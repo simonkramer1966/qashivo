@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { Mail, Phone, Eye } from "lucide-react";
+import { Mail, Phone, Eye, FileText } from "lucide-react";
 
 export default function RecentInvoices() {
   const { toast } = useToast();
@@ -90,7 +90,11 @@ export default function RecentInvoices() {
           </div>
         ) : recentInvoices.length === 0 ? (
           <div className="text-center py-8">
-            <p className="text-muted-foreground">No invoices found</p>
+            <div className="w-16 h-16 bg-[#17B6C3]/10 rounded-full flex items-center justify-center mx-auto mb-6">
+              <FileText className="h-8 w-8 text-[#17B6C3]" />
+            </div>
+            <p className="text-lg font-semibold text-slate-900 mb-2">No invoices found</p>
+            <p className="text-sm text-muted-foreground">Create your first invoice to get started</p>
           </div>
         ) : (
           <div className="overflow-x-auto">

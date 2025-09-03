@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Mail, Phone, Eye, Plus, Search, Filter } from "lucide-react";
+import { Mail, Phone, Eye, Plus, Search, Filter, FileText } from "lucide-react";
 
 export default function Invoices() {
   const { toast } = useToast();
@@ -154,7 +154,23 @@ export default function Invoices() {
                 </div>
               ) : filteredInvoices.length === 0 ? (
                 <div className="text-center py-8">
-                  <p className="text-muted-foreground">No invoices found</p>
+                  <div className="w-16 h-16 bg-[#17B6C3]/10 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <FileText className="h-8 w-8 text-[#17B6C3]" />
+                  </div>
+                  <p className="text-lg font-semibold text-slate-900 mb-2">No invoices found</p>
+                  {search ? (
+                    <p className="text-sm text-muted-foreground mt-2">
+                      Try adjusting your search terms or filters
+                    </p>
+                  ) : (
+                    <div className="mt-6">
+                      <p className="text-muted-foreground mb-4">Get started by creating your first invoice</p>
+                      <Button className="bg-[#17B6C3] hover:bg-[#1396A1] text-white">
+                        <Plus className="mr-2 h-4 w-4" />
+                        Create Your First Invoice
+                      </Button>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="overflow-x-auto">
