@@ -453,6 +453,86 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Mock Xero auth endpoint for development
+  app.get("/api/xero/mock-auth", async (req, res) => {
+    try {
+      // Simulate successful Xero connection
+      const html = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Xero Connection Successful</title>
+          <style>
+            body { 
+              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+              display: flex; 
+              justify-content: center; 
+              align-items: center; 
+              min-height: 100vh; 
+              margin: 0; 
+              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            }
+            .container { 
+              background: white; 
+              padding: 2rem; 
+              border-radius: 12px; 
+              box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+              text-align: center; 
+              max-width: 400px;
+            }
+            .success-icon { 
+              font-size: 4rem; 
+              color: #10B981; 
+              margin-bottom: 1rem; 
+            }
+            h1 { 
+              color: #111827; 
+              margin-bottom: 1rem; 
+            }
+            p { 
+              color: #6B7280; 
+              margin-bottom: 1.5rem; 
+            }
+            .btn { 
+              background: #17B6C3; 
+              color: white; 
+              padding: 12px 24px; 
+              border: none; 
+              border-radius: 6px; 
+              text-decoration: none; 
+              display: inline-block; 
+              font-weight: 500;
+              transition: background 0.2s;
+            }
+            .btn:hover { 
+              background: #1396A1; 
+            }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="success-icon">✅</div>
+            <h1>Xero Connection Successful!</h1>
+            <p>Your Nexus AR application is now connected to Xero (mock mode for development).</p>
+            <a href="/" class="btn">Return to Dashboard</a>
+          </div>
+          <script>
+            // Auto-redirect after 3 seconds
+            setTimeout(() => {
+              window.location.href = "/";
+            }, 3000);
+          </script>
+        </body>
+        </html>
+      `;
+      
+      res.send(html);
+    } catch (error) {
+      console.error("Error in mock auth:", error);
+      res.status(500).json({ message: "Mock auth failed" });
+    }
+  });
+
   app.post("/api/xero/callback", async (req, res) => {
     try {
       const { code, state: tenantId } = req.body;
