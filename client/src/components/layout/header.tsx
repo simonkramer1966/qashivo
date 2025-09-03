@@ -1,4 +1,8 @@
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/hooks/useAuth";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { LogOut, User } from "lucide-react";
 
 interface HeaderProps {
   title: string;
@@ -7,6 +11,36 @@ interface HeaderProps {
 }
 
 export default function Header({ title, subtitle, action }: HeaderProps) {
+  const { user } = useAuth();
+
+  const handleLogout = () => {
+    window.location.href = "/api/logout";
+  };
+
+  const getUserInitials = () => {
+    if (!user) return "U";
+    const firstName = user.firstName || "";
+    const lastName = user.lastName || "";
+    if (firstName && lastName) {
+      return `${firstName.charAt(0)}${lastName.charAt(0)}`;
+    }
+    if (user.email) {
+      return user.email.charAt(0).toUpperCase();
+    }
+    return "U";
+  };
+
+  const getDisplayName = () => {
+    if (!user) return "User";
+    if (user.firstName && user.lastName) {
+      return `${user.firstName} ${user.lastName}`;
+    }
+    if (user.email) {
+      return user.email;
+    }
+    return "User";
+  };
+
   return (
     <header className="bg-card border-b border-border px-6 py-4">
       <div className="flex items-center justify-between">
@@ -27,6 +61,37 @@ export default function Header({ title, subtitle, action }: HeaderProps) {
               2 min ago
             </span>
           </div>
+          
+          {/* User Profile */}
+          <DropdownMenu>
+            <DropdownMenuTrigger className="flex items-center space-x-3 hover:bg-accent hover:text-accent-foreground rounded-lg px-3 py-2 transition-colors" data-testid="button-user-menu">
+              <div className="text-right">
+                <p className="text-sm font-medium text-foreground" data-testid="text-user-name">
+                  {getDisplayName()}
+                </p>
+                <p className="text-xs text-muted-foreground" data-testid="text-user-email">
+                  {user?.email || ""}
+                </p>
+              </div>
+              <Avatar className="h-10 w-10" data-testid="avatar-user">
+                <AvatarImage src={user?.profileImageUrl || ""} alt={getDisplayName()} />
+                <AvatarFallback className="bg-[#17B6C3] text-white font-semibold">
+                  {getUserInitials()}
+                </AvatarFallback>
+              </Avatar>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuItem className="cursor-pointer" data-testid="menu-item-profile">
+                <User className="mr-2 h-4 w-4" />
+                <span>Profile</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleLogout} className="cursor-pointer" data-testid="menu-item-logout">
+                <LogOut className="mr-2 h-4 w-4" />
+                <span>Log out</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          
           {action}
         </div>
       </div>
