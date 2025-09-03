@@ -10,6 +10,7 @@ import Invoices from "@/pages/invoices";
 import Contacts from "@/pages/contacts";
 import Workflows from "@/pages/workflows";
 import Settings from "@/pages/settings";
+import Cashflow from "@/pages/cashflow";
 import { useAuth } from "@/hooks/useAuth";
 
 function Router() {
@@ -22,6 +23,7 @@ function Router() {
       ) : (
         <>
           <Route path="/" component={Dashboard} />
+          <Route path="/cashflow" component={Cashflow} />
           <Route path="/invoices" component={Invoices} />
           <Route path="/contacts" component={Contacts} />
           <Route path="/workflows" component={Workflows} />

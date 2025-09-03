@@ -10,13 +10,15 @@ import {
   BarChart, 
   Settings, 
   ChevronDown,
-  LogOut
+  LogOut,
+  TrendingUp
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import nexusLogo from "@assets/Main Nexus Logo copy_1756923544828.png";
 
 const navigation = [
   { name: "Dashboard", href: "/", icon: BarChart3 },
+  { name: "Cashflow", href: "/cashflow", icon: TrendingUp },
   { name: "Invoices", href: "/invoices", icon: FileText },
   { name: "Contacts", href: "/contacts", icon: Users },
   { name: "Collection Workflows", href: "/workflows", icon: Workflow },
