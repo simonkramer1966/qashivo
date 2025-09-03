@@ -81,32 +81,6 @@ export default function Sidebar() {
           })}
         </ul>
       </nav>
-      
-      <div className="absolute bottom-4 left-4 right-4">
-        <Button
-          variant="ghost"
-          className="w-full justify-start p-3 bg-muted rounded-lg hover:bg-muted/80"
-          onClick={handleLogout}
-          data-testid="button-user-profile"
-        >
-          <div className="flex items-center space-x-3 w-full">
-            <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
-              <span className="text-primary-foreground text-sm font-medium" data-testid="text-user-initials">
-                {(user as any)?.firstName?.[0] || (user as any)?.email?.[0]?.toUpperCase() || 'U'}
-              </span>
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-foreground truncate" data-testid="text-user-name">
-                {(user as any)?.firstName ? `${(user as any).firstName} ${(user as any).lastName || ''}`.trim() : (user as any)?.email || 'User'}
-              </p>
-              <p className="text-xs text-muted-foreground truncate" data-testid="text-user-role">
-                {(user as any)?.role === 'admin' ? 'Admin' : 'User'}
-              </p>
-            </div>
-            <ChevronDown className="text-muted-foreground h-4 w-4" />
-          </div>
-        </Button>
-      </div>
     </aside>
   );
 }
