@@ -75,21 +75,7 @@ export default function UIChoices() {
       <main className="flex-1 overflow-y-auto">
         <Header title="UI Choices" subtitle="Premium SaaS Dashboard Design Exploration" />
         
-        {/* Hero Background Section */}
-        <div 
-          className="relative bg-cover bg-center h-48 mb-8"
-          style={{ backgroundImage: `url(${businessOffice})` }}
-        >
-          <div className="absolute inset-0 bg-gradient-to-r from-[#17B6C3]/90 to-blue-600/80"></div>
-          <div className="relative z-10 h-full flex items-center justify-center">
-            <div className="text-center text-white">
-              <h1 className="text-4xl font-bold mb-2">Financial Overview</h1>
-              <p className="text-lg text-white/90">Real-time insights into your accounts receivable performance</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="p-8 space-y-8 -mt-16 relative z-20">
+        <div className="p-8 space-y-8">
           {/* Hero Metrics - Glassmorphism Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8">
             {/* Total Outstanding */}
