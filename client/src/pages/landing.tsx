@@ -16,8 +16,7 @@ export default function Landing() {
           <div className="flex justify-end items-center h-16">
             <Button 
               onClick={handleLogin}
-              variant="outline"
-              className="text-sm"
+              className="text-sm bg-[#17B6C3] hover:bg-[#1396A1] text-white"
               data-testid="button-nav-login"
             >
               Login
