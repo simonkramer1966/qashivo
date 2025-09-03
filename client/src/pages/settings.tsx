@@ -21,7 +21,8 @@ import {
   User, 
   Bell,
   Shield,
-  Palette
+  Palette,
+  Settings as SettingsIcon
 } from "lucide-react";
 
 export default function Settings() {
@@ -66,7 +67,7 @@ export default function Settings() {
   };
 
   return (
-    <div className="flex h-screen bg-background">
+    <div className="flex h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-teal-50">
       <Sidebar />
       <main className="flex-1 overflow-y-auto">
         <Header 
@@ -74,35 +75,50 @@ export default function Settings() {
           subtitle="Manage your account, integrations, and preferences"
         />
         
-        <div className="p-6 max-w-4xl mx-auto space-y-6">
-          <Tabs defaultValue="general" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-5">
-              <TabsTrigger value="general" data-testid="tab-general">General</TabsTrigger>
-              <TabsTrigger value="integrations" data-testid="tab-integrations">Integrations</TabsTrigger>
-              <TabsTrigger value="notifications" data-testid="tab-notifications">Notifications</TabsTrigger>
-              <TabsTrigger value="security" data-testid="tab-security">Security</TabsTrigger>
-              <TabsTrigger value="branding" data-testid="tab-branding">Branding</TabsTrigger>
-            </TabsList>
+        <div className="p-8 max-w-5xl mx-auto space-y-8">
+          <Tabs defaultValue="general" className="space-y-8">
+            <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
+              <CardHeader>
+                <CardTitle className="text-xl font-bold flex items-center">
+                  <div className="p-2 bg-[#17B6C3]/10 rounded-lg mr-3">
+                    <SettingsIcon className="h-5 w-5 text-[#17B6C3]" />
+                  </div>
+                  Settings Navigation
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <TabsList className="grid w-full grid-cols-5 bg-slate-50/80">
+                  <TabsTrigger value="general" className="data-[state=active]:bg-[#17B6C3] data-[state=active]:text-white" data-testid="tab-general">General</TabsTrigger>
+                  <TabsTrigger value="integrations" className="data-[state=active]:bg-[#17B6C3] data-[state=active]:text-white" data-testid="tab-integrations">Integrations</TabsTrigger>
+                  <TabsTrigger value="notifications" className="data-[state=active]:bg-[#17B6C3] data-[state=active]:text-white" data-testid="tab-notifications">Notifications</TabsTrigger>
+                  <TabsTrigger value="security" className="data-[state=active]:bg-[#17B6C3] data-[state=active]:text-white" data-testid="tab-security">Security</TabsTrigger>
+                  <TabsTrigger value="branding" className="data-[state=active]:bg-[#17B6C3] data-[state=active]:text-white" data-testid="tab-branding">Branding</TabsTrigger>
+                </TabsList>
+              </CardContent>
+            </Card>
 
-            <TabsContent value="general" className="space-y-6">
+            <TabsContent value="general" className="space-y-8">
               {/* Profile Settings */}
-              <Card>
+              <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
                 <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <User className="mr-2 h-5 w-5" />
+                  <CardTitle className="text-xl font-bold flex items-center">
+                    <div className="p-2 bg-[#17B6C3]/10 rounded-lg mr-3">
+                      <User className="h-5 w-5 text-[#17B6C3]" />
+                    </div>
                     Profile Information
                   </CardTitle>
-                  <CardDescription>
+                  <CardDescription className="text-base">
                     Update your personal information and preferences
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
+                <CardContent className="space-y-6">
+                  <div className="grid grid-cols-2 gap-6">
                     <div className="space-y-2">
                       <Label htmlFor="firstName">First Name</Label>
                       <Input 
                         id="firstName"
                         defaultValue={(user as any)?.firstName || ""}
+                        className="bg-white/70 border-gray-200/30"
                         data-testid="input-first-name"
                       />
                     </div>
@@ -111,6 +127,7 @@ export default function Settings() {
                       <Input 
                         id="lastName"
                         defaultValue={(user as any)?.lastName || ""}
+                        className="bg-white/70 border-gray-200/30"
                         data-testid="input-last-name"
                       />
                     </div>
@@ -122,33 +139,37 @@ export default function Settings() {
                       type="email"
                       defaultValue={(user as any)?.email || ""}
                       disabled
+                      className="bg-gray-100/50 border-gray-200/30"
                       data-testid="input-email"
                     />
                     <p className="text-sm text-muted-foreground">
                       Email cannot be changed. Contact support if needed.
                     </p>
                   </div>
-                  <Button data-testid="button-save-profile">Save Changes</Button>
+                  <Button className="bg-[#17B6C3] hover:bg-[#1396A1] text-white" data-testid="button-save-profile">Save Changes</Button>
                 </CardContent>
               </Card>
 
               {/* Tenant Settings */}
-              <Card>
+              <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
                 <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <Building2 className="mr-2 h-5 w-5" />
+                  <CardTitle className="text-xl font-bold flex items-center">
+                    <div className="p-2 bg-[#17B6C3]/10 rounded-lg mr-3">
+                      <Building2 className="h-5 w-5 text-[#17B6C3]" />
+                    </div>
                     Organization Settings
                   </CardTitle>
-                  <CardDescription>
+                  <CardDescription className="text-base">
                     Configure your organization details and preferences
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent className="space-y-6">
                   <div className="space-y-2">
                     <Label htmlFor="orgName">Organization Name</Label>
                     <Input 
                       id="orgName"
                       placeholder="Your Company Name"
+                      className="bg-white/70 border-gray-200/30"
                       data-testid="input-org-name"
                     />
                   </div>
@@ -158,47 +179,50 @@ export default function Settings() {
                       <Input 
                         id="subdomain"
                         placeholder="yourcompany"
-                        className="rounded-r-none"
+                        className="rounded-r-none bg-white/70 border-gray-200/30"
                         data-testid="input-subdomain"
                       />
-                      <div className="inline-flex items-center px-3 rounded-r-md border border-l-0 border-input bg-muted text-muted-foreground">
+                      <div className="inline-flex items-center px-3 rounded-r-md border border-l-0 border-gray-200/30 bg-slate-100/80 text-slate-600">
                         .arpro.com
                       </div>
                     </div>
                   </div>
-                  <Button data-testid="button-save-org">Save Changes</Button>
+                  <Button className="bg-[#17B6C3] hover:bg-[#1396A1] text-white" data-testid="button-save-org">Save Changes</Button>
                 </CardContent>
               </Card>
             </TabsContent>
 
-            <TabsContent value="integrations" className="space-y-6">
+            <TabsContent value="integrations" className="space-y-8">
               {/* Xero Integration */}
-              <Card>
+              <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
                 <CardHeader>
-                  <CardTitle className="flex items-center justify-between">
+                  <CardTitle className="text-xl font-bold flex items-center justify-between">
                     <div className="flex items-center">
-                      <BarChart3 className="mr-2 h-5 w-5" />
+                      <div className="p-2 bg-[#17B6C3]/10 rounded-lg mr-3">
+                        <BarChart3 className="h-5 w-5 text-[#17B6C3]" />
+                      </div>
                       Xero Integration
                     </div>
-                    <Badge variant="outline" className="text-red-600" data-testid="badge-xero-status">
+                    <Badge className="bg-red-100 text-red-800 border-red-200" data-testid="badge-xero-status">
                       Not Connected
                     </Badge>
                   </CardTitle>
-                  <CardDescription>
+                  <CardDescription className="text-base ml-11">
                     Connect to Xero to automatically sync invoices and contacts
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="flex items-center justify-between p-4 border rounded-lg">
+                  <div className="flex items-center justify-between p-6 bg-slate-50/80 rounded-xl border border-slate-200/50">
                     <div>
-                      <p className="font-medium">Xero Accounting</p>
-                      <p className="text-sm text-muted-foreground">
+                      <p className="font-semibold text-slate-900">Xero Accounting</p>
+                      <p className="text-sm text-slate-600">
                         Sync invoices, contacts, and payment data
                       </p>
                     </div>
                     <Button 
                       onClick={handleXeroConnect}
                       disabled={isConnecting}
+                      className="bg-[#17B6C3] hover:bg-[#1396A1] text-white"
                       data-testid="button-connect-xero"
                     >
                       {isConnecting ? "Connecting..." : "Connect"}
@@ -208,28 +232,31 @@ export default function Settings() {
               </Card>
 
               {/* Email Integration */}
-              <Card>
+              <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
                 <CardHeader>
-                  <CardTitle className="flex items-center justify-between">
+                  <CardTitle className="text-xl font-bold flex items-center justify-between">
                     <div className="flex items-center">
-                      <Mail className="mr-2 h-5 w-5" />
+                      <div className="p-2 bg-[#17B6C3]/10 rounded-lg mr-3">
+                        <Mail className="h-5 w-5 text-[#17B6C3]" />
+                      </div>
                       Email Integration (SendGrid)
                     </div>
-                    <Badge variant="outline" className="text-green-600" data-testid="badge-sendgrid-status">
+                    <Badge className="bg-green-100 text-green-800 border-green-200" data-testid="badge-sendgrid-status">
                       Connected
                     </Badge>
                   </CardTitle>
-                  <CardDescription>
+                  <CardDescription className="text-base ml-11">
                     Configure email settings for automated reminders
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent className="space-y-6">
                   <div className="space-y-2">
                     <Label htmlFor="fromEmail">From Email Address</Label>
                     <Input 
                       id="fromEmail"
                       type="email"
                       placeholder="billing@yourcompany.com"
+                      className="bg-white/70 border-gray-200/30"
                       data-testid="input-from-email"
                     />
                   </div>
@@ -238,72 +265,78 @@ export default function Settings() {
                     <Input 
                       id="fromName"
                       placeholder="Your Company Billing"
+                      className="bg-white/70 border-gray-200/30"
                       data-testid="input-from-name"
                     />
                   </div>
-                  <Button data-testid="button-save-email">Save Email Settings</Button>
+                  <Button className="bg-[#17B6C3] hover:bg-[#1396A1] text-white" data-testid="button-save-email">Save Email Settings</Button>
                 </CardContent>
               </Card>
 
               {/* SMS Integration */}
-              <Card>
+              <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
                 <CardHeader>
-                  <CardTitle className="flex items-center justify-between">
+                  <CardTitle className="text-xl font-bold flex items-center justify-between">
                     <div className="flex items-center">
-                      <MessageSquare className="mr-2 h-5 w-5" />
+                      <div className="p-2 bg-[#17B6C3]/10 rounded-lg mr-3">
+                        <MessageSquare className="h-5 w-5 text-[#17B6C3]" />
+                      </div>
                       SMS Integration (Twilio)
                     </div>
-                    <Badge variant="outline" className="text-green-600" data-testid="badge-twilio-status">
+                    <Badge className="bg-green-100 text-green-800 border-green-200" data-testid="badge-twilio-status">
                       Connected
                     </Badge>
                   </CardTitle>
-                  <CardDescription>
+                  <CardDescription className="text-base ml-11">
                     Configure SMS settings for text message reminders
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent className="space-y-6">
                   <div className="space-y-2">
                     <Label htmlFor="smsFromNumber">From Phone Number</Label>
                     <Input 
                       id="smsFromNumber"
                       placeholder="+1 (555) 123-4567"
+                      className="bg-white/70 border-gray-200/30"
                       data-testid="input-sms-number"
                     />
                   </div>
-                  <Button data-testid="button-save-sms">Save SMS Settings</Button>
+                  <Button className="bg-[#17B6C3] hover:bg-[#1396A1] text-white" data-testid="button-save-sms">Save SMS Settings</Button>
                 </CardContent>
               </Card>
 
               {/* AI Integration */}
-              <Card>
+              <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
                 <CardHeader>
-                  <CardTitle className="flex items-center justify-between">
+                  <CardTitle className="text-xl font-bold flex items-center justify-between">
                     <div className="flex items-center">
-                      <Bot className="mr-2 h-5 w-5" />
+                      <div className="p-2 bg-[#17B6C3]/10 rounded-lg mr-3">
+                        <Bot className="h-5 w-5 text-[#17B6C3]" />
+                      </div>
                       AI Integration (OpenAI)
                     </div>
-                    <Badge variant="outline" className="text-green-600" data-testid="badge-openai-status">
+                    <Badge className="bg-green-100 text-green-800 border-green-200" data-testid="badge-openai-status">
                       Active
                     </Badge>
                   </CardTitle>
-                  <CardDescription>
+                  <CardDescription className="text-base ml-11">
                     AI-powered suggestions and automated message generation
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-center justify-between">
+                <CardContent className="space-y-6">
+                  <div className="flex items-center justify-between p-4 bg-slate-50/80 rounded-xl">
                     <div>
-                      <p className="font-medium">Enable AI Suggestions</p>
-                      <p className="text-sm text-muted-foreground">
+                      <p className="font-semibold text-slate-900">Enable AI Suggestions</p>
+                      <p className="text-sm text-slate-600">
                         Get intelligent collection recommendations
                       </p>
                     </div>
                     <Switch defaultChecked data-testid="switch-ai-suggestions" />
                   </div>
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between p-4 bg-slate-50/80 rounded-xl">
                     <div>
-                      <p className="font-medium">Auto-generate Email Content</p>
-                      <p className="text-sm text-muted-foreground">
+                      <p className="font-semibold text-slate-900">Auto-generate Email Content</p>
+                      <p className="text-sm text-slate-600">
                         Use AI to create personalized reminder emails
                       </p>
                     </div>
@@ -313,59 +346,55 @@ export default function Settings() {
               </Card>
             </TabsContent>
 
-            <TabsContent value="notifications" className="space-y-6">
-              <Card>
+            <TabsContent value="notifications" className="space-y-8">
+              <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
                 <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <Bell className="mr-2 h-5 w-5" />
+                  <CardTitle className="text-xl font-bold flex items-center">
+                    <div className="p-2 bg-[#17B6C3]/10 rounded-lg mr-3">
+                      <Bell className="h-5 w-5 text-[#17B6C3]" />
+                    </div>
                     Notification Preferences
                   </CardTitle>
-                  <CardDescription>
+                  <CardDescription className="text-base ml-11">
                     Choose how you want to be notified about important events
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
+                  <div className="space-y-6">
+                    <div className="flex items-center justify-between p-4 bg-slate-50/80 rounded-xl">
                       <div>
-                        <p className="font-medium">New Overdue Invoices</p>
-                        <p className="text-sm text-muted-foreground">
+                        <p className="font-semibold text-slate-900">New Overdue Invoices</p>
+                        <p className="text-sm text-slate-600">
                           Get notified when invoices become overdue
                         </p>
                       </div>
                       <Switch defaultChecked data-testid="switch-overdue-notifications" />
                     </div>
                     
-                    <Separator />
-                    
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between p-4 bg-slate-50/80 rounded-xl">
                       <div>
-                        <p className="font-medium">Payment Received</p>
-                        <p className="text-sm text-muted-foreground">
+                        <p className="font-semibold text-slate-900">Payment Received</p>
+                        <p className="text-sm text-slate-600">
                           Get notified when payments are received
                         </p>
                       </div>
                       <Switch defaultChecked data-testid="switch-payment-notifications" />
                     </div>
                     
-                    <Separator />
-                    
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between p-4 bg-slate-50/80 rounded-xl">
                       <div>
-                        <p className="font-medium">Daily Summary</p>
-                        <p className="text-sm text-muted-foreground">
+                        <p className="font-semibold text-slate-900">Daily Summary</p>
+                        <p className="text-sm text-slate-600">
                           Receive daily summary of collection activities
                         </p>
                       </div>
                       <Switch data-testid="switch-daily-summary" />
                     </div>
                     
-                    <Separator />
-                    
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between p-4 bg-slate-50/80 rounded-xl">
                       <div>
-                        <p className="font-medium">AI Suggestions</p>
-                        <p className="text-sm text-muted-foreground">
+                        <p className="font-semibold text-slate-900">AI Suggestions</p>
+                        <p className="text-sm text-slate-600">
                           Get notified about new AI collection suggestions
                         </p>
                       </div>
@@ -376,54 +405,52 @@ export default function Settings() {
               </Card>
             </TabsContent>
 
-            <TabsContent value="security" className="space-y-6">
-              <Card>
+            <TabsContent value="security" className="space-y-8">
+              <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
                 <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <Shield className="mr-2 h-5 w-5" />
+                  <CardTitle className="text-xl font-bold flex items-center">
+                    <div className="p-2 bg-[#17B6C3]/10 rounded-lg mr-3">
+                      <Shield className="h-5 w-5 text-[#17B6C3]" />
+                    </div>
                     Security Settings
                   </CardTitle>
-                  <CardDescription>
+                  <CardDescription className="text-base ml-11">
                     Manage your account security and access controls
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="space-y-4">
-                    <div>
-                      <h4 className="font-medium mb-2">Account Security</h4>
-                      <div className="space-y-2">
-                        <p className="text-sm text-muted-foreground">
+                <CardContent className="space-y-8">
+                  <div className="space-y-6">
+                    <div className="p-6 bg-slate-50/80 rounded-xl">
+                      <h4 className="font-bold text-lg text-slate-900 mb-3">Account Security</h4>
+                      <div className="space-y-3">
+                        <p className="text-sm text-slate-600">
                           Your account is secured through Replit authentication.
                         </p>
-                        <Button variant="outline" data-testid="button-change-password">
+                        <Button variant="outline" className="border-[#17B6C3]/20 text-[#17B6C3] hover:bg-[#17B6C3]/5" data-testid="button-change-password">
                           Change Password
                         </Button>
                       </div>
                     </div>
                     
-                    <Separator />
-                    
-                    <div>
-                      <h4 className="font-medium mb-2">Session Management</h4>
-                      <div className="space-y-2">
-                        <p className="text-sm text-muted-foreground">
+                    <div className="p-6 bg-slate-50/80 rounded-xl">
+                      <h4 className="font-bold text-lg text-slate-900 mb-3">Session Management</h4>
+                      <div className="space-y-3">
+                        <p className="text-sm text-slate-600">
                           Manage your active sessions and logout from all devices.
                         </p>
-                        <Button variant="outline" data-testid="button-logout-all">
+                        <Button variant="outline" className="border-[#17B6C3]/20 text-[#17B6C3] hover:bg-[#17B6C3]/5" data-testid="button-logout-all">
                           Logout All Sessions
                         </Button>
                       </div>
                     </div>
                     
-                    <Separator />
-                    
-                    <div>
-                      <h4 className="font-medium mb-2">API Access</h4>
-                      <div className="space-y-2">
-                        <p className="text-sm text-muted-foreground">
+                    <div className="p-6 bg-slate-50/80 rounded-xl">
+                      <h4 className="font-bold text-lg text-slate-900 mb-3">API Access</h4>
+                      <div className="space-y-3">
+                        <p className="text-sm text-slate-600">
                           Generate API keys for integrating with external systems.
                         </p>
-                        <Button variant="outline" data-testid="button-generate-api-key">
+                        <Button variant="outline" className="border-[#17B6C3]/20 text-[#17B6C3] hover:bg-[#17B6C3]/5" data-testid="button-generate-api-key">
                           Generate API Key
                         </Button>
                       </div>
@@ -433,72 +460,74 @@ export default function Settings() {
               </Card>
             </TabsContent>
 
-            <TabsContent value="branding" className="space-y-6">
-              <Card>
+            <TabsContent value="branding" className="space-y-8">
+              <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
                 <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <Palette className="mr-2 h-5 w-5" />
+                  <CardTitle className="text-xl font-bold flex items-center">
+                    <div className="p-2 bg-[#17B6C3]/10 rounded-lg mr-3">
+                      <Palette className="h-5 w-5 text-[#17B6C3]" />
+                    </div>
                     Branding & Appearance
                   </CardTitle>
-                  <CardDescription>
+                  <CardDescription className="text-base ml-11">
                     Customize the appearance of your Nexus AR instance
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="space-y-4">
-                    <div>
-                      <Label htmlFor="companyLogo">Company Logo</Label>
-                      <div className="mt-2">
+                <CardContent className="space-y-8">
+                  <div className="space-y-6">
+                    <div className="p-6 bg-slate-50/80 rounded-xl">
+                      <Label htmlFor="companyLogo" className="text-base font-semibold text-slate-900">Company Logo</Label>
+                      <div className="mt-4">
                         <div className="flex items-center space-x-4">
-                          <div className="w-16 h-16 bg-muted rounded-lg flex items-center justify-center">
-                            <Building2 className="h-8 w-8 text-muted-foreground" />
+                          <div className="w-16 h-16 bg-white/70 border border-slate-200/50 rounded-xl flex items-center justify-center">
+                            <Building2 className="h-8 w-8 text-[#17B6C3]" />
                           </div>
-                          <Button variant="outline" data-testid="button-upload-logo">
+                          <Button variant="outline" className="border-[#17B6C3]/20 text-[#17B6C3] hover:bg-[#17B6C3]/5" data-testid="button-upload-logo">
                             Upload Logo
                           </Button>
                         </div>
                       </div>
                     </div>
                     
-                    <Separator />
-                    
-                    <div>
-                      <Label htmlFor="primaryColor">Primary Color</Label>
-                      <div className="mt-2 flex items-center space-x-4">
-                        <div className="w-10 h-10 bg-primary rounded border"></div>
+                    <div className="p-6 bg-slate-50/80 rounded-xl">
+                      <Label htmlFor="primaryColor" className="text-base font-semibold text-slate-900">Primary Color</Label>
+                      <div className="mt-4 flex items-center space-x-4">
+                        <div className="w-12 h-12 bg-[#17B6C3] rounded-lg border border-slate-200/50"></div>
                         <Input 
                           id="primaryColor"
-                          defaultValue="#3B82F6"
-                          className="w-32"
+                          defaultValue="#17B6C3"
+                          className="w-32 bg-white/70 border-gray-200/30"
                           data-testid="input-primary-color"
                         />
                       </div>
                     </div>
                     
-                    <Separator />
-                    
-                    <div>
-                      <Label htmlFor="companyName">Company Name (in sidebar)</Label>
-                      <Input 
-                        id="companyName"
-                        defaultValue="Nexus AR"
-                        className="mt-2"
-                        data-testid="input-sidebar-company-name"
-                      />
-                    </div>
-                    
-                    <div>
-                      <Label htmlFor="tagline">Tagline</Label>
-                      <Input 
-                        id="tagline"
-                        defaultValue="Debt Recovery Suite"
-                        className="mt-2"
-                        data-testid="input-tagline"
-                      />
+                    <div className="p-6 bg-slate-50/80 rounded-xl">
+                      <div className="space-y-4">
+                        <div>
+                          <Label htmlFor="companyName" className="text-base font-semibold text-slate-900">Company Name (in sidebar)</Label>
+                          <Input 
+                            id="companyName"
+                            defaultValue="Nexus AR"
+                            className="mt-2 bg-white/70 border-gray-200/30"
+                            data-testid="input-sidebar-company-name"
+                          />
+                        </div>
+                        
+                        <div>
+                          <Label htmlFor="tagline" className="text-base font-semibold text-slate-900">Tagline</Label>
+                          <Input 
+                            id="tagline"
+                            defaultValue="Debt Recovery Suite"
+                            className="mt-2 bg-white/70 border-gray-200/30"
+                            data-testid="input-tagline"
+                          />
+                        </div>
+                      </div>
                     </div>
                   </div>
                   
-                  <Button data-testid="button-save-branding">Save Branding</Button>
+                  <Button className="bg-[#17B6C3] hover:bg-[#1396A1] text-white" data-testid="button-save-branding">Save Branding</Button>
                 </CardContent>
               </Card>
             </TabsContent>
