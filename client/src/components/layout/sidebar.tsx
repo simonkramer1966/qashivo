@@ -42,11 +42,11 @@ export default function Sidebar() {
           <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center p-1">
             <img src={nexusLogo} alt="Nexus AR" className="w-full h-full object-contain" />
           </div>
-          <div>
-            <h1 className="text-xl font-semibold text-foreground" data-testid="text-app-name">
+          <div className="flex flex-col items-start">
+            <h1 className="text-xl font-semibold text-foreground leading-tight" data-testid="text-app-name">
               Nexus AR
             </h1>
-            <p className="text-sm text-muted-foreground" data-testid="text-app-subtitle">
+            <p className="text-sm text-muted-foreground leading-tight" data-testid="text-app-subtitle">
               Debt Recovery Suite
             </p>
           </div>
