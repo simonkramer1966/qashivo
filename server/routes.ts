@@ -446,6 +446,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const authUrl = xeroService.getAuthorizationUrl(user.tenantId);
+      console.log("=== GENERATED XERO AUTH URL ===");
+      console.log("Auth URL:", authUrl);
+      console.log("Tenant ID:", user.tenantId);
+      
       res.json({ authUrl });
     } catch (error) {
       console.error("Error getting Xero auth URL:", error);
@@ -534,6 +538,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.get("/api/xero/callback", async (req, res) => {
+    console.log("=== XERO CALLBACK RECEIVED ===");
+    console.log("Query params:", req.query);
+    console.log("Full URL:", req.url);
+    
     try {
       const { code, state: tenantId } = req.query;
       
