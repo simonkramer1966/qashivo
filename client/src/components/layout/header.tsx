@@ -13,7 +13,7 @@ interface HeaderProps {
   subtitleSize?: string;
 }
 
-export default function Header({ title, subtitle, action, noBorder = false, titleSize = "text-2xl", subtitleSize = "text-base" }: HeaderProps) {
+export default function Header({ title, subtitle, action, noBorder = true, titleSize = "text-2xl", subtitleSize = "text-base" }: HeaderProps) {
   const { user } = useAuth();
 
   const handleLogout = () => {
