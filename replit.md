@@ -8,6 +8,32 @@ Nexus AR is an AI-driven accounts receivable and debt recovery application built
 
 Preferred communication style: Simple, everyday language.
 
+## Design System Guidelines
+
+### Premium Glassmorphism UI Standards
+- **Page Background**: `bg-gradient-to-br from-slate-50 via-blue-50 to-teal-50`
+- **Card Styling**: `bg-white/80 backdrop-blur-sm border-white/50 shadow-lg`
+- **Metrics Cards**: `bg-white/70 backdrop-blur-md border-0 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105`
+- **Professional Spacing**: Use `p-8` for main content areas, `gap-8` for grids
+- **Brand Color**: #17B6C3 (Nexus teal) for all primary buttons and accents
+
+### Form Elements Standards
+- **Input Fields**: `bg-white/70 border-gray-200/30` for subtle definition
+- **Select Fields**: Same styling as inputs with `bg-white border-gray-200` for dropdown content
+- **Primary Buttons**: `bg-[#17B6C3] hover:bg-[#1396A1] text-white`
+- **Secondary Buttons**: `border-[#17B6C3]/20 text-[#17B6C3] hover:bg-[#17B6C3]/5`
+
+### Typography Standards
+- **Page Titles**: `text-2xl font-bold` 
+- **Card Titles**: `text-xl font-bold`
+- **Professional Icons**: Always wrap in `p-2 bg-[#17B6C3]/10 rounded-lg` containers
+
+### Consistent Patterns
+- All form inputs and selects use faint grey borders for better visibility
+- Dropdown contents are solid white for clean appearance
+- Hover effects include smooth transitions and subtle scale/shadow changes
+- Icons use brand color with light background containers
+
 ## System Architecture
 
 ### Frontend Architecture
