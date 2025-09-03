@@ -14,7 +14,7 @@ export default function Landing() {
   return (
     <div className="min-h-screen bg-background">
       {/* Navigation Header */}
-      <nav className="bg-card/80 backdrop-blur-sm fixed w-full z-50">
+      <nav className="bg-card fixed w-full z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-end items-center h-16">
             <Button 
