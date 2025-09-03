@@ -52,7 +52,7 @@ class XeroService {
       clientId: process.env.XERO_CLIENT_ID || "default_client_id",
       clientSecret: process.env.XERO_CLIENT_SECRET || "default_secret",
       redirectUri: `${protocol}://${domain}/api/xero/callback`,
-      scopes: "accounting.transactions accounting.contacts accounting.settings",
+      scopes: "openid profile email accounting.transactions accounting.contacts",
     };
 
     // Log configuration status (without secrets)
@@ -296,24 +296,36 @@ class XeroService {
     }
 
     try {
+      console.log(`Xero token exchange - Redirect URI: ${this.config.redirectUri}`);
+      console.log(`Xero token exchange - Client ID: ${this.config.clientId.substring(0, 8)}...`);
+      
+      const tokenRequestBody = new URLSearchParams({
+        grant_type: 'authorization_code',
+        code,
+        redirect_uri: this.config.redirectUri,
+      });
+
+      console.log(`Xero token request body: ${tokenRequestBody.toString()}`);
+
       const response = await fetch('https://identity.xero.com/connect/token', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
           'Authorization': `Basic ${Buffer.from(`${this.config.clientId}:${this.config.clientSecret}`).toString('base64')}`,
         },
-        body: new URLSearchParams({
-          grant_type: 'authorization_code',
-          code,
-          redirect_uri: this.config.redirectUri,
-        }),
+        body: tokenRequestBody,
       });
 
+      console.log(`Xero token response status: ${response.status}`);
+
       if (!response.ok) {
-        throw new Error(`Token exchange failed: ${response.status}`);
+        const errorText = await response.text();
+        console.error(`Xero token exchange failed: ${response.status} - ${errorText}`);
+        throw new Error(`Token exchange failed: ${response.status} - ${errorText}`);
       }
 
       const tokenData = await response.json();
+      console.log('Xero token exchange successful');
       
       // Get tenant info
       const connectionsResponse = await fetch('https://api.xero.com/connections', {
@@ -322,8 +334,16 @@ class XeroService {
         },
       });
 
+      if (!connectionsResponse.ok) {
+        const errorText = await connectionsResponse.text();
+        console.error(`Xero connections request failed: ${connectionsResponse.status} - ${errorText}`);
+        throw new Error(`Connections request failed: ${connectionsResponse.status}`);
+      }
+
       const connections = await connectionsResponse.json();
       const tenantId = connections[0]?.tenantId || '';
+
+      console.log(`Xero integration successful, tenant ID: ${tenantId}`);
 
       return {
         accessToken: tokenData.access_token,
