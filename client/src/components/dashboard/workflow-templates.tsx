@@ -69,7 +69,7 @@ export default function WorkflowTemplates() {
           {mockTemplates.map((template) => (
             <div 
               key={template.id} 
-              className="bg-white/70 backdrop-blur-sm border-0 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
+              className="bg-white/70 backdrop-blur-sm border-0 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 flex flex-col"
               data-testid={`card-workflow-template-${template.id}`}
             >
               <div className="flex items-center justify-between mb-4">
@@ -116,7 +116,7 @@ export default function WorkflowTemplates() {
                 ))}
               </div>
               
-              <div className="pt-4 border-t border-slate-200/50">
+              <div className="mt-auto pt-4 border-t border-slate-200/50">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center">
                     <CheckCircle2 className="h-4 w-4 text-green-600 mr-2" />
