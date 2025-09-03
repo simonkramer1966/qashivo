@@ -52,7 +52,7 @@ class XeroService {
       clientId: process.env.XERO_CLIENT_ID || "default_client_id",
       clientSecret: process.env.XERO_CLIENT_SECRET || "default_secret",
       redirectUri: `${protocol}://${domain}/api/xero/callback`,
-      scopes: "accounting.transactions accounting.contacts offline_access",
+      scopes: "accounting.transactions.read accounting.contacts.read",
     };
 
     // Log configuration status (without secrets)
