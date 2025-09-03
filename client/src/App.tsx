@@ -9,6 +9,7 @@ import Dashboard from "@/pages/dashboard";
 import Invoices from "@/pages/invoices";
 import Contacts from "@/pages/contacts";
 import Workflows from "@/pages/workflows";
+import UIChoices from "@/pages/ui-choices";
 import Settings from "@/pages/settings";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -25,6 +26,7 @@ function Router() {
           <Route path="/invoices" component={Invoices} />
           <Route path="/contacts" component={Contacts} />
           <Route path="/workflows" component={Workflows} />
+          <Route path="/ui-choices" component={UIChoices} />
           <Route path="/settings" component={Settings} />
         </>
       )}
