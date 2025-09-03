@@ -10,6 +10,28 @@ export default function Landing() {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Navigation Header */}
+      <nav className="bg-card border-b border-border">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            <div className="flex items-center space-x-3">
+              <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center p-1">
+                <img src={nexusLogo} alt="Nexus AR" className="w-full h-full object-contain" />
+              </div>
+              <span className="text-xl font-semibold text-foreground">Nexus AR</span>
+            </div>
+            <Button 
+              onClick={handleLogin}
+              variant="outline"
+              className="text-sm"
+              data-testid="button-nav-login"
+            >
+              Login
+            </Button>
+          </div>
+        </div>
+      </nav>
+
       {/* Hero Section */}
       <div className="relative overflow-hidden bg-gradient-to-br from-primary/10 via-background to-accent/10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
