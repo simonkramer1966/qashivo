@@ -51,7 +51,6 @@ export default function Sidebar() {
             </p>
           </div>
         </div>
-        <div className="absolute bottom-0 left-6 right-0 h-px bg-gray-200/30"></div>
       </div>
       
       <nav className="p-4">
