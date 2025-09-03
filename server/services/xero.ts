@@ -44,12 +44,19 @@ class XeroService {
   private config: XeroConfig;
 
   constructor() {
+    // Get the current domain from environment or use localhost for development
+    const domain = process.env.REPLIT_DOMAINS?.split(',')[0] || 'localhost:5000';
+    const protocol = domain.includes('localhost') ? 'http' : 'https';
+    
     this.config = {
-      clientId: process.env.XERO_CLIENT_ID || process.env.XERO_CLIENT_ID_ENV_VAR || "default_client_id",
-      clientSecret: process.env.XERO_CLIENT_SECRET || process.env.XERO_CLIENT_SECRET_ENV_VAR || "default_secret",
-      redirectUri: process.env.XERO_REDIRECT_URI || "http://localhost:5000/api/xero/callback",
-      scopes: "accounting.transactions accounting.contacts",
+      clientId: process.env.XERO_CLIENT_ID || "default_client_id",
+      clientSecret: process.env.XERO_CLIENT_SECRET || "default_secret",
+      redirectUri: `${protocol}://${domain}/api/xero/callback`,
+      scopes: "accounting.transactions accounting.contacts accounting.settings",
     };
+
+    // Log configuration status (without secrets)
+    console.log(`Xero Config: Client ID present: ${!!process.env.XERO_CLIENT_ID}, Redirect URI: ${this.config.redirectUri}`);
   }
 
   private async makeAuthenticatedRequest(

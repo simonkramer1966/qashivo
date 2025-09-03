@@ -533,30 +533,138 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/xero/callback", async (req, res) => {
+  app.get("/api/xero/callback", async (req, res) => {
     try {
-      const { code, state: tenantId } = req.body;
+      const { code, state: tenantId } = req.query;
       
       if (!code || !tenantId) {
-        return res.status(400).json({ message: "Missing code or tenant ID" });
+        return res.status(400).send(`
+          <html>
+            <body style="font-family: system-ui; text-align: center; padding: 2rem;">
+              <h1>❌ Authorization Failed</h1>
+              <p>Missing authorization code or tenant ID</p>
+              <a href="/" style="background: #17B6C3; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px;">Return to Dashboard</a>
+            </body>
+          </html>
+        `);
       }
 
-      const tokens = await xeroService.exchangeCodeForTokens(code);
+      const tokens = await xeroService.exchangeCodeForTokens(code as string);
       if (!tokens) {
-        return res.status(400).json({ message: "Failed to exchange authorization code" });
+        return res.status(400).send(`
+          <html>
+            <body style="font-family: system-ui; text-align: center; padding: 2rem;">
+              <h1>❌ Authorization Failed</h1>
+              <p>Failed to exchange authorization code with Xero</p>
+              <a href="/" style="background: #17B6C3; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px;">Return to Dashboard</a>
+            </body>
+          </html>
+        `);
       }
 
       // Store tokens in tenant record
-      await storage.updateTenant(tenantId, {
+      await storage.updateTenant(tenantId as string, {
         xeroAccessToken: tokens.accessToken,
         xeroRefreshToken: tokens.refreshToken,
         xeroTenantId: tokens.tenantId,
       });
 
-      res.json({ success: true });
+      // Success page with auto-redirect
+      res.send(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Xero Connected Successfully</title>
+          <style>
+            body { 
+              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+              display: flex; 
+              justify-content: center; 
+              align-items: center; 
+              min-height: 100vh; 
+              margin: 0; 
+              background: linear-gradient(135deg, #17B6C3 0%, #1396A1 100%);
+            }
+            .container { 
+              background: white; 
+              padding: 3rem; 
+              border-radius: 16px; 
+              box-shadow: 0 25px 50px rgba(0,0,0,0.15);
+              text-align: center; 
+              max-width: 450px;
+            }
+            .success-icon { 
+              font-size: 5rem; 
+              color: #10B981; 
+              margin-bottom: 1.5rem; 
+            }
+            h1 { 
+              color: #111827; 
+              margin-bottom: 1rem;
+              font-size: 1.8rem;
+            }
+            p { 
+              color: #6B7280; 
+              margin-bottom: 2rem;
+              font-size: 1.1rem;
+            }
+            .btn { 
+              background: #17B6C3; 
+              color: white; 
+              padding: 14px 28px; 
+              border: none; 
+              border-radius: 8px; 
+              text-decoration: none; 
+              display: inline-block; 
+              font-weight: 600;
+              transition: all 0.2s;
+              font-size: 1rem;
+            }
+            .btn:hover { 
+              background: #1396A1; 
+              transform: translateY(-1px);
+            }
+            .countdown {
+              color: #9CA3AF;
+              font-size: 0.9rem;
+              margin-top: 1rem;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="success-icon">🎉</div>
+            <h1>Xero Connected Successfully!</h1>
+            <p>Your Nexus AR application is now connected to Xero. You can now sync your invoices and contacts.</p>
+            <a href="/settings" class="btn">Go to Settings</a>
+            <div class="countdown">Redirecting in <span id="countdown">5</span> seconds...</div>
+          </div>
+          <script>
+            let seconds = 5;
+            const countdownEl = document.getElementById('countdown');
+            const interval = setInterval(() => {
+              seconds--;
+              countdownEl.textContent = seconds;
+              if (seconds <= 0) {
+                clearInterval(interval);
+                window.location.href = "/settings";
+              }
+            }, 1000);
+          </script>
+        </body>
+        </html>
+      `);
     } catch (error) {
       console.error("Error handling Xero callback:", error);
-      res.status(500).json({ message: "Failed to complete Xero authorization" });
+      res.status(500).send(`
+        <html>
+          <body style="font-family: system-ui; text-align: center; padding: 2rem;">
+            <h1>❌ Connection Error</h1>
+            <p>An error occurred while connecting to Xero</p>
+            <a href="/" style="background: #17B6C3; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px;">Return to Dashboard</a>
+          </body>
+        </html>
+      `);
     }
   });
 
