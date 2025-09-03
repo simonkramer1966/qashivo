@@ -1,7 +1,10 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { CheckCircle, DollarSign, TrendingUp, Zap } from "lucide-react";
+import { CheckCircle, DollarSign, TrendingUp, Zap, ArrowRight, BarChart3, Users, Clock } from "lucide-react";
 import nexusLogo from "@assets/Main Nexus Logo copy_1756923544828.png";
+import heroImage from "@assets/generated_images/Professional_office_analytics_workspace_90dbc817.png";
+import handshakeImage from "@assets/generated_images/Professional_business_handshake_meeting_724df08c.png";
+import dashboardImage from "@assets/generated_images/Financial_dashboard_interface_design_7156625d.png";
 
 export default function Landing() {
   const handleLogin = () => {
@@ -11,7 +14,7 @@ export default function Landing() {
   return (
     <div className="min-h-screen bg-background">
       {/* Navigation Header */}
-      <nav className="bg-card">
+      <nav className="bg-card/80 backdrop-blur-sm fixed w-full z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-end items-center h-16">
             <Button 
@@ -25,119 +28,207 @@ export default function Landing() {
         </div>
       </nav>
 
-      {/* Hero Section */}
-      <div className="relative overflow-hidden bg-gradient-to-br from-primary/10 via-background to-accent/10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
-          <div className="text-center">
-            <div className="flex justify-center items-center mb-6">
-              <div className="w-32 h-32 bg-primary rounded-lg flex items-center justify-center p-4">
-                <img src={nexusLogo} alt="Nexus AR" className="w-full h-full object-contain" />
-              </div>
+      {/* Hero Section with Background Image */}
+      <section 
+        className="relative min-h-screen flex items-center justify-center bg-cover bg-center"
+        style={{ backgroundImage: `url(${heroImage})` }}
+      >
+        <div className="absolute inset-0 bg-black/60"></div>
+        <div className="relative z-10 text-center text-white max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-center items-center mb-8">
+            <div className="w-24 h-24 bg-white/10 backdrop-blur-sm rounded-2xl flex items-center justify-center p-4">
+              <img src={nexusLogo} alt="Nexus AR" className="w-full h-full object-contain" />
             </div>
-            <h1 className="text-4xl md:text-6xl font-bold text-foreground mb-6">
-              Nexus AR
-            </h1>
-            <p className="text-xl md:text-2xl text-muted-foreground mb-4">
-              AI-Driven Accounts Receivable & Debt Recovery
-            </p>
-            <p className="text-lg text-muted-foreground mb-8 max-w-3xl mx-auto">
-              Streamline your collection process with intelligent automation, 
-              multi-channel communication, and data-driven insights. 
-              Reduce days sales outstanding and improve cash flow.
-            </p>
+          </div>
+          <h1 className="text-5xl md:text-7xl font-bold mb-6">
+            Nexus AR
+          </h1>
+          <p className="text-2xl md:text-3xl text-white/90 mb-4">
+            AI-Driven Accounts Receivable & Debt Recovery
+          </p>
+          <p className="text-xl text-white/80 mb-12 max-w-3xl mx-auto leading-relaxed">
+            Transform your collection process with intelligent automation, multi-channel communication, 
+            and data-driven insights. Reduce days sales outstanding and improve cash flow.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button 
               onClick={handleLogin}
               size="lg"
-              className="text-lg px-8 py-3 bg-[#17B6C3] hover:bg-[#1396A1] text-white"
-              data-testid="button-login"
+              className="text-lg px-8 py-4 bg-[#17B6C3] hover:bg-[#1396A1] text-white"
+              data-testid="button-hero-get-started"
             >
               Get Started
+              <ArrowRight className="ml-2 h-5 w-5" />
+            </Button>
+            <Button 
+              onClick={handleLogin}
+              variant="outline"
+              size="lg"
+              className="text-lg px-8 py-4 border-white text-white hover:bg-white hover:text-black"
+              data-testid="button-hero-demo"
+            >
+              View Demo
             </Button>
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* Features Section */}
-      <div className="py-20 bg-card">
+      {/* Content Section - Benefits */}
+      <section className="py-24 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
-              Everything you need to collect faster
+            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
+              Accelerate Your Cash Flow
             </h2>
-            <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-              Our comprehensive platform integrates with your existing systems 
-              and automates your entire collection workflow.
+            <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
+              Our intelligent platform reduces collection time by 40% and increases payment rates by 60% 
+              through automated workflows and AI-powered insights.
             </p>
           </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            <Card className="text-center hover:shadow-lg transition-shadow">
-              <CardHeader>
-                <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mx-auto mb-4">
-                  <Zap className="h-6 w-6 text-blue-600" />
-                </div>
-                <CardTitle>AI-Powered Suggestions</CardTitle>
-                <CardDescription>
-                  Get intelligent recommendations on the best collection strategies 
-                  for each customer based on payment history and behavior patterns.
-                </CardDescription>
-              </CardHeader>
-            </Card>
-
-            <Card className="text-center hover:shadow-lg transition-shadow">
-              <CardHeader>
-                <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mx-auto mb-4">
-                  <CheckCircle className="h-6 w-6 text-green-600" />
-                </div>
-                <CardTitle>Multi-Channel Communication</CardTitle>
-                <CardDescription>
-                  Reach customers through email, SMS, and phone calls with 
-                  automated workflows that escalate appropriately.
-                </CardDescription>
-              </CardHeader>
-            </Card>
-
-            <Card className="text-center hover:shadow-lg transition-shadow">
-              <CardHeader>
-                <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mx-auto mb-4">
-                  <DollarSign className="h-6 w-6 text-purple-600" />
-                </div>
-                <CardTitle>Xero Integration</CardTitle>
-                <CardDescription>
-                  Seamlessly sync with Xero for real-time invoice data, 
-                  contact information, and payment status updates.
-                </CardDescription>
-              </CardHeader>
-            </Card>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-[#17B6C3]/10 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                <BarChart3 className="h-8 w-8 text-[#17B6C3]" />
+              </div>
+              <h3 className="text-2xl font-bold text-gray-900 mb-4">Smart Analytics</h3>
+              <p className="text-gray-600 leading-relaxed">
+                Real-time insights into payment patterns, collection performance, and customer behavior 
+                help you make data-driven decisions.
+              </p>
+            </div>
+            
+            <div className="text-center">
+              <div className="w-16 h-16 bg-[#17B6C3]/10 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                <Users className="h-8 w-8 text-[#17B6C3]" />
+              </div>
+              <h3 className="text-2xl font-bold text-gray-900 mb-4">Multi-Channel Outreach</h3>
+              <p className="text-gray-600 leading-relaxed">
+                Reach customers through email, SMS, and phone with personalized messages that 
+                maintain professional relationships.
+              </p>
+            </div>
+            
+            <div className="text-center">
+              <div className="w-16 h-16 bg-[#17B6C3]/10 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                <Clock className="h-8 w-8 text-[#17B6C3]" />
+              </div>
+              <h3 className="text-2xl font-bold text-gray-900 mb-4">Automated Workflows</h3>
+              <p className="text-gray-600 leading-relaxed">
+                Set up intelligent collection sequences that adapt to customer responses and 
+                payment history automatically.
+              </p>
+            </div>
           </div>
         </div>
-      </div>
+      </section>
 
+      {/* Full-Width Image Section */}
+      <section 
+        className="h-96 bg-cover bg-center relative"
+        style={{ backgroundImage: `url(${handshakeImage})` }}
+      >
+        <div className="absolute inset-0 bg-[#17B6C3]/80"></div>
+        <div className="relative z-10 h-full flex items-center justify-center">
+          <div className="text-center text-white max-w-4xl mx-auto px-4">
+            <h2 className="text-4xl md:text-5xl font-bold mb-6">
+              Trusted by Leading Businesses
+            </h2>
+            <p className="text-xl text-white/90">
+              Join thousands of companies who have transformed their accounts receivable process
+            </p>
+          </div>
+        </div>
+      </section>
 
-      {/* CTA Section */}
-      <div className="py-20 bg-primary">
+      {/* Content Section - Features */}
+      <section className="py-24 bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+            <div>
+              <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
+                Everything you need to collect faster
+              </h2>
+              <p className="text-xl text-gray-600 mb-8 leading-relaxed">
+                Our comprehensive platform integrates with your existing systems and automates 
+                your entire collection workflow from initial contact to final payment.
+              </p>
+              
+              <div className="space-y-6">
+                <div className="flex items-start">
+                  <CheckCircle className="h-6 w-6 text-[#17B6C3] mt-1 mr-4 flex-shrink-0" />
+                  <div>
+                    <h3 className="font-semibold text-gray-900 mb-2">Xero Integration</h3>
+                    <p className="text-gray-600">Seamless sync with your accounting system for real-time data</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-start">
+                  <CheckCircle className="h-6 w-6 text-[#17B6C3] mt-1 mr-4 flex-shrink-0" />
+                  <div>
+                    <h3 className="font-semibold text-gray-900 mb-2">AI-Powered Insights</h3>
+                    <p className="text-gray-600">Smart recommendations on the best collection strategies</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-start">
+                  <CheckCircle className="h-6 w-6 text-[#17B6C3] mt-1 mr-4 flex-shrink-0" />
+                  <div>
+                    <h3 className="font-semibold text-gray-900 mb-2">Compliance Ready</h3>
+                    <p className="text-gray-600">Built-in compliance features for debt collection regulations</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="lg:order-first">
+              <img 
+                src={dashboardImage} 
+                alt="Financial Dashboard" 
+                className="rounded-2xl shadow-2xl w-full"
+              />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Call-to-Action Section */}
+      <section className="py-24 bg-[#17B6C3]">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-3xl md:text-4xl font-bold text-primary-foreground mb-6">
+          <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
             Ready to transform your collections?
           </h2>
-          <p className="text-xl text-primary-foreground/90 mb-8">
-            Join thousands of businesses already using Nexus AR to improve their cash flow.
+          <p className="text-xl text-white/90 mb-12">
+            Join thousands of businesses already using Nexus AR to improve their cash flow 
+            and reduce collection time.
           </p>
-          <Button 
-            onClick={handleLogin}
-            size="lg"
-            className="text-lg px-8 py-3 bg-[#17B6C3] hover:bg-[#1396A1] text-white"
-            data-testid="button-login-cta"
-          >
-            Start Free Trial
-          </Button>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Button 
+              onClick={handleLogin}
+              size="lg"
+              className="text-lg px-8 py-4 bg-white text-[#17B6C3] hover:bg-gray-100"
+              data-testid="button-cta-trial"
+            >
+              Start Free Trial
+              <ArrowRight className="ml-2 h-5 w-5" />
+            </Button>
+            <Button 
+              onClick={handleLogin}
+              variant="outline"
+              size="lg"
+              className="text-lg px-8 py-4 border-white text-white hover:bg-white hover:text-[#17B6C3]"
+              data-testid="button-cta-demo"
+            >
+              Schedule Demo
+            </Button>
+          </div>
         </div>
-      </div>
+      </section>
 
       {/* Footer */}
-      <footer className="py-8 bg-card border-t">
+      <footer className="py-12 bg-gray-900">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center text-muted-foreground">
+          <div className="text-center text-gray-400">
             <p>&copy; 2025 Nexus AR Limited. All Rights Reserved.</p>
           </div>
         </div>
