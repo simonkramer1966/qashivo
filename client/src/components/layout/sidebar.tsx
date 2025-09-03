@@ -10,8 +10,7 @@ import {
   BarChart, 
   Settings, 
   ChevronDown,
-  LogOut,
-  Palette
+  LogOut
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import nexusLogo from "@assets/Main Nexus Logo copy_1756923544828.png";
@@ -23,7 +22,6 @@ const navigation = [
   { name: "Collection Workflows", href: "/workflows", icon: Workflow },
   { name: "AI Suggestions", href: "#", icon: Bot },
   { name: "Reports", href: "#", icon: BarChart },
-  { name: "UI Choices", href: "/ui-choices", icon: Palette },
   { name: "Settings", href: "/settings", icon: Settings },
 ];
 
