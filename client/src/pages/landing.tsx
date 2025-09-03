@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { CheckCircle, DollarSign, TrendingUp, Zap } from "lucide-react";
+import nexusLogo from "@assets/Main Nexus Logo copy_1756923544828.png";
 
 export default function Landing() {
   const handleLogin = () => {
@@ -14,8 +15,8 @@ export default function Landing() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
           <div className="text-center">
             <div className="flex justify-center items-center mb-6">
-              <div className="w-16 h-16 bg-primary rounded-lg flex items-center justify-center">
-                <Zap className="h-8 w-8 text-primary-foreground" />
+              <div className="w-16 h-16 bg-primary rounded-lg flex items-center justify-center p-2">
+                <img src={nexusLogo} alt="Nexus AR" className="w-full h-full object-contain" />
               </div>
             </div>
             <h1 className="text-4xl md:text-6xl font-bold text-foreground mb-6">

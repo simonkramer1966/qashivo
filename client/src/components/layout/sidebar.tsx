@@ -9,10 +9,10 @@ import {
   Bot, 
   BarChart, 
   Settings, 
-  ChevronDown,
-  Zap 
+  ChevronDown 
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import nexusLogo from "@assets/Main Nexus Logo copy_1756923544828.png";
 
 const navigation = [
   { name: "Dashboard", href: "/", icon: BarChart3 },
@@ -36,8 +36,8 @@ export default function Sidebar() {
     <aside className="w-64 bg-card border-r border-border shadow-sm">
       <div className="p-6 border-b border-border">
         <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
-            <Zap className="text-primary-foreground text-xl" />
+          <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center p-1">
+            <img src={nexusLogo} alt="Nexus AR" className="w-full h-full object-contain" />
           </div>
           <div>
             <h1 className="text-xl font-semibold text-foreground" data-testid="text-app-name">
