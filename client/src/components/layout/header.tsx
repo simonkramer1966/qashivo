@@ -8,9 +8,10 @@ interface HeaderProps {
   title: string;
   subtitle: string;
   action?: React.ReactNode;
+  noBorder?: boolean;
 }
 
-export default function Header({ title, subtitle, action }: HeaderProps) {
+export default function Header({ title, subtitle, action, noBorder = false }: HeaderProps) {
   const { user } = useAuth();
 
   const handleLogout = () => {
@@ -42,7 +43,7 @@ export default function Header({ title, subtitle, action }: HeaderProps) {
   };
 
   return (
-    <header className="bg-card border-b border-border px-6 py-4">
+    <header className={`bg-card px-6 py-4 ${noBorder ? '' : 'border-b border-border'}`}>
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-semibold text-foreground" data-testid="text-page-title">

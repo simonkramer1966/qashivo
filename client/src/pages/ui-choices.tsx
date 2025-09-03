@@ -73,7 +73,7 @@ export default function UIChoices() {
     <div className="flex h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-teal-50">
       <Sidebar />
       <main className="flex-1 overflow-y-auto">
-        <Header title="UI Choices" subtitle="Premium SaaS Dashboard Design Exploration" />
+        <Header title="UI Choices" subtitle="Premium SaaS Dashboard Design Exploration" noBorder={true} />
         
         <div className="p-8 space-y-8">
           {/* Hero Metrics - Glassmorphism Cards */}
