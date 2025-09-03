@@ -77,8 +77,8 @@ export default function UIChoices() {
           title="UI Choices" 
           subtitle="Premium SaaS Dashboard Design Exploration" 
           noBorder={true}
-          titleSize="text-xl"
-          subtitleSize="text-sm"
+          titleSize="text-2xl"
+          subtitleSize="text-base"
         />
         
         <div className="p-8 space-y-8">
