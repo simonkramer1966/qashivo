@@ -57,13 +57,36 @@ function updateUserSession(
 async function upsertUser(
   claims: any,
 ) {
-  await storage.upsertUser({
-    id: claims["sub"],
-    email: claims["email"],
-    firstName: claims["first_name"],
-    lastName: claims["last_name"],
-    profileImageUrl: claims["profile_image_url"],
-  });
+  // Check if user already exists
+  const existingUser = await storage.getUser(claims["sub"]);
+  
+  if (existingUser) {
+    // Update existing user
+    await storage.upsertUser({
+      id: claims["sub"],
+      email: claims["email"],
+      firstName: claims["first_name"],
+      lastName: claims["last_name"],
+      profileImageUrl: claims["profile_image_url"],
+      tenantId: existingUser.tenantId, // Keep existing tenant association
+    });
+  } else {
+    // Create new tenant for new user
+    const tenant = await storage.createTenant({
+      name: claims["email"] || `User ${claims["sub"]}`,
+      subdomain: `user-${claims["sub"]}`,
+    });
+    
+    // Create user with tenant association
+    await storage.upsertUser({
+      id: claims["sub"],
+      email: claims["email"],
+      firstName: claims["first_name"],
+      lastName: claims["last_name"],
+      profileImageUrl: claims["profile_image_url"],
+      tenantId: tenant.id,
+    });
+  }
 }
 
 export async function setupAuth(app: Express) {
