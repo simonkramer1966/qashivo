@@ -13,13 +13,7 @@ export default function Landing() {
       {/* Navigation Header */}
       <nav className="bg-card border-b border-border">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center p-1">
-                <img src={nexusLogo} alt="Nexus AR" className="w-full h-full object-contain" />
-              </div>
-              <span className="text-xl font-semibold text-foreground">Nexus AR</span>
-            </div>
+          <div className="flex justify-end items-center h-16">
             <Button 
               onClick={handleLogin}
               variant="outline"
