@@ -33,7 +33,7 @@ export default function Landing() {
             <Button 
               onClick={handleLogin}
               size="lg"
-              className="text-lg px-8 py-3 bg-[#26D0CE] hover:bg-[#1FABA8] text-white"
+              className="text-lg px-8 py-3 bg-[#17B6C3] hover:bg-[#1396A1] text-white"
               data-testid="button-login"
             >
               Get Started
@@ -154,7 +154,7 @@ export default function Landing() {
           <Button 
             onClick={handleLogin}
             size="lg"
-            className="text-lg px-8 py-3 bg-[#26D0CE] hover:bg-[#1FABA8] text-white"
+            className="text-lg px-8 py-3 bg-[#17B6C3] hover:bg-[#1396A1] text-white"
             data-testid="button-login-cta"
           >
             Start Free Trial
