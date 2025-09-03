@@ -457,6 +457,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Test endpoint to verify callback URL is reachable
+  app.get("/api/xero/test-callback", async (req, res) => {
+    res.send(`
+      <html>
+        <body style="font-family: system-ui; text-align: center; padding: 2rem;">
+          <h1>✅ Callback URL is Working</h1>
+          <p>This confirms your Replit server can receive callbacks at:</p>
+          <code style="background: #f5f5f5; padding: 1rem; display: block; margin: 1rem 0;">
+            https://aa582738-6e16-49a1-8fcd-aec804a072e7-00-1x8ni2b2nm0k7.picard.replit.dev/api/xero/callback
+          </code>
+          <p>Copy this EXACT URL to your Xero app's redirect URI setting.</p>
+          <a href="/settings" style="background: #17B6C3; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px;">Back to Settings</a>
+        </body>
+      </html>
+    `);
+  });
+
   // Mock Xero auth endpoint for development
   app.get("/api/xero/mock-auth", async (req, res) => {
     try {
