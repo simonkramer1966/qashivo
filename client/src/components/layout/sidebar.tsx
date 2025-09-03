@@ -9,7 +9,8 @@ import {
   Bot, 
   BarChart, 
   Settings, 
-  ChevronDown 
+  ChevronDown,
+  LogOut 
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import nexusLogo from "@assets/Main Nexus Logo copy_1756923544828.png";
@@ -33,7 +34,7 @@ export default function Sidebar() {
   };
 
   return (
-    <aside className="w-64 bg-card border-r border-border shadow-sm">
+    <aside className="w-64 bg-card border-r border-border shadow-sm flex flex-col">
       <div className="p-6 relative">
         <div className="flex items-center space-x-3">
           <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center p-1">
@@ -80,6 +81,19 @@ export default function Sidebar() {
             );
           })}
         </ul>
+        
+        {/* Sign Out Button */}
+        <div className="mt-auto pt-4 border-t border-border">
+          <Button
+            variant="ghost"
+            className="w-full justify-start text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+            onClick={handleLogout}
+            data-testid="button-logout"
+          >
+            <LogOut className="w-5 h-5 mr-3" />
+            <span>Sign Out</span>
+          </Button>
+        </div>
       </nav>
     </aside>
   );
