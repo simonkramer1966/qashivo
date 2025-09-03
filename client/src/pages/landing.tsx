@@ -98,49 +98,6 @@ export default function Landing() {
         </div>
       </div>
 
-      {/* Integration Logos */}
-      <div className="py-16 bg-muted/50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <h3 className="text-2xl font-semibold text-foreground mb-4">
-              Integrated with the tools you already use
-            </h3>
-            <p className="text-muted-foreground">
-              Nexus AR connects with your existing business systems
-            </p>
-          </div>
-          
-          <div className="flex justify-center items-center space-x-12 opacity-60">
-            <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-blue-600 rounded flex items-center justify-center">
-                <span className="text-white text-sm font-bold">X</span>
-              </div>
-              <span className="text-lg font-semibold">Xero</span>
-            </div>
-            
-            <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-green-600 rounded flex items-center justify-center">
-                <span className="text-white text-sm font-bold">SG</span>
-              </div>
-              <span className="text-lg font-semibold">SendGrid</span>
-            </div>
-            
-            <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-purple-600 rounded flex items-center justify-center">
-                <span className="text-white text-sm font-bold">AI</span>
-              </div>
-              <span className="text-lg font-semibold">OpenAI</span>
-            </div>
-            
-            <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-red-600 rounded flex items-center justify-center">
-                <span className="text-white text-sm font-bold">T</span>
-              </div>
-              <span className="text-lg font-semibold">Twilio</span>
-            </div>
-          </div>
-        </div>
-      </div>
 
       {/* CTA Section */}
       <div className="py-20 bg-primary">
