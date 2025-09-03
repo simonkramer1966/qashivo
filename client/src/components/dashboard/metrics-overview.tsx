@@ -70,7 +70,7 @@ export default function MetricsOverview() {
       {metricsData.map((metric) => (
         <Card 
           key={metric.title} 
-          className="relative overflow-hidden bg-white/70 backdrop-blur-md border-white/20 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 metric-card" 
+          className="relative overflow-hidden bg-white/70 backdrop-blur-md border-0 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 metric-card" 
           data-testid={metric.testId}
         >
           <div className={`absolute inset-0 bg-gradient-to-br from-${metric.gradientFrom} to-transparent`}></div>
