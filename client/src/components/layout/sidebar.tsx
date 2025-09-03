@@ -43,10 +43,10 @@ export default function Sidebar() {
             <img src={nexusLogo} alt="Nexus AR" className="w-full h-full object-contain" />
           </div>
           <div>
-            <h1 className="text-2xl font-semibold text-foreground" data-testid="text-app-name">
+            <h1 className="text-xl font-semibold text-foreground" data-testid="text-app-name">
               Nexus AR
             </h1>
-            <p className="text-base text-muted-foreground" data-testid="text-app-subtitle">
+            <p className="text-sm text-muted-foreground" data-testid="text-app-subtitle">
               Debt Recovery Suite
             </p>
           </div>
