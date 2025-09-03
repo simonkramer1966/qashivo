@@ -15,7 +15,7 @@ export default function Landing() {
           <div className="text-center">
             <div className="flex justify-center items-center mb-6">
               <div className="w-16 h-16 bg-primary rounded-lg flex items-center justify-center">
-                <TrendingUp className="h-8 w-8 text-primary-foreground" />
+                <Zap className="h-8 w-8 text-primary-foreground" />
               </div>
             </div>
             <h1 className="text-4xl md:text-6xl font-bold text-foreground mb-6">
