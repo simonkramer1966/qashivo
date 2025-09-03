@@ -15,7 +15,7 @@ export default function Landing() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
           <div className="text-center">
             <div className="flex justify-center items-center mb-6">
-              <div className="w-16 h-16 bg-primary rounded-lg flex items-center justify-center p-2">
+              <div className="w-32 h-32 bg-primary rounded-lg flex items-center justify-center p-4">
                 <img src={nexusLogo} alt="Nexus AR" className="w-full h-full object-contain" />
               </div>
             </div>
