@@ -441,7 +441,7 @@ export default function Settings() {
                     Branding & Appearance
                   </CardTitle>
                   <CardDescription>
-                    Customize the appearance of your AR Pro instance
+                    Customize the appearance of your Nexus AR instance
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
@@ -481,7 +481,7 @@ export default function Settings() {
                       <Label htmlFor="companyName">Company Name (in sidebar)</Label>
                       <Input 
                         id="companyName"
-                        defaultValue="AR Pro"
+                        defaultValue="Nexus AR"
                         className="mt-2"
                         data-testid="input-sidebar-company-name"
                       />

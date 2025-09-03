@@ -9,7 +9,8 @@ import {
   Bot, 
   BarChart, 
   Settings, 
-  ChevronDown 
+  ChevronDown,
+  Zap 
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -36,11 +37,11 @@ export default function Sidebar() {
       <div className="p-6 border-b border-border">
         <div className="flex items-center space-x-3">
           <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
-            <BarChart3 className="text-primary-foreground text-xl" />
+            <Zap className="text-primary-foreground text-xl" />
           </div>
           <div>
             <h1 className="text-xl font-semibold text-foreground" data-testid="text-app-name">
-              AR Pro
+              Nexus AR
             </h1>
             <p className="text-sm text-muted-foreground" data-testid="text-app-subtitle">
               Debt Recovery Suite

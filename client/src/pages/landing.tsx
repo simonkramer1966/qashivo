@@ -19,7 +19,7 @@ export default function Landing() {
               </div>
             </div>
             <h1 className="text-4xl md:text-6xl font-bold text-foreground mb-6">
-              AR Pro
+              Nexus AR
             </h1>
             <p className="text-xl md:text-2xl text-muted-foreground mb-4">
               AI-Driven Accounts Receivable & Debt Recovery
@@ -105,7 +105,7 @@ export default function Landing() {
               Integrated with the tools you already use
             </h3>
             <p className="text-muted-foreground">
-              AR Pro connects with your existing business systems
+              Nexus AR connects with your existing business systems
             </p>
           </div>
           
@@ -148,7 +148,7 @@ export default function Landing() {
             Ready to transform your collections?
           </h2>
           <p className="text-xl text-primary-foreground/90 mb-8">
-            Join thousands of businesses already using AR Pro to improve their cash flow.
+            Join thousands of businesses already using Nexus AR to improve their cash flow.
           </p>
           <Button 
             onClick={handleLogin}
@@ -166,7 +166,7 @@ export default function Landing() {
       <footer className="py-8 bg-card border-t">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center text-muted-foreground">
-            <p>&copy; 2024 AR Pro. All rights reserved.</p>
+            <p>&copy; 2024 Nexus AR. All rights reserved.</p>
           </div>
         </div>
       </footer>

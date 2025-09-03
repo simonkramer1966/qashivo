@@ -2,7 +2,7 @@
 
 ## Overview
 
-AR Pro is an AI-driven accounts receivable and debt recovery application built with a modern full-stack architecture. The system helps businesses streamline their collection processes through intelligent automation, multi-channel communication, and data-driven insights. It provides comprehensive invoice management, automated workflows, and integration with external services like Xero, SendGrid, and Twilio to optimize cash flow and reduce days sales outstanding.
+Nexus AR is an AI-driven accounts receivable and debt recovery application built with a modern full-stack architecture. The system helps businesses streamline their collection processes through intelligent automation, multi-channel communication, and data-driven insights. It provides comprehensive invoice management, automated workflows, and integration with external services like Xero, SendGrid, and Twilio to optimize cash flow and reduce days sales outstanding.
 
 ## User Preferences
 
