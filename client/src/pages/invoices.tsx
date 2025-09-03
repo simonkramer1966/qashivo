@@ -111,7 +111,7 @@ export default function Invoices() {
                       placeholder="Search invoices or contacts..."
                       value={search}
                       onChange={(e) => setSearch(e.target.value)}
-                      className="pl-9 bg-white/70 border-white/20"
+                      className="pl-9 bg-white/70 border-gray-200/30"
                       data-testid="input-search"
                     />
                   </div>
