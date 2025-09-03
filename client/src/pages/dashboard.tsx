@@ -33,15 +33,15 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="flex h-screen bg-background">
+    <div className="flex h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-teal-50">
       <Sidebar />
       <main className="flex-1 overflow-y-auto">
         <Header title="Dashboard" subtitle="Overview of your accounts receivable performance" />
         
-        <div className="p-6 space-y-6">
+        <div className="p-8 space-y-8">
           <MetricsOverview />
           
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2">
               <RecentInvoices />
             </div>

@@ -53,10 +53,12 @@ export default function AIInsights() {
   ];
 
   return (
-    <Card className="shadow-sm">
-      <CardHeader className="border-b border-border">
-        <CardTitle className="flex items-center" data-testid="text-ai-insights-title">
-          <Bot className="text-primary mr-2" />
+    <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
+      <CardHeader>
+        <CardTitle className="text-xl font-bold flex items-center" data-testid="text-ai-insights-title">
+          <div className="p-2 bg-[#17B6C3]/10 rounded-lg mr-3">
+            <Bot className="text-[#17B6C3] h-5 w-5" />
+          </div>
           AI Insights
         </CardTitle>
       </CardHeader>
@@ -64,13 +66,15 @@ export default function AIInsights() {
         {mockInsights.map((insight, index) => (
           <div 
             key={index} 
-            className={`p-4 rounded-lg border ${insight.bgColor} ${insight.borderColor}`}
+            className="p-4 rounded-xl bg-slate-50/80 border border-slate-200/50 hover:bg-slate-100/80 transition-colors"
             data-testid={`insight-${insight.type}-${index}`}
           >
             <div className="flex items-start space-x-3">
-              <insight.icon className={`${insight.iconColor} mt-1`} size={16} />
+              <div className={`p-2 ${insight.bgColor} rounded-lg`}>
+                <insight.icon className={`${insight.iconColor}`} size={16} />
+              </div>
               <div className="flex-1">
-                <h4 className={`font-medium ${insight.titleColor}`} data-testid={`text-insight-title-${index}`}>
+                <h4 className="font-semibold text-slate-900" data-testid={`text-insight-title-${index}`}>
                   {insight.title}
                 </h4>
                 <p className={`text-sm ${insight.descColor} mt-1`} data-testid={`text-insight-description-${index}`}>
