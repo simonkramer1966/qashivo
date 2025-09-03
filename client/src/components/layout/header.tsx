@@ -9,9 +9,11 @@ interface HeaderProps {
   subtitle: string;
   action?: React.ReactNode;
   noBorder?: boolean;
+  titleSize?: string;
+  subtitleSize?: string;
 }
 
-export default function Header({ title, subtitle, action, noBorder = false }: HeaderProps) {
+export default function Header({ title, subtitle, action, noBorder = false, titleSize = "text-2xl", subtitleSize = "text-base" }: HeaderProps) {
   const { user } = useAuth();
 
   const handleLogout = () => {
@@ -46,10 +48,10 @@ export default function Header({ title, subtitle, action, noBorder = false }: He
     <header className={`bg-card px-6 py-4 ${noBorder ? '' : 'border-b border-border'}`}>
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-semibold text-foreground" data-testid="text-page-title">
+          <h2 className={`${titleSize} font-semibold text-foreground`} data-testid="text-page-title">
             {title}
           </h2>
-          <p className="text-muted-foreground" data-testid="text-page-subtitle">
+          <p className={`${subtitleSize} text-muted-foreground`} data-testid="text-page-subtitle">
             {subtitle}
           </p>
         </div>
