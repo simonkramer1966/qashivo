@@ -13,17 +13,80 @@ export default function Landing() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Navigation Header */}
-      <nav className="bg-card fixed w-full z-50">
+      {/* Premium Navigation Header */}
+      <nav className="bg-white/95 backdrop-blur-md border-b border-gray-200/20 fixed w-full z-50 shadow-lg">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-end items-center h-16">
-            <Button 
-              onClick={handleLogin}
-              className="text-sm bg-[#17B6C3] hover:bg-[#1396A1] text-white"
-              data-testid="button-nav-login"
-            >
-              Login
-            </Button>
+          <div className="flex justify-between items-center h-20">
+            {/* Logo Section */}
+            <div className="flex items-center space-x-3">
+              <div className="w-12 h-12 bg-[#17B6C3]/10 backdrop-blur-sm rounded-xl flex items-center justify-center p-2">
+                <img src={nexusLogo} alt="Nexus AR" className="w-full h-full object-contain" />
+              </div>
+              <div className="flex flex-col">
+                <h1 className="text-2xl font-bold text-gray-900" data-testid="text-brand-name">
+                  Nexus AR
+                </h1>
+                <p className="text-xs text-[#17B6C3] font-medium tracking-wide uppercase">
+                  AI-Driven Collections
+                </p>
+              </div>
+            </div>
+
+            {/* Navigation Menu */}
+            <div className="hidden lg:flex items-center space-x-8">
+              <a href="#home" className="text-gray-700 hover:text-[#17B6C3] font-medium transition-colors duration-200" data-testid="link-nav-home">
+                Home
+              </a>
+              <a href="#features" className="text-gray-700 hover:text-[#17B6C3] font-medium transition-colors duration-200" data-testid="link-nav-features">
+                Features
+              </a>
+              <a href="#ai-capabilities" className="text-gray-700 hover:text-[#17B6C3] font-medium transition-colors duration-200" data-testid="link-nav-ai">
+                AI Capabilities
+              </a>
+              <a href="#pricing" className="text-gray-700 hover:text-[#17B6C3] font-medium transition-colors duration-200" data-testid="link-nav-pricing">
+                Pricing
+              </a>
+              <a href="#about" className="text-gray-700 hover:text-[#17B6C3] font-medium transition-colors duration-200" data-testid="link-nav-about">
+                About
+              </a>
+              <a href="#contact" className="text-gray-700 hover:text-[#17B6C3] font-medium transition-colors duration-200" data-testid="link-nav-contact">
+                Contact
+              </a>
+            </div>
+
+            {/* CTA Section */}
+            <div className="flex items-center space-x-4">
+              <Button 
+                onClick={handleLogin}
+                variant="ghost"
+                className="text-gray-700 hover:text-[#17B6C3] hover:bg-[#17B6C3]/5 font-medium"
+                data-testid="button-nav-login"
+              >
+                Sign In
+              </Button>
+              <Button 
+                onClick={handleLogin}
+                className="bg-gradient-to-r from-[#17B6C3] to-[#1396A1] hover:from-[#1396A1] hover:to-[#117A85] text-white font-semibold px-6 py-2.5 rounded-lg shadow-lg hover:shadow-xl transition-all duration-300"
+                data-testid="button-nav-get-started"
+              >
+                Get Started Free
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </div>
+
+            {/* Mobile Menu Button */}
+            <div className="lg:hidden">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-gray-700"
+                data-testid="button-mobile-menu"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+              </Button>
+            </div>
           </div>
         </div>
       </nav>
