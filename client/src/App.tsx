@@ -12,6 +12,7 @@ import Workflows from "@/pages/workflows";
 import Settings from "@/pages/settings";
 import AiSuggestions from "@/pages/ai-suggestions";
 import Reports from "@/pages/reports";
+import UIChoices from "@/pages/ui-choices";
 import Cashflow from "@/pages/cashflow";
 import Features from "@/pages/features";
 import AiCapabilities from "@/pages/ai-capabilities";
@@ -44,6 +45,7 @@ function Router() {
           <Route path="/ai-suggestions" component={AiSuggestions} />
           <Route path="/reports" component={Reports} />
           <Route path="/settings" component={Settings} />
+          <Route path="/ui-choices" component={UIChoices} />
         </>
       )}
       <Route component={NotFound} />
