@@ -7,10 +7,12 @@ import WorkflowTemplates from "@/components/dashboard/workflow-templates";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus, Workflow, BarChart3, Activity, Target, Zap } from "lucide-react";
+import { useLocation } from "wouter";
 
 export default function Workflows() {
   const { toast } = useToast();
   const { isAuthenticated, isLoading } = useAuth();
+  const [, setLocation] = useLocation();
 
   // Redirect to home if not authenticated
   useEffect(() => {
@@ -39,7 +41,11 @@ export default function Workflows() {
           title="Collection Workflows" 
           subtitle="Create and manage automated collection processes"
           action={
-            <Button className="bg-[#17B6C3] hover:bg-[#1396A1] text-white" data-testid="button-create-workflow">
+            <Button 
+              onClick={() => setLocation('/workflow-builder')}
+              className="bg-[#17B6C3] hover:bg-[#1396A1] text-white" 
+              data-testid="button-create-workflow"
+            >
               <Plus className="mr-2 h-4 w-4" />
               Create Workflow
             </Button>

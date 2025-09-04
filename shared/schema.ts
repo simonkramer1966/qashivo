@@ -122,9 +122,54 @@ export const workflows = pgTable("workflows", {
   name: varchar("name").notNull(),
   description: text("description"),
   isActive: boolean("is_active").default(true),
+  isTemplate: boolean("is_template").default(false),
+  category: varchar("category"), // "email_sequence", "multi_channel", "escalation", etc.
   trigger: jsonb("trigger"), // Conditions to start workflow
-  steps: jsonb("steps"), // Array of workflow steps
+  steps: jsonb("steps"), // Array of workflow steps (legacy - for backward compatibility)
+  canvasData: jsonb("canvas_data"), // Visual workflow builder data (positions, zoom, etc.)
   successRate: decimal("success_rate", { precision: 5, scale: 2 }),
+  estimatedCost: decimal("estimated_cost", { precision: 8, scale: 2 }), // Cost per execution
+  testScenarios: jsonb("test_scenarios"), // Saved test scenarios
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Workflow nodes for visual workflow builder
+export const workflowNodes = pgTable("workflow_nodes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workflowId: varchar("workflow_id").notNull().references(() => workflows.id, { onDelete: "cascade" }),
+  nodeType: varchar("node_type").notNull(), // "trigger", "action", "decision", "delay"
+  subType: varchar("sub_type"), // "email", "sms", "whatsapp", "voice", "payment_received", etc.
+  label: varchar("label").notNull(),
+  position: jsonb("position").notNull(), // {x: number, y: number}
+  config: jsonb("config").notNull(), // Node-specific configuration
+  isStartNode: boolean("is_start_node").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Workflow connections between nodes
+export const workflowConnections = pgTable("workflow_connections", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workflowId: varchar("workflow_id").notNull().references(() => workflows.id, { onDelete: "cascade" }),
+  sourceNodeId: varchar("source_node_id").notNull().references(() => workflowNodes.id, { onDelete: "cascade" }),
+  targetNodeId: varchar("target_node_id").notNull().references(() => workflowNodes.id, { onDelete: "cascade" }),
+  condition: jsonb("condition"), // Condition for this connection (for decision nodes)
+  label: varchar("label"), // Optional label for the connection
+  successRate: decimal("success_rate", { precision: 5, scale: 2 }), // Historical success rate
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Workflow templates
+export const workflowTemplates = pgTable("workflow_templates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull(),
+  description: text("description"),
+  category: varchar("category").notNull(), // "freelancer", "small_business", "enterprise", etc.
+  industry: varchar("industry"), // "consulting", "retail", "construction", etc.
+  workflowData: jsonb("workflow_data").notNull(), // Complete workflow definition
+  isPublic: boolean("is_public").default(false), // System templates vs custom
+  usageCount: integer("usage_count").default(0),
+  averageSuccessRate: decimal("average_success_rate", { precision: 5, scale: 2 }),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -186,10 +231,42 @@ export const actionsRelations = relations(actions, ({ one }) => ({
   }),
 }));
 
-export const workflowsRelations = relations(workflows, ({ one }) => ({
+export const workflowsRelations = relations(workflows, ({ one, many }) => ({
   tenant: one(tenants, {
     fields: [workflows.tenantId],
     references: [tenants.id],
+  }),
+  nodes: many(workflowNodes),
+  connections: many(workflowConnections),
+}));
+
+export const workflowNodesRelations = relations(workflowNodes, ({ one, many }) => ({
+  workflow: one(workflows, {
+    fields: [workflowNodes.workflowId],
+    references: [workflows.id],
+  }),
+  sourceConnections: many(workflowConnections, {
+    relationName: "sourceNode",
+  }),
+  targetConnections: many(workflowConnections, {
+    relationName: "targetNode",
+  }),
+}));
+
+export const workflowConnectionsRelations = relations(workflowConnections, ({ one }) => ({
+  workflow: one(workflows, {
+    fields: [workflowConnections.workflowId],
+    references: [workflows.id],
+  }),
+  sourceNode: one(workflowNodes, {
+    fields: [workflowConnections.sourceNodeId],
+    references: [workflowNodes.id],
+    relationName: "sourceNode",
+  }),
+  targetNode: one(workflowNodes, {
+    fields: [workflowConnections.targetNodeId],
+    references: [workflowNodes.id],
+    relationName: "targetNode",
   }),
 }));
 
@@ -224,6 +301,22 @@ export const insertWorkflowSchema = createInsertSchema(workflows).omit({
   updatedAt: true,
 });
 
+export const insertWorkflowNodeSchema = createInsertSchema(workflowNodes).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertWorkflowConnectionSchema = createInsertSchema(workflowConnections).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertWorkflowTemplateSchema = createInsertSchema(workflowTemplates).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
@@ -237,3 +330,9 @@ export type InsertAction = z.infer<typeof insertActionSchema>;
 export type Action = typeof actions.$inferSelect;
 export type InsertWorkflow = z.infer<typeof insertWorkflowSchema>;
 export type Workflow = typeof workflows.$inferSelect;
+export type InsertWorkflowNode = z.infer<typeof insertWorkflowNodeSchema>;
+export type WorkflowNode = typeof workflowNodes.$inferSelect;
+export type InsertWorkflowConnection = z.infer<typeof insertWorkflowConnectionSchema>;
+export type WorkflowConnection = typeof workflowConnections.$inferSelect;
+export type InsertWorkflowTemplate = z.infer<typeof insertWorkflowTemplateSchema>;
+export type WorkflowTemplate = typeof workflowTemplates.$inferSelect;

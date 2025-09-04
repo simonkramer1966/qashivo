@@ -9,6 +9,7 @@ import Dashboard from "@/pages/dashboard";
 import Invoices from "@/pages/invoices";
 import Contacts from "@/pages/contacts";
 import Workflows from "@/pages/workflows";
+import WorkflowBuilder from "@/pages/workflow-builder";
 import Settings from "@/pages/settings";
 import AiSuggestions from "@/pages/ai-suggestions";
 import Reports from "@/pages/reports";
@@ -58,6 +59,7 @@ function Router() {
           <Route path="/invoices" component={Invoices} />
           <Route path="/contacts" component={Contacts} />
           <Route path="/workflows" component={Workflows} />
+          <Route path="/workflow-builder" component={WorkflowBuilder} />
           <Route path="/ai-suggestions" component={AiSuggestions} />
           <Route path="/reports" component={Reports} />
           <Route path="/settings" component={Settings} />
