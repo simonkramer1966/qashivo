@@ -129,9 +129,12 @@ div[style*="position: fixed"]:not([class]):empty {
   display: none !important;
 }
 
+/* Fix navigation z-index - ensure nav stays on top */
+.fixed {
+  z-index: 9999 !important;
+}
+
 /* Force all interactive elements to be clickable */
 button, a, input, select, textarea {
   pointer-events: auto !important;
-  position: relative !important;
-  z-index: 999 !important;
 }
