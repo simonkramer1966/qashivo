@@ -78,6 +78,9 @@ export default function WorkflowBuilder() {
   const [draggedNodeType, setDraggedNodeType] = useState<any>(null);
   const [workflowName, setWorkflowName] = useState("New Workflow");
   const [isTestMode, setIsTestMode] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [connectionStart, setConnectionStart] = useState<{ nodeId: string; x: number; y: number } | null>(null);
+  const [tempConnection, setTempConnection] = useState<{ x: number; y: number } | null>(null);
 
   // Redirect to home if not authenticated
   useEffect(() => {
@@ -123,8 +126,56 @@ export default function WorkflowBuilder() {
     e.preventDefault();
   };
 
-  const handleNodeClick = (node: WorkflowNode) => {
-    setSelectedNode(node);
+  const handleNodeClick = (node: WorkflowNode, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (isConnecting && connectionStart && connectionStart.nodeId !== node.id) {
+      // Complete the connection
+      const newConnection: WorkflowConnection = {
+        id: `conn_${Date.now()}`,
+        sourceId: connectionStart.nodeId,
+        targetId: node.id,
+      };
+      setConnections(prev => [...prev, newConnection]);
+      setIsConnecting(false);
+      setConnectionStart(null);
+      setTempConnection(null);
+    } else if (!isConnecting) {
+      setSelectedNode(node);
+    }
+  };
+
+  const handleConnectionStart = (node: WorkflowNode, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsConnecting(true);
+    setConnectionStart({
+      nodeId: node.id,
+      x: node.position.x,
+      y: node.position.y,
+    });
+    setSelectedNode(null);
+  };
+
+  const handleCanvasMouseMove = (e: React.MouseEvent) => {
+    if (isConnecting && canvasRef.current) {
+      const rect = canvasRef.current.getBoundingClientRect();
+      setTempConnection({
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top,
+      });
+    }
+  };
+
+  const handleCanvasClick = () => {
+    if (isConnecting) {
+      setIsConnecting(false);
+      setConnectionStart(null);
+      setTempConnection(null);
+    }
+    setSelectedNode(null);
+  };
+
+  const removeConnection = (connectionId: string) => {
+    setConnections(prev => prev.filter(conn => conn.id !== connectionId));
   };
 
   const saveWorkflow = async () => {
@@ -344,6 +395,8 @@ export default function WorkflowBuilder() {
               className="w-full h-full bg-white/30 relative overflow-hidden"
               onDrop={handleCanvasDrop}
               onDragOver={handleCanvasDragOver}
+              onMouseMove={handleCanvasMouseMove}
+              onClick={handleCanvasClick}
               data-testid="workflow-canvas"
             >
               {/* Grid background */}
@@ -358,6 +411,94 @@ export default function WorkflowBuilder() {
                 </svg>
               </div>
 
+              {/* Connection lines */}
+              <svg className="absolute inset-0 pointer-events-none" width="100%" height="100%">
+                <defs>
+                  <marker
+                    id="arrowhead"
+                    markerWidth="10"
+                    markerHeight="7"
+                    refX="9"
+                    refY="3.5"
+                    orient="auto"
+                  >
+                    <polygon
+                      points="0 0, 10 3.5, 0 7"
+                      fill="#17B6C3"
+                    />
+                  </marker>
+                </defs>
+                
+                {/* Existing connections */}
+                {connections.map((connection) => {
+                  const sourceNode = nodes.find(n => n.id === connection.sourceId);
+                  const targetNode = nodes.find(n => n.id === connection.targetId);
+                  
+                  if (!sourceNode || !targetNode) return null;
+                  
+                  const startX = sourceNode.position.x;
+                  const startY = sourceNode.position.y;
+                  const endX = targetNode.position.x;
+                  const endY = targetNode.position.y;
+                  
+                  // Calculate control points for curved line
+                  const dx = endX - startX;
+                  const dy = endY - startY;
+                  const distance = Math.sqrt(dx * dx + dy * dy);
+                  const controlOffset = Math.min(distance * 0.3, 100);
+                  
+                  const cp1x = startX + controlOffset;
+                  const cp1y = startY;
+                  const cp2x = endX - controlOffset;
+                  const cp2y = endY;
+                  
+                  return (
+                    <g key={connection.id}>
+                      <path
+                        d={`M ${startX} ${startY} C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${endX} ${endY}`}
+                        stroke="#17B6C3"
+                        strokeWidth="2"
+                        fill="none"
+                        markerEnd="url(#arrowhead)"
+                        className="hover:stroke-[#1396A1] cursor-pointer"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (window.confirm('Remove this connection?')) {
+                            removeConnection(connection.id);
+                          }
+                        }}
+                        style={{ pointerEvents: 'stroke' }}
+                      />
+                      {/* Connection label */}
+                      {connection.label && (
+                        <text
+                          x={(startX + endX) / 2}
+                          y={(startY + endY) / 2 - 10}
+                          textAnchor="middle"
+                          fontSize="12"
+                          fill="#64748b"
+                          className="pointer-events-none"
+                        >
+                          {connection.label}
+                        </text>
+                      )}
+                    </g>
+                  );
+                })}
+                
+                {/* Temporary connection line while dragging */}
+                {isConnecting && connectionStart && tempConnection && (
+                  <path
+                    d={`M ${connectionStart.x} ${connectionStart.y} L ${tempConnection.x} ${tempConnection.y}`}
+                    stroke="#17B6C3"
+                    strokeWidth="2"
+                    strokeDasharray="5,5"
+                    fill="none"
+                    className="opacity-70"
+                  />
+                )}
+              </svg>
+
               {/* Workflow Nodes */}
               {nodes.map((node) => {
                 const nodeTypeConfig = Object.values(NODE_TYPES).flat().find(
@@ -367,8 +508,8 @@ export default function WorkflowBuilder() {
                 return (
                   <div
                     key={node.id}
-                    onClick={() => handleNodeClick(node)}
-                    className={`absolute cursor-pointer transform -translate-x-1/2 -translate-y-1/2 ${
+                    onClick={(e) => handleNodeClick(node, e)}
+                    className={`absolute cursor-pointer transform -translate-x-1/2 -translate-y-1/2 group ${
                       selectedNode?.id === node.id ? 'ring-2 ring-[#17B6C3] ring-offset-2' : ''
                     }`}
                     style={{
@@ -377,7 +518,7 @@ export default function WorkflowBuilder() {
                     }}
                     data-testid={`node-${node.id}`}
                   >
-                    <Card className="bg-white shadow-lg border-2 border-gray-200 hover:shadow-xl transition-all min-w-[160px]">
+                    <Card className="bg-white shadow-lg border-2 border-gray-200 hover:shadow-xl transition-all min-w-[160px] relative">
                       <CardContent className="p-4">
                         <div className="flex items-center space-x-3">
                           {nodeTypeConfig && (
@@ -389,6 +530,22 @@ export default function WorkflowBuilder() {
                             <div className="font-medium text-sm text-gray-900">{node.label}</div>
                             <div className="text-xs text-gray-500 capitalize">{node.type}</div>
                           </div>
+                        </div>
+                        
+                        {/* Connection ports */}
+                        <div className="absolute -right-2 top-1/2 transform -translate-y-1/2">
+                          <div
+                            className="w-4 h-4 bg-[#17B6C3] rounded-full border-2 border-white shadow-md cursor-crosshair opacity-0 group-hover:opacity-100 transition-opacity hover:scale-110"
+                            onClick={(e) => handleConnectionStart(node, e)}
+                            title="Connect to another node"
+                          />
+                        </div>
+                        
+                        <div className="absolute -left-2 top-1/2 transform -translate-y-1/2">
+                          <div
+                            className="w-4 h-4 bg-gray-400 rounded-full border-2 border-white shadow-md opacity-0 group-hover:opacity-100 transition-opacity"
+                            title="Connection input"
+                          />
                         </div>
                       </CardContent>
                     </Card>
