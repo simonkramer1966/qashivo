@@ -28,6 +28,7 @@ import {
   Lightbulb
 } from "lucide-react";
 import nexusLogo from "@assets/Main Nexus Logo copy_1756923544828.png";
+import featuresHeroImage from "@assets/generated_images/Modern_business_analytics_workspace_8428f465.png";
 
 export default function Features() {
   const handleLogin = () => {
@@ -159,17 +160,21 @@ export default function Features() {
         </div>
       </nav>
 
-      {/* Hero Section */}
-      <section className="pt-32 pb-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      {/* Hero Section with Background Image */}
+      <section 
+        className="relative pt-32 pb-20 bg-cover bg-center"
+        style={{ backgroundImage: `url(${featuresHeroImage})` }}
+      >
+        <div className="absolute inset-0 bg-gradient-to-br from-[#17B6C3]/85 via-[#1396A1]/75 to-slate-900/80"></div>
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <Badge className="bg-[#17B6C3]/10 text-[#17B6C3] border-[#17B6C3]/20 mb-6" data-testid="badge-features-hero">
+            <Badge className="bg-white/20 text-white border-white/30 mb-6 backdrop-blur-sm" data-testid="badge-features-hero">
               Groundbreaking Technology
             </Badge>
-            <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-8" data-testid="text-features-hero-title">
+            <h1 className="text-5xl md:text-6xl font-bold text-white mb-8" data-testid="text-features-hero-title">
               Features That Drive Results
             </h1>
-            <p className="text-xl text-gray-600 max-w-4xl mx-auto leading-relaxed" data-testid="text-features-hero-description">
+            <p className="text-xl text-white/90 max-w-4xl mx-auto leading-relaxed" data-testid="text-features-hero-description">
               Discover the comprehensive suite of AI-powered tools designed to revolutionize 
               your accounts receivable process and accelerate cash flow.
             </p>
@@ -177,21 +182,21 @@ export default function Features() {
 
           {/* Stats Row */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-20">
-            <div className="text-center">
-              <div className="text-4xl font-bold text-[#17B6C3] mb-2" data-testid="text-stat-collection-time">40%</div>
-              <div className="text-gray-600">Faster Collection</div>
+            <div className="text-center bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/20">
+              <div className="text-4xl font-bold text-white mb-2" data-testid="text-stat-collection-time">40%</div>
+              <div className="text-white/80">Faster Collection</div>
             </div>
-            <div className="text-center">
-              <div className="text-4xl font-bold text-[#17B6C3] mb-2" data-testid="text-stat-payment-rate">60%</div>
-              <div className="text-gray-600">Higher Payment Rate</div>
+            <div className="text-center bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/20">
+              <div className="text-4xl font-bold text-white mb-2" data-testid="text-stat-payment-rate">60%</div>
+              <div className="text-white/80">Higher Payment Rate</div>
             </div>
-            <div className="text-center">
-              <div className="text-4xl font-bold text-[#17B6C3] mb-2" data-testid="text-stat-automation">85%</div>
-              <div className="text-gray-600">Process Automation</div>
+            <div className="text-center bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/20">
+              <div className="text-4xl font-bold text-white mb-2" data-testid="text-stat-automation">85%</div>
+              <div className="text-white/80">Process Automation</div>
             </div>
-            <div className="text-center">
-              <div className="text-4xl font-bold text-[#17B6C3] mb-2" data-testid="text-stat-compliance">100%</div>
-              <div className="text-gray-600">Compliance Ready</div>
+            <div className="text-center bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/20">
+              <div className="text-4xl font-bold text-white mb-2" data-testid="text-stat-compliance">100%</div>
+              <div className="text-white/80">Compliance Ready</div>
             </div>
           </div>
         </div>
