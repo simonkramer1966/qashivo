@@ -13,10 +13,32 @@ import { generateCollectionSuggestions, generateEmailDraft } from "./services/op
 import { sendReminderEmail } from "./services/sendgrid";
 import { sendPaymentReminderSMS } from "./services/twilio";
 import { xeroService } from "./services/xero";
+import { generateMockData } from "./mock-data";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
   await setupAuth(app);
+
+  // Mock data generation (for demo purposes)
+  app.post('/api/mock-data/generate', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      console.log('🚀 Starting mock data generation for tenant:', user.tenantId);
+      await generateMockData(user.tenantId);
+      
+      res.json({ 
+        success: true, 
+        message: "Mock data generated successfully! 80 clients and 1,800 invoices created."
+      });
+    } catch (error) {
+      console.error("Error generating mock data:", error);
+      res.status(500).json({ message: "Failed to generate mock data" });
+    }
+  });
 
   // Auth routes
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {

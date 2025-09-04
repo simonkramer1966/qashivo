@@ -22,13 +22,16 @@ import {
   Bell,
   Shield,
   Palette,
-  Settings as SettingsIcon
+  Settings as SettingsIcon,
+  Database,
+  Zap
 } from "lucide-react";
 
 export default function Settings() {
   const { toast } = useToast();
   const { user, isAuthenticated, isLoading } = useAuth();
   const [isConnecting, setIsConnecting] = useState(false);
+  const [isGeneratingMockData, setIsGeneratingMockData] = useState(false);
 
   // Redirect to home if not authenticated
   useEffect(() => {
@@ -63,6 +66,37 @@ export default function Settings() {
       });
     } finally {
       setIsConnecting(false);
+    }
+  };
+
+  const handleGenerateMockData = async () => {
+    setIsGeneratingMockData(true);
+    try {
+      const response = await fetch('/api/mock-data/generate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to generate mock data');
+      }
+      
+      const result = await response.json();
+      toast({
+        title: "Success!",
+        description: result.message,
+        variant: "default",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to generate mock data. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGeneratingMockData(false);
     }
   };
 
@@ -341,6 +375,50 @@ export default function Settings() {
                       </p>
                     </div>
                     <Switch defaultChecked data-testid="switch-ai-emails" />
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Developer Tools */}
+              <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
+                <CardHeader>
+                  <CardTitle className="text-xl font-bold flex items-center justify-between">
+                    <div className="flex items-center">
+                      <div className="p-2 bg-[#17B6C3]/10 rounded-lg mr-3">
+                        <Database className="h-5 w-5 text-[#17B6C3]" />
+                      </div>
+                      Developer Tools
+                    </div>
+                    <Badge className="bg-orange-100 text-orange-800 border-orange-200" data-testid="badge-dev-tools-status">
+                      Demo Mode
+                    </Badge>
+                  </CardTitle>
+                  <CardDescription className="text-base ml-11">
+                    Generate sample data for testing and demonstrations
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center justify-between p-6 bg-gradient-to-r from-slate-50/80 to-blue-50/80 rounded-xl border border-slate-200/50">
+                    <div>
+                      <p className="font-semibold text-slate-900 flex items-center">
+                        <Zap className="h-4 w-4 mr-2 text-[#17B6C3]" />
+                        Generate Mock AR Data
+                      </p>
+                      <p className="text-sm text-slate-600 mt-1">
+                        Creates 80 agency clients with 1,800 invoices over 6 months
+                      </p>
+                      <p className="text-xs text-slate-500 mt-1">
+                        Perfect for demos with realistic overdue accounts and payment patterns
+                      </p>
+                    </div>
+                    <Button 
+                      onClick={handleGenerateMockData}
+                      disabled={isGeneratingMockData}
+                      className="bg-[#17B6C3] hover:bg-[#1396A1] text-white min-w-[120px]"
+                      data-testid="button-generate-mock-data"
+                    >
+                      {isGeneratingMockData ? "Generating..." : "Generate Data"}
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
