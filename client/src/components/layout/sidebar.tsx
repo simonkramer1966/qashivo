@@ -53,7 +53,7 @@ export default function Sidebar() {
         </div>
       </div>
       
-      <nav className="p-4">
+      <nav className="flex-1 p-4">
         <ul className="space-y-2">
           {navigation.map((item) => {
             const isActive = location === item.href || (item.href !== "/" && location.startsWith(item.href));
@@ -81,20 +81,20 @@ export default function Sidebar() {
             );
           })}
         </ul>
-        
-        {/* Sign Out Button */}
-        <div className="mt-auto pt-4 border-t border-border">
-          <Button
-            variant="ghost"
-            className="w-full justify-start text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-            onClick={handleLogout}
-            data-testid="button-logout"
-          >
-            <LogOut className="w-5 h-5 mr-3" />
-            <span>Sign Out</span>
-          </Button>
-        </div>
       </nav>
+      
+      {/* Sign Out Button */}
+      <div className="p-4 pt-0 border-t border-border">
+        <Button
+          variant="ghost"
+          className="w-full justify-start text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+          onClick={handleLogout}
+          data-testid="button-logout"
+        >
+          <LogOut className="w-5 h-5 mr-3" />
+          <span>Sign Out</span>
+        </Button>
+      </div>
     </aside>
   );
 }

@@ -32,7 +32,7 @@ export default function Workflows() {
   }
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex h-screen bg-white">
       <Sidebar />
       <main className="flex-1 overflow-y-auto">
         <Header 
@@ -48,7 +48,7 @@ export default function Workflows() {
         
         <div className="p-8 space-y-8">
           {/* Overview */}
-          <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
+          <Card className="bg-white border border-gray-200 shadow-sm">
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>
@@ -97,7 +97,7 @@ export default function Workflows() {
           <WorkflowTemplates />
 
           {/* How It Works */}
-          <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
+          <Card className="bg-white border border-gray-200 shadow-sm">
             <CardHeader>
               <CardTitle className="text-2xl font-bold flex items-center">
                 <div className="p-3 bg-[#17B6C3]/10 rounded-xl mr-4">

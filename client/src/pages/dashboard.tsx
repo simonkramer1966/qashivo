@@ -33,7 +33,7 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex h-screen bg-white">
       <Sidebar />
       <main className="flex-1 overflow-y-auto">
         <Header title="Dashboard" subtitle="Overview of your accounts receivable performance" />

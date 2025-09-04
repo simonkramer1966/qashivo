@@ -77,7 +77,7 @@ export default function Invoices() {
   });
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex h-screen bg-white">
       <Sidebar />
       <main className="flex-1 overflow-y-auto">
         <Header 
@@ -93,7 +93,7 @@ export default function Invoices() {
         
         <div className="p-8 space-y-8">
           {/* Filters */}
-          <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
+          <Card className="bg-white border border-gray-200 shadow-sm">
             <CardHeader>
               <CardTitle className="text-xl font-bold flex items-center">
                 <div className="p-2 bg-[#17B6C3]/10 rounded-lg mr-3">
@@ -133,7 +133,7 @@ export default function Invoices() {
           </Card>
 
           {/* Invoices Table */}
-          <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
+          <Card className="bg-white border border-gray-200 shadow-sm">
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>
