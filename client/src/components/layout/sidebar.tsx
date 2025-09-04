@@ -22,8 +22,8 @@ const navigation = [
   { name: "Invoices", href: "/invoices", icon: FileText },
   { name: "Contacts", href: "/contacts", icon: Users },
   { name: "Collection Workflows", href: "/workflows", icon: Workflow },
-  { name: "AI Suggestions", href: "#", icon: Bot },
-  { name: "Reports", href: "#", icon: BarChart },
+  { name: "AI Suggestions", href: "/ai-suggestions", icon: Bot },
+  { name: "Reports", href: "/reports", icon: BarChart },
   { name: "Settings", href: "/settings", icon: Settings },
 ];
 
@@ -59,24 +59,23 @@ export default function Sidebar() {
             const isActive = location === item.href || (item.href !== "/" && location.startsWith(item.href));
             return (
               <li key={item.name}>
-                <Link href={item.href}>
-                  <a
-                    className={cn(
-                      "flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors",
-                      isActive 
-                        ? "sidebar-active" 
-                        : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-                    )}
-                    data-testid={`link-${item.name.toLowerCase().replace(/\s+/g, '-')}`}
-                  >
-                    <item.icon className="w-5 h-5" />
-                    <span>{item.name}</span>
-                    {item.name === "Invoices" && (
-                      <span className="ml-auto bg-destructive text-destructive-foreground px-2 py-1 rounded-full text-xs">
-                        23
-                      </span>
-                    )}
-                  </a>
+                <Link
+                  href={item.href}
+                  className={cn(
+                    "flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors",
+                    isActive 
+                      ? "sidebar-active" 
+                      : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                  )}
+                  data-testid={`link-${item.name.toLowerCase().replace(/\s+/g, '-')}`}
+                >
+                  <item.icon className="w-5 h-5" />
+                  <span>{item.name}</span>
+                  {item.name === "Invoices" && (
+                    <span className="ml-auto bg-destructive text-destructive-foreground px-2 py-1 rounded-full text-xs">
+                      23
+                    </span>
+                  )}
                 </Link>
               </li>
             );
