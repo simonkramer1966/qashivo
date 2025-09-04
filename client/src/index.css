@@ -111,3 +111,32 @@
 .workflow-step {
   background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(221.2, 83.2%, 43.3%) 100%);
 }
+
+/* Fix overlay blocking issues */
+* {
+  pointer-events: auto !important;
+}
+
+/* Ensure no invisible overlays */
+[data-radix-popper-content-wrapper] {
+  pointer-events: none !important;
+}
+
+[data-radix-popper-content-wrapper] > * {
+  pointer-events: auto !important;
+}
+
+/* Fix toast viewport */
+[data-sonner-toaster] {
+  pointer-events: none !important;
+}
+
+[data-sonner-toast] {
+  pointer-events: auto !important;
+}
+
+/* Ensure modals work correctly */
+[data-state="closed"] {
+  pointer-events: none !important;
+  display: none !important;
+}
