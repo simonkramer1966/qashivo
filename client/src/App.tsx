@@ -11,6 +11,7 @@ import Contacts from "@/pages/contacts";
 import Workflows from "@/pages/workflows";
 import Settings from "@/pages/settings";
 import Cashflow from "@/pages/cashflow";
+import Features from "@/pages/features";
 import { useAuth } from "@/hooks/useAuth";
 
 function Router() {
@@ -19,7 +20,10 @@ function Router() {
   return (
     <Switch>
       {isLoading || !isAuthenticated ? (
-        <Route path="/" component={Landing} />
+        <>
+          <Route path="/" component={Landing} />
+          <Route path="/features" component={Features} />
+        </>
       ) : (
         <>
           <Route path="/" component={Dashboard} />
