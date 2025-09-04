@@ -63,10 +63,19 @@ export default function Settings() {
   // Mutation to update tenant settings
   const updateTenantMutation = useMutation({
     mutationFn: async (data: { name?: string; settings?: any }) => {
-      return apiRequest('/api/tenant/settings', {
+      const response = await fetch('/api/tenant/settings', {
         method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify(data),
       });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/tenant'] });

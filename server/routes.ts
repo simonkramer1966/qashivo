@@ -751,12 +751,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Tenant settings endpoints
   app.get('/api/tenant', isAuthenticated, async (req: any, res) => {
     try {
-      const user = req.user;
+      const user = await storage.getUser(req.user.claims.sub);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
 
-      const tenant = await storage.getTenant(user.tenantId);
+      const tenant = await storage.getTenant(user.tenantId!);
       if (!tenant) {
         return res.status(404).json({ message: "Tenant not found" });
       }
@@ -770,7 +770,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put('/api/tenant/settings', isAuthenticated, async (req: any, res) => {
     try {
-      const user = req.user;
+      const user = await storage.getUser(req.user.claims.sub);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -781,7 +781,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (name) updates.name = name;
       if (settings) updates.settings = settings;
 
-      const tenant = await storage.updateTenant(user.tenantId, updates);
+      const tenant = await storage.updateTenant(user.tenantId!, updates);
       res.json(tenant);
     } catch (error) {
       console.error("Error updating tenant settings:", error);
