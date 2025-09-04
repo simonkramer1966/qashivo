@@ -13,6 +13,7 @@ export default function RecentInvoices() {
   
   const { data: invoices = [], isLoading } = useQuery({
     queryKey: ["/api/invoices"],
+    refetchOnMount: false,
   });
 
   const sendEmailMutation = useMutation({
