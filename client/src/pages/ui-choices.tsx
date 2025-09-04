@@ -70,137 +70,121 @@ export default function UIChoices() {
   }
 
   return (
-    <div className="flex h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-teal-50">
+    <div className="flex h-screen bg-gray-50">
       <Sidebar />
       <main className="flex-1 overflow-y-auto">
         <Header 
-          title="UI Choices" 
-          subtitle="Premium SaaS Dashboard Design Exploration" 
-          noBorder={true}
+          title="UI Test - Xero Style" 
+          subtitle="Clean Business Interface Design" 
+          noBorder={false}
           titleSize="text-2xl"
           subtitleSize="text-base"
         />
         
-        <div className="p-8 space-y-8">
-          {/* Hero Metrics - Glassmorphism Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8">
+        <div className="p-6 space-y-6 bg-white">
+          {/* Key Metrics - Xero Style Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
             {/* Total Outstanding */}
-            <Card className="relative overflow-hidden bg-white/70 backdrop-blur-md border-white/20 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105">
-              <div className="absolute inset-0 bg-gradient-to-br from-[#17B6C3]/10 to-transparent"></div>
-              <CardContent className="p-6 relative z-10">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="p-3 bg-[#17B6C3]/20 rounded-xl">
-                    <DollarSign className="h-6 w-6 text-[#17B6C3]" />
+            <Card className="bg-white border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+              <CardContent className="p-5">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                    <DollarSign className="h-4 w-4 text-blue-600" />
                   </div>
-                  <div className="flex items-center text-green-600">
-                    <ArrowUpRight className="h-4 w-4 mr-1" />
-                    <span className="text-sm font-medium">+12.5%</span>
-                  </div>
+                  <span className="text-xs text-green-600 font-medium">+12.5%</span>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground mb-1">Total Outstanding</p>
-                  <p className="text-3xl font-bold text-foreground">${sampleMetrics.totalOutstanding.toLocaleString()}</p>
+                  <p className="text-sm text-gray-600 mb-1">Total Outstanding</p>
+                  <p className="text-2xl font-semibold text-gray-900">${sampleMetrics.totalOutstanding.toLocaleString()}</p>
                 </div>
               </CardContent>
             </Card>
 
             {/* Overdue Amount */}
-            <Card className="relative overflow-hidden bg-white/70 backdrop-blur-md border-white/20 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105">
-              <div className="absolute inset-0 bg-gradient-to-br from-red-500/10 to-transparent"></div>
-              <CardContent className="p-6 relative z-10">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="p-3 bg-red-500/20 rounded-xl">
-                    <AlertCircle className="h-6 w-6 text-red-500" />
+            <Card className="bg-white border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+              <CardContent className="p-5">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
+                    <AlertCircle className="h-4 w-4 text-red-600" />
                   </div>
-                  <div className="flex items-center text-red-600">
-                    <ArrowUpRight className="h-4 w-4 mr-1" />
-                    <span className="text-sm font-medium">+5.2%</span>
-                  </div>
+                  <span className="text-xs text-red-600 font-medium">+5.2%</span>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground mb-1">Overdue Amount</p>
-                  <p className="text-3xl font-bold text-foreground">${sampleMetrics.overdueAmount.toLocaleString()}</p>
+                  <p className="text-sm text-gray-600 mb-1">Overdue Amount</p>
+                  <p className="text-2xl font-semibold text-gray-900">${sampleMetrics.overdueAmount.toLocaleString()}</p>
                 </div>
               </CardContent>
             </Card>
 
             {/* Collected This Month */}
-            <Card className="relative overflow-hidden bg-white/70 backdrop-blur-md border-white/20 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105">
-              <div className="absolute inset-0 bg-gradient-to-br from-green-500/10 to-transparent"></div>
-              <CardContent className="p-6 relative z-10">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="p-3 bg-green-500/20 rounded-xl">
-                    <TrendingUp className="h-6 w-6 text-green-500" />
+            <Card className="bg-white border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+              <CardContent className="p-5">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                    <TrendingUp className="h-4 w-4 text-green-600" />
                   </div>
-                  <div className="flex items-center text-green-600">
-                    <ArrowUpRight className="h-4 w-4 mr-1" />
-                    <span className="text-sm font-medium">+18.3%</span>
-                  </div>
+                  <span className="text-xs text-green-600 font-medium">+18.3%</span>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground mb-1">Collected This Month</p>
-                  <p className="text-3xl font-bold text-foreground">${sampleMetrics.collectedThisMonth.toLocaleString()}</p>
+                  <p className="text-sm text-gray-600 mb-1">Collected This Month</p>
+                  <p className="text-2xl font-semibold text-gray-900">${sampleMetrics.collectedThisMonth.toLocaleString()}</p>
                 </div>
               </CardContent>
             </Card>
 
             {/* Average DSO */}
-            <Card className="relative overflow-hidden bg-white/70 backdrop-blur-md border-white/20 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105">
-              <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-transparent"></div>
-              <CardContent className="p-6 relative z-10">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="p-3 bg-blue-500/20 rounded-xl">
-                    <Clock className="h-6 w-6 text-blue-500" />
+            <Card className="bg-white border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+              <CardContent className="p-5">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                    <Clock className="h-4 w-4 text-blue-600" />
                   </div>
-                  <div className="flex items-center text-green-600">
-                    <ArrowDownRight className="h-4 w-4 mr-1" />
-                    <span className="text-sm font-medium">-2.1 days</span>
-                  </div>
+                  <span className="text-xs text-green-600 font-medium">-2.1 days</span>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground mb-1">Average DSO</p>
-                  <p className="text-3xl font-bold text-foreground">{sampleMetrics.averageDSO} <span className="text-lg font-normal text-muted-foreground">days</span></p>
+                  <p className="text-sm text-gray-600 mb-1">Average DSO</p>
+                  <p className="text-2xl font-semibold text-gray-900">{sampleMetrics.averageDSO} <span className="text-base font-normal text-gray-600">days</span></p>
                 </div>
               </CardContent>
             </Card>
           </div>
 
           {/* Performance Overview Section */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Collection Performance */}
-            <Card className="lg:col-span-2 bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
-              <CardHeader className="pb-4">
+            <Card className="lg:col-span-2 bg-white border border-gray-200 shadow-sm">
+              <CardHeader className="pb-3 border-b border-gray-100">
                 <div className="flex items-center justify-between">
                   <div>
-                    <CardTitle className="text-2xl font-bold">Collection Performance</CardTitle>
-                    <CardDescription className="text-base mt-1">Monthly collection rates and trends</CardDescription>
+                    <CardTitle className="text-lg font-semibold text-gray-900">Collection Performance</CardTitle>
+                    <CardDescription className="text-sm mt-1 text-gray-600">Monthly collection rates and trends</CardDescription>
                   </div>
-                  <div className="p-3 bg-[#17B6C3]/10 rounded-xl">
-                    <BarChart3 className="h-6 w-6 text-[#17B6C3]" />
+                  <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                    <BarChart3 className="h-4 w-4 text-blue-600" />
                   </div>
                 </div>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-6">
+              <CardContent className="pt-4">
+                <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm font-medium text-muted-foreground">Collection Rate</p>
-                      <p className="text-2xl font-bold text-[#17B6C3]">{sampleMetrics.collectionRate}%</p>
+                      <p className="text-sm text-gray-600">Collection Rate</p>
+                      <p className="text-xl font-semibold text-gray-900">{sampleMetrics.collectionRate}%</p>
                     </div>
-                    <Badge variant="secondary" className="bg-green-100 text-green-800 border-green-200">
+                    <Badge className="bg-green-50 text-green-700 border border-green-200 hover:bg-green-50">
                       Above Target
                     </Badge>
                   </div>
-                  <Progress value={sampleMetrics.collectionRate} className="h-3 bg-slate-100" />
+                  <Progress value={sampleMetrics.collectionRate} className="h-2 bg-gray-100" />
                   
-                  <div className="grid grid-cols-2 gap-4 pt-4">
-                    <div className="text-center p-4 bg-slate-50 rounded-xl">
-                      <p className="text-2xl font-bold text-slate-700">{sampleMetrics.totalInvoices}</p>
-                      <p className="text-sm text-muted-foreground">Total Invoices</p>
+                  <div className="grid grid-cols-2 gap-3 pt-3">
+                    <div className="text-center p-3 bg-gray-50 rounded border">
+                      <p className="text-xl font-semibold text-gray-900">{sampleMetrics.totalInvoices}</p>
+                      <p className="text-xs text-gray-600">Total Invoices</p>
                     </div>
-                    <div className="text-center p-4 bg-slate-50 rounded-xl">
-                      <p className="text-2xl font-bold text-slate-700">{sampleMetrics.averagePaymentTime}</p>
-                      <p className="text-sm text-muted-foreground">Avg Payment Time</p>
+                    <div className="text-center p-3 bg-gray-50 rounded border">
+                      <p className="text-xl font-semibold text-gray-900">{sampleMetrics.averagePaymentTime}</p>
+                      <p className="text-xs text-gray-600">Avg Payment Time</p>
                     </div>
                   </div>
                 </div>
@@ -208,41 +192,41 @@ export default function UIChoices() {
             </Card>
 
             {/* Quick Actions */}
-            <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
-              <CardHeader>
-                <CardTitle className="text-xl font-bold">Quick Actions</CardTitle>
-                <CardDescription>Common collection tasks</CardDescription>
+            <Card className="bg-white border border-gray-200 shadow-sm">
+              <CardHeader className="pb-3 border-b border-gray-100">
+                <CardTitle className="text-lg font-semibold text-gray-900">Quick Actions</CardTitle>
+                <CardDescription className="text-sm text-gray-600">Common collection tasks</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <Button className="w-full justify-start text-left h-14 bg-[#17B6C3] hover:bg-[#1396A1] text-white shadow-md">
-                  <Mail className="mr-3 h-5 w-5" />
+              <CardContent className="pt-4 space-y-3">
+                <Button className="w-full justify-start text-left h-12 bg-blue-600 hover:bg-blue-700 text-white shadow-sm">
+                  <Mail className="mr-3 h-4 w-4" />
                   <div>
-                    <p className="font-medium">Send Payment Reminders</p>
-                    <p className="text-xs text-white/80">23 overdue invoices</p>
+                    <p className="font-medium text-sm">Send Payment Reminders</p>
+                    <p className="text-xs text-blue-100">23 overdue invoices</p>
                   </div>
                 </Button>
                 
-                <Button variant="outline" className="w-full justify-start text-left h-14 border-[#17B6C3]/20 hover:bg-[#17B6C3]/5">
-                  <Phone className="mr-3 h-5 w-5 text-[#17B6C3]" />
+                <Button variant="outline" className="w-full justify-start text-left h-12 border-gray-300 hover:bg-gray-50">
+                  <Phone className="mr-3 h-4 w-4 text-gray-600" />
                   <div>
-                    <p className="font-medium">Schedule Follow-ups</p>
-                    <p className="text-xs text-muted-foreground">12 contacts pending</p>
+                    <p className="font-medium text-sm text-gray-900">Schedule Follow-ups</p>
+                    <p className="text-xs text-gray-600">12 contacts pending</p>
                   </div>
                 </Button>
                 
-                <Button variant="outline" className="w-full justify-start text-left h-14 border-[#17B6C3]/20 hover:bg-[#17B6C3]/5">
-                  <MessageSquare className="mr-3 h-5 w-5 text-[#17B6C3]" />
+                <Button variant="outline" className="w-full justify-start text-left h-12 border-gray-300 hover:bg-gray-50">
+                  <MessageSquare className="mr-3 h-4 w-4 text-gray-600" />
                   <div>
-                    <p className="font-medium">SMS Campaigns</p>
-                    <p className="text-xs text-muted-foreground">Create new campaign</p>
+                    <p className="font-medium text-sm text-gray-900">SMS Campaigns</p>
+                    <p className="text-xs text-gray-600">Create new campaign</p>
                   </div>
                 </Button>
                 
-                <Button variant="outline" className="w-full justify-start text-left h-14 border-[#17B6C3]/20 hover:bg-[#17B6C3]/5">
-                  <Target className="mr-3 h-5 w-5 text-[#17B6C3]" />
+                <Button variant="outline" className="w-full justify-start text-left h-12 border-gray-300 hover:bg-gray-50">
+                  <Target className="mr-3 h-4 w-4 text-gray-600" />
                   <div>
-                    <p className="font-medium">AI Recommendations</p>
-                    <p className="text-xs text-muted-foreground">View suggestions</p>
+                    <p className="font-medium text-sm text-gray-900">AI Recommendations</p>
+                    <p className="text-xs text-gray-600">View suggestions</p>
                   </div>
                 </Button>
               </CardContent>
@@ -250,46 +234,46 @@ export default function UIChoices() {
           </div>
 
           {/* Recent Activity Section */}
-          <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
-            <CardHeader>
+          <Card className="bg-white border border-gray-200 shadow-sm">
+            <CardHeader className="pb-3 border-b border-gray-100">
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle className="text-2xl font-bold">Recent Activity</CardTitle>
-                  <CardDescription className="text-base mt-1">Latest collection actions and responses</CardDescription>
+                  <CardTitle className="text-lg font-semibold text-gray-900">Recent Activity</CardTitle>
+                  <CardDescription className="text-sm mt-1 text-gray-600">Latest collection actions and responses</CardDescription>
                 </div>
-                <Button variant="outline" size="sm" className="border-[#17B6C3]/20 text-[#17B6C3] hover:bg-[#17B6C3]/5">
+                <Button variant="outline" size="sm" className="border-gray-300 text-gray-700 hover:bg-gray-50 text-sm">
                   View All
                 </Button>
               </div>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
+            <CardContent className="pt-4">
+              <div className="space-y-3">
                 {[
                   { action: "Payment received", contact: "Acme Corp", amount: "$12,450", time: "2 hours ago", status: "success" },
                   { action: "Email reminder sent", contact: "TechStart Inc", amount: "$8,920", time: "4 hours ago", status: "pending" },
                   { action: "Phone call completed", contact: "Global Solutions", amount: "$15,670", time: "6 hours ago", status: "follow-up" },
                   { action: "SMS reminder sent", contact: "Innovation Labs", amount: "$5,230", time: "1 day ago", status: "pending" }
                 ].map((activity, index) => (
-                  <div key={index} className="flex items-center justify-between p-4 bg-slate-50/80 rounded-xl hover:bg-slate-100/80 transition-colors">
-                    <div className="flex items-center space-x-4">
-                      <div className={`p-2 rounded-full ${
+                  <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded border hover:bg-gray-100 transition-colors">
+                    <div className="flex items-center space-x-3">
+                      <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
                         activity.status === 'success' ? 'bg-green-100' :
                         activity.status === 'pending' ? 'bg-yellow-100' :
                         'bg-blue-100'
                       }`}>
                         {activity.status === 'success' ? 
-                          <CheckCircle2 className="h-4 w-4 text-green-600" /> :
+                          <CheckCircle2 className="h-3 w-3 text-green-600" /> :
                           activity.status === 'pending' ?
-                          <Clock className="h-4 w-4 text-yellow-600" /> :
-                          <Calendar className="h-4 w-4 text-blue-600" />
+                          <Clock className="h-3 w-3 text-yellow-600" /> :
+                          <Calendar className="h-3 w-3 text-blue-600" />
                         }
                       </div>
                       <div>
-                        <p className="font-medium text-foreground">{activity.action}</p>
-                        <p className="text-sm text-muted-foreground">{activity.contact} • {activity.amount}</p>
+                        <p className="text-sm font-medium text-gray-900">{activity.action}</p>
+                        <p className="text-xs text-gray-600">{activity.contact} • {activity.amount}</p>
                       </div>
                     </div>
-                    <p className="text-sm text-muted-foreground">{activity.time}</p>
+                    <p className="text-xs text-gray-500">{activity.time}</p>
                   </div>
                 ))}
               </div>
