@@ -49,7 +49,7 @@ export default function NewSidebar() {
       {/* Header */}
       <div className="p-6">
         <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 bg-[#17B6C3] rounded-lg flex items-center justify-center p-1">
+          <div className="w-10 h-10 rounded-lg flex items-center justify-center">
             <img src={nexusLogo} alt="Nexus AR" className="w-full h-full object-contain" />
           </div>
           <div>
