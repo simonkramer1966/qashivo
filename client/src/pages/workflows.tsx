@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import Sidebar from "@/components/layout/sidebar";
+import NewSidebar from "@/components/layout/new-sidebar";
 import Header from "@/components/layout/header";
 import WorkflowTemplates from "@/components/dashboard/workflow-templates";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -33,7 +33,7 @@ export default function Workflows() {
 
   return (
     <div className="flex h-screen bg-white">
-      <Sidebar />
+      <NewSidebar />
       <main className="flex-1 overflow-y-auto">
         <Header 
           title="Collection Workflows" 

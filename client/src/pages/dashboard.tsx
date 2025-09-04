@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import Sidebar from "@/components/layout/sidebar";
+import NewSidebar from "@/components/layout/new-sidebar";
 import Header from "@/components/layout/header";
 import MetricsOverview from "@/components/dashboard/metrics-overview";
 import RecentInvoices from "@/components/dashboard/recent-invoices";
@@ -34,7 +34,7 @@ export default function Dashboard() {
 
   return (
     <div className="flex h-screen bg-white">
-      <Sidebar />
+      <NewSidebar />
       <main className="flex-1 overflow-y-auto">
         <Header title="Dashboard" subtitle="Overview of your accounts receivable performance" />
         

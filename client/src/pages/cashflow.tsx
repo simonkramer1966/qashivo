@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import Sidebar from "@/components/layout/sidebar";
+import NewSidebar from "@/components/layout/new-sidebar";
 import Header from "@/components/layout/header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -43,7 +43,7 @@ export default function Cashflow() {
 
   return (
     <div className="flex h-screen bg-white">
-      <Sidebar />
+      <NewSidebar />
       <main className="flex-1 overflow-y-auto">
         <Header 
           title="Cashflow Analytics" 
