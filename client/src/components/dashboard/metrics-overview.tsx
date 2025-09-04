@@ -5,7 +5,6 @@ import { ArrowUp, ArrowDown, AlertTriangle, Clock, TrendingUp, Calendar, ArrowUp
 export default function MetricsOverview() {
   const { data: metrics, isLoading } = useQuery({
     queryKey: ["/api/dashboard/metrics"],
-    retry: false,
   });
 
   if (isLoading) {

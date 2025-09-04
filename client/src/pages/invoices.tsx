@@ -35,7 +35,6 @@ export default function Invoices() {
 
   const { data: invoices = [], isLoading: invoicesLoading, error } = useQuery({
     queryKey: ["/api/invoices"],
-    retry: false,
     enabled: isAuthenticated,
   });
 

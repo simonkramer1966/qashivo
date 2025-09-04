@@ -33,7 +33,6 @@ export default function Contacts() {
 
   const { data: contacts = [], isLoading: contactsLoading, error } = useQuery({
     queryKey: ["/api/contacts"],
-    retry: false,
     enabled: isAuthenticated,
   });
 

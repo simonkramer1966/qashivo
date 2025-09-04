@@ -7,7 +7,6 @@ import { Edit, Copy, Plus, Workflow, Clock, CheckCircle2 } from "lucide-react";
 export default function WorkflowTemplates() {
   const { data: workflows = [], isLoading } = useQuery({
     queryKey: ["/api/workflows"],
-    retry: false,
   });
 
   // Mock workflow templates for demonstration
