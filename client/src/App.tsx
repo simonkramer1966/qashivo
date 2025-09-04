@@ -12,6 +12,10 @@ import Workflows from "@/pages/workflows";
 import Settings from "@/pages/settings";
 import Cashflow from "@/pages/cashflow";
 import Features from "@/pages/features";
+import AiCapabilities from "@/pages/ai-capabilities";
+import Pricing from "@/pages/pricing";
+import About from "@/pages/about";
+import Contact from "@/pages/contact";
 import { useAuth } from "@/hooks/useAuth";
 
 function Router() {
@@ -23,6 +27,10 @@ function Router() {
         <>
           <Route path="/" component={Landing} />
           <Route path="/features" component={Features} />
+          <Route path="/ai-capabilities" component={AiCapabilities} />
+          <Route path="/pricing" component={Pricing} />
+          <Route path="/about" component={About} />
+          <Route path="/contact" component={Contact} />
         </>
       ) : (
         <>
