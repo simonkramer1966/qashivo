@@ -1,6 +1,7 @@
-import { useEffect } from "react";
+import { useEffect, Suspense } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { useQueryClient } from "@tanstack/react-query";
 import NewSidebar from "@/components/layout/new-sidebar";
 import Header from "@/components/layout/header";
 import MetricsOverview from "@/components/dashboard/metrics-overview";
@@ -12,6 +13,17 @@ import IntegrationsStatus from "@/components/dashboard/integrations-status";
 export default function Dashboard() {
   const { toast } = useToast();
   const { isAuthenticated, isLoading } = useAuth();
+  const queryClient = useQueryClient();
+
+  // Prefetch common data when dashboard loads
+  useEffect(() => {
+    if (isAuthenticated) {
+      // Prefetch data that's commonly accessed
+      queryClient.prefetchQuery({ queryKey: ["/api/invoices"] });
+      queryClient.prefetchQuery({ queryKey: ["/api/workflows"] });
+      queryClient.prefetchQuery({ queryKey: ["/api/dashboard/metrics"] });
+    }
+  }, [isAuthenticated, queryClient]);
 
   // Redirect to home if not authenticated
   useEffect(() => {
@@ -29,7 +41,14 @@ export default function Dashboard() {
   }, [isAuthenticated, isLoading, toast]);
 
   if (isLoading || !isAuthenticated) {
-    return <div className="min-h-screen bg-background" />;
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-8 h-8 border-4 border-[#17B6C3] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading dashboard...</p>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -39,19 +58,29 @@ export default function Dashboard() {
         <Header title="Dashboard" subtitle="Overview of your accounts receivable performance" />
         
         <div className="p-8 space-y-8" style={{ backgroundColor: '#ffffff' }}>
-          <MetricsOverview />
+          <Suspense fallback={<div className="h-32 animate-pulse bg-gray-100 rounded-lg" />}>
+            <MetricsOverview />
+          </Suspense>
           
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2">
-              <RecentInvoices />
+              <Suspense fallback={<div className="h-96 animate-pulse bg-gray-100 rounded-lg" />}>
+                <RecentInvoices />
+              </Suspense>
             </div>
             <div>
-              <AIInsights />
+              <Suspense fallback={<div className="h-96 animate-pulse bg-gray-100 rounded-lg" />}>
+                <AIInsights />
+              </Suspense>
             </div>
           </div>
 
-          <WorkflowTemplates />
-          <IntegrationsStatus />
+          <Suspense fallback={<div className="h-64 animate-pulse bg-gray-100 rounded-lg" />}>
+            <WorkflowTemplates />
+          </Suspense>
+          <Suspense fallback={<div className="h-48 animate-pulse bg-gray-100 rounded-lg" />}>
+            <IntegrationsStatus />
+          </Suspense>
         </div>
       </main>
     </div>
