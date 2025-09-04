@@ -1,5 +1,6 @@
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
+import { useLocation } from "wouter";
 import { 
   BarChart3, 
   FileText, 
@@ -27,10 +28,10 @@ const navigationItems = [
 
 export default function NewSidebar() {
   const { user } = useAuth();
-  const currentPath = window.location.pathname;
+  const [location, setLocation] = useLocation();
 
   const handleNavigation = (href: string) => {
-    window.location.href = href;
+    setLocation(href);
   };
 
   const handleLogout = () => {
@@ -39,9 +40,9 @@ export default function NewSidebar() {
 
   const isActivePath = (href: string) => {
     if (href === "/") {
-      return currentPath === "/";
+      return location === "/";
     }
-    return currentPath.startsWith(href);
+    return location.startsWith(href);
   };
 
   return (
