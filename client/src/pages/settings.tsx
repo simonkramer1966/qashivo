@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import NewSidebar from "@/components/layout/new-sidebar";
 import Header from "@/components/layout/header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -32,6 +34,64 @@ export default function Settings() {
   const { user, isAuthenticated, isLoading } = useAuth();
   const [isConnecting, setIsConnecting] = useState(false);
   const [isGeneratingMockData, setIsGeneratingMockData] = useState(false);
+  
+  // Branding form state
+  const [companyName, setCompanyName] = useState("");
+  const [tagline, setTagline] = useState("");
+
+  // Fetch tenant information
+  const { data: tenant } = useQuery<{
+    id: string;
+    name: string;
+    settings?: {
+      companyName?: string;
+      tagline?: string;
+    };
+  }>({
+    queryKey: ['/api/tenant'],
+    enabled: !!user,
+  });
+
+  // Initialize form values when tenant data loads
+  useEffect(() => {
+    if (tenant) {
+      setCompanyName(tenant.settings?.companyName || tenant.name || "Nexus AR");
+      setTagline(tenant.settings?.tagline || "Debt Recovery Suite");
+    }
+  }, [tenant]);
+
+  // Mutation to update tenant settings
+  const updateTenantMutation = useMutation({
+    mutationFn: async (data: { name?: string; settings?: any }) => {
+      return apiRequest('/api/tenant/settings', {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/tenant'] });
+      toast({
+        title: "Success",
+        description: "Branding settings updated successfully!",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update branding settings.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleSaveBranding = () => {
+    updateTenantMutation.mutate({
+      settings: {
+        companyName,
+        tagline,
+      },
+    });
+  };
 
   // Redirect to home if not authenticated
   useEffect(() => {
@@ -586,7 +646,8 @@ export default function Settings() {
                           <Label htmlFor="companyName" className="text-base font-semibold text-slate-900">Company Name (in sidebar)</Label>
                           <Input 
                             id="companyName"
-                            defaultValue="Nexus AR"
+                            value={companyName}
+                            onChange={(e) => setCompanyName(e.target.value)}
                             className="mt-2 bg-white/70 border-gray-200/30"
                             data-testid="input-sidebar-company-name"
                           />
@@ -596,7 +657,8 @@ export default function Settings() {
                           <Label htmlFor="tagline" className="text-base font-semibold text-slate-900">Tagline</Label>
                           <Input 
                             id="tagline"
-                            defaultValue="Debt Recovery Suite"
+                            value={tagline}
+                            onChange={(e) => setTagline(e.target.value)}
                             className="mt-2 bg-white/70 border-gray-200/30"
                             data-testid="input-tagline"
                           />
@@ -605,7 +667,14 @@ export default function Settings() {
                     </div>
                   </div>
                   
-                  <Button className="bg-[#17B6C3] hover:bg-[#1396A1] text-white" data-testid="button-save-branding">Save Branding</Button>
+                  <Button 
+                    className="bg-[#17B6C3] hover:bg-[#1396A1] text-white" 
+                    onClick={handleSaveBranding}
+                    disabled={updateTenantMutation.isPending}
+                    data-testid="button-save-branding"
+                  >
+                    {updateTenantMutation.isPending ? "Saving..." : "Save Branding"}
+                  </Button>
                 </CardContent>
               </Card>
             </TabsContent>

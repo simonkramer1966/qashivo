@@ -1,6 +1,7 @@
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
+import { useQuery } from "@tanstack/react-query";
 import { 
   BarChart3, 
   FileText, 
@@ -30,6 +31,21 @@ export default function NewSidebar() {
   const { user } = useAuth();
   const [location, setLocation] = useLocation();
 
+  // Fetch tenant information
+  const { data: tenant } = useQuery<{
+    id: string;
+    name: string;
+    settings?: {
+      companyName?: string;
+      tagline?: string;
+    };
+  }>({
+    queryKey: ['/api/tenant'],
+    enabled: !!user,
+    staleTime: 15 * 60 * 1000, // 15 minutes
+    gcTime: 30 * 60 * 1000, // 30 minutes
+  });
+
   const handleNavigation = (href: string) => {
     setLocation(href);
   };
@@ -54,8 +70,12 @@ export default function NewSidebar() {
             <img src={nexusLogo} alt="Nexus AR" className="w-full h-full object-contain" />
           </div>
           <div>
-            <h1 className="text-xl font-semibold text-gray-900">Nexus AR</h1>
-            <p className="text-sm text-gray-500">Debt Recovery Suite</p>
+            <h1 className="text-xl font-semibold text-gray-900">
+              {tenant?.settings?.companyName || tenant?.name || "Nexus AR"}
+            </h1>
+            <p className="text-sm text-gray-500">
+              {tenant?.settings?.tagline || "Debt Recovery Suite"}
+            </p>
           </div>
         </div>
       </div>

@@ -748,6 +748,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Tenant settings endpoints
+  app.get('/api/tenant', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = req.user;
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const tenant = await storage.getTenant(user.tenantId);
+      if (!tenant) {
+        return res.status(404).json({ message: "Tenant not found" });
+      }
+
+      res.json(tenant);
+    } catch (error) {
+      console.error("Error fetching tenant:", error);
+      res.status(500).json({ message: "Failed to fetch tenant settings" });
+    }
+  });
+
+  app.put('/api/tenant/settings', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = req.user;
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { name, settings } = req.body;
+      
+      const updates: any = {};
+      if (name) updates.name = name;
+      if (settings) updates.settings = settings;
+
+      const tenant = await storage.updateTenant(user.tenantId, updates);
+      res.json(tenant);
+    } catch (error) {
+      console.error("Error updating tenant settings:", error);
+      res.status(500).json({ message: "Failed to update tenant settings" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
