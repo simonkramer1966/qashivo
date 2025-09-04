@@ -66,20 +66,19 @@ export default function MetricsOverview() {
   ];
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
       {metricsData.map((metric) => (
         <Card 
           key={metric.title} 
           className="bg-white border border-gray-200 shadow-sm hover:shadow-md transition-shadow" 
           data-testid={metric.testId}
         >
-          <div className={`absolute inset-0 bg-gradient-to-br from-${metric.gradientFrom} to-transparent`}></div>
-          <CardContent className="p-6 relative z-10">
+          <CardContent className="p-6">
             <div className="flex items-center justify-between mb-4">
-              <div className={`p-3 bg-${metric.gradientFrom.replace('/10', '/20')} rounded-xl`}>
-                <metric.icon className={`h-6 w-6 ${metric.iconColor}`} />
+              <div className="p-2 bg-[#17B6C3]/10 rounded-lg">
+                <metric.icon className="h-4 w-4 text-[#17B6C3]" />
               </div>
-              <div className={`flex items-center ${
+              <div className={`flex items-center text-sm ${
                 metric.changeType === 'increase' 
                   ? metric.title === 'Total Outstanding' ? 'text-red-600' : 'text-green-600'
                   : 'text-green-600'
@@ -89,16 +88,16 @@ export default function MetricsOverview() {
                 ) : (
                   <ArrowDownRight className="h-4 w-4 mr-1" />
                 )}
-                <span className="text-sm font-medium" data-testid={`${metric.testId}-change`}>
+                <span className="font-medium" data-testid={`${metric.testId}-change`}>
                   {metric.change}
                 </span>
               </div>
             </div>
             <div>
-              <p className="text-sm font-medium text-muted-foreground mb-1">
+              <p className="text-sm font-medium text-gray-600 mb-1">
                 {metric.title}
               </p>
-              <p className="text-3xl font-bold text-foreground" data-testid={`${metric.testId}-value`}>
+              <p className="text-2xl font-bold text-gray-900" data-testid={`${metric.testId}-value`}>
                 {metric.value}
               </p>
             </div>
