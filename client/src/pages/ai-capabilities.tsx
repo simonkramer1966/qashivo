@@ -159,7 +159,7 @@ export default function AiCapabilities() {
         className="relative pt-32 pb-20 bg-cover bg-center"
         style={{ backgroundImage: `url(${aiHeroImage})` }}
       >
-        <div className="absolute inset-0 bg-gradient-to-br from-[#17B6C3]/90 via-purple-600/80 to-slate-900/85"></div>
+        <div className="absolute inset-0 bg-gradient-to-br from-[#17B6C3]/85 via-[#1396A1]/80 to-slate-900/85"></div>
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <Badge className="bg-white/20 text-white border-white/30 mb-6 backdrop-blur-sm" data-testid="badge-ai-hero">
