@@ -751,7 +751,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Tenant settings endpoints
   app.get('/api/tenant', isAuthenticated, async (req: any, res) => {
     try {
+      console.log("GET /api/tenant - User ID:", req.user.claims.sub);
       const user = await storage.getUser(req.user.claims.sub);
+      console.log("GET /api/tenant - User found:", user);
+      console.log("GET /api/tenant - User tenantId:", user?.tenantId);
+      
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -770,7 +774,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put('/api/tenant/settings', isAuthenticated, async (req: any, res) => {
     try {
+      console.log("PUT /api/tenant/settings - User ID:", req.user.claims.sub);
       const user = await storage.getUser(req.user.claims.sub);
+      console.log("PUT /api/tenant/settings - User found:", user);
+      console.log("PUT /api/tenant/settings - User tenantId:", user?.tenantId);
+      
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
