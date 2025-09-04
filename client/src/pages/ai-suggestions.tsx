@@ -1,3 +1,8 @@
+import { useEffect } from "react";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
+import NewSidebar from "@/components/layout/new-sidebar";
+import Header from "@/components/layout/header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -18,6 +23,27 @@ import {
 } from "lucide-react";
 
 export default function AiSuggestions() {
+  const { toast } = useToast();
+  const { isAuthenticated, isLoading } = useAuth();
+
+  // Redirect to home if not authenticated
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      toast({
+        title: "Unauthorized",
+        description: "You are logged out. Logging in again...",
+        variant: "destructive",
+      });
+      setTimeout(() => {
+        window.location.href = "/api/login";
+      }, 500);
+      return;
+    }
+  }, [isAuthenticated, isLoading, toast]);
+
+  if (isLoading || !isAuthenticated) {
+    return <div className="min-h-screen bg-background" />;
+  }
   const suggestions = [
     {
       id: 1,
@@ -84,16 +110,15 @@ export default function AiSuggestions() {
   ];
 
   return (
-    <div className="space-y-8">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900 mb-2" data-testid="text-ai-suggestions-title">
-          AI Suggestions
-        </h1>
-        <p className="text-gray-600" data-testid="text-ai-suggestions-description">
-          Intelligent recommendations powered by machine learning to optimize your collection process
-        </p>
-      </div>
+    <div className="flex h-screen bg-white">
+      <NewSidebar />
+      <main className="flex-1 overflow-y-auto">
+        <Header 
+          title="AI Suggestions" 
+          subtitle="Intelligent recommendations powered by machine learning to optimize your collection process"
+        />
+        
+        <div className="p-8 space-y-8">
 
       {/* AI Insights Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -212,6 +237,8 @@ export default function AiSuggestions() {
           </div>
         </CardContent>
       </Card>
+        </div>
+      </main>
     </div>
   );
 }

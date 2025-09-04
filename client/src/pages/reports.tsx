@@ -1,3 +1,8 @@
+import { useEffect } from "react";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
+import NewSidebar from "@/components/layout/new-sidebar";
+import Header from "@/components/layout/header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -17,6 +22,27 @@ import {
 } from "lucide-react";
 
 export default function Reports() {
+  const { toast } = useToast();
+  const { isAuthenticated, isLoading } = useAuth();
+
+  // Redirect to home if not authenticated
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      toast({
+        title: "Unauthorized",
+        description: "You are logged out. Logging in again...",
+        variant: "destructive",
+      });
+      setTimeout(() => {
+        window.location.href = "/api/login";
+      }, 500);
+      return;
+    }
+  }, [isAuthenticated, isLoading, toast]);
+
+  if (isLoading || !isAuthenticated) {
+    return <div className="min-h-screen bg-background" />;
+  }
   const kpiCards = [
     {
       title: "Total Outstanding",
@@ -111,22 +137,22 @@ export default function Reports() {
   ];
 
   return (
-    <div className="space-y-8">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2" data-testid="text-reports-title">
-            Reports & Analytics
-          </h1>
-          <p className="text-gray-600" data-testid="text-reports-description">
-            Comprehensive insights and detailed reporting for your debt recovery operations
-          </p>
-        </div>
-        <Button className="bg-[#17B6C3] hover:bg-[#1396A1] text-white" data-testid="button-export-all">
-          <Download className="h-4 w-4 mr-2" />
-          Export All Reports
-        </Button>
-      </div>
+    <div className="flex h-screen bg-white">
+      <NewSidebar />
+      <main className="flex-1 overflow-y-auto">
+        <Header 
+          title="Reports & Analytics" 
+          subtitle="Comprehensive insights and detailed reporting for your debt recovery operations"
+        />
+        
+        <div className="p-8 space-y-8">
+          {/* Export Button */}
+          <div className="flex justify-end">
+            <Button className="bg-[#17B6C3] hover:bg-[#1396A1] text-white" data-testid="button-export-all">
+              <Download className="h-4 w-4 mr-2" />
+              Export All Reports
+            </Button>
+          </div>
 
       {/* KPI Overview */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -251,6 +277,8 @@ export default function Reports() {
           </div>
         </CardContent>
       </Card>
+        </div>
+      </main>
     </div>
   );
 }
