@@ -25,7 +25,9 @@ const navigation = [
   { name: "AI Suggestions", href: "/ai-suggestions", icon: Bot },
   { name: "Reports", href: "/reports", icon: BarChart },
   { name: "Settings", href: "/settings", icon: Settings },
-  { name: "UI Test", href: "/ui-choices", icon: Settings },
+  { name: "UI Test Xero", href: "/ui-xero", icon: Settings },
+  { name: "UI Test QB", href: "/ui-quickbooks", icon: Settings },
+  { name: "UI Test Sage", href: "/ui-sage", icon: Settings },
 ];
 
 export default function Sidebar() {
