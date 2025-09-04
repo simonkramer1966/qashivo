@@ -61,16 +61,21 @@ export default function Sidebar() {
               <li key={item.name}>
                 <button
                   className={cn(
-                    "w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors text-left",
+                    "w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors text-left relative z-10 cursor-pointer",
                     isActive 
                       ? "sidebar-active" 
                       : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
                   )}
+                  style={{ pointerEvents: 'auto' }}
                   data-testid={`link-${item.name.toLowerCase().replace(/\s+/g, '-')}`}
-                  onClick={() => {
-                    console.log('Navigating to:', item.href);
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log('Button clicked! Navigating to:', item.href);
+                    alert('Button clicked: ' + item.name);
                     window.location.href = item.href;
                   }}
+                  onMouseEnter={() => console.log('Hover on:', item.name)}
                 >
                   <item.icon className="w-5 h-5" />
                   <span>{item.name}</span>
