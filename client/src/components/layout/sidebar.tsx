@@ -71,11 +71,6 @@ export default function Sidebar() {
                 >
                   <item.icon className="w-5 h-5" />
                   <span>{item.name}</span>
-                  {item.name === "Invoices" && (
-                    <span className="ml-auto bg-destructive text-destructive-foreground px-2 py-1 rounded-full text-xs">
-                      23
-                    </span>
-                  )}
                 </a>
               </li>
             );
