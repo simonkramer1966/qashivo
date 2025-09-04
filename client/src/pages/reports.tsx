@@ -131,7 +131,7 @@ export default function Reports() {
       {/* KPI Overview */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {kpiCards.map((kpi, index) => (
-          <Card key={index} className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg hover:shadow-xl transition-all duration-300" data-testid={`card-kpi-${index}`}>
+          <Card key={index} className="bg-white border border-gray-200 shadow-sm hover:shadow-md transition-shadow" data-testid={`card-kpi-${index}`}>
             <CardContent className="p-6">
               <div className="flex items-center justify-between mb-3">
                 <div className="p-2 bg-[#17B6C3]/10 rounded-lg">
@@ -153,7 +153,7 @@ export default function Reports() {
       </div>
 
       {/* Quick Stats */}
-      <Card className="bg-gradient-to-r from-[#17B6C3]/5 to-purple-500/5 border-[#17B6C3]/20">
+      <Card className="bg-white border border-gray-200 shadow-sm">
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
             <Activity className="h-5 w-5 text-[#17B6C3]" />
@@ -183,7 +183,7 @@ export default function Reports() {
         
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {reports.map((report, index) => (
-            <Card key={index} className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg hover:shadow-xl transition-all duration-300" data-testid={`card-report-${index}`}>
+            <Card key={index} className="bg-white border border-gray-200 shadow-sm hover:shadow-md transition-shadow" data-testid={`card-report-${index}`}>
               <CardHeader>
                 <div className="flex items-start justify-between">
                   <div className="flex items-center space-x-3">

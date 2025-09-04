@@ -98,7 +98,7 @@ export default function AiSuggestions() {
       {/* AI Insights Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {insights.map((insight, index) => (
-          <Card key={index} className="bg-white/70 backdrop-blur-md border-0 shadow-lg" data-testid={`card-insight-${index}`}>
+          <Card key={index} className="bg-white border border-gray-200 shadow-sm" data-testid={`card-insight-${index}`}>
             <CardContent className="p-6">
               <div className="flex items-center space-x-3 mb-3">
                 <Brain className="h-5 w-5 text-[#17B6C3]" />
@@ -125,7 +125,7 @@ export default function AiSuggestions() {
 
         <div className="grid grid-cols-1 gap-6">
           {suggestions.map((suggestion) => (
-            <Card key={suggestion.id} className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg hover:shadow-xl transition-all duration-300" data-testid={`card-suggestion-${suggestion.id}`}>
+            <Card key={suggestion.id} className="bg-white border border-gray-200 shadow-sm hover:shadow-md transition-shadow" data-testid={`card-suggestion-${suggestion.id}`}>
               <CardHeader>
                 <div className="flex items-start justify-between">
                   <div className="flex items-center space-x-3">

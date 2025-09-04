@@ -53,7 +53,7 @@ export default function AIInsights() {
   ];
 
   return (
-    <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
+    <Card className="bg-white border border-gray-200 shadow-sm">
       <CardHeader>
         <CardTitle className="text-xl font-bold flex items-center" data-testid="text-ai-insights-title">
           <div className="p-2 bg-[#17B6C3]/10 rounded-lg mr-3">
@@ -66,7 +66,7 @@ export default function AIInsights() {
         {mockInsights.map((insight, index) => (
           <div 
             key={index} 
-            className="p-4 rounded-xl bg-slate-50/80 border border-slate-200/50 hover:bg-slate-100/80 transition-colors"
+            className="p-4 rounded-lg bg-gray-50 border border-gray-200 hover:bg-gray-100 transition-colors"
             data-testid={`insight-${insight.type}-${index}`}
           >
             <div className="flex items-start space-x-3">

@@ -46,7 +46,7 @@ export default function IntegrationsStatus() {
   ];
 
   return (
-    <Card className="shadow-sm">
+    <Card className="bg-white border border-gray-200 shadow-sm">
       <CardHeader className="border-b border-border">
         <CardTitle data-testid="text-integrations-status-title">Integration Status</CardTitle>
       </CardHeader>

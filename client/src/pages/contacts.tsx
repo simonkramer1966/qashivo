@@ -62,7 +62,7 @@ export default function Contacts() {
   });
 
   return (
-    <div className="flex h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-teal-50">
+    <div className="flex h-screen bg-gray-50">
       <Sidebar />
       <main className="flex-1 overflow-y-auto">
         <Header 
@@ -78,7 +78,7 @@ export default function Contacts() {
         
         <div className="p-8 space-y-8">
           {/* Search */}
-          <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
+          <Card className="bg-white border border-gray-200 shadow-sm">
             <CardHeader>
               <CardTitle className="text-xl font-bold flex items-center">
                 <div className="p-2 bg-[#17B6C3]/10 rounded-lg mr-3">
@@ -117,7 +117,7 @@ export default function Contacts() {
                 <p className="text-muted-foreground">Loading contacts...</p>
               </div>
             ) : filteredContacts.length === 0 ? (
-              <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
+              <Card className="bg-white border border-gray-200 shadow-sm">
                 <CardContent className="text-center py-8">
                   <div className="w-16 h-16 bg-[#17B6C3]/10 rounded-full flex items-center justify-center mx-auto mb-6">
                     <User className="h-8 w-8 text-[#17B6C3]" />
@@ -141,7 +141,7 @@ export default function Contacts() {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                 {filteredContacts.map((contact: any) => (
-                  <Card key={contact.id} className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105" data-testid={`card-contact-${contact.id}`}>
+                  <Card key={contact.id} className="bg-white border border-gray-200 shadow-sm hover:shadow-md transition-shadow" data-testid={`card-contact-${contact.id}`}>
                     <CardHeader className="pb-4">
                       <div className="flex items-start justify-between">
                         <div className="flex items-center space-x-3">

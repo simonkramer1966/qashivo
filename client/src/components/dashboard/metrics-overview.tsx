@@ -12,7 +12,7 @@ export default function MetricsOverview() {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8">
         {[...Array(4)].map((_, i) => (
-          <Card key={i} className="relative overflow-hidden bg-white/70 backdrop-blur-md border-white/20 shadow-xl animate-pulse">
+          <Card key={i} className="bg-white border border-gray-200 shadow-sm animate-pulse">
             <CardContent className="p-6">
               <div className="h-20 bg-muted/30 rounded" />
             </CardContent>
@@ -70,7 +70,7 @@ export default function MetricsOverview() {
       {metricsData.map((metric) => (
         <Card 
           key={metric.title} 
-          className="relative overflow-hidden bg-white/70 backdrop-blur-md border-0 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 metric-card" 
+          className="bg-white border border-gray-200 shadow-sm hover:shadow-md transition-shadow" 
           data-testid={metric.testId}
         >
           <div className={`absolute inset-0 bg-gradient-to-br from-${metric.gradientFrom} to-transparent`}></div>
