@@ -114,7 +114,7 @@ export default function Contacts() {
             </div>
 
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="grid w-full grid-cols-2 max-w-md mx-auto mb-8">
+              <TabsList className="grid grid-cols-2 max-w-md mb-8">
                 <TabsTrigger value="cards" className="flex items-center gap-2" data-testid="tab-cards">
                   <Grid3X3 className="h-4 w-4" />
                   Card View
