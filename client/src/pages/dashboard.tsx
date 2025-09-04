@@ -33,12 +33,12 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="flex h-screen bg-white">
+    <div className="flex h-screen" style={{ backgroundColor: '#ffffff' }}>
       <NewSidebar />
-      <main className="flex-1 overflow-y-auto">
+      <main className="flex-1 overflow-y-auto" style={{ backgroundColor: '#ffffff' }}>
         <Header title="Dashboard" subtitle="Overview of your accounts receivable performance" />
         
-        <div className="p-8 space-y-8">
+        <div className="p-8 space-y-8" style={{ backgroundColor: '#ffffff' }}>
           <MetricsOverview />
           
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
