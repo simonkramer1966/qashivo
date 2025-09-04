@@ -36,7 +36,7 @@ export default function Sidebar() {
   };
 
   return (
-    <aside className="w-64 bg-card border-r border-gray-200/70 shadow-sm flex flex-col">
+    <aside className="w-64 bg-gray-50 border-r border-gray-200/70 shadow-sm flex flex-col">
       <div className="p-6 relative">
         <div className="flex items-center space-x-3">
           <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center p-1">
