@@ -175,7 +175,7 @@ export default function AiCapabilities() {
           </div>
 
           {/* AI Stats Row */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-20">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div className="text-center bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/20">
               <div className="text-4xl font-bold text-white mb-2" data-testid="text-ai-stat-accuracy">94%</div>
               <div className="text-white/80">Payment Prediction Accuracy</div>

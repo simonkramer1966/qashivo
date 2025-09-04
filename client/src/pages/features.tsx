@@ -166,7 +166,7 @@ export default function Features() {
         className="relative pt-32 pb-20 bg-cover bg-center"
         style={{ backgroundImage: `url(${featuresHeroImage})` }}
       >
-        <div className="absolute inset-0 bg-gradient-to-br from-[#17B6C3]/85 via-[#1396A1]/75 to-slate-900/80"></div>
+        <div className="absolute inset-0 bg-gradient-to-br from-[#17B6C3]/85 via-[#1396A1]/80 to-slate-900/85"></div>
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <Badge className="bg-white/20 text-white border-white/30 mb-6 backdrop-blur-sm" data-testid="badge-features-hero">
@@ -182,22 +182,18 @@ export default function Features() {
           </div>
 
           {/* Stats Row */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-20">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div className="text-center bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/20">
-              <div className="text-4xl font-bold text-white mb-2" data-testid="text-stat-collection-time">40%</div>
+              <div className="text-3xl font-bold text-white mb-2" data-testid="text-stat-collection-time">40%</div>
               <div className="text-white/80">Faster Collection</div>
             </div>
             <div className="text-center bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/20">
-              <div className="text-4xl font-bold text-white mb-2" data-testid="text-stat-payment-rate">60%</div>
-              <div className="text-white/80">Higher Payment Rate</div>
-            </div>
-            <div className="text-center bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/20">
-              <div className="text-4xl font-bold text-white mb-2" data-testid="text-stat-automation">85%</div>
+              <div className="text-3xl font-bold text-white mb-2" data-testid="text-stat-payment-rate">85%</div>
               <div className="text-white/80">Process Automation</div>
             </div>
             <div className="text-center bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/20">
-              <div className="text-4xl font-bold text-white mb-2" data-testid="text-stat-compliance">100%</div>
-              <div className="text-white/80">Compliance Ready</div>
+              <div className="text-3xl font-bold text-white mb-2" data-testid="text-stat-compliance">60%</div>
+              <div className="text-white/80">Higher Payment Rate</div>
             </div>
           </div>
         </div>
