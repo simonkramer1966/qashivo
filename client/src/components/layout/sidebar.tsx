@@ -71,11 +71,8 @@ export default function Sidebar() {
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    console.log('Button clicked! Navigating to:', item.href);
-                    alert('Button clicked: ' + item.name);
                     window.location.href = item.href;
                   }}
-                  onMouseEnter={() => console.log('Hover on:', item.name)}
                 >
                   <item.icon className="w-5 h-5" />
                   <span>{item.name}</span>
