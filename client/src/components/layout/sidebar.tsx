@@ -59,15 +59,17 @@ export default function Sidebar() {
             const isActive = location === item.href || (item.href !== "/" && location.startsWith(item.href));
             return (
               <li key={item.name}>
-                <Link
-                  href={item.href}
+                <button
                   className={cn(
-                    "flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors no-underline",
+                    "w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors text-left",
                     isActive 
                       ? "sidebar-active" 
                       : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
                   )}
                   data-testid={`link-${item.name.toLowerCase().replace(/\s+/g, '-')}`}
+                  onClick={() => {
+                    window.location.href = item.href;
+                  }}
                 >
                   <item.icon className="w-5 h-5" />
                   <span>{item.name}</span>
@@ -76,7 +78,7 @@ export default function Sidebar() {
                       23
                     </span>
                   )}
-                </Link>
+                </button>
               </li>
             );
           })}
