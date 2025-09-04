@@ -191,7 +191,7 @@ export default function Pricing() {
               <div className="text-white/80">Average ROI within 6 months</div>
             </div>
             <div className="text-center bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/20">
-              <div className="text-3xl font-bold text-white mb-2" data-testid="text-pricing-stat-trial">14 Days</div>
+              <div className="text-3xl font-bold text-white mb-2" data-testid="text-pricing-stat-trial">30 Days</div>
               <div className="text-white/80">Free trial, no credit card required</div>
             </div>
             <div className="text-center bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/20">
@@ -326,7 +326,7 @@ export default function Pricing() {
             Ready to Transform Your Collections?
           </h2>
           <p className="text-xl text-white/90 mb-12" data-testid="text-pricing-cta-description">
-            Start your free 14-day trial today. No credit card required, full access to all features.
+            Start your free 30-day trial today. No credit card required, full access to all features.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button 
