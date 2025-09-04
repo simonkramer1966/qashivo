@@ -1,4 +1,4 @@
-import { Link, useLocation } from "wouter";
+import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { 
@@ -28,7 +28,7 @@ const navigation = [
 ];
 
 export default function Sidebar() {
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
   const { user } = useAuth();
 
   const handleLogout = () => {
@@ -59,10 +59,10 @@ export default function Sidebar() {
             const isActive = location === item.href || (item.href !== "/" && location.startsWith(item.href));
             return (
               <li key={item.name}>
-                <Link
-                  href={item.href}
+                <button
+                  onClick={() => setLocation(item.href)}
                   className={cn(
-                    "flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors",
+                    "w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors text-left",
                     isActive 
                       ? "sidebar-active" 
                       : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
@@ -76,7 +76,7 @@ export default function Sidebar() {
                       23
                     </span>
                   )}
-                </Link>
+                </button>
               </li>
             );
           })}
