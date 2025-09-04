@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import nexusLogo from "@assets/Main Nexus Logo copy_1756923544828.png";
 import contactHeroImage from "@assets/generated_images/Professional_customer_service_center_c4e17bc2.png";
+import { Link } from "wouter";
 
 export default function Contact() {
   const handleLogin = () => {
@@ -101,24 +102,24 @@ export default function Contact() {
 
             {/* Navigation Menu */}
             <div className="hidden lg:flex items-center space-x-8">
-              <a href="/" className="text-gray-700 hover:text-[#17B6C3] font-medium transition-colors duration-200" data-testid="link-nav-home">
+              <Link href="/" className="text-gray-700 hover:text-[#17B6C3] font-medium transition-colors duration-200" data-testid="link-nav-home">
                 Home
-              </a>
-              <a href="/features" className="text-gray-700 hover:text-[#17B6C3] font-medium transition-colors duration-200" data-testid="link-nav-features">
+              </Link>
+              <Link href="/features" className="text-gray-700 hover:text-[#17B6C3] font-medium transition-colors duration-200" data-testid="link-nav-features">
                 Features
-              </a>
-              <a href="/ai-capabilities" className="text-gray-700 hover:text-[#17B6C3] font-medium transition-colors duration-200" data-testid="link-nav-ai">
+              </Link>
+              <Link href="/ai-capabilities" className="text-gray-700 hover:text-[#17B6C3] font-medium transition-colors duration-200" data-testid="link-nav-ai">
                 AI Capabilities
-              </a>
-              <a href="/pricing" className="text-gray-700 hover:text-[#17B6C3] font-medium transition-colors duration-200" data-testid="link-nav-pricing">
+              </Link>
+              <Link href="/pricing" className="text-gray-700 hover:text-[#17B6C3] font-medium transition-colors duration-200" data-testid="link-nav-pricing">
                 Pricing
-              </a>
-              <a href="/about" className="text-gray-700 hover:text-[#17B6C3] font-medium transition-colors duration-200" data-testid="link-nav-about">
+              </Link>
+              <Link href="/about" className="text-gray-700 hover:text-[#17B6C3] font-medium transition-colors duration-200" data-testid="link-nav-about">
                 About
-              </a>
-              <a href="/contact" className="text-[#17B6C3] font-semibold" data-testid="link-nav-contact">
+              </Link>
+              <Link href="/contact" className="text-[#17B6C3] font-semibold" data-testid="link-nav-contact">
                 Contact
-              </a>
+              </Link>
             </div>
 
             {/* CTA Section */}
