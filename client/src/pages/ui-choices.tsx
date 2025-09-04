@@ -88,8 +88,8 @@ export default function UIChoices() {
             <Card className="bg-white border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
               <CardContent className="p-5">
                 <div className="flex items-center justify-between mb-3">
-                  <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                    <DollarSign className="h-4 w-4 text-blue-600" />
+                  <div className="w-8 h-8 bg-[#17B6C3]/10 rounded-full flex items-center justify-center">
+                    <DollarSign className="h-4 w-4 text-[#17B6C3]" />
                   </div>
                   <span className="text-xs text-green-600 font-medium">+12.5%</span>
                 </div>
@@ -136,8 +136,8 @@ export default function UIChoices() {
             <Card className="bg-white border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
               <CardContent className="p-5">
                 <div className="flex items-center justify-between mb-3">
-                  <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                    <Clock className="h-4 w-4 text-blue-600" />
+                  <div className="w-8 h-8 bg-[#17B6C3]/10 rounded-full flex items-center justify-center">
+                    <Clock className="h-4 w-4 text-[#17B6C3]" />
                   </div>
                   <span className="text-xs text-green-600 font-medium">-2.1 days</span>
                 </div>
@@ -159,8 +159,8 @@ export default function UIChoices() {
                     <CardTitle className="text-lg font-semibold text-gray-900">Collection Performance</CardTitle>
                     <CardDescription className="text-sm mt-1 text-gray-600">Monthly collection rates and trends</CardDescription>
                   </div>
-                  <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                    <BarChart3 className="h-4 w-4 text-blue-600" />
+                  <div className="w-8 h-8 bg-[#17B6C3]/10 rounded-full flex items-center justify-center">
+                    <BarChart3 className="h-4 w-4 text-[#17B6C3]" />
                   </div>
                 </div>
               </CardHeader>
@@ -198,11 +198,11 @@ export default function UIChoices() {
                 <CardDescription className="text-sm text-gray-600">Common collection tasks</CardDescription>
               </CardHeader>
               <CardContent className="pt-4 space-y-3">
-                <Button className="w-full justify-start text-left h-12 bg-blue-600 hover:bg-blue-700 text-white shadow-sm">
+                <Button className="w-full justify-start text-left h-12 bg-[#17B6C3] hover:bg-[#1396A1] text-white shadow-sm">
                   <Mail className="mr-3 h-4 w-4" />
                   <div>
                     <p className="font-medium text-sm">Send Payment Reminders</p>
-                    <p className="text-xs text-blue-100">23 overdue invoices</p>
+                    <p className="text-xs text-white/80">23 overdue invoices</p>
                   </div>
                 </Button>
                 
