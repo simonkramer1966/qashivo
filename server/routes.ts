@@ -468,6 +468,165 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Profile and subscription management routes
+  app.get("/api/profile/subscription", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      let subscriptionData = null;
+      if (user.stripeSubscriptionId) {
+        try {
+          const subscription = await stripe.subscriptions.retrieve(user.stripeSubscriptionId);
+          const customer = await stripe.customers.retrieve(user.stripeCustomerId!) as any;
+          
+          subscriptionData = {
+            id: subscription.id,
+            status: subscription.status,
+            currentPeriodStart: new Date((subscription as any).current_period_start * 1000),
+            currentPeriodEnd: new Date((subscription as any).current_period_end * 1000),
+            cancelAtPeriodEnd: (subscription as any).cancel_at_period_end,
+            created: new Date(subscription.created * 1000),
+            customer: {
+              id: customer.id,
+              email: customer.email || null,
+              name: customer.name || null,
+            },
+            items: subscription.items.data.map(item => ({
+              id: item.id,
+              priceId: item.price.id,
+              quantity: item.quantity,
+              amount: (item.price as any).unit_amount,
+              currency: item.price.currency,
+              interval: item.price.recurring?.interval,
+            })),
+          };
+        } catch (stripeError) {
+          console.error("Error fetching Stripe subscription:", stripeError);
+          // Return user data without subscription details if Stripe call fails
+          subscriptionData = { error: "Could not fetch subscription details" };
+        }
+      }
+
+      res.json({
+        user: {
+          id: user.id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          profileImageUrl: user.profileImageUrl,
+          role: user.role,
+          createdAt: user.createdAt,
+          stripeCustomerId: user.stripeCustomerId,
+          stripeSubscriptionId: user.stripeSubscriptionId,
+        },
+        subscription: subscriptionData,
+      });
+    } catch (error) {
+      console.error("Error fetching profile subscription:", error);
+      res.status(500).json({ message: "Failed to fetch profile data" });
+    }
+  });
+
+  app.post("/api/profile/create-subscription", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      if (user.stripeSubscriptionId) {
+        const subscription = await stripe.subscriptions.retrieve(user.stripeSubscriptionId, {
+          expand: ['latest_invoice.payment_intent']
+        });
+        return res.json({
+          subscriptionId: subscription.id,
+          clientSecret: (subscription.latest_invoice as any)?.payment_intent?.client_secret,
+        });
+      }
+
+      if (!user.email) {
+        throw new Error('No user email on file');
+      }
+
+      let customerId = user.stripeCustomerId;
+      if (!customerId) {
+        const customer = await stripe.customers.create({
+          email: user.email,
+          name: user.firstName && user.lastName ? `${user.firstName} ${user.lastName}` : user.email,
+        });
+        customerId = customer.id;
+        await storage.updateUserStripeInfo(user.id, customerId, '');
+      }
+
+      // For now, return a mock subscription response since we don't have a real price ID configured
+      // In production, you would use a real Stripe price ID from your dashboard
+      res.json({
+        success: false,
+        message: 'Subscription creation not configured. Please set up Stripe price IDs in your dashboard.',
+        requiresSetup: true,
+      });
+      return;
+
+      await storage.updateUserStripeInfo(user.id, customerId, subscription.id);
+
+      res.json({
+        subscriptionId: subscription.id,
+        clientSecret: (subscription.latest_invoice as any)?.payment_intent?.client_secret,
+      });
+    } catch (error: any) {
+      console.error("Error creating subscription:", error);
+      res.status(400).json({ error: { message: error.message } });
+    }
+  });
+
+  app.post("/api/profile/cancel-subscription", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.stripeSubscriptionId) {
+        return res.status(400).json({ message: "No active subscription found" });
+      }
+
+      const subscription = await stripe.subscriptions.update(user.stripeSubscriptionId, {
+        cancel_at_period_end: true,
+      });
+
+      res.json({
+        success: true,
+        message: "Subscription will be cancelled at the end of the billing period",
+        cancelAtPeriodEnd: (subscription as any).cancel_at_period_end,
+        currentPeriodEnd: new Date((subscription as any).current_period_end * 1000),
+      });
+    } catch (error: any) {
+      console.error("Error cancelling subscription:", error);
+      res.status(500).json({ message: "Failed to cancel subscription" });
+    }
+  });
+
+  app.post("/api/profile/reactivate-subscription", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.stripeSubscriptionId) {
+        return res.status(400).json({ message: "No subscription found" });
+      }
+
+      const subscription = await stripe.subscriptions.update(user.stripeSubscriptionId, {
+        cancel_at_period_end: false,
+      });
+
+      res.json({
+        success: true,
+        message: "Subscription reactivated successfully",
+        status: subscription.status,
+      });
+    } catch (error: any) {
+      console.error("Error reactivating subscription:", error);
+      res.status(500).json({ message: "Failed to reactivate subscription" });
+    }
+  });
+
   // Xero integration routes
   app.get("/api/xero/auth-url", isAuthenticated, async (req: any, res) => {
     try {

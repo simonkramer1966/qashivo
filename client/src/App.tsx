@@ -24,6 +24,7 @@ import Pricing from "@/pages/pricing";
 import About from "@/pages/about";
 import Contact from "@/pages/contact";
 import Subscribe from "@/pages/subscribe";
+import Profile from "@/pages/Profile";
 import { useAuth } from "@/hooks/useAuth";
 
 function Router() {
@@ -64,6 +65,7 @@ function Router() {
           <Route path="/ai-suggestions" component={AiSuggestions} />
           <Route path="/reports" component={Reports} />
           <Route path="/settings" component={Settings} />
+          <Route path="/profile" component={Profile} />
           <Route path="/ui-choices" component={UIChoices} />
           <Route path="/ui-xero" component={UIXero} />
           <Route path="/ui-quickbooks" component={UIQuickBooks} />
