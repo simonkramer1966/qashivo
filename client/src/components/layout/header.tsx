@@ -3,6 +3,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { LogOut, User } from "lucide-react";
+import { useLocation } from "wouter";
 
 interface HeaderProps {
   title: string;
@@ -15,9 +16,14 @@ interface HeaderProps {
 
 export default function Header({ title, subtitle, action, noBorder = true, titleSize = "text-2xl", subtitleSize = "text-base" }: HeaderProps) {
   const { user } = useAuth();
+  const [, setLocation] = useLocation();
 
   const handleLogout = () => {
     window.location.href = "/api/logout";
+  };
+
+  const handleProfileClick = () => {
+    setLocation("/profile");
   };
 
   const getUserInitials = () => {
@@ -84,7 +90,7 @@ export default function Header({ title, subtitle, action, noBorder = true, title
               </Avatar>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuItem className="cursor-pointer" data-testid="menu-item-profile">
+              <DropdownMenuItem onClick={handleProfileClick} className="cursor-pointer" data-testid="menu-item-profile">
                 <User className="mr-2 h-4 w-4" />
                 <span>Profile</span>
               </DropdownMenuItem>
