@@ -155,6 +155,7 @@ export const workflowConnections = pgTable("workflow_connections", {
   targetNodeId: varchar("target_node_id").notNull().references(() => workflowNodes.id, { onDelete: "cascade" }),
   condition: jsonb("condition"), // Condition for this connection (for decision nodes)
   label: varchar("label"), // Optional label for the connection
+  connectionType: varchar("connection_type").default("default"), // "yes", "no", "what_if", "default"
   successRate: decimal("success_rate", { precision: 5, scale: 2 }), // Historical success rate
   createdAt: timestamp("created_at").defaultNow(),
 });
@@ -336,3 +337,116 @@ export type InsertWorkflowConnection = z.infer<typeof insertWorkflowConnectionSc
 export type WorkflowConnection = typeof workflowConnections.$inferSelect;
 export type InsertWorkflowTemplate = z.infer<typeof insertWorkflowTemplateSchema>;
 export type WorkflowTemplate = typeof workflowTemplates.$inferSelect;
+
+// Node Configuration Types
+export interface TriggerNodeConfig {
+  invoice_overdue?: {
+    daysOverdueThreshold: number; // 1-365
+    minimumAmount: number;
+    customerTypeFilter: 'individual' | 'business' | 'both';
+    previousContactLimit: number;
+    timeWindow: 'business_hours' | 'twenty_four_seven';
+  };
+  payment_received?: {
+    paymentMethodFilters: string[];
+    paymentType: 'partial' | 'full' | 'both';
+    gracePeriodDays: number;
+    notificationRecipients: string[];
+  };
+}
+
+export interface ActionNodeConfig {
+  send_email?: {
+    templateId: string;
+    personalizationFields: string[];
+    sendDelay: 'immediate' | 'scheduled';
+    scheduledTime?: string;
+    trackOpens: boolean;
+    trackClicks: boolean;
+    escalationDays?: number;
+  };
+  send_sms?: {
+    messageTemplate: string;
+    sendTimeStart: string; // "09:00"
+    sendTimeEnd: string; // "20:00"
+    optOutCompliance: boolean;
+    responseHandling: 'automated' | 'manual';
+  };
+  make_call?: {
+    scriptId: string;
+    callTimePreferences: string[];
+    maxRetryAttempts: number;
+    voicemailMessage: string;
+    outcomeTracking: boolean;
+  };
+  wait_delay?: {
+    duration: number;
+    durationUnit: 'hours' | 'days' | 'weeks';
+    businessDaysOnly: boolean;
+    skipOnPayment: boolean;
+  };
+}
+
+export interface DecisionNodeConfig {
+  payment_status_check?: {
+    condition: string;
+    daysToCheck: number;
+    yesAction: string;
+    noAction: string;
+    whatIfScenarios: Array<{
+      id: string;
+      condition: string;
+      label: string;
+    }>;
+  };
+  customer_response?: {
+    condition: string;
+    yesAction: string;
+    noAction: string;
+    whatIfScenarios: Array<{
+      id: string;
+      condition: string;
+      label: string;
+    }>;
+  };
+  amount_threshold?: {
+    condition: string;
+    thresholdAmount: number;
+    yesAction: string;
+    noAction: string;
+    whatIfScenarios: Array<{
+      id: string;
+      condition: string;
+      label: string;
+    }>;
+  };
+}
+
+export interface AINodeConfig {
+  generate_email?: {
+    tone: 'professional' | 'firm' | 'friendly';
+    customerHistoryAnalysis: boolean;
+    personalizationLevel: 'basic' | 'advanced';
+    legalComplianceCheck: boolean;
+    templateBase: string;
+  };
+  analyze_response?: {
+    sentimentAnalysis: boolean;
+    intentDetection: boolean;
+    urgencyScoring: boolean;
+    maxUrgencyScore: number;
+    recommendedActions: string[];
+  };
+}
+
+export type NodeConfigUnion = TriggerNodeConfig & ActionNodeConfig & DecisionNodeConfig & AINodeConfig;
+
+// Enhanced WorkflowNode type for the frontend
+export interface WorkflowNodeWithConfig extends Omit<WorkflowNode, 'config'> {
+  config: NodeConfigUnion;
+}
+
+// Enhanced WorkflowConnection type for decision branches
+export interface WorkflowConnectionWithType extends Omit<WorkflowConnection, 'connectionType'> {
+  connectionType: 'yes' | 'no' | 'what_if' | 'default';
+}

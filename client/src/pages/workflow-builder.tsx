@@ -9,6 +9,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Textarea } from "@/components/ui/textarea";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
   Save,
   Play,
@@ -24,12 +28,16 @@ import {
   Settings,
   TestTube,
   Trash2,
-  X
+  X,
+  ChevronDown,
+  Plus,
+  Brain,
+  Sparkles
 } from "lucide-react";
 
 interface WorkflowNode {
   id: string;
-  type: 'trigger' | 'action' | 'decision' | 'delay';
+  type: 'trigger' | 'action' | 'decision' | 'delay' | 'ai';
   subType: string;
   label: string;
   position: { x: number; y: number };
@@ -53,15 +61,18 @@ const NODE_TYPES = {
   action: [
     { subType: 'email', label: 'Send Email', icon: Mail, color: 'bg-blue-500' },
     { subType: 'sms', label: 'Send SMS', icon: MessageSquare, color: 'bg-green-500' },
-    { subType: 'whatsapp', label: 'WhatsApp Message', icon: MessageSquare, color: 'bg-green-600' },
-    { subType: 'voice_call', label: 'Voice Call', icon: Phone, color: 'bg-purple-500' },
-    { subType: 'update_status', label: 'Update Status', icon: CheckCircle, color: 'bg-gray-500' },
+    { subType: 'phone', label: 'Make Call', icon: Phone, color: 'bg-purple-500' },
+    { subType: 'delay', label: 'Wait/Delay', icon: Clock, color: 'bg-yellow-500' },
   ],
   decision: [
     { subType: 'payment_received', label: 'Payment Received?', icon: CheckCircle, color: 'bg-green-500' },
     { subType: 'email_opened', label: 'Email Opened?', icon: Mail, color: 'bg-blue-500' },
     { subType: 'sms_replied', label: 'SMS Replied?', icon: MessageSquare, color: 'bg-green-500' },
     { subType: 'call_answered', label: 'Call Answered?', icon: Phone, color: 'bg-purple-500' },
+  ],
+  ai: [
+    { subType: 'generate_email', label: 'AI Generate Email', icon: Brain, color: 'bg-indigo-500' },
+    { subType: 'analyze_response', label: 'AI Analyze Response', icon: Sparkles, color: 'bg-violet-500' },
   ],
   delay: [
     { subType: 'wait_days', label: 'Wait X Days', icon: Clock, color: 'bg-yellow-500' },
@@ -289,6 +300,16 @@ export default function WorkflowBuilder() {
         deleteNode(selectedNode.id);
       }
     }
+  };
+
+  const updateNodeConfig = (config: Record<string, any>) => {
+    if (!selectedNode) return;
+    
+    const updatedNode = { ...selectedNode, config: { ...selectedNode.config, ...config } };
+    setSelectedNode(updatedNode);
+    setNodes(prev => prev.map(node => 
+      node.id === selectedNode.id ? updatedNode : node
+    ));
   };
 
   const saveWorkflow = async () => {
@@ -780,10 +801,592 @@ export default function WorkflowBuilder() {
 
                     <Separator />
 
-                    {/* Node-specific configuration would go here */}
-                    <div className="text-sm text-gray-500 italic">
-                      Configuration options for {selectedNode.subType.replace('_', ' ')} will be added here.
-                    </div>
+                    {/* Node-specific configuration */}
+                    {selectedNode.type === 'trigger' && selectedNode.subType === 'invoice_overdue' && (
+                      <Collapsible defaultOpen>
+                        <CollapsibleTrigger className="flex items-center justify-between w-full p-2 text-sm font-medium bg-gray-50 rounded-lg hover:bg-gray-100">
+                          <span>Invoice Overdue Configuration</span>
+                          <ChevronDown className="h-4 w-4" />
+                        </CollapsibleTrigger>
+                        <CollapsibleContent className="space-y-4 pt-4">
+                          <div>
+                            <Label className="text-sm font-medium">Days Overdue Threshold</Label>
+                            <Input
+                              type="number"
+                              min="1"
+                              max="365"
+                              value={selectedNode.config.daysOverdueThreshold || 30}
+                              onChange={(e) => updateNodeConfig({ daysOverdueThreshold: parseInt(e.target.value) })}
+                              className="bg-white/70 border-gray-200/30"
+                              placeholder="30"
+                            />
+                            <p className="text-xs text-gray-500 mt-1">Trigger when invoice is overdue by this many days</p>
+                          </div>
+                          
+                          <div>
+                            <Label className="text-sm font-medium">Minimum Amount ($)</Label>
+                            <Input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={selectedNode.config.minimumAmount || 0}
+                              onChange={(e) => updateNodeConfig({ minimumAmount: parseFloat(e.target.value) })}
+                              className="bg-white/70 border-gray-200/30"
+                              placeholder="0.00"
+                            />
+                            <p className="text-xs text-gray-500 mt-1">Only trigger for invoices above this amount</p>
+                          </div>
+
+                          <div>
+                            <Label className="text-sm font-medium">Customer Type Filter</Label>
+                            <Select 
+                              value={selectedNode.config.customerTypeFilter || 'both'} 
+                              onValueChange={(value) => updateNodeConfig({ customerTypeFilter: value })}
+                            >
+                              <SelectTrigger className="bg-white border-gray-200">
+                                <SelectValue placeholder="Select customer type" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="individual">Individual</SelectItem>
+                                <SelectItem value="business">Business</SelectItem>
+                                <SelectItem value="both">Both</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          <div>
+                            <Label className="text-sm font-medium">Previous Contact Limit</Label>
+                            <Input
+                              type="number"
+                              min="0"
+                              value={selectedNode.config.previousContactLimit || 0}
+                              onChange={(e) => updateNodeConfig({ previousContactLimit: parseInt(e.target.value) })}
+                              className="bg-white/70 border-gray-200/30"
+                              placeholder="0"
+                            />
+                            <p className="text-xs text-gray-500 mt-1">Max previous contact attempts before triggering</p>
+                          </div>
+
+                          <div>
+                            <Label className="text-sm font-medium">Time Window</Label>
+                            <Select 
+                              value={selectedNode.config.timeWindow || 'business_hours'} 
+                              onValueChange={(value) => updateNodeConfig({ timeWindow: value })}
+                            >
+                              <SelectTrigger className="bg-white border-gray-200">
+                                <SelectValue placeholder="Select time window" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="business_hours">Business Hours Only</SelectItem>
+                                <SelectItem value="twenty_four_seven">24/7</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </CollapsibleContent>
+                      </Collapsible>
+                    )}
+
+                    {selectedNode.type === 'action' && selectedNode.subType === 'email' && (
+                      <Collapsible defaultOpen>
+                        <CollapsibleTrigger className="flex items-center justify-between w-full p-2 text-sm font-medium bg-gray-50 rounded-lg hover:bg-gray-100">
+                          <span>Send Email Configuration</span>
+                          <ChevronDown className="h-4 w-4" />
+                        </CollapsibleTrigger>
+                        <CollapsibleContent className="space-y-4 pt-4">
+                          <div>
+                            <Label className="text-sm font-medium">Email Template</Label>
+                            <Select 
+                              value={selectedNode.config.templateId || ''} 
+                              onValueChange={(value) => updateNodeConfig({ templateId: value })}
+                            >
+                              <SelectTrigger className="bg-white border-gray-200">
+                                <SelectValue placeholder="Select email template" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="first_notice">First Notice</SelectItem>
+                                <SelectItem value="second_notice">Second Notice</SelectItem>
+                                <SelectItem value="final_demand">Final Demand</SelectItem>
+                                <SelectItem value="payment_plan">Payment Plan Offer</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          <div>
+                            <Label className="text-sm font-medium">Send Delay</Label>
+                            <Select 
+                              value={selectedNode.config.sendDelay || 'immediate'} 
+                              onValueChange={(value) => updateNodeConfig({ sendDelay: value })}
+                            >
+                              <SelectTrigger className="bg-white border-gray-200">
+                                <SelectValue placeholder="Select send timing" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="immediate">Send Immediately</SelectItem>
+                                <SelectItem value="scheduled">Schedule for Later</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          {selectedNode.config.sendDelay === 'scheduled' && (
+                            <div>
+                              <Label className="text-sm font-medium">Scheduled Time</Label>
+                              <Input
+                                type="time"
+                                value={selectedNode.config.scheduledTime || '09:00'}
+                                onChange={(e) => updateNodeConfig({ scheduledTime: e.target.value })}
+                                className="bg-white/70 border-gray-200/30"
+                              />
+                            </div>
+                          )}
+
+                          <div className="space-y-2">
+                            <Label className="text-sm font-medium">Tracking Options</Label>
+                            <div className="flex items-center space-x-2">
+                              <Checkbox
+                                id="track-opens"
+                                checked={selectedNode.config.trackOpens || false}
+                                onCheckedChange={(checked) => updateNodeConfig({ trackOpens: checked })}
+                              />
+                              <Label htmlFor="track-opens" className="text-sm">Track email opens</Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <Checkbox
+                                id="track-clicks"
+                                checked={selectedNode.config.trackClicks || false}
+                                onCheckedChange={(checked) => updateNodeConfig({ trackClicks: checked })}
+                              />
+                              <Label htmlFor="track-clicks" className="text-sm">Track link clicks</Label>
+                            </div>
+                          </div>
+
+                          <div>
+                            <Label className="text-sm font-medium">Escalation (days)</Label>
+                            <Input
+                              type="number"
+                              min="1"
+                              value={selectedNode.config.escalationDays || 7}
+                              onChange={(e) => updateNodeConfig({ escalationDays: parseInt(e.target.value) })}
+                              className="bg-white/70 border-gray-200/30"
+                              placeholder="7"
+                            />
+                            <p className="text-xs text-gray-500 mt-1">Escalate if no response after this many days</p>
+                          </div>
+                        </CollapsibleContent>
+                      </Collapsible>
+                    )}
+
+                    {selectedNode.type === 'action' && selectedNode.subType === 'sms' && (
+                      <Collapsible defaultOpen>
+                        <CollapsibleTrigger className="flex items-center justify-between w-full p-2 text-sm font-medium bg-gray-50 rounded-lg hover:bg-gray-100">
+                          <span>Send SMS Configuration</span>
+                          <ChevronDown className="h-4 w-4" />
+                        </CollapsibleTrigger>
+                        <CollapsibleContent className="space-y-4 pt-4">
+                          <div>
+                            <Label className="text-sm font-medium">Message Template</Label>
+                            <Textarea
+                              value={selectedNode.config.messageTemplate || ''}
+                              onChange={(e) => updateNodeConfig({ messageTemplate: e.target.value })}
+                              className="bg-white/70 border-gray-200/30"
+                              placeholder="Hi [Name], your invoice [InvoiceNumber] for $[Amount] is overdue. Please pay at [PaymentLink]"
+                              rows={3}
+                            />
+                            <p className="text-xs text-gray-500 mt-1">Max 160 characters for SMS</p>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <Label className="text-sm font-medium">Send Time Start</Label>
+                              <Input
+                                type="time"
+                                value={selectedNode.config.sendTimeStart || '09:00'}
+                                onChange={(e) => updateNodeConfig({ sendTimeStart: e.target.value })}
+                                className="bg-white/70 border-gray-200/30"
+                              />
+                            </div>
+                            <div>
+                              <Label className="text-sm font-medium">Send Time End</Label>
+                              <Input
+                                type="time"
+                                value={selectedNode.config.sendTimeEnd || '20:00'}
+                                onChange={(e) => updateNodeConfig({ sendTimeEnd: e.target.value })}
+                                className="bg-white/70 border-gray-200/30"
+                              />
+                            </div>
+                          </div>
+
+                          <div className="space-y-2">
+                            <div className="flex items-center space-x-2">
+                              <Checkbox
+                                id="opt-out-compliance"
+                                checked={selectedNode.config.optOutCompliance || true}
+                                onCheckedChange={(checked) => updateNodeConfig({ optOutCompliance: checked })}
+                              />
+                              <Label htmlFor="opt-out-compliance" className="text-sm">Include opt-out instructions</Label>
+                            </div>
+                          </div>
+
+                          <div>
+                            <Label className="text-sm font-medium">Response Handling</Label>
+                            <Select 
+                              value={selectedNode.config.responseHandling || 'automated'} 
+                              onValueChange={(value) => updateNodeConfig({ responseHandling: value })}
+                            >
+                              <SelectTrigger className="bg-white border-gray-200">
+                                <SelectValue placeholder="Select response handling" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="automated">Automated Response</SelectItem>
+                                <SelectItem value="manual">Manual Review</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </CollapsibleContent>
+                      </Collapsible>
+                    )}
+
+                    {selectedNode.type === 'action' && selectedNode.subType === 'phone' && (
+                      <Collapsible defaultOpen>
+                        <CollapsibleTrigger className="flex items-center justify-between w-full p-2 text-sm font-medium bg-gray-50 rounded-lg hover:bg-gray-100">
+                          <span>Make Call Configuration</span>
+                          <ChevronDown className="h-4 w-4" />
+                        </CollapsibleTrigger>
+                        <CollapsibleContent className="space-y-4 pt-4">
+                          <div>
+                            <Label className="text-sm font-medium">Call Script</Label>
+                            <Select 
+                              value={selectedNode.config.scriptId || ''} 
+                              onValueChange={(value) => updateNodeConfig({ scriptId: value })}
+                            >
+                              <SelectTrigger className="bg-white border-gray-200">
+                                <SelectValue placeholder="Select call script" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="friendly_reminder">Friendly Reminder</SelectItem>
+                                <SelectItem value="formal_notice">Formal Notice</SelectItem>
+                                <SelectItem value="payment_plan">Payment Plan Discussion</SelectItem>
+                                <SelectItem value="final_demand">Final Demand</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          <div>
+                            <Label className="text-sm font-medium">Max Retry Attempts</Label>
+                            <Input
+                              type="number"
+                              min="1"
+                              max="10"
+                              value={selectedNode.config.maxRetryAttempts || 3}
+                              onChange={(e) => updateNodeConfig({ maxRetryAttempts: parseInt(e.target.value) })}
+                              className="bg-white/70 border-gray-200/30"
+                              placeholder="3"
+                            />
+                            <p className="text-xs text-gray-500 mt-1">Number of call attempts before giving up</p>
+                          </div>
+
+                          <div>
+                            <Label className="text-sm font-medium">Voicemail Message</Label>
+                            <Textarea
+                              value={selectedNode.config.voicemailMessage || ''}
+                              onChange={(e) => updateNodeConfig({ voicemailMessage: e.target.value })}
+                              className="bg-white/70 border-gray-200/30"
+                              placeholder="Hi [Name], this is [Company] regarding invoice [InvoiceNumber]. Please call us back at [PhoneNumber]."
+                              rows={3}
+                            />
+                          </div>
+
+                          <div className="flex items-center space-x-2">
+                            <Checkbox
+                              id="outcome-tracking"
+                              checked={selectedNode.config.outcomeTracking || true}
+                              onCheckedChange={(checked) => updateNodeConfig({ outcomeTracking: checked })}
+                            />
+                            <Label htmlFor="outcome-tracking" className="text-sm">Track call outcomes and responses</Label>
+                          </div>
+                        </CollapsibleContent>
+                      </Collapsible>
+                    )}
+
+                    {selectedNode.type === 'action' && selectedNode.subType === 'delay' && (
+                      <Collapsible defaultOpen>
+                        <CollapsibleTrigger className="flex items-center justify-between w-full p-2 text-sm font-medium bg-gray-50 rounded-lg hover:bg-gray-100">
+                          <span>Wait/Delay Configuration</span>
+                          <ChevronDown className="h-4 w-4" />
+                        </CollapsibleTrigger>
+                        <CollapsibleContent className="space-y-4 pt-4">
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <Label className="text-sm font-medium">Duration</Label>
+                              <Input
+                                type="number"
+                                min="1"
+                                value={selectedNode.config.duration || 1}
+                                onChange={(e) => updateNodeConfig({ duration: parseInt(e.target.value) })}
+                                className="bg-white/70 border-gray-200/30"
+                                placeholder="1"
+                              />
+                            </div>
+                            <div>
+                              <Label className="text-sm font-medium">Unit</Label>
+                              <Select 
+                                value={selectedNode.config.durationUnit || 'days'} 
+                                onValueChange={(value) => updateNodeConfig({ durationUnit: value })}
+                              >
+                                <SelectTrigger className="bg-white border-gray-200">
+                                  <SelectValue placeholder="Select unit" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="hours">Hours</SelectItem>
+                                  <SelectItem value="days">Days</SelectItem>
+                                  <SelectItem value="weeks">Weeks</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </div>
+
+                          <div className="space-y-2">
+                            <div className="flex items-center space-x-2">
+                              <Checkbox
+                                id="business-days-only"
+                                checked={selectedNode.config.businessDaysOnly || false}
+                                onCheckedChange={(checked) => updateNodeConfig({ businessDaysOnly: checked })}
+                              />
+                              <Label htmlFor="business-days-only" className="text-sm">Business days only</Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <Checkbox
+                                id="skip-on-payment"
+                                checked={selectedNode.config.skipOnPayment || true}
+                                onCheckedChange={(checked) => updateNodeConfig({ skipOnPayment: checked })}
+                              />
+                              <Label htmlFor="skip-on-payment" className="text-sm">Skip delay if payment received</Label>
+                            </div>
+                          </div>
+                        </CollapsibleContent>
+                      </Collapsible>
+                    )}
+
+                    {selectedNode.type === 'ai' && selectedNode.subType === 'generate_email' && (
+                      <Collapsible defaultOpen>
+                        <CollapsibleTrigger className="flex items-center justify-between w-full p-2 text-sm font-medium bg-gray-50 rounded-lg hover:bg-gray-100">
+                          <span>AI Email Generation Configuration</span>
+                          <ChevronDown className="h-4 w-4" />
+                        </CollapsibleTrigger>
+                        <CollapsibleContent className="space-y-4 pt-4">
+                          <div>
+                            <Label className="text-sm font-medium">Tone</Label>
+                            <Select 
+                              value={selectedNode.config.tone || 'professional'} 
+                              onValueChange={(value) => updateNodeConfig({ tone: value })}
+                            >
+                              <SelectTrigger className="bg-white border-gray-200">
+                                <SelectValue placeholder="Select tone" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="friendly">Friendly</SelectItem>
+                                <SelectItem value="professional">Professional</SelectItem>
+                                <SelectItem value="firm">Firm</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          <div>
+                            <Label className="text-sm font-medium">Personalization Level</Label>
+                            <Select 
+                              value={selectedNode.config.personalizationLevel || 'basic'} 
+                              onValueChange={(value) => updateNodeConfig({ personalizationLevel: value })}
+                            >
+                              <SelectTrigger className="bg-white border-gray-200">
+                                <SelectValue placeholder="Select personalization" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="basic">Basic (Name, Amount)</SelectItem>
+                                <SelectItem value="advanced">Advanced (History, Context)</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          <div>
+                            <Label className="text-sm font-medium">Template Base</Label>
+                            <Input
+                              value={selectedNode.config.templateBase || ''}
+                              onChange={(e) => updateNodeConfig({ templateBase: e.target.value })}
+                              className="bg-white/70 border-gray-200/30"
+                              placeholder="Base template or guidelines for AI"
+                            />
+                          </div>
+
+                          <div className="space-y-2">
+                            <div className="flex items-center space-x-2">
+                              <Checkbox
+                                id="customer-history"
+                                checked={selectedNode.config.customerHistoryAnalysis || true}
+                                onCheckedChange={(checked) => updateNodeConfig({ customerHistoryAnalysis: checked })}
+                              />
+                              <Label htmlFor="customer-history" className="text-sm">Analyze customer history</Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <Checkbox
+                                id="legal-compliance"
+                                checked={selectedNode.config.legalComplianceCheck || true}
+                                onCheckedChange={(checked) => updateNodeConfig({ legalComplianceCheck: checked })}
+                              />
+                              <Label htmlFor="legal-compliance" className="text-sm">Legal compliance check</Label>
+                            </div>
+                          </div>
+                        </CollapsibleContent>
+                      </Collapsible>
+                    )}
+
+                    {selectedNode.type === 'ai' && selectedNode.subType === 'analyze_response' && (
+                      <Collapsible defaultOpen>
+                        <CollapsibleTrigger className="flex items-center justify-between w-full p-2 text-sm font-medium bg-gray-50 rounded-lg hover:bg-gray-100">
+                          <span>AI Response Analysis Configuration</span>
+                          <ChevronDown className="h-4 w-4" />
+                        </CollapsibleTrigger>
+                        <CollapsibleContent className="space-y-4 pt-4">
+                          <div>
+                            <Label className="text-sm font-medium">Max Urgency Score</Label>
+                            <Input
+                              type="number"
+                              min="1"
+                              max="10"
+                              value={selectedNode.config.maxUrgencyScore || 10}
+                              onChange={(e) => updateNodeConfig({ maxUrgencyScore: parseInt(e.target.value) })}
+                              className="bg-white/70 border-gray-200/30"
+                              placeholder="10"
+                            />
+                            <p className="text-xs text-gray-500 mt-1">Scale for urgency scoring (1-10)</p>
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label className="text-sm font-medium">Analysis Features</Label>
+                            <div className="flex items-center space-x-2">
+                              <Checkbox
+                                id="sentiment-analysis"
+                                checked={selectedNode.config.sentimentAnalysis || true}
+                                onCheckedChange={(checked) => updateNodeConfig({ sentimentAnalysis: checked })}
+                              />
+                              <Label htmlFor="sentiment-analysis" className="text-sm">Sentiment analysis</Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <Checkbox
+                                id="intent-detection"
+                                checked={selectedNode.config.intentDetection || true}
+                                onCheckedChange={(checked) => updateNodeConfig({ intentDetection: checked })}
+                              />
+                              <Label htmlFor="intent-detection" className="text-sm">Intent detection</Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <Checkbox
+                                id="urgency-scoring"
+                                checked={selectedNode.config.urgencyScoring || true}
+                                onCheckedChange={(checked) => updateNodeConfig({ urgencyScoring: checked })}
+                              />
+                              <Label htmlFor="urgency-scoring" className="text-sm">Urgency scoring</Label>
+                            </div>
+                          </div>
+
+                          <div>
+                            <Label className="text-sm font-medium">Recommended Actions</Label>
+                            <Textarea
+                              value={selectedNode.config.recommendedActions?.join('\n') || ''}
+                              onChange={(e) => updateNodeConfig({ recommendedActions: e.target.value.split('\n').filter(action => action.trim()) })}
+                              className="bg-white/70 border-gray-200/30"
+                              placeholder="Follow up in 3 days&#10;Escalate to manager&#10;Offer payment plan"
+                              rows={3}
+                            />
+                            <p className="text-xs text-gray-500 mt-1">One action per line</p>
+                          </div>
+                        </CollapsibleContent>
+                      </Collapsible>
+                    )}
+
+                    {selectedNode.type === 'decision' && (
+                      <Collapsible defaultOpen>
+                        <CollapsibleTrigger className="flex items-center justify-between w-full p-2 text-sm font-medium bg-gray-50 rounded-lg hover:bg-gray-100">
+                          <span>Decision Node Configuration</span>
+                          <ChevronDown className="h-4 w-4" />
+                        </CollapsibleTrigger>
+                        <CollapsibleContent className="space-y-4 pt-4">
+                          <div>
+                            <Label className="text-sm font-medium">Primary Condition</Label>
+                            <Textarea
+                              value={selectedNode.config.condition || ''}
+                              onChange={(e) => updateNodeConfig({ condition: e.target.value })}
+                              className="bg-white/70 border-gray-200/30"
+                              placeholder="e.g., Payment received in last 7 days?"
+                              rows={2}
+                            />
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <Label className="text-sm font-medium text-green-600">YES Action</Label>
+                              <Input
+                                value={selectedNode.config.yesAction || ''}
+                                onChange={(e) => updateNodeConfig({ yesAction: e.target.value })}
+                                className="bg-white/70 border-gray-200/30"
+                                placeholder="Continue to thank you"
+                              />
+                            </div>
+                            <div>
+                              <Label className="text-sm font-medium text-red-600">NO Action</Label>
+                              <Input
+                                value={selectedNode.config.noAction || ''}
+                                onChange={(e) => updateNodeConfig({ noAction: e.target.value })}
+                                className="bg-white/70 border-gray-200/30"
+                                placeholder="Escalate collection"
+                              />
+                            </div>
+                          </div>
+
+                          <div>
+                            <Label className="text-sm font-medium">What-If Scenarios</Label>
+                            <div className="space-y-2">
+                              {(selectedNode.config.whatIfScenarios || []).map((scenario: any, index: number) => (
+                                <div key={index} className="flex items-center space-x-2 p-2 bg-gray-50 rounded">
+                                  <Input
+                                    value={scenario.label || ''}
+                                    onChange={(e) => {
+                                      const scenarios = [...(selectedNode.config.whatIfScenarios || [])];
+                                      scenarios[index] = { ...scenarios[index], label: e.target.value };
+                                      updateNodeConfig({ whatIfScenarios: scenarios });
+                                    }}
+                                    className="flex-1 bg-white border-gray-200"
+                                    placeholder="Scenario description"
+                                  />
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => {
+                                      const scenarios = [...(selectedNode.config.whatIfScenarios || [])];
+                                      scenarios.splice(index, 1);
+                                      updateNodeConfig({ whatIfScenarios: scenarios });
+                                    }}
+                                  >
+                                    <X className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                              ))}
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  const scenarios = [...(selectedNode.config.whatIfScenarios || [])];
+                                  scenarios.push({ id: `scenario_${Date.now()}`, label: '', condition: '' });
+                                  updateNodeConfig({ whatIfScenarios: scenarios });
+                                }}
+                                className="w-full"
+                              >
+                                <Plus className="h-3 w-3 mr-2" />
+                                Add What-If Scenario
+                              </Button>
+                            </div>
+                          </div>
+                        </CollapsibleContent>
+                      </Collapsible>
+                    )}
                     
                     <Separator />
                     

@@ -1,0 +1,107 @@
+Suggested Node Configuration Properties
+Trigger Nodes
+Invoice Overdue:
+
+Days overdue threshold (1-365)
+Minimum amount ($)
+Customer type filter (individual/business)
+Previous contact attempts limit
+Time window (business hours only/24-7)
+Payment Received:
+
+Payment method filters
+Partial/full payment options
+Grace period (days)
+Notification recipients
+Action Nodes
+Send Email:
+
+Template selection (first notice, final demand, etc.)
+Personalization fields (name, amount, due date)
+Send delay (immediate/scheduled)
+Track opens/clicks (yes/no)
+Escalation if no response (days)
+Send SMS:
+
+Message template with character limit
+Send time restrictions (9am-8pm)
+Opt-out compliance (yes/no)
+Response handling (automated/manual)
+Make Call:
+
+Script selection
+Call time preferences
+Max retry attempts
+Voicemail message
+Call outcome tracking
+Wait/Delay:
+
+Duration (hours/days/weeks)
+Business days only (yes/no)
+Skip on payment received (yes/no)
+Decision Nodes (With Yes/No + What-If)
+Payment Status Check:
+
+Condition: Payment received in last X days?
+Yes Branch: → Continue to thank you message
+No Branch: → Escalate to next collection step
+What-If Options:
+Partial payment received
+Payment plan requested
+Dispute raised
+Customer Response:
+
+Condition: Customer responded to last contact?
+Yes Branch: → Route to manual review
+No Branch: → Automated escalation
+What-If Options:
+Response was out-of-office
+Response requested more time
+Response was confrontational
+Amount Threshold:
+
+Condition: Outstanding amount > $X?
+Yes Branch: → High-value collection process
+No Branch: → Standard collection process
+What-If Options:
+Multiple invoices for same customer
+Disputed amount
+Credit memo pending
+AI Nodes
+Generate Email:
+
+Tone selection (professional/firm/friendly)
+Customer history analysis (yes/no)
+Personalization level (basic/advanced)
+Legal compliance check (yes/no)
+Template base selection
+Analyze Response:
+
+Sentiment analysis (positive/negative/neutral)
+Intent detection (payment promise/dispute/ignore)
+Urgency scoring (1-10)
+Recommended next action
+Enhanced Decision Node Structure
+For decision nodes, I suggest this enhanced configuration:
+
+Primary Condition: [dropdown + input field]
+├── YES → [connection point]
+├── NO → [connection point]  
+└── WHAT-IF Scenarios:
+    ├── Scenario 1: [custom condition] → [connection point]
+    ├── Scenario 2: [custom condition] → [connection point]
+    └── Add More... [+ button]
+Configuration UI Suggestions
+Form Layout:
+
+Collapsible sections for better organization
+Smart defaults based on node type
+Validation rules (required fields, min/max values)
+Preview functionality for templates
+Import/export configuration presets
+Dynamic Fields:
+
+Show/hide fields based on selections
+Real-time validation feedback
+Template preview with sample data
+Integration testing buttons
