@@ -28,7 +28,7 @@ export default function Landing() {
                   Nexus AR
                 </h1>
                 <p className="text-xs text-[#17B6C3] font-medium tracking-wide uppercase">
-                  AI-Driven Collections
+                  SME Credit Control Platform
                 </p>
               </div>
             </div>
@@ -108,11 +108,11 @@ export default function Landing() {
             Nexus AR
           </h1>
           <p className="text-2xl md:text-3xl text-white/90 mb-4">
-            AI-Driven Accounts Receivable & Debt Recovery
+            Smart Credit Control & Debtor Management for SMEs
           </p>
           <p className="text-xl text-white/80 mb-12 max-w-3xl mx-auto leading-relaxed">
-            Transform your collection process with intelligent automation, multi-channel communication, 
-            and data-driven insights. Reduce days sales outstanding and improve cash flow.
+            Optimize your working capital with intelligent debtor management, proactive credit control, 
+            and automated customer communications designed specifically for SME businesses.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button 
@@ -142,11 +142,11 @@ export default function Landing() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
-              Accelerate Your Cash Flow
+              Strengthen Your Working Capital Management
             </h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
-              Our intelligent platform reduces collection time by 40% and increases payment rates by 60% 
-              through automated workflows and AI-powered insights.
+              Our intelligent platform improves cash flow timing by 40% and reduces overdue accounts by 60% 
+              for SME businesses through automated workflows and AI-powered insights.
             </p>
           </div>
           
@@ -166,10 +166,10 @@ export default function Landing() {
               <div className="w-16 h-16 bg-[#17B6C3]/10 rounded-2xl flex items-center justify-center mx-auto mb-6">
                 <Users className="h-8 w-8 text-[#17B6C3]" />
               </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-4">Multi-Channel Outreach</h3>
+              <h3 className="text-2xl font-bold text-gray-900 mb-4">Professional Customer Communications</h3>
               <p className="text-gray-600 leading-relaxed">
-                Reach customers through email, SMS, and phone with personalized messages that 
-                maintain professional relationships.
+                Proactive customer communications via email, SMS, and phone that preserve valuable 
+                business relationships while ensuring timely payments.
               </p>
             </div>
             
@@ -177,10 +177,10 @@ export default function Landing() {
               <div className="w-16 h-16 bg-[#17B6C3]/10 rounded-2xl flex items-center justify-center mx-auto mb-6">
                 <Clock className="h-8 w-8 text-[#17B6C3]" />
               </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-4">Automated Workflows</h3>
+              <h3 className="text-2xl font-bold text-gray-900 mb-4">Smart Payment Workflows</h3>
               <p className="text-gray-600 leading-relaxed">
-                Set up intelligent collection sequences that adapt to customer responses and 
-                payment history automatically.
+                Configure smart payment reminder workflows that escalate appropriately while 
+                maintaining customer goodwill and preserving business relationships.
               </p>
             </div>
           </div>
@@ -211,11 +211,11 @@ export default function Landing() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
             <div>
               <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
-                Everything you need to collect faster
+                Complete credit control solution for growing SMEs
               </h2>
               <p className="text-xl text-gray-600 mb-8 leading-relaxed">
                 Our comprehensive platform integrates with your existing systems and automates 
-                your entire collection workflow from initial contact to final payment.
+                your entire debtor management workflow while preserving valuable customer relationships.
               </p>
               
               <div className="space-y-6">
@@ -238,8 +238,8 @@ export default function Landing() {
                 <div className="flex items-start">
                   <CheckCircle className="h-6 w-6 text-[#17B6C3] mt-1 mr-4 flex-shrink-0" />
                   <div>
-                    <h3 className="font-semibold text-gray-900 mb-2">Compliance Ready</h3>
-                    <p className="text-gray-600">Built-in compliance features for debt collection regulations</p>
+                    <h3 className="font-semibold text-gray-900 mb-2">Compliance & Relationship Focus</h3>
+                    <p className="text-gray-600">Compliant credit control processes that protect customer relationships and meet regulatory requirements</p>
                   </div>
                 </div>
               </div>
@@ -260,11 +260,11 @@ export default function Landing() {
       <section className="py-24 bg-[#17B6C3]">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
-            Ready to transform your collections?
+            Ready to optimize your debtor management?
           </h2>
           <p className="text-xl text-white/90 mb-12">
-            Join thousands of businesses already using Nexus AR to improve their cash flow 
-            and reduce collection time.
+            Join hundreds of SMEs using Nexus AR to strengthen cash flow management 
+            and optimize working capital.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button 
