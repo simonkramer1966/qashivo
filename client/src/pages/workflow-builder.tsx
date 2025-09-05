@@ -22,7 +22,9 @@ import {
   CheckCircle,
   AlertCircle,
   Settings,
-  TestTube
+  TestTube,
+  Trash2,
+  X
 } from "lucide-react";
 
 interface WorkflowNode {
@@ -81,6 +83,11 @@ export default function WorkflowBuilder() {
   const [isConnecting, setIsConnecting] = useState(false);
   const [connectionStart, setConnectionStart] = useState<{ nodeId: string; x: number; y: number } | null>(null);
   const [tempConnection, setTempConnection] = useState<{ x: number; y: number } | null>(null);
+  
+  // New state for node dragging
+  const [isDraggingNode, setIsDraggingNode] = useState(false);
+  const [draggedNode, setDraggedNode] = useState<string | null>(null);
+  const [dragOffset, setDragOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
 
   // Redirect to home if not authenticated
   useEffect(() => {
@@ -96,6 +103,21 @@ export default function WorkflowBuilder() {
       return;
     }
   }, [isAuthenticated, isLoading, toast]);
+
+  // Keyboard event handler for deletion
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        if (selectedNode && !e.target || (e.target as HTMLElement).tagName !== 'INPUT') {
+          e.preventDefault();
+          handleDeleteSelectedNode();
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedNode]);
 
   const handleDragStart = (nodeType: any) => {
     setDraggedNodeType(nodeType);
@@ -155,15 +177,6 @@ export default function WorkflowBuilder() {
     setSelectedNode(null);
   };
 
-  const handleCanvasMouseMove = (e: React.MouseEvent) => {
-    if (isConnecting && canvasRef.current) {
-      const rect = canvasRef.current.getBoundingClientRect();
-      setTempConnection({
-        x: e.clientX - rect.left,
-        y: e.clientY - rect.top,
-      });
-    }
-  };
 
   const handleCanvasClick = () => {
     if (isConnecting) {
@@ -176,6 +189,83 @@ export default function WorkflowBuilder() {
 
   const removeConnection = (connectionId: string) => {
     setConnections(prev => prev.filter(conn => conn.id !== connectionId));
+  };
+
+  // Node dragging handlers
+  const handleNodeMouseDown = (node: WorkflowNode, e: React.MouseEvent) => {
+    if (isConnecting) return; // Don't drag while connecting
+    
+    e.stopPropagation();
+    setIsDraggingNode(true);
+    setDraggedNode(node.id);
+    setSelectedNode(node);
+    
+    const rect = canvasRef.current?.getBoundingClientRect();
+    if (rect) {
+      setDragOffset({
+        x: e.clientX - rect.left - node.position.x,
+        y: e.clientY - rect.top - node.position.y,
+      });
+    }
+  };
+
+  const handleCanvasMouseMove = (e: React.MouseEvent) => {
+    if (isConnecting && canvasRef.current) {
+      const rect = canvasRef.current.getBoundingClientRect();
+      setTempConnection({
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top,
+      });
+    } else if (isDraggingNode && draggedNode && canvasRef.current) {
+      // Update node position while dragging
+      const rect = canvasRef.current.getBoundingClientRect();
+      const newX = e.clientX - rect.left - dragOffset.x;
+      const newY = e.clientY - rect.top - dragOffset.y;
+      
+      setNodes(prev => prev.map(node => 
+        node.id === draggedNode 
+          ? { ...node, position: { x: newX, y: newY } }
+          : node
+      ));
+      
+      // Update selected node position for properties panel
+      setSelectedNode(prev => 
+        prev && prev.id === draggedNode 
+          ? { ...prev, position: { x: newX, y: newY } }
+          : prev
+      );
+    }
+  };
+
+  const handleCanvasMouseUp = () => {
+    setIsDraggingNode(false);
+    setDraggedNode(null);
+    setDragOffset({ x: 0, y: 0 });
+  };
+
+  // Node deletion handlers
+  const deleteNode = (nodeId: string) => {
+    // Remove the node
+    setNodes(prev => prev.filter(node => node.id !== nodeId));
+    
+    // Remove all connections to/from this node
+    setConnections(prev => prev.filter(conn => 
+      conn.sourceId !== nodeId && conn.targetId !== nodeId
+    ));
+    
+    // Clear selection if this node was selected
+    if (selectedNode?.id === nodeId) {
+      setSelectedNode(null);
+    }
+  };
+
+  const handleDeleteSelectedNode = () => {
+    if (selectedNode) {
+      const confirmDelete = window.confirm(`Are you sure you want to delete "${selectedNode.label}"?`);
+      if (confirmDelete) {
+        deleteNode(selectedNode.id);
+      }
+    }
   };
 
   const saveWorkflow = async () => {
@@ -396,6 +486,7 @@ export default function WorkflowBuilder() {
               onDrop={handleCanvasDrop}
               onDragOver={handleCanvasDragOver}
               onMouseMove={handleCanvasMouseMove}
+              onMouseUp={handleCanvasMouseUp}
               onClick={handleCanvasClick}
               data-testid="workflow-canvas"
             >
@@ -509,9 +600,10 @@ export default function WorkflowBuilder() {
                   <div
                     key={node.id}
                     onClick={(e) => handleNodeClick(node, e)}
-                    className={`absolute cursor-pointer transform -translate-x-1/2 -translate-y-1/2 group ${
+                    onMouseDown={(e) => handleNodeMouseDown(node, e)}
+                    className={`absolute transform -translate-x-1/2 -translate-y-1/2 group ${
                       selectedNode?.id === node.id ? 'ring-2 ring-[#17B6C3] ring-offset-2' : ''
-                    }`}
+                    } ${isDraggingNode && draggedNode === node.id ? 'cursor-grabbing z-50' : 'cursor-grab hover:cursor-grab'}`}
                     style={{
                       left: node.position.x,
                       top: node.position.y,
@@ -519,6 +611,23 @@ export default function WorkflowBuilder() {
                     data-testid={`node-${node.id}`}
                   >
                     <Card className="bg-white shadow-lg border-2 border-gray-200 hover:shadow-xl transition-all min-w-[160px] relative">
+                      {/* Delete button for selected node */}
+                      {selectedNode?.id === node.id && (
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          className="absolute -top-2 -right-2 w-6 h-6 p-0 rounded-full shadow-lg z-10"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteSelectedNode();
+                          }}
+                          title="Delete node"
+                          data-testid={`delete-node-${node.id}`}
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      )}
+                      
                       <CardContent className="p-4">
                         <div className="flex items-center space-x-3">
                           {nodeTypeConfig && (
@@ -580,9 +689,21 @@ export default function WorkflowBuilder() {
             {selectedNode ? (
               <Card className="bg-white/70 backdrop-blur-md border-0 shadow-xl">
                 <CardHeader>
-                  <CardTitle className="text-lg flex items-center">
-                    <Settings className="mr-2 h-5 w-5" />
-                    Node Properties
+                  <CardTitle className="text-lg flex items-center justify-between">
+                    <div className="flex items-center">
+                      <Settings className="mr-2 h-5 w-5" />
+                      Node Properties
+                    </div>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={handleDeleteSelectedNode}
+                      className="h-8 w-8 p-0"
+                      title="Delete node (Del)"
+                      data-testid="delete-node-button"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -598,6 +719,7 @@ export default function WorkflowBuilder() {
                           ));
                         }}
                         className="bg-white/70 border-gray-200/30"
+                        placeholder="Enter node label..."
                       />
                     </div>
                     
@@ -608,11 +730,29 @@ export default function WorkflowBuilder() {
                       </div>
                     </div>
 
+                    <div>
+                      <Label className="text-sm font-medium">Position</Label>
+                      <div className="text-sm text-gray-600">
+                        X: {Math.round(selectedNode.position.x)}, Y: {Math.round(selectedNode.position.y)}
+                      </div>
+                    </div>
+
                     <Separator />
 
                     {/* Node-specific configuration would go here */}
                     <div className="text-sm text-gray-500 italic">
                       Configuration options for {selectedNode.subType.replace('_', ' ')} will be added here.
+                    </div>
+                    
+                    <Separator />
+                    
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium text-gray-700">Actions</Label>
+                      <div className="text-xs text-gray-500 mb-2">
+                        • Drag to move this node
+                        • Press Delete key to remove
+                        • Click connection port to link nodes
+                      </div>
                     </div>
                   </div>
                 </CardContent>
