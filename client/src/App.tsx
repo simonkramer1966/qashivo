@@ -23,6 +23,7 @@ import AiCapabilities from "@/pages/ai-capabilities";
 import Pricing from "@/pages/pricing";
 import About from "@/pages/about";
 import Contact from "@/pages/contact";
+import Subscribe from "@/pages/subscribe";
 import { useAuth } from "@/hooks/useAuth";
 
 function Router() {
@@ -67,6 +68,7 @@ function Router() {
           <Route path="/ui-xero" component={UIXero} />
           <Route path="/ui-quickbooks" component={UIQuickBooks} />
           <Route path="/ui-sage" component={UISage} />
+          <Route path="/subscribe" component={Subscribe} />
           <Route component={NotFound} />
         </>
       )}
