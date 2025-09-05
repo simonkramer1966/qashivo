@@ -846,7 +846,7 @@ export default function WorkflowBuilder() {
                               <SelectTrigger className="bg-white border-gray-200">
                                 <SelectValue placeholder="Select customer type" />
                               </SelectTrigger>
-                              <SelectContent>
+                              <SelectContent className="bg-white border-gray-200">
                                 <SelectItem value="individual">Individual</SelectItem>
                                 <SelectItem value="business">Business</SelectItem>
                                 <SelectItem value="both">Both</SelectItem>
@@ -876,7 +876,7 @@ export default function WorkflowBuilder() {
                               <SelectTrigger className="bg-white border-gray-200">
                                 <SelectValue placeholder="Select time window" />
                               </SelectTrigger>
-                              <SelectContent>
+                              <SelectContent className="bg-white border-gray-200">
                                 <SelectItem value="business_hours">Business Hours Only</SelectItem>
                                 <SelectItem value="twenty_four_seven">24/7</SelectItem>
                               </SelectContent>
@@ -902,7 +902,7 @@ export default function WorkflowBuilder() {
                               <SelectTrigger className="bg-white border-gray-200">
                                 <SelectValue placeholder="Select email template" />
                               </SelectTrigger>
-                              <SelectContent>
+                              <SelectContent className="bg-white border-gray-200">
                                 <SelectItem value="first_notice">First Notice</SelectItem>
                                 <SelectItem value="second_notice">Second Notice</SelectItem>
                                 <SelectItem value="final_demand">Final Demand</SelectItem>
@@ -920,7 +920,7 @@ export default function WorkflowBuilder() {
                               <SelectTrigger className="bg-white border-gray-200">
                                 <SelectValue placeholder="Select send timing" />
                               </SelectTrigger>
-                              <SelectContent>
+                              <SelectContent className="bg-white border-gray-200">
                                 <SelectItem value="immediate">Send Immediately</SelectItem>
                                 <SelectItem value="scheduled">Schedule for Later</SelectItem>
                               </SelectContent>
@@ -1035,7 +1035,7 @@ export default function WorkflowBuilder() {
                               <SelectTrigger className="bg-white border-gray-200">
                                 <SelectValue placeholder="Select response handling" />
                               </SelectTrigger>
-                              <SelectContent>
+                              <SelectContent className="bg-white border-gray-200">
                                 <SelectItem value="automated">Automated Response</SelectItem>
                                 <SelectItem value="manual">Manual Review</SelectItem>
                               </SelectContent>
@@ -1061,7 +1061,7 @@ export default function WorkflowBuilder() {
                               <SelectTrigger className="bg-white border-gray-200">
                                 <SelectValue placeholder="Select call script" />
                               </SelectTrigger>
-                              <SelectContent>
+                              <SelectContent className="bg-white border-gray-200">
                                 <SelectItem value="friendly_reminder">Friendly Reminder</SelectItem>
                                 <SelectItem value="formal_notice">Formal Notice</SelectItem>
                                 <SelectItem value="payment_plan">Payment Plan Discussion</SelectItem>
@@ -1135,7 +1135,7 @@ export default function WorkflowBuilder() {
                                 <SelectTrigger className="bg-white border-gray-200">
                                   <SelectValue placeholder="Select unit" />
                                 </SelectTrigger>
-                                <SelectContent>
+                                <SelectContent className="bg-white border-gray-200">
                                   <SelectItem value="hours">Hours</SelectItem>
                                   <SelectItem value="days">Days</SelectItem>
                                   <SelectItem value="weeks">Weeks</SelectItem>
@@ -1182,7 +1182,7 @@ export default function WorkflowBuilder() {
                               <SelectTrigger className="bg-white border-gray-200">
                                 <SelectValue placeholder="Select tone" />
                               </SelectTrigger>
-                              <SelectContent>
+                              <SelectContent className="bg-white border-gray-200">
                                 <SelectItem value="friendly">Friendly</SelectItem>
                                 <SelectItem value="professional">Professional</SelectItem>
                                 <SelectItem value="firm">Firm</SelectItem>
@@ -1199,7 +1199,7 @@ export default function WorkflowBuilder() {
                               <SelectTrigger className="bg-white border-gray-200">
                                 <SelectValue placeholder="Select personalization" />
                               </SelectTrigger>
-                              <SelectContent>
+                              <SelectContent className="bg-white border-gray-200">
                                 <SelectItem value="basic">Basic (Name, Amount)</SelectItem>
                                 <SelectItem value="advanced">Advanced (History, Context)</SelectItem>
                               </SelectContent>
