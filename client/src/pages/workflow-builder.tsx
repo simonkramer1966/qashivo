@@ -151,23 +151,42 @@ export default function WorkflowBuilder() {
   const handleNodeClick = (node: WorkflowNode, e: React.MouseEvent) => {
     e.stopPropagation();
     if (isConnecting && connectionStart && connectionStart.nodeId !== node.id) {
-      // Complete the connection
-      const newConnection: WorkflowConnection = {
-        id: `conn_${Date.now()}`,
-        sourceId: connectionStart.nodeId,
-        targetId: node.id,
-      };
-      setConnections(prev => [...prev, newConnection]);
+      // Check if connection already exists
+      const connectionExists = connections.some(
+        conn => (conn.sourceId === connectionStart.nodeId && conn.targetId === node.id) ||
+                (conn.sourceId === node.id && conn.targetId === connectionStart.nodeId)
+      );
+      
+      if (!connectionExists) {
+        // Complete the connection
+        const newConnection: WorkflowConnection = {
+          id: `conn_${Date.now()}`,
+          sourceId: connectionStart.nodeId,
+          targetId: node.id,
+        };
+        setConnections(prev => [...prev, newConnection]);
+        toast({
+          title: "Connection Created",
+          description: "Successfully connected the nodes",
+        });
+      } else {
+        toast({
+          title: "Connection Exists",
+          description: "These nodes are already connected",
+          variant: "destructive",
+        });
+      }
       setIsConnecting(false);
       setConnectionStart(null);
       setTempConnection(null);
-    } else if (!isConnecting) {
+    } else if (!isConnecting && !isDraggingNode) {
       setSelectedNode(node);
     }
   };
 
   const handleConnectionStart = (node: WorkflowNode, e: React.MouseEvent) => {
     e.stopPropagation();
+    e.preventDefault();
     setIsConnecting(true);
     setConnectionStart({
       nodeId: node.id,
@@ -175,6 +194,10 @@ export default function WorkflowBuilder() {
       y: node.position.y,
     });
     setSelectedNode(null);
+    toast({
+      title: "Connection Mode",
+      description: "Click on another node to connect them, or click empty space to cancel",
+    });
   };
 
 
@@ -642,18 +665,27 @@ export default function WorkflowBuilder() {
                         </div>
                         
                         {/* Connection ports */}
-                        <div className="absolute -right-2 top-1/2 transform -translate-y-1/2">
+                        <div className="absolute -right-2 top-1/2 transform -translate-y-1/2 z-20">
                           <div
-                            className="w-4 h-4 bg-[#17B6C3] rounded-full border-2 border-white shadow-md cursor-crosshair opacity-0 group-hover:opacity-100 transition-opacity hover:scale-110"
-                            onClick={(e) => handleConnectionStart(node, e)}
-                            title="Connect to another node"
+                            className="w-4 h-4 bg-[#17B6C3] rounded-full border-2 border-white shadow-md cursor-crosshair opacity-60 group-hover:opacity-100 transition-all hover:scale-125 hover:shadow-lg"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleConnectionStart(node, e);
+                            }}
+                            onMouseDown={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                            }}
+                            title="Click to start connection"
+                            data-testid={`connection-port-${node.id}`}
                           />
                         </div>
                         
-                        <div className="absolute -left-2 top-1/2 transform -translate-y-1/2">
+                        <div className="absolute -left-2 top-1/2 transform -translate-y-1/2 z-20">
                           <div
-                            className="w-4 h-4 bg-gray-400 rounded-full border-2 border-white shadow-md opacity-0 group-hover:opacity-100 transition-opacity"
-                            title="Connection input"
+                            className="w-4 h-4 bg-gray-400 rounded-full border-2 border-white shadow-md opacity-50 group-hover:opacity-80 transition-opacity"
+                            title="Connection target"
                           />
                         </div>
                       </CardContent>
@@ -679,6 +711,15 @@ export default function WorkflowBuilder() {
                 <div className="flex items-center">
                   <TestTube className="h-4 w-4 mr-2" />
                   Test Mode Active
+                </div>
+              </div>
+            )}
+
+            {isConnecting && (
+              <div className="absolute top-4 left-1/2 transform -translate-x-1/2 bg-[#17B6C3]/90 text-white px-4 py-2 rounded-lg shadow-lg animate-pulse">
+                <div className="flex items-center">
+                  <div className="w-2 h-2 bg-white rounded-full mr-2 animate-ping" />
+                  Connection Mode: Click on a node to connect
                 </div>
               </div>
             )}
