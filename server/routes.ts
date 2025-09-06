@@ -6,7 +6,12 @@ import {
   insertContactSchema, 
   insertInvoiceSchema, 
   insertActionSchema,
-  insertWorkflowSchema 
+  insertWorkflowSchema,
+  insertCommunicationTemplateSchema,
+  insertEscalationRuleSchema,
+  insertAiAgentConfigSchema,
+  insertChannelAnalyticsSchema,
+  insertWorkflowTemplateSchema 
 } from "@shared/schema";
 import { z } from "zod";
 import { generateCollectionSuggestions, generateEmailDraft } from "./services/openai";
@@ -465,6 +470,236 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid workflow data", errors: error.errors });
       }
       res.status(500).json({ message: "Failed to create workflow" });
+    }
+  });
+
+  // Collections Workflow Management Routes
+  
+  // Communication Templates
+  app.get("/api/collections/templates", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { type, category } = req.query;
+      const templates = await storage.getCommunicationTemplates(user.tenantId, { type, category });
+      res.json(templates);
+    } catch (error) {
+      console.error("Error fetching communication templates:", error);
+      res.status(500).json({ message: "Failed to fetch communication templates" });
+    }
+  });
+
+  app.post("/api/collections/templates", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const templateData = insertCommunicationTemplateSchema.parse({
+        ...req.body,
+        tenantId: user.tenantId,
+      });
+
+      const template = await storage.createCommunicationTemplate(templateData);
+      res.status(201).json(template);
+    } catch (error) {
+      console.error("Error creating communication template:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid template data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create communication template" });
+    }
+  });
+
+  app.put("/api/collections/templates/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { id } = req.params;
+      const updateData = insertCommunicationTemplateSchema.partial().parse(req.body);
+      
+      const template = await storage.updateCommunicationTemplate(id, user.tenantId, updateData);
+      res.json(template);
+    } catch (error) {
+      console.error("Error updating communication template:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid template data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to update communication template" });
+    }
+  });
+
+  app.delete("/api/collections/templates/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { id } = req.params;
+      await storage.deleteCommunicationTemplate(id, user.tenantId);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting communication template:", error);
+      res.status(500).json({ message: "Failed to delete communication template" });
+    }
+  });
+
+  // AI Agent Configurations
+  app.get("/api/collections/ai-agents", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { type } = req.query;
+      const agents = await storage.getAiAgentConfigs(user.tenantId, { type });
+      res.json(agents);
+    } catch (error) {
+      console.error("Error fetching AI agent configs:", error);
+      res.status(500).json({ message: "Failed to fetch AI agent configs" });
+    }
+  });
+
+  app.post("/api/collections/ai-agents", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const agentData = insertAiAgentConfigSchema.parse({
+        ...req.body,
+        tenantId: user.tenantId,
+      });
+
+      const agent = await storage.createAiAgentConfig(agentData);
+      res.status(201).json(agent);
+    } catch (error) {
+      console.error("Error creating AI agent config:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid agent data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create AI agent config" });
+    }
+  });
+
+  // Escalation Rules
+  app.get("/api/collections/escalation-rules", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const rules = await storage.getEscalationRules(user.tenantId);
+      res.json(rules);
+    } catch (error) {
+      console.error("Error fetching escalation rules:", error);
+      res.status(500).json({ message: "Failed to fetch escalation rules" });
+    }
+  });
+
+  app.post("/api/collections/escalation-rules", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const ruleData = insertEscalationRuleSchema.parse({
+        ...req.body,
+        tenantId: user.tenantId,
+      });
+
+      const rule = await storage.createEscalationRule(ruleData);
+      res.status(201).json(rule);
+    } catch (error) {
+      console.error("Error creating escalation rule:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid rule data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create escalation rule" });
+    }
+  });
+
+  // Channel Analytics
+  app.get("/api/collections/analytics", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { channel, startDate, endDate } = req.query;
+      const analytics = await storage.getChannelAnalytics(user.tenantId, { 
+        channel: channel as string, 
+        startDate: startDate as string, 
+        endDate: endDate as string 
+      });
+      res.json(analytics);
+    } catch (error) {
+      console.error("Error fetching channel analytics:", error);
+      res.status(500).json({ message: "Failed to fetch channel analytics" });
+    }
+  });
+
+  // Collections Dashboard Metrics
+  app.get("/api/collections/dashboard", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const dashboard = await storage.getCollectionsDashboard(user.tenantId);
+      res.json(dashboard);
+    } catch (error) {
+      console.error("Error fetching collections dashboard:", error);
+      res.status(500).json({ message: "Failed to fetch collections dashboard" });
+    }
+  });
+
+  // Workflow Templates
+  app.get("/api/collections/workflow-templates", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { category, industry } = req.query;
+      const templates = await storage.getWorkflowTemplates({ category, industry });
+      res.json(templates);
+    } catch (error) {
+      console.error("Error fetching workflow templates:", error);
+      res.status(500).json({ message: "Failed to fetch workflow templates" });
+    }
+  });
+
+  app.post("/api/collections/workflow-templates/:templateId/clone", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { templateId } = req.params;
+      const { name } = req.body;
+      
+      const workflow = await storage.cloneWorkflowTemplate(templateId, user.tenantId, name);
+      res.status(201).json(workflow);
+    } catch (error) {
+      console.error("Error cloning workflow template:", error);
+      res.status(500).json({ message: "Failed to clone workflow template" });
     }
   });
 

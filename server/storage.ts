@@ -5,6 +5,11 @@ import {
   invoices,
   actions,
   workflows,
+  communicationTemplates,
+  escalationRules,
+  aiAgentConfigs,
+  channelAnalytics,
+  workflowTemplates,
   type User,
   type UpsertUser,
   type Tenant,
@@ -17,6 +22,16 @@ import {
   type InsertAction,
   type Workflow,
   type InsertWorkflow,
+  type CommunicationTemplate,
+  type InsertCommunicationTemplate,
+  type EscalationRule,
+  type InsertEscalationRule,
+  type AiAgentConfig,
+  type InsertAiAgentConfig,
+  type ChannelAnalytics,
+  type InsertChannelAnalytics,
+  type WorkflowTemplate,
+  type InsertWorkflowTemplate,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, sql, count } from "drizzle-orm";
@@ -62,6 +77,33 @@ export interface IStorage {
   getWorkflows(tenantId: string): Promise<Workflow[]>;
   createWorkflow(workflow: InsertWorkflow): Promise<Workflow>;
   updateWorkflow(id: string, tenantId: string, updates: Partial<InsertWorkflow>): Promise<Workflow>;
+  
+  // Collections Workflow operations
+  getCommunicationTemplates(tenantId: string, filters?: { type?: string; category?: string }): Promise<CommunicationTemplate[]>;
+  createCommunicationTemplate(template: InsertCommunicationTemplate): Promise<CommunicationTemplate>;
+  updateCommunicationTemplate(id: string, tenantId: string, updates: Partial<InsertCommunicationTemplate>): Promise<CommunicationTemplate>;
+  deleteCommunicationTemplate(id: string, tenantId: string): Promise<void>;
+  
+  getAiAgentConfigs(tenantId: string, filters?: { type?: string }): Promise<AiAgentConfig[]>;
+  createAiAgentConfig(config: InsertAiAgentConfig): Promise<AiAgentConfig>;
+  updateAiAgentConfig(id: string, tenantId: string, updates: Partial<InsertAiAgentConfig>): Promise<AiAgentConfig>;
+  
+  getEscalationRules(tenantId: string): Promise<EscalationRule[]>;
+  createEscalationRule(rule: InsertEscalationRule): Promise<EscalationRule>;
+  updateEscalationRule(id: string, tenantId: string, updates: Partial<InsertEscalationRule>): Promise<EscalationRule>;
+  
+  getChannelAnalytics(tenantId: string, filters?: { channel?: string; startDate?: string; endDate?: string }): Promise<ChannelAnalytics[]>;
+  createChannelAnalytics(analytics: InsertChannelAnalytics): Promise<ChannelAnalytics>;
+  
+  getCollectionsDashboard(tenantId: string): Promise<{
+    activeWorkflows: number;
+    totalTemplates: number;
+    channelPerformance: { channel: string; successRate: number; cost: number }[];
+    recentActivity: { type: string; count: number }[];
+  }>;
+  
+  getWorkflowTemplates(filters?: { category?: string; industry?: string }): Promise<WorkflowTemplate[]>;
+  cloneWorkflowTemplate(templateId: string, tenantId: string, name: string): Promise<Workflow>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -382,6 +424,235 @@ export class DatabaseStorage implements IStorage {
       .set({ ...updates, updatedAt: new Date() })
       .where(and(eq(workflows.id, id), eq(workflows.tenantId, tenantId)))
       .returning();
+    return workflow;
+  }
+
+  // Collections Workflow operations
+  async getCommunicationTemplates(
+    tenantId: string,
+    filters?: { type?: string; category?: string }
+  ): Promise<CommunicationTemplate[]> {
+    let query = db
+      .select()
+      .from(communicationTemplates)
+      .where(eq(communicationTemplates.tenantId, tenantId));
+
+    if (filters?.type) {
+      query = query.where(eq(communicationTemplates.type, filters.type));
+    }
+    if (filters?.category) {
+      query = query.where(eq(communicationTemplates.category, filters.category));
+    }
+
+    return await query.orderBy(communicationTemplates.stage, desc(communicationTemplates.createdAt));
+  }
+
+  async createCommunicationTemplate(templateData: InsertCommunicationTemplate): Promise<CommunicationTemplate> {
+    const [template] = await db.insert(communicationTemplates).values(templateData).returning();
+    return template;
+  }
+
+  async updateCommunicationTemplate(
+    id: string,
+    tenantId: string,
+    updates: Partial<InsertCommunicationTemplate>
+  ): Promise<CommunicationTemplate> {
+    const [template] = await db
+      .update(communicationTemplates)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(and(eq(communicationTemplates.id, id), eq(communicationTemplates.tenantId, tenantId)))
+      .returning();
+    return template;
+  }
+
+  async deleteCommunicationTemplate(id: string, tenantId: string): Promise<void> {
+    await db
+      .delete(communicationTemplates)
+      .where(and(eq(communicationTemplates.id, id), eq(communicationTemplates.tenantId, tenantId)));
+  }
+
+  async getAiAgentConfigs(
+    tenantId: string,
+    filters?: { type?: string }
+  ): Promise<AiAgentConfig[]> {
+    let query = db
+      .select()
+      .from(aiAgentConfigs)
+      .where(eq(aiAgentConfigs.tenantId, tenantId));
+
+    if (filters?.type) {
+      query = query.where(eq(aiAgentConfigs.type, filters.type));
+    }
+
+    return await query.orderBy(desc(aiAgentConfigs.createdAt));
+  }
+
+  async createAiAgentConfig(configData: InsertAiAgentConfig): Promise<AiAgentConfig> {
+    const [config] = await db.insert(aiAgentConfigs).values(configData).returning();
+    return config;
+  }
+
+  async updateAiAgentConfig(
+    id: string,
+    tenantId: string,
+    updates: Partial<InsertAiAgentConfig>
+  ): Promise<AiAgentConfig> {
+    const [config] = await db
+      .update(aiAgentConfigs)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(and(eq(aiAgentConfigs.id, id), eq(aiAgentConfigs.tenantId, tenantId)))
+      .returning();
+    return config;
+  }
+
+  async getEscalationRules(tenantId: string): Promise<EscalationRule[]> {
+    return await db
+      .select()
+      .from(escalationRules)
+      .where(eq(escalationRules.tenantId, tenantId))
+      .orderBy(escalationRules.priority, desc(escalationRules.createdAt));
+  }
+
+  async createEscalationRule(ruleData: InsertEscalationRule): Promise<EscalationRule> {
+    const [rule] = await db.insert(escalationRules).values(ruleData).returning();
+    return rule;
+  }
+
+  async updateEscalationRule(
+    id: string,
+    tenantId: string,
+    updates: Partial<InsertEscalationRule>
+  ): Promise<EscalationRule> {
+    const [rule] = await db
+      .update(escalationRules)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(and(eq(escalationRules.id, id), eq(escalationRules.tenantId, tenantId)))
+      .returning();
+    return rule;
+  }
+
+  async getChannelAnalytics(
+    tenantId: string,
+    filters?: { channel?: string; startDate?: string; endDate?: string }
+  ): Promise<ChannelAnalytics[]> {
+    let query = db
+      .select()
+      .from(channelAnalytics)
+      .where(eq(channelAnalytics.tenantId, tenantId));
+
+    if (filters?.channel) {
+      query = query.where(eq(channelAnalytics.channel, filters.channel));
+    }
+    if (filters?.startDate) {
+      query = query.where(sql`${channelAnalytics.date} >= ${filters.startDate}`);
+    }
+    if (filters?.endDate) {
+      query = query.where(sql`${channelAnalytics.date} <= ${filters.endDate}`);
+    }
+
+    return await query.orderBy(desc(channelAnalytics.date));
+  }
+
+  async createChannelAnalytics(analyticsData: InsertChannelAnalytics): Promise<ChannelAnalytics> {
+    const [analytics] = await db.insert(channelAnalytics).values(analyticsData).returning();
+    return analytics;
+  }
+
+  async getCollectionsDashboard(tenantId: string): Promise<{
+    activeWorkflows: number;
+    totalTemplates: number;
+    channelPerformance: { channel: string; successRate: number; cost: number }[];
+    recentActivity: { type: string; count: number }[];
+  }> {
+    // Get active workflows count
+    const activeWorkflowsResult = await db
+      .select({ count: count() })
+      .from(workflows)
+      .where(and(eq(workflows.tenantId, tenantId), eq(workflows.isActive, true)));
+
+    // Get total communication templates
+    const totalTemplatesResult = await db
+      .select({ count: count() })
+      .from(communicationTemplates)
+      .where(eq(communicationTemplates.tenantId, tenantId));
+
+    // Get channel performance (mock data for now)
+    const channelPerformance = [
+      { channel: "email", successRate: 45.2, cost: 0.02 },
+      { channel: "sms", successRate: 62.8, cost: 0.08 },
+      { channel: "whatsapp", successRate: 71.5, cost: 0.05 },
+      { channel: "voice", successRate: 85.3, cost: 0.25 },
+    ];
+
+    // Get recent activity from actions
+    const recentActivityResult = await db
+      .select({
+        type: actions.type,
+        count: count(),
+      })
+      .from(actions)
+      .where(
+        and(
+          eq(actions.tenantId, tenantId),
+          sql`${actions.createdAt} >= NOW() - INTERVAL '7 days'`
+        )
+      )
+      .groupBy(actions.type);
+
+    return {
+      activeWorkflows: activeWorkflowsResult[0]?.count || 0,
+      totalTemplates: totalTemplatesResult[0]?.count || 0,
+      channelPerformance,
+      recentActivity: recentActivityResult.map(item => ({
+        type: item.type,
+        count: item.count,
+      })),
+    };
+  }
+
+  async getWorkflowTemplates(filters?: { category?: string; industry?: string }): Promise<WorkflowTemplate[]> {
+    let query = db.select().from(workflowTemplates);
+
+    if (filters?.category) {
+      query = query.where(eq(workflowTemplates.category, filters.category));
+    }
+    if (filters?.industry) {
+      query = query.where(eq(workflowTemplates.industry, filters.industry));
+    }
+
+    return await query.orderBy(desc(workflowTemplates.usageCount), desc(workflowTemplates.createdAt));
+  }
+
+  async cloneWorkflowTemplate(templateId: string, tenantId: string, name: string): Promise<Workflow> {
+    // Get the template
+    const [template] = await db
+      .select()
+      .from(workflowTemplates)
+      .where(eq(workflowTemplates.id, templateId));
+
+    if (!template) {
+      throw new Error("Workflow template not found");
+    }
+
+    // Create new workflow from template
+    const workflowData: InsertWorkflow = {
+      tenantId,
+      name,
+      description: `Cloned from template: ${template.name}`,
+      isActive: true,
+      isTemplate: false,
+      category: template.category,
+      steps: template.workflowData as any, // Cast to match expected type
+    };
+
+    const [workflow] = await db.insert(workflows).values(workflowData).returning();
+
+    // Increment template usage count
+    await db
+      .update(workflowTemplates)
+      .set({ usageCount: sql`${workflowTemplates.usageCount} + 1` })
+      .where(eq(workflowTemplates.id, templateId));
+
     return workflow;
   }
 }
