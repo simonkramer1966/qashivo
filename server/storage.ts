@@ -10,6 +10,8 @@ import {
   aiAgentConfigs,
   channelAnalytics,
   workflowTemplates,
+  retellConfigurations,
+  voiceCalls,
   type User,
   type UpsertUser,
   type Tenant,
@@ -32,6 +34,10 @@ import {
   type InsertChannelAnalytics,
   type WorkflowTemplate,
   type InsertWorkflowTemplate,
+  type RetellConfiguration,
+  type InsertRetellConfiguration,
+  type VoiceCall,
+  type InsertVoiceCall,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, sql, count } from "drizzle-orm";
@@ -104,6 +110,16 @@ export interface IStorage {
   
   getWorkflowTemplates(filters?: { category?: string; industry?: string }): Promise<WorkflowTemplate[]>;
   cloneWorkflowTemplate(templateId: string, tenantId: string, name: string): Promise<Workflow>;
+
+  // Retell AI operations
+  getRetellConfiguration(tenantId: string): Promise<RetellConfiguration | undefined>;
+  createRetellConfiguration(config: InsertRetellConfiguration): Promise<RetellConfiguration>;
+  updateRetellConfiguration(tenantId: string, updates: Partial<InsertRetellConfiguration>): Promise<RetellConfiguration>;
+  
+  getVoiceCalls(tenantId: string, filters?: { contactId?: string; status?: string; limit?: number }): Promise<(VoiceCall & { contact: Contact; invoice?: Invoice })[]>;
+  getVoiceCall(id: string, tenantId: string): Promise<(VoiceCall & { contact: Contact; invoice?: Invoice }) | undefined>;
+  createVoiceCall(voiceCall: InsertVoiceCall): Promise<VoiceCall>;
+  updateVoiceCall(id: string, tenantId: string, updates: Partial<InsertVoiceCall>): Promise<VoiceCall>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -654,6 +670,226 @@ export class DatabaseStorage implements IStorage {
       .where(eq(workflowTemplates.id, templateId));
 
     return workflow;
+  }
+
+  // Retell AI operations
+  async getRetellConfiguration(tenantId: string): Promise<RetellConfiguration | undefined> {
+    const [config] = await db
+      .select()
+      .from(retellConfigurations)
+      .where(eq(retellConfigurations.tenantId, tenantId));
+    return config;
+  }
+
+  async createRetellConfiguration(config: InsertRetellConfiguration): Promise<RetellConfiguration> {
+    const [retellConfig] = await db
+      .insert(retellConfigurations)
+      .values(config)
+      .returning();
+    return retellConfig;
+  }
+
+  async updateRetellConfiguration(tenantId: string, updates: Partial<InsertRetellConfiguration>): Promise<RetellConfiguration> {
+    const [retellConfig] = await db
+      .update(retellConfigurations)
+      .set({
+        ...updates,
+        updatedAt: new Date(),
+      })
+      .where(eq(retellConfigurations.tenantId, tenantId))
+      .returning();
+    return retellConfig;
+  }
+
+  async getVoiceCalls(tenantId: string, filters?: { contactId?: string; status?: string; limit?: number }): Promise<(VoiceCall & { contact: Contact; invoice?: Invoice })[]> {
+    let query = db
+      .select({
+        id: voiceCalls.id,
+        tenantId: voiceCalls.tenantId,
+        contactId: voiceCalls.contactId,
+        invoiceId: voiceCalls.invoiceId,
+        retellCallId: voiceCalls.retellCallId,
+        retellAgentId: voiceCalls.retellAgentId,
+        fromNumber: voiceCalls.fromNumber,
+        toNumber: voiceCalls.toNumber,
+        direction: voiceCalls.direction,
+        status: voiceCalls.status,
+        duration: voiceCalls.duration,
+        cost: voiceCalls.cost,
+        transcript: voiceCalls.transcript,
+        recordingUrl: voiceCalls.recordingUrl,
+        callAnalysis: voiceCalls.callAnalysis,
+        userSentiment: voiceCalls.userSentiment,
+        callSuccessful: voiceCalls.callSuccessful,
+        disconnectionReason: voiceCalls.disconnectionReason,
+        customerResponse: voiceCalls.customerResponse,
+        followUpRequired: voiceCalls.followUpRequired,
+        scheduledAt: voiceCalls.scheduledAt,
+        startedAt: voiceCalls.startedAt,
+        endedAt: voiceCalls.endedAt,
+        createdAt: voiceCalls.createdAt,
+        updatedAt: voiceCalls.updatedAt,
+        contact: {
+          id: contacts.id,
+          name: contacts.name,
+          email: contacts.email,
+          phone: contacts.phone,
+          companyName: contacts.companyName,
+          tenantId: contacts.tenantId,
+          xeroContactId: contacts.xeroContactId,
+          address: contacts.address,
+          isActive: contacts.isActive,
+          paymentTerms: contacts.paymentTerms,
+          creditLimit: contacts.creditLimit,
+          preferredContactMethod: contacts.preferredContactMethod,
+          notes: contacts.notes,
+          createdAt: contacts.createdAt,
+          updatedAt: contacts.updatedAt,
+        },
+        invoice: {
+          id: invoices.id,
+          tenantId: invoices.tenantId,
+          contactId: invoices.contactId,
+          xeroInvoiceId: invoices.xeroInvoiceId,
+          invoiceNumber: invoices.invoiceNumber,
+          amount: invoices.amount,
+          amountPaid: invoices.amountPaid,
+          taxAmount: invoices.taxAmount,
+          status: invoices.status,
+          issueDate: invoices.issueDate,
+          dueDate: invoices.dueDate,
+          paidDate: invoices.paidDate,
+          description: invoices.description,
+          currency: invoices.currency,
+          workflowId: invoices.workflowId,
+          lastReminderSent: invoices.lastReminderSent,
+          reminderCount: invoices.reminderCount,
+          createdAt: invoices.createdAt,
+          updatedAt: invoices.updatedAt,
+        }
+      })
+      .from(voiceCalls)
+      .leftJoin(contacts, eq(voiceCalls.contactId, contacts.id))
+      .leftJoin(invoices, eq(voiceCalls.invoiceId, invoices.id))
+      .where(eq(voiceCalls.tenantId, tenantId));
+
+    if (filters?.contactId) {
+      query = query.where(and(eq(voiceCalls.tenantId, tenantId), eq(voiceCalls.contactId, filters.contactId)));
+    }
+    if (filters?.status) {
+      query = query.where(and(eq(voiceCalls.tenantId, tenantId), eq(voiceCalls.status, filters.status)));
+    }
+
+    const result = await query
+      .orderBy(desc(voiceCalls.createdAt))
+      .limit(filters?.limit || 50);
+
+    return result.map(row => ({
+      ...row,
+      contact: row.contact!,
+      invoice: row.invoice || undefined,
+    })) as (VoiceCall & { contact: Contact; invoice?: Invoice })[];
+  }
+
+  async getVoiceCall(id: string, tenantId: string): Promise<(VoiceCall & { contact: Contact; invoice?: Invoice }) | undefined> {
+    const [result] = await db
+      .select({
+        id: voiceCalls.id,
+        tenantId: voiceCalls.tenantId,
+        contactId: voiceCalls.contactId,
+        invoiceId: voiceCalls.invoiceId,
+        retellCallId: voiceCalls.retellCallId,
+        retellAgentId: voiceCalls.retellAgentId,
+        fromNumber: voiceCalls.fromNumber,
+        toNumber: voiceCalls.toNumber,
+        direction: voiceCalls.direction,
+        status: voiceCalls.status,
+        duration: voiceCalls.duration,
+        cost: voiceCalls.cost,
+        transcript: voiceCalls.transcript,
+        recordingUrl: voiceCalls.recordingUrl,
+        callAnalysis: voiceCalls.callAnalysis,
+        userSentiment: voiceCalls.userSentiment,
+        callSuccessful: voiceCalls.callSuccessful,
+        disconnectionReason: voiceCalls.disconnectionReason,
+        customerResponse: voiceCalls.customerResponse,
+        followUpRequired: voiceCalls.followUpRequired,
+        scheduledAt: voiceCalls.scheduledAt,
+        startedAt: voiceCalls.startedAt,
+        endedAt: voiceCalls.endedAt,
+        createdAt: voiceCalls.createdAt,
+        updatedAt: voiceCalls.updatedAt,
+        contact: {
+          id: contacts.id,
+          name: contacts.name,
+          email: contacts.email,
+          phone: contacts.phone,
+          companyName: contacts.companyName,
+          tenantId: contacts.tenantId,
+          xeroContactId: contacts.xeroContactId,
+          address: contacts.address,
+          isActive: contacts.isActive,
+          paymentTerms: contacts.paymentTerms,
+          creditLimit: contacts.creditLimit,
+          preferredContactMethod: contacts.preferredContactMethod,
+          notes: contacts.notes,
+          createdAt: contacts.createdAt,
+          updatedAt: contacts.updatedAt,
+        },
+        invoice: {
+          id: invoices.id,
+          tenantId: invoices.tenantId,
+          contactId: invoices.contactId,
+          xeroInvoiceId: invoices.xeroInvoiceId,
+          invoiceNumber: invoices.invoiceNumber,
+          amount: invoices.amount,
+          amountPaid: invoices.amountPaid,
+          taxAmount: invoices.taxAmount,
+          status: invoices.status,
+          issueDate: invoices.issueDate,
+          dueDate: invoices.dueDate,
+          paidDate: invoices.paidDate,
+          description: invoices.description,
+          currency: invoices.currency,
+          workflowId: invoices.workflowId,
+          lastReminderSent: invoices.lastReminderSent,
+          reminderCount: invoices.reminderCount,
+          createdAt: invoices.createdAt,
+          updatedAt: invoices.updatedAt,
+        }
+      })
+      .from(voiceCalls)
+      .leftJoin(contacts, eq(voiceCalls.contactId, contacts.id))
+      .leftJoin(invoices, eq(voiceCalls.invoiceId, invoices.id))
+      .where(and(eq(voiceCalls.id, id), eq(voiceCalls.tenantId, tenantId)));
+
+    if (!result) return undefined;
+
+    return {
+      ...result,
+      contact: result.contact!,
+      invoice: result.invoice || undefined,
+    } as VoiceCall & { contact: Contact; invoice?: Invoice };
+  }
+
+  async createVoiceCall(voiceCall: InsertVoiceCall): Promise<VoiceCall> {
+    const [call] = await db
+      .insert(voiceCalls)
+      .values(voiceCall)
+      .returning();
+    return call;
+  }
+
+  async updateVoiceCall(id: string, tenantId: string, updates: Partial<InsertVoiceCall>): Promise<VoiceCall> {
+    const [call] = await db
+      .update(voiceCalls)
+      .set({
+        ...updates,
+        updatedAt: new Date(),
+      })
+      .where(and(eq(voiceCalls.id, id), eq(voiceCalls.tenantId, tenantId)))
+      .returning();
+    return call;
   }
 }
 
