@@ -243,6 +243,50 @@ export const channelAnalytics = pgTable("channel_analytics", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Retell AI configurations
+export const retellConfigurations = pgTable("retell_configurations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  apiKey: text("api_key").notNull(), // Encrypted Retell AI API key
+  agentId: varchar("agent_id").notNull(), // Retell AI agent ID for collections
+  phoneNumber: varchar("phone_number").notNull(), // From number in E.164 format
+  phoneNumberId: varchar("phone_number_id"), // Retell phone number ID if using their numbers
+  isActive: boolean("is_active").default(true),
+  webhookUrl: varchar("webhook_url"), // Webhook endpoint for call events
+  settings: jsonb("settings"), // Additional Retell AI settings
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Voice call logs for Retell AI calls
+export const voiceCalls = pgTable("voice_calls", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  contactId: varchar("contact_id").notNull().references(() => contacts.id),
+  invoiceId: varchar("invoice_id").references(() => invoices.id),
+  retellCallId: varchar("retell_call_id").notNull(), // Retell AI call ID
+  retellAgentId: varchar("retell_agent_id").notNull(), // Agent used for the call
+  fromNumber: varchar("from_number").notNull(), // E.164 format
+  toNumber: varchar("to_number").notNull(), // E.164 format
+  direction: varchar("direction").notNull(), // "inbound" or "outbound"
+  status: varchar("status").notNull().default("initiated"), // "initiated", "ringing", "answered", "completed", "failed", "no_answer"
+  duration: integer("duration"), // Call duration in seconds
+  cost: decimal("cost", { precision: 8, scale: 4 }), // Cost of the call
+  transcript: text("transcript"), // Full call transcript
+  recordingUrl: varchar("recording_url"), // Retell AI recording URL
+  callAnalysis: jsonb("call_analysis"), // AI analysis from Retell
+  userSentiment: varchar("user_sentiment"), // "positive", "neutral", "negative"
+  callSuccessful: boolean("call_successful"), // Did the call achieve its goal
+  disconnectionReason: varchar("disconnection_reason"), // Why the call ended
+  customerResponse: varchar("customer_response"), // "payment_promised", "dispute", "no_response", etc.
+  followUpRequired: boolean("follow_up_required").default(false),
+  scheduledAt: timestamp("scheduled_at"), // When the call was scheduled
+  startedAt: timestamp("started_at"), // When the call actually started
+  endedAt: timestamp("ended_at"), // When the call ended
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Define relations
 export const usersRelations = relations(users, ({ one, many }) => ({
   tenant: one(tenants, {
@@ -262,6 +306,8 @@ export const tenantsRelations = relations(tenants, ({ many }) => ({
   escalationRules: many(escalationRules),
   aiAgentConfigs: many(aiAgentConfigs),
   channelAnalytics: many(channelAnalytics),
+  retellConfigurations: many(retellConfigurations),
+  voiceCalls: many(voiceCalls),
 }));
 
 export const contactsRelations = relations(contacts, ({ one, many }) => ({
@@ -271,6 +317,7 @@ export const contactsRelations = relations(contacts, ({ one, many }) => ({
   }),
   invoices: many(invoices),
   actions: many(actions),
+  voiceCalls: many(voiceCalls),
 }));
 
 export const invoicesRelations = relations(invoices, ({ one, many }) => ({
@@ -283,6 +330,7 @@ export const invoicesRelations = relations(invoices, ({ one, many }) => ({
     references: [contacts.id],
   }),
   actions: many(actions),
+  voiceCalls: many(voiceCalls),
 }));
 
 export const actionsRelations = relations(actions, ({ one }) => ({
@@ -376,6 +424,28 @@ export const channelAnalyticsRelations = relations(channelAnalytics, ({ one }) =
   }),
 }));
 
+export const retellConfigurationsRelations = relations(retellConfigurations, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [retellConfigurations.tenantId],
+    references: [tenants.id],
+  }),
+}));
+
+export const voiceCallsRelations = relations(voiceCalls, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [voiceCalls.tenantId],
+    references: [tenants.id],
+  }),
+  contact: one(contacts, {
+    fields: [voiceCalls.contactId],
+    references: [contacts.id],
+  }),
+  invoice: one(invoices, {
+    fields: [voiceCalls.invoiceId],
+    references: [invoices.id],
+  }),
+}));
+
 // Insert schemas
 export const insertTenantSchema = createInsertSchema(tenants).omit({
   id: true,
@@ -446,6 +516,18 @@ export const insertChannelAnalyticsSchema = createInsertSchema(channelAnalytics)
   createdAt: true,
 });
 
+export const insertRetellConfigurationSchema = createInsertSchema(retellConfigurations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertVoiceCallSchema = createInsertSchema(voiceCalls).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
@@ -473,6 +555,10 @@ export type InsertAiAgentConfig = z.infer<typeof insertAiAgentConfigSchema>;
 export type AiAgentConfig = typeof aiAgentConfigs.$inferSelect;
 export type InsertChannelAnalytics = z.infer<typeof insertChannelAnalyticsSchema>;
 export type ChannelAnalytics = typeof channelAnalytics.$inferSelect;
+export type InsertRetellConfiguration = z.infer<typeof insertRetellConfigurationSchema>;
+export type RetellConfiguration = typeof retellConfigurations.$inferSelect;
+export type InsertVoiceCall = z.infer<typeof insertVoiceCallSchema>;
+export type VoiceCall = typeof voiceCalls.$inferSelect;
 
 // Node Configuration Types
 export interface TriggerNodeConfig {
