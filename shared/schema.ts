@@ -177,6 +177,72 @@ export const workflowTemplates = pgTable("workflow_templates", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Communication templates for emails, SMS, etc.
+export const communicationTemplates = pgTable("communication_templates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  name: varchar("name").notNull(),
+  type: varchar("type").notNull(), // "email", "sms", "whatsapp", "voice"
+  category: varchar("category").notNull(), // "reminder", "formal_notice", "urgent", "final_notice", "collection_warning"
+  stage: integer("stage"), // 1-5 for email sequence stages
+  subject: varchar("subject"), // For emails
+  content: text("content").notNull(),
+  variables: jsonb("variables"), // Available variables for personalization
+  isActive: boolean("is_active").default(true),
+  isDefault: boolean("is_default").default(false),
+  successRate: decimal("success_rate", { precision: 5, scale: 2 }),
+  usageCount: integer("usage_count").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Channel escalation rules
+export const escalationRules = pgTable("escalation_rules", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  name: varchar("name").notNull(),
+  description: text("description"),
+  rules: jsonb("rules").notNull(), // Escalation logic and conditions
+  isActive: boolean("is_active").default(true),
+  priority: integer("priority").default(1), // Rule execution order
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// AI agent configurations
+export const aiAgentConfigs = pgTable("ai_agent_configs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  name: varchar("name").notNull(),
+  type: varchar("type").notNull(), // "whatsapp", "voice", "email_generator"
+  personality: varchar("personality").default("professional"), // "professional", "friendly", "firm"
+  instructions: text("instructions").notNull(),
+  escalationTriggers: jsonb("escalation_triggers"), // When to escalate to human
+  responseTemplates: jsonb("response_templates"), // Pre-built responses
+  isActive: boolean("is_active").default(true),
+  modelSettings: jsonb("model_settings"), // AI model parameters
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Channel performance analytics
+export const channelAnalytics = pgTable("channel_analytics", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  channel: varchar("channel").notNull(), // "email", "sms", "whatsapp", "voice"
+  stage: integer("stage"), // Which stage in the sequence
+  templateId: varchar("template_id").references(() => communicationTemplates.id),
+  date: timestamp("date").notNull(),
+  sentCount: integer("sent_count").default(0),
+  deliveredCount: integer("delivered_count").default(0),
+  openedCount: integer("opened_count").default(0),
+  respondedCount: integer("responded_count").default(0),
+  paidCount: integer("paid_count").default(0),
+  totalAmount: decimal("total_amount", { precision: 10, scale: 2 }).default("0"),
+  costPerCommunication: decimal("cost_per_communication", { precision: 6, scale: 4 }).default("0"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Define relations
 export const usersRelations = relations(users, ({ one, many }) => ({
   tenant: one(tenants, {
@@ -192,6 +258,10 @@ export const tenantsRelations = relations(tenants, ({ many }) => ({
   invoices: many(invoices),
   actions: many(actions),
   workflows: many(workflows),
+  communicationTemplates: many(communicationTemplates),
+  escalationRules: many(escalationRules),
+  aiAgentConfigs: many(aiAgentConfigs),
+  channelAnalytics: many(channelAnalytics),
 }));
 
 export const contactsRelations = relations(contacts, ({ one, many }) => ({
@@ -273,6 +343,39 @@ export const workflowConnectionsRelations = relations(workflowConnections, ({ on
   }),
 }));
 
+export const communicationTemplatesRelations = relations(communicationTemplates, ({ one, many }) => ({
+  tenant: one(tenants, {
+    fields: [communicationTemplates.tenantId],
+    references: [tenants.id],
+  }),
+  analytics: many(channelAnalytics),
+}));
+
+export const escalationRulesRelations = relations(escalationRules, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [escalationRules.tenantId],
+    references: [tenants.id],
+  }),
+}));
+
+export const aiAgentConfigsRelations = relations(aiAgentConfigs, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [aiAgentConfigs.tenantId],
+    references: [tenants.id],
+  }),
+}));
+
+export const channelAnalyticsRelations = relations(channelAnalytics, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [channelAnalytics.tenantId],
+    references: [tenants.id],
+  }),
+  template: one(communicationTemplates, {
+    fields: [channelAnalytics.templateId],
+    references: [communicationTemplates.id],
+  }),
+}));
+
 // Insert schemas
 export const insertTenantSchema = createInsertSchema(tenants).omit({
   id: true,
@@ -320,6 +423,29 @@ export const insertWorkflowTemplateSchema = createInsertSchema(workflowTemplates
   updatedAt: true,
 });
 
+export const insertCommunicationTemplateSchema = createInsertSchema(communicationTemplates).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertEscalationRuleSchema = createInsertSchema(escalationRules).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertAiAgentConfigSchema = createInsertSchema(aiAgentConfigs).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertChannelAnalyticsSchema = createInsertSchema(channelAnalytics).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
@@ -339,6 +465,14 @@ export type InsertWorkflowConnection = z.infer<typeof insertWorkflowConnectionSc
 export type WorkflowConnection = typeof workflowConnections.$inferSelect;
 export type InsertWorkflowTemplate = z.infer<typeof insertWorkflowTemplateSchema>;
 export type WorkflowTemplate = typeof workflowTemplates.$inferSelect;
+export type InsertCommunicationTemplate = z.infer<typeof insertCommunicationTemplateSchema>;
+export type CommunicationTemplate = typeof communicationTemplates.$inferSelect;
+export type InsertEscalationRule = z.infer<typeof insertEscalationRuleSchema>;
+export type EscalationRule = typeof escalationRules.$inferSelect;
+export type InsertAiAgentConfig = z.infer<typeof insertAiAgentConfigSchema>;
+export type AiAgentConfig = typeof aiAgentConfigs.$inferSelect;
+export type InsertChannelAnalytics = z.infer<typeof insertChannelAnalyticsSchema>;
+export type ChannelAnalytics = typeof channelAnalytics.$inferSelect;
 
 // Node Configuration Types
 export interface TriggerNodeConfig {
