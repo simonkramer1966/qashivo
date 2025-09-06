@@ -481,6 +481,7 @@ export default function Workflows() {
                   <Button 
                     type="button" 
                     variant="outline" 
+                    className="border-gray-200"
                     onClick={() => setIsEditDialogOpen(false)}
                     data-testid="button-cancel-edit"
                   >
