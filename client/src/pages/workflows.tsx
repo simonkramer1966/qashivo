@@ -190,7 +190,7 @@ export default function Workflows() {
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-lg font-semibold">Email Sequence Templates</h3>
-          <p className="text-sm text-gray-600">Manage your 5-stage email collection sequence</p>
+          <p className="text-sm text-gray-600">Manage your multi-stage email collection sequence</p>
         </div>
         <Button className="bg-[#17B6C3] hover:bg-[#1396A1] text-white" data-testid="button-add-email-template">
           <Plus className="mr-2 h-4 w-4" />
