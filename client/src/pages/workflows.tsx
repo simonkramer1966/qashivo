@@ -31,12 +31,12 @@ export default function Workflows() {
 
   // Fetch communication templates
   const { data: emailTemplates } = useQuery({
-    queryKey: ['/api/collections/templates', { type: 'email' }],
+    queryKey: ['/api/collections/templates?type=email'],
     enabled: isAuthenticated,
   });
 
   const { data: smsTemplates } = useQuery({
-    queryKey: ['/api/collections/templates', { type: 'sms' }],
+    queryKey: ['/api/collections/templates?type=sms'],
     enabled: isAuthenticated,
   });
 
@@ -75,7 +75,7 @@ export default function Workflows() {
               <div>
                 <p className="text-sm font-medium text-gray-600">Active Workflows</p>
                 <p className="text-3xl font-bold text-gray-900" data-testid="text-active-workflows">
-                  {dashboardData?.activeWorkflows || 0}
+                  {(dashboardData as any)?.activeWorkflows || 0}
                 </p>
               </div>
               <div className="p-2 bg-[#17B6C3]/10 rounded-lg">
@@ -91,7 +91,7 @@ export default function Workflows() {
               <div>
                 <p className="text-sm font-medium text-gray-600">Total Templates</p>
                 <p className="text-3xl font-bold text-gray-900" data-testid="text-total-templates">
-                  {dashboardData?.totalTemplates || 0}
+                  {(dashboardData as any)?.totalTemplates || 0}
                 </p>
               </div>
               <div className="p-2 bg-blue-500/10 rounded-lg">
@@ -107,7 +107,7 @@ export default function Workflows() {
               <div>
                 <p className="text-sm font-medium text-gray-600">AI Agents</p>
                 <p className="text-3xl font-bold text-gray-900" data-testid="text-ai-agents">
-                  {aiAgents?.length || 0}
+                  {(aiAgents as any[])?.length || 0}
                 </p>
               </div>
               <div className="p-2 bg-purple-500/10 rounded-lg">
@@ -142,7 +142,7 @@ export default function Workflows() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {dashboardData?.channelPerformance?.map((channel) => (
+            {((dashboardData as any)?.channelPerformance || []).map((channel: any) => (
               <div key={channel.channel} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                 <div className="flex items-center space-x-3">
                   <div className="p-2 bg-[#17B6C3]/10 rounded-lg">
@@ -185,7 +185,7 @@ export default function Workflows() {
 
       <div className="grid gap-4">
         {[1, 2, 3, 4, 5].map((stage) => {
-          const template = emailTemplates?.find(t => t.stage === stage);
+          const template = (emailTemplates as any[])?.find((t: any) => t.stage === stage);
           return (
             <Card key={stage} className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
               <CardHeader className="pb-3">
@@ -245,7 +245,7 @@ export default function Workflows() {
 
       <div className="grid gap-4">
         {[
-          { day: 3, type: "Quick Reminder", message: "Hi {name}, friendly reminder your invoice #{number} of ${amount} is due. Pay easily: {link}" },
+          { day: 3, type: "Quick Reminder", message: "Hi {name}, friendly reminder your invoice #{invoiceNumber} of ${amount} is due. Pay easily: {link}" },
           { day: 10, type: "Follow-up", message: "Your account shows ${amount} overdue. Avoid late fees - pay now: {link}" },
           { day: 17, type: "Urgency", message: "URGENT: ${amount} payment required to prevent account hold. {link}" },
           { day: 25, type: "Final Appeal", message: "Final notice: Please contact us immediately about your ${amount} overdue payment." },
