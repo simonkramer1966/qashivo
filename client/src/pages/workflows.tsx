@@ -413,7 +413,7 @@ export default function Workflows() {
                       <FormItem>
                         <FormLabel>Stage Title</FormLabel>
                         <FormControl>
-                          <Input placeholder="e.g., Friendly Reminder" {...field} data-testid="input-stage-title" />
+                          <Input placeholder="e.g., Friendly Reminder" {...field} className="border-gray-200" data-testid="input-stage-title" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -430,6 +430,7 @@ export default function Workflows() {
                             type="number" 
                             placeholder="7" 
                             {...field} 
+                            className="border-gray-200"
                             onChange={(e) => field.onChange(parseInt(e.target.value))}
                             data-testid="input-days-overdue"
                           />
@@ -446,7 +447,7 @@ export default function Workflows() {
                     <FormItem>
                       <FormLabel>Email Subject</FormLabel>
                       <FormControl>
-                        <Input placeholder="Payment Reminder - Invoice #{invoiceNumber}" {...field} data-testid="input-email-subject" />
+                        <Input placeholder="Payment Reminder - Invoice #{invoiceNumber}" {...field} className="border-gray-200" data-testid="input-email-subject" />
                       </FormControl>
                       <FormDescription>
                         Use {`{customerName}, {invoiceNumber}, {amount}, {dueDate}, {daysOverdue}`} for dynamic content
@@ -464,7 +465,7 @@ export default function Workflows() {
                       <FormControl>
                         <Textarea 
                           placeholder="Dear {customerName}..."
-                          className="min-h-[150px]" 
+                          className="min-h-[150px] border-gray-200" 
                           {...field}
                           data-testid="textarea-email-content"
                         />
