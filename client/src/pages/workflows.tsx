@@ -9,11 +9,16 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { useForm } from "react-hook-form";
 import { 
   Plus, Workflow, BarChart3, Activity, Target, Zap, 
   Mail, MessageSquare, Phone, Bot, Settings, 
   ArrowRight, TrendingUp, Clock, Users,
-  Edit, Trash2, Play, Pause
+  Edit, Trash2, Play, Pause, GripVertical, Save
 } from "lucide-react";
 import { useLocation } from "wouter";
 
@@ -185,43 +190,193 @@ export default function Workflows() {
     </div>
   );
 
-  const EmailSequenceBuilder = () => (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-lg font-semibold">Email Sequence Templates</h3>
-          <p className="text-sm text-gray-600">Manage your multi-stage email collection sequence</p>
-        </div>
-        <Button className="bg-[#17B6C3] hover:bg-[#1396A1] text-white" data-testid="button-add-email-template">
-          <Plus className="mr-2 h-4 w-4" />
-          Add Template
-        </Button>
-      </div>
+  interface EmailStage {
+    id: string;
+    order: number;
+    title: string;
+    subject: string;
+    daysOverdue: number;
+    content: string;
+  }
 
-      <div className="grid gap-4">
-        {[1, 2, 3, 4, 5].map((stage) => {
-          const template = (emailTemplates as any[])?.find((t: any) => t.stage === stage);
-          return (
-            <Card key={stage} className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
+  const EmailSequenceBuilder = () => {
+    const [stages, setStages] = useState<EmailStage[]>([
+      {
+        id: '1',
+        order: 1,
+        title: 'Friendly Reminder',
+        subject: 'Payment Reminder - Invoice #{invoiceNumber}',
+        daysOverdue: 7,
+        content: 'Dear {customerName},\n\nThis is a friendly reminder that your invoice #{invoiceNumber} for ${amount} was due on {dueDate}. We would appreciate your prompt payment.\n\nBest regards,\nAccounts Receivable Team'
+      },
+      {
+        id: '2',
+        order: 2,
+        title: 'Formal Notice',
+        subject: 'Second Notice - Payment Required',
+        daysOverdue: 14,
+        content: 'Dear {customerName},\n\nYour invoice #{invoiceNumber} for ${amount} is now {daysOverdue} days overdue. Please remit payment immediately to avoid additional collection action.\n\nRegards,\nAccounts Receivable Team'
+      },
+      {
+        id: '3',
+        order: 3,
+        title: 'Urgent Request',
+        subject: 'URGENT: Payment Required',
+        daysOverdue: 21,
+        content: 'Dear {customerName},\n\nYour account is seriously overdue. Invoice #{invoiceNumber} for ${amount} requires immediate attention. Please contact us within 48 hours.\n\nUrgently,\nAccounts Receivable Team'
+      }
+    ]);
+
+    const [editingStage, setEditingStage] = useState<EmailStage | null>(null);
+    const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+    const [draggedStage, setDraggedStage] = useState<EmailStage | null>(null);
+
+    const form = useForm({
+      defaultValues: {
+        title: '',
+        subject: '',
+        daysOverdue: 7,
+        content: ''
+      }
+    });
+
+    const addStage = () => {
+      const newStage = {
+        id: Date.now().toString(),
+        order: stages.length + 1,
+        title: `Stage ${stages.length + 1}`,
+        subject: 'Payment Reminder',
+        daysOverdue: (stages.length + 1) * 7,
+        content: 'New email template content...'
+      };
+      setStages([...stages, newStage]);
+    };
+
+    const editStage = (stage: EmailStage) => {
+      setEditingStage(stage);
+      form.reset({
+        title: stage.title,
+        subject: stage.subject,
+        daysOverdue: stage.daysOverdue,
+        content: stage.content
+      });
+      setIsEditDialogOpen(true);
+    };
+
+    const saveStage = (formData: any) => {
+      setStages(stages.map(stage => 
+        stage.id === editingStage?.id 
+          ? { ...stage, ...formData }
+          : stage
+      ));
+      setIsEditDialogOpen(false);
+      setEditingStage(null);
+      toast({
+        title: "Stage Updated",
+        description: "Email stage has been successfully updated.",
+      });
+    };
+
+    const deleteStage = (stageId: string) => {
+      setStages(stages.filter(stage => stage.id !== stageId));
+      toast({
+        title: "Stage Deleted",
+        description: "Email stage has been removed from sequence.",
+      });
+    };
+
+    const handleDragStart = (e: React.DragEvent, stage: EmailStage) => {
+      setDraggedStage(stage);
+      e.dataTransfer.effectAllowed = 'move';
+    };
+
+    const handleDragOver = (e: React.DragEvent) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+    };
+
+    const handleDrop = (e: React.DragEvent, targetStage: EmailStage) => {
+      e.preventDefault();
+      if (!draggedStage || draggedStage.id === targetStage.id) return;
+
+      const updatedStages = [...stages];
+      const draggedIndex = updatedStages.findIndex(s => s.id === draggedStage.id);
+      const targetIndex = updatedStages.findIndex(s => s.id === targetStage.id);
+
+      // Remove dragged stage and insert at target position
+      const [removed] = updatedStages.splice(draggedIndex, 1);
+      updatedStages.splice(targetIndex, 0, removed);
+
+      // Update order numbers
+      const reorderedStages = updatedStages.map((stage, index) => ({
+        ...stage,
+        order: index + 1
+      }));
+
+      setStages(reorderedStages);
+      setDraggedStage(null);
+      
+      toast({
+        title: "Stages Reordered",
+        description: "Email sequence has been rearranged.",
+      });
+    };
+
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-lg font-semibold">Email Sequence Templates</h3>
+            <p className="text-sm text-gray-600">Manage your multi-stage email collection sequence</p>
+          </div>
+          <Button 
+            onClick={addStage}
+            className="bg-[#17B6C3] hover:bg-[#1396A1] text-white" 
+            data-testid="button-add-email-stage"
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            Add Stage
+          </Button>
+        </div>
+
+        <div className="grid gap-4">
+          {stages.sort((a, b) => a.order - b.order).map((stage) => (
+            <Card 
+              key={stage.id} 
+              className="bg-white border border-gray-200 shadow-sm hover:shadow-md transition-shadow cursor-move"
+              draggable
+              onDragStart={(e) => handleDragStart(e, stage)}
+              onDragOver={handleDragOver}
+              onDrop={(e) => handleDrop(e, stage)}
+              data-testid={`email-stage-${stage.order}`}
+            >
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
+                    <GripVertical className="h-5 w-5 text-gray-400" />
                     <Badge variant="outline" className="bg-[#17B6C3]/10 text-[#17B6C3] border-[#17B6C3]/20">
-                      Stage {stage}
+                      Stage {stage.order}
                     </Badge>
-                    <h4 className="font-medium">
-                      {stage === 1 && "Friendly Reminder"}
-                      {stage === 2 && "Formal Notice"}
-                      {stage === 3 && "Urgent Request"}
-                      {stage === 4 && "Final Notice"}
-                      {stage === 5 && "Collection Warning"}
-                    </h4>
+                    <h4 className="font-medium">{stage.title}</h4>
                   </div>
                   <div className="flex space-x-2">
-                    <Button variant="outline" size="sm" data-testid={`button-edit-email-${stage}`}>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => editStage(stage)}
+                      data-testid={`button-edit-stage-${stage.order}`}
+                    >
                       <Edit className="h-4 w-4" />
                     </Button>
-                    <Button variant="outline" size="sm" data-testid={`button-test-email-${stage}`}>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => deleteStage(stage.id)}
+                      data-testid={`button-delete-stage-${stage.order}`}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                    <Button variant="outline" size="sm" data-testid={`button-test-stage-${stage.order}`}>
                       <Play className="h-4 w-4" />
                     </Button>
                   </div>
@@ -229,21 +384,123 @@ export default function Workflows() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
-                  <p className="text-sm font-medium">Subject: {template?.subject || `Payment Reminder - Stage ${stage}`}</p>
+                  <p className="text-sm font-medium">Subject: {stage.subject}</p>
                   <p className="text-sm text-gray-600">
-                    Sent after: <span className="font-medium">{stage * 7} days overdue</span>
+                    Sent after: <span className="font-medium">{stage.daysOverdue} days overdue</span>
                   </p>
                   <p className="text-sm text-gray-600 bg-gray-50 p-3 rounded border-l-4 border-[#17B6C3]">
-                    {template?.content?.substring(0, 120) || `Professional collection email template for stage ${stage}...`}
+                    {stage.content.substring(0, 120)}...
                   </p>
                 </div>
               </CardContent>
             </Card>
-          );
-        })}
+          ))}
+        </div>
+
+        {/* Edit Stage Dialog */}
+        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Edit Email Stage</DialogTitle>
+            </DialogHeader>
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(saveStage)} className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="title"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Stage Title</FormLabel>
+                        <FormControl>
+                          <Input placeholder="e.g., Friendly Reminder" {...field} data-testid="input-stage-title" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="daysOverdue"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Days Overdue</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="number" 
+                            placeholder="7" 
+                            {...field} 
+                            onChange={(e) => field.onChange(parseInt(e.target.value))}
+                            data-testid="input-days-overdue"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                <FormField
+                  control={form.control}
+                  name="subject"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Email Subject</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Payment Reminder - Invoice #{invoiceNumber}" {...field} data-testid="input-email-subject" />
+                      </FormControl>
+                      <FormDescription>
+                        Use {`{customerName}, {invoiceNumber}, {amount}, {dueDate}, {daysOverdue}`} for dynamic content
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="content"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Email Content</FormLabel>
+                      <FormControl>
+                        <Textarea 
+                          placeholder="Dear {customerName}..."
+                          className="min-h-[150px]" 
+                          {...field}
+                          data-testid="textarea-email-content"
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Use placeholders for personalization: {`{customerName}, {invoiceNumber}, {amount}, {dueDate}, {daysOverdue}`}
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <div className="flex justify-end space-x-2">
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    onClick={() => setIsEditDialogOpen(false)}
+                    data-testid="button-cancel-edit"
+                  >
+                    Cancel
+                  </Button>
+                  <Button 
+                    type="submit" 
+                    className="bg-[#17B6C3] hover:bg-[#1396A1] text-white"
+                    data-testid="button-save-stage"
+                  >
+                    <Save className="mr-2 h-4 w-4" />
+                    Save Stage
+                  </Button>
+                </div>
+              </form>
+            </Form>
+          </DialogContent>
+        </Dialog>
       </div>
-    </div>
-  );
+    );
+  };
 
   const SMSStrategy = () => (
     <div className="space-y-6">
