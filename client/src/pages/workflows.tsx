@@ -306,7 +306,100 @@ export default function Workflows() {
     </div>
   );
 
-  const AIAgentsConfig = () => (
+  const WhatsAppConfig = () => (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-lg font-semibold">WhatsApp AI Agent</h3>
+          <p className="text-sm text-gray-600">Configure WhatsApp AI for customer queries and payment discussions</p>
+        </div>
+        <Button className="bg-[#17B6C3] hover:bg-[#1396A1] text-white" data-testid="button-configure-whatsapp">
+          <Plus className="mr-2 h-4 w-4" />
+          Configure WhatsApp
+        </Button>
+      </div>
+
+      {/* WhatsApp AI Agent */}
+      <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="p-2 bg-green-500/10 rounded-lg">
+                <MessageSquare className="h-6 w-6 text-green-600" />
+              </div>
+              <div>
+                <h4 className="font-semibold">WhatsApp AI Agent</h4>
+                <p className="text-sm text-gray-600">Handles customer queries and payment discussions</p>
+              </div>
+            </div>
+            <Badge variant="outline" className="bg-yellow-500/10 text-yellow-600 border-yellow-500/20">
+              Setup Required
+            </Badge>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8">
+            <MessageSquare className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">WhatsApp AI Setup</h3>
+            <p className="text-gray-600 mb-4 max-w-md mx-auto">
+              Set up WhatsApp Business API integration to enable AI-powered customer communication for payment discussions and dispute resolution.
+            </p>
+            <div className="space-y-2 text-sm text-gray-600 mb-6">
+              <p>• Professional & empathetic AI personality</p>
+              <p>• Automated responses to payment queries</p>
+              <p>• Escalation to human agents for complex disputes</p>
+              <p>• Payment plan negotiations and scheduling</p>
+            </div>
+            <Button className="bg-green-500 hover:bg-green-600 text-white" data-testid="button-setup-whatsapp">
+              <Plus className="h-4 w-4 mr-2" />
+              Set Up WhatsApp Business
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* WhatsApp Integration Guide */}
+      <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
+        <CardHeader>
+          <h4 className="font-semibold">Integration Requirements</h4>
+          <p className="text-sm text-gray-600">What you'll need to get started</p>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div className="flex items-start space-x-3 p-4 bg-blue-50 rounded-lg">
+              <div className="p-1 bg-blue-600 rounded-full">
+                <span className="block w-2 h-2 bg-white rounded-full"></span>
+              </div>
+              <div>
+                <p className="font-medium">WhatsApp Business Account</p>
+                <p className="text-sm text-gray-600">Verified business account with WhatsApp Business API access</p>
+              </div>
+            </div>
+            <div className="flex items-start space-x-3 p-4 bg-green-50 rounded-lg">
+              <div className="p-1 bg-green-600 rounded-full">
+                <span className="block w-2 h-2 bg-white rounded-full"></span>
+              </div>
+              <div>
+                <p className="font-medium">Webhook Configuration</p>
+                <p className="text-sm text-gray-600">Secure webhook endpoints for message handling</p>
+              </div>
+            </div>
+            <div className="flex items-start space-x-3 p-4 bg-purple-50 rounded-lg">
+              <div className="p-1 bg-purple-600 rounded-full">
+                <span className="block w-2 h-2 bg-white rounded-full"></span>
+              </div>
+              <div>
+                <p className="font-medium">AI Personality Training</p>
+                <p className="text-sm text-gray-600">Custom training for your industry and communication style</p>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+
+  const VoiceConfig = () => (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
@@ -504,7 +597,7 @@ export default function Workflows() {
         
         <div className="p-8">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-            <TabsList className="grid w-full grid-cols-5 bg-white/70 border-gray-200/30">
+            <TabsList className="grid w-full grid-cols-6 bg-white/70 border-gray-200/30">
               <TabsTrigger value="dashboard" className="data-[state=active]:bg-[#17B6C3] data-[state=active]:text-white">
                 <BarChart3 className="mr-2 h-4 w-4" />
                 Dashboard
@@ -517,9 +610,13 @@ export default function Workflows() {
                 <MessageSquare className="mr-2 h-4 w-4" />
                 SMS Strategy
               </TabsTrigger>
-              <TabsTrigger value="ai" className="data-[state=active]:bg-[#17B6C3] data-[state=active]:text-white">
-                <Bot className="mr-2 h-4 w-4" />
-                AI Agents
+              <TabsTrigger value="whatsapp" className="data-[state=active]:bg-[#17B6C3] data-[state=active]:text-white">
+                <MessageSquare className="mr-2 h-4 w-4" />
+                WhatsApp
+              </TabsTrigger>
+              <TabsTrigger value="voice" className="data-[state=active]:bg-[#17B6C3] data-[state=active]:text-white">
+                <Phone className="mr-2 h-4 w-4" />
+                Voice
               </TabsTrigger>
               <TabsTrigger value="analytics" className="data-[state=active]:bg-[#17B6C3] data-[state=active]:text-white">
                 <TrendingUp className="mr-2 h-4 w-4" />
@@ -539,8 +636,12 @@ export default function Workflows() {
               <SMSStrategy />
             </TabsContent>
 
-            <TabsContent value="ai">
-              <AIAgentsConfig />
+            <TabsContent value="whatsapp">
+              <WhatsAppConfig />
+            </TabsContent>
+
+            <TabsContent value="voice">
+              <VoiceConfig />
             </TabsContent>
 
             <TabsContent value="analytics">
