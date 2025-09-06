@@ -11,7 +11,9 @@ import {
   insertEscalationRuleSchema,
   insertAiAgentConfigSchema,
   insertChannelAnalyticsSchema,
-  insertWorkflowTemplateSchema 
+  insertWorkflowTemplateSchema,
+  insertRetellConfigurationSchema,
+  insertVoiceCallSchema 
 } from "@shared/schema";
 import { z } from "zod";
 import { generateCollectionSuggestions, generateEmailDraft } from "./services/openai";
@@ -19,6 +21,7 @@ import { sendReminderEmail } from "./services/sendgrid";
 import { sendPaymentReminderSMS } from "./services/twilio";
 import { xeroService } from "./services/xero";
 import { generateMockData } from "./mock-data";
+import { retellService } from "./retell-service";
 import Stripe from "stripe";
 
 // Initialize Stripe
@@ -700,6 +703,162 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error cloning workflow template:", error);
       res.status(500).json({ message: "Failed to clone workflow template" });
+    }
+  });
+
+  // Retell AI Voice Calling Routes
+  app.get("/api/retell/configuration", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const config = await storage.getRetellConfiguration(user.tenantId);
+      res.json(config);
+    } catch (error) {
+      console.error("Error fetching Retell configuration:", error);
+      res.status(500).json({ message: "Failed to fetch Retell configuration" });
+    }
+  });
+
+  app.post("/api/retell/configuration", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const validatedData = insertRetellConfigurationSchema.parse({
+        ...req.body,
+        tenantId: user.tenantId,
+      });
+
+      const config = await storage.createRetellConfiguration(validatedData);
+      res.status(201).json(config);
+    } catch (error: any) {
+      console.error("Error creating Retell configuration:", error);
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create Retell configuration" });
+    }
+  });
+
+  app.post("/api/retell/call", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { contactId, invoiceId, message } = req.body;
+
+      // Get contact and invoice details
+      const contact = await storage.getContact(contactId, user.tenantId);
+      const invoice = invoiceId ? await storage.getInvoice(invoiceId, user.tenantId) : undefined;
+
+      if (!contact) {
+        return res.status(404).json({ message: "Contact not found" });
+      }
+
+      if (!contact.phone) {
+        return res.status(400).json({ message: "Contact does not have a phone number" });
+      }
+
+      // Get Retell configuration
+      const retellConfig = await storage.getRetellConfiguration(user.tenantId);
+      if (!retellConfig || !retellConfig.isActive) {
+        return res.status(400).json({ message: "Retell AI not configured for this tenant" });
+      }
+
+      // Create dynamic variables for the call
+      const dynamicVariables = {
+        customer_name: contact.name,
+        company_name: contact.companyName || contact.name,
+        invoice_number: invoice?.invoiceNumber || "N/A",
+        amount: invoice?.amount || "0",
+        days_overdue: invoice ? Math.floor((Date.now() - new Date(invoice.dueDate).getTime()) / (1000 * 60 * 60 * 24)) : 0,
+        custom_message: message || ""
+      };
+
+      // Make the call using Retell AI
+      const callResult = await retellService.createCall({
+        fromNumber: retellConfig.phoneNumber,
+        toNumber: contact.phone,
+        agentId: retellConfig.agentId,
+        dynamicVariables,
+        metadata: {
+          contactId,
+          invoiceId,
+          tenantId: user.tenantId
+        }
+      });
+
+      // Store the call record
+      const voiceCallData = insertVoiceCallSchema.parse({
+        tenantId: user.tenantId,
+        contactId,
+        invoiceId,
+        retellCallId: callResult.callId,
+        retellAgentId: callResult.agentId,
+        fromNumber: callResult.fromNumber,
+        toNumber: callResult.toNumber,
+        direction: callResult.direction,
+        status: callResult.status,
+        scheduledAt: new Date(),
+      });
+
+      const voiceCall = await storage.createVoiceCall(voiceCallData);
+
+      res.status(201).json({
+        voiceCall,
+        retellCallId: callResult.callId,
+        message: "Call initiated successfully"
+      });
+    } catch (error: any) {
+      console.error("Error creating voice call:", error);
+      res.status(500).json({ message: error.message || "Failed to create voice call" });
+    }
+  });
+
+  app.get("/api/retell/calls", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { contactId, status, limit } = req.query;
+      const filters = {
+        contactId: contactId as string,
+        status: status as string,
+        limit: limit ? parseInt(limit as string) : undefined
+      };
+
+      const calls = await storage.getVoiceCalls(user.tenantId, filters);
+      res.json(calls);
+    } catch (error) {
+      console.error("Error fetching voice calls:", error);
+      res.status(500).json({ message: "Failed to fetch voice calls" });
+    }
+  });
+
+  app.post("/api/retell/webhook", async (req, res) => {
+    try {
+      console.log("Retell webhook received:", req.body);
+
+      const webhookData = req.body;
+      const retellCallId = webhookData.call_id;
+
+      if (!retellCallId) {
+        return res.status(400).json({ message: "Missing call_id in webhook" });
+      }
+
+      res.json({ success: true, message: "Webhook processed successfully" });
+    } catch (error) {
+      console.error("Error processing Retell webhook:", error);
+      res.status(500).json({ message: "Failed to process webhook" });
     }
   });
 

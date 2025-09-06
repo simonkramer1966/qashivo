@@ -149,8 +149,8 @@ export class RetellService {
       userSentiment: webhookData.call_analysis?.user_sentiment,
       callSuccessful: webhookData.call_analysis?.call_successful,
       disconnectionReason: webhookData.disconnection_reason,
-      startedAt: webhookData.start_timestamp ? new Date(webhookData.start_timestamp) : null,
-      endedAt: webhookData.end_timestamp ? new Date(webhookData.end_timestamp) : null,
+      startedAt: webhookData.start_timestamp ? new Date(webhookData.start_timestamp) : undefined,
+      endedAt: webhookData.end_timestamp ? new Date(webhookData.end_timestamp) : undefined,
     };
   }
 
