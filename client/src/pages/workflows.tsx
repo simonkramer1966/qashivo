@@ -336,7 +336,7 @@ export default function Workflows() {
                 </div>
               </div>
               <div className="border-l-4 border-green-500 bg-green-50 p-4">
-                <p className="text-sm"><strong>Sample Response:</strong> "Hi {name}, I understand your concern about invoice #{number}. I can help you set up a payment plan or discuss your options. What works best for you?"</p>
+                <p className="text-sm"><strong>Sample Response:</strong> "Hi {`{name}`}, I understand your concern about invoice #{`{number}`}. I can help you set up a payment plan or discuss your options. What works best for you?"</p>
               </div>
             </div>
           </CardContent>
@@ -373,7 +373,7 @@ export default function Workflows() {
                 </div>
               </div>
               <div className="border-l-4 border-purple-500 bg-purple-50 p-4">
-                <p className="text-sm"><strong>Sample Script:</strong> "Hello {name}, this is regarding your outstanding invoice {number} for {amount}. I'd like to discuss payment options that work for your business..."</p>
+                <p className="text-sm"><strong>Sample Script:</strong> "Hello {`{name}`}, this is regarding your outstanding invoice {`{number}`} for {`{amount}`}. I'd like to discuss payment options that work for your business..."</p>
               </div>
             </div>
           </CardContent>
