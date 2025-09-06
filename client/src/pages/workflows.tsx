@@ -500,7 +500,7 @@ export default function Workflows() {
 
       {/* Recent Voice Calls */}
       {(retellConfig as any)?.isActive && voiceCalls && (voiceCalls as any[])?.length > 0 && (
-        <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
+        <Card className="bg-white border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
           <CardHeader>
             <div className="flex items-center justify-between">
               <h4 className="font-semibold">Recent Voice Calls</h4>
@@ -577,7 +577,7 @@ export default function Workflows() {
   );
 
   return (
-    <div className="flex h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-teal-50">
+    <div className="flex h-screen" style={{ backgroundColor: '#ffffff' }}>
       <NewSidebar />
       <main className="flex-1 overflow-y-auto">
         <Header 
@@ -595,9 +595,9 @@ export default function Workflows() {
           }
         />
         
-        <div className="p-8">
+        <div className="p-8" style={{ backgroundColor: '#ffffff' }}>
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-            <TabsList className="grid w-full grid-cols-6 bg-white/70 border-gray-200/30">
+            <TabsList className="grid w-full grid-cols-6 bg-white border border-gray-200">
               <TabsTrigger value="dashboard" className="data-[state=active]:bg-[#17B6C3] data-[state=active]:text-white">
                 <BarChart3 className="mr-2 h-4 w-4" />
                 Dashboard
@@ -645,7 +645,7 @@ export default function Workflows() {
             </TabsContent>
 
             <TabsContent value="analytics">
-              <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
+              <Card className="bg-white border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
                 <CardHeader>
                   <CardTitle className="text-xl font-bold">Performance Analytics</CardTitle>
                   <CardDescription>Comprehensive channel effectiveness and ROI analysis</CardDescription>

@@ -77,9 +77,9 @@ export default function Contacts() {
           }
         />
         
-        <div className="p-8 space-y-8">
+        <div className="p-8 space-y-8" style={{ backgroundColor: '#ffffff' }}>
           {/* Search */}
-          <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
+          <Card className="bg-white border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
             <CardHeader>
               <CardTitle className="text-xl font-bold flex items-center">
                 <div className="p-2 bg-[#17B6C3]/10 rounded-lg mr-3">
@@ -114,7 +114,7 @@ export default function Contacts() {
             </div>
 
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="grid grid-cols-2 max-w-md mb-8 bg-white/70 border-gray-200/30">
+              <TabsList className="grid grid-cols-2 max-w-md mb-8 bg-white border border-gray-200">
                 <TabsTrigger value="cards" className="flex items-center gap-2 data-[state=active]:bg-[#17B6C3] data-[state=active]:text-white" data-testid="tab-cards">
                   <Grid3X3 className="h-4 w-4" />
                   Card View
@@ -131,7 +131,7 @@ export default function Contacts() {
                     <p className="text-muted-foreground">Loading contacts...</p>
                   </div>
                 ) : filteredContacts.length === 0 ? (
-                  <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
+                  <Card className="bg-white border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
                     <CardContent className="text-center py-8">
                       <div className="w-16 h-16 bg-[#17B6C3]/10 rounded-full flex items-center justify-center mx-auto mb-6">
                         <User className="h-8 w-8 text-[#17B6C3]" />
@@ -155,7 +155,7 @@ export default function Contacts() {
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                     {filteredContacts.map((contact: any) => (
-                      <Card key={contact.id} className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg hover:shadow-2xl transition-all duration-300 hover:scale-105" data-testid={`card-contact-${contact.id}`}>
+                      <Card key={contact.id} className="bg-white border border-gray-200 shadow-sm hover:shadow-md transition-shadow" data-testid={`card-contact-${contact.id}`}>
                         <CardHeader className="pb-4">
                           <div className="flex items-start justify-between">
                             <div className="flex items-center space-x-3">
@@ -246,7 +246,7 @@ export default function Contacts() {
                     <p className="text-muted-foreground">Loading contacts...</p>
                   </div>
                 ) : filteredContacts.length === 0 ? (
-                  <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
+                  <Card className="bg-white border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
                     <CardContent className="text-center py-8">
                       <div className="w-16 h-16 bg-[#17B6C3]/10 rounded-full flex items-center justify-center mx-auto mb-6">
                         <User className="h-8 w-8 text-[#17B6C3]" />
@@ -268,7 +268,7 @@ export default function Contacts() {
                     </CardContent>
                   </Card>
                 ) : (
-                  <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
+                  <Card className="bg-white border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
                     <CardContent className="p-0">
                       <div className="overflow-x-auto">
                         <table className="w-full">
