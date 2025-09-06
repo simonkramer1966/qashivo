@@ -13,6 +13,7 @@ import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { 
   Building2, 
   Link as LinkIcon, 
@@ -26,8 +27,272 @@ import {
   Palette,
   Settings as SettingsIcon,
   Database,
-  Zap
+  Zap,
+  TestTube,
+  Phone,
+  CheckCircle
 } from "lucide-react";
+
+// Test Tab Component
+function TestTabContent() {
+  const { toast } = useToast();
+  const { user } = useAuth();
+  const [selectedContactId, setSelectedContactId] = useState<string>("");
+  const [isTestingEmail, setIsTestingEmail] = useState(false);
+  const [isTestingSMS, setIsTestingSMS] = useState(false);
+  const [isTestingVoice, setIsTestingVoice] = useState(false);
+
+  // Fetch contacts for selection
+  const { data: contacts = [] } = useQuery<{
+    id: string;
+    name: string;
+    email?: string;
+    phone?: string;
+    companyName?: string;
+  }[]>({
+    queryKey: ['/api/contacts'],
+    enabled: !!user,
+  });
+
+  const selectedContact = contacts.find(c => c.id === selectedContactId);
+
+  const handleTestEmail = async () => {
+    if (!selectedContact || !selectedContact.email) {
+      toast({
+        title: "Error",
+        description: "Please select a contact with an email address.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsTestingEmail(true);
+    try {
+      const response = await apiRequest("POST", "/api/test/email", {
+        contactId: selectedContactId
+      });
+      
+      if (response.ok) {
+        toast({
+          title: "Success",
+          description: `Test email sent to ${selectedContact.email}`,
+        });
+      } else {
+        throw new Error("Failed to send test email");
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to send test email. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsTestingEmail(false);
+    }
+  };
+
+  const handleTestSMS = async () => {
+    if (!selectedContact || !selectedContact.phone) {
+      toast({
+        title: "Error",
+        description: "Please select a contact with a phone number.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsTestingSMS(true);
+    try {
+      const response = await apiRequest("POST", "/api/test/sms", {
+        contactId: selectedContactId
+      });
+      
+      if (response.ok) {
+        toast({
+          title: "Success",
+          description: `Test SMS sent to ${selectedContact.phone}`,
+        });
+      } else {
+        throw new Error("Failed to send test SMS");
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to send test SMS. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsTestingSMS(false);
+    }
+  };
+
+  const handleTestVoice = async () => {
+    if (!selectedContact || !selectedContact.phone) {
+      toast({
+        title: "Error",
+        description: "Please select a contact with a phone number.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsTestingVoice(true);
+    try {
+      const response = await apiRequest("POST", "/api/test/voice", {
+        contactId: selectedContactId
+      });
+      
+      if (response.ok) {
+        toast({
+          title: "Success",
+          description: `Test voice call initiated to ${selectedContact.phone}`,
+        });
+      } else {
+        throw new Error("Failed to initiate test voice call");
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to initiate test voice call. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsTestingVoice(false);
+    }
+  };
+
+  return (
+    <Card className="bg-white border border-gray-200 shadow-sm">
+      <CardHeader>
+        <CardTitle className="text-xl font-bold flex items-center">
+          <div className="p-2 bg-[#17B6C3]/10 rounded-lg mr-3">
+            <TestTube className="h-5 w-5 text-[#17B6C3]" />
+          </div>
+          Client Testing
+        </CardTitle>
+        <CardDescription className="text-base">
+          Test email, SMS, and voice communications with specific clients
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        {/* Contact Selection */}
+        <div className="space-y-2">
+          <Label htmlFor="contact-select">Select Client for Testing</Label>
+          <Select value={selectedContactId} onValueChange={setSelectedContactId}>
+            <SelectTrigger className="bg-white border-gray-200">
+              <SelectValue placeholder="Choose a client to test communications" />
+            </SelectTrigger>
+            <SelectContent className="bg-white border-gray-200">
+              {contacts.map((contact) => (
+                <SelectItem key={contact.id} value={contact.id}>
+                  <div className="flex flex-col">
+                    <span className="font-medium">{contact.name}</span>
+                    <span className="text-sm text-gray-500">
+                      {contact.email && `📧 ${contact.email}`} 
+                      {contact.phone && `📱 ${contact.phone}`}
+                    </span>
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {selectedContact && (
+          <div className="p-4 bg-gray-50 rounded-lg">
+            <h4 className="font-semibold mb-2">Selected Client:</h4>
+            <div className="text-sm space-y-1">
+              <p><strong>Name:</strong> {selectedContact.name}</p>
+              <p><strong>Company:</strong> {selectedContact.companyName || 'N/A'}</p>
+              <p><strong>Email:</strong> {selectedContact.email || 'N/A'}</p>
+              <p><strong>Phone:</strong> {selectedContact.phone || 'N/A'}</p>
+            </div>
+          </div>
+        )}
+
+        <Separator />
+
+        {/* Test Actions */}
+        <div className="space-y-4">
+          <h4 className="font-semibold text-lg">Test Communications</h4>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Email Test */}
+            <Card className="p-4">
+              <div className="flex items-center mb-3">
+                <Mail className="h-5 w-5 text-[#17B6C3] mr-2" />
+                <h5 className="font-medium">Email Test</h5>
+              </div>
+              <p className="text-sm text-gray-600 mb-3">
+                Send a test email reminder to the selected client
+              </p>
+              <Button 
+                onClick={handleTestEmail}
+                disabled={!selectedContact || !selectedContact.email || isTestingEmail}
+                className="w-full bg-[#17B6C3] hover:bg-[#1396A1] text-white"
+                data-testid="button-test-email"
+              >
+                {isTestingEmail ? "Sending..." : "Send Test Email"}
+              </Button>
+            </Card>
+
+            {/* SMS Test */}
+            <Card className="p-4">
+              <div className="flex items-center mb-3">
+                <MessageSquare className="h-5 w-5 text-[#17B6C3] mr-2" />
+                <h5 className="font-medium">SMS Test</h5>
+              </div>
+              <p className="text-sm text-gray-600 mb-3">
+                Send a test SMS message to the selected client
+              </p>
+              <Button 
+                onClick={handleTestSMS}
+                disabled={!selectedContact || !selectedContact.phone || isTestingSMS}
+                className="w-full bg-[#17B6C3] hover:bg-[#1396A1] text-white"
+                data-testid="button-test-sms"
+              >
+                {isTestingSMS ? "Sending..." : "Send Test SMS"}
+              </Button>
+            </Card>
+
+            {/* Voice Test */}
+            <Card className="p-4">
+              <div className="flex items-center mb-3">
+                <Phone className="h-5 w-5 text-[#17B6C3] mr-2" />
+                <h5 className="font-medium">Voice Test</h5>
+              </div>
+              <p className="text-sm text-gray-600 mb-3">
+                Initiate a test voice call to the selected client
+              </p>
+              <Button 
+                onClick={handleTestVoice}
+                disabled={!selectedContact || !selectedContact.phone || isTestingVoice}
+                className="w-full bg-[#17B6C3] hover:bg-[#1396A1] text-white"
+                data-testid="button-test-voice"
+              >
+                {isTestingVoice ? "Calling..." : "Start Test Call"}
+              </Button>
+            </Card>
+          </div>
+        </div>
+
+        {/* Status Information */}
+        <div className="mt-6 p-4 bg-blue-50 rounded-lg">
+          <div className="flex items-center">
+            <CheckCircle className="h-5 w-5 text-blue-600 mr-2" />
+            <h5 className="font-medium text-blue-800">Testing Information</h5>
+          </div>
+          <div className="mt-2 text-sm text-blue-700">
+            <p>• Email tests will send a sample payment reminder</p>
+            <p>• SMS tests will send a brief payment notification</p>
+            <p>• Voice tests will initiate a short AI-powered call</p>
+            <p>• All tests are clearly marked as test communications</p>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
 
 export default function Settings() {
   const { toast } = useToast();
@@ -190,12 +455,13 @@ export default function Settings() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <TabsList className="grid w-full grid-cols-5 bg-slate-50/80">
+                <TabsList className="grid w-full grid-cols-6 bg-slate-50/80">
                   <TabsTrigger value="general" className="data-[state=active]:bg-[#17B6C3] data-[state=active]:text-white" data-testid="tab-general">General</TabsTrigger>
                   <TabsTrigger value="integrations" className="data-[state=active]:bg-[#17B6C3] data-[state=active]:text-white" data-testid="tab-integrations">Integrations</TabsTrigger>
                   <TabsTrigger value="notifications" className="data-[state=active]:bg-[#17B6C3] data-[state=active]:text-white" data-testid="tab-notifications">Notifications</TabsTrigger>
                   <TabsTrigger value="security" className="data-[state=active]:bg-[#17B6C3] data-[state=active]:text-white" data-testid="tab-security">Security</TabsTrigger>
                   <TabsTrigger value="branding" className="data-[state=active]:bg-[#17B6C3] data-[state=active]:text-white" data-testid="tab-branding">Branding</TabsTrigger>
+                  <TabsTrigger value="test" className="data-[state=active]:bg-[#17B6C3] data-[state=active]:text-white" data-testid="tab-test">Test</TabsTrigger>
                 </TabsList>
               </CardContent>
             </Card>
@@ -686,6 +952,10 @@ export default function Settings() {
                   </Button>
                 </CardContent>
               </Card>
+            </TabsContent>
+
+            <TabsContent value="test" className="space-y-8">
+              <TestTabContent />
             </TabsContent>
           </Tabs>
         </div>

@@ -437,6 +437,200 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Test Communication Routes
+  app.post("/api/test/email", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { contactId } = req.body;
+      if (!contactId) {
+        return res.status(400).json({ message: "Contact ID is required" });
+      }
+
+      const contact = await storage.getContact(contactId, user.tenantId);
+      if (!contact) {
+        return res.status(404).json({ message: "Contact not found" });
+      }
+
+      if (!contact.email) {
+        return res.status(400).json({ message: "Contact email not available" });
+      }
+
+      const fromEmail = user.email || 'noreply@nexusar.com';
+
+      const success = await sendReminderEmail({
+        contactEmail: contact.email,
+        contactName: contact.name,
+        invoiceNumber: "TEST-001",
+        amount: 100.00,
+        dueDate: new Date().toLocaleDateString(),
+        daysPastDue: 0,
+      }, fromEmail, "[TEST EMAIL] This is a test communication from Nexus AR");
+
+      if (success) {
+        // Log the test action
+        await storage.createAction({
+          tenantId: user.tenantId,
+          contactId,
+          userId: user.id,
+          type: 'email',
+          status: 'completed',
+          subject: 'TEST EMAIL - Communication Test',
+          content: 'Test email sent successfully from Settings page',
+          completedAt: new Date(),
+        });
+      }
+
+      res.json({ success, message: success ? 'Test email sent successfully' : 'Failed to send test email' });
+    } catch (error) {
+      console.error("Error sending test email:", error);
+      res.status(500).json({ message: "Failed to send test email" });
+    }
+  });
+
+  app.post("/api/test/sms", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { contactId } = req.body;
+      if (!contactId) {
+        return res.status(400).json({ message: "Contact ID is required" });
+      }
+
+      const contact = await storage.getContact(contactId, user.tenantId);
+      if (!contact) {
+        return res.status(404).json({ message: "Contact not found" });
+      }
+
+      if (!contact.phone) {
+        return res.status(400).json({ message: "Contact phone not available" });
+      }
+
+      const result = await sendPaymentReminderSMS({
+        phone: contact.phone,
+        name: contact.name,
+        invoiceNumber: "TEST-001",
+        amount: 100.00,
+        daysPastDue: 0,
+      });
+
+      if (result.success) {
+        // Log the test action
+        await storage.createAction({
+          tenantId: user.tenantId,
+          contactId,
+          userId: user.id,
+          type: 'sms',
+          status: 'completed',
+          subject: 'TEST SMS - Communication Test',
+          content: 'Test SMS sent successfully from Settings page',
+          completedAt: new Date(),
+          metadata: { messageId: result.messageId },
+        });
+      }
+
+      res.json(result);
+    } catch (error) {
+      console.error("Error sending test SMS:", error);
+      res.status(500).json({ message: "Failed to send test SMS" });
+    }
+  });
+
+  app.post("/api/test/voice", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { contactId } = req.body;
+      if (!contactId) {
+        return res.status(400).json({ message: "Contact ID is required" });
+      }
+
+      const contact = await storage.getContact(contactId, user.tenantId);
+      if (!contact) {
+        return res.status(404).json({ message: "Contact not found" });
+      }
+
+      if (!contact.phone) {
+        return res.status(400).json({ message: "Contact phone not available" });
+      }
+
+      // Get Retell configuration
+      const retellConfig = await storage.getRetellConfiguration(user.tenantId);
+      if (!retellConfig || !retellConfig.isActive) {
+        return res.status(400).json({ message: "Retell AI not configured for this tenant" });
+      }
+
+      // Create dynamic variables for the test call
+      const dynamicVariables = {
+        customer_name: contact.name,
+        company_name: contact.companyName || contact.name,
+        invoice_number: "TEST-001",
+        amount: "100.00",
+        days_overdue: 0,
+        custom_message: "[TEST CALL] This is a test voice communication from Nexus AR."
+      };
+
+      // Make the test call using Retell AI
+      const callResult = await retellService.createCall({
+        fromNumber: retellConfig.phoneNumber,
+        toNumber: contact.phone,
+        agentId: retellConfig.agentId,
+        dynamicVariables,
+        metadata: {
+          contactId,
+          tenantId: user.tenantId,
+          isTest: true
+        }
+      });
+
+      // Store the test call record
+      const voiceCallData = insertVoiceCallSchema.parse({
+        tenantId: user.tenantId,
+        contactId,
+        retellCallId: callResult.callId,
+        retellAgentId: callResult.agentId,
+        fromNumber: callResult.fromNumber,
+        toNumber: callResult.toNumber,
+        direction: callResult.direction,
+        status: callResult.status,
+        scheduledAt: new Date(),
+      });
+
+      const voiceCall = await storage.createVoiceCall(voiceCallData);
+
+      // Log the test action
+      await storage.createAction({
+        tenantId: user.tenantId,
+        contactId,
+        userId: user.id,
+        type: 'voice',
+        status: 'completed',
+        subject: 'TEST VOICE - Communication Test',
+        content: 'Test voice call initiated successfully from Settings page',
+        completedAt: new Date(),
+        metadata: { retellCallId: callResult.callId },
+      });
+
+      res.status(201).json({
+        voiceCall,
+        retellCallId: callResult.callId,
+        message: "Test call initiated successfully"
+      });
+    } catch (error: any) {
+      console.error("Error creating test voice call:", error);
+      res.status(500).json({ message: error.message || "Failed to create test voice call" });
+    }
+  });
+
   // Workflow routes
   app.get("/api/workflows", isAuthenticated, async (req: any, res) => {
     try {
