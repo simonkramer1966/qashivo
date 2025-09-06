@@ -399,7 +399,7 @@ export default function Workflows() {
 
         {/* Edit Stage Dialog */}
         <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="max-w-2xl bg-white border border-gray-200 shadow-lg">
             <DialogHeader>
               <DialogTitle>Edit Email Stage</DialogTitle>
             </DialogHeader>
