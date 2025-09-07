@@ -414,74 +414,127 @@ export default function Invoices() {
           </DialogHeader>
           
           <div className="overflow-y-auto max-h-[60vh]">
-            {historyLoading ? (
-              <div className="flex items-center justify-center py-8">
-                <div className="animate-spin w-6 h-6 border-2 border-[#17B6C3] border-t-transparent rounded-full"></div>
-                <span className="ml-2 text-sm text-gray-600">Loading contact history...</span>
+            {/* Invoice Details Section */}
+            {selectedInvoice && (
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Invoice Details</h3>
+                <div className="bg-gray-50 rounded-lg p-4 space-y-3">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Invoice Number</label>
+                      <p className="text-sm font-medium text-gray-900">{selectedInvoice.invoiceNumber}</p>
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Amount</label>
+                      <p className="text-sm font-medium text-gray-900">${Number(selectedInvoice.amount).toLocaleString()}</p>
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Issue Date</label>
+                      <p className="text-sm text-gray-700">{new Date(selectedInvoice.issueDate).toLocaleDateString()}</p>
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Due Date</label>
+                      <p className="text-sm text-gray-700">{new Date(selectedInvoice.dueDate).toLocaleDateString()}</p>
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Status</label>
+                      <div className="mt-1">
+                        {getStatusBadge(selectedInvoice.status)}
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Contact</label>
+                      <p className="text-sm text-gray-700">{selectedInvoice.contact?.name || 'Unknown Contact'}</p>
+                      {selectedInvoice.contact?.email && (
+                        <p className="text-xs text-gray-500">{selectedInvoice.contact.email}</p>
+                      )}
+                    </div>
+                  </div>
+                  {selectedInvoice.description && (
+                    <div className="pt-2 border-t border-gray-200">
+                      <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Description</label>
+                      <p className="text-sm text-gray-700 mt-1">{selectedInvoice.description}</p>
+                    </div>
+                  )}
+                </div>
               </div>
-            ) : contactHistory.length === 0 ? (
-              <div className="text-center py-8">
-                <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-600 mb-2">No contact history found</p>
-                <p className="text-sm text-gray-500">No communication activities have been recorded for this invoice yet.</p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {contactHistory.map((action: any) => (
-                  <div key={action.id} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors">
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-start gap-3">
-                        <div className={`p-2 rounded-lg bg-gray-100 ${getActionStatusColor(action.status)}`}>
-                          {getActionIcon(action.type)}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            <h4 className="font-medium text-gray-900 capitalize">
-                              {action.type}
-                            </h4>
-                            <Badge 
-                              variant="outline" 
-                              className={`text-xs ${getActionStatusColor(action.status)}`}
-                            >
-                              {action.status}
-                            </Badge>
+            )}
+
+            {/* Light Dividing Line */}
+            <div className="border-t border-gray-200 mb-6"></div>
+
+            {/* Contact History Section */}
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Contact History</h3>
+              {historyLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="animate-spin w-6 h-6 border-2 border-[#17B6C3] border-t-transparent rounded-full"></div>
+                  <span className="ml-2 text-sm text-gray-600">Loading contact history...</span>
+                </div>
+              ) : contactHistory.length === 0 ? (
+                <div className="text-center py-8">
+                  <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <p className="text-gray-600 mb-2">No contact history found</p>
+                  <p className="text-sm text-gray-500">No communication activities have been recorded for this invoice yet.</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {contactHistory.map((action: any) => (
+                    <div key={action.id} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors">
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-start gap-3">
+                          <div className={`p-2 rounded-lg bg-gray-100 ${getActionStatusColor(action.status)}`}>
+                            {getActionIcon(action.type)}
                           </div>
-                          {action.subject && (
-                            <p className="text-sm font-medium text-gray-700 mb-1">
-                              {action.subject}
-                            </p>
-                          )}
-                          {action.content && (
-                            <p className="text-sm text-gray-600 mb-2 break-words">
-                              {action.content.length > 200 
-                                ? `${action.content.substring(0, 200)}...` 
-                                : action.content
-                              }
-                            </p>
-                          )}
-                          <div className="flex items-center gap-4 text-xs text-gray-500">
-                            <span className="flex items-center gap-1">
-                              <Clock className="h-3 w-3" />
-                              {new Date(action.createdAt).toLocaleString()}
-                            </span>
-                            {action.completedAt && (
-                              <span>
-                                Completed: {new Date(action.completedAt).toLocaleString()}
-                              </span>
-                            )}
-                            {action.aiGenerated && (
-                              <Badge variant="outline" className="text-xs">
-                                AI Generated
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <h4 className="font-medium text-gray-900 capitalize">
+                                {action.type}
+                              </h4>
+                              <Badge 
+                                variant="outline" 
+                                className={`text-xs ${getActionStatusColor(action.status)}`}
+                              >
+                                {action.status}
                               </Badge>
+                            </div>
+                            {action.subject && (
+                              <p className="text-sm font-medium text-gray-700 mb-1">
+                                {action.subject}
+                              </p>
                             )}
+                            {action.content && (
+                              <p className="text-sm text-gray-600 mb-2 break-words">
+                                {action.content.length > 200 
+                                  ? `${action.content.substring(0, 200)}...` 
+                                  : action.content
+                                }
+                              </p>
+                            )}
+                            <div className="flex items-center gap-4 text-xs text-gray-500">
+                              <span className="flex items-center gap-1">
+                                <Clock className="h-3 w-3" />
+                                {new Date(action.createdAt).toLocaleString()}
+                              </span>
+                              {action.completedAt && (
+                                <span>
+                                  Completed: {new Date(action.completedAt).toLocaleString()}
+                                </span>
+                              )}
+                              {action.aiGenerated && (
+                                <Badge variant="outline" className="text-xs">
+                                  AI Generated
+                                </Badge>
+                              )}
+                            </div>
                           </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-            )}
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
           
           <div className="flex justify-end pt-4 border-t">
