@@ -13,7 +13,8 @@ import {
   LogOut,
   TrendingUp,
   User,
-  Building2
+  Building2,
+  ExternalLink
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import nexusLogo from "@assets/Main Nexus Logo copy_1756923544828.png";
@@ -22,6 +23,7 @@ const navigationItems = [
   { name: "Dashboard", href: "/", icon: BarChart3 },
   { name: "Cashflow", href: "/cashflow", icon: TrendingUp },
   { name: "Invoices", href: "/invoices", icon: FileText },
+  { name: "Invoices - Xero", href: "/invoices-xero", icon: ExternalLink },
   { name: "Contacts", href: "/contacts", icon: Users },
   { name: "Collection Workflows", href: "/workflows", icon: Workflow },
   { name: "AI Suggestions", href: "/ai-suggestions", icon: Bot },
