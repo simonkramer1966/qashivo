@@ -176,71 +176,69 @@ export default function Invoices() {
                   <table className="w-full">
                     <thead>
                       <tr className="border-b border-slate-200/50">
-                        <th className="text-left py-4 text-sm font-semibold text-slate-700">Invoice</th>
-                        <th className="text-left py-4 text-sm font-semibold text-slate-700">Contact</th>
-                        <th className="text-left py-4 text-sm font-semibold text-slate-700">Amount</th>
-                        <th className="text-left py-4 text-sm font-semibold text-slate-700">Due Date</th>
-                        <th className="text-left py-4 text-sm font-semibold text-slate-700">Status</th>
-                        <th className="text-left py-4 text-sm font-semibold text-slate-700">Actions</th>
+                        <th className="text-left py-2 text-xs font-semibold text-slate-700">Invoice Details</th>
+                        <th className="text-left py-2 text-xs font-semibold text-slate-700">Amount</th>
+                        <th className="text-left py-2 text-xs font-semibold text-slate-700">Due Date</th>
+                        <th className="text-left py-2 text-xs font-semibold text-slate-700">Status</th>
+                        <th className="text-left py-2 text-xs font-semibold text-slate-700">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-200/50">
                       {filteredInvoices.map((invoice: any) => (
                         <tr key={invoice.id} className="hover:bg-slate-50/50 transition-colors" data-testid={`row-invoice-${invoice.id}`}>
-                          <td className="py-6">
-                            <div className="font-semibold text-slate-900" data-testid={`text-invoice-number-${invoice.id}`}>
-                              {invoice.invoiceNumber}
-                            </div>
-                            <div className="text-sm text-slate-600" data-testid={`text-issue-date-${invoice.id}`}>
-                              {new Date(invoice.issueDate).toLocaleDateString()}
+                          <td className="py-3">
+                            <div className="text-xs text-slate-700 flex items-center space-x-2">
+                              <span data-testid={`text-issue-date-${invoice.id}`}>
+                                {new Date(invoice.issueDate).toLocaleDateString()}
+                              </span>
+                              <span className="text-slate-400">•</span>
+                              <span className="font-medium" data-testid={`text-invoice-number-${invoice.id}`}>
+                                {invoice.invoiceNumber}
+                              </span>
+                              <span className="text-slate-400">•</span>
+                              <span data-testid={`text-contact-name-${invoice.id}`}>
+                                {invoice.contact?.name || 'Unknown Contact'}
+                              </span>
                             </div>
                           </td>
-                          <td className="py-6">
-                            <div className="font-semibold text-slate-900" data-testid={`text-contact-name-${invoice.id}`}>
-                              {invoice.contact?.name || 'Unknown Contact'}
-                            </div>
-                            <div className="text-sm text-slate-600" data-testid={`text-contact-email-${invoice.id}`}>
-                              {invoice.contact?.email || 'No email'}
-                            </div>
-                          </td>
-                          <td className="py-6 font-bold text-slate-900" data-testid={`text-amount-${invoice.id}`}>
+                          <td className="py-3 text-xs font-medium text-slate-900" data-testid={`text-amount-${invoice.id}`}>
                             ${Number(invoice.amount).toLocaleString()}
                           </td>
-                          <td className="py-6 text-slate-700" data-testid={`text-due-date-${invoice.id}`}>
+                          <td className="py-3 text-xs text-slate-700" data-testid={`text-due-date-${invoice.id}`}>
                             {new Date(invoice.dueDate).toLocaleDateString()}
                           </td>
-                          <td className="py-6">
+                          <td className="py-3">
                             {getStatusBadge(invoice.status)}
                           </td>
-                          <td className="py-6">
-                            <div className="flex space-x-2">
+                          <td className="py-3">
+                            <div className="flex space-x-1">
                               {invoice.contact?.email && (
                                 <Button 
                                   variant="outline" 
                                   size="sm" 
-                                  className="border-[#17B6C3]/20 text-[#17B6C3] hover:bg-[#17B6C3]/5"
+                                  className="border-[#17B6C3]/20 text-[#17B6C3] hover:bg-[#17B6C3]/5 h-7 w-7 p-0"
                                   data-testid={`button-send-email-${invoice.id}`}
                                 >
-                                  <Mail className="h-4 w-4" />
+                                  <Mail className="h-3 w-3" />
                                 </Button>
                               )}
                               {invoice.contact?.phone && (
                                 <Button 
                                   variant="outline" 
                                   size="sm"
-                                  className="border-[#17B6C3]/20 text-[#17B6C3] hover:bg-[#17B6C3]/5"
+                                  className="border-[#17B6C3]/20 text-[#17B6C3] hover:bg-[#17B6C3]/5 h-7 w-7 p-0"
                                   data-testid={`button-call-${invoice.id}`}
                                 >
-                                  <Phone className="h-4 w-4" />
+                                  <Phone className="h-3 w-3" />
                                 </Button>
                               )}
                               <Button 
                                 variant="outline" 
                                 size="sm"
-                                className="border-[#17B6C3]/20 text-[#17B6C3] hover:bg-[#17B6C3]/5"
+                                className="border-[#17B6C3]/20 text-[#17B6C3] hover:bg-[#17B6C3]/5 h-7 w-7 p-0"
                                 data-testid={`button-view-${invoice.id}`}
                               >
-                                <Eye className="h-4 w-4" />
+                                <Eye className="h-3 w-3" />
                               </Button>
                             </div>
                           </td>
