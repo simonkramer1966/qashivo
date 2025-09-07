@@ -130,6 +130,10 @@ export default function InvoicesXero() {
           aValue = new Date(a.dueDate).getTime();
           bValue = new Date(b.dueDate).getTime();
           break;
+        case "paidDate":
+          aValue = a.paymentDetails?.paidDate ? new Date(a.paymentDetails.paidDate).getTime() : 0;
+          bValue = b.paymentDetails?.paidDate ? new Date(b.paymentDetails.paidDate).getTime() : 0;
+          break;
         case "status":
           aValue = a.status.toLowerCase();
           bValue = b.status.toLowerCase();
@@ -335,6 +339,15 @@ export default function InvoicesXero() {
                         </th>
                         <th className="text-left py-2 text-xs font-semibold text-slate-700">
                           <button 
+                            onClick={() => handleSort("paidDate")}
+                            className="flex items-center space-x-1 hover:text-slate-900"
+                          >
+                            <span>Paid Date</span>
+                            {getSortIcon("paidDate")}
+                          </button>
+                        </th>
+                        <th className="text-left py-2 text-xs font-semibold text-slate-700">
+                          <button 
                             onClick={() => handleSort("age")}
                             className="flex items-center space-x-1 hover:text-slate-900"
                           >
@@ -380,6 +393,12 @@ export default function InvoicesXero() {
                           </td>
                           <td className="py-1 text-xs text-slate-700" data-testid={`text-due-date-${invoice.id}`}>
                             {new Date(invoice.dueDate).toLocaleDateString()}
+                          </td>
+                          <td className="py-1 text-xs text-slate-700" data-testid={`text-paid-date-${invoice.id}`}>
+                            {invoice.paymentDetails?.paidDate ? 
+                              new Date(invoice.paymentDetails.paidDate).toLocaleDateString() : 
+                              <span className="text-gray-400">-</span>
+                            }
                           </td>
                           <td className="py-1 text-xs text-slate-700" data-testid={`text-age-${invoice.id}`}>
                             {Math.floor((Date.now() - new Date(invoice.issueDate).getTime()) / (1000 * 60 * 60 * 24))} days
@@ -564,6 +583,61 @@ export default function InvoicesXero() {
                     </div>
                   )}
                 </div>
+
+                {/* Payment Details Section */}
+                {selectedInvoice.paymentDetails && (
+                  <div className="mt-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Payment Information</h3>
+                    <div className="bg-blue-50 rounded-lg p-4">
+                      <div className="grid grid-cols-4 gap-4">
+                        <div>
+                          <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Paid Date</label>
+                          <p className="text-sm font-medium text-gray-900">
+                            {selectedInvoice.paymentDetails.paidDate ? 
+                              new Date(selectedInvoice.paymentDetails.paidDate).toLocaleDateString() : 
+                              <span className="text-gray-400">Not paid</span>
+                            }
+                          </p>
+                        </div>
+                        <div>
+                          <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Payment Method</label>
+                          <p className="text-sm text-gray-700">
+                            {selectedInvoice.paymentDetails.paymentMethod || 'N/A'}
+                          </p>
+                        </div>
+                        <div>
+                          <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Reference</label>
+                          <p className="text-sm text-gray-700">
+                            {selectedInvoice.paymentDetails.paymentReference || 'N/A'}
+                          </p>
+                        </div>
+                        <div>
+                          <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Total Payments</label>
+                          <p className="text-sm text-gray-700">
+                            {selectedInvoice.paymentDetails.totalPayments || 0} payment{selectedInvoice.paymentDetails.totalPayments !== 1 ? 's' : ''}
+                          </p>
+                        </div>
+                      </div>
+                      
+                      {/* Show all payments if there are multiple */}
+                      {selectedInvoice.paymentDetails.allPayments && selectedInvoice.paymentDetails.allPayments.length > 1 && (
+                        <div className="mt-4 pt-4 border-t border-blue-200">
+                          <label className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2 block">All Payments</label>
+                          <div className="space-y-2">
+                            {selectedInvoice.paymentDetails.allPayments.map((payment: any, index: number) => (
+                              <div key={index} className="flex justify-between items-center text-sm bg-white rounded p-2">
+                                <span>{new Date(payment.date).toLocaleDateString()}</span>
+                                <span className="font-medium">{selectedInvoice.currency} {Number(payment.amount).toLocaleString()}</span>
+                                <span className="text-gray-600">{payment.method || 'N/A'}</span>
+                                {payment.reference && <span className="text-gray-500 text-xs">{payment.reference}</span>}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
