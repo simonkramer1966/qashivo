@@ -104,6 +104,18 @@ export default function Invoices() {
           aValue = (a.contact?.name || 'Unknown Contact').toLowerCase();
           bValue = (b.contact?.name || 'Unknown Contact').toLowerCase();
           break;
+        case "amount":
+          aValue = Number(a.amount);
+          bValue = Number(b.amount);
+          break;
+        case "dueDate":
+          aValue = new Date(a.dueDate).getTime();
+          bValue = new Date(b.dueDate).getTime();
+          break;
+        case "status":
+          aValue = a.status.toLowerCase();
+          bValue = b.status.toLowerCase();
+          break;
         default:
           return 0;
       }
@@ -248,9 +260,33 @@ export default function Invoices() {
                             {getSortIcon("clientName")}
                           </button>
                         </th>
-                        <th className="text-left py-2 text-xs font-semibold text-slate-700">Amount</th>
-                        <th className="text-left py-2 text-xs font-semibold text-slate-700">Due Date</th>
-                        <th className="text-left py-2 text-xs font-semibold text-slate-700">Status</th>
+                        <th className="text-left py-2 text-xs font-semibold text-slate-700">
+                          <button 
+                            onClick={() => handleSort("amount")}
+                            className="flex items-center space-x-1 hover:text-slate-900"
+                          >
+                            <span>Amount</span>
+                            {getSortIcon("amount")}
+                          </button>
+                        </th>
+                        <th className="text-left py-2 text-xs font-semibold text-slate-700">
+                          <button 
+                            onClick={() => handleSort("dueDate")}
+                            className="flex items-center space-x-1 hover:text-slate-900"
+                          >
+                            <span>Due Date</span>
+                            {getSortIcon("dueDate")}
+                          </button>
+                        </th>
+                        <th className="text-left py-2 text-xs font-semibold text-slate-700">
+                          <button 
+                            onClick={() => handleSort("status")}
+                            className="flex items-center space-x-1 hover:text-slate-900"
+                          >
+                            <span>Status</span>
+                            {getSortIcon("status")}
+                          </button>
+                        </th>
                         <th className="text-left py-2 text-xs font-semibold text-slate-700">Actions</th>
                       </tr>
                     </thead>
