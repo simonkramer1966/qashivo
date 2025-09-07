@@ -419,7 +419,7 @@ export default function Invoices() {
               <div className="mb-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Invoice Details</h3>
                 <div className="bg-gray-50 rounded-lg p-4 space-y-3">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-3 gap-4">
                     <div>
                       <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Invoice Number</label>
                       <p className="text-sm font-medium text-gray-900">{selectedInvoice.invoiceNumber}</p>
