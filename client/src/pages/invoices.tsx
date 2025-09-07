@@ -186,12 +186,6 @@ export default function Invoices() {
         <Header 
           title="Invoices" 
           subtitle="Manage your invoices and collection activities"
-          action={
-            <Button className="bg-[#17B6C3] hover:bg-[#1396A1] text-white" data-testid="button-new-invoice">
-              <Plus className="mr-2 h-4 w-4" />
-              New Invoice
-            </Button>
-          }
         />
         
         <div className="p-8 space-y-8">
