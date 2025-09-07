@@ -361,20 +361,10 @@ export default function Demo() {
             <Card className="bg-white/70 backdrop-blur-md border-0 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105">
               <CardContent className="p-6 text-center">
                 <div className="p-3 bg-[#17B6C3]/10 rounded-xl mx-auto mb-4 w-fit">
-                  <BarChart3 className="h-8 w-8 text-[#17B6C3]" />
+                  <Mail className="h-8 w-8 text-[#17B6C3]" />
                 </div>
-                <h3 className="text-xl font-bold mb-2">Intelligent Dashboard</h3>
-                <p className="text-gray-600">Real-time analytics and insights into your receivables performance</p>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-white/70 backdrop-blur-md border-0 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105">
-              <CardContent className="p-6 text-center">
-                <div className="p-3 bg-[#17B6C3]/10 rounded-xl mx-auto mb-4 w-fit">
-                  <Zap className="h-8 w-8 text-[#17B6C3]" />
-                </div>
-                <h3 className="text-xl font-bold mb-2">Automated Workflows</h3>
-                <p className="text-gray-600">AI-powered sequences that adapt to customer behavior and payment patterns</p>
+                <h3 className="text-xl font-bold mb-2">Intelligent Email Campaigns</h3>
+                <p className="text-gray-600">Automated sequences with escalating urgency - from gentle payment reminders to formal collection notices, all personalized with AI-generated content</p>
               </CardContent>
             </Card>
 
@@ -383,8 +373,18 @@ export default function Demo() {
                 <div className="p-3 bg-[#17B6C3]/10 rounded-xl mx-auto mb-4 w-fit">
                   <MessageSquare className="h-8 w-8 text-[#17B6C3]" />
                 </div>
-                <h3 className="text-xl font-bold mb-2">Multi-Channel Communication</h3>
-                <p className="text-gray-600">Email, SMS, WhatsApp, and AI voice calls - all in one platform</p>
+                <h3 className="text-xl font-bold mb-2">Direct SMS & WhatsApp Outreach</h3>
+                <p className="text-gray-600">Personal, immediate contact when emails go unanswered - strategic messaging that cuts through the noise and prompts action</p>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-white/70 backdrop-blur-md border-0 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105">
+              <CardContent className="p-6 text-center">
+                <div className="p-3 bg-[#17B6C3]/10 rounded-xl mx-auto mb-4 w-fit">
+                  <Phone className="h-8 w-8 text-[#17B6C3]" />
+                </div>
+                <h3 className="text-xl font-bold mb-2">AI-Powered Voice Calls</h3>
+                <p className="text-gray-600">Human-like conversations with natural language processing - personalized payment discussions that maintain relationships while securing collections</p>
               </CardContent>
             </Card>
           </div>
