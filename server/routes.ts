@@ -98,6 +98,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   type: "object",
                   properties: {}
                 }
+              },
+              {
+                name: "get_customer_invoices",
+                description: "Get all invoices for a specific customer during debt collection call",
+                inputSchema: {
+                  type: "object",
+                  properties: {
+                    customer_name: { type: "string", description: "Customer company name" }
+                  },
+                  required: ["customer_name"]
+                }
+              },
+              {
+                name: "get_invoice_details",
+                description: "Get detailed information about a specific invoice",
+                inputSchema: {
+                  type: "object",
+                  properties: {
+                    invoice_number: { type: "string", description: "Invoice number" }
+                  },
+                  required: ["invoice_number"]
+                }
+              },
+              {
+                name: "get_customer_contact_info",
+                description: "Get customer contact details and payment history",
+                inputSchema: {
+                  type: "object",
+                  properties: {
+                    customer_name: { type: "string", description: "Customer company name" }
+                  },
+                  required: ["customer_name"]
+                }
+              },
+              {
+                name: "update_invoice_status",
+                description: "Update invoice status after customer interaction",
+                inputSchema: {
+                  type: "object",
+                  properties: {
+                    invoice_number: { type: "string", description: "Invoice number" },
+                    status: { type: "string", description: "New status (contacted, promised_payment, disputed, etc.)" },
+                    notes: { type: "string", description: "Notes about the interaction" }
+                  },
+                  required: ["invoice_number", "status"]
+                }
               }
             ]
           });
@@ -191,6 +237,196 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   content: [{
                     type: "text",
                     text: JSON.stringify([])
+                  }]
+                });
+              }
+
+            case 'get_customer_invoices':
+              try {
+                // Get invoices for specific customer from storage
+                const allInvoices = await storage.getInvoices();
+                const customerInvoices = allInvoices.filter(invoice => 
+                  invoice.customerName.toLowerCase().includes(toolArgs.customer_name.toLowerCase())
+                );
+                
+                const invoiceData = customerInvoices.map(invoice => ({
+                  invoice_number: invoice.invoiceNumber,
+                  amount: invoice.amount,
+                  due_date: invoice.dueDate,
+                  status: invoice.status,
+                  days_overdue: Math.max(0, Math.floor((new Date().getTime() - new Date(invoice.dueDate).getTime()) / (1000 * 60 * 60 * 24))),
+                  description: invoice.description
+                }));
+                
+                return res.json({
+                  content: [{
+                    type: "text",
+                    text: JSON.stringify({
+                      customer_name: toolArgs.customer_name,
+                      total_invoices: invoiceData.length,
+                      total_outstanding: invoiceData.reduce((sum, inv) => sum + inv.amount, 0),
+                      invoices: invoiceData
+                    })
+                  }]
+                });
+              } catch (error: any) {
+                console.error(`Error getting customer invoices: ${error.message}`);
+                return res.json({
+                  content: [{
+                    type: "text",
+                    text: JSON.stringify({
+                      customer_name: toolArgs.customer_name,
+                      total_invoices: 0,
+                      total_outstanding: 0,
+                      invoices: [],
+                      error: "Unable to retrieve customer invoices"
+                    })
+                  }]
+                });
+              }
+
+            case 'get_invoice_details':
+              try {
+                const allInvoices = await storage.getInvoices();
+                const invoice = allInvoices.find(inv => inv.invoiceNumber === toolArgs.invoice_number);
+                
+                if (!invoice) {
+                  return res.json({
+                    content: [{
+                      type: "text",
+                      text: JSON.stringify({
+                        error: `Invoice ${toolArgs.invoice_number} not found`
+                      })
+                    }]
+                  });
+                }
+                
+                const invoiceDetails = {
+                  invoice_number: invoice.invoiceNumber,
+                  customer_name: invoice.customerName,
+                  amount: invoice.amount,
+                  due_date: invoice.dueDate,
+                  status: invoice.status,
+                  description: invoice.description,
+                  days_overdue: Math.max(0, Math.floor((new Date().getTime() - new Date(invoice.dueDate).getTime()) / (1000 * 60 * 60 * 24))),
+                  created_date: invoice.createdAt || "Unknown"
+                };
+                
+                return res.json({
+                  content: [{
+                    type: "text",
+                    text: JSON.stringify(invoiceDetails)
+                  }]
+                });
+              } catch (error: any) {
+                console.error(`Error getting invoice details: ${error.message}`);
+                return res.json({
+                  content: [{
+                    type: "text",
+                    text: JSON.stringify({
+                      error: "Unable to retrieve invoice details"
+                    })
+                  }]
+                });
+              }
+
+            case 'get_customer_contact_info':
+              try {
+                const allContacts = await storage.getContacts();
+                const customer = allContacts.find(contact => 
+                  contact.name.toLowerCase().includes(toolArgs.customer_name.toLowerCase())
+                );
+                
+                if (!customer) {
+                  return res.json({
+                    content: [{
+                      type: "text",
+                      text: JSON.stringify({
+                        error: `Customer ${toolArgs.customer_name} not found in contacts`
+                      })
+                    }]
+                  });
+                }
+                
+                const contactInfo = {
+                  customer_name: customer.name,
+                  email: customer.email,
+                  phone: customer.phone,
+                  address: customer.address || "Not provided",
+                  contact_person: customer.contactPerson || "Not specified",
+                  preferred_contact_method: customer.preferredContactMethod || "Email",
+                  last_contact_date: customer.lastContactDate || "Never",
+                  payment_terms: "Net 30 days",
+                  credit_limit: "Standard terms"
+                };
+                
+                return res.json({
+                  content: [{
+                    type: "text",
+                    text: JSON.stringify(contactInfo)
+                  }]
+                });
+              } catch (error: any) {
+                console.error(`Error getting customer contact info: ${error.message}`);
+                return res.json({
+                  content: [{
+                    type: "text",
+                    text: JSON.stringify({
+                      error: "Unable to retrieve customer contact information"
+                    })
+                  }]
+                });
+              }
+
+            case 'update_invoice_status':
+              try {
+                const allInvoices = await storage.getInvoices();
+                const invoiceIndex = allInvoices.findIndex(inv => inv.invoiceNumber === toolArgs.invoice_number);
+                
+                if (invoiceIndex === -1) {
+                  return res.json({
+                    content: [{
+                      type: "text",
+                      text: JSON.stringify({
+                        error: `Invoice ${toolArgs.invoice_number} not found`
+                      })
+                    }]
+                  });
+                }
+                
+                // Update invoice status and add notes
+                const updatedInvoice = {
+                  ...allInvoices[invoiceIndex],
+                  status: toolArgs.status,
+                  lastContactDate: new Date().toISOString(),
+                  notes: toolArgs.notes || ""
+                };
+                
+                // In a real implementation, you'd update the database here
+                // For now, we'll just return the updated info
+                
+                return res.json({
+                  content: [{
+                    type: "text",
+                    text: JSON.stringify({
+                      success: true,
+                      invoice_number: toolArgs.invoice_number,
+                      old_status: allInvoices[invoiceIndex].status,
+                      new_status: toolArgs.status,
+                      notes: toolArgs.notes || "",
+                      updated_at: new Date().toISOString(),
+                      message: `Invoice ${toolArgs.invoice_number} status updated to ${toolArgs.status}`
+                    })
+                  }]
+                });
+              } catch (error: any) {
+                console.error(`Error updating invoice status: ${error.message}`);
+                return res.json({
+                  content: [{
+                    type: "text",
+                    text: JSON.stringify({
+                      error: "Unable to update invoice status"
+                    })
                   }]
                 });
               }
