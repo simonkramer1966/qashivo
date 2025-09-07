@@ -1077,6 +1077,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         (inv.status === 'overdue' || inv.status === 'pending')
       );
 
+      console.log(`📊 Found ${contactInvoices.length} eligible invoices for contact ${contact.name}`);
+
       // Calculate invoice details for the call
       let primaryInvoice = null;
       let totalOutstanding = 0;
@@ -1098,6 +1100,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             new Date(inv.dueDate) < thirtyDaysAgo
           );
           
+          console.log(`🔍 Found ${significantlyOverdue.length} invoices 30+ days overdue`);
+          
           if (significantlyOverdue.length > 0) {
             significantlyOverdue.sort((a, b) => 
               new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()
@@ -1109,6 +1113,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         }
         
+        console.log(`💰 Primary invoice selected: ${primaryInvoice?.invoiceNumber || 'None'} - Due: ${primaryInvoice?.dueDate || 'N/A'} - Amount: ${primaryInvoice?.amount || '0'}`);
+        
         // Calculate total outstanding
         totalOutstanding = contactInvoices.reduce((sum, inv) => sum + parseFloat(inv.amount), 0);
         
@@ -1118,6 +1124,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         )[0];
         const daysOverdue = Math.floor((Date.now() - new Date(oldestInvoice.dueDate).getTime()) / (1000 * 60 * 60 * 24));
         oldestDaysOverdue = Math.max(0, daysOverdue);
+      } else {
+        console.log(`⚠️ No eligible invoices found for contact ${contact.name}, using demo data`);
       }
 
       // Create dynamic variables for the call
