@@ -624,6 +624,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // New endpoint for contacts with significantly overdue invoices (>30 days)
+  app.get("/api/contacts/overdue", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      // Get all invoices for the tenant
+      const allInvoices = await storage.getInvoices(user.tenantId, 1000);
+      
+      // Calculate 30 days ago
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      
+      // Find contacts with invoices overdue by more than 30 days
+      const overdueContactIds = new Set<string>();
+      
+      allInvoices.forEach(invoice => {
+        if ((invoice.status === 'overdue' || invoice.status === 'pending') && 
+            new Date(invoice.dueDate) < thirtyDaysAgo) {
+          overdueContactIds.add(invoice.contactId);
+        }
+      });
+      
+      // Get all contacts and filter to those with significantly overdue invoices
+      const allContacts = await storage.getContacts(user.tenantId);
+      const overdueContacts = allContacts.filter(contact => 
+        overdueContactIds.has(contact.id)
+      );
+      
+      res.json(overdueContacts);
+    } catch (error) {
+      console.error("Error fetching overdue contacts:", error);
+      res.status(500).json({ message: "Failed to fetch overdue contacts" });
+    }
+  });
+
   app.post("/api/contacts", isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.claims.sub);

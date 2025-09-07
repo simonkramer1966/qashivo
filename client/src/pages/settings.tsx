@@ -59,7 +59,7 @@ function TestTabContent() {
     localStorage.getItem('nexus-test-override-contact') || ""
   );
 
-  // Fetch contacts for selection
+  // Fetch contacts with overdue invoices (>30 days) for testing
   const { data: contacts = [] } = useQuery<{
     id: string;
     name: string;
@@ -67,7 +67,7 @@ function TestTabContent() {
     phone?: string;
     companyName?: string;
   }[]>({
-    queryKey: ['/api/contacts'],
+    queryKey: ['/api/contacts/overdue'],
     enabled: !!user,
   });
 
@@ -252,10 +252,10 @@ function TestTabContent() {
       <CardContent className="space-y-6">
         {/* Contact Selection */}
         <div className="space-y-2">
-          <Label htmlFor="contact-select">Select Client for Testing</Label>
+          <Label htmlFor="contact-select">Select Client for Testing (30+ Days Overdue)</Label>
           <Select value={selectedContactId} onValueChange={setSelectedContactId}>
             <SelectTrigger className="bg-white border-gray-200">
-              <SelectValue placeholder="Choose a client to test communications" />
+              <SelectValue placeholder="Choose a client with overdue invoices (30+ days)" />
             </SelectTrigger>
             <SelectContent className="bg-white border-gray-200">
               {contacts.map((contact) => (
