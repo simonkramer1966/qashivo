@@ -41,6 +41,7 @@ function TestTabContent() {
   const [isTestingEmail, setIsTestingEmail] = useState(false);
   const [isTestingSMS, setIsTestingSMS] = useState(false);
   const [isTestingVoice, setIsTestingVoice] = useState(false);
+  const [isDemoSetup, setIsDemoSetup] = useState(false);
   
   // Override contact details for testing
   const [overrideEmail, setOverrideEmail] = useState<string>("");
@@ -172,6 +173,31 @@ function TestTabContent() {
       });
     } finally {
       setIsTestingVoice(false);
+    }
+  };
+
+  const handleDemoSetup = async () => {
+    setIsDemoSetup(true);
+    try {
+      const response = await apiRequest("POST", "/api/demo/setup-retell", {});
+      
+      if (response.ok) {
+        const data = await response.json();
+        toast({
+          title: "Success",
+          description: data.message || "Retell AI demo configured successfully!",
+        });
+      } else {
+        throw new Error("Failed to setup demo");
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to setup Retell AI demo. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDemoSetup(false);
     }
   };
 
@@ -335,6 +361,29 @@ function TestTabContent() {
                 {isTestingVoice ? "Calling..." : "Start Test Call"}
               </Button>
             </Card>
+          </div>
+        </div>
+
+        {/* Demo Setup Section */}
+        <div className="mt-6 p-4 bg-orange-50 rounded-lg border border-orange-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="flex items-center">
+                <Phone className="h-5 w-5 text-orange-600 mr-2" />
+                <h5 className="font-medium text-orange-800">Retell AI Demo Setup</h5>
+              </div>
+              <p className="mt-1 text-sm text-orange-700">
+                One-time setup required for voice calling demo
+              </p>
+            </div>
+            <Button 
+              onClick={handleDemoSetup}
+              disabled={isDemoSetup}
+              className="bg-orange-600 hover:bg-orange-700 text-white"
+              data-testid="button-demo-setup"
+            >
+              {isDemoSetup ? "Setting up..." : "Setup Demo"}
+            </Button>
           </div>
         </div>
 

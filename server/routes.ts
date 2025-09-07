@@ -1091,6 +1091,80 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Quick Demo Setup Route for Retell AI
+  app.post("/api/demo/setup-retell", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      // Check if already configured
+      const existingConfig = await storage.getRetellConfiguration(user.tenantId);
+      if (existingConfig) {
+        return res.json({ success: true, message: "Retell AI already configured", config: existingConfig });
+      }
+
+      // Create a demo agent with collection instructions
+      const agent = await retellService.createAgent({
+        voiceId: "11labs-Adrian",
+        instructions: `You are a professional debt collection agent working for Nexus AR. When you call someone:
+
+1. Greet them professionally: "Hello [customer_name], this is calling from [company_name] regarding your account."
+
+2. If this is a demo call (indicated by custom_message), say: "[custom_message]"
+
+3. For real collections, reference specific details:
+   - Invoice number: [invoice_number] 
+   - Amount: $[invoice_amount] or $[total_outstanding] if multiple invoices
+   - Days overdue: [days_overdue] days
+   - Due date: [due_date]
+
+4. Be polite but professional. Offer payment options and ask when they can make payment.
+
+5. Always maintain compliance with debt collection regulations.
+
+6. End with next steps and contact information.
+
+Keep the call brief and professional.`
+      });
+
+      // Get available phone numbers from Retell
+      const phoneNumbers = await retellService.listPhoneNumbers();
+      const phoneNumber = phoneNumbers.length > 0 ? phoneNumbers[0].number : "+1234567890"; // Fallback
+
+      // Create Retell configuration
+      const retellConfigData = insertRetellConfigurationSchema.parse({
+        tenantId: user.tenantId,
+        apiKey: process.env.RETELL_API_KEY || "", // Use the environment API key
+        agentId: agent.agent_id,
+        phoneNumber: phoneNumber,
+        phoneNumberId: phoneNumbers.length > 0 ? phoneNumbers[0].phone_number_id : null,
+        isActive: true,
+        webhookUrl: `${req.protocol}://${req.get('host')}/api/retell/webhook`,
+        settings: {
+          demoMode: true,
+          setupDate: new Date().toISOString()
+        }
+      });
+
+      const config = await storage.createRetellConfiguration(retellConfigData);
+      
+      res.json({ 
+        success: true, 
+        message: "Retell AI configured successfully for demo", 
+        config: {
+          agentId: config.agentId,
+          phoneNumber: config.phoneNumber,
+          isActive: config.isActive
+        }
+      });
+    } catch (error: any) {
+      console.error("Error setting up Retell demo:", error);
+      res.status(500).json({ message: "Failed to setup Retell demo: " + error.message });
+    }
+  });
+
   // Profile and subscription management routes
   app.get("/api/profile/subscription", isAuthenticated, async (req: any, res) => {
     try {
