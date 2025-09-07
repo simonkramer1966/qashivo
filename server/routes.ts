@@ -820,9 +820,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
           has_dynamic_variables: !!dynamicVariables
         });
         
+        // Clean phone numbers - remove parentheses and spaces
+        const cleanFromNumber = process.env.RETELL_PHONE_NUMBER!.replace(/[()\\s-]/g, '');
+        const cleanToNumber = phoneToUse.replace(/[()\\s-]/g, '');
+        
+        console.log("🧹 Cleaned phone numbers:", {
+          from: cleanFromNumber,
+          to: cleanToNumber
+        });
+        
         const call = await retellClient.call.createPhoneCall({
-          from_number: process.env.RETELL_PHONE_NUMBER!,
-          to_number: phoneToUse,
+          from_number: cleanFromNumber,
+          to_number: cleanToNumber,
           agent_id: process.env.RETELL_AGENT_ID!,
           dynamic_variables: dynamicVariables
         } as any);
