@@ -328,7 +328,7 @@ export default function Invoices() {
                             {getSortIcon("status")}
                           </button>
                         </th>
-                        <th className="text-left py-2 text-xs font-semibold text-slate-700">Actions</th>
+                        <th className="text-right py-2 text-xs font-semibold text-slate-700">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-200/50">
@@ -353,7 +353,7 @@ export default function Invoices() {
                             {getStatusBadge(invoice.status)}
                           </td>
                           <td className="py-1">
-                            <div className="flex space-x-1">
+                            <div className="flex space-x-1 justify-end">
                               {invoice.contact?.email && (
                                 <Button 
                                   variant="outline" 
