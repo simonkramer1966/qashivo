@@ -186,6 +186,7 @@ class XeroService {
 
   async getInvoicesPaginated(tokens: XeroTokens, page: number = 1, limit: number = 50): Promise<{
     invoices: XeroInvoice[];
+    payments: Map<string, XeroPayment[]>;
     pagination: {
       currentPage: number;
       totalPages: number;
@@ -210,8 +211,32 @@ class XeroService {
       // Take only the requested limit from the results
       const limitedInvoices = invoices.slice(0, limit);
       
+      // Fetch payment data for each invoice (Option B - separate API calls)
+      const paymentsMap = new Map<string, XeroPayment[]>();
+      
+      // Process invoices in batches to avoid overwhelming the API
+      const batchSize = 10;
+      for (let i = 0; i < limitedInvoices.length; i += batchSize) {
+        const batch = limitedInvoices.slice(i, i + batchSize);
+        const paymentPromises = batch.map(async (invoice) => {
+          try {
+            const payments = await this.getInvoicePayments(tokens, invoice.InvoiceID);
+            return { invoiceId: invoice.InvoiceID, payments };
+          } catch (error) {
+            console.warn(`Failed to fetch payments for invoice ${invoice.InvoiceID}:`, error);
+            return { invoiceId: invoice.InvoiceID, payments: [] };
+          }
+        });
+        
+        const batchResults = await Promise.all(paymentPromises);
+        batchResults.forEach(({ invoiceId, payments }) => {
+          paymentsMap.set(invoiceId, payments);
+        });
+      }
+      
       return {
         invoices: limitedInvoices,
+        payments: paymentsMap,
         pagination: {
           currentPage,
           totalPages: hasMore ? currentPage + 1 : currentPage, // Estimate
@@ -224,6 +249,7 @@ class XeroService {
       console.error('Failed to fetch paginated Xero invoices:', error);
       return {
         invoices: [],
+        payments: new Map(),
         pagination: {
           currentPage: page,
           totalPages: 1,
