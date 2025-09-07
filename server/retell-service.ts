@@ -90,20 +90,92 @@ export class RetellService {
     responseEngine?: any;
   }): Promise<any> {
     try {
-      // Use web socket URL for retell-llm
-      const responseEngine = config.responseEngine || {
-        type: "retell-llm",
-        llm_id: config.llmId || "retell-llm-web-socket",
-        llm_websocket_url: "wss://api.retellai.com/audio-websocket/llm-general-use"
+      // Create agent with proper Retell configuration
+      const agentConfig = {
+        agent_name: "Nexus AR Collections Agent",
+        voice_id: config.voiceId || "11labs-Adrian",
+        response_engine: {
+          type: "retell-llm",
+          llm_id: "gpt-4",
+          llm_websocket_url: "wss://api.retellai.com/audio-websocket/llm-general-use"
+        },
+        language: "en-US",
+        voice_temperature: 1,
+        voice_speed: 1,
+        responsiveness: 1,
+        interruption_sensitivity: 1,
+        enable_backchannel: true,
+        backchannel_frequency: 0.9,
+        backchannel_words: ["yeah", "uh-huh"],
+        reminder_trigger_ms: 10000,
+        reminder_max_count: 1,
+        ambient_sound: "office",
+        ambient_sound_volume: 0.1,
+        language_model_latency_optimizations: ["accuracy"],
+        pronunciation_dictionary: [],
+        normalize_for_speech: true,
+        end_call_after_silence_ms: 600000,
+        enable_transcription_formatting: false,
+        post_call_analysis_schema: {},
+        llm_dynamic_variables: [
+          {
+            name: "customer_name",
+            value: "John Smith"
+          },
+          {
+            name: "company_name", 
+            value: "ABC Corp"
+          },
+          {
+            name: "invoice_number",
+            value: "INV-001"
+          },
+          {
+            name: "invoice_amount",
+            value: "1500.00"
+          },
+          {
+            name: "total_outstanding",
+            value: "1500.00"
+          },
+          {
+            name: "days_overdue",
+            value: "15"
+          },
+          {
+            name: "due_date",
+            value: "30 days ago"
+          },
+          {
+            name: "custom_message",
+            value: "This is a demonstration call"
+          }
+        ],
+        general_prompt: config.instructions || `You are a professional debt collection agent working for Nexus AR. When you call someone:
+
+1. Greet them professionally: "Hello {{customer_name}}, this is calling from {{company_name}} regarding your account."
+
+2. If this is a demo call (indicated by custom_message), say: "{{custom_message}}"
+
+3. For real collections, reference specific details:
+   - Invoice number: {{invoice_number}} 
+   - Amount: ${{invoice_amount}} or ${{total_outstanding}} if multiple invoices
+   - Days overdue: {{days_overdue}} days
+   - Due date: {{due_date}}
+
+4. Be polite but professional. Offer payment options and ask when they can make payment.
+
+5. Always maintain compliance with debt collection regulations.
+
+6. End with next steps and contact information.
+
+Keep the call brief and professional.`,
+        general_tools: [],
+        states: [],
+        starting_state: "default"
       };
 
-      return await retell.agent.create({
-        response_engine: responseEngine,
-        voice_id: config.voiceId || "11labs-Adrian",
-        agent_name: "Collections Agent",
-        instructions: config.instructions || "You are a professional debt collection agent. Be polite but firm when discussing overdue payments. Always maintain a professional tone and comply with all debt collection regulations.",
-        ...config
-      });
+      return await retell.agent.create(agentConfig);
     } catch (error: any) {
       console.error('Failed to create agent:', error);
       throw new Error(`Failed to create agent: ${error.message}`);

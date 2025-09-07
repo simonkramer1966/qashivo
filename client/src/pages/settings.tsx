@@ -37,16 +37,24 @@ import {
 function TestTabContent() {
   const { toast } = useToast();
   const { user } = useAuth();
-  const [selectedContactId, setSelectedContactId] = useState<string>("");
+  const [selectedContactId, setSelectedContactId] = useState<string>(() => 
+    localStorage.getItem('nexus-test-contact-id') || ""
+  );
   const [isTestingEmail, setIsTestingEmail] = useState(false);
   const [isTestingSMS, setIsTestingSMS] = useState(false);
   const [isTestingVoice, setIsTestingVoice] = useState(false);
   const [isDemoSetup, setIsDemoSetup] = useState(false);
   
-  // Override contact details for testing
-  const [overrideEmail, setOverrideEmail] = useState<string>("");
-  const [overrideMobile, setOverrideMobile] = useState<string>("");
-  const [overrideTelephone, setOverrideTelephone] = useState<string>("");
+  // Override contact details for testing - with localStorage persistence
+  const [overrideEmail, setOverrideEmail] = useState<string>(() => 
+    localStorage.getItem('nexus-test-override-email') || ""
+  );
+  const [overrideMobile, setOverrideMobile] = useState<string>(() => 
+    localStorage.getItem('nexus-test-override-mobile') || ""
+  );
+  const [overrideTelephone, setOverrideTelephone] = useState<string>(() => 
+    localStorage.getItem('nexus-test-override-telephone') || ""
+  );
 
   // Fetch contacts for selection
   const { data: contacts = [] } = useQuery<{
@@ -61,6 +69,25 @@ function TestTabContent() {
   });
 
   const selectedContact = contacts.find(c => c.id === selectedContactId);
+
+  // Save to localStorage whenever values change
+  useEffect(() => {
+    if (selectedContactId) {
+      localStorage.setItem('nexus-test-contact-id', selectedContactId);
+    }
+  }, [selectedContactId]);
+
+  useEffect(() => {
+    localStorage.setItem('nexus-test-override-email', overrideEmail);
+  }, [overrideEmail]);
+
+  useEffect(() => {
+    localStorage.setItem('nexus-test-override-mobile', overrideMobile);
+  }, [overrideMobile]);
+
+  useEffect(() => {
+    localStorage.setItem('nexus-test-override-telephone', overrideTelephone);
+  }, [overrideTelephone]);
 
   const handleTestEmail = async () => {
     const emailToUse = overrideEmail || selectedContact?.email;
