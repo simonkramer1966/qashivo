@@ -174,17 +174,44 @@ export default function WorkflowBuilder() {
       );
       
       if (!connectionExists) {
-        // Complete the connection
-        const newConnection: WorkflowConnection = {
-          id: `conn_${Date.now()}`,
-          sourceId: connectionStart.nodeId,
-          targetId: node.id,
-        };
-        setConnections(prev => [...prev, newConnection]);
-        toast({
-          title: "Connection Created",
-          description: "Successfully connected the nodes",
-        });
+        const sourceNode = nodes.find(n => n.id === connectionStart.nodeId);
+        
+        // If connecting from a decision node, prompt for branch type
+        if (sourceNode?.type === 'decision') {
+          const branchType = prompt(
+            "Select branch type:\n\nType 'yes' for YES branch\nType 'no' for NO branch\nOr press Cancel for default",
+            ""
+          );
+          
+          let finalBranchType: 'yes' | 'no' | 'default' = 'default';
+          if (branchType === 'yes') finalBranchType = 'yes';
+          else if (branchType === 'no') finalBranchType = 'no';
+          
+          // Complete the connection with branch type
+          const newConnection: WorkflowConnection = {
+            id: `conn_${Date.now()}`,
+            sourceId: connectionStart.nodeId,
+            targetId: node.id,
+            branchType: finalBranchType,
+          };
+          setConnections(prev => [...prev, newConnection]);
+          toast({
+            title: "Decision Branch Created",
+            description: `${finalBranchType.toUpperCase()} branch connected successfully`,
+          });
+        } else {
+          // Complete the connection normally
+          const newConnection: WorkflowConnection = {
+            id: `conn_${Date.now()}`,
+            sourceId: connectionStart.nodeId,
+            targetId: node.id,
+          };
+          setConnections(prev => [...prev, newConnection]);
+          toast({
+            title: "Connection Created",
+            description: "Successfully connected the nodes",
+          });
+        }
       } else {
         toast({
           title: "Connection Exists",
