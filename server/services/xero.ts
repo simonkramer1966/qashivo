@@ -184,7 +184,7 @@ class XeroService {
     }
   }
 
-  async getInvoicesPaginated(tokens: XeroTokens, page: number = 1, limit: number = 50): Promise<{
+  async getInvoicesPaginated(tokens: XeroTokens, page: number = 1, limit: number = 50, status: string = 'all'): Promise<{
     invoices: XeroInvoice[];
     payments: Map<string, XeroPayment[]>;
     pagination: {
@@ -198,7 +198,34 @@ class XeroService {
     try {
       // Xero API uses 1-based pagination
       const xeroPage = Math.max(1, page);
-      let endpoint = `Invoices?where=Type%3D%3D%22ACCREC%22&page=${xeroPage}`;
+      
+      // Build status-based filter for Xero API
+      let whereClause = 'Type%3D%3D%22ACCREC%22'; // Type=="ACCREC"
+      
+      switch (status) {
+        case 'unpaid':
+          // Invoices that are authorized but not fully paid
+          whereClause += '%20AND%20Status%3D%3D%22AUTHORISED%22%20AND%20AmountDue%3E0';
+          break;
+        case 'partial':
+          // Invoices with some payment but still have amount due
+          whereClause += '%20AND%20AmountPaid%3E0%20AND%20AmountDue%3E0';
+          break;
+        case 'paid':
+          // Fully paid invoices
+          whereClause += '%20AND%20Status%3D%3D%22PAID%22';
+          break;
+        case 'void':
+          // Voided invoices
+          whereClause += '%20AND%20Status%3D%3D%22VOIDED%22';
+          break;
+        case 'all':
+        default:
+          // No additional filter - show all ACCREC invoices
+          break;
+      }
+      
+      const endpoint = `Invoices?where=${whereClause}&page=${xeroPage}`;
       
       const response = await this.makeAuthenticatedRequest(tokens, endpoint);
       const invoices = response.Invoices || [];

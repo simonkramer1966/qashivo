@@ -2171,9 +2171,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Parse pagination parameters
       const page = parseInt(req.query.page as string) || 1;
       const limit = Math.min(parseInt(req.query.limit as string) || 50, 100); // Max 100 per page
+      const status = req.query.status as string || 'all'; // unpaid, partial, paid, void, all
 
       // Get paginated Xero invoices with payment data
-      const result = await xeroService.getInvoicesPaginated(tokens, page, limit);
+      const result = await xeroService.getInvoicesPaginated(tokens, page, limit, status);
       
       // Transform Xero invoice data to match our frontend format
       const transformedInvoices = result.invoices.map(xeroInv => {
