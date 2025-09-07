@@ -40,6 +40,25 @@ interface XeroInvoice {
   CurrencyCode: string;
 }
 
+interface XeroPayment {
+  PaymentID: string;
+  InvoiceID: string;
+  AccountID: string;
+  Date: string;
+  Amount: number;
+  PaymentType: 'ACCRECPAYMENT' | 'ACCPAYPAYMENT' | 'ARCREDITPAYMENT' | 'APCREDITPAYMENT' | 'AROVERPAYMENTPAYMENT' | 'ARPREPAYMENTPAYMENT';
+  Status: 'AUTHORISED' | 'DELETED';
+  Reference?: string;
+  IsReconciled: boolean;
+  CurrencyRate?: number;
+  PaymentMethod?: string;
+  Account?: {
+    AccountID: string;
+    Name: string;
+    Code: string;
+  };
+}
+
 class XeroService {
   private config: XeroConfig;
 
@@ -223,6 +242,31 @@ class XeroService {
     } catch (error) {
       console.error('Failed to fetch Xero invoice:', error);
       return null;
+    }
+  }
+
+  async getPayments(tokens: XeroTokens, invoiceId?: string): Promise<XeroPayment[]> {
+    try {
+      let endpoint = 'Payments';
+      if (invoiceId) {
+        endpoint += `?where=Invoice.InvoiceID%3Dguid"${invoiceId}"`;
+      }
+      
+      const response = await this.makeAuthenticatedRequest(tokens, endpoint);
+      return response.Payments || [];
+    } catch (error) {
+      console.error('Failed to fetch Xero payments:', error);
+      return [];
+    }
+  }
+
+  async getInvoicePayments(tokens: XeroTokens, invoiceId: string): Promise<XeroPayment[]> {
+    try {
+      const response = await this.makeAuthenticatedRequest(tokens, `Invoices/${invoiceId}/Payments`);
+      return response.Payments || [];
+    } catch (error) {
+      console.error('Failed to fetch Xero invoice payments:', error);
+      return [];
     }
   }
 
