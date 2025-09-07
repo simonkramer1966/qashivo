@@ -813,6 +813,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       try {
         const retellClient = createRetellClient(process.env.RETELL_API_KEY!);
         
+        console.log("🔧 Retell API call parameters:", {
+          from_number: process.env.RETELL_PHONE_NUMBER,
+          to_number: phoneToUse,
+          agent_id: process.env.RETELL_AGENT_ID,
+          has_dynamic_variables: !!dynamicVariables
+        });
+        
         const call = await retellClient.call.createPhoneCall({
           from_number: process.env.RETELL_PHONE_NUMBER!,
           to_number: phoneToUse,
@@ -826,6 +833,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log("✅ Retell call created successfully:", { callId, callStatus });
       } catch (error: any) {
         console.error("❌ Retell API call failed:", error.message);
+        console.error("❌ Full error details:", {
+          message: error.message,
+          status: error.status,
+          statusText: error.statusText,
+          response: error.response?.data || error.response || "No response data"
+        });
         console.log("📞 Using fallback call ID for demo purposes");
       }
 
