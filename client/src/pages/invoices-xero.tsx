@@ -206,19 +206,6 @@ export default function InvoicesXero() {
         />
         
         <div className="p-8 space-y-8">
-          {/* Xero Connection Status */}
-          <Card className="bg-green-50 border border-green-200 shadow-sm">
-            <CardContent className="p-4">
-              <div className="flex items-center">
-                <div className="w-3 h-3 bg-green-500 rounded-full mr-3 animate-pulse"></div>
-                <div>
-                  <p className="text-sm font-medium text-green-800">Connected to Xero</p>
-                  <p className="text-xs text-green-600">Displaying live invoice data from your Xero account</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
           {/* Filters */}
           <Card className="bg-white border border-gray-200 shadow-sm">
             <CardHeader>
