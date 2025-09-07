@@ -10,13 +10,15 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Mail, Phone, Eye, Plus, Search, Filter, FileText } from "lucide-react";
+import { Mail, Phone, Eye, Plus, Search, Filter, FileText, ChevronUp, ChevronDown } from "lucide-react";
 
 export default function Invoices() {
   const { toast } = useToast();
   const { isAuthenticated, isLoading } = useAuth();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [sortField, setSortField] = useState<string>("");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
 
   // Redirect to home if not authenticated
   useEffect(() => {
@@ -68,12 +70,55 @@ export default function Invoices() {
     }
   };
 
-  const filteredInvoices = (invoices as any[]).filter((invoice: any) => {
-    const matchesSearch = invoice.invoiceNumber.toLowerCase().includes(search.toLowerCase()) ||
-                         invoice.contact?.name?.toLowerCase().includes(search.toLowerCase());
-    const matchesStatus = statusFilter === "all" || invoice.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
+  const handleSort = (field: string) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      setSortField(field);
+      setSortDirection("asc");
+    }
+  };
+
+  const filteredAndSortedInvoices = (invoices as any[])
+    .filter((invoice: any) => {
+      const matchesSearch = invoice.invoiceNumber.toLowerCase().includes(search.toLowerCase()) ||
+                           invoice.contact?.name?.toLowerCase().includes(search.toLowerCase());
+      const matchesStatus = statusFilter === "all" || invoice.status === statusFilter;
+      return matchesSearch && matchesStatus;
+    })
+    .sort((a: any, b: any) => {
+      if (!sortField) return 0;
+      
+      let aValue, bValue;
+      
+      switch (sortField) {
+        case "date":
+          aValue = new Date(a.issueDate).getTime();
+          bValue = new Date(b.issueDate).getTime();
+          break;
+        case "invoiceNumber":
+          aValue = a.invoiceNumber.toLowerCase();
+          bValue = b.invoiceNumber.toLowerCase();
+          break;
+        case "clientName":
+          aValue = (a.contact?.name || 'Unknown Contact').toLowerCase();
+          bValue = (b.contact?.name || 'Unknown Contact').toLowerCase();
+          break;
+        default:
+          return 0;
+      }
+      
+      if (sortDirection === "asc") {
+        return aValue < bValue ? -1 : aValue > bValue ? 1 : 0;
+      } else {
+        return aValue > bValue ? -1 : aValue < bValue ? 1 : 0;
+      }
+    });
+
+  const getSortIcon = (field: string) => {
+    if (sortField !== field) return null;
+    return sortDirection === "asc" ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />;
+  };
 
   return (
     <div className="flex h-screen bg-white">
@@ -138,7 +183,7 @@ export default function Invoices() {
                 <div>
                   <CardTitle className="text-2xl font-bold">All Invoices</CardTitle>
                   <CardDescription className="text-base mt-1">
-                    {filteredInvoices.length} invoice{filteredInvoices.length !== 1 ? 's' : ''} found
+                    {filteredAndSortedInvoices.length} invoice{filteredAndSortedInvoices.length !== 1 ? 's' : ''} found
                   </CardDescription>
                 </div>
                 <div className="p-3 bg-[#17B6C3]/10 rounded-xl">
@@ -151,7 +196,7 @@ export default function Invoices() {
                 <div className="text-center py-8">
                   <p className="text-muted-foreground">Loading invoices...</p>
                 </div>
-              ) : filteredInvoices.length === 0 ? (
+              ) : filteredAndSortedInvoices.length === 0 ? (
                 <div className="text-center py-8">
                   <div className="w-16 h-16 bg-[#17B6C3]/10 rounded-full flex items-center justify-center mx-auto mb-6">
                     <FileText className="h-8 w-8 text-[#17B6C3]" />
@@ -176,7 +221,33 @@ export default function Invoices() {
                   <table className="w-full">
                     <thead>
                       <tr className="border-b border-slate-200/50">
-                        <th className="text-left py-2 text-xs font-semibold text-slate-700">Invoice Details</th>
+                        <th className="text-left py-2 text-xs font-semibold text-slate-700">
+                          <button 
+                            onClick={() => handleSort("date")}
+                            className="flex items-center space-x-1 hover:text-slate-900"
+                          >
+                            <span>Invoice Date</span>
+                            {getSortIcon("date")}
+                          </button>
+                        </th>
+                        <th className="text-left py-2 text-xs font-semibold text-slate-700">
+                          <button 
+                            onClick={() => handleSort("invoiceNumber")}
+                            className="flex items-center space-x-1 hover:text-slate-900"
+                          >
+                            <span>Inv No.</span>
+                            {getSortIcon("invoiceNumber")}
+                          </button>
+                        </th>
+                        <th className="text-left py-2 text-xs font-semibold text-slate-700">
+                          <button 
+                            onClick={() => handleSort("clientName")}
+                            className="flex items-center space-x-1 hover:text-slate-900"
+                          >
+                            <span>Client Name</span>
+                            {getSortIcon("clientName")}
+                          </button>
+                        </th>
                         <th className="text-left py-2 text-xs font-semibold text-slate-700">Amount</th>
                         <th className="text-left py-2 text-xs font-semibold text-slate-700">Due Date</th>
                         <th className="text-left py-2 text-xs font-semibold text-slate-700">Status</th>
@@ -184,22 +255,16 @@ export default function Invoices() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-200/50">
-                      {filteredInvoices.map((invoice: any) => (
+                      {filteredAndSortedInvoices.map((invoice: any) => (
                         <tr key={invoice.id} className="hover:bg-slate-50/50 transition-colors" data-testid={`row-invoice-${invoice.id}`}>
-                          <td className="py-1">
-                            <div className="text-xs text-slate-700 flex items-center space-x-2">
-                              <span data-testid={`text-issue-date-${invoice.id}`}>
-                                {new Date(invoice.issueDate).toLocaleDateString()}
-                              </span>
-                              <span className="text-slate-400">•</span>
-                              <span className="font-medium" data-testid={`text-invoice-number-${invoice.id}`}>
-                                {invoice.invoiceNumber}
-                              </span>
-                              <span className="text-slate-400">•</span>
-                              <span data-testid={`text-contact-name-${invoice.id}`}>
-                                {invoice.contact?.name || 'Unknown Contact'}
-                              </span>
-                            </div>
+                          <td className="py-1 text-xs text-slate-700" data-testid={`text-issue-date-${invoice.id}`}>
+                            {new Date(invoice.issueDate).toLocaleDateString()}
+                          </td>
+                          <td className="py-1 text-xs font-medium text-slate-900" data-testid={`text-invoice-number-${invoice.id}`}>
+                            {invoice.invoiceNumber}
+                          </td>
+                          <td className="py-1 text-xs text-slate-700" data-testid={`text-contact-name-${invoice.id}`}>
+                            {invoice.contact?.name || 'Unknown Contact'}
                           </td>
                           <td className="py-1 text-xs font-medium text-slate-900" data-testid={`text-amount-${invoice.id}`}>
                             ${Number(invoice.amount).toLocaleString()}
