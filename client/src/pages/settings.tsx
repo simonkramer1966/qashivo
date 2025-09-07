@@ -37,88 +37,114 @@ import {
 function TestTabContent() {
   const { toast } = useToast();
   const { user } = useAuth();
-  const [selectedContactId, setSelectedContactId] = useState<string>(() => 
-    localStorage.getItem('nexus-test-contact-id') || ""
-  );
   const [isTestingEmail, setIsTestingEmail] = useState(false);
   const [isTestingSMS, setIsTestingSMS] = useState(false);
   const [isTestingVoice, setIsTestingVoice] = useState(false);
   const [isDemoSetup, setIsDemoSetup] = useState(false);
-  
-  // Override contact details for testing - with localStorage persistence
-  const [overrideEmail, setOverrideEmail] = useState<string>(() => 
-    localStorage.getItem('nexus-test-override-email') || ""
-  );
-  const [overrideMobile, setOverrideMobile] = useState<string>(() => 
-    localStorage.getItem('nexus-test-override-mobile') || ""
-  );
-  const [overrideTelephone, setOverrideTelephone] = useState<string>(() => 
-    localStorage.getItem('nexus-test-override-telephone') || ""
-  );
-  const [overrideContact, setOverrideContact] = useState<string>(() => 
-    localStorage.getItem('nexus-test-override-contact') || ""
-  );
-  const [selectedInvoiceId, setSelectedInvoiceId] = useState<string>("");
   const [isRegenerating, setIsRegenerating] = useState(false);
+  
+  // Static test data for communications
+  const [testEmail, setTestEmail] = useState<string>(() => 
+    localStorage.getItem('nexus-test-email') || "test@example.com"
+  );
+  const [testMobile, setTestMobile] = useState<string>(() => 
+    localStorage.getItem('nexus-test-mobile') || "+1234567890"
+  );
+  const [testTelephone, setTestTelephone] = useState<string>(() => 
+    localStorage.getItem('nexus-test-telephone') || "+1234567890"
+  );
+  
+  // Retell voice call variables
+  const [customerName, setCustomerName] = useState<string>(() => 
+    localStorage.getItem('nexus-test-customer-name') || "John Smith"
+  );
+  const [companyName, setCompanyName] = useState<string>(() => 
+    localStorage.getItem('nexus-test-company-name') || "ABC Corporation"
+  );
+  const [invoiceNumber, setInvoiceNumber] = useState<string>(() => 
+    localStorage.getItem('nexus-test-invoice-number') || "INV-12345"
+  );
+  const [invoiceAmount, setInvoiceAmount] = useState<string>(() => 
+    localStorage.getItem('nexus-test-invoice-amount') || "2500.00"
+  );
+  const [totalOutstanding, setTotalOutstanding] = useState<string>(() => 
+    localStorage.getItem('nexus-test-total-outstanding') || "5000.00"
+  );
+  const [daysOverdue, setDaysOverdue] = useState<string>(() => 
+    localStorage.getItem('nexus-test-days-overdue') || "45"
+  );
+  const [invoiceCount, setInvoiceCount] = useState<string>(() => 
+    localStorage.getItem('nexus-test-invoice-count') || "3"
+  );
+  const [dueDate, setDueDate] = useState<string>(() => 
+    localStorage.getItem('nexus-test-due-date') || "7/15/2025"
+  );
+  const [organisationName, setOrganisationName] = useState<string>(() => 
+    localStorage.getItem('nexus-test-organisation-name') || "Nexus AR"
+  );
+  const [demoMessage, setDemoMessage] = useState<string>(() => 
+    localStorage.getItem('nexus-test-demo-message') || "This is a professional collection call regarding outstanding invoices."
+  );
 
-  // Fetch contacts with overdue invoices (>30 days) for testing
-  const { data: contacts = [] } = useQuery<{
-    id: string;
-    name: string;
-    email?: string;
-    phone?: string;
-    companyName?: string;
-  }[]>({
-    queryKey: ['/api/contacts/overdue'],
-    enabled: !!user,
-  });
-
-  const selectedContact = contacts.find(c => c.id === selectedContactId);
-
-  // Fetch invoices for the selected contact
-  const { data: contactInvoices = [] } = useQuery<{
-    id: string;
-    invoiceNumber: string;
-    amount: string;
-    status: string;
-    dueDate: string;
-    description?: string;
-  }[]>({
-    queryKey: ['/api/invoices', selectedContactId],
-    queryFn: () => fetch(`/api/invoices?contactId=${selectedContactId}`).then(res => res.json()),
-    enabled: !!selectedContactId,
-  });
 
   // Save to localStorage whenever values change
   useEffect(() => {
-    if (selectedContactId) {
-      localStorage.setItem('nexus-test-contact-id', selectedContactId);
-    }
-  }, [selectedContactId]);
+    localStorage.setItem('nexus-test-email', testEmail);
+  }, [testEmail]);
 
   useEffect(() => {
-    localStorage.setItem('nexus-test-override-email', overrideEmail);
-  }, [overrideEmail]);
+    localStorage.setItem('nexus-test-mobile', testMobile);
+  }, [testMobile]);
 
   useEffect(() => {
-    localStorage.setItem('nexus-test-override-mobile', overrideMobile);
-  }, [overrideMobile]);
+    localStorage.setItem('nexus-test-telephone', testTelephone);
+  }, [testTelephone]);
 
   useEffect(() => {
-    localStorage.setItem('nexus-test-override-telephone', overrideTelephone);
-  }, [overrideTelephone]);
+    localStorage.setItem('nexus-test-customer-name', customerName);
+  }, [customerName]);
 
   useEffect(() => {
-    localStorage.setItem('nexus-test-override-contact', overrideContact);
-  }, [overrideContact]);
+    localStorage.setItem('nexus-test-company-name', companyName);
+  }, [companyName]);
+
+  useEffect(() => {
+    localStorage.setItem('nexus-test-invoice-number', invoiceNumber);
+  }, [invoiceNumber]);
+
+  useEffect(() => {
+    localStorage.setItem('nexus-test-invoice-amount', invoiceAmount);
+  }, [invoiceAmount]);
+
+  useEffect(() => {
+    localStorage.setItem('nexus-test-total-outstanding', totalOutstanding);
+  }, [totalOutstanding]);
+
+  useEffect(() => {
+    localStorage.setItem('nexus-test-days-overdue', daysOverdue);
+  }, [daysOverdue]);
+
+  useEffect(() => {
+    localStorage.setItem('nexus-test-invoice-count', invoiceCount);
+  }, [invoiceCount]);
+
+  useEffect(() => {
+    localStorage.setItem('nexus-test-due-date', dueDate);
+  }, [dueDate]);
+
+  useEffect(() => {
+    localStorage.setItem('nexus-test-organisation-name', organisationName);
+  }, [organisationName]);
+
+  useEffect(() => {
+    localStorage.setItem('nexus-test-demo-message', demoMessage);
+  }, [demoMessage]);
 
   const handleTestEmail = async () => {
-    const emailToUse = overrideEmail || selectedContact?.email;
-    
-    if (!selectedContact || !emailToUse) {
+    if (!testEmail) {
       toast({
         title: "Error",
-        description: "Please select a contact and provide an email address.",
+        description: "Please provide an email address.",
         variant: "destructive",
       });
       return;
@@ -127,14 +153,15 @@ function TestTabContent() {
     setIsTestingEmail(true);
     try {
       const response = await apiRequest("POST", "/api/test/email", {
-        contactId: selectedContactId,
-        overrideEmail: overrideEmail || undefined
+        email: testEmail,
+        customerName,
+        companyName
       });
       
       if (response.ok) {
         toast({
           title: "Success",
-          description: `Test email sent to ${emailToUse}`,
+          description: `Test email sent to ${testEmail}`,
         });
       } else {
         throw new Error("Failed to send test email");
@@ -151,12 +178,10 @@ function TestTabContent() {
   };
 
   const handleTestSMS = async () => {
-    const mobileToUse = overrideMobile || selectedContact?.phone;
-    
-    if (!selectedContact || !mobileToUse) {
+    if (!testMobile) {
       toast({
         title: "Error",
-        description: "Please select a contact and provide a mobile number.",
+        description: "Please provide a mobile number.",
         variant: "destructive",
       });
       return;
@@ -165,14 +190,17 @@ function TestTabContent() {
     setIsTestingSMS(true);
     try {
       const response = await apiRequest("POST", "/api/test/sms", {
-        contactId: selectedContactId,
-        overrideMobile: overrideMobile || undefined
+        phone: testMobile,
+        customerName,
+        invoiceNumber,
+        invoiceAmount: parseFloat(invoiceAmount),
+        daysOverdue: parseInt(daysOverdue)
       });
       
       if (response.ok) {
         toast({
           title: "Success",
-          description: `Test SMS sent to ${mobileToUse}`,
+          description: `Test SMS sent to ${testMobile}`,
         });
       } else {
         throw new Error("Failed to send test SMS");
@@ -188,13 +216,11 @@ function TestTabContent() {
     }
   };
 
-  const handleTestVoice = async (invoiceId?: string) => {
-    const telephoneToUse = overrideTelephone || selectedContact?.phone;
-    
-    if (!selectedContact || !telephoneToUse) {
+  const handleTestVoice = async () => {
+    if (!testTelephone) {
       toast({
         title: "Error",
-        description: "Please select a contact and provide a telephone number.",
+        description: "Please provide a telephone number.",
         variant: "destructive",
       });
       return;
@@ -203,18 +229,23 @@ function TestTabContent() {
     setIsTestingVoice(true);
     try {
       const response = await apiRequest("POST", "/api/test/voice", {
-        contactId: selectedContactId,
-        invoiceId: invoiceId || selectedInvoiceId || undefined,
-        overrideTelephone: overrideTelephone || undefined,
-        overrideContact: overrideContact || undefined
+        phone: testTelephone,
+        customerName,
+        companyName,
+        invoiceNumber,
+        invoiceAmount,
+        totalOutstanding,
+        daysOverdue,
+        invoiceCount,
+        dueDate,
+        organisationName,
+        demoMessage
       });
       
       if (response.ok) {
-        const selectedInvoice = contactInvoices.find(inv => inv.id === (invoiceId || selectedInvoiceId));
-        const invoiceText = selectedInvoice ? ` for invoice ${selectedInvoice.invoiceNumber}` : '';
         toast({
           title: "Success",
-          description: `Test voice call initiated to ${telephoneToUse}${invoiceText}`,
+          description: `Test voice call initiated to ${testTelephone} for ${customerName}`,
         });
       } else {
         throw new Error("Failed to initiate test voice call");
@@ -296,224 +327,252 @@ function TestTabContent() {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        {/* Contact Selection */}
-        <div className="space-y-2">
-          <Label htmlFor="contact-select">Select Client for Testing (30+ Days Overdue)</Label>
-          <Select value={selectedContactId} onValueChange={setSelectedContactId}>
-            <SelectTrigger className="bg-white border-gray-200">
-              <SelectValue placeholder="Choose a client with overdue invoices (30+ days)" />
-            </SelectTrigger>
-            <SelectContent className="bg-white border-gray-200">
-              {contacts.map((contact) => (
-                <SelectItem key={contact.id} value={contact.id}>
-                  <div className="flex flex-col">
-                    <span className="font-medium">{contact.name}</span>
-                    <span className="text-sm text-gray-500">
-                      {contact.email && `📧 ${contact.email}`} 
-                      {contact.phone && `📱 ${contact.phone}`}
-                    </span>
-                  </div>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        {/* Contact Information */}
+        <div className="space-y-4">
+          <h4 className="font-semibold text-lg">Contact Information</h4>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="test-email">Email Address</Label>
+              <Input
+                id="test-email"
+                type="email"
+                placeholder="test@example.com"
+                value={testEmail}
+                onChange={(e) => setTestEmail(e.target.value)}
+                className="bg-white/70 border-gray-200/30"
+                data-testid="input-test-email"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="test-mobile">Mobile Number (SMS)</Label>
+              <Input
+                id="test-mobile"
+                type="tel"
+                placeholder="+1234567890"
+                value={testMobile}
+                onChange={(e) => setTestMobile(e.target.value)}
+                className="bg-white/70 border-gray-200/30"
+                data-testid="input-test-mobile"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="test-telephone">Telephone (Voice)</Label>
+              <Input
+                id="test-telephone"
+                type="tel"
+                placeholder="+1234567890"
+                value={testTelephone}
+                onChange={(e) => setTestTelephone(e.target.value)}
+                className="bg-white/70 border-gray-200/30"
+                data-testid="input-test-telephone"
+              />
+            </div>
+          </div>
         </div>
 
-        {selectedContact && (
-          <div className="p-4 bg-gray-50 rounded-lg">
-            <h4 className="font-semibold mb-2">Selected Client:</h4>
-            <div className="text-sm space-y-1">
-              <p><strong>Name:</strong> {selectedContact.name}</p>
-              <p><strong>Company:</strong> {selectedContact.companyName || 'N/A'}</p>
-              <p><strong>Email:</strong> {selectedContact.email || 'N/A'}</p>
-              <p><strong>Phone:</strong> {selectedContact.phone || 'N/A'}</p>
-            </div>
-          </div>
-        )}
 
-        {selectedContact && (
-          <div className="space-y-4">
-            <h4 className="font-semibold text-lg">Override Contact Details (Optional)</h4>
-            <p className="text-sm text-gray-600">Override the client's contact details for testing purposes</p>
+        {/* Voice Call Variables */}
+        <div className="space-y-4">
+          <h4 className="font-semibold text-lg">Voice Call Variables</h4>
+          <p className="text-sm text-gray-600">Configure the data that will be passed to the Retell AI voice agent</p>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="customer-name">Customer Name</Label>
+              <Input
+                id="customer-name"
+                type="text"
+                placeholder="John Smith"
+                value={customerName}
+                onChange={(e) => setCustomerName(e.target.value)}
+                className="bg-white/70 border-gray-200/30"
+                data-testid="input-customer-name"
+              />
+            </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="override-contact">Contact Override</Label>
-                <Input
-                  id="override-contact"
-                  type="text"
-                  placeholder={selectedContact.name || "Enter contact name for testing"}
-                  value={overrideContact}
-                  onChange={(e) => setOverrideContact(e.target.value)}
-                  className="bg-white/70 border-gray-200/30"
-                  data-testid="input-override-contact"
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="override-email">Email Override</Label>
-                <Input
-                  id="override-email"
-                  type="email"
-                  placeholder={selectedContact.email || "Enter email for testing"}
-                  value={overrideEmail}
-                  onChange={(e) => setOverrideEmail(e.target.value)}
-                  className="bg-white/70 border-gray-200/30"
-                  data-testid="input-override-email"
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="override-mobile">Mobile Override (SMS)</Label>
-                <Input
-                  id="override-mobile"
-                  type="tel"
-                  placeholder={selectedContact.phone || "Enter mobile for SMS testing"}
-                  value={overrideMobile}
-                  onChange={(e) => setOverrideMobile(e.target.value)}
-                  className="bg-white/70 border-gray-200/30"
-                  data-testid="input-override-mobile"
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="override-telephone">Telephone Override (Voice)</Label>
-                <Input
-                  id="override-telephone"
-                  type="tel"
-                  placeholder={selectedContact.phone || "Enter telephone for voice testing"}
-                  value={overrideTelephone}
-                  onChange={(e) => setOverrideTelephone(e.target.value)}
-                  className="bg-white/70 border-gray-200/30"
-                  data-testid="input-override-telephone"
-                />
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="company-name">Company Name</Label>
+              <Input
+                id="company-name"
+                type="text"
+                placeholder="ABC Corporation"
+                value={companyName}
+                onChange={(e) => setCompanyName(e.target.value)}
+                className="bg-white/70 border-gray-200/30"
+                data-testid="input-company-name"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="invoice-number">Invoice Number</Label>
+              <Input
+                id="invoice-number"
+                type="text"
+                placeholder="INV-12345"
+                value={invoiceNumber}
+                onChange={(e) => setInvoiceNumber(e.target.value)}
+                className="bg-white/70 border-gray-200/30"
+                data-testid="input-invoice-number"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="invoice-amount">Invoice Amount</Label>
+              <Input
+                id="invoice-amount"
+                type="number"
+                step="0.01"
+                placeholder="2500.00"
+                value={invoiceAmount}
+                onChange={(e) => setInvoiceAmount(e.target.value)}
+                className="bg-white/70 border-gray-200/30"
+                data-testid="input-invoice-amount"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="total-outstanding">Total Outstanding</Label>
+              <Input
+                id="total-outstanding"
+                type="number"
+                step="0.01"
+                placeholder="5000.00"
+                value={totalOutstanding}
+                onChange={(e) => setTotalOutstanding(e.target.value)}
+                className="bg-white/70 border-gray-200/30"
+                data-testid="input-total-outstanding"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="days-overdue">Days Overdue</Label>
+              <Input
+                id="days-overdue"
+                type="number"
+                placeholder="45"
+                value={daysOverdue}
+                onChange={(e) => setDaysOverdue(e.target.value)}
+                className="bg-white/70 border-gray-200/30"
+                data-testid="input-days-overdue"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="invoice-count">Invoice Count</Label>
+              <Input
+                id="invoice-count"
+                type="number"
+                placeholder="3"
+                value={invoiceCount}
+                onChange={(e) => setInvoiceCount(e.target.value)}
+                className="bg-white/70 border-gray-200/30"
+                data-testid="input-invoice-count"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="due-date">Due Date</Label>
+              <Input
+                id="due-date"
+                type="text"
+                placeholder="7/15/2025"
+                value={dueDate}
+                onChange={(e) => setDueDate(e.target.value)}
+                className="bg-white/70 border-gray-200/30"
+                data-testid="input-due-date"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="organisation-name">Organisation Name</Label>
+              <Input
+                id="organisation-name"
+                type="text"
+                placeholder="Nexus AR"
+                value={organisationName}
+                onChange={(e) => setOrganisationName(e.target.value)}
+                className="bg-white/70 border-gray-200/30"
+                data-testid="input-organisation-name"
+              />
             </div>
           </div>
-        )}
+          
+          <div className="space-y-2">
+            <Label htmlFor="demo-message">Demo Message</Label>
+            <Input
+              id="demo-message"
+              type="text"
+              placeholder="This is a professional collection call regarding outstanding invoices."
+              value={demoMessage}
+              onChange={(e) => setDemoMessage(e.target.value)}
+              className="bg-white/70 border-gray-200/30"
+              data-testid="input-demo-message"
+            />
+          </div>
+        </div>
 
-        {/* Invoice Selection */}
-        {selectedContact && contactInvoices.length > 0 && (
-          <div className="space-y-4">
-            <h4 className="font-semibold text-lg">Select Invoice for Communication</h4>
-            <p className="text-sm text-gray-600">Choose a specific invoice to reference in your communication</p>
-            
-            <div className="border border-gray-200 rounded-lg overflow-hidden">
-              <div className="bg-gray-50 px-4 py-2 border-b border-gray-200">
-                <div className="grid grid-cols-12 gap-4 text-sm font-medium text-gray-700">
-                  <div className="col-span-1"></div>
-                  <div className="col-span-3">Invoice #</div>
-                  <div className="col-span-2">Amount</div>
-                  <div className="col-span-2">Status</div>
-                  <div className="col-span-2">Due Date</div>
-                  <div className="col-span-2">Actions</div>
-                </div>
-              </div>
-              
-              <div className="max-h-64 overflow-y-auto">
-                {contactInvoices.map((invoice) => {
-                  const dueDate = new Date(invoice.dueDate);
-                  const isOverdue = dueDate < new Date();
-                  const daysOverdue = isOverdue ? Math.floor((Date.now() - dueDate.getTime()) / (1000 * 60 * 60 * 24)) : 0;
-                  
-                  return (
-                    <div key={invoice.id} className="px-4 py-3 border-b border-gray-100 hover:bg-gray-50">
-                      <div className="grid grid-cols-12 gap-4 items-center">
-                        {/* Checkbox */}
-                        <div className="col-span-1">
-                          <input
-                            type="radio"
-                            name="selectedInvoice"
-                            value={invoice.id}
-                            checked={selectedInvoiceId === invoice.id}
-                            onChange={(e) => setSelectedInvoiceId(e.target.value)}
-                            className="w-4 h-4 text-[#17B6C3] border-gray-300 focus:ring-[#17B6C3]"
-                            data-testid={`radio-invoice-${invoice.invoiceNumber}`}
-                          />
-                        </div>
-                        
-                        {/* Invoice Number */}
-                        <div className="col-span-3">
-                          <span className="font-medium">{invoice.invoiceNumber}</span>
-                          {invoice.description && (
-                            <div className="text-xs text-gray-500 mt-1">{invoice.description}</div>
-                          )}
-                        </div>
-                        
-                        {/* Amount */}
-                        <div className="col-span-2">
-                          <span className="font-medium">${parseFloat(invoice.amount).toLocaleString()}</span>
-                        </div>
-                        
-                        {/* Status */}
-                        <div className="col-span-2">
-                          <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
-                            invoice.status === 'paid' ? 'bg-green-100 text-green-800' :
-                            invoice.status === 'overdue' ? 'bg-red-100 text-red-800' :
-                            'bg-yellow-100 text-yellow-800'
-                          }`}>
-                            {invoice.status}
-                          </span>
-                          {isOverdue && (
-                            <div className="text-xs text-red-600 mt-1">
-                              {daysOverdue} days overdue
-                            </div>
-                          )}
-                        </div>
-                        
-                        {/* Due Date */}
-                        <div className="col-span-2">
-                          <span className={`text-sm ${isOverdue ? 'text-red-600 font-medium' : 'text-gray-600'}`}>
-                            {dueDate.toLocaleDateString()}
-                          </span>
-                        </div>
-                        
-                        {/* Action Icons */}
-                        <div className="col-span-2">
-                          <div className="flex space-x-2">
-                            <button
-                              onClick={() => {
-                                setSelectedInvoiceId(invoice.id);
-                                // Handle email action
-                              }}
-                              className="p-2 text-gray-400 hover:text-[#17B6C3] hover:bg-blue-50 rounded"
-                              title="Send Email"
-                              data-testid={`button-email-${invoice.invoiceNumber}`}
-                            >
-                              <Mail className="h-4 w-4" />
-                            </button>
-                            <button
-                              onClick={() => {
-                                setSelectedInvoiceId(invoice.id);
-                                // Handle SMS action
-                              }}
-                              className="p-2 text-gray-400 hover:text-[#17B6C3] hover:bg-blue-50 rounded"
-                              title="Send SMS"
-                              data-testid={`button-sms-${invoice.invoiceNumber}`}
-                            >
-                              <MessageSquare className="h-4 w-4" />
-                            </button>
-                            <button
-                              onClick={() => {
-                                setSelectedInvoiceId(invoice.id);
-                                handleTestVoice(invoice.id);
-                              }}
-                              className="p-2 text-gray-400 hover:text-[#17B6C3] hover:bg-blue-50 rounded"
-                              title="Voice Call"
-                              data-testid={`button-voice-${invoice.invoiceNumber}`}
-                            >
-                              <Phone className="h-4 w-4" />
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+        {/* Communication Test Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Email Test */}
+          <Card className="p-4">
+            <div className="flex items-center mb-3">
+              <Mail className="h-5 w-5 text-[#17B6C3] mr-2" />
+              <h5 className="font-medium">Email Test</h5>
             </div>
-          </div>
-        )}
+            <p className="text-sm text-gray-600 mb-3">
+              Send a test email reminder using static data
+            </p>
+            <Button 
+              onClick={handleTestEmail}
+              disabled={!testEmail || isTestingEmail}
+              className="w-full bg-[#17B6C3] hover:bg-[#1396A1] text-white"
+              data-testid="button-test-email"
+            >
+              {isTestingEmail ? "Sending..." : "Send Test Email"}
+            </Button>
+          </Card>
+
+          {/* SMS Test */}
+          <Card className="p-4">
+            <div className="flex items-center mb-3">
+              <MessageSquare className="h-5 w-5 text-[#17B6C3] mr-2" />
+              <h5 className="font-medium">SMS Test</h5>
+            </div>
+            <p className="text-sm text-gray-600 mb-3">
+              Send a test SMS message using static data
+            </p>
+            <Button 
+              onClick={handleTestSMS}
+              disabled={!testMobile || isTestingSMS}
+              className="w-full bg-[#17B6C3] hover:bg-[#1396A1] text-white"
+              data-testid="button-test-sms"
+            >
+              {isTestingSMS ? "Sending..." : "Send Test SMS"}
+            </Button>
+          </Card>
+
+          {/* Voice Test */}
+          <Card className="p-4">
+            <div className="flex items-center mb-3">
+              <Phone className="h-5 w-5 text-[#17B6C3] mr-2" />
+              <h5 className="font-medium">Voice Test</h5>
+            </div>
+            <p className="text-sm text-gray-600 mb-3">
+              Initiate a test voice call using static data
+            </p>
+            <Button 
+              onClick={handleTestVoice}
+              disabled={!testTelephone || isTestingVoice}
+              className="w-full bg-[#17B6C3] hover:bg-[#1396A1] text-white"
+              data-testid="button-test-voice"
+            >
+              {isTestingVoice ? "Calling..." : "Start Test Call"}
+            </Button>
+          </Card>
+        </div>
+
 
         <Separator />
 
@@ -533,7 +592,7 @@ function TestTabContent() {
               </p>
               <Button 
                 onClick={handleTestEmail}
-                disabled={!selectedContact || (!selectedContact.email && !overrideEmail) || isTestingEmail}
+                disabled={!testEmail || isTestingEmail}
                 className="w-full bg-[#17B6C3] hover:bg-[#1396A1] text-white"
                 data-testid="button-test-email"
               >
@@ -552,7 +611,7 @@ function TestTabContent() {
               </p>
               <Button 
                 onClick={handleTestSMS}
-                disabled={!selectedContact || (!selectedContact.phone && !overrideMobile) || isTestingSMS}
+                disabled={!testMobile || isTestingSMS}
                 className="w-full bg-[#17B6C3] hover:bg-[#1396A1] text-white"
                 data-testid="button-test-sms"
               >
@@ -571,7 +630,7 @@ function TestTabContent() {
               </p>
               <Button 
                 onClick={() => handleTestVoice()}
-                disabled={!selectedContact || (!selectedContact.phone && !overrideTelephone) || isTestingVoice}
+                disabled={!testTelephone || isTestingVoice}
                 className="w-full bg-[#17B6C3] hover:bg-[#1396A1] text-white"
                 data-testid="button-test-voice"
               >
