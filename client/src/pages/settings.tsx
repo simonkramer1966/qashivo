@@ -320,7 +320,7 @@ function TestTabContent() {
           <div className="p-2 bg-[#17B6C3]/10 rounded-lg mr-3">
             <TestTube className="h-5 w-5 text-[#17B6C3]" />
           </div>
-          Client Testing
+          Contact Testing
         </CardTitle>
         <CardDescription className="text-base">
           Test email, SMS, and voice communications with specific clients
