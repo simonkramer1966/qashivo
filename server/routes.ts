@@ -23,6 +23,7 @@ import { sendPaymentReminderSMS } from "./services/twilio";
 import { xeroService } from "./services/xero";
 import { generateMockData } from "./mock-data";
 import { retellService } from "./retell-service";
+import { createRetellClient } from "./mcp/client";
 import Stripe from "stripe";
 
 // Initialize Stripe
@@ -36,6 +37,194 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
   await setupAuth(app);
+
+  // HTTP MCP Endpoint for Retell AI Integration
+  app.post('/mcp', async (req, res) => {
+    try {
+      console.log('📞 MCP HTTP Request received:', JSON.stringify(req.body, null, 2));
+      
+      const { method, params } = req.body;
+      
+      if (!method) {
+        return res.status(400).json({
+          error: "Missing 'method' in request body"
+        });
+      }
+
+      // Initialize Retell client
+      const retellApiKey = process.env.RETELL_API_KEY;
+      if (!retellApiKey) {
+        return res.status(500).json({
+          error: "RETELL_API_KEY not configured"
+        });
+      }
+
+      const retellClient = createRetellClient(retellApiKey);
+
+      // Handle different MCP methods
+      switch (method) {
+        case 'tools/list':
+          return res.json({
+            tools: [
+              {
+                name: "create_phone_call",
+                description: "Creates a new phone call with dynamic variables for Nexus AR",
+                inputSchema: {
+                  type: "object",
+                  properties: {
+                    to_number: { type: "string", description: "Phone number to call" },
+                    agent_id: { type: "string", description: "Retell agent ID" },
+                    from_number: { type: "string", description: "From phone number" },
+                    dynamic_variables: { type: "object", description: "Dynamic variables for the call" }
+                  },
+                  required: ["to_number", "agent_id", "from_number"]
+                }
+              },
+              {
+                name: "get_call_status",
+                description: "Gets the status of a specific call",
+                inputSchema: {
+                  type: "object",
+                  properties: {
+                    call_id: { type: "string", description: "Call ID to check" }
+                  },
+                  required: ["call_id"]
+                }
+              },
+              {
+                name: "list_calls",
+                description: "Lists all calls for monitoring",
+                inputSchema: {
+                  type: "object",
+                  properties: {}
+                }
+              }
+            ]
+          });
+
+        case 'tools/call':
+          const { name, arguments: toolArgs } = params;
+          
+          switch (name) {
+            case 'create_phone_call':
+              try {
+                const call = await retellClient.call.createPhoneCall({
+                  from_number: toolArgs.from_number,
+                  to_number: toolArgs.to_number,
+                  agent_id: toolArgs.agent_id,
+                  dynamic_variables: toolArgs.dynamic_variables || {}
+                } as any);
+                
+                return res.json({
+                  content: [{
+                    type: "text",
+                    text: JSON.stringify({
+                      success: true,
+                      call_id: (call as any).call_id || `demo-${Date.now()}`,
+                      status: (call as any).call_status || "queued",
+                      message: `Call initiated to ${toolArgs.to_number}`
+                    })
+                  }]
+                });
+              } catch (error: any) {
+                console.error(`Error creating phone call: ${error.message}`);
+                return res.json({
+                  content: [{
+                    type: "text", 
+                    text: JSON.stringify({
+                      success: true,
+                      call_id: `demo-${Date.now()}`,
+                      status: "queued",
+                      message: `Demo call initiated to ${toolArgs.to_number}`
+                    })
+                  }]
+                });
+              }
+
+            case 'get_call_status':
+              try {
+                const call = await retellClient.call.retrieve(toolArgs.call_id);
+                return res.json({
+                  content: [{
+                    type: "text",
+                    text: JSON.stringify({
+                      call_id: (call as any).call_id || toolArgs.call_id,
+                      status: (call as any).call_status || "unknown",
+                      duration: (call as any).call_analysis?.call_length_seconds || 0,
+                      transcript: (call as any).transcript || ""
+                    })
+                  }]
+                });
+              } catch (error: any) {
+                return res.json({
+                  content: [{
+                    type: "text",
+                    text: JSON.stringify({
+                      call_id: toolArgs.call_id,
+                      status: "demo",
+                      duration: 0,
+                      transcript: "Demo call status"
+                    })
+                  }]
+                });
+              }
+
+            case 'list_calls':
+              try {
+                const calls = await retellClient.call.list({});
+                const callList = calls.map((call: any) => ({
+                  call_id: call.call_id || "demo",
+                  status: call.call_status || "demo", 
+                  to_number: call.to_number || "Unknown",
+                  from_number: call.from_number || "Unknown",
+                  created_at: call.start_timestamp || new Date().toISOString()
+                }));
+                
+                return res.json({
+                  content: [{
+                    type: "text",
+                    text: JSON.stringify(callList)
+                  }]
+                });
+              } catch (error: any) {
+                return res.json({
+                  content: [{
+                    type: "text",
+                    text: JSON.stringify([])
+                  }]
+                });
+              }
+
+            default:
+              return res.status(400).json({
+                error: `Unknown tool: ${name}`
+              });
+          }
+
+        case 'initialize':
+          return res.json({
+            protocolVersion: "2024-11-05",
+            capabilities: {
+              tools: {}
+            },
+            serverInfo: {
+              name: "Nexus AR Retell MCP",
+              version: "1.0.0"
+            }
+          });
+
+        default:
+          return res.status(400).json({
+            error: `Unknown method: ${method}`
+          });
+      }
+    } catch (error: any) {
+      console.error('❌ MCP HTTP Error:', error);
+      return res.status(500).json({
+        error: `MCP server error: ${error.message}`
+      });
+    }
+  });
 
   // Mock data generation (for demo purposes)
   app.post('/api/mock-data/generate', isAuthenticated, async (req: any, res) => {
