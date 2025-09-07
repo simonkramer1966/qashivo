@@ -543,8 +543,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
 
+      const contactId = req.query.contactId as string;
       const limit = req.query.limit ? parseInt(req.query.limit) : undefined;
-      const invoices = await storage.getInvoices(user.tenantId, limit);
+      
+      let invoices = await storage.getInvoices(user.tenantId, limit);
+      
+      // Filter by contact ID if provided
+      if (contactId) {
+        invoices = invoices.filter(invoice => invoice.contactId === contactId);
+      }
+      
       res.json(invoices);
     } catch (error) {
       console.error("Error fetching invoices:", error);
@@ -1041,7 +1049,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
 
-      const { contactId, overrideTelephone, overrideContact } = req.body;
+      const { contactId, invoiceId, overrideTelephone, overrideContact } = req.body;
       if (!contactId) {
         return res.status(400).json({ message: "Contact ID is required" });
       }
@@ -1075,37 +1083,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let oldestDaysOverdue = 0;
 
       if (contactInvoices.length > 0) {
-        // For voice calls, prioritize the most overdue invoice (30+ days) for realistic collection calls
-        const thirtyDaysAgo = new Date();
-        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-        
-        console.log(`🔍 Voice call invoice selection for contact: ${contact.name}`);
-        console.log(`📅 30 days ago cutoff: ${thirtyDaysAgo.toISOString()}`);
-        console.log(`📋 Found ${contactInvoices.length} overdue/pending invoices for this contact:`);
-        
-        contactInvoices.forEach(inv => {
-          console.log(`   • ${inv.invoiceNumber}: Due ${new Date(inv.dueDate).toISOString()}, Amount: $${inv.amount}, Status: ${inv.status}`);
-        });
-        
-        // First try to find invoices that are 30+ days overdue
-        const significantlyOverdue = contactInvoices.filter(inv => 
-          new Date(inv.dueDate) < thirtyDaysAgo
-        );
-        
-        console.log(`🎯 Found ${significantlyOverdue.length} invoices that are 30+ days overdue`);
-        
-        if (significantlyOverdue.length > 0) {
-          // Sort by oldest due date first (most problematic for collections)
-          significantlyOverdue.sort((a, b) => 
-            new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()
-          );
-          primaryInvoice = significantlyOverdue[0];
-          console.log(`✅ Selected oldest overdue invoice: ${primaryInvoice.invoiceNumber}, Due: ${new Date(primaryInvoice.dueDate).toISOString()}`);
+        // If a specific invoice ID is provided, use that invoice
+        if (invoiceId) {
+          primaryInvoice = contactInvoices.find(inv => inv.id === invoiceId);
+          if (!primaryInvoice) {
+            return res.status(400).json({ message: "Selected invoice not found or not eligible for collection call" });
+          }
         } else {
-          // Fallback to highest amount if no 30+ day overdue invoices
-          contactInvoices.sort((a, b) => parseFloat(b.amount) - parseFloat(a.amount));
-          primaryInvoice = contactInvoices[0];
-          console.log(`⚠️ No 30+ day overdue invoices found, using highest amount: ${primaryInvoice.invoiceNumber}, Due: ${new Date(primaryInvoice.dueDate).toISOString()}`);
+          // Fallback to auto-selection logic (prioritize 30+ day overdue)
+          const thirtyDaysAgo = new Date();
+          thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+          
+          const significantlyOverdue = contactInvoices.filter(inv => 
+            new Date(inv.dueDate) < thirtyDaysAgo
+          );
+          
+          if (significantlyOverdue.length > 0) {
+            significantlyOverdue.sort((a, b) => 
+              new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()
+            );
+            primaryInvoice = significantlyOverdue[0];
+          } else {
+            contactInvoices.sort((a, b) => parseFloat(b.amount) - parseFloat(a.amount));
+            primaryInvoice = contactInvoices[0];
+          }
         }
         
         // Calculate total outstanding

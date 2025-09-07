@@ -58,6 +58,7 @@ function TestTabContent() {
   const [overrideContact, setOverrideContact] = useState<string>(() => 
     localStorage.getItem('nexus-test-override-contact') || ""
   );
+  const [selectedInvoiceId, setSelectedInvoiceId] = useState<string>("");
 
   // Fetch contacts with overdue invoices (>30 days) for testing
   const { data: contacts = [] } = useQuery<{
@@ -72,6 +73,20 @@ function TestTabContent() {
   });
 
   const selectedContact = contacts.find(c => c.id === selectedContactId);
+
+  // Fetch invoices for the selected contact
+  const { data: contactInvoices = [] } = useQuery<{
+    id: string;
+    invoiceNumber: string;
+    amount: string;
+    status: string;
+    dueDate: string;
+    description?: string;
+  }[]>({
+    queryKey: ['/api/invoices', selectedContactId],
+    queryFn: () => fetch(`/api/invoices?contactId=${selectedContactId}`).then(res => res.json()),
+    enabled: !!selectedContactId,
+  });
 
   // Save to localStorage whenever values change
   useEffect(() => {
@@ -172,7 +187,7 @@ function TestTabContent() {
     }
   };
 
-  const handleTestVoice = async () => {
+  const handleTestVoice = async (invoiceId?: string) => {
     const telephoneToUse = overrideTelephone || selectedContact?.phone;
     
     if (!selectedContact || !telephoneToUse) {
@@ -188,14 +203,17 @@ function TestTabContent() {
     try {
       const response = await apiRequest("POST", "/api/test/voice", {
         contactId: selectedContactId,
+        invoiceId: invoiceId || selectedInvoiceId || undefined,
         overrideTelephone: overrideTelephone || undefined,
         overrideContact: overrideContact || undefined
       });
       
       if (response.ok) {
+        const selectedInvoice = contactInvoices.find(inv => inv.id === (invoiceId || selectedInvoiceId));
+        const invoiceText = selectedInvoice ? ` for invoice ${selectedInvoice.invoiceNumber}` : '';
         toast({
           title: "Success",
-          description: `Test voice call initiated to ${telephoneToUse}`,
+          description: `Test voice call initiated to ${telephoneToUse}${invoiceText}`,
         });
       } else {
         throw new Error("Failed to initiate test voice call");
@@ -346,6 +364,129 @@ function TestTabContent() {
           </div>
         )}
 
+        {/* Invoice Selection */}
+        {selectedContact && contactInvoices.length > 0 && (
+          <div className="space-y-4">
+            <h4 className="font-semibold text-lg">Select Invoice for Communication</h4>
+            <p className="text-sm text-gray-600">Choose a specific invoice to reference in your communication</p>
+            
+            <div className="border border-gray-200 rounded-lg overflow-hidden">
+              <div className="bg-gray-50 px-4 py-2 border-b border-gray-200">
+                <div className="grid grid-cols-12 gap-4 text-sm font-medium text-gray-700">
+                  <div className="col-span-1"></div>
+                  <div className="col-span-3">Invoice #</div>
+                  <div className="col-span-2">Amount</div>
+                  <div className="col-span-2">Status</div>
+                  <div className="col-span-2">Due Date</div>
+                  <div className="col-span-2">Actions</div>
+                </div>
+              </div>
+              
+              <div className="max-h-64 overflow-y-auto">
+                {contactInvoices.map((invoice) => {
+                  const dueDate = new Date(invoice.dueDate);
+                  const isOverdue = dueDate < new Date();
+                  const daysOverdue = isOverdue ? Math.floor((Date.now() - dueDate.getTime()) / (1000 * 60 * 60 * 24)) : 0;
+                  
+                  return (
+                    <div key={invoice.id} className="px-4 py-3 border-b border-gray-100 hover:bg-gray-50">
+                      <div className="grid grid-cols-12 gap-4 items-center">
+                        {/* Checkbox */}
+                        <div className="col-span-1">
+                          <input
+                            type="radio"
+                            name="selectedInvoice"
+                            value={invoice.id}
+                            checked={selectedInvoiceId === invoice.id}
+                            onChange={(e) => setSelectedInvoiceId(e.target.value)}
+                            className="w-4 h-4 text-[#17B6C3] border-gray-300 focus:ring-[#17B6C3]"
+                            data-testid={`radio-invoice-${invoice.invoiceNumber}`}
+                          />
+                        </div>
+                        
+                        {/* Invoice Number */}
+                        <div className="col-span-3">
+                          <span className="font-medium">{invoice.invoiceNumber}</span>
+                          {invoice.description && (
+                            <div className="text-xs text-gray-500 mt-1">{invoice.description}</div>
+                          )}
+                        </div>
+                        
+                        {/* Amount */}
+                        <div className="col-span-2">
+                          <span className="font-medium">${parseFloat(invoice.amount).toLocaleString()}</span>
+                        </div>
+                        
+                        {/* Status */}
+                        <div className="col-span-2">
+                          <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
+                            invoice.status === 'paid' ? 'bg-green-100 text-green-800' :
+                            invoice.status === 'overdue' ? 'bg-red-100 text-red-800' :
+                            'bg-yellow-100 text-yellow-800'
+                          }`}>
+                            {invoice.status}
+                          </span>
+                          {isOverdue && (
+                            <div className="text-xs text-red-600 mt-1">
+                              {daysOverdue} days overdue
+                            </div>
+                          )}
+                        </div>
+                        
+                        {/* Due Date */}
+                        <div className="col-span-2">
+                          <span className={`text-sm ${isOverdue ? 'text-red-600 font-medium' : 'text-gray-600'}`}>
+                            {dueDate.toLocaleDateString()}
+                          </span>
+                        </div>
+                        
+                        {/* Action Icons */}
+                        <div className="col-span-2">
+                          <div className="flex space-x-2">
+                            <button
+                              onClick={() => {
+                                setSelectedInvoiceId(invoice.id);
+                                // Handle email action
+                              }}
+                              className="p-2 text-gray-400 hover:text-[#17B6C3] hover:bg-blue-50 rounded"
+                              title="Send Email"
+                              data-testid={`button-email-${invoice.invoiceNumber}`}
+                            >
+                              <Mail className="h-4 w-4" />
+                            </button>
+                            <button
+                              onClick={() => {
+                                setSelectedInvoiceId(invoice.id);
+                                // Handle SMS action
+                              }}
+                              className="p-2 text-gray-400 hover:text-[#17B6C3] hover:bg-blue-50 rounded"
+                              title="Send SMS"
+                              data-testid={`button-sms-${invoice.invoiceNumber}`}
+                            >
+                              <MessageSquare className="h-4 w-4" />
+                            </button>
+                            <button
+                              onClick={() => {
+                                setSelectedInvoiceId(invoice.id);
+                                handleTestVoice(invoice.id);
+                              }}
+                              className="p-2 text-gray-400 hover:text-[#17B6C3] hover:bg-blue-50 rounded"
+                              title="Voice Call"
+                              data-testid={`button-voice-${invoice.invoiceNumber}`}
+                            >
+                              <Phone className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
+
         <Separator />
 
         {/* Test Actions */}
@@ -401,7 +542,7 @@ function TestTabContent() {
                 Initiate a test voice call to the selected client
               </p>
               <Button 
-                onClick={handleTestVoice}
+                onClick={() => handleTestVoice()}
                 disabled={!selectedContact || (!selectedContact.phone && !overrideTelephone) || isTestingVoice}
                 className="w-full bg-[#17B6C3] hover:bg-[#1396A1] text-white"
                 data-testid="button-test-voice"
