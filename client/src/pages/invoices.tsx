@@ -418,9 +418,10 @@ export default function Invoices() {
             {selectedInvoice && (
               <div className="mb-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Invoice Details</h3>
-                <div className="bg-gray-50 rounded-lg p-4 space-y-3">
-                  {/* First Row: Invoice Number, Amount, Issue Date, Due Date */}
+                <div className="bg-gray-50 rounded-lg p-4">
+                  {/* Single grid container for proper alignment */}
                   <div className="grid grid-cols-4 gap-4">
+                    {/* First Row: Invoice Number, Amount, Issue Date, Due Date */}
                     <div>
                       <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Invoice Number</label>
                       <p className="text-sm font-medium text-gray-900">{selectedInvoice.invoiceNumber}</p>
@@ -437,25 +438,23 @@ export default function Invoices() {
                       <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Due Date</label>
                       <p className="text-sm text-gray-700">{new Date(selectedInvoice.dueDate).toLocaleDateString()}</p>
                     </div>
-                  </div>
-                  
-                  {/* Second Row: Status, Contact Name, Phone, Email */}
-                  <div className="grid grid-cols-4 gap-4">
-                    <div>
+                    
+                    {/* Second Row: Status, Contact Name, Phone, Email */}
+                    <div className="mt-4">
                       <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Status</label>
                       <div className="mt-1">
                         {getStatusBadge(selectedInvoice.status)}
                       </div>
                     </div>
-                    <div>
+                    <div className="mt-4">
                       <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Contact Name</label>
                       <p className="text-sm text-gray-700">{selectedInvoice.contact?.name || 'Unknown Contact'}</p>
                     </div>
-                    <div>
+                    <div className="mt-4">
                       <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Phone</label>
                       <p className="text-sm text-gray-700">{selectedInvoice.contact?.phone || 'N/A'}</p>
                     </div>
-                    <div>
+                    <div className="mt-4">
                       <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Email</label>
                       <p className="text-sm text-gray-700">{selectedInvoice.contact?.email || 'N/A'}</p>
                     </div>
