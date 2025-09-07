@@ -19,6 +19,7 @@ import {
   MessageSquare
 } from "lucide-react";
 import nexusLogo from "@assets/Main Nexus Logo copy_1756923544828.png";
+import strategyWorkflowImage from "@assets/generated_images/AR_strategy_workflow_illustration_8aaa5cce.png";
 import { Link } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -151,8 +152,17 @@ export default function Demo() {
       </nav>
 
       {/* Hero Section */}
-      <section className="pt-32 pb-20 bg-gradient-to-br from-[#17B6C3]/10 via-blue-50 to-teal-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <section 
+        className="pt-32 pb-20 bg-gradient-to-br from-[#17B6C3]/10 via-blue-50 to-teal-50 relative overflow-hidden"
+        style={{
+          backgroundImage: `linear-gradient(to bottom right, rgba(23, 182, 195, 0.1), rgba(59, 130, 246, 0.05), rgba(20, 184, 166, 0.05)), url(${strategyWorkflowImage})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat'
+        }}
+      >
+        <div className="absolute inset-0 bg-gradient-to-br from-slate-50/90 via-blue-50/80 to-teal-50/90"></div>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="text-center mb-16">
             <Badge className="bg-[#17B6C3]/10 text-[#17B6C3] border-[#17B6C3]/20 mb-6 backdrop-blur-sm" data-testid="badge-demo-hero">
               Interactive Demo
