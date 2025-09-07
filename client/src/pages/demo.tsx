@@ -31,7 +31,6 @@ const leadFormSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
   phone: z.string().min(10, "Please enter a valid phone number"),
   company: z.string().optional(),
-  notes: z.string().optional(),
 });
 
 export default function Demo() {
@@ -46,7 +45,6 @@ export default function Demo() {
       email: "",
       phone: "",
       company: "",
-      notes: "",
     },
   });
 
@@ -169,57 +167,188 @@ export default function Demo() {
         </div>
       </section>
 
-      {/* Video Section */}
+      {/* Video and Form Section */}
       <section className="py-20 bg-white/50">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-          <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-xl">
-            <CardHeader className="text-center">
-              <CardTitle className="text-3xl font-bold flex items-center justify-center">
-                <div className="p-2 bg-[#17B6C3]/10 rounded-lg mr-3">
-                  <Play className="h-6 w-6 text-[#17B6C3]" />
-                </div>
-                Product Demo Video
-              </CardTitle>
-              <CardDescription className="text-lg">
-                Learn how Nexus AR revolutionizes accounts receivable management
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="aspect-video bg-gray-100 rounded-xl flex items-center justify-center relative overflow-hidden">
-                {demoVideoUrl ? (
-                  <video 
-                    controls 
-                    className="w-full h-full object-cover rounded-xl"
-                    poster="/api/placeholder/800/450"
-                  >
-                    <source src={demoVideoUrl} type="video/mp4" />
-                    Your browser does not support the video tag.
-                  </video>
-                ) : (
-                  <div className="text-center p-8">
-                    <Upload className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                    <h3 className="text-xl font-semibold text-gray-600 mb-2">Demo Video Coming Soon</h3>
-                    <p className="text-gray-500">
-                      Our comprehensive product demonstration video will showcase all the powerful features of Nexus AR.
-                    </p>
-                    <Button 
-                      className="mt-4 bg-[#17B6C3] hover:bg-[#1396A1] text-white"
-                      onClick={() => {
-                        toast({
-                          title: "Video Upload",
-                          description: "Video upload functionality will be available for administrators.",
-                        });
-                      }}
-                      data-testid="button-upload-video"
-                    >
-                      <Upload className="h-4 w-4 mr-2" />
-                      Upload Demo Video
-                    </Button>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
+            {/* Video Section - Left Side */}
+            <div>
+              <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-xl">
+                <CardHeader>
+                  <CardTitle className="text-2xl font-bold flex items-center">
+                    <div className="p-2 bg-[#17B6C3]/10 rounded-lg mr-3">
+                      <Play className="h-5 w-5 text-[#17B6C3]" />
+                    </div>
+                    Product Demo Video
+                  </CardTitle>
+                  <CardDescription className="text-base">
+                    See how Nexus AR revolutionizes accounts receivable management
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="aspect-video bg-gray-100 rounded-xl flex items-center justify-center relative overflow-hidden">
+                    {demoVideoUrl ? (
+                      <video 
+                        controls 
+                        className="w-full h-full object-cover rounded-xl"
+                        poster="/api/placeholder/800/450"
+                      >
+                        <source src={demoVideoUrl} type="video/mp4" />
+                        Your browser does not support the video tag.
+                      </video>
+                    ) : (
+                      <div className="text-center p-6">
+                        <Upload className="h-10 w-10 text-gray-400 mx-auto mb-3" />
+                        <h3 className="text-lg font-semibold text-gray-600 mb-2">Demo Video Coming Soon</h3>
+                        <p className="text-gray-500 text-sm mb-4">
+                          Our comprehensive product demonstration will showcase all the powerful features of Nexus AR.
+                        </p>
+                        <Button 
+                          className="bg-[#17B6C3] hover:bg-[#1396A1] text-white"
+                          onClick={() => {
+                            toast({
+                              title: "Video Upload",
+                              description: "Video upload functionality will be available for administrators.",
+                            });
+                          }}
+                          data-testid="button-upload-video"
+                        >
+                          <Upload className="h-4 w-4 mr-2" />
+                          Upload Demo Video
+                        </Button>
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Lead Capture Form - Right Side */}
+            <div>
+              <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-xl">
+                <CardHeader>
+                  <CardTitle className="text-2xl font-bold">
+                    Get Instant Access
+                  </CardTitle>
+                  <CardDescription className="text-base">
+                    Enter your details for an immediate live demo
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Form {...form}>
+                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                      <FormField
+                        control={form.control}
+                        name="name"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Full Name *</FormLabel>
+                            <FormControl>
+                              <Input 
+                                placeholder="Enter your full name"
+                                className="bg-white/70 border-gray-200/30"
+                                data-testid="input-lead-name"
+                                {...field} 
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="email"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Business Email *</FormLabel>
+                            <FormControl>
+                              <Input 
+                                type="email"
+                                placeholder="Enter your business email"
+                                className="bg-white/70 border-gray-200/30"
+                                data-testid="input-lead-email"
+                                {...field} 
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="phone"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Phone Number *</FormLabel>
+                            <FormControl>
+                              <Input 
+                                type="tel"
+                                placeholder="Enter your phone number"
+                                className="bg-white/70 border-gray-200/30"
+                                data-testid="input-lead-phone"
+                                {...field} 
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="company"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Company Name</FormLabel>
+                            <FormControl>
+                              <Input 
+                                placeholder="Enter your company name"
+                                className="bg-white/70 border-gray-200/30"
+                                data-testid="input-lead-company"
+                                {...field} 
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <div className="pt-2">
+                        <Button 
+                          type="submit"
+                          disabled={isSubmitting}
+                          className="w-full bg-gradient-to-r from-[#17B6C3] to-[#1396A1] hover:from-[#1396A1] hover:to-[#117A85] text-white font-semibold py-3 text-base shadow-lg hover:shadow-xl transition-all duration-300"
+                          data-testid="button-submit-demo-request"
+                        >
+                          {isSubmitting ? "Submitting..." : "Get My Live Demo"}
+                          <ArrowRight className="ml-2 h-5 w-5" />
+                        </Button>
+                      </div>
+                    </form>
+                  </Form>
+
+                  {/* Contact Information */}
+                  <div className="mt-6 pt-6 border-t border-gray-200/30">
+                    <div className="text-center">
+                      <h4 className="font-semibold text-gray-900 mb-3 text-sm">Prefer to speak directly?</h4>
+                      <div className="flex items-center justify-center space-x-4 text-xs text-gray-600">
+                        <div className="flex items-center">
+                          <Phone className="h-3 w-3 mr-1 text-[#17B6C3]" />
+                          <span>+1 (555) 123-4567</span>
+                        </div>
+                        <div className="flex items-center">
+                          <Mail className="h-3 w-3 mr-1 text-[#17B6C3]" />
+                          <span>demo@nexusar.com</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -269,159 +398,6 @@ export default function Demo() {
         </div>
       </section>
 
-      {/* Lead Capture Form */}
-      <section className="py-20 bg-gradient-to-r from-[#17B6C3]/5 to-teal-50">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-          <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-xl">
-            <CardHeader className="text-center">
-              <CardTitle className="text-3xl font-bold">
-                Request Your Personalized Demo
-              </CardTitle>
-              <CardDescription className="text-lg">
-                Get a customized demonstration tailored to your business needs
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <FormField
-                      control={form.control}
-                      name="name"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Full Name *</FormLabel>
-                          <FormControl>
-                            <Input 
-                              placeholder="Enter your full name"
-                              className="bg-white/70 border-gray-200/30"
-                              data-testid="input-lead-name"
-                              {...field} 
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="email"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Business Email *</FormLabel>
-                          <FormControl>
-                            <Input 
-                              type="email"
-                              placeholder="Enter your business email"
-                              className="bg-white/70 border-gray-200/30"
-                              data-testid="input-lead-email"
-                              {...field} 
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <FormField
-                      control={form.control}
-                      name="phone"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Phone Number *</FormLabel>
-                          <FormControl>
-                            <Input 
-                              type="tel"
-                              placeholder="Enter your phone number"
-                              className="bg-white/70 border-gray-200/30"
-                              data-testid="input-lead-phone"
-                              {...field} 
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="company"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Company Name</FormLabel>
-                          <FormControl>
-                            <Input 
-                              placeholder="Enter your company name"
-                              className="bg-white/70 border-gray-200/30"
-                              data-testid="input-lead-company"
-                              {...field} 
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-
-                  <FormField
-                    control={form.control}
-                    name="notes"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Additional Notes</FormLabel>
-                        <FormControl>
-                          <Textarea 
-                            placeholder="Tell us about your business needs and specific challenges with accounts receivable"
-                            className="bg-white/70 border-gray-200/30 min-h-[100px]"
-                            data-testid="input-lead-notes"
-                            {...field} 
-                          />
-                        </FormControl>
-                        <FormDescription>
-                          Help us customize the demo to your specific requirements
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <div className="text-center">
-                    <Button 
-                      type="submit"
-                      disabled={isSubmitting}
-                      className="bg-gradient-to-r from-[#17B6C3] to-[#1396A1] hover:from-[#1396A1] hover:to-[#117A85] text-white font-semibold px-8 py-3 text-lg shadow-lg hover:shadow-xl transition-all duration-300"
-                      data-testid="button-submit-demo-request"
-                    >
-                      {isSubmitting ? "Submitting..." : "Request Demo"}
-                      <ArrowRight className="ml-2 h-5 w-5" />
-                    </Button>
-                  </div>
-                </form>
-              </Form>
-
-              {/* Contact Information */}
-              <div className="mt-8 pt-8 border-t border-gray-200/30">
-                <div className="text-center">
-                  <h4 className="font-semibold text-gray-900 mb-4">Prefer to speak directly?</h4>
-                  <div className="flex items-center justify-center space-x-6 text-sm text-gray-600">
-                    <div className="flex items-center">
-                      <Phone className="h-4 w-4 mr-2 text-[#17B6C3]" />
-                      <span>+1 (555) 123-4567</span>
-                    </div>
-                    <div className="flex items-center">
-                      <Mail className="h-4 w-4 mr-2 text-[#17B6C3]" />
-                      <span>demo@nexusar.com</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </section>
 
       {/* Footer */}
       <footer className="py-12 bg-gray-900">
