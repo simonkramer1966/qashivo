@@ -129,6 +129,10 @@ export default function Invoices() {
           aValue = (a.collectionStage || 'initial').toLowerCase();
           bValue = (b.collectionStage || 'initial').toLowerCase();
           break;
+        case "age":
+          aValue = Math.floor((Date.now() - new Date(a.issueDate).getTime()) / (1000 * 60 * 60 * 24));
+          bValue = Math.floor((Date.now() - new Date(b.issueDate).getTime()) / (1000 * 60 * 60 * 24));
+          break;
         default:
           return 0;
       }
@@ -341,6 +345,15 @@ export default function Invoices() {
                             {getSortIcon("collectionStage")}
                           </button>
                         </th>
+                        <th className="text-left py-2 text-xs font-semibold text-slate-700">
+                          <button 
+                            onClick={() => handleSort("age")}
+                            className="flex items-center space-x-1 hover:text-slate-900"
+                          >
+                            <span>Age</span>
+                            {getSortIcon("age")}
+                          </button>
+                        </th>
                         <th className="text-right py-2 text-xs font-semibold text-slate-700">Actions</th>
                       </tr>
                     </thead>
@@ -370,6 +383,9 @@ export default function Invoices() {
                               invoice.collectionStage.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()) : 
                               'Initial'
                             }
+                          </td>
+                          <td className="py-1 text-xs text-slate-700" data-testid={`text-age-${invoice.id}`}>
+                            {Math.floor((Date.now() - new Date(invoice.issueDate).getTime()) / (1000 * 60 * 60 * 24))} days
                           </td>
                           <td className="py-1">
                             <div className="flex space-x-1 justify-end">
