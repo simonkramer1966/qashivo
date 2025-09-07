@@ -1100,9 +1100,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           has_dynamic_variables: !!dynamicVariables
         });
         
-        // Clean phone numbers - remove parentheses and spaces
+        // Format and clean phone numbers for Retell
+        const formattedPhone = formatPhoneToE164(phone);
         const cleanFromNumber = process.env.RETELL_PHONE_NUMBER!.replace(/[()\\s-]/g, '');
-        const cleanToNumber = phone.replace(/[()\\s-]/g, '');
+        const cleanToNumber = formattedPhone.replace(/[()\\s-]/g, '');
+        
+        console.log(`📞 Test call phone formatting: "${phone}" → "${formattedPhone}"`);
         
         console.log("🧹 Cleaned phone numbers:", {
           from: cleanFromNumber,
@@ -2296,6 +2299,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Function to format phone number to E.164 format
+  function formatPhoneToE164(phone: string): string {
+    // Remove all non-digits
+    const digitsOnly = phone.replace(/\D/g, '');
+    
+    // If already starts with country code, use as is
+    if (digitsOnly.startsWith('1') && digitsOnly.length === 11) {
+      return `+${digitsOnly}`;
+    }
+    
+    // UK numbers starting with 07 or 447
+    if (digitsOnly.startsWith('07') && digitsOnly.length === 11) {
+      return `+44${digitsOnly.substring(1)}`;
+    }
+    if (digitsOnly.startsWith('447') && digitsOnly.length === 12) {
+      return `+${digitsOnly}`;
+    }
+    
+    // US numbers (10 digits)
+    if (digitsOnly.length === 10) {
+      return `+1${digitsOnly}`;
+    }
+    
+    // Default: assume it's already formatted or add +1
+    if (digitsOnly.length === 11 && !digitsOnly.startsWith('1')) {
+      return `+1${digitsOnly}`;
+    }
+    
+    return digitsOnly.startsWith('+') ? phone : `+${digitsOnly}`;
+  }
+
   // Live demo endpoint that generates invoice data and triggers voice call
   app.post("/api/demo/live-call", async (req, res) => {
     try {
@@ -2304,6 +2338,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!name || !phone) {
         return res.status(400).json({ message: "Name and phone number are required" });
       }
+
+      // Format phone number to E.164
+      const formattedPhone = formatPhoneToE164(phone);
+      console.log(`📞 Phone formatting: "${phone}" → "${formattedPhone}"`);
 
       // Generate temporary invoice data
       const invoiceData = generateDemoInvoiceData();
@@ -2323,7 +2361,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
 
       console.log("🎯 Live demo call with generated data:", {
-        lead: { name, company, phone },
+        lead: { name, company, phone: formattedPhone },
         invoiceData,
         dynamicVariables
       });
@@ -2335,9 +2373,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       try {
         const retellClient = createRetellClient(process.env.RETELL_API_KEY!);
         
-        // Clean phone numbers
+        // Clean and format phone numbers for Retell
         const cleanFromNumber = process.env.RETELL_PHONE_NUMBER!.replace(/[()\\s-]/g, '');
-        const cleanToNumber = phone.replace(/[()\\s-]/g, '');
+        const cleanToNumber = formattedPhone.replace(/[()\\s-]/g, '');
+        
+        console.log("🔧 Retell call parameters:", {
+          from: cleanFromNumber,
+          to: cleanToNumber,
+          agent_id: process.env.RETELL_AGENT_ID
+        });
         
         const call = await retellClient.call.createPhoneCall({
           from_number: cleanFromNumber,
@@ -2349,10 +2393,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         callId = (call as any).call_id || callId;
         callStatus = (call as any).call_status || "registered";
         
-        console.log("✅ Live demo call created:", { callId, callStatus });
+        console.log("✅ Live demo call created successfully:", { callId, callStatus });
       } catch (retellError: any) {
         console.error("❌ Retell API error for live demo:", retellError);
-        // Continue anyway for demo purposes
+        // Continue anyway for demo purposes - still save the lead
+        callStatus = "failed";
       }
       
       // Store the lead with demo call info
