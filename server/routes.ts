@@ -2148,6 +2148,82 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Xero raw invoice data endpoint
+  app.get("/api/xero/invoices", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const tenant = await storage.getTenant(user.tenantId);
+      if (!tenant?.xeroAccessToken) {
+        return res.status(400).json({ message: "Xero not connected" });
+      }
+
+      const tokens = {
+        accessToken: tenant.xeroAccessToken,
+        refreshToken: tenant.xeroRefreshToken!,
+        expiresAt: new Date(Date.now() + 3600000), // Assume 1 hour
+        tenantId: tenant.xeroTenantId!,
+      };
+
+      // Get raw Xero invoices
+      const xeroInvoices = await xeroService.getInvoices(tokens);
+      
+      // Transform Xero invoice data to match our frontend format
+      const transformedInvoices = xeroInvoices.map(xeroInv => ({
+        id: xeroInv.InvoiceID,
+        xeroInvoiceId: xeroInv.InvoiceID,
+        invoiceNumber: xeroInv.InvoiceNumber,
+        amount: xeroInv.Total.toString(),
+        amountPaid: xeroInv.AmountPaid.toString(),
+        taxAmount: xeroInv.TotalTax.toString(),
+        status: mapXeroStatusToLocal(xeroInv.Status),
+        issueDate: xeroInv.DateString,
+        dueDate: xeroInv.DueDateString,
+        currency: xeroInv.CurrencyCode,
+        description: `Xero Invoice - ${xeroInv.InvoiceNumber}`,
+        contact: {
+          name: xeroInv.Contact.Name,
+          contactId: xeroInv.Contact.ContactID,
+          phone: xeroInv.Contact.Phones?.[0]?.PhoneNumber || null,
+          email: xeroInv.Contact.EmailAddress || null
+        },
+        // Calculate collection stage based on status and days overdue
+        collectionStage: calculateCollectionStage(xeroInv.Status, new Date(xeroInv.DueDateString))
+      }));
+
+      res.json(transformedInvoices);
+    } catch (error) {
+      console.error("Error fetching Xero invoices:", error);
+      res.status(500).json({ message: "Failed to fetch Xero invoices" });
+    }
+  });
+
+  // Helper functions for Xero data transformation
+  function mapXeroStatusToLocal(xeroStatus: string): string {
+    switch (xeroStatus) {
+      case 'PAID': return 'paid';
+      case 'AUTHORISED': return 'pending';
+      case 'VOIDED': return 'cancelled';
+      default: return 'pending';
+    }
+  }
+
+  function calculateCollectionStage(status: string, dueDate: Date): string {
+    if (status === 'PAID') return 'resolved';
+    
+    const now = new Date();
+    const daysDiff = Math.floor((now.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
+    
+    if (daysDiff <= 0) return 'current';
+    if (daysDiff <= 30) return 'first_notice';
+    if (daysDiff <= 60) return 'second_notice';
+    if (daysDiff <= 90) return 'final_notice';
+    return 'collections';
+  }
+
   // Tenant settings endpoints
   app.get('/api/tenant', isAuthenticated, async (req: any, res) => {
     try {
