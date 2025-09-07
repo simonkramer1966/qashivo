@@ -63,6 +63,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Handle different MCP methods
       switch (method) {
+        case 'initialize':
+          return res.json({
+            jsonrpc: "2.0", 
+            id: req.body.id,
+            result: {
+              protocolVersion: "2025-06-18",
+              capabilities: {
+                tools: { listChanged: true },
+                resources: {},
+                prompts: {}
+              },
+              serverInfo: {
+                name: "Nexus AR Retell MCP",
+                version: "1.0.0"
+              }
+            }
+          });
+
         case 'tools/list':
           return res.json({
             tools: [
