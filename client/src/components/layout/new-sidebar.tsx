@@ -66,7 +66,8 @@ export default function NewSidebar() {
     if (href === "/") {
       return location === "/";
     }
-    return location.startsWith(href);
+    // Exact match or starts with the href followed by a slash or query parameter
+    return location === href || location.startsWith(href + "/") || location.startsWith(href + "?");
   };
 
   // Get all navigation items based on user role
