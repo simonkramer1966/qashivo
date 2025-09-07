@@ -50,6 +50,7 @@ interface WorkflowConnection {
   targetId: string;
   condition?: string;
   label?: string;
+  branchType?: 'yes' | 'no' | 'default';
 }
 
 const NODE_TYPES = {
@@ -69,6 +70,10 @@ const NODE_TYPES = {
     { subType: 'email_opened', label: 'Email Opened?', icon: Mail, color: 'bg-blue-500' },
     { subType: 'sms_replied', label: 'SMS Replied?', icon: MessageSquare, color: 'bg-green-500' },
     { subType: 'call_answered', label: 'Call Answered?', icon: Phone, color: 'bg-purple-500' },
+    { subType: 'response_positive', label: 'Positive Response?', icon: CheckCircle, color: 'bg-green-600' },
+    { subType: 'commitment_made', label: 'Payment Commitment?', icon: Target, color: 'bg-emerald-500' },
+    { subType: 'dispute_raised', label: 'Dispute Raised?', icon: AlertCircle, color: 'bg-red-500' },
+    { subType: 'contact_successful', label: 'Contact Successful?', icon: CheckCircle, color: 'bg-blue-600' },
   ],
   ai: [
     { subType: 'generate_email', label: 'AI Generate Email', icon: Brain, color: 'bg-indigo-500' },
