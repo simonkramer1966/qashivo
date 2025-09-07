@@ -642,12 +642,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Find contacts with invoices overdue by more than 30 days
       const overdueContactIds = new Set<string>();
       
+      console.log(`🔍 Checking invoices for 30+ day overdue filter. ThirtyDaysAgo: ${thirtyDaysAgo.toISOString()}`);
+      
       allInvoices.forEach(invoice => {
-        if ((invoice.status === 'overdue' || invoice.status === 'pending') && 
-            new Date(invoice.dueDate) < thirtyDaysAgo) {
+        const invoiceDueDate = new Date(invoice.dueDate);
+        const isOverdue = (invoice.status === 'overdue' || invoice.status === 'pending') && invoiceDueDate < thirtyDaysAgo;
+        
+        if (isOverdue) {
+          console.log(`✅ Found overdue invoice: ${invoice.invoiceNumber}, Due: ${invoiceDueDate.toISOString()}, Status: ${invoice.status}`);
           overdueContactIds.add(invoice.contactId);
         }
       });
+      
+      console.log(`📊 Found ${overdueContactIds.size} contacts with 30+ day overdue invoices out of ${allInvoices.length} total invoices`);
       
       // Get all contacts and filter to those with significantly overdue invoices
       const allContacts = await storage.getContacts(user.tenantId);
