@@ -445,7 +445,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
 
-      const { contactId } = req.body;
+      const { contactId, overrideEmail } = req.body;
       if (!contactId) {
         return res.status(400).json({ message: "Contact ID is required" });
       }
@@ -455,14 +455,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Contact not found" });
       }
 
-      if (!contact.email) {
-        return res.status(400).json({ message: "Contact email not available" });
+      const emailToUse = overrideEmail || contact.email;
+      if (!emailToUse) {
+        return res.status(400).json({ message: "Contact email not available and no override provided" });
       }
 
       const fromEmail = user.email || 'noreply@nexusar.com';
 
       const success = await sendReminderEmail({
-        contactEmail: contact.email,
+        contactEmail: emailToUse,
         contactName: contact.name,
         invoiceNumber: "TEST-001",
         amount: 100.00,
@@ -498,7 +499,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
 
-      const { contactId } = req.body;
+      const { contactId, overrideMobile } = req.body;
       if (!contactId) {
         return res.status(400).json({ message: "Contact ID is required" });
       }
@@ -508,12 +509,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Contact not found" });
       }
 
-      if (!contact.phone) {
-        return res.status(400).json({ message: "Contact phone not available" });
+      const phoneToUse = overrideMobile || contact.phone;
+      if (!phoneToUse) {
+        return res.status(400).json({ message: "Contact phone not available and no override provided" });
       }
 
       const result = await sendPaymentReminderSMS({
-        phone: contact.phone,
+        phone: phoneToUse,
         name: contact.name,
         invoiceNumber: "TEST-001",
         amount: 100.00,
@@ -549,7 +551,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
 
-      const { contactId } = req.body;
+      const { contactId, overrideTelephone } = req.body;
       if (!contactId) {
         return res.status(400).json({ message: "Contact ID is required" });
       }
@@ -559,8 +561,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Contact not found" });
       }
 
-      if (!contact.phone) {
-        return res.status(400).json({ message: "Contact phone not available" });
+      const phoneToUse = overrideTelephone || contact.phone;
+      if (!phoneToUse) {
+        return res.status(400).json({ message: "Contact phone not available and no override provided" });
       }
 
       // Get Retell configuration
@@ -582,7 +585,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Make the test call using Retell AI
       const callResult = await retellService.createCall({
         fromNumber: retellConfig.phoneNumber,
-        toNumber: contact.phone,
+        toNumber: phoneToUse,
         agentId: retellConfig.agentId,
         dynamicVariables,
         metadata: {

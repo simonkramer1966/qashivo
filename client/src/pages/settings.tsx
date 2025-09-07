@@ -41,6 +41,11 @@ function TestTabContent() {
   const [isTestingEmail, setIsTestingEmail] = useState(false);
   const [isTestingSMS, setIsTestingSMS] = useState(false);
   const [isTestingVoice, setIsTestingVoice] = useState(false);
+  
+  // Override contact details for testing
+  const [overrideEmail, setOverrideEmail] = useState<string>("");
+  const [overrideMobile, setOverrideMobile] = useState<string>("");
+  const [overrideTelephone, setOverrideTelephone] = useState<string>("");
 
   // Fetch contacts for selection
   const { data: contacts = [] } = useQuery<{
@@ -57,10 +62,12 @@ function TestTabContent() {
   const selectedContact = contacts.find(c => c.id === selectedContactId);
 
   const handleTestEmail = async () => {
-    if (!selectedContact || !selectedContact.email) {
+    const emailToUse = overrideEmail || selectedContact?.email;
+    
+    if (!selectedContact || !emailToUse) {
       toast({
         title: "Error",
-        description: "Please select a contact with an email address.",
+        description: "Please select a contact and provide an email address.",
         variant: "destructive",
       });
       return;
@@ -69,13 +76,14 @@ function TestTabContent() {
     setIsTestingEmail(true);
     try {
       const response = await apiRequest("POST", "/api/test/email", {
-        contactId: selectedContactId
+        contactId: selectedContactId,
+        overrideEmail: overrideEmail || undefined
       });
       
       if (response.ok) {
         toast({
           title: "Success",
-          description: `Test email sent to ${selectedContact.email}`,
+          description: `Test email sent to ${emailToUse}`,
         });
       } else {
         throw new Error("Failed to send test email");
@@ -92,10 +100,12 @@ function TestTabContent() {
   };
 
   const handleTestSMS = async () => {
-    if (!selectedContact || !selectedContact.phone) {
+    const mobileToUse = overrideMobile || selectedContact?.phone;
+    
+    if (!selectedContact || !mobileToUse) {
       toast({
         title: "Error",
-        description: "Please select a contact with a phone number.",
+        description: "Please select a contact and provide a mobile number.",
         variant: "destructive",
       });
       return;
@@ -104,13 +114,14 @@ function TestTabContent() {
     setIsTestingSMS(true);
     try {
       const response = await apiRequest("POST", "/api/test/sms", {
-        contactId: selectedContactId
+        contactId: selectedContactId,
+        overrideMobile: overrideMobile || undefined
       });
       
       if (response.ok) {
         toast({
           title: "Success",
-          description: `Test SMS sent to ${selectedContact.phone}`,
+          description: `Test SMS sent to ${mobileToUse}`,
         });
       } else {
         throw new Error("Failed to send test SMS");
@@ -127,10 +138,12 @@ function TestTabContent() {
   };
 
   const handleTestVoice = async () => {
-    if (!selectedContact || !selectedContact.phone) {
+    const telephoneToUse = overrideTelephone || selectedContact?.phone;
+    
+    if (!selectedContact || !telephoneToUse) {
       toast({
         title: "Error",
-        description: "Please select a contact with a phone number.",
+        description: "Please select a contact and provide a telephone number.",
         variant: "destructive",
       });
       return;
@@ -139,13 +152,14 @@ function TestTabContent() {
     setIsTestingVoice(true);
     try {
       const response = await apiRequest("POST", "/api/test/voice", {
-        contactId: selectedContactId
+        contactId: selectedContactId,
+        overrideTelephone: overrideTelephone || undefined
       });
       
       if (response.ok) {
         toast({
           title: "Success",
-          description: `Test voice call initiated to ${selectedContact.phone}`,
+          description: `Test voice call initiated to ${telephoneToUse}`,
         });
       } else {
         throw new Error("Failed to initiate test voice call");
@@ -210,6 +224,54 @@ function TestTabContent() {
           </div>
         )}
 
+        {selectedContact && (
+          <div className="space-y-4">
+            <h4 className="font-semibold text-lg">Override Contact Details (Optional)</h4>
+            <p className="text-sm text-gray-600">Override the client's contact details for testing purposes</p>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="override-email">Email Override</Label>
+                <Input
+                  id="override-email"
+                  type="email"
+                  placeholder={selectedContact.email || "Enter email for testing"}
+                  value={overrideEmail}
+                  onChange={(e) => setOverrideEmail(e.target.value)}
+                  className="bg-white/70 border-gray-200/30"
+                  data-testid="input-override-email"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="override-mobile">Mobile Override (SMS)</Label>
+                <Input
+                  id="override-mobile"
+                  type="tel"
+                  placeholder={selectedContact.phone || "Enter mobile for SMS testing"}
+                  value={overrideMobile}
+                  onChange={(e) => setOverrideMobile(e.target.value)}
+                  className="bg-white/70 border-gray-200/30"
+                  data-testid="input-override-mobile"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="override-telephone">Telephone Override (Voice)</Label>
+                <Input
+                  id="override-telephone"
+                  type="tel"
+                  placeholder={selectedContact.phone || "Enter telephone for voice testing"}
+                  value={overrideTelephone}
+                  onChange={(e) => setOverrideTelephone(e.target.value)}
+                  className="bg-white/70 border-gray-200/30"
+                  data-testid="input-override-telephone"
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
         <Separator />
 
         {/* Test Actions */}
@@ -228,7 +290,7 @@ function TestTabContent() {
               </p>
               <Button 
                 onClick={handleTestEmail}
-                disabled={!selectedContact || !selectedContact.email || isTestingEmail}
+                disabled={!selectedContact || (!selectedContact.email && !overrideEmail) || isTestingEmail}
                 className="w-full bg-[#17B6C3] hover:bg-[#1396A1] text-white"
                 data-testid="button-test-email"
               >
@@ -247,7 +309,7 @@ function TestTabContent() {
               </p>
               <Button 
                 onClick={handleTestSMS}
-                disabled={!selectedContact || !selectedContact.phone || isTestingSMS}
+                disabled={!selectedContact || (!selectedContact.phone && !overrideMobile) || isTestingSMS}
                 className="w-full bg-[#17B6C3] hover:bg-[#1396A1] text-white"
                 data-testid="button-test-sms"
               >
@@ -266,7 +328,7 @@ function TestTabContent() {
               </p>
               <Button 
                 onClick={handleTestVoice}
-                disabled={!selectedContact || !selectedContact.phone || isTestingVoice}
+                disabled={!selectedContact || (!selectedContact.phone && !overrideTelephone) || isTestingVoice}
                 className="w-full bg-[#17B6C3] hover:bg-[#1396A1] text-white"
                 data-testid="button-test-voice"
               >
