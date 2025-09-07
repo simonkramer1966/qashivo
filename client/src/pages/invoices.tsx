@@ -291,7 +291,7 @@ export default function Invoices() {
                             {getSortIcon("date")}
                           </button>
                         </th>
-                        <th className="text-left py-2 text-xs font-semibold text-slate-700 w-24">
+                        <th className="text-left py-2 text-xs font-semibold text-slate-700 w-32">
                           <button 
                             onClick={() => handleSort("invoiceNumber")}
                             className="flex items-center space-x-1 hover:text-slate-900"
@@ -300,7 +300,7 @@ export default function Invoices() {
                             {getSortIcon("invoiceNumber")}
                           </button>
                         </th>
-                        <th className="text-left py-2 text-xs font-semibold text-slate-700 w-48">
+                        <th className="text-left py-2 text-xs font-semibold text-slate-700 w-60">
                           <button 
                             onClick={() => handleSort("clientName")}
                             className="flex items-center space-x-1 hover:text-slate-900"
@@ -363,10 +363,10 @@ export default function Invoices() {
                           <td className="py-1 text-xs text-slate-700 w-32" data-testid={`text-issue-date-${invoice.id}`}>
                             {new Date(invoice.issueDate).toLocaleDateString()}
                           </td>
-                          <td className="py-1 text-xs font-medium text-slate-900 w-24" data-testid={`text-invoice-number-${invoice.id}`}>
+                          <td className="py-1 text-xs font-medium text-slate-900 w-32" data-testid={`text-invoice-number-${invoice.id}`}>
                             {invoice.invoiceNumber}
                           </td>
-                          <td className="py-1 text-xs text-slate-700 w-48" data-testid={`text-contact-name-${invoice.id}`}>
+                          <td className="py-1 text-xs text-slate-700 w-60" data-testid={`text-contact-name-${invoice.id}`}>
                             {invoice.contact?.name || 'Unknown Contact'}
                           </td>
                           <td className="py-1 text-xs font-medium text-slate-900" data-testid={`text-amount-${invoice.id}`}>
