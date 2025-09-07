@@ -404,7 +404,7 @@ export default function Invoices() {
 
       {/* Contact History Dialog */}
       <Dialog open={showContactHistory} onOpenChange={closeContactHistory}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden">
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden bg-white">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Eye className="h-5 w-5 text-[#17B6C3]" />
