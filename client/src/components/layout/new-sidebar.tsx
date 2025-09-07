@@ -12,7 +12,8 @@ import {
   Settings, 
   LogOut,
   TrendingUp,
-  User
+  User,
+  Building2
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import nexusLogo from "@assets/Main Nexus Logo copy_1756923544828.png";
@@ -26,6 +27,11 @@ const navigationItems = [
   { name: "AI Suggestions", href: "/ai-suggestions", icon: Bot },
   { name: "Reports", href: "/reports", icon: BarChart },
   { name: "Settings", href: "/settings", icon: Settings },
+];
+
+// Owner-only navigation items
+const ownerNavigationItems = [
+  { name: "Owner Dashboard", href: "/owner", icon: Building2, ownerOnly: true },
 ];
 
 export default function NewSidebar() {
@@ -62,6 +68,18 @@ export default function NewSidebar() {
     return location.startsWith(href);
   };
 
+  // Get all navigation items based on user role
+  const getAllNavigationItems = () => {
+    let allItems = [...navigationItems];
+    
+    // Add owner-only items if user is an owner
+    if (user?.role === "owner") {
+      allItems = [...allItems, ...ownerNavigationItems];
+    }
+    
+    return allItems;
+  };
+
   return (
     <aside className="w-64 bg-gray-50 border-r border-gray-200 flex flex-col h-full">
       {/* Header */}
@@ -84,7 +102,7 @@ export default function NewSidebar() {
       {/* Navigation */}
       <nav className="flex-1 px-4">
         <ul className="space-y-1">
-          {navigationItems.map((item) => {
+          {getAllNavigationItems().map((item) => {
             const isActive = isActivePath(item.href);
             const Icon = item.icon;
             
@@ -96,12 +114,18 @@ export default function NewSidebar() {
                     "w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 text-left",
                     isActive
                       ? "bg-[#17B6C3] text-white shadow-sm"
-                      : "text-gray-600 hover:bg-white hover:text-gray-900 hover:shadow-sm"
+                      : "text-gray-600 hover:bg-white hover:text-gray-900 hover:shadow-sm",
+                    (item as any).ownerOnly && "border-t border-gray-300 mt-2 pt-2"
                   )}
                   data-testid={`nav-${item.name.toLowerCase().replace(/\s+/g, '-')}`}
                 >
                   <Icon className="w-5 h-5" />
                   <span>{item.name}</span>
+                  {(item as any).ownerOnly && (
+                    <span className="ml-auto bg-amber-100 text-amber-800 px-2 py-1 rounded text-xs font-medium">
+                      Owner
+                    </span>
+                  )}
                   {item.name === "Invoices" && (
                     <span className="ml-auto bg-red-500 text-white px-2 py-1 rounded-full text-xs font-medium">
                       23
