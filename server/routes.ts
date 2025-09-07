@@ -70,9 +70,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             result: {
               protocolVersion: "2025-06-18",
               capabilities: {
-                tools: { listChanged: true },
-                resources: {},
-                prompts: {}
+                tools: {}
               },
               serverInfo: {
                 name: "Nexus AR Retell MCP",
@@ -80,6 +78,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
               }
             }
           });
+
+        case 'notifications/initialized':
+          // Acknowledge the initialization notification
+          return res.status(200).send();
 
         case 'tools/list':
           return res.json({
