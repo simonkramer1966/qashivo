@@ -55,6 +55,9 @@ function TestTabContent() {
   const [overrideTelephone, setOverrideTelephone] = useState<string>(() => 
     localStorage.getItem('nexus-test-override-telephone') || ""
   );
+  const [overrideContact, setOverrideContact] = useState<string>(() => 
+    localStorage.getItem('nexus-test-override-contact') || ""
+  );
 
   // Fetch contacts for selection
   const { data: contacts = [] } = useQuery<{
@@ -88,6 +91,10 @@ function TestTabContent() {
   useEffect(() => {
     localStorage.setItem('nexus-test-override-telephone', overrideTelephone);
   }, [overrideTelephone]);
+
+  useEffect(() => {
+    localStorage.setItem('nexus-test-override-contact', overrideContact);
+  }, [overrideContact]);
 
   const handleTestEmail = async () => {
     const emailToUse = overrideEmail || selectedContact?.email;
@@ -181,7 +188,8 @@ function TestTabContent() {
     try {
       const response = await apiRequest("POST", "/api/test/voice", {
         contactId: selectedContactId,
-        overrideTelephone: overrideTelephone || undefined
+        overrideTelephone: overrideTelephone || undefined,
+        overrideContact: overrideContact || undefined
       });
       
       if (response.ok) {
@@ -282,7 +290,20 @@ function TestTabContent() {
             <h4 className="font-semibold text-lg">Override Contact Details (Optional)</h4>
             <p className="text-sm text-gray-600">Override the client's contact details for testing purposes</p>
             
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="override-contact">Contact Override</Label>
+                <Input
+                  id="override-contact"
+                  type="text"
+                  placeholder={selectedContact.name || "Enter contact name for testing"}
+                  value={overrideContact}
+                  onChange={(e) => setOverrideContact(e.target.value)}
+                  className="bg-white/70 border-gray-200/30"
+                  data-testid="input-override-contact"
+                />
+              </div>
+              
               <div className="space-y-2">
                 <Label htmlFor="override-email">Email Override</Label>
                 <Input

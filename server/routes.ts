@@ -1001,7 +1001,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
 
-      const { contactId, overrideTelephone } = req.body;
+      const { contactId, overrideTelephone, overrideContact } = req.body;
       if (!contactId) {
         return res.status(400).json({ message: "Contact ID is required" });
       }
@@ -1052,7 +1052,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Create dynamic variables for the call
       const dynamicVariables = {
-        customer_name: (user.firstName && user.lastName) ? `${user.firstName} ${user.lastName}` : contact.name,
+        customer_name: overrideContact || (user.firstName && user.lastName) ? `${user.firstName} ${user.lastName}` : contact.name,
         company_name: contact.companyName || contact.name,
         invoice_number: primaryInvoice?.invoiceNumber || "DEMO-001",
         invoice_amount: primaryInvoice ? parseFloat(primaryInvoice.amount).toFixed(2) : "1500.00",
