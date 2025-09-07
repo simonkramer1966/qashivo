@@ -66,7 +66,7 @@ export class RetellMCPClient {
             invoice_count: params.invoiceData.invoiceCount,
             due_date: params.invoiceData.dueDate,
             organisation_name: params.invoiceData.organisationName,
-            demo_message: `[DEMO] This is a live demonstration of ${params.invoiceData.organisationName}'s AI collection system for ${params.customerName}.`
+            demo_message: `This is a professional collection call regarding outstanding invoices for ${params.customerName}.`
           }
         }
       });
@@ -83,7 +83,7 @@ export class RetellMCPClient {
         invoice_count: params.invoiceData.invoiceCount,
         due_date: params.invoiceData.dueDate,
         organisation_name: params.invoiceData.organisationName,
-        demo_message: `[DEMO] This is a live demonstration of ${params.invoiceData.organisationName}'s AI collection system for ${params.customerName}.`
+        demo_message: `This is a professional collection call regarding outstanding invoices for ${params.customerName}.`
       });
       
       return {
