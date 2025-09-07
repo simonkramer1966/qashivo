@@ -170,7 +170,7 @@ export default function Demo() {
       {/* Video and Form Section */}
       <section className="py-20 bg-white/50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-stretch">
             {/* Video Section - Left Side */}
             <div>
               <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-xl">
@@ -237,83 +237,87 @@ export default function Demo() {
                 <CardContent>
                   <Form {...form}>
                     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                      <FormField
-                        control={form.control}
-                        name="name"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Full Name *</FormLabel>
-                            <FormControl>
-                              <Input 
-                                placeholder="Enter your full name"
-                                className="bg-white/70 border-gray-200/30"
-                                data-testid="input-lead-name"
-                                {...field} 
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <FormField
+                          control={form.control}
+                          name="name"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Full Name *</FormLabel>
+                              <FormControl>
+                                <Input 
+                                  placeholder="Enter your full name"
+                                  className="bg-white/70 border-gray-200/30"
+                                  data-testid="input-lead-name"
+                                  {...field} 
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
 
-                      <FormField
-                        control={form.control}
-                        name="email"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Business Email *</FormLabel>
-                            <FormControl>
-                              <Input 
-                                type="email"
-                                placeholder="Enter your business email"
-                                className="bg-white/70 border-gray-200/30"
-                                data-testid="input-lead-email"
-                                {...field} 
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+                        <FormField
+                          control={form.control}
+                          name="phone"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Phone Number *</FormLabel>
+                              <FormControl>
+                                <Input 
+                                  type="tel"
+                                  placeholder="Enter your phone number"
+                                  className="bg-white/70 border-gray-200/30"
+                                  data-testid="input-lead-phone"
+                                  {...field} 
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
 
-                      <FormField
-                        control={form.control}
-                        name="phone"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Phone Number *</FormLabel>
-                            <FormControl>
-                              <Input 
-                                type="tel"
-                                placeholder="Enter your phone number"
-                                className="bg-white/70 border-gray-200/30"
-                                data-testid="input-lead-phone"
-                                {...field} 
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <FormField
+                          control={form.control}
+                          name="company"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Company Name</FormLabel>
+                              <FormControl>
+                                <Input 
+                                  placeholder="Enter your company name"
+                                  className="bg-white/70 border-gray-200/30"
+                                  data-testid="input-lead-company"
+                                  {...field} 
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
 
-                      <FormField
-                        control={form.control}
-                        name="company"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Company Name</FormLabel>
-                            <FormControl>
-                              <Input 
-                                placeholder="Enter your company name"
-                                className="bg-white/70 border-gray-200/30"
-                                data-testid="input-lead-company"
-                                {...field} 
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+                        <FormField
+                          control={form.control}
+                          name="email"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Business Email *</FormLabel>
+                              <FormControl>
+                                <Input 
+                                  type="email"
+                                  placeholder="Enter your business email"
+                                  className="bg-white/70 border-gray-200/30"
+                                  data-testid="input-lead-email"
+                                  {...field} 
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
 
                       <div className="pt-2">
                         <Button 
