@@ -1052,7 +1052,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Create dynamic variables for the call
       const dynamicVariables = {
-        customer_name: contact.name,
+        customer_name: user.name || contact.name,
         company_name: contact.companyName || contact.name,
         invoice_number: primaryInvoice?.invoiceNumber || "DEMO-001",
         invoice_amount: primaryInvoice ? parseFloat(primaryInvoice.amount).toFixed(2) : "1500.00",
