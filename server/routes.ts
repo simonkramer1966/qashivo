@@ -567,6 +567,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Contact phone not available and no override provided" });
       }
 
+      // Get tenant information for organization name
+      const tenant = await storage.getTenant(user.tenantId);
+      if (!tenant) {
+        return res.status(400).json({ message: "Tenant information not found" });
+      }
+
       // Get actual outstanding invoices for this contact
       const allInvoices = await storage.getInvoices(user.tenantId, 100);
       const contactInvoices = allInvoices.filter(inv => 
@@ -611,7 +617,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           daysOverdue: oldestDaysOverdue,
           invoiceCount: contactInvoices.length,
           dueDate: primaryInvoice ? new Date(primaryInvoice.dueDate).toLocaleDateString() : new Date().toLocaleDateString(),
-          companyName: contact.companyName || contact.name
+          companyName: contact.companyName || contact.name,
+          organisationName: tenant.name
         }
       });
 

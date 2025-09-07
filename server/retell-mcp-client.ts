@@ -65,7 +65,8 @@ export class RetellMCPClient {
             days_overdue: params.invoiceData.daysOverdue,
             invoice_count: params.invoiceData.invoiceCount,
             due_date: params.invoiceData.dueDate,
-            demo_message: `[DEMO] This is a live demonstration of Nexus AR's AI collection system for ${params.customerName}.`
+            organisation_name: params.invoiceData.organisationName,
+            demo_message: `[DEMO] This is a live demonstration of ${params.invoiceData.organisationName}'s AI collection system for ${params.customerName}.`
           }
         }
       });
@@ -81,7 +82,8 @@ export class RetellMCPClient {
         days_overdue: params.invoiceData.daysOverdue,
         invoice_count: params.invoiceData.invoiceCount,
         due_date: params.invoiceData.dueDate,
-        demo_message: `[DEMO] This is a live demonstration of Nexus AR's AI collection system for ${params.customerName}.`
+        organisation_name: params.invoiceData.organisationName,
+        demo_message: `[DEMO] This is a live demonstration of ${params.invoiceData.organisationName}'s AI collection system for ${params.customerName}.`
       });
       
       return {
