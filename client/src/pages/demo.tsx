@@ -174,8 +174,8 @@ export default function Demo() {
             {/* Video Section - Left Side */}
             <div className="h-full">
               <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-xl h-full flex flex-col">
-                <CardHeader>
-                  <CardTitle className="text-2xl font-bold flex items-center">
+                <CardHeader className="pb-4">
+                  <CardTitle className="text-2xl font-bold flex items-center mb-2">
                     <div className="p-2 bg-[#17B6C3]/10 rounded-lg mr-3">
                       <Play className="h-5 w-5 text-[#17B6C3]" />
                     </div>
@@ -226,109 +226,113 @@ export default function Demo() {
             {/* Lead Capture Form - Right Side */}
             <div className="h-full">
               <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-xl h-full flex flex-col">
-                <CardHeader>
-                  <CardTitle className="text-2xl font-bold">
+                <CardHeader className="pb-4">
+                  <CardTitle className="text-2xl font-bold mb-2">
                     Get Instant Access
                   </CardTitle>
                   <CardDescription className="text-base">
                     Enter your details for an immediate live demo
                   </CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="flex-1 flex flex-col">
                   <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <FormField
-                          control={form.control}
-                          name="name"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Full Name *</FormLabel>
-                              <FormControl>
-                                <Input 
-                                  placeholder="Enter your full name"
-                                  className="bg-white/70 border-gray-200/30"
-                                  data-testid="input-lead-name"
-                                  {...field} 
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
+                    <form onSubmit={form.handleSubmit(onSubmit)} className="flex-1 flex flex-col">
+                      <div className="space-y-6 flex-1">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <FormField
+                            control={form.control}
+                            name="name"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Full Name *</FormLabel>
+                                <FormControl>
+                                  <Input 
+                                    placeholder="Enter your full name"
+                                    className="bg-white/70 border-gray-200/30"
+                                    data-testid="input-lead-name"
+                                    {...field} 
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
 
-                        <FormField
-                          control={form.control}
-                          name="phone"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Phone Number *</FormLabel>
-                              <FormControl>
-                                <Input 
-                                  type="tel"
-                                  placeholder="Enter your phone number"
-                                  className="bg-white/70 border-gray-200/30"
-                                  data-testid="input-lead-phone"
-                                  {...field} 
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
+                          <FormField
+                            control={form.control}
+                            name="phone"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Phone Number *</FormLabel>
+                                <FormControl>
+                                  <Input 
+                                    type="tel"
+                                    placeholder="Enter your phone number"
+                                    className="bg-white/70 border-gray-200/30"
+                                    data-testid="input-lead-phone"
+                                    {...field} 
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <FormField
+                            control={form.control}
+                            name="company"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Company Name</FormLabel>
+                                <FormControl>
+                                  <Input 
+                                    placeholder="Enter your company name"
+                                    className="bg-white/70 border-gray-200/30"
+                                    data-testid="input-lead-company"
+                                    {...field} 
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+
+                          <FormField
+                            control={form.control}
+                            name="email"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Business Email *</FormLabel>
+                                <FormControl>
+                                  <Input 
+                                    type="email"
+                                    placeholder="Enter your business email"
+                                    className="bg-white/70 border-gray-200/30"
+                                    data-testid="input-lead-email"
+                                    {...field} 
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <FormField
-                          control={form.control}
-                          name="company"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Company Name</FormLabel>
-                              <FormControl>
-                                <Input 
-                                  placeholder="Enter your company name"
-                                  className="bg-white/70 border-gray-200/30"
-                                  data-testid="input-lead-company"
-                                  {...field} 
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        <FormField
-                          control={form.control}
-                          name="email"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Business Email *</FormLabel>
-                              <FormControl>
-                                <Input 
-                                  type="email"
-                                  placeholder="Enter your business email"
-                                  className="bg-white/70 border-gray-200/30"
-                                  data-testid="input-lead-email"
-                                  {...field} 
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-
-                      <div className="pt-2">
-                        <Button 
-                          type="submit"
-                          disabled={isSubmitting}
-                          className="w-full bg-gradient-to-r from-[#17B6C3] to-[#1396A1] hover:from-[#1396A1] hover:to-[#117A85] text-white font-semibold py-3 text-base shadow-lg hover:shadow-xl transition-all duration-300"
-                          data-testid="button-submit-demo-request"
-                        >
-                          {isSubmitting ? "Submitting..." : "Get My Live Demo"}
-                          <ArrowRight className="ml-2 h-5 w-5" />
-                        </Button>
+                      <div className="mt-auto">
+                        <div className="pb-2.5">
+                          <Button 
+                            type="submit"
+                            disabled={isSubmitting}
+                            className="w-full bg-gradient-to-r from-[#17B6C3] to-[#1396A1] hover:from-[#1396A1] hover:to-[#117A85] text-white font-semibold py-3 text-base shadow-lg hover:shadow-xl transition-all duration-300"
+                            data-testid="button-submit-demo-request"
+                          >
+                            {isSubmitting ? "Submitting..." : "Get My Live Demo"}
+                            <ArrowRight className="ml-2 h-5 w-5" />
+                          </Button>
+                        </div>
                       </div>
                     </form>
                   </Form>
