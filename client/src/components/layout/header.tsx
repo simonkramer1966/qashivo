@@ -75,17 +75,6 @@ export default function Header({ title, subtitle, action, noBorder = true, title
             </span>
           </div>
           
-          {/* Settings Icon */}
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleSettingsClick}
-            className="hover:bg-accent hover:text-accent-foreground rounded-lg p-2 transition-colors"
-            data-testid="button-settings"
-          >
-            <Settings className="h-5 w-5" />
-          </Button>
-
           {/* User Profile */}
           <DropdownMenu>
             <DropdownMenuTrigger className="flex items-center space-x-3 hover:bg-accent hover:text-accent-foreground rounded-lg px-3 py-2 transition-colors" data-testid="button-user-menu">
@@ -115,6 +104,17 @@ export default function Header({ title, subtitle, action, noBorder = true, title
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+
+          {/* Settings Icon */}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleSettingsClick}
+            className="hover:bg-accent hover:text-accent-foreground rounded-lg p-2 transition-colors"
+            data-testid="button-settings"
+          >
+            <Settings className="h-5 w-5" />
+          </Button>
           
           {action}
         </div>
