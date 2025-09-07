@@ -567,29 +567,6 @@ function TestTabContent() {
           </div>
         </div>
 
-        {/* Demo Setup Section */}
-        <div className="mt-6 p-4 bg-orange-50 rounded-lg border border-orange-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="flex items-center">
-                <Phone className="h-5 w-5 text-orange-600 mr-2" />
-                <h5 className="font-medium text-orange-800">Retell AI Demo Setup</h5>
-              </div>
-              <p className="mt-1 text-sm text-orange-700">
-                One-time setup required for voice calling demo
-              </p>
-            </div>
-            <Button 
-              onClick={handleDemoSetup}
-              disabled={isDemoSetup}
-              className="bg-orange-600 hover:bg-orange-700 text-white"
-              data-testid="button-demo-setup"
-            >
-              {isDemoSetup ? "Setting up..." : "Setup Demo"}
-            </Button>
-          </div>
-        </div>
-
         {/* Status Information */}
         <div className="mt-6 p-4 bg-blue-50 rounded-lg">
           <div className="flex items-center">
