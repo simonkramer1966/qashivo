@@ -567,12 +567,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Contact phone not available and no override provided" });
       }
 
-      // Get Retell configuration
-      const retellConfig = await storage.getRetellConfiguration(user.tenantId);
-      if (!retellConfig || !retellConfig.isActive) {
-        return res.status(400).json({ message: "Retell AI not configured for this tenant" });
-      }
-
       // Get actual outstanding invoices for this contact
       const allInvoices = await storage.getInvoices(user.tenantId, 100);
       const contactInvoices = allInvoices.filter(inv => 
@@ -601,43 +595,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
         oldestDaysOverdue = Math.max(0, daysOverdue);
       }
 
-      // Create dynamic variables for the call with real data
-      const dynamicVariables = {
-        customer_name: contact.name,
-        company_name: contact.companyName || contact.name,
-        invoice_number: primaryInvoice?.invoiceNumber || "DEMO-001",
-        invoice_amount: primaryInvoice ? parseFloat(primaryInvoice.amount).toFixed(2) : "1500.00",
-        total_outstanding: totalOutstanding.toFixed(2),
-        days_overdue: oldestDaysOverdue,
-        invoice_count: contactInvoices.length,
-        due_date: primaryInvoice ? new Date(primaryInvoice.dueDate).toLocaleDateString() : new Date().toLocaleDateString(),
-        custom_message: `[DEMO CALL] This is a live demonstration of Nexus AR's AI collection agent. ${contactInvoices.length > 0 ? `You have ${contactInvoices.length} outstanding invoice${contactInvoices.length > 1 ? 's' : ''} totaling $${totalOutstanding.toFixed(2)}.` : 'This contact has no outstanding invoices, so this is a demonstration with sample data.'}`
-      };
-
-      // For demo purposes, simulate a successful call creation
-      // This bypasses the actual Retell API call that might fail during setup
-      const callResult = {
-        callId: "demo-call-" + Date.now(),
-        agentId: retellConfig.agentId,
-        status: "queued",
-        fromNumber: retellConfig.phoneNumber,
-        toNumber: phoneToUse,
-        direction: "outbound"
-      };
+      // Use MCP client to create the call
+      const { RetellMCPClient } = await import('./retell-mcp-client');
+      const mcpClient = new RetellMCPClient();
       
-      console.log("Demo call initiated:", callResult);
-      console.log("Dynamic variables:", dynamicVariables);
+      const callResult = await mcpClient.createCall({
+        toNumber: phoneToUse,
+        fromNumber: process.env.RETELL_PHONE_NUMBER,
+        agentId: process.env.RETELL_AGENT_ID,
+        customerName: contact.name,
+        invoiceData: {
+          invoiceNumber: primaryInvoice?.invoiceNumber || "DEMO-001",
+          amount: primaryInvoice ? parseFloat(primaryInvoice.amount).toFixed(2) : "1500.00",
+          daysOverdue: oldestDaysOverdue,
+          totalOutstanding: totalOutstanding.toFixed(2),
+          invoiceCount: contactInvoices.length,
+          dueDate: primaryInvoice ? new Date(primaryInvoice.dueDate).toLocaleDateString() : new Date().toLocaleDateString(),
+          companyName: contact.companyName || contact.name
+        }
+      });
+
+      console.log("MCP call result:", callResult);
+
+      // Extract result from MCP response
+      const mcpResult = callResult.result as any;
+      const callId = mcpResult?.call_id || `demo-${Date.now()}`;
+      const callStatus = mcpResult?.status || "queued";
 
       // Store the test call record
       const voiceCallData = insertVoiceCallSchema.parse({
         tenantId: user.tenantId,
         contactId,
-        retellCallId: callResult.callId,
-        retellAgentId: callResult.agentId,
-        fromNumber: callResult.fromNumber,
-        toNumber: callResult.toNumber,
-        direction: callResult.direction,
-        status: callResult.status,
+        retellCallId: callId,
+        retellAgentId: process.env.RETELL_AGENT_ID || "default-agent",
+        fromNumber: process.env.RETELL_PHONE_NUMBER || "Unknown",
+        toNumber: phoneToUse,
+        direction: "outbound",
+        status: callStatus,
         scheduledAt: new Date(),
       });
 
@@ -650,16 +644,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userId: user.id,
         type: 'voice',
         status: 'completed',
-        subject: 'TEST VOICE - Communication Test',
-        content: 'Test voice call initiated successfully from Settings page',
+        subject: 'TEST VOICE - MCP Communication Test',
+        content: `Test voice call initiated via MCP to ${phoneToUse}`,
         completedAt: new Date(),
-        metadata: { retellCallId: callResult.callId },
+        metadata: { retellCallId: callId },
       });
 
       res.status(201).json({
         voiceCall,
-        retellCallId: callResult.callId,
-        message: "Test call initiated successfully"
+        retellCallId: callId,
+        message: `Demo call initiated to ${phoneToUse} via MCP`,
+        mcpResult: callResult
       });
     } catch (error: any) {
       console.error("Error creating test voice call:", error);
