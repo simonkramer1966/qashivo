@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Mail, Phone, Eye, Plus, Search, Filter, FileText, ChevronUp, ChevronDown, X, MessageSquare, Calendar, CheckCircle, AlertCircle, Clock } from "lucide-react";
+import { Mail, Phone, Eye, Plus, Search, Filter, FileText, ChevronUp, ChevronDown, X, MessageSquare, Calendar, CheckCircle, AlertCircle, Clock, ChevronLeft, ChevronRight } from "lucide-react";
 
 export default function InvoicesXero() {
   const { toast } = useToast();
@@ -22,6 +22,8 @@ export default function InvoicesXero() {
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const [selectedInvoice, setSelectedInvoice] = useState<any>(null);
   const [showContactHistory, setShowContactHistory] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize] = useState(50);
 
   // Redirect to home if not authenticated
   useEffect(() => {
@@ -38,11 +40,15 @@ export default function InvoicesXero() {
     }
   }, [isAuthenticated, isLoading, toast]);
 
-  // Fetch Xero invoice data directly from Xero API
-  const { data: invoices = [], isLoading: invoicesLoading, error } = useQuery({
-    queryKey: ["/api/xero/invoices"],
+  // Fetch Xero invoice data directly from Xero API with pagination
+  const { data: invoicesData, isLoading: invoicesLoading, error } = useQuery({
+    queryKey: ["/api/xero/invoices", currentPage, pageSize],
+    queryFn: () => fetch(`/api/xero/invoices?page=${currentPage}&limit=${pageSize}`).then(res => res.json()),
     enabled: isAuthenticated,
   });
+
+  const invoices = invoicesData?.invoices || [];
+  const pagination = invoicesData?.pagination;
 
   // Fetch contact history for selected invoice (reuse existing endpoint)
   const { data: contactHistory = [], isLoading: historyLoading } = useQuery({
