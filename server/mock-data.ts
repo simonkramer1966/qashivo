@@ -208,8 +208,14 @@ export async function generateMockData(tenantId: string): Promise<void> {
       const contactId = contactIds[Math.floor(Math.random() * contactIds.length)];
       const projectType = projectTypes[Math.floor(Math.random() * projectTypes.length)];
       const amount = getRandomAmount(projectType.minAmount, projectType.maxAmount);
-      const issueDate = getRandomDate(monthsBack);
-      const dueDate = new Date(issueDate.getTime() + (30 * 24 * 60 * 60 * 1000)); // 30 days from issue
+      
+      // Generate overdue invoices with due dates before August 30, 2025
+      const maxDueDate = new Date('2025-08-30');
+      const minDueDate = new Date('2025-06-01'); // Start from June for variety
+      const dueDate = new Date(minDueDate.getTime() + Math.random() * (maxDueDate.getTime() - minDueDate.getTime()));
+      
+      // Issue date is 30 days before due date
+      const issueDate = new Date(dueDate.getTime() - (30 * 24 * 60 * 60 * 1000));
       
       const { status, paidDate, amountPaid } = getInvoiceStatus(dueDate, issueDate);
       
