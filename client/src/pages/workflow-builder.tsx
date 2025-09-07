@@ -1258,6 +1258,149 @@ export default function WorkflowBuilder() {
                       </Collapsible>
                     )}
 
+                    {selectedNode.type === 'decision' && (
+                      <Collapsible defaultOpen>
+                        <CollapsibleTrigger className="flex items-center justify-between w-full p-2 text-sm font-medium bg-gray-50 rounded-lg hover:bg-gray-100">
+                          <span>Decision Logic Configuration</span>
+                          <ChevronDown className="h-4 w-4" />
+                        </CollapsibleTrigger>
+                        <CollapsibleContent className="space-y-4 pt-4">
+                          <div>
+                            <Label className="text-sm font-medium">Decision Question</Label>
+                            <Input
+                              value={selectedNode.config.decisionQuestion || selectedNode.label}
+                              onChange={(e) => updateNodeConfig({ decisionQuestion: e.target.value })}
+                              className="bg-white/70 border-gray-200/30"
+                              placeholder="What condition are we checking?"
+                            />
+                            <p className="text-xs text-gray-500 mt-1">The question that will determine the outcome</p>
+                          </div>
+
+                          <div>
+                            <Label className="text-sm font-medium">YES Condition</Label>
+                            <Textarea
+                              value={selectedNode.config.yesCondition || ''}
+                              onChange={(e) => updateNodeConfig({ yesCondition: e.target.value })}
+                              className="bg-white/70 border-gray-200/30"
+                              placeholder="What triggers the YES branch? (e.g., Payment received within 24 hours)"
+                              rows={2}
+                            />
+                          </div>
+
+                          <div>
+                            <Label className="text-sm font-medium">NO Condition</Label>
+                            <Textarea
+                              value={selectedNode.config.noCondition || ''}
+                              onChange={(e) => updateNodeConfig({ noCondition: e.target.value })}
+                              className="bg-white/70 border-gray-200/30"
+                              placeholder="What triggers the NO branch? (e.g., No response after 48 hours)"
+                              rows={2}
+                            />
+                          </div>
+
+                          <div>
+                            <Label className="text-sm font-medium">Evaluation Method</Label>
+                            <Select 
+                              value={selectedNode.config.evaluationMethod || 'automatic'} 
+                              onValueChange={(value) => updateNodeConfig({ evaluationMethod: value })}
+                            >
+                              <SelectTrigger className="bg-white border-gray-200">
+                                <SelectValue placeholder="How is this decision evaluated?" />
+                              </SelectTrigger>
+                              <SelectContent className="bg-white border-gray-200">
+                                <SelectItem value="automatic">Automatic (System checks)</SelectItem>
+                                <SelectItem value="manual">Manual (User decides)</SelectItem>
+                                <SelectItem value="ai_assisted">AI Assisted</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          <div>
+                            <Label className="text-sm font-medium">Timeout (hours)</Label>
+                            <Input
+                              type="number"
+                              min="1"
+                              max="168"
+                              value={selectedNode.config.timeoutHours || 24}
+                              onChange={(e) => updateNodeConfig({ timeoutHours: parseInt(e.target.value) })}
+                              className="bg-white/70 border-gray-200/30"
+                              placeholder="24"
+                            />
+                            <p className="text-xs text-gray-500 mt-1">Default to NO branch if no decision after this time</p>
+                          </div>
+
+                          <div>
+                            <Label className="text-sm font-medium">Default Action</Label>
+                            <Select 
+                              value={selectedNode.config.defaultAction || 'no_branch'} 
+                              onValueChange={(value) => updateNodeConfig({ defaultAction: value })}
+                            >
+                              <SelectTrigger className="bg-white border-gray-200">
+                                <SelectValue placeholder="What happens on timeout?" />
+                              </SelectTrigger>
+                              <SelectContent className="bg-white border-gray-200">
+                                <SelectItem value="no_branch">Take NO branch</SelectItem>
+                                <SelectItem value="yes_branch">Take YES branch</SelectItem>
+                                <SelectItem value="escalate">Escalate to manual review</SelectItem>
+                                <SelectItem value="pause">Pause workflow</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label className="text-sm font-medium">Decision Options</Label>
+                            <div className="flex items-center space-x-2">
+                              <Checkbox
+                                id="require-confirmation"
+                                checked={selectedNode.config.requireConfirmation || false}
+                                onCheckedChange={(checked) => updateNodeConfig({ requireConfirmation: checked })}
+                              />
+                              <Label htmlFor="require-confirmation" className="text-sm">Require manual confirmation</Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <Checkbox
+                                id="log-decision"
+                                checked={selectedNode.config.logDecision || true}
+                                onCheckedChange={(checked) => updateNodeConfig({ logDecision: checked })}
+                              />
+                              <Label htmlFor="log-decision" className="text-sm">Log decision details</Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <Checkbox
+                                id="notify-team"
+                                checked={selectedNode.config.notifyTeam || false}
+                                onCheckedChange={(checked) => updateNodeConfig({ notifyTeam: checked })}
+                              />
+                              <Label htmlFor="notify-team" className="text-sm">Notify team of outcome</Label>
+                            </div>
+                          </div>
+
+                          <div className="bg-blue-50 p-3 rounded-lg">
+                            <h4 className="text-sm font-medium text-blue-900 mb-2">Connected Branches</h4>
+                            <div className="space-y-1 text-xs">
+                              {connections.filter(conn => conn.sourceId === selectedNode.id).map((conn) => {
+                                const targetNode = nodes.find(n => n.id === conn.targetId);
+                                const branchColor = conn.branchType === 'yes' ? 'text-green-700' : 
+                                                  conn.branchType === 'no' ? 'text-red-700' : 'text-blue-700';
+                                return (
+                                  <div key={conn.id} className={`flex items-center ${branchColor}`}>
+                                    <div className={`w-2 h-2 rounded-full mr-2 ${
+                                      conn.branchType === 'yes' ? 'bg-green-500' : 
+                                      conn.branchType === 'no' ? 'bg-red-500' : 'bg-blue-500'
+                                    }`} />
+                                    {(conn.branchType || 'DEFAULT').toUpperCase()}: {targetNode?.label || 'Unknown'}
+                                  </div>
+                                );
+                              })}
+                              {connections.filter(conn => conn.sourceId === selectedNode.id).length === 0 && (
+                                <p className="text-gray-500">No branches connected yet</p>
+                              )}
+                            </div>
+                          </div>
+                        </CollapsibleContent>
+                      </Collapsible>
+                    )}
+
                     {selectedNode.type === 'ai' && selectedNode.subType === 'generate_email' && (
                       <Collapsible defaultOpen>
                         <CollapsibleTrigger className="flex items-center justify-between w-full p-2 text-sm font-medium bg-gray-50 rounded-lg hover:bg-gray-100">
