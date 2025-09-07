@@ -90,11 +90,15 @@ export class RetellService {
     responseEngine?: any;
   }): Promise<any> {
     try {
+      // Use web socket URL for retell-llm
+      const responseEngine = config.responseEngine || {
+        type: "retell-llm",
+        llm_id: config.llmId || "retell-llm-web-socket",
+        llm_websocket_url: "wss://api.retellai.com/audio-websocket/llm-general-use"
+      };
+
       return await retell.agent.create({
-        response_engine: config.responseEngine || {
-          type: "retell-llm",
-          llm_id: config.llmId,
-        },
+        response_engine: responseEngine,
         voice_id: config.voiceId || "11labs-Adrian",
         agent_name: "Collections Agent",
         instructions: config.instructions || "You are a professional debt collection agent. Be polite but firm when discussing overdue payments. Always maintain a professional tone and comply with all debt collection regulations.",
