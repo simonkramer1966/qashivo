@@ -1057,8 +1057,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         invoice_number: primaryInvoice?.invoiceNumber || "DEMO-001",
         invoice_amount: primaryInvoice ? parseFloat(primaryInvoice.amount).toFixed(2) : "1500.00",
         total_outstanding: totalOutstanding.toFixed(2),
-        days_overdue: oldestDaysOverdue,
-        invoice_count: contactInvoices.length,
+        days_overdue: String(oldestDaysOverdue),
+        invoice_count: String(contactInvoices.length),
         due_date: primaryInvoice ? new Date(primaryInvoice.dueDate).toLocaleDateString() : new Date().toLocaleDateString(),
         organisation_name: tenant.name,
         demo_message: `This is a professional collection call regarding outstanding invoices for ${contact.name}.`
@@ -1093,7 +1093,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           from_number: cleanFromNumber,
           to_number: cleanToNumber,
           agent_id: process.env.RETELL_AGENT_ID!,
-          dynamic_variables: dynamicVariables
+          retell_llm_dynamic_variables: dynamicVariables
         } as any);
         
         callId = (call as any).call_id || callId;
