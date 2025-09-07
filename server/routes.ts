@@ -2172,31 +2172,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const page = parseInt(req.query.page as string) || 1;
       const limit = Math.min(parseInt(req.query.limit as string) || 50, 100); // Max 100 per page
 
-      // Get paginated Xero invoices
+      // Get paginated Xero invoices with payment data
       const result = await xeroService.getInvoicesPaginated(tokens, page, limit);
       
       // Transform Xero invoice data to match our frontend format
-      const transformedInvoices = result.invoices.map(xeroInv => ({
-        id: xeroInv.InvoiceID,
-        xeroInvoiceId: xeroInv.InvoiceID,
-        invoiceNumber: xeroInv.InvoiceNumber,
-        amount: xeroInv.Total.toString(),
-        amountPaid: xeroInv.AmountPaid.toString(),
-        taxAmount: xeroInv.TotalTax.toString(),
-        status: mapXeroStatusToLocal(xeroInv.Status),
-        issueDate: xeroInv.DateString,
-        dueDate: xeroInv.DueDateString,
-        currency: xeroInv.CurrencyCode,
-        description: `Xero Invoice - ${xeroInv.InvoiceNumber}`,
-        contact: {
-          name: xeroInv.Contact.Name,
-          contactId: xeroInv.Contact.ContactID,
-          phone: xeroInv.Contact.Phones?.[0]?.PhoneNumber || null,
-          email: xeroInv.Contact.EmailAddress || null
-        },
-        // Calculate collection stage based on status and days overdue
-        collectionStage: calculateCollectionStage(xeroInv.Status, new Date(xeroInv.DueDateString))
-      }));
+      const transformedInvoices = result.invoices.map(xeroInv => {
+        const invoicePayments = result.payments.get(xeroInv.InvoiceID) || [];
+        
+        // Extract the most recent payment date and details
+        const latestPayment = invoicePayments
+          .filter(p => p.Status === 'AUTHORISED')
+          .sort((a, b) => new Date(b.Date).getTime() - new Date(a.Date).getTime())[0];
+
+        return {
+          id: xeroInv.InvoiceID,
+          xeroInvoiceId: xeroInv.InvoiceID,
+          invoiceNumber: xeroInv.InvoiceNumber,
+          amount: xeroInv.Total.toString(),
+          amountPaid: xeroInv.AmountPaid.toString(),
+          taxAmount: xeroInv.TotalTax.toString(),
+          status: mapXeroStatusToLocal(xeroInv.Status),
+          issueDate: xeroInv.DateString,
+          dueDate: xeroInv.DueDateString,
+          currency: xeroInv.CurrencyCode,
+          description: `Xero Invoice - ${xeroInv.InvoiceNumber}`,
+          contact: {
+            name: xeroInv.Contact.Name,
+            contactId: xeroInv.Contact.ContactID,
+            phone: xeroInv.Contact.Phones?.[0]?.PhoneNumber || null,
+            email: xeroInv.Contact.EmailAddress || null
+          },
+          // Payment information from Xero
+          paymentDetails: {
+            paidDate: latestPayment ? latestPayment.Date : null,
+            paymentMethod: latestPayment?.PaymentMethod || null,
+            paymentReference: latestPayment?.Reference || null,
+            totalPayments: invoicePayments.filter(p => p.Status === 'AUTHORISED').length,
+            allPayments: invoicePayments.filter(p => p.Status === 'AUTHORISED').map(p => ({
+              date: p.Date,
+              amount: p.Amount.toString(),
+              method: p.PaymentMethod,
+              reference: p.Reference,
+              account: p.Account?.Name || null
+            }))
+          },
+          // Calculate collection stage based on status, payment dates and days overdue
+          collectionStage: calculateCollectionStageWithPayments(xeroInv.Status, new Date(xeroInv.DueDateString), latestPayment?.Date)
+        };
+      });
 
       res.json({
         invoices: transformedInvoices,
@@ -2219,6 +2242,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }
 
   function calculateCollectionStage(status: string, dueDate: Date): string {
+    if (status === 'PAID') return 'resolved';
+    
+    const now = new Date();
+    const daysDiff = Math.floor((now.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
+    
+    if (daysDiff <= 0) return 'current';
+    if (daysDiff <= 30) return 'first_notice';
+    if (daysDiff <= 60) return 'second_notice';
+    if (daysDiff <= 90) return 'final_notice';
+    return 'collections';
+  }
+
+  function calculateCollectionStageWithPayments(status: string, dueDate: Date, paidDate?: string): string {
+    // If invoice is paid (has a payment date), it's resolved regardless of status
+    if (paidDate) return 'resolved';
+    
+    // If status shows paid but no payment date found, treat as paid (Xero status wins)
     if (status === 'PAID') return 'resolved';
     
     const now = new Date();
