@@ -23,6 +23,7 @@ import AiCapabilities from "@/pages/ai-capabilities";
 import Pricing from "@/pages/pricing";
 import About from "@/pages/about";
 import Contact from "@/pages/contact";
+import Demo from "@/pages/demo";
 import Subscribe from "@/pages/subscribe";
 import Profile from "@/pages/Profile";
 import { useAuth } from "@/hooks/useAuth";
@@ -50,6 +51,7 @@ function Router() {
           <Route path="/features" component={Features} />
           <Route path="/ai-capabilities" component={AiCapabilities} />
           <Route path="/pricing" component={Pricing} />
+          <Route path="/demo" component={Demo} />
           <Route path="/about" component={About} />
           <Route path="/contact" component={Contact} />
           <Route component={NotFound} />

@@ -13,7 +13,8 @@ import {
   insertChannelAnalyticsSchema,
   insertWorkflowTemplateSchema,
   insertRetellConfigurationSchema,
-  insertVoiceCallSchema 
+  insertVoiceCallSchema,
+  insertLeadSchema 
 } from "@shared/schema";
 import { z } from "zod";
 import { generateCollectionSuggestions, generateEmailDraft } from "./services/openai";
@@ -1666,6 +1667,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error canceling subscription:", error);
       res.status(500).json({ message: "Failed to cancel subscription" });
+    }
+  });
+
+  // Lead Management Routes
+  app.post("/api/leads", async (req, res) => {
+    try {
+      const leadData = insertLeadSchema.parse(req.body);
+      const lead = await storage.createLead(leadData);
+      res.status(201).json(lead);
+    } catch (error) {
+      console.error("Error creating lead:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid lead data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create lead" });
+    }
+  });
+
+  app.get("/api/leads", isAuthenticated, async (req: any, res) => {
+    try {
+      const leads = await storage.getLeads();
+      res.json(leads);
+    } catch (error) {
+      console.error("Error fetching leads:", error);
+      res.status(500).json({ message: "Failed to fetch leads" });
     }
   });
 

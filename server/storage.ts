@@ -12,6 +12,7 @@ import {
   workflowTemplates,
   retellConfigurations,
   voiceCalls,
+  leads,
   type User,
   type UpsertUser,
   type Tenant,
@@ -38,6 +39,8 @@ import {
   type InsertRetellConfiguration,
   type VoiceCall,
   type InsertVoiceCall,
+  type Lead,
+  type InsertLead,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, sql, count } from "drizzle-orm";
@@ -120,6 +123,13 @@ export interface IStorage {
   getVoiceCall(id: string, tenantId: string): Promise<(VoiceCall & { contact: Contact; invoice?: Invoice }) | undefined>;
   createVoiceCall(voiceCall: InsertVoiceCall): Promise<VoiceCall>;
   updateVoiceCall(id: string, tenantId: string, updates: Partial<InsertVoiceCall>): Promise<VoiceCall>;
+  
+  // Lead operations
+  getLeads(): Promise<Lead[]>;
+  getLead(id: string): Promise<Lead | undefined>;
+  createLead(lead: InsertLead): Promise<Lead>;
+  updateLead(id: string, updates: Partial<InsertLead>): Promise<Lead>;
+  deleteLead(id: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -890,6 +900,42 @@ export class DatabaseStorage implements IStorage {
       .where(and(eq(voiceCalls.id, id), eq(voiceCalls.tenantId, tenantId)))
       .returning();
     return call;
+  }
+
+  // Lead operations
+  async getLeads(): Promise<Lead[]> {
+    return await db
+      .select()
+      .from(leads)
+      .orderBy(desc(leads.createdAt));
+  }
+
+  async getLead(id: string): Promise<Lead | undefined> {
+    const [lead] = await db
+      .select()
+      .from(leads)
+      .where(eq(leads.id, id));
+    return lead;
+  }
+
+  async createLead(leadData: InsertLead): Promise<Lead> {
+    const [lead] = await db.insert(leads).values(leadData).returning();
+    return lead;
+  }
+
+  async updateLead(id: string, updates: Partial<InsertLead>): Promise<Lead> {
+    const [lead] = await db
+      .update(leads)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(leads.id, id))
+      .returning();
+    return lead;
+  }
+
+  async deleteLead(id: string): Promise<void> {
+    await db
+      .delete(leads)
+      .where(eq(leads.id, id));
   }
 }
 

@@ -287,6 +287,20 @@ export const voiceCalls = pgTable("voice_calls", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Leads table for CRM
+export const leads = pgTable("leads", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull(),
+  email: varchar("email").notNull(),
+  phone: varchar("phone").notNull(),
+  company: varchar("company"),
+  status: varchar("status").notNull().default("new"), // "new", "contacted", "qualified", "converted", "closed"
+  source: varchar("source").notNull().default("demo"), // "demo", "website", "referral", etc.
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Define relations
 export const usersRelations = relations(users, ({ one, many }) => ({
   tenant: one(tenants, {
@@ -528,6 +542,12 @@ export const insertVoiceCallSchema = createInsertSchema(voiceCalls).omit({
   updatedAt: true,
 });
 
+export const insertLeadSchema = createInsertSchema(leads).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
@@ -559,6 +579,8 @@ export type InsertRetellConfiguration = z.infer<typeof insertRetellConfiguration
 export type RetellConfiguration = typeof retellConfigurations.$inferSelect;
 export type InsertVoiceCall = z.infer<typeof insertVoiceCallSchema>;
 export type VoiceCall = typeof voiceCalls.$inferSelect;
+export type InsertLead = z.infer<typeof insertLeadSchema>;
+export type Lead = typeof leads.$inferSelect;
 
 // Node Configuration Types
 export interface TriggerNodeConfig {
