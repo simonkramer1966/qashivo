@@ -11,18 +11,26 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Mail, Phone, Eye, Plus, Search, Filter, FileText, ChevronUp, ChevronDown, X, MessageSquare, Calendar, CheckCircle, AlertCircle, Clock, ChevronLeft, ChevronRight } from "lucide-react";
 
 export default function InvoicesXero() {
   const { toast } = useToast();
   const { isAuthenticated, isLoading } = useAuth();
+  const [activeTab, setActiveTab] = useState("unpaid");
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
   const [sortField, setSortField] = useState<string>("");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const [selectedInvoice, setSelectedInvoice] = useState<any>(null);
   const [showContactHistory, setShowContactHistory] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
+  
+  // Separate pagination state for each tab
+  const [pages, setPages] = useState({
+    unpaid: 1,
+    partial: 1,
+    paid: 1,
+    void: 1
+  });
   const [pageSize] = useState(50);
 
   // Redirect to home if not authenticated
@@ -40,15 +48,45 @@ export default function InvoicesXero() {
     }
   }, [isAuthenticated, isLoading, toast]);
 
-  // Fetch Xero invoice data directly from Xero API with pagination
-  const { data: invoicesData, isLoading: invoicesLoading, error } = useQuery({
-    queryKey: ["/api/xero/invoices", currentPage, pageSize],
-    queryFn: () => fetch(`/api/xero/invoices?page=${currentPage}&limit=${pageSize}`).then(res => res.json()),
+  // Separate queries for each tab
+  const { data: unpaidData, isLoading: unpaidLoading, error: unpaidError } = useQuery({
+    queryKey: ["/api/xero/invoices", "unpaid", pages.unpaid, pageSize],
+    queryFn: () => fetch(`/api/xero/invoices?status=unpaid&page=${pages.unpaid}&limit=${pageSize}`).then(res => res.json()),
     enabled: isAuthenticated,
   });
 
-  const invoices = invoicesData?.invoices || [];
-  const pagination = invoicesData?.pagination;
+  const { data: partialData, isLoading: partialLoading, error: partialError } = useQuery({
+    queryKey: ["/api/xero/invoices", "partial", pages.partial, pageSize],
+    queryFn: () => fetch(`/api/xero/invoices?status=partial&page=${pages.partial}&limit=${pageSize}`).then(res => res.json()),
+    enabled: isAuthenticated && activeTab === 'partial',
+  });
+
+  const { data: paidData, isLoading: paidLoading, error: paidError } = useQuery({
+    queryKey: ["/api/xero/invoices", "paid", pages.paid, pageSize],
+    queryFn: () => fetch(`/api/xero/invoices?status=paid&page=${pages.paid}&limit=${pageSize}`).then(res => res.json()),
+    enabled: isAuthenticated && activeTab === 'paid',
+  });
+
+  const { data: voidData, isLoading: voidLoading, error: voidError } = useQuery({
+    queryKey: ["/api/xero/invoices", "void", pages.void, pageSize],
+    queryFn: () => fetch(`/api/xero/invoices?status=void&page=${pages.void}&limit=${pageSize}`).then(res => res.json()),
+    enabled: isAuthenticated && activeTab === 'void',
+  });
+
+  // Get current tab data
+  const getCurrentTabData = () => {
+    switch (activeTab) {
+      case 'unpaid': return { data: unpaidData, isLoading: unpaidLoading, error: unpaidError };
+      case 'partial': return { data: partialData, isLoading: partialLoading, error: partialError };
+      case 'paid': return { data: paidData, isLoading: paidLoading, error: paidError };
+      case 'void': return { data: voidData, isLoading: voidLoading, error: voidError };
+      default: return { data: unpaidData, isLoading: unpaidLoading, error: unpaidError };
+    }
+  };
+
+  const currentTabData = getCurrentTabData();
+  const invoices = currentTabData.data?.invoices || [];
+  const pagination = currentTabData.data?.pagination;
 
   // Fetch contact history for selected invoice (reuse existing endpoint)
   const { data: contactHistory = [], isLoading: historyLoading } = useQuery({
@@ -57,7 +95,7 @@ export default function InvoicesXero() {
   });
 
   useEffect(() => {
-    if (error && isUnauthorizedError(error as Error)) {
+    if (currentTabData.error && isUnauthorizedError(currentTabData.error as Error)) {
       toast({
         title: "Unauthorized",
         description: "You are logged out. Logging in again...",
@@ -67,7 +105,7 @@ export default function InvoicesXero() {
         window.location.href = "/api/login";
       }, 500);
     }
-  }, [error, toast]);
+  }, [currentTabData.error, toast]);
 
   if (isLoading || !isAuthenticated) {
     return <div className="min-h-screen bg-background" />;
@@ -97,12 +135,17 @@ export default function InvoicesXero() {
     }
   };
 
+  // Helper functions for pagination
+  const getCurrentPage = () => pages[activeTab as keyof typeof pages];
+  const setCurrentPage = (newPage: number) => {
+    setPages(prev => ({ ...prev, [activeTab]: newPage }));
+  };
+
   const filteredAndSortedInvoices = (invoices as any[])
     .filter((invoice: any) => {
       const matchesSearch = invoice.invoiceNumber.toLowerCase().includes(search.toLowerCase()) ||
                            invoice.contact?.name?.toLowerCase().includes(search.toLowerCase());
-      const matchesStatus = statusFilter === "all" || invoice.status === statusFilter;
-      return matchesSearch && matchesStatus;
+      return matchesSearch; // No status filter needed since tabs handle this
     })
     .sort((a: any, b: any) => {
       if (!sortField) return 0;
@@ -210,68 +253,68 @@ export default function InvoicesXero() {
         />
         
         <div className="p-8 space-y-8">
-          {/* Filters */}
+          {/* Search Filter */}
           <Card className="bg-white border border-gray-200 shadow-sm">
             <CardHeader>
               <CardTitle className="text-xl font-bold flex items-center">
                 <div className="p-2 bg-[#17B6C3]/10 rounded-lg mr-3">
-                  <Filter className="h-5 w-5 text-[#17B6C3]" />
+                  <Search className="h-5 w-5 text-[#17B6C3]" />
                 </div>
-                Filters
+                Search
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="flex flex-col sm:flex-row gap-4">
-                <div className="flex-1">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                    <Input 
-                      placeholder="Search Xero invoices or contacts..."
-                      value={search}
-                      onChange={(e) => setSearch(e.target.value)}
-                      className="pl-9 bg-white/70 border-gray-200/30"
-                      data-testid="input-search"
-                    />
-                  </div>
-                </div>
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="w-[180px] bg-white/70 border-gray-200/30" data-testid="select-status-filter">
-                    <Filter className="mr-2 h-4 w-4" />
-                    <SelectValue placeholder="All Status" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-white border-gray-200">
-                    <SelectItem value="all">All Status</SelectItem>
-                    <SelectItem value="pending">Pending</SelectItem>
-                    <SelectItem value="overdue">Overdue</SelectItem>
-                    <SelectItem value="paid">Paid</SelectItem>
-                    <SelectItem value="cancelled">Cancelled</SelectItem>
-                  </SelectContent>
-                </Select>
+              <div className="relative">
+                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Input 
+                  placeholder="Search Xero invoices or contacts..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="pl-9 bg-white/70 border-gray-200/30"
+                  data-testid="input-search"
+                />
               </div>
             </CardContent>
           </Card>
 
-          {/* Invoices Table */}
-          <Card className="bg-white border border-gray-200 shadow-sm">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="text-2xl font-bold">Xero Invoices</CardTitle>
-                  <CardDescription className="text-base mt-1">
-                    {filteredAndSortedInvoices.length} invoice{filteredAndSortedInvoices.length !== 1 ? 's' : ''} from Xero
-                  </CardDescription>
-                </div>
-                <div className="p-3 bg-[#17B6C3]/10 rounded-xl">
-                  <Eye className="h-6 w-6 text-[#17B6C3]" />
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {invoicesLoading ? (
-                <div className="text-center py-8">
-                  <p className="text-muted-foreground">Loading Xero invoices...</p>
-                </div>
-              ) : filteredAndSortedInvoices.length === 0 ? (
+          {/* Invoices Tabs */}
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="grid grid-cols-4 w-full max-w-2xl">
+              <TabsTrigger value="unpaid" className="text-sm">
+                Unpaid ({unpaidData?.pagination?.totalCount || 0})
+              </TabsTrigger>
+              <TabsTrigger value="partial" className="text-sm">
+                Partial ({partialData?.pagination?.totalCount || 0})
+              </TabsTrigger>
+              <TabsTrigger value="paid" className="text-sm">
+                Paid ({paidData?.pagination?.totalCount || 0})
+              </TabsTrigger>
+              <TabsTrigger value="void" className="text-sm">
+                Void ({voidData?.pagination?.totalCount || 0})
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="unpaid" className="mt-6">
+              <Card className="bg-white border border-gray-200 shadow-sm">
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="text-2xl font-bold">Unpaid Invoices</CardTitle>
+                      <CardDescription className="text-base mt-1">
+                        {filteredAndSortedInvoices.length} unpaid invoice{filteredAndSortedInvoices.length !== 1 ? 's' : ''} from Xero
+                      </CardDescription>
+                    </div>
+                    <div className="p-3 bg-red-100 rounded-xl">
+                      <AlertCircle className="h-6 w-6 text-red-600" />
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {currentTabData.isLoading ? (
+                    <div className="text-center py-8">
+                      <p className="text-muted-foreground">Loading unpaid invoices...</p>
+                    </div>
+                  ) : filteredAndSortedInvoices.length === 0 ? (
                 <div className="text-center py-8">
                   <div className="w-16 h-16 bg-[#17B6C3]/10 rounded-full flex items-center justify-center mx-auto mb-6">
                     <FileText className="h-8 w-8 text-[#17B6C3]" />
@@ -462,8 +505,8 @@ export default function InvoicesXero() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                      disabled={!pagination.hasPreviousPage || invoicesLoading}
+                      onClick={() => setCurrentPage(Math.max(1, getCurrentPage() - 1))}
+                      disabled={!pagination?.hasPreviousPage || currentTabData.isLoading}
                       className="border-[#17B6C3]/20 text-[#17B6C3] hover:bg-[#17B6C3]/5"
                       data-testid="button-prev-page"
                     >
@@ -472,14 +515,14 @@ export default function InvoicesXero() {
                     </Button>
                     
                     <span className="text-sm text-gray-600 px-3">
-                      Page {pagination.currentPage} of {pagination.totalPages}
+                      Page {pagination?.currentPage || 1} of {pagination?.totalPages || 1}
                     </span>
                     
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => setCurrentPage(currentPage + 1)}
-                      disabled={!pagination.hasNextPage || invoicesLoading}
+                      onClick={() => setCurrentPage(getCurrentPage() + 1)}
+                      disabled={!pagination?.hasNextPage || currentTabData.isLoading}
                       className="border-[#17B6C3]/20 text-[#17B6C3] hover:bg-[#17B6C3]/5"
                       data-testid="button-next-page"
                     >
@@ -489,8 +532,73 @@ export default function InvoicesXero() {
                   </div>
                 </div>
               )}
-            </CardContent>
-          </Card>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="partial" className="mt-6">
+              <Card className="bg-white border border-gray-200 shadow-sm">
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="text-2xl font-bold">Partially Paid Invoices</CardTitle>
+                      <CardDescription className="text-base mt-1">
+                        {filteredAndSortedInvoices.length} partially paid invoice{filteredAndSortedInvoices.length !== 1 ? 's' : ''} from Xero
+                      </CardDescription>
+                    </div>
+                    <div className="p-3 bg-yellow-100 rounded-xl">
+                      <Clock className="h-6 w-6 text-yellow-600" />
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-center py-8 text-muted-foreground">Partially paid invoices will be displayed here.</p>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="paid" className="mt-6">
+              <Card className="bg-white border border-gray-200 shadow-sm">
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="text-2xl font-bold">Paid Invoices</CardTitle>
+                      <CardDescription className="text-base mt-1">
+                        {filteredAndSortedInvoices.length} paid invoice{filteredAndSortedInvoices.length !== 1 ? 's' : ''} from Xero
+                      </CardDescription>
+                    </div>
+                    <div className="p-3 bg-green-100 rounded-xl">
+                      <CheckCircle className="h-6 w-6 text-green-600" />
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-center py-8 text-muted-foreground">Paid invoices will be displayed here.</p>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="void" className="mt-6">
+              <Card className="bg-white border border-gray-200 shadow-sm">
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="text-2xl font-bold">Void Invoices</CardTitle>
+                      <CardDescription className="text-base mt-1">
+                        {filteredAndSortedInvoices.length} void invoice{filteredAndSortedInvoices.length !== 1 ? 's' : ''} from Xero
+                      </CardDescription>
+                    </div>
+                    <div className="p-3 bg-gray-100 rounded-xl">
+                      <X className="h-6 w-6 text-gray-600" />
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-center py-8 text-muted-foreground">Void invoices will be displayed here.</p>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
         </div>
       </main>
 
