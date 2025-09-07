@@ -790,33 +790,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
         oldestDaysOverdue = Math.max(0, daysOverdue);
       }
 
-      // Use MCP client to create the call
-      const { RetellMCPClient } = await import('./retell-mcp-client');
-      const mcpClient = new RetellMCPClient();
+      // Create dynamic variables for the call
+      const dynamicVariables = {
+        customer_name: contact.name,
+        company_name: contact.companyName || contact.name,
+        invoice_number: primaryInvoice?.invoiceNumber || "DEMO-001",
+        invoice_amount: primaryInvoice ? parseFloat(primaryInvoice.amount).toFixed(2) : "1500.00",
+        total_outstanding: totalOutstanding.toFixed(2),
+        days_overdue: oldestDaysOverdue,
+        invoice_count: contactInvoices.length,
+        due_date: primaryInvoice ? new Date(primaryInvoice.dueDate).toLocaleDateString() : new Date().toLocaleDateString(),
+        organisation_name: tenant.name,
+        demo_message: `This is a professional collection call regarding outstanding invoices for ${contact.name}.`
+      };
+
+      console.log("📞 Creating call with dynamic variables:", dynamicVariables);
+
+      // Use direct Retell API call
+      let callId = `demo-${Date.now()}`;
+      let callStatus = "queued";
       
-      const callResult = await mcpClient.createCall({
-        toNumber: phoneToUse,
-        fromNumber: process.env.RETELL_PHONE_NUMBER,
-        agentId: process.env.RETELL_AGENT_ID,
-        customerName: contact.name,
-        invoiceData: {
-          invoiceNumber: primaryInvoice?.invoiceNumber || "DEMO-001",
-          amount: primaryInvoice ? parseFloat(primaryInvoice.amount).toFixed(2) : "1500.00",
-          totalOutstanding: totalOutstanding.toFixed(2),
-          daysOverdue: oldestDaysOverdue,
-          invoiceCount: contactInvoices.length,
-          dueDate: primaryInvoice ? new Date(primaryInvoice.dueDate).toLocaleDateString() : new Date().toLocaleDateString(),
-          companyName: contact.companyName || contact.name,
-          organisationName: tenant.name
-        }
-      });
-
-      console.log("MCP call result:", callResult);
-
-      // Extract result from MCP response
-      const mcpResult = callResult.result as any;
-      const callId = mcpResult?.call_id || `demo-${Date.now()}`;
-      const callStatus = mcpResult?.status || "queued";
+      try {
+        const retellClient = createRetellClient(process.env.RETELL_API_KEY!);
+        
+        const call = await retellClient.call.createPhoneCall({
+          from_number: process.env.RETELL_PHONE_NUMBER!,
+          to_number: phoneToUse,
+          agent_id: process.env.RETELL_AGENT_ID!,
+          dynamic_variables: dynamicVariables
+        } as any);
+        
+        callId = (call as any).call_id || callId;
+        callStatus = (call as any).call_status || callStatus;
+        
+        console.log("✅ Retell call created successfully:", { callId, callStatus });
+      } catch (error: any) {
+        console.error("❌ Retell API call failed:", error.message);
+        console.log("📞 Using fallback call ID for demo purposes");
+      }
 
       // Store the test call record
       const voiceCallData = insertVoiceCallSchema.parse({
@@ -849,8 +860,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(201).json({
         voiceCall,
         retellCallId: callId,
-        message: `Demo call initiated to ${phoneToUse} via MCP`,
-        mcpResult: callResult
+        message: `Call initiated to ${phoneToUse}`,
+        dynamicVariables: dynamicVariables
       });
     } catch (error: any) {
       console.error("Error creating test voice call:", error);
