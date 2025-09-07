@@ -353,7 +353,7 @@ export default function Demo() {
               What You'll See & Hear in the Demo
             </h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Experience the complete accounts receivable workflow from invoice to payment
+              Experience the complete accounts receivable strategy from email to voice
             </p>
           </div>
 
