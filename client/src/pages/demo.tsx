@@ -172,8 +172,8 @@ export default function Demo() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-stretch">
             {/* Video Section - Left Side */}
-            <div>
-              <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-xl">
+            <div className="h-full">
+              <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-xl h-full flex flex-col">
                 <CardHeader>
                   <CardTitle className="text-2xl font-bold flex items-center">
                     <div className="p-2 bg-[#17B6C3]/10 rounded-lg mr-3">
@@ -224,8 +224,8 @@ export default function Demo() {
             </div>
 
             {/* Lead Capture Form - Right Side */}
-            <div>
-              <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-xl">
+            <div className="h-full">
+              <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-xl h-full flex flex-col">
                 <CardHeader>
                   <CardTitle className="text-2xl font-bold">
                     Get Instant Access
@@ -333,22 +333,6 @@ export default function Demo() {
                     </form>
                   </Form>
 
-                  {/* Contact Information */}
-                  <div className="mt-6 pt-6 border-t border-gray-200/30">
-                    <div className="text-center">
-                      <h4 className="font-semibold text-gray-900 mb-3 text-sm">Prefer to speak directly?</h4>
-                      <div className="flex items-center justify-center space-x-4 text-xs text-gray-600">
-                        <div className="flex items-center">
-                          <Phone className="h-3 w-3 mr-1 text-[#17B6C3]" />
-                          <span>+1 (555) 123-4567</span>
-                        </div>
-                        <div className="flex items-center">
-                          <Mail className="h-3 w-3 mr-1 text-[#17B6C3]" />
-                          <span>demo@nexusar.com</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
                 </CardContent>
               </Card>
             </div>
