@@ -590,29 +590,6 @@ function TestTabContent() {
           </div>
         </div>
 
-        {/* Data Regeneration Section */}
-        <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="flex items-center">
-                <TestTube className="h-5 w-5 text-blue-600 mr-2" />
-                <h5 className="font-medium text-blue-800">Regenerate Test Data</h5>
-              </div>
-              <p className="mt-1 text-sm text-blue-700">
-                Regenerate mock data with hardcoded overdue invoice dates for testing
-              </p>
-            </div>
-            <Button 
-              onClick={handleRegenerateData}
-              disabled={isRegenerating}
-              className="bg-blue-600 hover:bg-blue-700 text-white"
-              data-testid="button-regenerate-data"
-            >
-              {isRegenerating ? "Regenerating..." : "Regenerate Data"}
-            </Button>
-          </div>
-        </div>
-
         {/* Status Information */}
         <div className="mt-6 p-4 bg-blue-50 rounded-lg">
           <div className="flex items-center">
