@@ -26,7 +26,6 @@ const navigationItems = [
   { name: "Collection Workflows", href: "/workflows", icon: Workflow },
   { name: "AI Suggestions", href: "/ai-suggestions", icon: Bot },
   { name: "Reports", href: "/reports", icon: BarChart },
-  { name: "Settings", href: "/settings", icon: Settings },
 ];
 
 // Owner-only navigation items

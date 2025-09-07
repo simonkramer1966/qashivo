@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { LogOut, User } from "lucide-react";
+import { LogOut, User, Settings } from "lucide-react";
 import { useLocation } from "wouter";
 
 interface HeaderProps {
@@ -24,6 +24,10 @@ export default function Header({ title, subtitle, action, noBorder = true, title
 
   const handleProfileClick = () => {
     setLocation("/profile");
+  };
+
+  const handleSettingsClick = () => {
+    setLocation("/settings");
   };
 
   const getUserInitials = () => {
@@ -71,6 +75,17 @@ export default function Header({ title, subtitle, action, noBorder = true, title
             </span>
           </div>
           
+          {/* Settings Icon */}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleSettingsClick}
+            className="hover:bg-accent hover:text-accent-foreground rounded-lg p-2 transition-colors"
+            data-testid="button-settings"
+          >
+            <Settings className="h-5 w-5" />
+          </Button>
+
           {/* User Profile */}
           <DropdownMenu>
             <DropdownMenuTrigger className="flex items-center space-x-3 hover:bg-accent hover:text-accent-foreground rounded-lg px-3 py-2 transition-colors" data-testid="button-user-menu">
