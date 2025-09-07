@@ -26,6 +26,7 @@ import Contact from "@/pages/contact";
 import Demo from "@/pages/demo";
 import Subscribe from "@/pages/subscribe";
 import Profile from "@/pages/Profile";
+import OwnerDashboard from "@/pages/owner-dashboard";
 import { useAuth } from "@/hooks/useAuth";
 
 function Router() {
@@ -73,6 +74,7 @@ function Router() {
           <Route path="/ui-quickbooks" component={UIQuickBooks} />
           <Route path="/ui-sage" component={UISage} />
           <Route path="/subscribe" component={Subscribe} />
+          <Route path="/owner" component={OwnerDashboard} />
           <Route component={NotFound} />
         </>
       )}

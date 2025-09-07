@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { setupAuth, isAuthenticated } from "./replitAuth";
+import { setupAuth, isAuthenticated, isOwner } from "./replitAuth";
 import { 
   insertContactSchema, 
   insertInvoiceSchema, 
@@ -532,6 +532,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching dashboard metrics:", error);
       res.status(500).json({ message: "Failed to fetch metrics" });
+    }
+  });
+
+  // Owner-only endpoints
+  app.get("/api/owner/tenants", isOwner, async (req: any, res) => {
+    try {
+      const tenants = await storage.getAllTenants();
+      res.json(tenants);
+    } catch (error) {
+      console.error("Error fetching all tenants:", error);
+      res.status(500).json({ message: "Failed to fetch tenants" });
+    }
+  });
+
+  app.get("/api/owner/tenants-with-metrics", isOwner, async (req: any, res) => {
+    try {
+      const tenantsWithMetrics = await storage.getAllTenantsWithMetrics();
+      res.json(tenantsWithMetrics);
+    } catch (error) {
+      console.error("Error fetching tenants with metrics:", error);
+      res.status(500).json({ message: "Failed to fetch tenants with metrics" });
     }
   });
 
