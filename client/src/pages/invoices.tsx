@@ -329,6 +329,15 @@ export default function Invoices() {
                         </th>
                         <th className="text-left py-2 text-xs font-semibold text-slate-700">
                           <button 
+                            onClick={() => handleSort("age")}
+                            className="flex items-center space-x-1 hover:text-slate-900"
+                          >
+                            <span>Age</span>
+                            {getSortIcon("age")}
+                          </button>
+                        </th>
+                        <th className="text-left py-2 text-xs font-semibold text-slate-700">
+                          <button 
                             onClick={() => handleSort("status")}
                             className="flex items-center space-x-1 hover:text-slate-900"
                           >
@@ -343,15 +352,6 @@ export default function Invoices() {
                           >
                             <span>Collection Stage</span>
                             {getSortIcon("collectionStage")}
-                          </button>
-                        </th>
-                        <th className="text-left py-2 text-xs font-semibold text-slate-700">
-                          <button 
-                            onClick={() => handleSort("age")}
-                            className="flex items-center space-x-1 hover:text-slate-900"
-                          >
-                            <span>Age</span>
-                            {getSortIcon("age")}
                           </button>
                         </th>
                         <th className="text-right py-2 text-xs font-semibold text-slate-700">Actions</th>
@@ -375,6 +375,9 @@ export default function Invoices() {
                           <td className="py-1 text-xs text-slate-700" data-testid={`text-due-date-${invoice.id}`}>
                             {new Date(invoice.dueDate).toLocaleDateString()}
                           </td>
+                          <td className="py-1 text-xs text-slate-700" data-testid={`text-age-${invoice.id}`}>
+                            {Math.floor((Date.now() - new Date(invoice.issueDate).getTime()) / (1000 * 60 * 60 * 24))} days
+                          </td>
                           <td className="py-1">
                             {getStatusBadge(invoice.status)}
                           </td>
@@ -383,9 +386,6 @@ export default function Invoices() {
                               invoice.collectionStage.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()) : 
                               'Initial'
                             }
-                          </td>
-                          <td className="py-1 text-xs text-slate-700" data-testid={`text-age-${invoice.id}`}>
-                            {Math.floor((Date.now() - new Date(invoice.issueDate).getTime()) / (1000 * 60 * 60 * 24))} days
                           </td>
                           <td className="py-1">
                             <div className="flex space-x-1 justify-end">
