@@ -350,7 +350,7 @@ export default function Demo() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-4xl font-bold text-gray-900 mb-6" data-testid="text-features-title">
-              What You'll See in the Demo
+              What You'll See & Hear in the Demo
             </h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
               Experience the complete accounts receivable workflow from invoice to payment
