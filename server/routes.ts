@@ -607,8 +607,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         invoiceData: {
           invoiceNumber: primaryInvoice?.invoiceNumber || "DEMO-001",
           amount: primaryInvoice ? parseFloat(primaryInvoice.amount).toFixed(2) : "1500.00",
-          daysOverdue: oldestDaysOverdue,
           totalOutstanding: totalOutstanding.toFixed(2),
+          daysOverdue: oldestDaysOverdue,
           invoiceCount: contactInvoices.length,
           dueDate: primaryInvoice ? new Date(primaryInvoice.dueDate).toLocaleDateString() : new Date().toLocaleDateString(),
           companyName: contact.companyName || contact.name

@@ -58,16 +58,32 @@ export class RetellMCPClient {
           agent_id: params.agentId || process.env.RETELL_AGENT_ID,
           dynamic_variables: {
             customer_name: params.customerName,
+            company_name: params.invoiceData.companyName,
             invoice_number: params.invoiceData.invoiceNumber,
             invoice_amount: params.invoiceData.amount,
+            total_outstanding: params.invoiceData.totalOutstanding,
             days_overdue: params.invoiceData.daysOverdue,
+            invoice_count: params.invoiceData.invoiceCount,
+            due_date: params.invoiceData.dueDate,
             demo_message: `[DEMO] This is a live demonstration of Nexus AR's AI collection system for ${params.customerName}.`
           }
         }
       });
     } catch (error) {
       console.error("MCP call failed, using fallback:", error);
-      // Fallback for demo purposes
+      // Fallback for demo purposes - still log the call attempt with all variables
+      console.log("Fallback mode - would have sent these dynamic variables:", {
+        customer_name: params.customerName,
+        company_name: params.invoiceData.companyName,
+        invoice_number: params.invoiceData.invoiceNumber,
+        invoice_amount: params.invoiceData.amount,
+        total_outstanding: params.invoiceData.totalOutstanding,
+        days_overdue: params.invoiceData.daysOverdue,
+        invoice_count: params.invoiceData.invoiceCount,
+        due_date: params.invoiceData.dueDate,
+        demo_message: `[DEMO] This is a live demonstration of Nexus AR's AI collection system for ${params.customerName}.`
+      });
+      
       return {
         result: {
           success: true,
