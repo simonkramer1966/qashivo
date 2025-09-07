@@ -373,9 +373,9 @@ function TestTabContent() {
         </div>
 
 
-        {/* Voice Call Variables */}
+        {/* Contact Test Variables */}
         <div className="space-y-4">
-          <h4 className="font-semibold text-lg">Voice Call Variables</h4>
+          <h4 className="font-semibold text-lg">Contact Test Variables</h4>
           <p className="text-sm text-gray-600">Configure the data that will be passed to the Retell AI voice agent</p>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
