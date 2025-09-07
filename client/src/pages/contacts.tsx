@@ -333,7 +333,7 @@ export default function Contacts() {
                         <table className="w-full">
                           <thead>
                             <tr className="border-b border-slate-200/50">
-                              <th className="text-left py-2 text-xs font-semibold text-slate-700 w-60">
+                              <th className="text-left py-2 px-6 text-xs font-semibold text-slate-700 w-60">
                                 <button 
                                   onClick={() => handleSort("name")}
                                   className="flex items-center space-x-1 hover:text-slate-900"
@@ -342,7 +342,7 @@ export default function Contacts() {
                                   {getSortIcon("name")}
                                 </button>
                               </th>
-                              <th className="text-left py-2 text-xs font-semibold text-slate-700 w-48">
+                              <th className="text-left py-2 px-6 text-xs font-semibold text-slate-700 w-48">
                                 <button 
                                   onClick={() => handleSort("companyName")}
                                   className="flex items-center space-x-1 hover:text-slate-900"
@@ -351,7 +351,7 @@ export default function Contacts() {
                                   {getSortIcon("companyName")}
                                 </button>
                               </th>
-                              <th className="text-left py-2 text-xs font-semibold text-slate-700 w-48">
+                              <th className="text-left py-2 px-6 text-xs font-semibold text-slate-700 w-48">
                                 <button 
                                   onClick={() => handleSort("email")}
                                   className="flex items-center space-x-1 hover:text-slate-900"
@@ -360,7 +360,7 @@ export default function Contacts() {
                                   {getSortIcon("email")}
                                 </button>
                               </th>
-                              <th className="text-left py-2 text-xs font-semibold text-slate-700 w-32">
+                              <th className="text-left py-2 px-6 text-xs font-semibold text-slate-700 w-32">
                                 <button 
                                   onClick={() => handleSort("phone")}
                                   className="flex items-center space-x-1 hover:text-slate-900"
@@ -369,7 +369,7 @@ export default function Contacts() {
                                   {getSortIcon("phone")}
                                 </button>
                               </th>
-                              <th className="text-left py-2 text-xs font-semibold text-slate-700 w-20">
+                              <th className="text-left py-2 px-6 text-xs font-semibold text-slate-700 w-20">
                                 <button 
                                   onClick={() => handleSort("paymentTerms")}
                                   className="flex items-center space-x-1 hover:text-slate-900"
@@ -378,7 +378,7 @@ export default function Contacts() {
                                   {getSortIcon("paymentTerms")}
                                 </button>
                               </th>
-                              <th className="text-left py-2 text-xs font-semibold text-slate-700 w-20">
+                              <th className="text-left py-2 px-6 text-xs font-semibold text-slate-700 w-20">
                                 <button 
                                   onClick={() => handleSort("status")}
                                   className="flex items-center space-x-1 hover:text-slate-900"
@@ -387,28 +387,28 @@ export default function Contacts() {
                                   {getSortIcon("status")}
                                 </button>
                               </th>
-                              <th className="text-right py-2 text-xs font-semibold text-slate-700">Actions</th>
+                              <th className="text-right py-2 px-6 text-xs font-semibold text-slate-700">Actions</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-slate-200/50">
                             {sortedContacts.map((contact: any) => (
                               <tr key={contact.id} className="hover:bg-slate-50/50 transition-colors" data-testid={`row-contact-${contact.id}`}>
-                                <td className="py-1 text-xs text-slate-700 w-60" data-testid={`text-list-name-${contact.id}`}>
+                                <td className="py-1 px-6 text-xs text-slate-700 w-60" data-testid={`text-list-name-${contact.id}`}>
                                   {contact.name}
                                 </td>
-                                <td className="py-1 text-xs text-slate-700 w-48" data-testid={`text-list-company-${contact.id}`}>
+                                <td className="py-1 px-6 text-xs text-slate-700 w-48" data-testid={`text-list-company-${contact.id}`}>
                                   {contact.companyName || '-'}
                                 </td>
-                                <td className="py-1 text-xs text-slate-700 w-48" data-testid={`text-list-email-${contact.id}`}>
+                                <td className="py-1 px-6 text-xs text-slate-700 w-48" data-testid={`text-list-email-${contact.id}`}>
                                   {contact.email || '-'}
                                 </td>
-                                <td className="py-1 text-xs text-slate-700 w-32" data-testid={`text-list-phone-${contact.id}`}>
+                                <td className="py-1 px-6 text-xs text-slate-700 w-32" data-testid={`text-list-phone-${contact.id}`}>
                                   {contact.phone || '-'}
                                 </td>
-                                <td className="py-1 text-xs text-slate-700 w-20" data-testid={`text-list-terms-${contact.id}`}>
+                                <td className="py-1 px-6 text-xs text-slate-700 w-20" data-testid={`text-list-terms-${contact.id}`}>
                                   {contact.paymentTerms ? `${contact.paymentTerms}d` : '-'}
                                 </td>
-                                <td className="py-1 w-20">
+                                <td className="py-1 px-6 w-20">
                                   <Badge 
                                     className={contact.isActive ? "bg-green-100 text-green-800 border-green-200 text-xs" : "bg-gray-100 text-gray-800 border-gray-200 text-xs"} 
                                     data-testid={`badge-list-status-${contact.id}`}
@@ -416,7 +416,7 @@ export default function Contacts() {
                                     {contact.isActive ? "Active" : "Inactive"}
                                   </Badge>
                                 </td>
-                                <td className="py-1">
+                                <td className="py-1 px-6">
                                   <div className="flex space-x-1 justify-end">
                                     <Button 
                                       variant="outline" 
