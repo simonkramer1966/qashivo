@@ -2301,33 +2301,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Function to format phone number to E.164 format
   function formatPhoneToE164(phone: string): string {
+    // If already in E.164 format (starts with +), validate and return
+    if (phone.startsWith('+')) {
+      return phone;
+    }
+    
     // Remove all non-digits
     const digitsOnly = phone.replace(/\D/g, '');
     
-    // If already starts with country code, use as is
+    // South African numbers (starting with 27, total 11 digits)
+    if (digitsOnly.startsWith('27') && digitsOnly.length === 11) {
+      return `+${digitsOnly}`;
+    }
+    
+    // US numbers starting with 1 (11 digits total)
     if (digitsOnly.startsWith('1') && digitsOnly.length === 11) {
       return `+${digitsOnly}`;
     }
     
-    // UK numbers starting with 07 or 447
+    // UK numbers starting with 07 (11 digits, convert to +44)
     if (digitsOnly.startsWith('07') && digitsOnly.length === 11) {
       return `+44${digitsOnly.substring(1)}`;
     }
-    if (digitsOnly.startsWith('447') && digitsOnly.length === 12) {
+    
+    // UK numbers already with 44 prefix (12 digits)
+    if (digitsOnly.startsWith('44') && digitsOnly.length === 12) {
       return `+${digitsOnly}`;
     }
     
-    // US numbers (10 digits)
+    // US numbers (10 digits, add +1)
     if (digitsOnly.length === 10) {
       return `+1${digitsOnly}`;
     }
     
-    // Default: assume it's already formatted or add +1
-    if (digitsOnly.length === 11 && !digitsOnly.startsWith('1')) {
-      return `+1${digitsOnly}`;
-    }
-    
-    return digitsOnly.startsWith('+') ? phone : `+${digitsOnly}`;
+    // For other international numbers, assume they're already properly formatted
+    // and just add the + prefix
+    return `+${digitsOnly}`;
   }
 
   // Live demo endpoint that generates invoice data and triggers voice call
