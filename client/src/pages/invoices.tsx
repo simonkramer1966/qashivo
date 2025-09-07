@@ -125,6 +125,10 @@ export default function Invoices() {
           aValue = a.status.toLowerCase();
           bValue = b.status.toLowerCase();
           break;
+        case "collectionStage":
+          aValue = (a.collectionStage || 'initial').toLowerCase();
+          bValue = (b.collectionStage || 'initial').toLowerCase();
+          break;
         default:
           return 0;
       }
@@ -328,6 +332,15 @@ export default function Invoices() {
                             {getSortIcon("status")}
                           </button>
                         </th>
+                        <th className="text-left py-2 text-xs font-semibold text-slate-700">
+                          <button 
+                            onClick={() => handleSort("collectionStage")}
+                            className="flex items-center space-x-1 hover:text-slate-900"
+                          >
+                            <span>Collection Stage</span>
+                            {getSortIcon("collectionStage")}
+                          </button>
+                        </th>
                         <th className="text-right py-2 text-xs font-semibold text-slate-700">Actions</th>
                       </tr>
                     </thead>
@@ -351,6 +364,12 @@ export default function Invoices() {
                           </td>
                           <td className="py-1">
                             {getStatusBadge(invoice.status)}
+                          </td>
+                          <td className="py-1 text-xs text-slate-700">
+                            {invoice.collectionStage ? 
+                              invoice.collectionStage.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()) : 
+                              'Initial'
+                            }
                           </td>
                           <td className="py-1">
                             <div className="flex space-x-1 justify-end">

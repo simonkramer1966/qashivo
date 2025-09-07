@@ -85,6 +85,7 @@ export const invoices = pgTable("invoices", {
   amountPaid: decimal("amount_paid", { precision: 10, scale: 2 }).default("0"),
   taxAmount: decimal("tax_amount", { precision: 10, scale: 2 }).default("0"),
   status: varchar("status").notNull().default("pending"), // pending, paid, overdue, cancelled
+  collectionStage: varchar("collection_stage").default("initial"), // initial, reminder_1, reminder_2, formal_notice, final_notice, escalated
   issueDate: timestamp("issue_date").notNull(),
   dueDate: timestamp("due_date").notNull(),
   paidDate: timestamp("paid_date"),
