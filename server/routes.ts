@@ -1049,97 +1049,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
 
-      const { contactId, invoiceId, overrideTelephone, overrideContact } = req.body;
-      if (!contactId) {
-        return res.status(400).json({ message: "Contact ID is required" });
+      const { 
+        phone, 
+        customerName, 
+        companyName, 
+        invoiceNumber, 
+        invoiceAmount, 
+        totalOutstanding, 
+        daysOverdue, 
+        invoiceCount, 
+        dueDate, 
+        organisationName, 
+        demoMessage 
+      } = req.body;
+      
+      if (!phone) {
+        return res.status(400).json({ message: "Phone number is required" });
       }
 
-      const contact = await storage.getContact(contactId, user.tenantId);
-      if (!contact) {
-        return res.status(404).json({ message: "Contact not found" });
-      }
-
-      const phoneToUse = overrideTelephone || contact.phone;
-      if (!phoneToUse) {
-        return res.status(400).json({ message: "Contact phone not available and no override provided" });
-      }
-
-      // Get tenant information for organization name
+      // Get tenant information for fallback organization name
       const tenant = await storage.getTenant(user.tenantId);
-      if (!tenant) {
-        return res.status(400).json({ message: "Tenant information not found" });
-      }
-
-      // Get actual outstanding invoices for this contact
-      const allInvoices = await storage.getInvoices(user.tenantId, 100);
-      const contactInvoices = allInvoices.filter(inv => 
-        inv.contactId === contactId && 
-        (inv.status === 'overdue' || inv.status === 'pending')
-      );
-
-      console.log(`📊 Found ${contactInvoices.length} eligible invoices for contact ${contact.name}`);
-
-      // Calculate invoice details for the call
-      let primaryInvoice = null;
-      let totalOutstanding = 0;
-      let oldestDaysOverdue = 0;
-
-      if (contactInvoices.length > 0) {
-        // If a specific invoice ID is provided, use that invoice
-        if (invoiceId) {
-          primaryInvoice = contactInvoices.find(inv => inv.id === invoiceId);
-          if (!primaryInvoice) {
-            return res.status(400).json({ message: "Selected invoice not found or not eligible for collection call" });
-          }
-        } else {
-          // Fallback to auto-selection logic (prioritize 30+ day overdue)
-          const thirtyDaysAgo = new Date();
-          thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-          
-          const significantlyOverdue = contactInvoices.filter(inv => 
-            new Date(inv.dueDate) < thirtyDaysAgo
-          );
-          
-          console.log(`🔍 Found ${significantlyOverdue.length} invoices 30+ days overdue`);
-          
-          if (significantlyOverdue.length > 0) {
-            significantlyOverdue.sort((a, b) => 
-              new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()
-            );
-            primaryInvoice = significantlyOverdue[0];
-          } else {
-            contactInvoices.sort((a, b) => parseFloat(b.amount) - parseFloat(a.amount));
-            primaryInvoice = contactInvoices[0];
-          }
-        }
-        
-        console.log(`💰 Primary invoice selected: ${primaryInvoice?.invoiceNumber || 'None'} - Due: ${primaryInvoice?.dueDate || 'N/A'} - Amount: ${primaryInvoice?.amount || '0'}`);
-        
-        // Calculate total outstanding
-        totalOutstanding = contactInvoices.reduce((sum, inv) => sum + parseFloat(inv.amount), 0);
-        
-        // Calculate days overdue for oldest invoice
-        const oldestInvoice = contactInvoices.sort((a, b) => 
-          new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()
-        )[0];
-        const daysOverdue = Math.floor((Date.now() - new Date(oldestInvoice.dueDate).getTime()) / (1000 * 60 * 60 * 24));
-        oldestDaysOverdue = Math.max(0, daysOverdue);
-      } else {
-        console.log(`⚠️ No eligible invoices found for contact ${contact.name}, using demo data`);
-      }
-
-      // Create dynamic variables for the call
+      
+      // Create dynamic variables for the call using static test data
       const dynamicVariables = {
-        customer_name: overrideContact || (user.firstName && user.lastName) ? `${user.firstName} ${user.lastName}` : contact.name,
-        company_name: contact.companyName || contact.name,
-        invoice_number: primaryInvoice?.invoiceNumber || "DEMO-001",
-        invoice_amount: primaryInvoice ? parseFloat(primaryInvoice.amount).toFixed(2) : "1500.00",
-        total_outstanding: totalOutstanding.toFixed(2),
-        days_overdue: String(oldestDaysOverdue),
-        invoice_count: String(contactInvoices.length),
-        due_date: primaryInvoice ? new Date(primaryInvoice.dueDate).toLocaleDateString() : new Date().toLocaleDateString(),
-        organisation_name: tenant.name,
-        demo_message: `This is a professional collection call regarding outstanding invoices for ${contact.name}.`
+        customer_name: customerName || "Test Customer",
+        company_name: companyName || "Test Company",
+        invoice_number: invoiceNumber || "TEST-001",
+        invoice_amount: invoiceAmount || "1500.00",
+        total_outstanding: totalOutstanding || "0.00",
+        days_overdue: daysOverdue || "0",
+        invoice_count: invoiceCount || "1",
+        due_date: dueDate || new Date().toLocaleDateString(),
+        organisation_name: organisationName || tenant?.name || "Nexus AR",
+        demo_message: demoMessage || "This is a professional collection call regarding outstanding invoices."
       };
 
       console.log("📞 Creating call with dynamic variables:", dynamicVariables);
@@ -1153,14 +1095,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         console.log("🔧 Retell API call parameters:", {
           from_number: process.env.RETELL_PHONE_NUMBER,
-          to_number: phoneToUse,
+          to_number: phone,
           agent_id: process.env.RETELL_AGENT_ID,
           has_dynamic_variables: !!dynamicVariables
         });
         
         // Clean phone numbers - remove parentheses and spaces
         const cleanFromNumber = process.env.RETELL_PHONE_NUMBER!.replace(/[()\\s-]/g, '');
-        const cleanToNumber = phoneToUse.replace(/[()\\s-]/g, '');
+        const cleanToNumber = phone.replace(/[()\\s-]/g, '');
         
         console.log("🧹 Cleaned phone numbers:", {
           from: cleanFromNumber,
@@ -1192,11 +1134,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Store the test call record
       const voiceCallData = insertVoiceCallSchema.parse({
         tenantId: user.tenantId,
-        contactId,
         retellCallId: callId,
         retellAgentId: process.env.RETELL_AGENT_ID || "default-agent",
         fromNumber: process.env.RETELL_PHONE_NUMBER || "Unknown",
-        toNumber: phoneToUse,
+        toNumber: phone,
         direction: "outbound",
         status: callStatus,
         scheduledAt: new Date(),
@@ -1207,20 +1148,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Log the test action
       await storage.createAction({
         tenantId: user.tenantId,
-        contactId,
         userId: user.id,
         type: 'voice',
         status: 'completed',
-        subject: 'TEST VOICE - MCP Communication Test',
-        content: `Test voice call initiated via MCP to ${phoneToUse}`,
+        subject: 'TEST VOICE - Communication Test',
+        content: `Test voice call initiated to ${phone} for ${customerName || 'Test Customer'}`,
         completedAt: new Date(),
-        metadata: { retellCallId: callId },
+        metadata: { retellCallId: callId, dynamicVariables },
       });
 
       res.status(201).json({
         voiceCall,
         retellCallId: callId,
-        message: `Call initiated to ${phoneToUse}`,
+        message: `Call initiated to ${phone}`,
         dynamicVariables: dynamicVariables
       });
     } catch (error: any) {
