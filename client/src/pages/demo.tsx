@@ -55,24 +55,25 @@ export default function Demo() {
   const onSubmit = async (values: z.infer<typeof leadFormSchema>) => {
     setIsSubmitting(true);
     try {
-      const response = await apiRequest("POST", "/api/leads", {
+      const response = await apiRequest("POST", "/api/demo/live-call", {
         ...values,
-        source: "demo"
+        source: "live_demo"
       });
 
       if (response.ok) {
+        const data = await response.json();
         toast({
-          title: "Demo Request Submitted!",
-          description: "Thank you for your interest. We'll contact you soon to schedule your personalized demo.",
+          title: "Live Demo Initiated! 🎯",
+          description: `Your phone will ring shortly! We'll discuss invoice ${data.invoiceData.invoiceNumber} for $${data.invoiceData.outstandingAmount} (${data.invoiceData.daysOverdue} days overdue).`,
         });
         form.reset();
       } else {
-        throw new Error("Failed to submit demo request");
+        throw new Error("Failed to initiate live demo");
       }
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to submit demo request. Please try again.",
+        description: "Failed to initiate live demo call. Please try again.",
         variant: "destructive",
       });
     } finally {

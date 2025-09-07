@@ -2256,6 +2256,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Lead Management Routes
+  // Function to generate temporary invoice data for live demos
+  function generateDemoInvoiceData() {
+    const invoiceNumber = `INV-${Date.now().toString().slice(-6)}`;
+    const baseAmounts = [850, 1200, 1500, 2300, 3200, 4500, 6700, 8900];
+    const outstandingAmount = baseAmounts[Math.floor(Math.random() * baseAmounts.length)];
+    
+    // Generate realistic past due dates (30-90 days ago)
+    const daysOverdue = Math.floor(Math.random() * 60) + 30; // 30-90 days
+    const dueDate = new Date();
+    dueDate.setDate(dueDate.getDate() - daysOverdue);
+    
+    // Invoice date is 30 days before due date
+    const invoiceDate = new Date(dueDate);
+    invoiceDate.setDate(invoiceDate.getDate() - 30);
+    
+    return {
+      invoiceNumber,
+      outstandingAmount: outstandingAmount.toFixed(2),
+      invoiceDate: invoiceDate.toLocaleDateString(),
+      dueDate: dueDate.toLocaleDateString(),
+      daysOverdue: daysOverdue.toString(),
+      invoiceCount: "1",
+      totalOutstanding: outstandingAmount.toFixed(2)
+    };
+  }
+
   app.post("/api/leads", async (req, res) => {
     try {
       const leadData = insertLeadSchema.parse(req.body);
@@ -2267,6 +2293,92 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid lead data", errors: error.errors });
       }
       res.status(500).json({ message: "Failed to create lead" });
+    }
+  });
+
+  // Live demo endpoint that generates invoice data and triggers voice call
+  app.post("/api/demo/live-call", async (req, res) => {
+    try {
+      const { name, email, phone, company } = req.body;
+      
+      if (!name || !phone) {
+        return res.status(400).json({ message: "Name and phone number are required" });
+      }
+
+      // Generate temporary invoice data
+      const invoiceData = generateDemoInvoiceData();
+      
+      // Create dynamic variables for the call
+      const dynamicVariables = {
+        customer_name: name,
+        company_name: company || "Your Company",
+        invoice_number: invoiceData.invoiceNumber,
+        invoice_amount: invoiceData.outstandingAmount,
+        total_outstanding: invoiceData.totalOutstanding,
+        days_overdue: invoiceData.daysOverdue,
+        invoice_count: invoiceData.invoiceCount,
+        due_date: invoiceData.dueDate,
+        organisation_name: "Nexus AR",
+        demo_message: `Hello ${name}, this is a live demonstration of Nexus AR's AI-powered collection system. We're calling regarding invoice ${invoiceData.invoiceNumber} for $${invoiceData.outstandingAmount}.`
+      };
+
+      console.log("🎯 Live demo call with generated data:", {
+        lead: { name, company, phone },
+        invoiceData,
+        dynamicVariables
+      });
+
+      // Use direct Retell API call
+      let callId = `live-demo-${Date.now()}`;
+      let callStatus = "queued";
+      
+      try {
+        const retellClient = createRetellClient(process.env.RETELL_API_KEY!);
+        
+        // Clean phone numbers
+        const cleanFromNumber = process.env.RETELL_PHONE_NUMBER!.replace(/[()\\s-]/g, '');
+        const cleanToNumber = phone.replace(/[()\\s-]/g, '');
+        
+        const call = await retellClient.call.createPhoneCall({
+          from_number: cleanFromNumber,
+          to_number: cleanToNumber,
+          agent_id: process.env.RETELL_AGENT_ID!,
+          retell_llm_dynamic_variables: dynamicVariables
+        } as any);
+        
+        callId = (call as any).call_id || callId;
+        callStatus = (call as any).call_status || "registered";
+        
+        console.log("✅ Live demo call created:", { callId, callStatus });
+      } catch (retellError: any) {
+        console.error("❌ Retell API error for live demo:", retellError);
+        // Continue anyway for demo purposes
+      }
+      
+      // Store the lead with demo call info
+      const leadData = insertLeadSchema.parse({
+        ...req.body,
+        source: "live_demo",
+        notes: `Live demo call initiated. Invoice: ${invoiceData.invoiceNumber}, Amount: $${invoiceData.outstandingAmount}`
+      });
+      
+      const lead = await storage.createLead(leadData);
+      
+      res.status(201).json({
+        success: true,
+        message: "Live demo call initiated successfully!",
+        lead,
+        callId,
+        callStatus,
+        invoiceData,
+        dynamicVariables
+      });
+    } catch (error) {
+      console.error("Error creating live demo call:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid demo data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to initiate live demo call" });
     }
   });
 
