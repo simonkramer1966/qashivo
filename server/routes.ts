@@ -85,7 +85,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         case 'tools/list':
           return res.json({
-            tools: [
+            jsonrpc: "2.0",
+            id: req.body.id,
+            result: {
+              tools: [
               {
                 name: "create_phone_call",
                 description: "Creates a new phone call with dynamic variables for Nexus AR",
@@ -166,6 +169,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 }
               }
             ]
+            }
           });
 
         case 'tools/call':
