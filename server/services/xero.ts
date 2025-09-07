@@ -165,6 +165,57 @@ class XeroService {
     }
   }
 
+  async getInvoicesPaginated(tokens: XeroTokens, page: number = 1, limit: number = 50): Promise<{
+    invoices: XeroInvoice[];
+    pagination: {
+      currentPage: number;
+      totalPages: number;
+      totalCount: number;
+      hasNextPage: boolean;
+      hasPreviousPage: boolean;
+    };
+  }> {
+    try {
+      // Xero API uses 1-based pagination
+      const xeroPage = Math.max(1, page);
+      let endpoint = `Invoices?where=Type%3D%3D%22ACCREC%22&page=${xeroPage}`;
+      
+      const response = await this.makeAuthenticatedRequest(tokens, endpoint);
+      const invoices = response.Invoices || [];
+      
+      // Calculate pagination info based on Xero's response
+      // Xero doesn't always provide total count, so we estimate based on returned results
+      const hasMore = invoices.length === 100; // Xero's default page size is 100
+      const currentPage = xeroPage;
+      
+      // Take only the requested limit from the results
+      const limitedInvoices = invoices.slice(0, limit);
+      
+      return {
+        invoices: limitedInvoices,
+        pagination: {
+          currentPage,
+          totalPages: hasMore ? currentPage + 1 : currentPage, // Estimate
+          totalCount: hasMore ? (currentPage * 100) + 1 : (currentPage - 1) * 100 + invoices.length, // Estimate
+          hasNextPage: hasMore && limitedInvoices.length === limit,
+          hasPreviousPage: currentPage > 1,
+        },
+      };
+    } catch (error) {
+      console.error('Failed to fetch paginated Xero invoices:', error);
+      return {
+        invoices: [],
+        pagination: {
+          currentPage: page,
+          totalPages: 1,
+          totalCount: 0,
+          hasNextPage: false,
+          hasPreviousPage: false,
+        },
+      };
+    }
+  }
+
   async getInvoice(tokens: XeroTokens, invoiceId: string): Promise<XeroInvoice | null> {
     try {
       const response = await this.makeAuthenticatedRequest(tokens, `Invoices/${invoiceId}`);
