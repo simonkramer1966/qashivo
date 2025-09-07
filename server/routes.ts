@@ -733,6 +733,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get contact history for a specific invoice
+  app.get("/api/invoices/:invoiceId/contact-history", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { invoiceId } = req.params;
+      
+      // Get the invoice to validate access and get contact info
+      const invoice = await storage.getInvoice(invoiceId, user.tenantId);
+      if (!invoice) {
+        return res.status(404).json({ message: "Invoice not found" });
+      }
+
+      // Get all actions for this invoice and contact
+      const allActions = await storage.getActions(user.tenantId);
+      const contactHistory = allActions
+        .filter(action => 
+          action.invoiceId === invoiceId || action.contactId === invoice.contactId
+        )
+        .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+
+      res.json(contactHistory);
+    } catch (error) {
+      console.error("Error fetching contact history:", error);
+      res.status(500).json({ message: "Failed to fetch contact history" });
+    }
+  });
+
   app.post("/api/actions", isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.claims.sub);

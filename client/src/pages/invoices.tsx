@@ -10,7 +10,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Mail, Phone, Eye, Plus, Search, Filter, FileText, ChevronUp, ChevronDown } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Mail, Phone, Eye, Plus, Search, Filter, FileText, ChevronUp, ChevronDown, X, MessageSquare, Calendar, CheckCircle, AlertCircle, Clock } from "lucide-react";
 
 export default function Invoices() {
   const { toast } = useToast();
@@ -19,6 +20,8 @@ export default function Invoices() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [sortField, setSortField] = useState<string>("");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+  const [selectedInvoice, setSelectedInvoice] = useState<any>(null);
+  const [showContactHistory, setShowContactHistory] = useState(false);
 
   // Redirect to home if not authenticated
   useEffect(() => {
@@ -38,6 +41,12 @@ export default function Invoices() {
   const { data: invoices = [], isLoading: invoicesLoading, error } = useQuery({
     queryKey: ["/api/invoices"],
     enabled: isAuthenticated,
+  });
+
+  // Fetch contact history for selected invoice
+  const { data: contactHistory = [], isLoading: historyLoading } = useQuery({
+    queryKey: [`/api/invoices/${selectedInvoice?.id}/contact-history`],
+    enabled: !!selectedInvoice?.id,
   });
 
   useEffect(() => {
@@ -130,6 +139,44 @@ export default function Invoices() {
   const getSortIcon = (field: string) => {
     if (sortField !== field) return null;
     return sortDirection === "asc" ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />;
+  };
+
+  const openContactHistory = (invoice: any) => {
+    setSelectedInvoice(invoice);
+    setShowContactHistory(true);
+  };
+
+  const closeContactHistory = () => {
+    setSelectedInvoice(null);
+    setShowContactHistory(false);
+  };
+
+  const getActionIcon = (type: string) => {
+    switch (type) {
+      case 'email':
+        return <Mail className="h-4 w-4" />;
+      case 'sms':
+        return <MessageSquare className="h-4 w-4" />;
+      case 'call':
+        return <Phone className="h-4 w-4" />;
+      case 'payment':
+        return <CheckCircle className="h-4 w-4" />;
+      default:
+        return <Calendar className="h-4 w-4" />;
+    }
+  };
+
+  const getActionStatusColor = (status: string) => {
+    switch (status) {
+      case 'completed':
+        return 'text-green-600';
+      case 'failed':
+        return 'text-red-600';
+      case 'pending':
+        return 'text-yellow-600';
+      default:
+        return 'text-gray-600';
+    }
   };
 
   return (
@@ -336,6 +383,7 @@ export default function Invoices() {
                               <Button 
                                 variant="outline" 
                                 size="sm"
+                                onClick={() => openContactHistory(invoice)}
                                 className="border-[#17B6C3]/20 text-[#17B6C3] hover:bg-[#17B6C3]/5 h-7 w-7 p-0"
                                 data-testid={`button-view-${invoice.id}`}
                               >
@@ -353,6 +401,102 @@ export default function Invoices() {
           </Card>
         </div>
       </main>
+
+      {/* Contact History Dialog */}
+      <Dialog open={showContactHistory} onOpenChange={closeContactHistory}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Eye className="h-5 w-5 text-[#17B6C3]" />
+              Contact History
+            </DialogTitle>
+            <DialogDescription>
+              {selectedInvoice && (
+                <>
+                  Communication history for <strong>{selectedInvoice.contact?.name || 'Unknown Contact'}</strong> regarding invoice <strong>{selectedInvoice.invoiceNumber}</strong>
+                </>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="overflow-y-auto max-h-[60vh]">
+            {historyLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="animate-spin w-6 h-6 border-2 border-[#17B6C3] border-t-transparent rounded-full"></div>
+                <span className="ml-2 text-sm text-gray-600">Loading contact history...</span>
+              </div>
+            ) : contactHistory.length === 0 ? (
+              <div className="text-center py-8">
+                <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                <p className="text-gray-600 mb-2">No contact history found</p>
+                <p className="text-sm text-gray-500">No communication activities have been recorded for this invoice yet.</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {contactHistory.map((action: any) => (
+                  <div key={action.id} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-start gap-3">
+                        <div className={`p-2 rounded-lg bg-gray-100 ${getActionStatusColor(action.status)}`}>
+                          {getActionIcon(action.type)}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <h4 className="font-medium text-gray-900 capitalize">
+                              {action.type}
+                            </h4>
+                            <Badge 
+                              variant="outline" 
+                              className={`text-xs ${getActionStatusColor(action.status)}`}
+                            >
+                              {action.status}
+                            </Badge>
+                          </div>
+                          {action.subject && (
+                            <p className="text-sm font-medium text-gray-700 mb-1">
+                              {action.subject}
+                            </p>
+                          )}
+                          {action.content && (
+                            <p className="text-sm text-gray-600 mb-2 break-words">
+                              {action.content.length > 200 
+                                ? `${action.content.substring(0, 200)}...` 
+                                : action.content
+                              }
+                            </p>
+                          )}
+                          <div className="flex items-center gap-4 text-xs text-gray-500">
+                            <span className="flex items-center gap-1">
+                              <Clock className="h-3 w-3" />
+                              {new Date(action.createdAt).toLocaleString()}
+                            </span>
+                            {action.completedAt && (
+                              <span>
+                                Completed: {new Date(action.completedAt).toLocaleString()}
+                              </span>
+                            )}
+                            {action.aiGenerated && (
+                              <Badge variant="outline" className="text-xs">
+                                AI Generated
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          
+          <div className="flex justify-end pt-4 border-t">
+            <Button variant="outline" onClick={closeContactHistory}>
+              Close
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
