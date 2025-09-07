@@ -1079,10 +1079,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const thirtyDaysAgo = new Date();
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
         
+        console.log(`🔍 Voice call invoice selection for contact: ${contact.name}`);
+        console.log(`📅 30 days ago cutoff: ${thirtyDaysAgo.toISOString()}`);
+        console.log(`📋 Found ${contactInvoices.length} overdue/pending invoices for this contact:`);
+        
+        contactInvoices.forEach(inv => {
+          console.log(`   • ${inv.invoiceNumber}: Due ${new Date(inv.dueDate).toISOString()}, Amount: $${inv.amount}, Status: ${inv.status}`);
+        });
+        
         // First try to find invoices that are 30+ days overdue
         const significantlyOverdue = contactInvoices.filter(inv => 
           new Date(inv.dueDate) < thirtyDaysAgo
         );
+        
+        console.log(`🎯 Found ${significantlyOverdue.length} invoices that are 30+ days overdue`);
         
         if (significantlyOverdue.length > 0) {
           // Sort by oldest due date first (most problematic for collections)
@@ -1090,10 +1100,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
             new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()
           );
           primaryInvoice = significantlyOverdue[0];
+          console.log(`✅ Selected oldest overdue invoice: ${primaryInvoice.invoiceNumber}, Due: ${new Date(primaryInvoice.dueDate).toISOString()}`);
         } else {
           // Fallback to highest amount if no 30+ day overdue invoices
           contactInvoices.sort((a, b) => parseFloat(b.amount) - parseFloat(a.amount));
           primaryInvoice = contactInvoices[0];
+          console.log(`⚠️ No 30+ day overdue invoices found, using highest amount: ${primaryInvoice.invoiceNumber}, Due: ${new Date(primaryInvoice.dueDate).toISOString()}`);
         }
         
         // Calculate total outstanding
