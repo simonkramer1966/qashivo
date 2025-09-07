@@ -110,10 +110,10 @@ export default function Header({ title, subtitle, action, noBorder = true, title
             variant="ghost"
             size="icon"
             onClick={handleSettingsClick}
-            className="hover:bg-accent hover:text-accent-foreground rounded-lg p-2 transition-colors"
+            className="h-10 w-10 rounded-full bg-gray-200 hover:bg-gray-300 transition-colors p-0 flex items-center justify-center"
             data-testid="button-settings"
           >
-            <Settings className="h-10 w-10" />
+            <Settings className="h-5 w-5 text-gray-600" />
           </Button>
           
           {action}
