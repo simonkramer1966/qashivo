@@ -113,7 +113,7 @@ export default function Header({ title, subtitle, action, noBorder = true, title
             className="hover:bg-accent hover:text-accent-foreground rounded-lg p-2 transition-colors"
             data-testid="button-settings"
           >
-            <Settings className="h-5 w-5" />
+            <Settings className="h-6 w-6" />
           </Button>
           
           {action}
