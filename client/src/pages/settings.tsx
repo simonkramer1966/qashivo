@@ -441,6 +441,9 @@ export default function Settings() {
   // Branding form state
   const [companyName, setCompanyName] = useState("");
   const [tagline, setTagline] = useState("");
+  
+  // Organization settings state
+  const [organizationName, setOrganizationName] = useState("");
 
   // Fetch tenant information
   const { data: tenant } = useQuery<{
@@ -460,6 +463,7 @@ export default function Settings() {
     if (tenant) {
       setCompanyName(tenant.settings?.companyName || tenant.name || "Nexus AR");
       setTagline(tenant.settings?.tagline || "Debt Recovery Suite");
+      setOrganizationName(tenant.name || "");
     }
   }, [tenant]);
 
@@ -502,6 +506,12 @@ export default function Settings() {
         companyName,
         tagline,
       },
+    });
+  };
+
+  const handleSaveOrganization = () => {
+    updateTenantMutation.mutate({
+      name: organizationName,
     });
   };
 
@@ -675,6 +685,8 @@ export default function Settings() {
                     <Label htmlFor="orgName">Organization Name</Label>
                     <Input 
                       id="orgName"
+                      value={organizationName}
+                      onChange={(e) => setOrganizationName(e.target.value)}
                       placeholder="Your Company Name"
                       className="bg-white/70 border-gray-200/30"
                       data-testid="input-org-name"
@@ -694,7 +706,14 @@ export default function Settings() {
                       </div>
                     </div>
                   </div>
-                  <Button className="bg-[#17B6C3] hover:bg-[#1396A1] text-white" data-testid="button-save-org">Save Changes</Button>
+                  <Button 
+                    onClick={handleSaveOrganization}
+                    disabled={updateTenantMutation.isPending}
+                    className="bg-[#17B6C3] hover:bg-[#1396A1] text-white" 
+                    data-testid="button-save-org"
+                  >
+                    {updateTenantMutation.isPending ? "Saving..." : "Save Changes"}
+                  </Button>
                 </CardContent>
               </Card>
             </TabsContent>
