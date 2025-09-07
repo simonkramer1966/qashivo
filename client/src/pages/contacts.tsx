@@ -10,13 +10,15 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Search, Mail, Phone, Building, User, Users, Grid3X3, List } from "lucide-react";
+import { Plus, Search, Mail, Phone, Building, User, Users, Grid3X3, List, ChevronUp, ChevronDown } from "lucide-react";
 
 export default function Contacts() {
   const { toast } = useToast();
   const { isAuthenticated, isLoading } = useAuth();
   const [search, setSearch] = useState("");
   const [activeTab, setActiveTab] = useState("cards");
+  const [sortField, setSortField] = useState<string>("");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
 
   // Redirect to home if not authenticated
   useEffect(() => {
@@ -55,11 +57,68 @@ export default function Contacts() {
     return <div className="min-h-screen bg-background" />;
   }
 
+  const handleSort = (field: string) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      setSortField(field);
+      setSortDirection("asc");
+    }
+  };
+
+  const getSortIcon = (field: string) => {
+    if (sortField !== field) {
+      return <ChevronUp className="h-3 w-3 text-gray-400" />;
+    }
+    return sortDirection === "asc" ? 
+      <ChevronUp className="h-3 w-3 text-slate-700" /> : 
+      <ChevronDown className="h-3 w-3 text-slate-700" />;
+  };
+
   const filteredContacts = (contacts as any[]).filter((contact: any) => {
     const searchLower = search.toLowerCase();
     return contact.name?.toLowerCase().includes(searchLower) ||
            contact.email?.toLowerCase().includes(searchLower) ||
            contact.companyName?.toLowerCase().includes(searchLower);
+  });
+
+  const sortedContacts = [...filteredContacts].sort((a: any, b: any) => {
+    if (!sortField) return 0;
+    
+    let aValue: any, bValue: any;
+    
+    switch (sortField) {
+      case "name":
+        aValue = a.name?.toLowerCase() || '';
+        bValue = b.name?.toLowerCase() || '';
+        break;
+      case "companyName":
+        aValue = a.companyName?.toLowerCase() || '';
+        bValue = b.companyName?.toLowerCase() || '';
+        break;
+      case "email":
+        aValue = a.email?.toLowerCase() || '';
+        bValue = b.email?.toLowerCase() || '';
+        break;
+      case "phone":
+        aValue = a.phone || '';
+        bValue = b.phone || '';
+        break;
+      case "paymentTerms":
+        aValue = a.paymentTerms || 0;
+        bValue = b.paymentTerms || 0;
+        break;
+      case "status":
+        aValue = a.isActive ? 'active' : 'inactive';
+        bValue = b.isActive ? 'active' : 'inactive';
+        break;
+      default:
+        return 0;
+    }
+    
+    if (aValue < bValue) return sortDirection === "asc" ? -1 : 1;
+    if (aValue > bValue) return sortDirection === "asc" ? 1 : -1;
+    return 0;
   });
 
   return (
@@ -109,7 +168,7 @@ export default function Contacts() {
                 <div className="p-3 bg-[#17B6C3]/10 rounded-xl mr-4">
                   <Users className="h-6 w-6 text-[#17B6C3]" />
                 </div>
-                All Contacts ({filteredContacts.length})
+                All Contacts ({sortedContacts.length})
               </h2>
             </div>
 
@@ -130,7 +189,7 @@ export default function Contacts() {
                   <div className="text-center py-8">
                     <p className="text-muted-foreground">Loading contacts...</p>
                   </div>
-                ) : filteredContacts.length === 0 ? (
+                ) : sortedContacts.length === 0 ? (
                   <Card className="bg-white border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
                     <CardContent className="text-center py-8">
                       <div className="w-16 h-16 bg-[#17B6C3]/10 rounded-full flex items-center justify-center mx-auto mb-6">
@@ -154,7 +213,7 @@ export default function Contacts() {
                   </Card>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                    {filteredContacts.map((contact: any) => (
+                    {sortedContacts.map((contact: any) => (
                       <Card key={contact.id} className="bg-white border border-gray-200 shadow-sm hover:shadow-md transition-shadow" data-testid={`card-contact-${contact.id}`}>
                         <CardHeader className="pb-4">
                           <div className="flex items-start justify-between">
@@ -245,7 +304,7 @@ export default function Contacts() {
                   <div className="text-center py-8">
                     <p className="text-muted-foreground">Loading contacts...</p>
                   </div>
-                ) : filteredContacts.length === 0 ? (
+                ) : sortedContacts.length === 0 ? (
                   <Card className="bg-white border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
                     <CardContent className="text-center py-8">
                       <div className="w-16 h-16 bg-[#17B6C3]/10 rounded-full flex items-center justify-center mx-auto mb-6">
@@ -274,61 +333,95 @@ export default function Contacts() {
                         <table className="w-full">
                           <thead>
                             <tr className="border-b border-slate-200/50">
-                              <th className="text-left py-4 px-6 text-sm font-semibold text-slate-700">Contact</th>
-                              <th className="text-left py-4 px-6 text-sm font-semibold text-slate-700">Company</th>
-                              <th className="text-left py-4 px-6 text-sm font-semibold text-slate-700">Email</th>
-                              <th className="text-left py-4 px-6 text-sm font-semibold text-slate-700">Phone</th>
-                              <th className="text-left py-4 px-6 text-sm font-semibold text-slate-700">Terms</th>
-                              <th className="text-left py-4 px-6 text-sm font-semibold text-slate-700">Status</th>
-                              <th className="text-left py-4 px-6 text-sm font-semibold text-slate-700">Actions</th>
+                              <th className="text-left py-2 text-xs font-semibold text-slate-700 w-60">
+                                <button 
+                                  onClick={() => handleSort("name")}
+                                  className="flex items-center space-x-1 hover:text-slate-900"
+                                >
+                                  <span>Contact</span>
+                                  {getSortIcon("name")}
+                                </button>
+                              </th>
+                              <th className="text-left py-2 text-xs font-semibold text-slate-700 w-48">
+                                <button 
+                                  onClick={() => handleSort("companyName")}
+                                  className="flex items-center space-x-1 hover:text-slate-900"
+                                >
+                                  <span>Company</span>
+                                  {getSortIcon("companyName")}
+                                </button>
+                              </th>
+                              <th className="text-left py-2 text-xs font-semibold text-slate-700 w-48">
+                                <button 
+                                  onClick={() => handleSort("email")}
+                                  className="flex items-center space-x-1 hover:text-slate-900"
+                                >
+                                  <span>Email</span>
+                                  {getSortIcon("email")}
+                                </button>
+                              </th>
+                              <th className="text-left py-2 text-xs font-semibold text-slate-700 w-32">
+                                <button 
+                                  onClick={() => handleSort("phone")}
+                                  className="flex items-center space-x-1 hover:text-slate-900"
+                                >
+                                  <span>Phone</span>
+                                  {getSortIcon("phone")}
+                                </button>
+                              </th>
+                              <th className="text-left py-2 text-xs font-semibold text-slate-700 w-20">
+                                <button 
+                                  onClick={() => handleSort("paymentTerms")}
+                                  className="flex items-center space-x-1 hover:text-slate-900"
+                                >
+                                  <span>Terms</span>
+                                  {getSortIcon("paymentTerms")}
+                                </button>
+                              </th>
+                              <th className="text-left py-2 text-xs font-semibold text-slate-700 w-20">
+                                <button 
+                                  onClick={() => handleSort("status")}
+                                  className="flex items-center space-x-1 hover:text-slate-900"
+                                >
+                                  <span>Status</span>
+                                  {getSortIcon("status")}
+                                </button>
+                              </th>
+                              <th className="text-right py-2 text-xs font-semibold text-slate-700">Actions</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-slate-200/50">
-                            {filteredContacts.map((contact: any) => (
+                            {sortedContacts.map((contact: any) => (
                               <tr key={contact.id} className="hover:bg-slate-50/50 transition-colors" data-testid={`row-contact-${contact.id}`}>
-                                <td className="py-6 px-6">
-                                  <div className="flex items-center space-x-3">
-                                    <div className="w-10 h-10 bg-[#17B6C3]/20 rounded-full flex items-center justify-center">
-                                      <span className="text-[#17B6C3] text-sm font-bold">
-                                        {contact.name?.charAt(0)?.toUpperCase() || '?'}
-                                      </span>
-                                    </div>
-                                    <div>
-                                      <div className="font-semibold text-slate-900" data-testid={`text-list-name-${contact.id}`}>
-                                        {contact.name}
-                                      </div>
-                                      <div className="text-sm text-slate-600">
-                                        Created: {new Date(contact.createdAt).toLocaleDateString()}
-                                      </div>
-                                    </div>
-                                  </div>
+                                <td className="py-1 text-xs text-slate-700 w-60" data-testid={`text-list-name-${contact.id}`}>
+                                  {contact.name}
                                 </td>
-                                <td className="py-6 px-6 text-slate-700" data-testid={`text-list-company-${contact.id}`}>
+                                <td className="py-1 text-xs text-slate-700 w-48" data-testid={`text-list-company-${contact.id}`}>
                                   {contact.companyName || '-'}
                                 </td>
-                                <td className="py-6 px-6 text-slate-700" data-testid={`text-list-email-${contact.id}`}>
+                                <td className="py-1 text-xs text-slate-700 w-48" data-testid={`text-list-email-${contact.id}`}>
                                   {contact.email || '-'}
                                 </td>
-                                <td className="py-6 px-6 text-slate-700" data-testid={`text-list-phone-${contact.id}`}>
+                                <td className="py-1 text-xs text-slate-700 w-32" data-testid={`text-list-phone-${contact.id}`}>
                                   {contact.phone || '-'}
                                 </td>
-                                <td className="py-6 px-6 text-slate-700" data-testid={`text-list-terms-${contact.id}`}>
-                                  {contact.paymentTerms ? `${contact.paymentTerms} days` : '-'}
+                                <td className="py-1 text-xs text-slate-700 w-20" data-testid={`text-list-terms-${contact.id}`}>
+                                  {contact.paymentTerms ? `${contact.paymentTerms}d` : '-'}
                                 </td>
-                                <td className="py-6 px-6">
+                                <td className="py-1 w-20">
                                   <Badge 
-                                    className={contact.isActive ? "bg-green-100 text-green-800 border-green-200" : "bg-gray-100 text-gray-800 border-gray-200"} 
+                                    className={contact.isActive ? "bg-green-100 text-green-800 border-green-200 text-xs" : "bg-gray-100 text-gray-800 border-gray-200 text-xs"} 
                                     data-testid={`badge-list-status-${contact.id}`}
                                   >
                                     {contact.isActive ? "Active" : "Inactive"}
                                   </Badge>
                                 </td>
-                                <td className="py-6 px-6">
-                                  <div className="flex space-x-2">
+                                <td className="py-1">
+                                  <div className="flex space-x-1 justify-end">
                                     <Button 
                                       variant="outline" 
                                       size="sm" 
-                                      className="border-[#17B6C3]/20 text-[#17B6C3] hover:bg-[#17B6C3]/5"
+                                      className="border-[#17B6C3]/20 text-[#17B6C3] hover:bg-[#17B6C3]/5 h-7 w-16 text-xs"
                                       data-testid={`button-list-edit-${contact.id}`}
                                     >
                                       Edit
@@ -336,7 +429,7 @@ export default function Contacts() {
                                     <Button 
                                       variant="outline" 
                                       size="sm"
-                                      className="border-[#17B6C3]/20 text-[#17B6C3] hover:bg-[#17B6C3]/5"
+                                      className="border-[#17B6C3]/20 text-[#17B6C3] hover:bg-[#17B6C3]/5 h-7 w-18 text-xs"
                                       data-testid={`button-list-invoices-${contact.id}`}
                                     >
                                       Invoices
