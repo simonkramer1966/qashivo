@@ -186,7 +186,7 @@ export default function Invoices() {
                     <tbody className="divide-y divide-slate-200/50">
                       {filteredInvoices.map((invoice: any) => (
                         <tr key={invoice.id} className="hover:bg-slate-50/50 transition-colors" data-testid={`row-invoice-${invoice.id}`}>
-                          <td className="py-3">
+                          <td className="py-1">
                             <div className="text-xs text-slate-700 flex items-center space-x-2">
                               <span data-testid={`text-issue-date-${invoice.id}`}>
                                 {new Date(invoice.issueDate).toLocaleDateString()}
@@ -201,16 +201,16 @@ export default function Invoices() {
                               </span>
                             </div>
                           </td>
-                          <td className="py-3 text-xs font-medium text-slate-900" data-testid={`text-amount-${invoice.id}`}>
+                          <td className="py-1 text-xs font-medium text-slate-900" data-testid={`text-amount-${invoice.id}`}>
                             ${Number(invoice.amount).toLocaleString()}
                           </td>
-                          <td className="py-3 text-xs text-slate-700" data-testid={`text-due-date-${invoice.id}`}>
+                          <td className="py-1 text-xs text-slate-700" data-testid={`text-due-date-${invoice.id}`}>
                             {new Date(invoice.dueDate).toLocaleDateString()}
                           </td>
-                          <td className="py-3">
+                          <td className="py-1">
                             {getStatusBadge(invoice.status)}
                           </td>
-                          <td className="py-3">
+                          <td className="py-1">
                             <div className="flex space-x-1">
                               {invoice.contact?.email && (
                                 <Button 
