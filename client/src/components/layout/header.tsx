@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { LogOut, User, Settings } from "lucide-react";
 import { useLocation } from "wouter";
 
@@ -106,15 +107,24 @@ export default function Header({ title, subtitle, action, noBorder = true, title
           </DropdownMenu>
 
           {/* Settings Icon */}
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleSettingsClick}
-            className="h-10 w-10 rounded-full bg-gray-200 hover:bg-gray-300 transition-colors p-0 flex items-center justify-center"
-            data-testid="button-settings"
-          >
-            <Settings className="h-5 w-5 text-gray-600" />
-          </Button>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleSettingsClick}
+                  className="h-10 w-10 rounded-full bg-gray-200 hover:bg-gray-300 transition-colors p-0 flex items-center justify-center"
+                  data-testid="button-settings"
+                >
+                  <Settings className="h-5 w-5 text-gray-600" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Settings</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
           
           {action}
         </div>
