@@ -2176,7 +2176,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const result = await xeroService.getInvoicesPaginated(tokens, page, limit);
       
       // Transform Xero invoice data to match our frontend format
-      const transformedInvoices = xeroInvoices.map(xeroInv => ({
+      const transformedInvoices = result.invoices.map(xeroInv => ({
         id: xeroInv.InvoiceID,
         xeroInvoiceId: xeroInv.InvoiceID,
         invoiceNumber: xeroInv.InvoiceNumber,
@@ -2198,7 +2198,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         collectionStage: calculateCollectionStage(xeroInv.Status, new Date(xeroInv.DueDateString))
       }));
 
-      res.json(transformedInvoices);
+      res.json({
+        invoices: transformedInvoices,
+        pagination: result.pagination
+      });
     } catch (error) {
       console.error("Error fetching Xero invoices:", error);
       res.status(500).json({ message: "Failed to fetch Xero invoices" });
