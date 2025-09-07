@@ -7,6 +7,7 @@ import NotFound from "@/pages/not-found";
 import Landing from "@/pages/landing";
 import Dashboard from "@/pages/dashboard";
 import Invoices from "@/pages/invoices";
+import InvoicesXero from "@/pages/invoices-xero";
 import Contacts from "@/pages/contacts";
 import Workflows from "@/pages/workflows";
 import WorkflowBuilder from "@/pages/workflow-builder";
@@ -62,6 +63,7 @@ function Router() {
           <Route path="/" component={Dashboard} />
           <Route path="/cashflow" component={Cashflow} />
           <Route path="/invoices" component={Invoices} />
+          <Route path="/invoices-xero" component={InvoicesXero} />
           <Route path="/contacts" component={Contacts} />
           <Route path="/workflows" component={Workflows} />
           <Route path="/workflow-builder" component={WorkflowBuilder} />
