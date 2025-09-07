@@ -554,8 +554,9 @@ export default function WorkflowBuilder() {
               {/* Connection lines */}
               <svg className="absolute inset-0 pointer-events-none" width="100%" height="100%">
                 <defs>
+                  {/* Default arrowhead */}
                   <marker
-                    id="arrowhead"
+                    id="arrowhead-default"
                     markerWidth="10"
                     markerHeight="7"
                     refX="9"
@@ -565,6 +566,34 @@ export default function WorkflowBuilder() {
                     <polygon
                       points="0 0, 10 3.5, 0 7"
                       fill="#17B6C3"
+                    />
+                  </marker>
+                  {/* Yes arrowhead (green) */}
+                  <marker
+                    id="arrowhead-yes"
+                    markerWidth="10"
+                    markerHeight="7"
+                    refX="9"
+                    refY="3.5"
+                    orient="auto"
+                  >
+                    <polygon
+                      points="0 0, 10 3.5, 0 7"
+                      fill="#10B981"
+                    />
+                  </marker>
+                  {/* No arrowhead (red) */}
+                  <marker
+                    id="arrowhead-no"
+                    markerWidth="10"
+                    markerHeight="7"
+                    refX="9"
+                    refY="3.5"
+                    orient="auto"
+                  >
+                    <polygon
+                      points="0 0, 10 3.5, 0 7"
+                      fill="#EF4444"
                     />
                   </marker>
                 </defs>
@@ -592,15 +621,33 @@ export default function WorkflowBuilder() {
                   const cp2x = endX - controlOffset;
                   const cp2y = endY;
                   
+                  // Get connection color based on branch type
+                  const getConnectionColor = () => {
+                    switch (connection.branchType) {
+                      case 'yes': return '#10B981'; // Green
+                      case 'no': return '#EF4444';  // Red
+                      default: return '#17B6C3';    // Blue (default)
+                    }
+                  };
+                  
+                  const strokeColor = getConnectionColor();
+                  
+                  // Get branch label
+                  const getBranchLabel = () => {
+                    if (connection.branchType === 'yes') return 'YES';
+                    if (connection.branchType === 'no') return 'NO';
+                    return connection.label || '';
+                  };
+                  
                   return (
                     <g key={connection.id}>
                       <path
                         d={`M ${startX} ${startY} C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${endX} ${endY}`}
-                        stroke="#17B6C3"
+                        stroke={strokeColor}
                         strokeWidth="2"
                         fill="none"
-                        markerEnd="url(#arrowhead)"
-                        className="hover:stroke-[#1396A1] cursor-pointer"
+                        markerEnd={`url(#arrowhead-${connection.branchType || 'default'})`}
+                        className="cursor-pointer transition-all hover:stroke-opacity-80"
                         onClick={(e) => {
                           e.stopPropagation();
                           if (window.confirm('Remove this connection?')) {
@@ -609,18 +656,31 @@ export default function WorkflowBuilder() {
                         }}
                         style={{ pointerEvents: 'stroke' }}
                       />
-                      {/* Connection label */}
-                      {connection.label && (
-                        <text
-                          x={(startX + endX) / 2}
-                          y={(startY + endY) / 2 - 10}
-                          textAnchor="middle"
-                          fontSize="12"
-                          fill="#64748b"
-                          className="pointer-events-none"
-                        >
-                          {connection.label}
-                        </text>
+                      
+                      {/* Branch label with colored background */}
+                      {getBranchLabel() && (
+                        <g>
+                          <rect
+                            x={(startX + endX) / 2 - 15}
+                            y={(startY + endY) / 2 - 18}
+                            width="30"
+                            height="16"
+                            rx="8"
+                            fill={strokeColor}
+                            className="pointer-events-none"
+                          />
+                          <text
+                            x={(startX + endX) / 2}
+                            y={(startY + endY) / 2 - 8}
+                            textAnchor="middle"
+                            fontSize="10"
+                            fontWeight="bold"
+                            fill="white"
+                            className="pointer-events-none"
+                          >
+                            {getBranchLabel()}
+                          </text>
+                        </g>
                       )}
                     </g>
                   );
