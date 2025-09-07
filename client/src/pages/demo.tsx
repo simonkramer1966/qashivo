@@ -239,7 +239,7 @@ export default function Demo() {
               <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-xl h-full flex flex-col">
                 <CardHeader className="pb-4">
                   <CardTitle className="text-2xl font-bold mb-2">
-                    Get Instant Access
+                    Get a Live Demo
                   </CardTitle>
                   <CardDescription className="text-base">
                     Enter your details for an immediate live demo
