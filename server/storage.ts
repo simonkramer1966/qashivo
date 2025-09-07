@@ -57,6 +57,19 @@ export interface IStorage {
   createTenant(tenant: InsertTenant): Promise<Tenant>;
   updateTenant(id: string, updates: Partial<InsertTenant>): Promise<Tenant>;
   
+  // Owner operations
+  getAllTenants(): Promise<Tenant[]>;
+  getAllTenantsWithMetrics(): Promise<(Tenant & { 
+    metrics: {
+      totalOutstanding: number;
+      overdueCount: number;
+      collectionRate: number;
+      avgDaysToPay: number;
+      userCount: number;
+      invoiceCount: number;
+    }
+  })[]>;
+  
   // Contact operations
   getContacts(tenantId: string): Promise<Contact[]>;
   getContact(id: string, tenantId: string): Promise<Contact | undefined>;
@@ -185,6 +198,60 @@ export class DatabaseStorage implements IStorage {
       .where(eq(tenants.id, id))
       .returning();
     return tenant;
+  }
+
+  // Owner operations
+  async getAllTenants(): Promise<Tenant[]> {
+    return await db
+      .select()
+      .from(tenants)
+      .orderBy(desc(tenants.createdAt));
+  }
+
+  async getAllTenantsWithMetrics(): Promise<(Tenant & { 
+    metrics: {
+      totalOutstanding: number;
+      overdueCount: number;
+      collectionRate: number;
+      avgDaysToPay: number;
+      userCount: number;
+      invoiceCount: number;
+    }
+  })[]> {
+    const allTenants = await this.getAllTenants();
+    
+    const tenantsWithMetrics = await Promise.all(
+      allTenants.map(async (tenant) => {
+        // Get invoice metrics
+        const invoiceMetrics = await this.getInvoiceMetrics(tenant.id);
+        
+        // Get user count for this tenant
+        const userCountResult = await db
+          .select({ count: count() })
+          .from(users)
+          .where(eq(users.tenantId, tenant.id));
+        
+        // Get total invoice count for this tenant
+        const invoiceCountResult = await db
+          .select({ count: count() })
+          .from(invoices)
+          .where(eq(invoices.tenantId, tenant.id));
+        
+        const userCount = userCountResult[0]?.count || 0;
+        const invoiceCount = invoiceCountResult[0]?.count || 0;
+        
+        return {
+          ...tenant,
+          metrics: {
+            ...invoiceMetrics,
+            userCount,
+            invoiceCount,
+          }
+        };
+      })
+    );
+    
+    return tenantsWithMetrics;
   }
 
   // Contact operations

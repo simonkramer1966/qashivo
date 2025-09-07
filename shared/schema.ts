@@ -35,7 +35,7 @@ export const users = pgTable("users", {
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
   tenantId: varchar("tenant_id").references(() => tenants.id),
-  role: varchar("role").notNull().default("user"), // admin, user
+  role: varchar("role").notNull().default("user"), // owner, admin, user
   stripeCustomerId: varchar("stripe_customer_id"),
   stripeSubscriptionId: varchar("stripe_subscription_id"),
   createdAt: timestamp("created_at").defaultNow(),

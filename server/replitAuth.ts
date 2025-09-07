@@ -178,3 +178,26 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
     return;
   }
 };
+
+// Owner-only access control middleware
+export const isOwner: RequestHandler = async (req, res, next) => {
+  const user = req.user as any;
+
+  if (!req.isAuthenticated() || !user.claims) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+
+  try {
+    const { storage } = await import("./storage");
+    const dbUser = await storage.getUser(user.claims.sub);
+    
+    if (!dbUser || dbUser.role !== "owner") {
+      return res.status(403).json({ message: "Owner access required" });
+    }
+
+    return next();
+  } catch (error) {
+    console.error("Owner access check failed:", error);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
