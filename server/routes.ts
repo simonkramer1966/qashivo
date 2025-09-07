@@ -573,14 +573,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Retell AI not configured for this tenant" });
       }
 
-      // Create dynamic variables for the test call
+      // Get actual outstanding invoices for this contact
+      const allInvoices = await storage.getInvoices(user.tenantId, 100);
+      const contactInvoices = allInvoices.filter(inv => 
+        inv.contactId === contactId && 
+        (inv.status === 'overdue' || inv.status === 'pending')
+      );
+
+      // Calculate invoice details for the call
+      let primaryInvoice = null;
+      let totalOutstanding = 0;
+      let oldestDaysOverdue = 0;
+
+      if (contactInvoices.length > 0) {
+        // Sort by amount (highest first) and get the primary invoice
+        contactInvoices.sort((a, b) => parseFloat(b.amount) - parseFloat(a.amount));
+        primaryInvoice = contactInvoices[0];
+        
+        // Calculate total outstanding
+        totalOutstanding = contactInvoices.reduce((sum, inv) => sum + parseFloat(inv.amount), 0);
+        
+        // Calculate days overdue for oldest invoice
+        const oldestInvoice = contactInvoices.sort((a, b) => 
+          new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()
+        )[0];
+        const daysOverdue = Math.floor((Date.now() - new Date(oldestInvoice.dueDate).getTime()) / (1000 * 60 * 60 * 24));
+        oldestDaysOverdue = Math.max(0, daysOverdue);
+      }
+
+      // Create dynamic variables for the call with real data
       const dynamicVariables = {
         customer_name: contact.name,
         company_name: contact.companyName || contact.name,
-        invoice_number: "TEST-001",
-        amount: "100.00",
-        days_overdue: 0,
-        custom_message: "[TEST CALL] This is a test voice communication from Nexus AR."
+        invoice_number: primaryInvoice?.invoiceNumber || "DEMO-001",
+        invoice_amount: primaryInvoice ? parseFloat(primaryInvoice.amount).toFixed(2) : "1500.00",
+        total_outstanding: totalOutstanding.toFixed(2),
+        days_overdue: oldestDaysOverdue,
+        invoice_count: contactInvoices.length,
+        due_date: primaryInvoice ? new Date(primaryInvoice.dueDate).toLocaleDateString() : new Date().toLocaleDateString(),
+        custom_message: `[DEMO CALL] This is a live demonstration of Nexus AR's AI collection agent. ${contactInvoices.length > 0 ? `You have ${contactInvoices.length} outstanding invoice${contactInvoices.length > 1 ? 's' : ''} totaling $${totalOutstanding.toFixed(2)}.` : 'This contact has no outstanding invoices, so this is a demonstration with sample data.'}`
       };
 
       // Make the test call using Retell AI
