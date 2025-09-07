@@ -2148,7 +2148,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Xero raw invoice data endpoint
+  // Xero raw invoice data endpoint with pagination
   app.get("/api/xero/invoices", isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.claims.sub);
@@ -2168,8 +2168,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         tenantId: tenant.xeroTenantId!,
       };
 
-      // Get raw Xero invoices
-      const xeroInvoices = await xeroService.getInvoices(tokens);
+      // Parse pagination parameters
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = Math.min(parseInt(req.query.limit as string) || 50, 100); // Max 100 per page
+
+      // Get paginated Xero invoices
+      const result = await xeroService.getInvoicesPaginated(tokens, page, limit);
       
       // Transform Xero invoice data to match our frontend format
       const transformedInvoices = xeroInvoices.map(xeroInv => ({
