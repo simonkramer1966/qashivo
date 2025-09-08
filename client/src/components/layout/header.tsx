@@ -67,15 +67,6 @@ export default function Header({ title, subtitle, action, noBorder = true, title
           </p>
         </div>
         <div className="flex items-center space-x-4">
-          {/* Xero Sync Status */}
-          <div className="flex items-center space-x-2 px-3 py-2 bg-muted rounded-lg">
-            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-            <span className="text-sm text-muted-foreground">Xero Synced</span>
-            <span className="text-xs text-muted-foreground" data-testid="text-last-sync">
-              2 min ago
-            </span>
-          </div>
-          
           {/* User Profile */}
           <DropdownMenu>
             <DropdownMenuTrigger className="flex items-center space-x-3 hover:bg-accent hover:text-accent-foreground rounded-lg px-3 py-2 transition-colors" data-testid="button-user-menu">
