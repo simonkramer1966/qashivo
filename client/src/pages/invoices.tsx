@@ -129,16 +129,6 @@ export default function Invoices() {
     }
   };
 
-  const getActiveSortType = () => {
-    // Determine which column is actively sorting based on the selected sort types
-    // We'll use a priority order: Inv/Client first, then Due Date/Age, then Next Action
-    if (invClientSort !== "inv-asc") return invClientSort;
-    if (dueDateAgeSort !== "due-date-asc") return dueDateAgeSort;
-    if (nextActionSort !== "action-date-asc") return nextActionSort;
-    // Default to invoice number ascending
-    return invClientSort;
-  };
-
   const filteredAndSortedInvoices = (invoices as any[])
     .filter((invoice: any) => {
       const matchesSearch = invoice.invoiceNumber.toLowerCase().includes(search.toLowerCase()) ||
@@ -147,65 +137,70 @@ export default function Invoices() {
       return matchesSearch && matchesStatus;
     })
     .sort((a: any, b: any) => {
-      const activeSortType = getActiveSortType();
-      let aValue, bValue;
+      let result = 0;
       
-      switch (activeSortType) {
-        // Invoice Number / Client sorting
+      // Primary sort by Inv/Client column
+      switch (invClientSort) {
         case "inv-asc":
-          aValue = a.invoiceNumber.toLowerCase();
-          bValue = b.invoiceNumber.toLowerCase();
-          return aValue < bValue ? -1 : aValue > bValue ? 1 : 0;
+          result = a.invoiceNumber.toLowerCase().localeCompare(b.invoiceNumber.toLowerCase());
+          break;
         case "inv-desc":
-          aValue = a.invoiceNumber.toLowerCase();
-          bValue = b.invoiceNumber.toLowerCase();
-          return aValue > bValue ? -1 : aValue < bValue ? 1 : 0;
+          result = b.invoiceNumber.toLowerCase().localeCompare(a.invoiceNumber.toLowerCase());
+          break;
         case "client-asc":
-          aValue = (a.contact?.companyName || 'Unknown Company').toLowerCase();
-          bValue = (b.contact?.companyName || 'Unknown Company').toLowerCase();
-          return aValue < bValue ? -1 : aValue > bValue ? 1 : 0;
+          result = (a.contact?.companyName || 'Unknown Company').toLowerCase()
+            .localeCompare((b.contact?.companyName || 'Unknown Company').toLowerCase());
+          break;
         case "client-desc":
-          aValue = (a.contact?.companyName || 'Unknown Company').toLowerCase();
-          bValue = (b.contact?.companyName || 'Unknown Company').toLowerCase();
-          return aValue > bValue ? -1 : aValue < bValue ? 1 : 0;
-        
-        // Due Date / Age sorting
+          result = (b.contact?.companyName || 'Unknown Company').toLowerCase()
+            .localeCompare((a.contact?.companyName || 'Unknown Company').toLowerCase());
+          break;
+      }
+      if (result !== 0) return result;
+      
+      // Secondary sort by Due Date/Age column
+      switch (dueDateAgeSort) {
         case "due-date-asc":
-          aValue = new Date(a.dueDate).getTime();
-          bValue = new Date(b.dueDate).getTime();
-          return aValue < bValue ? -1 : aValue > bValue ? 1 : 0;
+          result = new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+          break;
         case "due-date-desc":
-          aValue = new Date(a.dueDate).getTime();
-          bValue = new Date(b.dueDate).getTime();
-          return aValue > bValue ? -1 : aValue < bValue ? 1 : 0;
+          result = new Date(b.dueDate).getTime() - new Date(a.dueDate).getTime();
+          break;
         case "age-asc":
-          aValue = Math.floor((Date.now() - new Date(a.issueDate).getTime()) / (1000 * 60 * 60 * 24));
-          bValue = Math.floor((Date.now() - new Date(b.issueDate).getTime()) / (1000 * 60 * 60 * 24));
-          return aValue < bValue ? -1 : aValue > bValue ? 1 : 0;
+          const ageA = Math.floor((Date.now() - new Date(a.issueDate).getTime()) / (1000 * 60 * 60 * 24));
+          const ageB = Math.floor((Date.now() - new Date(b.issueDate).getTime()) / (1000 * 60 * 60 * 24));
+          result = ageA - ageB;
+          break;
         case "age-desc":
-          aValue = Math.floor((Date.now() - new Date(a.issueDate).getTime()) / (1000 * 60 * 60 * 24));
-          bValue = Math.floor((Date.now() - new Date(b.issueDate).getTime()) / (1000 * 60 * 60 * 24));
-          return aValue > bValue ? -1 : aValue < bValue ? 1 : 0;
-        
-        // Next Action sorting (mock data for now)
+          const ageA2 = Math.floor((Date.now() - new Date(a.issueDate).getTime()) / (1000 * 60 * 60 * 24));
+          const ageB2 = Math.floor((Date.now() - new Date(b.issueDate).getTime()) / (1000 * 60 * 60 * 24));
+          result = ageB2 - ageA2;
+          break;
+      }
+      if (result !== 0) return result;
+      
+      // Tertiary sort by Next Action column
+      switch (nextActionSort) {
         case "action-date-asc":
         case "action-date-desc":
-          // Using random dates for next actions
-          aValue = Date.now() + (Math.random() * 7 + 1) * 24 * 60 * 60 * 1000;
-          bValue = Date.now() + (Math.random() * 7 + 1) * 24 * 60 * 60 * 1000;
-          return activeSortType === "action-date-asc" ? aValue - bValue : bValue - aValue;
+          // Generate consistent dates based on invoice ID hash
+          const hashA = a.id.split('').reduce((hash, char) => hash + char.charCodeAt(0), 0);
+          const hashB = b.id.split('').reduce((hash, char) => hash + char.charCodeAt(0), 0);
+          const dateA = Date.now() + ((hashA % 7) + 1) * 24 * 60 * 60 * 1000;
+          const dateB = Date.now() + ((hashB % 7) + 1) * 24 * 60 * 60 * 1000;
+          result = nextActionSort === "action-date-asc" ? dateA - dateB : dateB - dateA;
+          break;
         case "action-type-asc":
         case "action-type-desc":
           const actions = ['Email Reminder', 'Phone Call', 'Letter', 'SMS Follow-up'];
-          aValue = actions[Math.floor(Math.random() * 4)];
-          bValue = actions[Math.floor(Math.random() * 4)];
-          return activeSortType === "action-type-asc" ? 
-            (aValue < bValue ? -1 : aValue > bValue ? 1 : 0) :
-            (aValue > bValue ? -1 : aValue < bValue ? 1 : 0);
-        
-        default:
-          return 0;
+          const actionA = actions[a.id.split('').reduce((hash, char) => hash + char.charCodeAt(0), 0) % 4];
+          const actionB = actions[b.id.split('').reduce((hash, char) => hash + char.charCodeAt(0), 0) % 4];
+          result = nextActionSort === "action-type-asc" ? 
+            actionA.localeCompare(actionB) : actionB.localeCompare(actionA);
+          break;
       }
+      
+      return result;
     });
 
   // Calculate pagination for invoices
