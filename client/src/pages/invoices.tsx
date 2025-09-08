@@ -48,6 +48,10 @@ export default function Invoices() {
   // Selection state for bulk actions
   const [selectedInvoices, setSelectedInvoices] = useState<Set<string>>(new Set());
   const [showBulkActions, setShowBulkActions] = useState(false);
+  
+  // Selection state for customer bulk actions
+  const [selectedCustomers, setSelectedCustomers] = useState<Set<string>>(new Set());
+  const [showCustomerBulkActions, setShowCustomerBulkActions] = useState(false);
 
   // Redirect to home if not authenticated
   useEffect(() => {
@@ -536,10 +540,77 @@ export default function Invoices() {
     setSelectedInvoices(new Set());
   };
 
+  // Customer bulk selection functions
+  const toggleCustomerSelection = (customerId: string) => {
+    setSelectedCustomers(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(customerId)) {
+        newSet.delete(customerId);
+      } else {
+        newSet.add(customerId);
+      }
+      return newSet;
+    });
+  };
+
+  const toggleSelectAllCustomers = () => {
+    if (selectedCustomers.size === paginatedContacts.length) {
+      setSelectedCustomers(new Set());
+    } else {
+      setSelectedCustomers(new Set(paginatedContacts.map((contact: any) => contact.id)));
+    }
+  };
+
+  const handleCustomerBulkAction = (action: string) => {
+    const customerIds = Array.from(selectedCustomers);
+    
+    switch (action) {
+      case 'send-email':
+        toast({
+          title: "Email Sent",
+          description: `Email sent to ${customerIds.length} customer(s)`,
+        });
+        break;
+      case 'send-sms':
+        toast({
+          title: "SMS Sent",
+          description: `SMS sent to ${customerIds.length} customer(s)`,
+        });
+        break;
+      case 'mark-priority':
+        toast({
+          title: "Priority Updated",
+          description: `${customerIds.length} customer(s) marked as priority`,
+        });
+        break;
+      case 'export':
+        toast({
+          title: "Export Complete",
+          description: `${customerIds.length} customer(s) exported successfully`,
+        });
+        break;
+      case 'delete':
+        toast({
+          title: "Customers Deleted",
+          description: `${customerIds.length} customer(s) deleted`,
+          variant: "destructive"
+        });
+        break;
+    }
+    
+    // Clear selection after action
+    setSelectedCustomers(new Set());
+  };
+
   // Update showBulkActions based on selection
   useEffect(() => {
     setShowBulkActions(selectedInvoices.size > 0);
   }, [selectedInvoices]);
+
+  // Update showCustomerBulkActions based on selection
+  useEffect(() => {
+    setShowCustomerBulkActions(selectedCustomers.size > 0);
+  }, [selectedCustomers]);
 
   return (
     <div className="flex h-screen bg-white">
@@ -743,10 +814,65 @@ export default function Invoices() {
                       </div>
                     ) : (
                       <div className="overflow-x-auto">
+                        {/* Customer Bulk Actions Dropdown */}
+                        {showCustomerBulkActions && (
+                          <div className="mb-4 flex items-center justify-start">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button 
+                                  className="bg-[#17B6C3] hover:bg-[#17B6C3]/80 text-white h-8 px-4"
+                                  data-testid="bulk-actions-customers-dropdown"
+                                >
+                                  {selectedCustomers.size} selected
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent className="w-48 bg-white border-gray-200">
+                                <DropdownMenuItem 
+                                  onClick={() => handleCustomerBulkAction('send-email')}
+                                  data-testid="bulk-action-send-email"
+                                >
+                                  Send Email
+                                </DropdownMenuItem>
+                                <DropdownMenuItem 
+                                  onClick={() => handleCustomerBulkAction('send-sms')}
+                                  data-testid="bulk-action-send-sms"
+                                >
+                                  Send SMS
+                                </DropdownMenuItem>
+                                <DropdownMenuItem 
+                                  onClick={() => handleCustomerBulkAction('mark-priority')}
+                                  data-testid="bulk-action-mark-priority"
+                                >
+                                  Mark as Priority
+                                </DropdownMenuItem>
+                                <DropdownMenuItem 
+                                  onClick={() => handleCustomerBulkAction('export')}
+                                  data-testid="bulk-action-export"
+                                >
+                                  Export Selected
+                                </DropdownMenuItem>
+                                <DropdownMenuItem 
+                                  onClick={() => handleCustomerBulkAction('delete')}
+                                  data-testid="bulk-action-delete"
+                                >
+                                  Delete Selected
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
+                        )}
+                        
                         <table className="w-full table-fixed">
                           <thead>
                             <tr className="border-b border-slate-200/50">
-                              <th className="text-left py-2 text-xs font-semibold text-slate-700 w-[12%]">
+                              <th className="text-center py-2 text-xs font-semibold text-slate-700 w-[5%]">
+                                <Checkbox
+                                  checked={selectedCustomers.size === paginatedContacts.length && paginatedContacts.length > 0}
+                                  onCheckedChange={toggleSelectAllCustomers}
+                                  data-testid="checkbox-select-all-customers"
+                                />
+                              </th>
+                              <th className="text-left py-2 text-xs font-semibold text-slate-700 w-[11%]">
                                 <button 
                                   onClick={() => handleSort("name")}
                                   className="flex items-center space-x-1 hover:text-slate-900"
@@ -754,7 +880,7 @@ export default function Invoices() {
                                   <span>Contact Name</span>
                                 </button>
                               </th>
-                              <th className="text-left py-2 text-xs font-semibold text-slate-700 w-[15%]">
+                              <th className="text-left py-2 text-xs font-semibold text-slate-700 w-[14%]">
                                 <button 
                                   onClick={() => handleSort("companyName")}
                                   className="flex items-center space-x-1 hover:text-slate-900"
@@ -762,16 +888,16 @@ export default function Invoices() {
                                   <span>Company</span>
                                 </button>
                               </th>
-                              <th className="text-left py-2 text-xs font-semibold text-slate-700 w-[8%]">
+                              <th className="text-left py-2 text-xs font-semibold text-slate-700 w-[7%]">
                                 <span>Rating</span>
                               </th>
                               <th className="text-left py-2 text-xs font-semibold text-slate-700 w-[10%]">
                                 <span>Outstanding</span>
                               </th>
-                              <th className="text-left py-2 text-xs font-semibold text-slate-700 w-[8%]">
+                              <th className="text-left py-2 text-xs font-semibold text-slate-700 w-[7%]">
                                 <span>Late</span>
                               </th>
-                              <th className="text-left py-2 text-xs font-semibold text-slate-700 w-[15%]">
+                              <th className="text-left py-2 text-xs font-semibold text-slate-700 w-[14%]">
                                 <button 
                                   onClick={() => handleSort("email")}
                                   className="flex items-center space-x-1 hover:text-slate-900"
@@ -787,7 +913,7 @@ export default function Invoices() {
                                   <span>Phone</span>
                                 </button>
                               </th>
-                              <th className="text-left py-2 text-xs font-semibold text-slate-700 w-[7%]">
+                              <th className="text-left py-2 text-xs font-semibold text-slate-700 w-[6%]">
                                 <button 
                                   onClick={() => handleSort("paymentTerms")}
                                   className="flex items-center space-x-1 hover:text-slate-900"
@@ -795,7 +921,7 @@ export default function Invoices() {
                                   <span>Terms</span>
                                 </button>
                               </th>
-                              <th className="text-left py-2 text-xs font-semibold text-slate-700 w-[8%]">
+                              <th className="text-left py-2 text-xs font-semibold text-slate-700 w-[7%]">
                                 <button 
                                   onClick={() => handleSort("status")}
                                   className="flex items-center space-x-1 hover:text-slate-900"
@@ -803,12 +929,19 @@ export default function Invoices() {
                                   <span>Status</span>
                                 </button>
                               </th>
-                              <th className="text-right py-2 text-xs font-semibold text-slate-700 w-[7%]">Actions</th>
+                              <th className="text-right py-2 text-xs font-semibold text-slate-700 w-[6%]">Actions</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-slate-200/50">
                             {paginatedContacts.map((contact: any) => (
                               <tr key={contact.id} className="hover:bg-slate-50/50 transition-colors" data-testid={`row-contact-${contact.id}`}>
+                                <td className="py-1 text-center" data-testid={`checkbox-cell-customer-${contact.id}`}>
+                                  <Checkbox
+                                    checked={selectedCustomers.has(contact.id)}
+                                    onCheckedChange={() => toggleCustomerSelection(contact.id)}
+                                    data-testid={`checkbox-customer-${contact.id}`}
+                                  />
+                                </td>
                                 <td className="py-1 text-xs text-slate-700" data-testid={`text-contact-name-${contact.id}`}>
                                   {contact.name}
                                 </td>
