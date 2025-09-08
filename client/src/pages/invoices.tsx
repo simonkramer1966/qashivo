@@ -717,6 +717,7 @@ export default function Invoices() {
                           }}>
                             <SelectTrigger className="border-0 bg-transparent p-0 h-auto font-semibold text-xs text-slate-700 hover:text-slate-900 focus:ring-0 data-[state=open]:text-slate-900">
                               <span>Inv No. / Client</span>
+                              <ChevronDown className="h-3 w-3 ml-1" />
                             </SelectTrigger>
                             <SelectContent className="bg-white border-gray-200">
                               <SelectItem value="inv-asc">Inv No 123</SelectItem>
