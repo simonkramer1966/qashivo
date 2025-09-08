@@ -776,15 +776,6 @@ export default function Invoices() {
                             {getSortIcon("status")}
                           </button>
                         </th>
-                        <th className="text-left py-2 text-xs font-semibold text-slate-700 w-40">
-                          <button 
-                            onClick={() => handleSort("collectionStage")}
-                            className="flex items-center space-x-1 hover:text-slate-900"
-                          >
-                            <span>Collection Stage</span>
-                            {getSortIcon("collectionStage")}
-                          </button>
-                        </th>
                         <th className="text-left py-2 text-xs font-semibold text-slate-700 w-36">
                           <Select value={nextActionSort} onValueChange={(value) => {
                             setNextActionSort(value);
@@ -829,12 +820,6 @@ export default function Invoices() {
                           </td>
                           <td className="py-2 w-24">
                             {getStatusBadge(invoice.status)}
-                          </td>
-                          <td className="py-2 w-40 text-xs text-slate-700">
-                            {invoice.collectionStage ? 
-                              invoice.collectionStage.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()) : 
-                              'Initial'
-                            }
                           </td>
                           <td className="py-2 w-36" data-testid={`text-next-action-${invoice.id}`}>
                             <div className="text-xs text-slate-900">
