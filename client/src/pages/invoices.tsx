@@ -59,6 +59,8 @@ export default function Invoices() {
   const { data: contacts = [], isLoading: contactsLoading, error: contactsError } = useQuery({
     queryKey: ["/api/contacts"],
     enabled: isAuthenticated,
+    retry: 3,
+    refetchOnMount: true,
   });
 
   // Fetch contact history for selected invoice
@@ -79,6 +81,10 @@ export default function Invoices() {
       queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
       queryClient.invalidateQueries({ queryKey: ["/api/contacts"] });
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard/metrics"] });
+      // Force refetch contacts to resolve any auth timing issues
+      setTimeout(() => {
+        queryClient.refetchQueries({ queryKey: ["/api/contacts"] });
+      }, 1000);
     },
     onError: (error: any) => {
       toast({
