@@ -629,7 +629,29 @@ export default function CollectionScheduleBuilder({ className }: CollectionSched
                     const availableTemplates = templates.filter((t: CommunicationTemplate) => t.type === step.type);
                     
                     return (
-                      <div key={step.id} className={`p-4 border rounded-lg ${getStepColor(step.type)} bg-opacity-20`}>
+                      <div 
+                        key={step.id} 
+                        className={`p-4 border rounded-lg ${getStepColor(step.type)} bg-opacity-20 ${draggedStep === step.id ? 'opacity-50' : ''}`}
+                        draggable={true}
+                        onDragStart={(e) => {
+                          setDraggedStep(step.id);
+                          e.dataTransfer.effectAllowed = "move";
+                        }}
+                        onDragOver={(e) => {
+                          e.preventDefault();
+                          e.dataTransfer.dropEffect = "move";
+                        }}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          if (draggedStep && draggedStep !== step.id) {
+                            const draggedIndex = steps.findIndex(s => s.id === draggedStep);
+                            const targetIndex = index;
+                            reorderSteps(draggedIndex, targetIndex);
+                          }
+                          setDraggedStep(null);
+                        }}
+                        onDragEnd={() => setDraggedStep(null)}
+                      >
                         <div className="flex items-start gap-4">
                           {/* Drag Handle */}
                           <div className="cursor-move mt-1">
