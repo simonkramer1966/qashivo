@@ -688,25 +688,30 @@ export default function InvoicesXero() {
                               <td className="py-1 text-xs text-slate-700" data-testid={`text-age-${invoice.id}`}>
                                 {Math.floor((Date.now() - new Date(invoice.issueDate).getTime()) / (1000 * 60 * 60 * 24))} days
                               </td>
-                              <td className="py-1 text-xs text-slate-700" data-testid={`text-status-${invoice.id}`}>
+                              <td className="py-1">
                                 {getStatusBadge(invoice.status)}
                               </td>
-                              <td className="py-1 text-xs text-slate-700" data-testid={`text-collection-stage-${invoice.id}`}>
-                                <Badge variant="outline" className="text-xs">{invoice.collectionStage || 'initial'}</Badge>
+                              <td className="py-1 text-xs text-slate-700">
+                                {invoice.collectionStage ? 
+                                  invoice.collectionStage.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()) : 
+                                  'Initial'
+                                }
                               </td>
-                              <td className="py-1 text-right">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => {
-                                    setSelectedInvoice(invoice);
-                                    setShowContactHistory(true);
-                                  }}
-                                  className="text-[#17B6C3] hover:text-[#1396A1] hover:bg-[#17B6C3]/5"
-                                  data-testid={`button-view-${invoice.id}`}
-                                >
-                                  <Eye className="h-4 w-4" />
-                                </Button>
+                              <td className="py-1">
+                                <div className="flex space-x-1 justify-end">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => {
+                                      setSelectedInvoice(invoice);
+                                      setShowContactHistory(true);
+                                    }}
+                                    className="text-[#17B6C3] hover:text-[#1396A1] hover:bg-[#17B6C3]/5 h-7 w-7 p-0"
+                                    data-testid={`button-view-${invoice.id}`}
+                                  >
+                                    <Eye className="h-3 w-3" />
+                                  </Button>
+                                </div>
                               </td>
                             </tr>
                           ))}
@@ -908,25 +913,30 @@ export default function InvoicesXero() {
                               <td className="py-1 text-xs text-slate-700" data-testid={`text-age-${invoice.id}`}>
                                 {Math.floor((Date.now() - new Date(invoice.issueDate).getTime()) / (1000 * 60 * 60 * 24))} days
                               </td>
-                              <td className="py-1 text-xs text-slate-700" data-testid={`text-status-${invoice.id}`}>
+                              <td className="py-1">
                                 {getStatusBadge(invoice.status)}
                               </td>
-                              <td className="py-1 text-xs text-slate-700" data-testid={`text-collection-stage-${invoice.id}`}>
-                                <Badge variant="outline" className="text-xs">{invoice.collectionStage || 'initial'}</Badge>
+                              <td className="py-1 text-xs text-slate-700">
+                                {invoice.collectionStage ? 
+                                  invoice.collectionStage.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()) : 
+                                  'Initial'
+                                }
                               </td>
-                              <td className="py-1 text-right">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => {
-                                    setSelectedInvoice(invoice);
-                                    setShowContactHistory(true);
-                                  }}
-                                  className="text-[#17B6C3] hover:text-[#1396A1] hover:bg-[#17B6C3]/5"
-                                  data-testid={`button-view-${invoice.id}`}
-                                >
-                                  <Eye className="h-4 w-4" />
-                                </Button>
+                              <td className="py-1">
+                                <div className="flex space-x-1 justify-end">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => {
+                                      setSelectedInvoice(invoice);
+                                      setShowContactHistory(true);
+                                    }}
+                                    className="text-[#17B6C3] hover:text-[#1396A1] hover:bg-[#17B6C3]/5 h-7 w-7 p-0"
+                                    data-testid={`button-view-${invoice.id}`}
+                                  >
+                                    <Eye className="h-3 w-3" />
+                                  </Button>
+                                </div>
                               </td>
                             </tr>
                           ))}
@@ -1128,25 +1138,30 @@ export default function InvoicesXero() {
                               <td className="py-1 text-xs text-slate-700" data-testid={`text-age-${invoice.id}`}>
                                 {Math.floor((Date.now() - new Date(invoice.issueDate).getTime()) / (1000 * 60 * 60 * 24))} days
                               </td>
-                              <td className="py-1 text-xs text-slate-700" data-testid={`text-status-${invoice.id}`}>
+                              <td className="py-1">
                                 {getStatusBadge(invoice.status)}
                               </td>
-                              <td className="py-1 text-xs text-slate-700" data-testid={`text-collection-stage-${invoice.id}`}>
-                                <Badge variant="outline" className="text-xs">{invoice.collectionStage || 'initial'}</Badge>
+                              <td className="py-1 text-xs text-slate-700">
+                                {invoice.collectionStage ? 
+                                  invoice.collectionStage.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()) : 
+                                  'Initial'
+                                }
                               </td>
-                              <td className="py-1 text-right">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => {
-                                    setSelectedInvoice(invoice);
-                                    setShowContactHistory(true);
-                                  }}
-                                  className="text-[#17B6C3] hover:text-[#1396A1] hover:bg-[#17B6C3]/5"
-                                  data-testid={`button-view-${invoice.id}`}
-                                >
-                                  <Eye className="h-4 w-4" />
-                                </Button>
+                              <td className="py-1">
+                                <div className="flex space-x-1 justify-end">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => {
+                                      setSelectedInvoice(invoice);
+                                      setShowContactHistory(true);
+                                    }}
+                                    className="text-[#17B6C3] hover:text-[#1396A1] hover:bg-[#17B6C3]/5 h-7 w-7 p-0"
+                                    data-testid={`button-view-${invoice.id}`}
+                                  >
+                                    <Eye className="h-3 w-3" />
+                                  </Button>
+                                </div>
                               </td>
                             </tr>
                           ))}
