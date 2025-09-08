@@ -65,17 +65,23 @@ export default function InvoicesXero() {
     enabled: true,
   });
 
+  // Fetch tenant data to get currency setting
+  const { data: tenant } = useQuery({
+    queryKey: ['/api/tenant'],
+  });
+
   // Helper function to calculate total amount for invoices
   const calculateTotal = (invoices: any[] | undefined) => {
     if (!invoices || invoices.length === 0) return 0;
     return invoices.reduce((total, invoice) => total + parseFloat(invoice.amount || 0), 0);
   };
 
-  // Format currency for display
-  const formatCurrency = (amount: number, currency: string = 'USD') => {
+  // Format currency for display using organization's currency
+  const formatCurrency = (amount: number) => {
+    const currencyCode = tenant?.settings?.currency || 'USD';
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
-      currency: currency,
+      currency: currencyCode,
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(amount);
@@ -283,16 +289,16 @@ export default function InvoicesXero() {
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid grid-cols-4 w-full max-w-2xl">
               <TabsTrigger value="unpaid" className="text-sm">
-                Unpaid ({formatCurrency(calculateTotal(unpaidData?.invoices))})
+                Unpaid ({unpaidData?.invoices?.length || 0} / {formatCurrency(calculateTotal(unpaidData?.invoices))})
               </TabsTrigger>
               <TabsTrigger value="partial" className="text-sm">
-                Part Paid ({formatCurrency(calculateTotal(partialData?.invoices))})
+                Part Paid ({partialData?.invoices?.length || 0} / {formatCurrency(calculateTotal(partialData?.invoices))})
               </TabsTrigger>
               <TabsTrigger value="paid" className="text-sm">
-                Paid ({formatCurrency(calculateTotal(paidData?.invoices))})
+                Paid ({paidData?.invoices?.length || 0} / {formatCurrency(calculateTotal(paidData?.invoices))})
               </TabsTrigger>
               <TabsTrigger value="void" className="text-sm">
-                Void ({formatCurrency(calculateTotal(voidData?.invoices))})
+                Void ({voidData?.invoices?.length || 0} / {formatCurrency(calculateTotal(voidData?.invoices))})
               </TabsTrigger>
             </TabsList>
 

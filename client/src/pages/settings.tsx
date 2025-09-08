@@ -621,6 +621,7 @@ export default function Settings() {
       setCompanyName(tenant.settings?.companyName || tenant.name || "Nexus AR");
       setTagline(tenant.settings?.tagline || "Debt Recovery Suite");
       setOrganizationName(tenant.name || "");
+      setOrganizationCurrency(tenant.settings?.currency || DEFAULT_CURRENCY);
     }
   }, [tenant]);
 
