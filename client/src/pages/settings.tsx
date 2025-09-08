@@ -32,6 +32,7 @@ import {
   Phone,
   CheckCircle
 } from "lucide-react";
+import { CURRENCIES, DEFAULT_CURRENCY } from "@shared/currencies";
 
 // Test Tab Component
 function TestTabContent() {
@@ -597,6 +598,7 @@ export default function Settings() {
   
   // Organization settings state
   const [organizationName, setOrganizationName] = useState("");
+  const [organizationCurrency, setOrganizationCurrency] = useState(DEFAULT_CURRENCY);
 
   // Fetch tenant information
   const { data: tenant } = useQuery<{
@@ -667,6 +669,10 @@ export default function Settings() {
   const handleSaveOrganization = () => {
     updateTenantMutation.mutate({
       name: organizationName,
+      settings: {
+        ...tenant?.settings,
+        currency: organizationCurrency,
+      },
     });
   };
 
@@ -846,6 +852,24 @@ export default function Settings() {
                       className="bg-white/70 border-gray-200/30"
                       data-testid="input-org-name"
                     />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="currency">Organisation Currency</Label>
+                    <Select 
+                      value={organizationCurrency} 
+                      onValueChange={setOrganizationCurrency}
+                    >
+                      <SelectTrigger className="bg-white/70 border-gray-200/30" data-testid="select-currency">
+                        <SelectValue placeholder="Select currency" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-white border-gray-200">
+                        {CURRENCIES.map((currency) => (
+                          <SelectItem key={currency.code} value={currency.code}>
+                            {currency.symbol} {currency.name} ({currency.code})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="subdomain">Subdomain</Label>
