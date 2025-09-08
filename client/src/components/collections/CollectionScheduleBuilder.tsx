@@ -709,7 +709,7 @@ export default function CollectionScheduleBuilder({ className }: CollectionSched
                                   <SelectTrigger data-testid={`select-step-template-${step.id}`}>
                                     <SelectValue placeholder="Select template" />
                                   </SelectTrigger>
-                                  <SelectContent>
+                                  <SelectContent className="bg-white">
                                     {availableTemplates.map((template: CommunicationTemplate) => (
                                       <SelectItem key={template.id} value={template.id}>
                                         {template.name}
