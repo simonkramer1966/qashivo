@@ -682,31 +682,13 @@ export default function Invoices() {
                   <table className="w-full">
                     <thead>
                       <tr className="border-b border-slate-200/50">
-                        <th className="text-left py-2 text-xs font-semibold text-slate-700 w-32">
-                          <button 
-                            onClick={() => handleSort("date")}
-                            className="flex items-center space-x-1 hover:text-slate-900"
-                          >
-                            <span>Invoice Date</span>
-                            {getSortIcon("date")}
-                          </button>
-                        </th>
-                        <th className="text-left py-2 text-xs font-semibold text-slate-700 w-32">
+                        <th className="text-left py-2 text-xs font-semibold text-slate-700 w-60">
                           <button 
                             onClick={() => handleSort("invoiceNumber")}
                             className="flex items-center space-x-1 hover:text-slate-900"
                           >
-                            <span>Inv No.</span>
+                            <span>Inv No. / Client</span>
                             {getSortIcon("invoiceNumber")}
-                          </button>
-                        </th>
-                        <th className="text-left py-2 text-xs font-semibold text-slate-700 w-60">
-                          <button 
-                            onClick={() => handleSort("clientName")}
-                            className="flex items-center space-x-1 hover:text-slate-900"
-                          >
-                            <span>Client Name</span>
-                            {getSortIcon("clientName")}
                           </button>
                         </th>
                         <th className="text-left py-2 text-xs font-semibold text-slate-700">
@@ -714,7 +696,7 @@ export default function Invoices() {
                             onClick={() => handleSort("amount")}
                             className="flex items-center space-x-1 hover:text-slate-900"
                           >
-                            <span>Amount</span>
+                            <span>Amount Outstanding</span>
                             {getSortIcon("amount")}
                           </button>
                         </th>
@@ -723,17 +705,8 @@ export default function Invoices() {
                             onClick={() => handleSort("dueDate")}
                             className="flex items-center space-x-1 hover:text-slate-900"
                           >
-                            <span>Due Date</span>
+                            <span>Due Date / Age</span>
                             {getSortIcon("dueDate")}
-                          </button>
-                        </th>
-                        <th className="text-left py-2 text-xs font-semibold text-slate-700">
-                          <button 
-                            onClick={() => handleSort("age")}
-                            className="flex items-center space-x-1 hover:text-slate-900"
-                          >
-                            <span>Age</span>
-                            {getSortIcon("age")}
                           </button>
                         </th>
                         <th className="text-left py-2 text-xs font-semibold text-slate-700">
@@ -753,6 +726,9 @@ export default function Invoices() {
                             <span>Collection Stage</span>
                             {getSortIcon("collectionStage")}
                           </button>
+                        </th>
+                        <th className="text-left py-2 text-xs font-semibold text-slate-700">
+                          <span>Next Action</span>
                         </th>
                         <th className="text-right py-2 text-xs font-semibold text-slate-700">Actions</th>
                       </tr>
