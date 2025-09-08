@@ -736,34 +736,43 @@ export default function Invoices() {
                     <tbody className="divide-y divide-slate-200/50">
                       {paginatedInvoices.map((invoice: any) => (
                         <tr key={invoice.id} className="hover:bg-slate-50/50 transition-colors" data-testid={`row-invoice-${invoice.id}`}>
-                          <td className="py-1 text-xs text-slate-700 w-32" data-testid={`text-issue-date-${invoice.id}`}>
-                            {new Date(invoice.issueDate).toLocaleDateString()}
+                          <td className="py-2 w-60" data-testid={`text-invoice-client-${invoice.id}`}>
+                            <div className="text-xs font-medium text-slate-900">
+                              {invoice.invoiceNumber}
+                            </div>
+                            <div className="text-xs text-slate-600 mt-0.5">
+                              {invoice.contact?.name || 'Unknown Contact'}
+                            </div>
                           </td>
-                          <td className="py-1 text-xs font-medium text-slate-900 w-32" data-testid={`text-invoice-number-${invoice.id}`}>
-                            {invoice.invoiceNumber}
-                          </td>
-                          <td className="py-1 text-xs text-slate-700 w-60" data-testid={`text-contact-name-${invoice.id}`}>
-                            {invoice.contact?.name || 'Unknown Contact'}
-                          </td>
-                          <td className="py-1 text-xs font-medium text-slate-900" data-testid={`text-amount-${invoice.id}`}>
+                          <td className="py-2 text-xs font-medium text-slate-900" data-testid={`text-amount-outstanding-${invoice.id}`}>
                             ${Number(invoice.amount).toLocaleString()}
                           </td>
-                          <td className="py-1 text-xs text-slate-700" data-testid={`text-due-date-${invoice.id}`}>
-                            {new Date(invoice.dueDate).toLocaleDateString()}
+                          <td className="py-2" data-testid={`text-due-date-age-${invoice.id}`}>
+                            <div className="text-xs text-slate-900">
+                              {new Date(invoice.dueDate).toLocaleDateString()}
+                            </div>
+                            <div className="text-xs text-slate-600 mt-0.5">
+                              {Math.floor((Date.now() - new Date(invoice.issueDate).getTime()) / (1000 * 60 * 60 * 24))} days
+                            </div>
                           </td>
-                          <td className="py-1 text-xs text-slate-700" data-testid={`text-age-${invoice.id}`}>
-                            {Math.floor((Date.now() - new Date(invoice.issueDate).getTime()) / (1000 * 60 * 60 * 24))} days
-                          </td>
-                          <td className="py-1">
+                          <td className="py-2">
                             {getStatusBadge(invoice.status)}
                           </td>
-                          <td className="py-1 text-xs text-slate-700">
+                          <td className="py-2 text-xs text-slate-700">
                             {invoice.collectionStage ? 
                               invoice.collectionStage.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()) : 
                               'Initial'
                             }
                           </td>
-                          <td className="py-1">
+                          <td className="py-2" data-testid={`text-next-action-${invoice.id}`}>
+                            <div className="text-xs text-slate-900">
+                              {new Date(Date.now() + (Math.random() * 7 + 1) * 24 * 60 * 60 * 1000).toLocaleDateString()}
+                            </div>
+                            <div className="text-xs text-slate-600 mt-0.5">
+                              {['Email Reminder', 'Phone Call', 'Letter', 'SMS Follow-up'][Math.floor(Math.random() * 4)]}
+                            </div>
+                          </td>
+                          <td className="py-2">
                             <div className="flex space-x-1 justify-end">
                               {invoice.contact?.email && (
                                 <Button 
