@@ -891,7 +891,7 @@ export default function Invoices() {
                               <th className="text-left py-2 text-xs font-semibold text-slate-700 w-[15%]">
                                 <span>Collection Rating</span>
                               </th>
-                              <th className="text-left py-2 text-xs font-semibold text-slate-700 w-[15%]">
+                              <th className="text-left py-2 text-xs font-semibold text-slate-700 w-[10%]">
                                 <span>Outstanding</span>
                               </th>
                               <th className="text-left py-2 text-xs font-semibold text-slate-700 w-[10%]">
