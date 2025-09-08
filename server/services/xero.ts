@@ -149,14 +149,130 @@ class XeroService {
     }
   }
 
-  async getContacts(tokens: XeroTokens): Promise<XeroContact[]> {
+  async getContacts(tokens: XeroTokens, filters?: {
+    hasOutstandingInvoices?: boolean;
+    activeOnly?: boolean;
+    recentActivityMonths?: number;
+    minOutstandingAmount?: number;
+  }): Promise<XeroContact[]> {
     try {
-      const response = await this.makeAuthenticatedRequest(tokens, 'Contacts');
-      return response.Contacts || [];
+      let endpoint = 'Contacts';
+      const whereClauses: string[] = [];
+
+      // Apply filters if provided
+      if (filters?.activeOnly !== false) {
+        whereClauses.push('IsActive%3D%3Dtrue'); // IsActive==true
+      }
+
+      if (whereClauses.length > 0) {
+        endpoint += `?where=${whereClauses.join('%20AND%20')}`;
+      }
+
+      const response = await this.makeAuthenticatedRequest(tokens, endpoint);
+      let contacts = response.Contacts || [];
+
+      // Additional filtering that requires invoice data
+      if (filters?.hasOutstandingInvoices || filters?.recentActivityMonths || filters?.minOutstandingAmount) {
+        contacts = await this.filterContactsByInvoiceActivity(tokens, contacts, filters);
+      }
+
+      return contacts;
     } catch (error) {
       console.error('Failed to fetch Xero contacts:', error);
       return [];
     }
+  }
+
+  private async filterContactsByInvoiceActivity(
+    tokens: XeroTokens, 
+    contacts: XeroContact[], 
+    filters: {
+      hasOutstandingInvoices?: boolean;
+      recentActivityMonths?: number;
+      minOutstandingAmount?: number;
+    }
+  ): Promise<XeroContact[]> {
+    const filteredContacts: XeroContact[] = [];
+    const recentDate = filters.recentActivityMonths 
+      ? new Date(Date.now() - (filters.recentActivityMonths * 30 * 24 * 60 * 60 * 1000))
+      : null;
+
+    console.log(`Filtering ${contacts.length} contacts based on invoice activity...`);
+    
+    // Process contacts in batches to avoid overwhelming the API
+    const batchSize = 50;
+    for (let i = 0; i < contacts.length; i += batchSize) {
+      const batch = contacts.slice(i, i + batchSize);
+      
+      const contactPromises = batch.map(async (contact) => {
+        try {
+          // Get invoices for this contact with outstanding amounts
+          let invoiceEndpoint = `Invoices?where=Contact.ContactID%3Dguid"${contact.ContactID}"%20AND%20Type%3D%3D%22ACCREC%22`;
+          
+          // Add status filter for collection-relevant invoices
+          invoiceEndpoint += '%20AND%20(Status%3D%3D%22AUTHORISED%22%20OR%20Status%3D%3D%22SUBMITTED%22)';
+          
+          const invoiceResponse = await this.makeAuthenticatedRequest(tokens, invoiceEndpoint);
+          const invoices = invoiceResponse.Invoices || [];
+          
+          if (invoices.length === 0) {
+            return null; // No relevant invoices
+          }
+
+          let hasRecentActivity = false;
+          let totalOutstanding = 0;
+          
+          for (const invoice of invoices) {
+            // Check for recent activity
+            if (recentDate) {
+              const invoiceDate = new Date(invoice.DateString);
+              if (invoiceDate >= recentDate) {
+                hasRecentActivity = true;
+              }
+            } else {
+              hasRecentActivity = true; // No date filter applied
+            }
+            
+            // Calculate outstanding amount
+            const outstandingAmount = invoice.AmountDue || (invoice.Total - invoice.AmountPaid);
+            if (outstandingAmount > 0) {
+              totalOutstanding += outstandingAmount;
+            }
+          }
+
+          // Apply filters
+          if (filters.hasOutstandingInvoices && totalOutstanding === 0) {
+            return null; // No outstanding balance
+          }
+          
+          if (filters.recentActivityMonths && !hasRecentActivity) {
+            return null; // No recent activity
+          }
+          
+          if (filters.minOutstandingAmount && totalOutstanding < filters.minOutstandingAmount) {
+            return null; // Outstanding amount too low
+          }
+
+          // Contact meets all criteria
+          return { contact, totalOutstanding, invoiceCount: invoices.length };
+          
+        } catch (error) {
+          console.warn(`Failed to check invoices for contact ${contact.Name}:`, error);
+          return null;
+        }
+      });
+      
+      const batchResults = await Promise.all(contactPromises);
+      const validContacts = batchResults.filter(result => result !== null);
+      
+      filteredContacts.push(...validContacts.map(result => result!.contact));
+      
+      // Log progress
+      console.log(`Processed batch ${Math.floor(i/batchSize) + 1}/${Math.ceil(contacts.length/batchSize)}, found ${validContacts.length} qualifying contacts`);
+    }
+
+    console.log(`Filtered ${contacts.length} contacts down to ${filteredContacts.length} with relevant invoice activity`);
+    return filteredContacts;
   }
 
   async getContact(tokens: XeroTokens, contactId: string): Promise<XeroContact | null> {
@@ -169,9 +285,31 @@ class XeroService {
     }
   }
 
-  async getInvoices(tokens: XeroTokens, modifiedSince?: Date): Promise<XeroInvoice[]> {
+  async getInvoices(tokens: XeroTokens, modifiedSince?: Date, filters?: {
+    outstandingOnly?: boolean;
+    collectionRelevantOnly?: boolean;
+    recentActivityMonths?: number;
+  }): Promise<XeroInvoice[]> {
     try {
-      let endpoint = 'Invoices?where=Type%3D%3D%22ACCREC%22';
+      let whereClause = 'Type%3D%3D%22ACCREC%22'; // Type=="ACCREC"
+      
+      // Apply collection-focused filters
+      if (filters?.outstandingOnly) {
+        whereClause += '%20AND%20AmountDue%3E0'; // AmountDue>0
+      }
+      
+      if (filters?.collectionRelevantOnly) {
+        // Focus on AUTHORISED and SUBMITTED invoices (exclude PAID, VOIDED, DRAFT)
+        whereClause += '%20AND%20(Status%3D%3D%22AUTHORISED%22%20OR%20Status%3D%3D%22SUBMITTED%22)';
+      }
+      
+      if (filters?.recentActivityMonths) {
+        const recentDate = new Date(Date.now() - (filters.recentActivityMonths * 30 * 24 * 60 * 60 * 1000));
+        whereClause += `%20AND%20Date%3E%3DDateTime(${recentDate.getFullYear()},${recentDate.getMonth()+1},${recentDate.getDate()})`;
+      }
+      
+      let endpoint = `Invoices?where=${whereClause}`;
+      
       if (modifiedSince) {
         endpoint += `&ModifiedAfter=${modifiedSince.toISOString()}`;
       }
@@ -326,11 +464,26 @@ class XeroService {
   async syncContactsToDatabase(tokens: XeroTokens, tenantId: string): Promise<{
     synced: number;
     errors: string[];
+    filtered: number;
   }> {
-    const results = { synced: 0, errors: [] as string[] };
+    const results = { synced: 0, errors: [] as string[], filtered: 0 };
 
     try {
-      const xeroContacts = await this.getContacts(tokens);
+      console.log('🔍 Fetching Xero contacts with collection-focused filters...');
+      
+      // Apply smart filters to only get relevant customers
+      const filterConfig = {
+        hasOutstandingInvoices: true,           // Only customers with outstanding balances
+        activeOnly: true,                       // Only active customers
+        recentActivityMonths: 18,               // Activity within last 18 months
+        minOutstandingAmount: 50                // Minimum $50 outstanding balance
+      };
+      
+      const xeroContacts = await this.getContacts(tokens, filterConfig);
+      results.filtered = xeroContacts.length;
+      
+      console.log(`✅ Filtered contacts: ${xeroContacts.length} relevant customers found (vs ~15,000+ total)`);
+      
       const { storage } = await import('../storage');
 
       for (const xeroContact of xeroContacts) {

@@ -8,6 +8,55 @@ export class XeroSyncService {
     // Use the existing xeroService instance
   }
 
+  async syncContactsForTenant(tenantId: string): Promise<{
+    success: boolean;
+    contactsCount: number;
+    filteredCount: number;
+    error?: string;
+  }> {
+    try {
+      console.log(`🔍 Starting filtered Xero contact sync for tenant: ${tenantId}`);
+
+      // Get tenant with Xero tokens
+      const [tenant] = await db
+        .select()
+        .from(tenants)
+        .where(eq(tenants.id, tenantId));
+
+      if (!tenant || !tenant.xeroAccessToken) {
+        throw new Error("Tenant not found or Xero access token missing");
+      }
+
+      // Sync contacts with collection-focused filters
+      const contactSyncResult = await xeroService.syncContactsToDatabase(
+        {
+          accessToken: tenant.xeroAccessToken,
+          refreshToken: tenant.xeroRefreshToken!,
+          expiresAt: new Date(Date.now() + 3600000),
+          tenantId: tenant.xeroTenantId!,
+        },
+        tenantId
+      );
+
+      console.log(`✅ Contact sync completed: ${contactSyncResult.synced} contacts synced (${contactSyncResult.filtered} filtered)`);
+
+      return {
+        success: true,
+        contactsCount: contactSyncResult.synced,
+        filteredCount: contactSyncResult.filtered,
+      };
+
+    } catch (error) {
+      console.error("Contact sync failed:", error);
+      return {
+        success: false,
+        contactsCount: 0,
+        filteredCount: 0,
+        error: error instanceof Error ? error.message : "Unknown error",
+      };
+    }
+  }
+
   async syncInvoicesForTenant(tenantId: string): Promise<{
     success: boolean;
     invoicesCount: number;
@@ -30,8 +79,8 @@ export class XeroSyncService {
         throw new Error("Xero access token not found for tenant");
       }
 
-      // Fetch all invoices from Xero
-      const allStatuses = ['AUTHORISED', 'PAID', 'VOIDED', 'DRAFT'];
+      // Fetch only collection-relevant invoices from Xero (filtering out unnecessary data)
+      const collectionRelevantStatuses = ['AUTHORISED', 'SUBMITTED']; // Focus on unpaid invoices only
       let totalInvoicesCount = 0;
 
       // Clear existing cached invoices for this tenant
@@ -40,9 +89,10 @@ export class XeroSyncService {
         .where(eq(cachedXeroInvoices.tenantId, tenantId));
 
       console.log("Cleared existing cached invoices");
+      console.log("🎯 Syncing only collection-relevant invoices (AUTHORISED, SUBMITTED with outstanding balances)");
 
-      // Fetch invoices for each status
-      for (const status of allStatuses) {
+      // Fetch invoices for each collection-relevant status
+      for (const status of collectionRelevantStatuses) {
         try {
           const response = await xeroService.getInvoicesPaginated(
             {
@@ -97,7 +147,7 @@ export class XeroSyncService {
         .set({ xeroLastSyncAt: new Date() })
         .where(eq(tenants.id, tenantId));
 
-      console.log(`Sync completed. Total invoices cached: ${totalInvoicesCount}`);
+      console.log(`✅ Invoice sync completed. Total collection-relevant invoices cached: ${totalInvoicesCount}`);
 
       return {
         success: true,
@@ -227,6 +277,49 @@ export class XeroSyncService {
     } catch (error) {
       console.error("Error updating sync settings:", error);
       return false;
+    }
+  }
+
+  async syncAllDataForTenant(tenantId: string): Promise<{
+    success: boolean;
+    contactsCount: number;
+    invoicesCount: number;
+    filteredCount: number;
+    error?: string;
+  }> {
+    try {
+      console.log(`🚀 Starting complete filtered Xero sync for tenant: ${tenantId}`);
+
+      // Sync contacts first (with filtering)
+      const contactResult = await this.syncContactsForTenant(tenantId);
+      if (!contactResult.success) {
+        throw new Error(`Contact sync failed: ${contactResult.error}`);
+      }
+
+      // Then sync invoices (with filtering)
+      const invoiceResult = await this.syncInvoicesForTenant(tenantId);
+      if (!invoiceResult.success) {
+        throw new Error(`Invoice sync failed: ${invoiceResult.error}`);
+      }
+
+      console.log(`🎉 Complete sync successful: ${contactResult.contactsCount} contacts, ${invoiceResult.invoicesCount} invoices (filtered from ~15,000+ total)`);
+
+      return {
+        success: true,
+        contactsCount: contactResult.contactsCount,
+        invoicesCount: invoiceResult.invoicesCount,
+        filteredCount: contactResult.filteredCount,
+      };
+
+    } catch (error) {
+      console.error("Complete sync failed:", error);
+      return {
+        success: false,
+        contactsCount: 0,
+        invoicesCount: 0,
+        filteredCount: 0,
+        error: error instanceof Error ? error.message : "Unknown error",
+      };
     }
   }
 }

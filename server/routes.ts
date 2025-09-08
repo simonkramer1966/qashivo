@@ -2250,14 +2250,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
 
-      console.log(`Starting manual Xero sync for tenant: ${user.tenantId}`);
-      const result = await xeroSyncService.syncInvoicesForTenant(user.tenantId);
+      console.log(`🚀 Starting comprehensive filtered Xero sync for tenant: ${user.tenantId}`);
+      const result = await xeroSyncService.syncAllDataForTenant(user.tenantId);
 
       if (result.success) {
         res.json({
           success: true,
-          message: `Successfully synced ${result.invoicesCount} invoices`,
+          message: `Successfully synced ${result.contactsCount} customers and ${result.invoicesCount} collection-relevant invoices (filtered from ~15,000+ total)`,
+          contactsCount: result.contactsCount,
           invoicesCount: result.invoicesCount,
+          filteredCount: result.filteredCount,
           syncedAt: new Date().toISOString(),
         });
       } else {
@@ -2267,7 +2269,73 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
     } catch (error) {
-      console.error("Error in manual Xero sync:", error);
+      console.error("Error in comprehensive Xero sync:", error);
+      res.status(500).json({ 
+        success: false,
+        message: "Failed to sync Xero data" 
+      });
+    }
+  });
+
+  // Separate endpoints for individual syncing (optional)
+  app.post("/api/xero/sync/contacts", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      console.log(`🔍 Starting filtered contact sync for tenant: ${user.tenantId}`);
+      const result = await xeroSyncService.syncContactsForTenant(user.tenantId);
+
+      if (result.success) {
+        res.json({
+          success: true,
+          message: `Successfully synced ${result.contactsCount} filtered customers (${result.filteredCount} total found)`,
+          contactsCount: result.contactsCount,
+          filteredCount: result.filteredCount,
+          syncedAt: new Date().toISOString(),
+        });
+      } else {
+        res.status(500).json({
+          success: false,
+          message: result.error || "Contact sync failed",
+        });
+      }
+    } catch (error) {
+      console.error("Error in contact sync:", error);
+      res.status(500).json({ 
+        success: false,
+        message: "Failed to sync contacts" 
+      });
+    }
+  });
+
+  app.post("/api/xero/sync/invoices", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      console.log(`📄 Starting filtered invoice sync for tenant: ${user.tenantId}`);
+      const result = await xeroSyncService.syncInvoicesForTenant(user.tenantId);
+
+      if (result.success) {
+        res.json({
+          success: true,
+          message: `Successfully synced ${result.invoicesCount} collection-relevant invoices`,
+          invoicesCount: result.invoicesCount,
+          syncedAt: new Date().toISOString(),
+        });
+      } else {
+        res.status(500).json({
+          success: false,
+          message: result.error || "Invoice sync failed",
+        });
+      }
+    } catch (error) {
+      console.error("Error in invoice sync:", error);
       res.status(500).json({ 
         success: false,
         message: "Failed to sync invoices" 

@@ -39,19 +39,41 @@ export default function Header({ title, subtitle, action, noBorder = true, title
   const syncMutation = useMutation({
     mutationFn: () => apiRequest("POST", "/api/xero/sync", {}),
     onSuccess: (data: any) => {
+      const contactsMsg = data.contactsCount ? `${data.contactsCount} customers` : '';
+      const invoicesMsg = data.invoicesCount ? `${data.invoicesCount} invoices` : '';
+      const filteredMsg = data.filteredCount ? ` (filtered from ~15,000+ total)` : '';
+      
+      let description = '';
+      if (contactsMsg && invoicesMsg) {
+        description = `Synced ${contactsMsg} and ${invoicesMsg}${filteredMsg}`;
+      } else if (contactsMsg) {
+        description = `Synced ${contactsMsg}${filteredMsg}`;
+      } else if (invoicesMsg) {
+        description = `Synced ${invoicesMsg}${filteredMsg}`;
+      } else {
+        description = "Xero data synchronized successfully";
+      }
+
       toast({
         title: "Sync Successful",
-        description: `Synced ${data.invoicesCount || 0} invoices from Xero`,
+        description,
       });
-      // Invalidate all cached invoice queries to refresh the data
+      
+      // Invalidate all relevant cached queries to refresh the data
       queryClient.invalidateQueries({ 
         queryKey: ["/api/xero/invoices/cached"] 
+      });
+      queryClient.invalidateQueries({ 
+        queryKey: ["/api/contacts"] 
+      });
+      queryClient.invalidateQueries({ 
+        queryKey: ["/api/invoices"] 
       });
     },
     onError: (error: any) => {
       toast({
-        title: "Sync Failed",
-        description: error?.message || "Failed to sync invoices from Xero",
+        title: "Sync Failed", 
+        description: error?.message || "Failed to sync data from Xero",
         variant: "destructive",
       });
     },
@@ -128,7 +150,7 @@ export default function Header({ title, subtitle, action, noBorder = true, title
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>{syncMutation.isPending ? "Syncing invoices..." : "Sync Xero data"}</p>
+                  <p>{syncMutation.isPending ? "Syncing customers & invoices..." : "Sync Xero data"}</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
