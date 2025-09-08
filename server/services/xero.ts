@@ -159,20 +159,26 @@ class XeroService {
       let endpoint = 'Contacts';
       const whereClauses: string[] = [];
 
-      // Apply filters if provided
+      // Apply basic filters that can be done at API level
       if (filters?.activeOnly !== false) {
-        whereClauses.push('IsActive%3D%3Dtrue'); // IsActive==true
+        whereClauses.push('IsActive==true');
       }
 
       if (whereClauses.length > 0) {
-        endpoint += `?where=${whereClauses.join('%20AND%20')}`;
+        // Properly encode the where clause
+        const whereClause = whereClauses.join(' AND ');
+        endpoint += `?where=${encodeURIComponent(whereClause)}`;
       }
 
+      console.log(`Fetching Xero contacts with endpoint: ${endpoint}`);
       const response = await this.makeAuthenticatedRequest(tokens, endpoint);
       let contacts = response.Contacts || [];
 
-      // Additional filtering that requires invoice data
+      console.log(`Fetched ${contacts.length} active contacts from Xero`);
+
+      // Additional filtering that requires invoice analysis
       if (filters?.hasOutstandingInvoices || filters?.recentActivityMonths || filters?.minOutstandingAmount) {
+        console.log('Applying invoice-based filtering...');
         contacts = await this.filterContactsByInvoiceActivity(tokens, contacts, filters);
       }
 
@@ -206,11 +212,9 @@ class XeroService {
       
       const contactPromises = batch.map(async (contact) => {
         try {
-          // Get invoices for this contact with outstanding amounts
-          let invoiceEndpoint = `Invoices?where=Contact.ContactID%3Dguid"${contact.ContactID}"%20AND%20Type%3D%3D%22ACCREC%22`;
-          
-          // Add status filter for collection-relevant invoices
-          invoiceEndpoint += '%20AND%20(Status%3D%3D%22AUTHORISED%22%20OR%20Status%3D%3D%22SUBMITTED%22)';
+          // Get invoices for this contact - properly encoded
+          const whereClause = `Contact.ContactID=guid"${contact.ContactID}" AND Type=="ACCREC" AND (Status=="AUTHORISED" OR Status=="SUBMITTED")`;
+          const invoiceEndpoint = `Invoices?where=${encodeURIComponent(whereClause)}`;
           
           const invoiceResponse = await this.makeAuthenticatedRequest(tokens, invoiceEndpoint);
           const invoices = invoiceResponse.Invoices || [];
@@ -475,8 +479,8 @@ class XeroService {
       const filterConfig = {
         hasOutstandingInvoices: true,           // Only customers with outstanding balances
         activeOnly: true,                       // Only active customers
-        recentActivityMonths: 18,               // Activity within last 18 months
-        minOutstandingAmount: 50                // Minimum $50 outstanding balance
+        recentActivityMonths: 36,               // Activity within last 36 months (more flexible)
+        minOutstandingAmount: 1                 // Minimum $1 outstanding balance (very flexible)
       };
       
       const xeroContacts = await this.getContacts(tokens, filterConfig);
