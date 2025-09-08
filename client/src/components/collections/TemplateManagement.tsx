@@ -319,7 +319,7 @@ export default function TemplateManagement({ className }: TemplateManagementProp
             <SelectTrigger className="w-[200px]" id="category-filter">
               <SelectValue placeholder="All Categories" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="bg-white">
               <SelectItem value="all">All Categories</SelectItem>
               {templateCategories.map(category => (
                 <SelectItem key={category.value} value={category.value}>
@@ -336,7 +336,7 @@ export default function TemplateManagement({ className }: TemplateManagementProp
             <SelectTrigger className="w-[150px]" id="type-filter">
               <SelectValue placeholder="All Types" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="bg-white">
               <SelectItem value="all">All Types</SelectItem>
               <SelectItem value="email">Email</SelectItem>
               <SelectItem value="sms">SMS</SelectItem>
@@ -464,7 +464,7 @@ export default function TemplateManagement({ className }: TemplateManagementProp
                             <SelectValue placeholder="Select type" />
                           </SelectTrigger>
                         </FormControl>
-                        <SelectContent>
+                        <SelectContent className="bg-white">
                           <SelectItem value="email">Email</SelectItem>
                           <SelectItem value="sms">SMS</SelectItem>
                           <SelectItem value="whatsapp">WhatsApp</SelectItem>
@@ -489,7 +489,7 @@ export default function TemplateManagement({ className }: TemplateManagementProp
                             <SelectValue placeholder="Select category" />
                           </SelectTrigger>
                         </FormControl>
-                        <SelectContent>
+                        <SelectContent className="bg-white">
                           {templateCategories.map(category => (
                             <SelectItem key={category.value} value={category.value}>
                               {category.label}
@@ -535,7 +535,7 @@ export default function TemplateManagement({ className }: TemplateManagementProp
                             <SelectValue placeholder="Select tone" />
                           </SelectTrigger>
                         </FormControl>
-                        <SelectContent>
+                        <SelectContent className="bg-white">
                           <SelectItem value="friendly">Friendly</SelectItem>
                           <SelectItem value="professional">Professional</SelectItem>
                           <SelectItem value="firm">Firm</SelectItem>
