@@ -689,7 +689,7 @@ export default function CollectionScheduleBuilder({ className }: CollectionSched
                                   <SelectTrigger className="w-24" data-testid={`select-step-delay-unit-${step.id}`}>
                                     <SelectValue />
                                   </SelectTrigger>
-                                  <SelectContent>
+                                  <SelectContent className="bg-white">
                                     <SelectItem value="hours">Hours</SelectItem>
                                     <SelectItem value="days">Days</SelectItem>
                                     <SelectItem value="weeks">Weeks</SelectItem>
