@@ -465,7 +465,7 @@ export default function CollectionScheduleBuilder({ className }: CollectionSched
 
       {/* Create/Edit Schedule Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-white">
           <DialogHeader>
             <DialogTitle>
               {editingSchedule ? 'Edit Collection Schedule' : 'Create New Collection Schedule'}
