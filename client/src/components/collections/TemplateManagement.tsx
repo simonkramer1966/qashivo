@@ -166,8 +166,7 @@ export default function TemplateManagement({ className }: TemplateManagementProp
   // AI Generate template mutation
   const aiGenerateMutation = useMutation({
     mutationFn: async (data: { type: string; category: string; tone: string; stage: number }) => {
-      const response = await apiRequest("POST", "/api/collections/templates/ai-generate", data);
-      return response.json();
+      return apiRequest("POST", "/api/collections/templates/ai-generate", data);
     },
     onSuccess: (data) => {
       console.log("AI Generate response:", data); // Debug log
