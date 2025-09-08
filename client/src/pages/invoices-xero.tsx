@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/useAuth";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import NewSidebar from "@/components/layout/new-sidebar";
@@ -18,7 +17,6 @@ import { Mail, Phone, Eye, Plus, Search, Filter, FileText, ChevronUp, ChevronDow
 export default function InvoicesXero() {
   const { toast } = useToast();
   const { isAuthenticated, isLoading } = useAuth();
-  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState("unpaid");
   const [search, setSearch] = useState("");
   const [sortField, setSortField] = useState<string>("");
@@ -67,27 +65,6 @@ export default function InvoicesXero() {
     enabled: true,
   });
 
-  // Sync mutation for manual refresh
-  const syncMutation = useMutation({
-    mutationFn: () => apiRequest("POST", "/api/xero/sync", {}),
-    onSuccess: (data) => {
-      toast({
-        title: "Sync Successful",
-        description: `Synced ${data.invoicesCount} invoices from Xero`,
-      });
-      // Invalidate all cached invoice queries to refresh the data
-      queryClient.invalidateQueries({ 
-        queryKey: ["/api/xero/invoices/cached"] 
-      });
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Sync Failed",
-        description: error?.message || "Failed to sync invoices from Xero",
-        variant: "destructive",
-      });
-    },
-  });
 
   // Fetch tenant data to get currency setting
   const { data: tenant } = useQuery({
@@ -102,7 +79,7 @@ export default function InvoicesXero() {
 
   // Format currency for display using organization's currency
   const formatCurrency = (amount: number) => {
-    const currencyCode = tenant?.settings?.currency || 'USD';
+    const currencyCode = (tenant as any)?.settings?.currency || 'USD';
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: currencyCode,
@@ -305,38 +282,6 @@ export default function InvoicesXero() {
         <Header 
           title="Invoices - Xero" 
           subtitle="Live invoice data directly from your Xero accounting system"
-          action={
-            <div className="flex items-center space-x-4">
-              <Button
-                onClick={() => syncMutation.mutate()}
-                disabled={syncMutation.isPending}
-                className="bg-[#17B6C3] hover:bg-[#1396A1] text-white"
-                data-testid="button-sync-now"
-              >
-                {syncMutation.isPending ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                    Syncing...
-                  </>
-                ) : (
-                  <>
-                    <AlertCircle className="h-4 w-4 mr-2" />
-                    Sync Now
-                  </>
-                )}
-              </Button>
-              
-              <div className="text-sm text-gray-600">
-                {currentTabData.data?.lastSyncAt ? (
-                  <>
-                    Last synced: {new Date(currentTabData.data.lastSyncAt).toLocaleString()}
-                  </>
-                ) : (
-                  "No recent sync data"
-                )}
-              </div>
-            </div>
-          }
         />
         
         <div className="p-8 space-y-8">

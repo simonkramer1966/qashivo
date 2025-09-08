@@ -3,8 +3,11 @@ import { useAuth } from "@/hooks/useAuth";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { LogOut, User, Settings } from "lucide-react";
+import { LogOut, User, Settings, AlertCircle } from "lucide-react";
 import { useLocation } from "wouter";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 
 interface HeaderProps {
   title: string;
@@ -18,6 +21,41 @@ interface HeaderProps {
 export default function Header({ title, subtitle, action, noBorder = true, titleSize = "text-2xl", subtitleSize = "text-base" }: HeaderProps) {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  // Fetch tenant information to check Xero connection
+  const { data: tenant } = useQuery<{
+    id: string;
+    name: string;
+    xeroAccessToken?: string;
+    xeroTenantId?: string;
+  }>({
+    queryKey: ['/api/tenant'],
+    enabled: !!user,
+  });
+
+  // Sync mutation for manual refresh
+  const syncMutation = useMutation({
+    mutationFn: () => apiRequest("POST", "/api/xero/sync", {}),
+    onSuccess: (data: any) => {
+      toast({
+        title: "Sync Successful",
+        description: `Synced ${data.invoicesCount || 0} invoices from Xero`,
+      });
+      // Invalidate all cached invoice queries to refresh the data
+      queryClient.invalidateQueries({ 
+        queryKey: ["/api/xero/invoices/cached"] 
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Sync Failed",
+        description: error?.message || "Failed to sync invoices from Xero",
+        variant: "destructive",
+      });
+    },
+  });
 
   const handleLogout = () => {
     window.location.href = "/api/logout";
@@ -38,8 +76,8 @@ export default function Header({ title, subtitle, action, noBorder = true, title
     if (firstName && lastName) {
       return `${firstName.charAt(0)}${lastName.charAt(0)}`;
     }
-    if (user?.email) {
-      return user.email.charAt(0).toUpperCase();
+    if ((user as any)?.email) {
+      return (user as any).email.charAt(0).toUpperCase();
     }
     return "U";
   };
@@ -51,8 +89,8 @@ export default function Header({ title, subtitle, action, noBorder = true, title
     if (firstName && lastName) {
       return `${firstName} ${lastName}`;
     }
-    if (user?.email) {
-      return user.email;
+    if ((user as any)?.email) {
+      return (user as any).email;
     }
     return "User";
   };
@@ -69,6 +107,33 @@ export default function Header({ title, subtitle, action, noBorder = true, title
           </p>
         </div>
         <div className="flex items-center space-x-4">
+          {/* Sync Button - Only show if Xero is connected */}
+          {tenant?.xeroAccessToken && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    onClick={() => syncMutation.mutate()}
+                    disabled={syncMutation.isPending}
+                    variant="ghost"
+                    size="sm"
+                    className="h-10 px-3 bg-[#17B6C3]/10 hover:bg-[#17B6C3]/20 text-[#17B6C3] border border-[#17B6C3]/20"
+                    data-testid="button-sync-now"
+                  >
+                    {syncMutation.isPending ? (
+                      <div className="w-4 h-4 border-2 border-[#17B6C3] border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <AlertCircle className="h-4 w-4" />
+                    )}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{syncMutation.isPending ? "Syncing invoices..." : "Sync Xero data"}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
+
           {/* User Profile */}
           <DropdownMenu>
             <DropdownMenuTrigger className="flex items-center space-x-3 hover:bg-accent hover:text-accent-foreground rounded-lg px-3 py-2 transition-colors" data-testid="button-user-menu">
@@ -77,7 +142,7 @@ export default function Header({ title, subtitle, action, noBorder = true, title
                   {getDisplayName()}
                 </p>
                 <p className="text-xs text-muted-foreground" data-testid="text-user-email">
-                  {user?.email || ""}
+                  {(user as any)?.email || ""}
                 </p>
               </div>
               <Avatar className="h-10 w-10" data-testid="avatar-user">
