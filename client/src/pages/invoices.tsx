@@ -25,6 +25,7 @@ export default function Invoices() {
   const [invClientSort, setInvClientSort] = useState<string>("inv-asc");
   const [dueDateAgeSort, setDueDateAgeSort] = useState<string>("due-date-asc");
   const [nextActionSort, setNextActionSort] = useState<string>("action-date-asc");
+  const [activeSortColumn, setActiveSortColumn] = useState<string>("invClient");
   // Basic sorting for customers tab
   const [customersSortField, setCustomersSortField] = useState<string>("");
   const [customersSortDirection, setCustomersSortDirection] = useState<"asc" | "desc">("asc");
@@ -129,6 +130,15 @@ export default function Invoices() {
     }
   };
 
+  const getActiveSortType = () => {
+    switch (activeSortColumn) {
+      case "invClient": return invClientSort;
+      case "dueDateAge": return dueDateAgeSort; 
+      case "nextAction": return nextActionSort;
+      default: return invClientSort;
+    }
+  };
+
   const filteredAndSortedInvoices = (invoices as any[])
     .filter((invoice: any) => {
       const matchesSearch = invoice.invoiceNumber.toLowerCase().includes(search.toLowerCase()) ||
@@ -137,70 +147,61 @@ export default function Invoices() {
       return matchesSearch && matchesStatus;
     })
     .sort((a: any, b: any) => {
-      let result = 0;
+      const activeSortType = getActiveSortType();
+      let aValue, bValue;
       
-      // Primary sort by Inv/Client column
-      switch (invClientSort) {
+      switch (activeSortType) {
+        // Invoice Number / Client sorting
         case "inv-asc":
-          result = a.invoiceNumber.toLowerCase().localeCompare(b.invoiceNumber.toLowerCase());
-          break;
+          aValue = a.invoiceNumber.toLowerCase();
+          bValue = b.invoiceNumber.toLowerCase();
+          return aValue.localeCompare(bValue);
         case "inv-desc":
-          result = b.invoiceNumber.toLowerCase().localeCompare(a.invoiceNumber.toLowerCase());
-          break;
+          aValue = a.invoiceNumber.toLowerCase();
+          bValue = b.invoiceNumber.toLowerCase();
+          return bValue.localeCompare(aValue);
         case "client-asc":
-          result = (a.contact?.companyName || 'Unknown Company').toLowerCase()
-            .localeCompare((b.contact?.companyName || 'Unknown Company').toLowerCase());
-          break;
+          aValue = (a.contact?.companyName || 'Unknown Company').toLowerCase();
+          bValue = (b.contact?.companyName || 'Unknown Company').toLowerCase();
+          return aValue.localeCompare(bValue);
         case "client-desc":
-          result = (b.contact?.companyName || 'Unknown Company').toLowerCase()
-            .localeCompare((a.contact?.companyName || 'Unknown Company').toLowerCase());
-          break;
-      }
-      if (result !== 0) return result;
-      
-      // Secondary sort by Due Date/Age column
-      switch (dueDateAgeSort) {
+          aValue = (a.contact?.companyName || 'Unknown Company').toLowerCase();
+          bValue = (b.contact?.companyName || 'Unknown Company').toLowerCase();
+          return bValue.localeCompare(aValue);
+        
+        // Due Date / Age sorting
         case "due-date-asc":
-          result = new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
-          break;
+          return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
         case "due-date-desc":
-          result = new Date(b.dueDate).getTime() - new Date(a.dueDate).getTime();
-          break;
+          return new Date(b.dueDate).getTime() - new Date(a.dueDate).getTime();
         case "age-asc":
-          const ageA = Math.floor((Date.now() - new Date(a.issueDate).getTime()) / (1000 * 60 * 60 * 24));
-          const ageB = Math.floor((Date.now() - new Date(b.issueDate).getTime()) / (1000 * 60 * 60 * 24));
-          result = ageA - ageB;
-          break;
+          aValue = Math.floor((Date.now() - new Date(a.issueDate).getTime()) / (1000 * 60 * 60 * 24));
+          bValue = Math.floor((Date.now() - new Date(b.issueDate).getTime()) / (1000 * 60 * 60 * 24));
+          return aValue - bValue;
         case "age-desc":
-          const ageA2 = Math.floor((Date.now() - new Date(a.issueDate).getTime()) / (1000 * 60 * 60 * 24));
-          const ageB2 = Math.floor((Date.now() - new Date(b.issueDate).getTime()) / (1000 * 60 * 60 * 24));
-          result = ageB2 - ageA2;
-          break;
-      }
-      if (result !== 0) return result;
-      
-      // Tertiary sort by Next Action column
-      switch (nextActionSort) {
+          aValue = Math.floor((Date.now() - new Date(a.issueDate).getTime()) / (1000 * 60 * 60 * 24));
+          bValue = Math.floor((Date.now() - new Date(b.issueDate).getTime()) / (1000 * 60 * 60 * 24));
+          return bValue - aValue;
+        
+        // Next Action sorting - generate consistent mock data based on invoice ID
         case "action-date-asc":
         case "action-date-desc":
-          // Generate consistent dates based on invoice ID hash
           const hashA = a.id.split('').reduce((hash, char) => hash + char.charCodeAt(0), 0);
           const hashB = b.id.split('').reduce((hash, char) => hash + char.charCodeAt(0), 0);
-          const dateA = Date.now() + ((hashA % 7) + 1) * 24 * 60 * 60 * 1000;
-          const dateB = Date.now() + ((hashB % 7) + 1) * 24 * 60 * 60 * 1000;
-          result = nextActionSort === "action-date-asc" ? dateA - dateB : dateB - dateA;
-          break;
+          aValue = Date.now() + ((hashA % 7) + 1) * 24 * 60 * 60 * 1000;
+          bValue = Date.now() + ((hashB % 7) + 1) * 24 * 60 * 60 * 1000;
+          return activeSortType === "action-date-asc" ? aValue - bValue : bValue - aValue;
         case "action-type-asc":
         case "action-type-desc":
           const actions = ['Email Reminder', 'Phone Call', 'Letter', 'SMS Follow-up'];
-          const actionA = actions[a.id.split('').reduce((hash, char) => hash + char.charCodeAt(0), 0) % 4];
-          const actionB = actions[b.id.split('').reduce((hash, char) => hash + char.charCodeAt(0), 0) % 4];
-          result = nextActionSort === "action-type-asc" ? 
-            actionA.localeCompare(actionB) : actionB.localeCompare(actionA);
-          break;
+          aValue = actions[a.id.split('').reduce((hash, char) => hash + char.charCodeAt(0), 0) % 4];
+          bValue = actions[b.id.split('').reduce((hash, char) => hash + char.charCodeAt(0), 0) % 4];
+          return activeSortType === "action-type-asc" ? 
+            aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
+        
+        default:
+          return 0;
       }
-      
-      return result;
     });
 
   // Calculate pagination for invoices
@@ -724,7 +725,10 @@ export default function Invoices() {
                     <thead>
                       <tr className="border-b border-slate-200/50">
                         <th className="text-left py-2 text-xs font-semibold text-slate-700 w-60">
-                          <Select value={invClientSort} onValueChange={setInvClientSort}>
+                          <Select value={invClientSort} onValueChange={(value) => {
+                            setInvClientSort(value);
+                            setActiveSortColumn("invClient");
+                          }}>
                             <SelectTrigger className="border-0 bg-transparent p-0 h-auto font-semibold text-xs text-slate-700 hover:text-slate-900 focus:ring-0 data-[state=open]:text-slate-900">
                               <span>Inv No. / Client</span>
                               <ChevronDown className="h-3 w-3 ml-1" />
@@ -747,7 +751,10 @@ export default function Invoices() {
                           </button>
                         </th>
                         <th className="text-left py-2 text-xs font-semibold text-slate-700">
-                          <Select value={dueDateAgeSort} onValueChange={setDueDateAgeSort}>
+                          <Select value={dueDateAgeSort} onValueChange={(value) => {
+                            setDueDateAgeSort(value);
+                            setActiveSortColumn("dueDateAge");
+                          }}>
                             <SelectTrigger className="border-0 bg-transparent p-0 h-auto font-semibold text-xs text-slate-700 hover:text-slate-900 focus:ring-0 data-[state=open]:text-slate-900">
                               <span>Due Date / Age</span>
                               <ChevronDown className="h-3 w-3 ml-1" />
@@ -779,7 +786,10 @@ export default function Invoices() {
                           </button>
                         </th>
                         <th className="text-left py-2 text-xs font-semibold text-slate-700">
-                          <Select value={nextActionSort} onValueChange={setNextActionSort}>
+                          <Select value={nextActionSort} onValueChange={(value) => {
+                            setNextActionSort(value);
+                            setActiveSortColumn("nextAction");
+                          }}>
                             <SelectTrigger className="border-0 bg-transparent p-0 h-auto font-semibold text-xs text-slate-700 hover:text-slate-900 focus:ring-0 data-[state=open]:text-slate-900">
                               <span>Next Action</span>
                               <ChevronDown className="h-3 w-3 ml-1" />
