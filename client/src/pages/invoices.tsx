@@ -694,7 +694,7 @@ export default function Invoices() {
                     <div>
                       <CardTitle className="text-2xl font-bold">All Invoices</CardTitle>
                       <CardDescription className="text-base mt-1">
-                        {filteredAndSortedInvoices.length} invoice{filteredAndSortedInvoices.length !== 1 ? 's' : ''} found
+                        {filteredAndSortedInvoices.length.toLocaleString()} invoice{filteredAndSortedInvoices.length !== 1 ? 's' : ''} found
                       </CardDescription>
                     </div>
                     <div className="p-3 bg-[#17B6C3]/10 rounded-xl">
