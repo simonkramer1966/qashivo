@@ -2866,6 +2866,184 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Send Invoice PDF by Email - Direct API endpoint for testing
+  app.post("/api/invoices/send-pdf-email", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { invoiceId, customMessage, subject } = req.body;
+      if (!invoiceId) {
+        return res.status(400).json({ message: "Invoice ID is required" });
+      }
+
+      // Get invoice with contact details
+      const invoice = await storage.getInvoice(invoiceId, user.tenantId);
+      if (!invoice) {
+        return res.status(404).json({ message: "Invoice not found" });
+      }
+
+      if (!invoice.contact.email) {
+        return res.status(400).json({ message: "Contact email not available" });
+      }
+
+      // Get tenant information for company details
+      const tenant = await storage.getTenant(user.tenantId);
+      if (!tenant) {
+        return res.status(400).json({ message: "Tenant not found" });
+      }
+
+      // Import PDF and email services
+      const { generateInvoicePDF } = await import('./services/invoicePDF.js');
+      const { sendEmailWithAttachment } = await import('./services/sendgrid.js');
+
+      // Generate PDF
+      console.log(`Generating PDF for invoice ${invoice.invoiceNumber}...`);
+      const pdfBuffer = await generateInvoicePDF({
+        invoiceNumber: invoice.invoiceNumber,
+        contactName: invoice.contact.name,
+        contactEmail: invoice.contact.email,
+        companyName: invoice.contact.companyName,
+        amount: Number(invoice.amount),
+        taxAmount: Number(invoice.taxAmount),
+        issueDate: invoice.issueDate.toISOString(),
+        dueDate: invoice.dueDate.toISOString(),
+        description: invoice.description || 'Professional Services',
+        currency: invoice.currency,
+        status: invoice.status,
+        fromCompany: tenant.name,
+        fromAddress: tenant.settings?.companyAddress,
+        fromEmail: user.email,
+        fromPhone: tenant.settings?.companyPhone
+      });
+
+      console.log(`PDF generated successfully, size: ${Math.round(pdfBuffer.length / 1024)}KB`);
+
+      // Prepare email content
+      const emailSubject = subject || `Invoice ${invoice.invoiceNumber} - ${tenant.name}`;
+      const defaultMessage = `
+Dear ${invoice.contact.name},
+
+Please find attached invoice ${invoice.invoiceNumber} for ${invoice.currency} ${Number(invoice.amount).toFixed(2)}.
+
+Invoice Details:
+- Invoice Number: ${invoice.invoiceNumber}
+- Issue Date: ${invoice.issueDate.toLocaleDateString()}
+- Due Date: ${invoice.dueDate.toLocaleDateString()}
+- Amount: ${invoice.currency} ${Number(invoice.amount).toFixed(2)}
+- Status: ${invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1)}
+
+Payment is due by ${invoice.dueDate.toLocaleDateString()}. If you have any questions about this invoice or need to discuss payment arrangements, please don't hesitate to contact us.
+
+Best regards,
+${tenant.name}
+      `.trim();
+
+      const htmlMessage = `
+<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <div style="text-align: center; margin-bottom: 30px;">
+    <h1 style="color: #17B6C3; margin: 0;">${tenant.name}</h1>
+    <p style="color: #666; margin: 5px 0;">Invoice Delivery</p>
+  </div>
+  
+  <p>Dear ${invoice.contact.name},</p>
+  
+  <p>Please find attached invoice ${invoice.invoiceNumber} for ${invoice.currency} ${Number(invoice.amount).toFixed(2)}.</p>
+  
+  <div style="background: #f8f9fa; padding: 20px; border-left: 4px solid #17B6C3; margin: 20px 0;">
+    <h3 style="margin: 0 0 10px 0; color: #333;">Invoice Details</h3>
+    <p style="margin: 5px 0;"><strong>Invoice Number:</strong> ${invoice.invoiceNumber}</p>
+    <p style="margin: 5px 0;"><strong>Issue Date:</strong> ${invoice.issueDate.toLocaleDateString()}</p>
+    <p style="margin: 5px 0;"><strong>Due Date:</strong> ${invoice.dueDate.toLocaleDateString()}</p>
+    <p style="margin: 5px 0;"><strong>Amount:</strong> ${invoice.currency} ${Number(invoice.amount).toFixed(2)}</p>
+    <p style="margin: 5px 0;"><strong>Status:</strong> <span style="color: ${invoice.status === 'paid' ? '#10B981' : invoice.status === 'overdue' ? '#EF4444' : '#F59E0B'};">${invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1)}</span></p>
+  </div>
+  
+  <p>Payment is due by <strong>${invoice.dueDate.toLocaleDateString()}</strong>. If you have any questions about this invoice or need to discuss payment arrangements, please don't hesitate to contact us.</p>
+  
+  <div style="margin: 30px 0; padding: 15px; background: #f0f9ff; border-radius: 4px;">
+    <p style="margin: 0; color: #0369a1; font-size: 14px;"><strong>📎 PDF Invoice attached</strong> - Please open the attached PDF for the complete invoice details.</p>
+  </div>
+  
+  <p>Best regards,<br>
+  <strong>${tenant.name}</strong></p>
+  
+  <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e0e0e0; color: #888; font-size: 12px; text-align: center;">
+    <p>This email was generated automatically. Please do not reply to this email.</p>
+  </div>
+</div>
+      `;
+
+      // Send email with PDF attachment
+      console.log(`Sending email to ${invoice.contact.email}...`);
+      const success = await sendEmailWithAttachment({
+        to: invoice.contact.email,
+        from: user.email,
+        subject: emailSubject,
+        text: customMessage || defaultMessage,
+        html: customMessage ? undefined : htmlMessage,
+        attachments: [{
+          content: pdfBuffer,
+          filename: `Invoice-${invoice.invoiceNumber}.pdf`,
+          type: 'application/pdf',
+          disposition: 'attachment'
+        }]
+      });
+
+      if (success) {
+        // Log the action
+        await storage.createAction({
+          tenantId: user.tenantId,
+          invoiceId,
+          contactId: invoice.contactId,
+          userId: user.id,
+          type: 'email',
+          status: 'completed',
+          subject: emailSubject,
+          content: `Invoice PDF sent to ${invoice.contact.email}`,
+          completedAt: new Date(),
+          metadata: { 
+            attachmentType: 'pdf',
+            attachmentSize: `${Math.round(pdfBuffer.length / 1024)}KB`,
+            fileName: `Invoice-${invoice.invoiceNumber}.pdf`
+          },
+        });
+
+        // Update invoice reminder count
+        await storage.updateInvoice(invoiceId, user.tenantId, {
+          lastReminderSent: new Date(),
+          reminderCount: (invoice.reminderCount || 0) + 1,
+        });
+      }
+
+      const result = {
+        success,
+        message: success 
+          ? `Invoice PDF email successfully sent to ${invoice.contact.email}` 
+          : "Failed to send invoice PDF email",
+        recipientEmail: invoice.contact.email,
+        recipientName: invoice.contact.name,
+        invoiceNumber: invoice.invoiceNumber,
+        invoiceAmount: `${invoice.currency} ${Number(invoice.amount).toFixed(2)}`,
+        attachmentSize: `${Math.round(pdfBuffer.length / 1024)}KB`,
+        pdfFilename: `Invoice-${invoice.invoiceNumber}.pdf`,
+        emailSubject
+      };
+
+      console.log('Invoice PDF email result:', result);
+      res.json(result);
+    } catch (error: any) {
+      console.error("Error sending invoice PDF email:", error);
+      res.status(500).json({ 
+        success: false,
+        message: `Failed to send invoice PDF email: ${error.message}`,
+        error: error.message 
+      });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

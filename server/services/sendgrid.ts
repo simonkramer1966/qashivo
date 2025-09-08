@@ -15,6 +15,15 @@ interface EmailParams {
   html?: string;
 }
 
+interface EmailWithAttachmentParams extends EmailParams {
+  attachments: Array<{
+    content: Buffer;
+    filename: string;
+    type: string;
+    disposition?: string;
+  }>;
+}
+
 interface BulkEmailParams {
   from: string;
   subject: string;
@@ -166,4 +175,39 @@ export async function sendBulkEmails(params: BulkEmailParams): Promise<{
   }
 
   return results;
+}
+
+export async function sendEmailWithAttachment(params: EmailWithAttachmentParams): Promise<boolean> {
+  try {
+    if (apiKey === "default_key") {
+      console.log("SendGrid API key not configured, skipping email with attachment send:", {
+        to: params.to,
+        subject: params.subject,
+        attachmentCount: params.attachments.length
+      });
+      return true;
+    }
+
+    const attachmentData = params.attachments.map(att => ({
+      content: att.content.toString('base64'),
+      filename: att.filename,
+      type: att.type,
+      disposition: att.disposition || 'attachment'
+    }));
+
+    await mailService.send({
+      to: params.to,
+      from: params.from,
+      subject: params.subject,
+      text: params.text || '',
+      html: params.html,
+      attachments: attachmentData
+    });
+    
+    console.log(`Email with ${params.attachments.length} attachment(s) sent successfully to ${params.to}`);
+    return true;
+  } catch (error) {
+    console.error('SendGrid email with attachment error:', error);
+    return false;
+  }
 }
