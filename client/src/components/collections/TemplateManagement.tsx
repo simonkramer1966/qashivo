@@ -166,11 +166,17 @@ export default function TemplateManagement({ className }: TemplateManagementProp
   // AI Generate template mutation
   const aiGenerateMutation = useMutation({
     mutationFn: async (data: { type: string; category: string; tone: string; stage: number }) => {
-      return apiRequest("POST", "/api/collections/templates/ai-generate", data);
+      const response = await apiRequest("POST", "/api/collections/templates/ai-generate", data);
+      return response.json();
     },
     onSuccess: (data) => {
-      form.setValue("content", data.content);
-      if (data.subject) form.setValue("subject", data.subject);
+      console.log("AI Generate response:", data); // Debug log
+      if (data.content) {
+        form.setValue("content", data.content);
+      }
+      if (data.subject) {
+        form.setValue("subject", data.subject);
+      }
       toast({
         title: "AI Template Generated",
         description: "Template content has been generated. Review and adjust as needed.",
