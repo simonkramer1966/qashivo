@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/useAuth";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import NewSidebar from "@/components/layout/new-sidebar";
@@ -17,6 +18,7 @@ import { Mail, Phone, Eye, Plus, Search, Filter, FileText, ChevronUp, ChevronDow
 export default function InvoicesXero() {
   const { toast } = useToast();
   const { isAuthenticated, isLoading } = useAuth();
+  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState("unpaid");
   const [search, setSearch] = useState("");
   const [sortField, setSortField] = useState<string>("");
@@ -40,29 +42,51 @@ export default function InvoicesXero() {
   //   }
   // }, [isAuthenticated, isLoading, toast]);
 
-  // Separate queries for each tab - fetch all invoices without pagination
+  // Cached invoice queries - faster and more reliable than live Xero API calls
   const { data: unpaidData, isLoading: unpaidLoading, error: unpaidError } = useQuery({
-    queryKey: ["/api/xero/invoices", "unpaid"],
-    queryFn: () => fetch(`/api/xero/invoices?status=unpaid`).then(res => res.json()),
+    queryKey: ["/api/xero/invoices/cached", "unpaid"],
+    queryFn: () => fetch(`/api/xero/invoices/cached?status=unpaid`).then(res => res.json()),
     enabled: true,
   });
 
   const { data: partialData, isLoading: partialLoading, error: partialError } = useQuery({
-    queryKey: ["/api/xero/invoices", "partial"],
-    queryFn: () => fetch(`/api/xero/invoices?status=partial`).then(res => res.json()),
+    queryKey: ["/api/xero/invoices/cached", "partial"],
+    queryFn: () => fetch(`/api/xero/invoices/cached?status=partial`).then(res => res.json()),
     enabled: true,
   });
 
   const { data: paidData, isLoading: paidLoading, error: paidError } = useQuery({
-    queryKey: ["/api/xero/invoices", "paid"],
-    queryFn: () => fetch(`/api/xero/invoices?status=paid`).then(res => res.json()),
+    queryKey: ["/api/xero/invoices/cached", "paid"],
+    queryFn: () => fetch(`/api/xero/invoices/cached?status=paid`).then(res => res.json()),
     enabled: true,
   });
 
   const { data: voidData, isLoading: voidLoading, error: voidError } = useQuery({
-    queryKey: ["/api/xero/invoices", "void"],
-    queryFn: () => fetch(`/api/xero/invoices?status=void`).then(res => res.json()),
+    queryKey: ["/api/xero/invoices/cached", "void"],
+    queryFn: () => fetch(`/api/xero/invoices/cached?status=void`).then(res => res.json()),
     enabled: true,
+  });
+
+  // Sync mutation for manual refresh
+  const syncMutation = useMutation({
+    mutationFn: () => apiRequest("POST", "/api/xero/sync", {}),
+    onSuccess: (data) => {
+      toast({
+        title: "Sync Successful",
+        description: `Synced ${data.invoicesCount} invoices from Xero`,
+      });
+      // Invalidate all cached invoice queries to refresh the data
+      queryClient.invalidateQueries({ 
+        queryKey: ["/api/xero/invoices/cached"] 
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Sync Failed",
+        description: error?.message || "Failed to sync invoices from Xero",
+        variant: "destructive",
+      });
+    },
   });
 
   // Fetch tenant data to get currency setting
@@ -307,6 +331,44 @@ export default function InvoicesXero() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Sync Controls */}
+          <div className="flex items-center justify-between bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+            <div className="flex items-center space-x-4">
+              <Button
+                onClick={() => syncMutation.mutate()}
+                disabled={syncMutation.isPending}
+                className="bg-[#17B6C3] hover:bg-[#1396A1] text-white"
+                data-testid="button-sync-now"
+              >
+                {syncMutation.isPending ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                    Syncing...
+                  </>
+                ) : (
+                  <>
+                    <AlertCircle className="h-4 w-4 mr-2" />
+                    Sync Now
+                  </>
+                )}
+              </Button>
+              
+              <div className="text-sm text-gray-600">
+                {currentTabData.data?.lastSyncAt ? (
+                  <>
+                    Last synced: {new Date(currentTabData.data.lastSyncAt).toLocaleString()}
+                  </>
+                ) : (
+                  "No recent sync data"
+                )}
+              </div>
+            </div>
+
+            <div className="text-xs text-gray-500">
+              Data cached from Xero for faster loading
+            </div>
+          </div>
 
           {/* Invoices Tabs */}
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
