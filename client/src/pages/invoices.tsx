@@ -726,7 +726,7 @@ export default function Invoices() {
                             </SelectContent>
                           </Select>
                         </th>
-                        <th className="text-left py-2 text-xs font-semibold text-slate-700 w-32">
+                        <th className="text-left py-2 text-xs font-semibold text-slate-700 w-52">
                           <button 
                             onClick={() => handleSort("amount")}
                             className="flex items-center space-x-1 hover:text-slate-900"
@@ -734,7 +734,7 @@ export default function Invoices() {
                             <span>Outstanding</span>
                           </button>
                         </th>
-                        <th className="text-left py-2 text-xs font-semibold text-slate-700 w-32">
+                        <th className="text-left py-2 text-xs font-semibold text-slate-700 w-52">
                           <Select value={dueDateAgeSort} onValueChange={(value) => {
                             setDueDateAgeSort(value);
                             setActiveSortColumn("dueDateAge");
@@ -750,7 +750,7 @@ export default function Invoices() {
                             </SelectContent>
                           </Select>
                         </th>
-                        <th className="text-left py-2 text-xs font-semibold text-slate-700 w-24">
+                        <th className="text-left py-2 text-xs font-semibold text-slate-700 w-52">
                           <button 
                             onClick={() => handleSort("status")}
                             className="flex items-center space-x-1 hover:text-slate-900"
@@ -758,7 +758,7 @@ export default function Invoices() {
                             <span>Status</span>
                           </button>
                         </th>
-                        <th className="text-left py-2 text-xs font-semibold text-slate-700 w-36">
+                        <th className="text-left py-2 text-xs font-semibold text-slate-700 w-52">
                           <Select value={nextActionSort} onValueChange={(value) => {
                             setNextActionSort(value);
                             setActiveSortColumn("nextAction");
@@ -774,7 +774,7 @@ export default function Invoices() {
                             </SelectContent>
                           </Select>
                         </th>
-                        <th className="text-right py-2 text-xs font-semibold text-slate-700">Actions</th>
+                        <th className="text-right py-2 text-xs font-semibold text-slate-700 w-52">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-200/50">
@@ -788,10 +788,10 @@ export default function Invoices() {
                               {invoice.contact?.companyName || 'Unknown Company'}
                             </div>
                           </td>
-                          <td className="py-2 w-32 text-xs font-medium text-slate-900" data-testid={`text-amount-outstanding-${invoice.id}`}>
+                          <td className="py-2 w-52 text-xs font-medium text-slate-900" data-testid={`text-amount-outstanding-${invoice.id}`}>
                             ${Number(invoice.amount).toLocaleString()}
                           </td>
-                          <td className="py-2 w-32" data-testid={`text-due-date-age-${invoice.id}`}>
+                          <td className="py-2 w-52" data-testid={`text-due-date-age-${invoice.id}`}>
                             <div className="text-xs text-slate-900">
                               {new Date(invoice.dueDate).toLocaleDateString()}
                             </div>
@@ -799,10 +799,10 @@ export default function Invoices() {
                               {Math.floor((Date.now() - new Date(invoice.issueDate).getTime()) / (1000 * 60 * 60 * 24))} days
                             </div>
                           </td>
-                          <td className="py-2 w-24">
+                          <td className="py-2 w-52">
                             {getStatusBadge(invoice.status)}
                           </td>
-                          <td className="py-2 w-36" data-testid={`text-next-action-${invoice.id}`}>
+                          <td className="py-2 w-52" data-testid={`text-next-action-${invoice.id}`}>
                             <div className="text-xs text-slate-900">
                               {new Date(Date.now() + (Math.random() * 7 + 1) * 24 * 60 * 60 * 1000).toLocaleDateString()}
                             </div>
@@ -810,7 +810,7 @@ export default function Invoices() {
                               {['Email Reminder', 'Phone Call', 'Letter', 'SMS Follow-up'][Math.floor(Math.random() * 4)]}
                             </div>
                           </td>
-                          <td className="py-2">
+                          <td className="py-2 w-52">
                             <div className="flex space-x-1 justify-end">
                               {invoice.contact?.email && (
                                 <Button 
