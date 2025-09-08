@@ -58,19 +58,19 @@ export default function InvoicesXero() {
   const { data: partialData, isLoading: partialLoading, error: partialError } = useQuery({
     queryKey: ["/api/xero/invoices", "partial", pages.partial, pageSize],
     queryFn: () => fetch(`/api/xero/invoices?status=partial&page=${pages.partial}&limit=${pageSize}`).then(res => res.json()),
-    enabled: activeTab === 'partial', // Temporarily disabled auth for demo
+    enabled: true, // Always enabled to show tab counts
   });
 
   const { data: paidData, isLoading: paidLoading, error: paidError } = useQuery({
     queryKey: ["/api/xero/invoices", "paid", pages.paid, pageSize],
     queryFn: () => fetch(`/api/xero/invoices?status=paid&page=${pages.paid}&limit=${pageSize}`).then(res => res.json()),
-    enabled: activeTab === 'paid', // Temporarily disabled auth for demo
+    enabled: true, // Always enabled to show tab counts
   });
 
   const { data: voidData, isLoading: voidLoading, error: voidError } = useQuery({
     queryKey: ["/api/xero/invoices", "void", pages.void, pageSize],
     queryFn: () => fetch(`/api/xero/invoices?status=void&page=${pages.void}&limit=${pageSize}`).then(res => res.json()),
-    enabled: activeTab === 'void', // Temporarily disabled auth for demo
+    enabled: true, // Always enabled to show tab counts
   });
 
   // Get current tab data
