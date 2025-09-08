@@ -724,7 +724,7 @@ export default function Invoices() {
                   <table className="w-full">
                     <thead>
                       <tr className="border-b border-slate-200/50">
-                        <th className="text-left py-2 text-xs font-semibold text-slate-700 w-80">
+                        <th className="text-left py-2 text-xs font-semibold text-slate-700 w-60">
                           <Select value={invClientSort} onValueChange={(value) => {
                             setInvClientSort(value);
                             setActiveSortColumn("invClient");
@@ -741,10 +741,10 @@ export default function Invoices() {
                             </SelectContent>
                           </Select>
                         </th>
-                        <th className="text-right py-2 text-xs font-semibold text-slate-700">
+                        <th className="text-left py-2 text-xs font-semibold text-slate-700">
                           <button 
                             onClick={() => handleSort("amount")}
-                            className="flex items-center justify-end space-x-1 hover:text-slate-900"
+                            className="flex items-center space-x-1 hover:text-slate-900"
                           >
                             <span>Outstanding</span>
                             {getSortIcon("amount")}
@@ -808,7 +808,7 @@ export default function Invoices() {
                     <tbody className="divide-y divide-slate-200/50">
                       {paginatedInvoices.map((invoice: any) => (
                         <tr key={invoice.id} className="hover:bg-slate-50/50 transition-colors" data-testid={`row-invoice-${invoice.id}`}>
-                          <td className="py-2 w-80" data-testid={`text-invoice-client-${invoice.id}`}>
+                          <td className="py-2 w-60" data-testid={`text-invoice-client-${invoice.id}`}>
                             <div className="text-xs font-medium text-slate-900">
                               {invoice.invoiceNumber}
                             </div>
@@ -816,7 +816,7 @@ export default function Invoices() {
                               {invoice.contact?.companyName || 'Unknown Company'}
                             </div>
                           </td>
-                          <td className="py-2 text-right text-xs font-medium text-slate-900" data-testid={`text-amount-outstanding-${invoice.id}`}>
+                          <td className="py-2 text-xs font-medium text-slate-900" data-testid={`text-amount-outstanding-${invoice.id}`}>
                             ${Number(invoice.amount).toLocaleString()}
                           </td>
                           <td className="py-2" data-testid={`text-due-date-age-${invoice.id}`}>
