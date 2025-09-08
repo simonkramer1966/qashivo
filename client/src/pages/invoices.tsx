@@ -147,10 +147,6 @@ export default function Invoices() {
       let aValue, bValue;
       
       switch (sortField) {
-        case "date":
-          aValue = new Date(a.issueDate).getTime();
-          bValue = new Date(b.issueDate).getTime();
-          break;
         case "invoiceNumber":
           aValue = a.invoiceNumber.toLowerCase();
           bValue = b.invoiceNumber.toLowerCase();
@@ -174,10 +170,6 @@ export default function Invoices() {
         case "collectionStage":
           aValue = (a.collectionStage || 'initial').toLowerCase();
           bValue = (b.collectionStage || 'initial').toLowerCase();
-          break;
-        case "age":
-          aValue = Math.floor((Date.now() - new Date(a.issueDate).getTime()) / (1000 * 60 * 60 * 24));
-          bValue = Math.floor((Date.now() - new Date(b.issueDate).getTime()) / (1000 * 60 * 60 * 24));
           break;
         default:
           return 0;
