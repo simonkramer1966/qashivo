@@ -33,12 +33,12 @@ export default function Header({ title, subtitle, action, noBorder = true, title
 
   const getUserInitials = () => {
     if (!user) return "U";
-    const firstName = user.firstName || "";
-    const lastName = user.lastName || "";
+    const firstName = (user as any)?.firstName || "";
+    const lastName = (user as any)?.lastName || "";
     if (firstName && lastName) {
       return `${firstName.charAt(0)}${lastName.charAt(0)}`;
     }
-    if (user.email) {
+    if (user?.email) {
       return user.email.charAt(0).toUpperCase();
     }
     return "U";
@@ -46,10 +46,12 @@ export default function Header({ title, subtitle, action, noBorder = true, title
 
   const getDisplayName = () => {
     if (!user) return "User";
-    if (user.firstName && user.lastName) {
-      return `${user.firstName} ${user.lastName}`;
+    const firstName = (user as any)?.firstName;
+    const lastName = (user as any)?.lastName;
+    if (firstName && lastName) {
+      return `${firstName} ${lastName}`;
     }
-    if (user.email) {
+    if (user?.email) {
       return user.email;
     }
     return "User";
@@ -79,7 +81,7 @@ export default function Header({ title, subtitle, action, noBorder = true, title
                 </p>
               </div>
               <Avatar className="h-10 w-10" data-testid="avatar-user">
-                <AvatarImage src={user?.profileImageUrl || ""} alt={getDisplayName()} />
+                <AvatarImage src={(user as any)?.profileImageUrl || ""} alt={getDisplayName()} />
                 <AvatarFallback className="bg-[#17B6C3] text-white font-semibold">
                   {getUserInitials()}
                 </AvatarFallback>
