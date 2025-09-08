@@ -506,9 +506,9 @@ export default function InvoicesXero() {
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <div>
-                      <CardTitle className="text-2xl font-bold">Partially Paid Invoices</CardTitle>
+                      <CardTitle className="text-2xl font-bold">Part Paid Invoices</CardTitle>
                       <CardDescription className="text-base mt-1">
-                        {filteredAndSortedInvoices.length} partially paid invoice{filteredAndSortedInvoices.length !== 1 ? 's' : ''} from Xero
+                        {filteredAndSortedInvoices.length} part paid invoice{filteredAndSortedInvoices.length !== 1 ? 's' : ''} from Xero
                       </CardDescription>
                     </div>
                     <div className="p-3 bg-yellow-100 rounded-xl">
@@ -519,21 +519,21 @@ export default function InvoicesXero() {
                 <CardContent>
                   {currentTabData.isLoading ? (
                     <div className="text-center py-8">
-                      <p className="text-muted-foreground">Loading partially paid invoices...</p>
+                      <p className="text-muted-foreground">Loading part paid invoices...</p>
                     </div>
                   ) : filteredAndSortedInvoices.length === 0 ? (
                     <div className="text-center py-8">
                       <div className="w-16 h-16 bg-[#17B6C3]/10 rounded-full flex items-center justify-center mx-auto mb-6">
                         <FileText className="h-8 w-8 text-[#17B6C3]" />
                       </div>
-                      <p className="text-lg font-semibold text-slate-900 mb-2">No partially paid invoices found</p>
+                      <p className="text-lg font-semibold text-slate-900 mb-2">No part paid invoices found</p>
                       {search ? (
                         <p className="text-sm text-muted-foreground mt-2">
                           Try adjusting your search terms
                         </p>
                       ) : (
                         <div className="mt-6">
-                          <p className="text-muted-foreground mb-4">No partially paid invoices found in your connected Xero account</p>
+                          <p className="text-muted-foreground mb-4">No part paid invoices found in your connected Xero account</p>
                         </div>
                       )}
                     </div>
