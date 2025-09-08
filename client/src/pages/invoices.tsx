@@ -746,24 +746,24 @@ export default function Invoices() {
                         <table className="w-full">
                           <thead>
                             <tr className="border-b border-slate-200/50">
-                              <th className="text-left py-2 text-xs font-semibold text-slate-700 w-60">
+                              <th className="text-left py-2 text-xs font-semibold text-slate-700">
                                 <button 
                                   onClick={() => handleSort("name")}
                                   className="flex items-center space-x-1 hover:text-slate-900"
                                 >
-                                  <span>Customer Name</span>
+                                  <span>Contact Name</span>
                                 </button>
                               </th>
-                              <th className="text-left py-2 text-xs font-semibold text-slate-700 w-20">
+                              <th className="text-left py-2 text-xs font-semibold text-slate-700">
                                 <span>Rating</span>
                               </th>
-                              <th className="text-left py-2 text-xs font-semibold text-slate-700 w-28">
+                              <th className="text-left py-2 text-xs font-semibold text-slate-700">
                                 <span>Outstanding</span>
                               </th>
-                              <th className="text-left py-2 text-xs font-semibold text-slate-700 w-20">
+                              <th className="text-left py-2 text-xs font-semibold text-slate-700">
                                 <span>Late</span>
                               </th>
-                              <th className="text-left py-2 text-xs font-semibold text-slate-700 w-48">
+                              <th className="text-left py-2 text-xs font-semibold text-slate-700">
                                 <button 
                                   onClick={() => handleSort("companyName")}
                                   className="flex items-center space-x-1 hover:text-slate-900"
@@ -771,7 +771,7 @@ export default function Invoices() {
                                   <span>Company</span>
                                 </button>
                               </th>
-                              <th className="text-left py-2 text-xs font-semibold text-slate-700 w-48">
+                              <th className="text-left py-2 text-xs font-semibold text-slate-700">
                                 <button 
                                   onClick={() => handleSort("email")}
                                   className="flex items-center space-x-1 hover:text-slate-900"
@@ -779,7 +779,7 @@ export default function Invoices() {
                                   <span>Email</span>
                                 </button>
                               </th>
-                              <th className="text-left py-2 text-xs font-semibold text-slate-700 w-32">
+                              <th className="text-left py-2 text-xs font-semibold text-slate-700">
                                 <button 
                                   onClick={() => handleSort("phone")}
                                   className="flex items-center space-x-1 hover:text-slate-900"
@@ -787,7 +787,7 @@ export default function Invoices() {
                                   <span>Phone</span>
                                 </button>
                               </th>
-                              <th className="text-left py-2 text-xs font-semibold text-slate-700 w-20">
+                              <th className="text-left py-2 text-xs font-semibold text-slate-700">
                                 <button 
                                   onClick={() => handleSort("paymentTerms")}
                                   className="flex items-center space-x-1 hover:text-slate-900"
@@ -795,7 +795,7 @@ export default function Invoices() {
                                   <span>Terms</span>
                                 </button>
                               </th>
-                              <th className="text-left py-2 text-xs font-semibold text-slate-700 w-20">
+                              <th className="text-left py-2 text-xs font-semibold text-slate-700">
                                 <button 
                                   onClick={() => handleSort("status")}
                                   className="flex items-center space-x-1 hover:text-slate-900"
@@ -809,31 +809,31 @@ export default function Invoices() {
                           <tbody className="divide-y divide-slate-200/50">
                             {paginatedContacts.map((contact: any) => (
                               <tr key={contact.id} className="hover:bg-slate-50/50 transition-colors" data-testid={`row-contact-${contact.id}`}>
-                                <td className="py-1 text-xs text-slate-700 w-60" data-testid={`text-contact-name-${contact.id}`}>
+                                <td className="py-1 text-xs text-slate-700" data-testid={`text-contact-name-${contact.id}`}>
                                   {contact.name}
                                 </td>
-                                <td className="py-1 w-20" data-testid={`rating-cell-${contact.id}`}>
+                                <td className="py-1" data-testid={`rating-cell-${contact.id}`}>
                                   {renderStarRating(getCustomerRating(contact))}
                                 </td>
-                                <td className="py-1 text-xs font-medium text-slate-700 w-28" data-testid={`text-outstanding-${contact.id}`}>
+                                <td className="py-1 text-xs font-medium text-slate-700" data-testid={`text-outstanding-${contact.id}`}>
                                   ${getCustomerOutstanding(contact).toLocaleString()}
                                 </td>
-                                <td className="py-1 text-xs font-medium text-slate-700 w-20" data-testid={`text-late-${contact.id}`}>
+                                <td className="py-1 text-xs font-medium text-slate-700" data-testid={`text-late-${contact.id}`}>
                                   ${getCustomerLateAmount(contact).toLocaleString()}
                                 </td>
-                                <td className="py-1 text-xs text-slate-700 w-48" data-testid={`text-company-${contact.id}`}>
+                                <td className="py-1 text-xs text-slate-700" data-testid={`text-company-${contact.id}`}>
                                   {contact.companyName || '-'}
                                 </td>
-                                <td className="py-1 text-xs text-slate-700 w-48" data-testid={`text-email-${contact.id}`}>
+                                <td className="py-1 text-xs text-slate-700" data-testid={`text-email-${contact.id}`}>
                                   {contact.email || '-'}
                                 </td>
-                                <td className="py-1 text-xs text-slate-700 w-32" data-testid={`text-phone-${contact.id}`}>
+                                <td className="py-1 text-xs text-slate-700" data-testid={`text-phone-${contact.id}`}>
                                   {contact.phone || '-'}
                                 </td>
-                                <td className="py-1 text-xs text-slate-700 w-20" data-testid={`text-terms-${contact.id}`}>
+                                <td className="py-1 text-xs text-slate-700" data-testid={`text-terms-${contact.id}`}>
                                   {contact.paymentTerms ? `${contact.paymentTerms}d` : '-'}
                                 </td>
-                                <td className="py-1 w-20">
+                                <td className="py-1">
                                   <Badge 
                                     className={contact.isActive ? "bg-green-100 text-green-800 border-green-200 text-xs" : "bg-gray-100 text-gray-800 border-gray-200 text-xs"} 
                                     data-testid={`badge-status-${contact.id}`}
