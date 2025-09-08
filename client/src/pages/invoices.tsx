@@ -746,7 +746,7 @@ export default function Invoices() {
                         <table className="w-full table-fixed">
                           <thead>
                             <tr className="border-b border-slate-200/50">
-                              <th className="text-left py-2 text-xs font-semibold text-slate-700 w-[10%]">
+                              <th className="text-left py-2 text-xs font-semibold text-slate-700 w-[12%]">
                                 <button 
                                   onClick={() => handleSort("name")}
                                   className="flex items-center space-x-1 hover:text-slate-900"
@@ -754,7 +754,7 @@ export default function Invoices() {
                                   <span>Contact Name</span>
                                 </button>
                               </th>
-                              <th className="text-left py-2 text-xs font-semibold text-slate-700 w-[10%]">
+                              <th className="text-left py-2 text-xs font-semibold text-slate-700 w-[15%]">
                                 <button 
                                   onClick={() => handleSort("companyName")}
                                   className="flex items-center space-x-1 hover:text-slate-900"
@@ -762,16 +762,16 @@ export default function Invoices() {
                                   <span>Company</span>
                                 </button>
                               </th>
-                              <th className="text-left py-2 text-xs font-semibold text-slate-700 w-[10%]">
+                              <th className="text-left py-2 text-xs font-semibold text-slate-700 w-[8%]">
                                 <span>Rating</span>
                               </th>
                               <th className="text-left py-2 text-xs font-semibold text-slate-700 w-[10%]">
                                 <span>Outstanding</span>
                               </th>
-                              <th className="text-left py-2 text-xs font-semibold text-slate-700 w-[10%]">
+                              <th className="text-left py-2 text-xs font-semibold text-slate-700 w-[8%]">
                                 <span>Late</span>
                               </th>
-                              <th className="text-left py-2 text-xs font-semibold text-slate-700 w-[10%]">
+                              <th className="text-left py-2 text-xs font-semibold text-slate-700 w-[15%]">
                                 <button 
                                   onClick={() => handleSort("email")}
                                   className="flex items-center space-x-1 hover:text-slate-900"
@@ -787,7 +787,7 @@ export default function Invoices() {
                                   <span>Phone</span>
                                 </button>
                               </th>
-                              <th className="text-left py-2 text-xs font-semibold text-slate-700 w-[10%]">
+                              <th className="text-left py-2 text-xs font-semibold text-slate-700 w-[7%]">
                                 <button 
                                   onClick={() => handleSort("paymentTerms")}
                                   className="flex items-center space-x-1 hover:text-slate-900"
@@ -795,7 +795,7 @@ export default function Invoices() {
                                   <span>Terms</span>
                                 </button>
                               </th>
-                              <th className="text-left py-2 text-xs font-semibold text-slate-700 w-[10%]">
+                              <th className="text-left py-2 text-xs font-semibold text-slate-700 w-[8%]">
                                 <button 
                                   onClick={() => handleSort("status")}
                                   className="flex items-center space-x-1 hover:text-slate-900"
@@ -803,7 +803,7 @@ export default function Invoices() {
                                   <span>Status</span>
                                 </button>
                               </th>
-                              <th className="text-right py-2 text-xs font-semibold text-slate-700 w-[10%]">Actions</th>
+                              <th className="text-right py-2 text-xs font-semibold text-slate-700 w-[7%]">Actions</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-slate-200/50">
