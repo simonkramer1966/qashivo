@@ -606,6 +606,8 @@ export default function Settings() {
       companyName?: string;
       tagline?: string;
     };
+    xeroAccessToken?: string;
+    xeroTenantId?: string;
   }>({
     queryKey: ['/api/tenant'],
     enabled: !!user,
@@ -882,8 +884,14 @@ export default function Settings() {
                       </div>
                       Xero Integration
                     </div>
-                    <Badge className="bg-red-100 text-red-800 border-red-200" data-testid="badge-xero-status">
-                      Not Connected
+                    <Badge 
+                      className={tenant?.xeroAccessToken 
+                        ? "bg-green-100 text-green-800 border-green-200" 
+                        : "bg-red-100 text-red-800 border-red-200"
+                      } 
+                      data-testid="badge-xero-status"
+                    >
+                      {tenant?.xeroAccessToken ? "Connected" : "Not Connected"}
                     </Badge>
                   </CardTitle>
                   <CardDescription className="text-base ml-11">
@@ -904,7 +912,7 @@ export default function Settings() {
                       className="bg-[#17B6C3] hover:bg-[#1396A1] text-white"
                       data-testid="button-connect-xero"
                     >
-                      {isConnecting ? "Connecting..." : "Connect"}
+                      {isConnecting ? "Connecting..." : tenant?.xeroAccessToken ? "Reconnect" : "Connect"}
                     </Button>
                   </div>
                 </CardContent>
