@@ -33,44 +33,44 @@ export default function InvoicesXero() {
   });
   const [pageSize] = useState(50);
 
-  // Redirect to home if not authenticated
-  useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      toast({
-        title: "Unauthorized",
-        description: "You are logged out. Logging in again...",
-        variant: "destructive",
-      });
-      setTimeout(() => {
-        window.location.href = "/api/login";
-      }, 500);
-      return;
-    }
-  }, [isAuthenticated, isLoading, toast]);
+  // Temporarily disabled authentication check for demo
+  // useEffect(() => {
+  //   if (!isLoading && !isAuthenticated) {
+  //     toast({
+  //       title: "Unauthorized",
+  //       description: "You are logged out. Logging in again...",
+  //       variant: "destructive",
+  //     });
+  //     setTimeout(() => {
+  //       window.location.href = "/api/login";
+  //     }, 500);
+  //     return;
+  //   }
+  // }, [isAuthenticated, isLoading, toast]);
 
   // Separate queries for each tab
   const { data: unpaidData, isLoading: unpaidLoading, error: unpaidError } = useQuery({
     queryKey: ["/api/xero/invoices", "unpaid", pages.unpaid, pageSize],
     queryFn: () => fetch(`/api/xero/invoices?status=unpaid&page=${pages.unpaid}&limit=${pageSize}`).then(res => res.json()),
-    enabled: isAuthenticated,
+    enabled: true, // Temporarily disabled auth for demo
   });
 
   const { data: partialData, isLoading: partialLoading, error: partialError } = useQuery({
     queryKey: ["/api/xero/invoices", "partial", pages.partial, pageSize],
     queryFn: () => fetch(`/api/xero/invoices?status=partial&page=${pages.partial}&limit=${pageSize}`).then(res => res.json()),
-    enabled: isAuthenticated && activeTab === 'partial',
+    enabled: activeTab === 'partial', // Temporarily disabled auth for demo
   });
 
   const { data: paidData, isLoading: paidLoading, error: paidError } = useQuery({
     queryKey: ["/api/xero/invoices", "paid", pages.paid, pageSize],
     queryFn: () => fetch(`/api/xero/invoices?status=paid&page=${pages.paid}&limit=${pageSize}`).then(res => res.json()),
-    enabled: isAuthenticated && activeTab === 'paid',
+    enabled: activeTab === 'paid', // Temporarily disabled auth for demo
   });
 
   const { data: voidData, isLoading: voidLoading, error: voidError } = useQuery({
     queryKey: ["/api/xero/invoices", "void", pages.void, pageSize],
     queryFn: () => fetch(`/api/xero/invoices?status=void&page=${pages.void}&limit=${pageSize}`).then(res => res.json()),
-    enabled: isAuthenticated && activeTab === 'void',
+    enabled: activeTab === 'void', // Temporarily disabled auth for demo
   });
 
   // Get current tab data
