@@ -309,14 +309,6 @@ export default function Invoices() {
     }
   };
 
-  const getSortIcon = (field: string) => {
-    if (customersSortField !== field) {
-      return <ChevronUp className="h-3 w-3 text-gray-400" />;
-    }
-    return customersSortDirection === "asc" ? 
-      <ChevronUp className="h-3 w-3 text-slate-700" /> : 
-      <ChevronDown className="h-3 w-3 text-slate-700" />;
-  };
 
   const openContactHistory = (invoice: any) => {
     setSelectedInvoice(invoice);
@@ -567,7 +559,6 @@ export default function Invoices() {
                                   className="flex items-center space-x-1 hover:text-slate-900"
                                 >
                                   <span>Customer Name</span>
-                                  {getSortIcon("name")}
                                 </button>
                               </th>
                               <th className="text-left py-2 text-xs font-semibold text-slate-700 w-48">
@@ -576,7 +567,6 @@ export default function Invoices() {
                                   className="flex items-center space-x-1 hover:text-slate-900"
                                 >
                                   <span>Company</span>
-                                  {getSortIcon("companyName")}
                                 </button>
                               </th>
                               <th className="text-left py-2 text-xs font-semibold text-slate-700 w-48">
@@ -585,7 +575,6 @@ export default function Invoices() {
                                   className="flex items-center space-x-1 hover:text-slate-900"
                                 >
                                   <span>Email</span>
-                                  {getSortIcon("email")}
                                 </button>
                               </th>
                               <th className="text-left py-2 text-xs font-semibold text-slate-700 w-32">
@@ -594,7 +583,6 @@ export default function Invoices() {
                                   className="flex items-center space-x-1 hover:text-slate-900"
                                 >
                                   <span>Phone</span>
-                                  {getSortIcon("phone")}
                                 </button>
                               </th>
                               <th className="text-left py-2 text-xs font-semibold text-slate-700 w-20">
@@ -603,7 +591,6 @@ export default function Invoices() {
                                   className="flex items-center space-x-1 hover:text-slate-900"
                                 >
                                   <span>Terms</span>
-                                  {getSortIcon("paymentTerms")}
                                 </button>
                               </th>
                               <th className="text-left py-2 text-xs font-semibold text-slate-700 w-20">
@@ -612,7 +599,6 @@ export default function Invoices() {
                                   className="flex items-center space-x-1 hover:text-slate-900"
                                 >
                                   <span>Status</span>
-                                  {getSortIcon("status")}
                                 </button>
                               </th>
                               <th className="text-right py-2 text-xs font-semibold text-slate-700">Actions</th>
@@ -747,7 +733,6 @@ export default function Invoices() {
                             className="flex items-center space-x-1 hover:text-slate-900"
                           >
                             <span>Outstanding</span>
-                            {getSortIcon("amount")}
                           </button>
                         </th>
                         <th className="text-left py-2 text-xs font-semibold text-slate-700 w-32">
@@ -773,7 +758,6 @@ export default function Invoices() {
                             className="flex items-center space-x-1 hover:text-slate-900"
                           >
                             <span>Status</span>
-                            {getSortIcon("status")}
                           </button>
                         </th>
                         <th className="text-left py-2 text-xs font-semibold text-slate-700 w-36">
