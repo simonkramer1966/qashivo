@@ -755,6 +755,14 @@ export default function Invoices() {
                                 </button>
                               </th>
                               <th className="text-left py-2 text-xs font-semibold text-slate-700">
+                                <button 
+                                  onClick={() => handleSort("companyName")}
+                                  className="flex items-center space-x-1 hover:text-slate-900"
+                                >
+                                  <span>Company</span>
+                                </button>
+                              </th>
+                              <th className="text-left py-2 text-xs font-semibold text-slate-700">
                                 <span>Rating</span>
                               </th>
                               <th className="text-left py-2 text-xs font-semibold text-slate-700">
@@ -762,14 +770,6 @@ export default function Invoices() {
                               </th>
                               <th className="text-left py-2 text-xs font-semibold text-slate-700">
                                 <span>Late</span>
-                              </th>
-                              <th className="text-left py-2 text-xs font-semibold text-slate-700">
-                                <button 
-                                  onClick={() => handleSort("companyName")}
-                                  className="flex items-center space-x-1 hover:text-slate-900"
-                                >
-                                  <span>Company</span>
-                                </button>
                               </th>
                               <th className="text-left py-2 text-xs font-semibold text-slate-700">
                                 <button 
@@ -812,6 +812,9 @@ export default function Invoices() {
                                 <td className="py-1 text-xs text-slate-700" data-testid={`text-contact-name-${contact.id}`}>
                                   {contact.name}
                                 </td>
+                                <td className="py-1 text-xs text-slate-700" data-testid={`text-company-${contact.id}`}>
+                                  {contact.companyName || '-'}
+                                </td>
                                 <td className="py-1" data-testid={`rating-cell-${contact.id}`}>
                                   {renderStarRating(getCustomerRating(contact))}
                                 </td>
@@ -820,9 +823,6 @@ export default function Invoices() {
                                 </td>
                                 <td className="py-1 text-xs font-medium text-slate-700" data-testid={`text-late-${contact.id}`}>
                                   ${getCustomerLateAmount(contact).toLocaleString()}
-                                </td>
-                                <td className="py-1 text-xs text-slate-700" data-testid={`text-company-${contact.id}`}>
-                                  {contact.companyName || '-'}
                                 </td>
                                 <td className="py-1 text-xs text-slate-700" data-testid={`text-email-${contact.id}`}>
                                   {contact.email || '-'}
