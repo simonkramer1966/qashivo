@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Mail, Phone, Eye, Plus, Search, Filter, FileText, ChevronUp, ChevronDown, X, MessageSquare, Calendar, CheckCircle, AlertCircle, Clock, ChevronLeft, ChevronRight } from "lucide-react";
+import { Mail, Phone, Eye, Plus, Search, Filter, FileText, ChevronUp, ChevronDown, X, MessageSquare, Calendar, CheckCircle, AlertCircle, Clock } from "lucide-react";
 
 export default function InvoicesXero() {
   const { toast } = useToast();
@@ -24,14 +24,6 @@ export default function InvoicesXero() {
   const [selectedInvoice, setSelectedInvoice] = useState<any>(null);
   const [showContactHistory, setShowContactHistory] = useState(false);
   
-  // Separate pagination state for each tab
-  const [pages, setPages] = useState({
-    unpaid: 1,
-    partial: 1,
-    paid: 1,
-    void: 1
-  });
-  const [pageSize] = useState(50);
 
   // Temporarily disabled authentication check for demo
   // useEffect(() => {
@@ -48,29 +40,29 @@ export default function InvoicesXero() {
   //   }
   // }, [isAuthenticated, isLoading, toast]);
 
-  // Separate queries for each tab
+  // Separate queries for each tab - fetch all invoices without pagination
   const { data: unpaidData, isLoading: unpaidLoading, error: unpaidError } = useQuery({
-    queryKey: ["/api/xero/invoices", "unpaid", pages.unpaid, pageSize],
-    queryFn: () => fetch(`/api/xero/invoices?status=unpaid&page=${pages.unpaid}&limit=${pageSize}`).then(res => res.json()),
-    enabled: true, // Temporarily disabled auth for demo
+    queryKey: ["/api/xero/invoices", "unpaid"],
+    queryFn: () => fetch(`/api/xero/invoices?status=unpaid`).then(res => res.json()),
+    enabled: true,
   });
 
   const { data: partialData, isLoading: partialLoading, error: partialError } = useQuery({
-    queryKey: ["/api/xero/invoices", "partial", pages.partial, pageSize],
-    queryFn: () => fetch(`/api/xero/invoices?status=partial&page=${pages.partial}&limit=${pageSize}`).then(res => res.json()),
-    enabled: true, // Always enabled to show tab counts
+    queryKey: ["/api/xero/invoices", "partial"],
+    queryFn: () => fetch(`/api/xero/invoices?status=partial`).then(res => res.json()),
+    enabled: true,
   });
 
   const { data: paidData, isLoading: paidLoading, error: paidError } = useQuery({
-    queryKey: ["/api/xero/invoices", "paid", pages.paid, pageSize],
-    queryFn: () => fetch(`/api/xero/invoices?status=paid&page=${pages.paid}&limit=${pageSize}`).then(res => res.json()),
-    enabled: true, // Always enabled to show tab counts
+    queryKey: ["/api/xero/invoices", "paid"],
+    queryFn: () => fetch(`/api/xero/invoices?status=paid`).then(res => res.json()),
+    enabled: true,
   });
 
   const { data: voidData, isLoading: voidLoading, error: voidError } = useQuery({
-    queryKey: ["/api/xero/invoices", "void", pages.void, pageSize],
-    queryFn: () => fetch(`/api/xero/invoices?status=void&page=${pages.void}&limit=${pageSize}`).then(res => res.json()),
-    enabled: true, // Always enabled to show tab counts
+    queryKey: ["/api/xero/invoices", "void"],
+    queryFn: () => fetch(`/api/xero/invoices?status=void`).then(res => res.json()),
+    enabled: true,
   });
 
   // Get current tab data
@@ -86,7 +78,6 @@ export default function InvoicesXero() {
 
   const currentTabData = getCurrentTabData();
   const invoices = currentTabData.data?.invoices || [];
-  const pagination = currentTabData.data?.pagination;
 
   // Fetch contact history for selected invoice (reuse existing endpoint)
   const { data: contactHistory = [], isLoading: historyLoading } = useQuery({
@@ -135,11 +126,6 @@ export default function InvoicesXero() {
     }
   };
 
-  // Helper functions for pagination
-  const getCurrentPage = () => pages[activeTab as keyof typeof pages];
-  const setCurrentPage = (newPage: number) => {
-    setPages(prev => ({ ...prev, [activeTab]: newPage }));
-  };
 
   const filteredAndSortedInvoices = (invoices as any[])
     .filter((invoice: any) => {
@@ -495,43 +481,6 @@ export default function InvoicesXero() {
                 </div>
               )}
               
-              {/* Pagination Controls */}
-              {pagination && filteredAndSortedInvoices.length > 0 && (
-                <div className="flex items-center justify-between mt-6 pt-6 border-t border-gray-200">
-                  <div className="text-sm text-gray-500">
-                    Showing {filteredAndSortedInvoices.length} of {pagination.totalCount.toLocaleString()} invoices
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setCurrentPage(Math.max(1, getCurrentPage() - 1))}
-                      disabled={!pagination?.hasPreviousPage || currentTabData.isLoading}
-                      className="border-[#17B6C3]/20 text-[#17B6C3] hover:bg-[#17B6C3]/5"
-                      data-testid="button-prev-page"
-                    >
-                      <ChevronLeft className="h-4 w-4 mr-1" />
-                      Previous
-                    </Button>
-                    
-                    <span className="text-sm text-gray-600 px-3">
-                      Page {pagination?.currentPage || 1} of {pagination?.totalPages || 1}
-                    </span>
-                    
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setCurrentPage(getCurrentPage() + 1)}
-                      disabled={!pagination?.hasNextPage || currentTabData.isLoading}
-                      className="border-[#17B6C3]/20 text-[#17B6C3] hover:bg-[#17B6C3]/5"
-                      data-testid="button-next-page"
-                    >
-                      Next
-                      <ChevronRight className="h-4 w-4 ml-1" />
-                    </Button>
-                  </div>
-                </div>
-              )}
                 </CardContent>
               </Card>
             </TabsContent>
@@ -720,43 +669,7 @@ export default function InvoicesXero() {
                     </div>
                   )}
                   
-                  {/* Pagination */}
-                  {pagination && filteredAndSortedInvoices.length > 0 && (
-                    <div className="flex items-center justify-between mt-6 pt-6 border-t border-gray-200">
-                      <div className="text-sm text-gray-500">
-                        Showing {filteredAndSortedInvoices.length} of {pagination.totalCount.toLocaleString()} invoices
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setCurrentPage(Math.max(1, getCurrentPage() - 1))}
-                          disabled={!pagination?.hasPreviousPage || currentTabData.isLoading}
-                          className="border-[#17B6C3]/20 text-[#17B6C3] hover:bg-[#17B6C3]/5"
-                          data-testid="button-prev-page"
-                        >
-                          <ChevronLeft className="h-4 w-4 mr-1" />
-                          Previous
-                        </Button>
-                        
-                        <span className="text-sm text-gray-600 px-3">
-                          Page {pagination?.currentPage || 1} of {pagination?.totalPages || 1}
-                        </span>
-                        
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setCurrentPage(getCurrentPage() + 1)}
-                          disabled={!pagination?.hasNextPage || currentTabData.isLoading}
-                          className="border-[#17B6C3]/20 text-[#17B6C3] hover:bg-[#17B6C3]/5"
-                          data-testid="button-next-page"
-                        >
-                          Next
-                          <ChevronRight className="h-4 w-4 ml-1" />
-                        </Button>
-                      </div>
-                    </div>
-                  )}
+
                 </CardContent>
               </Card>
             </TabsContent>
@@ -945,43 +858,7 @@ export default function InvoicesXero() {
                     </div>
                   )}
                   
-                  {/* Pagination */}
-                  {pagination && filteredAndSortedInvoices.length > 0 && (
-                    <div className="flex items-center justify-between mt-6 pt-6 border-t border-gray-200">
-                      <div className="text-sm text-gray-500">
-                        Showing {filteredAndSortedInvoices.length} of {pagination.totalCount.toLocaleString()} invoices
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setCurrentPage(Math.max(1, getCurrentPage() - 1))}
-                          disabled={!pagination?.hasPreviousPage || currentTabData.isLoading}
-                          className="border-[#17B6C3]/20 text-[#17B6C3] hover:bg-[#17B6C3]/5"
-                          data-testid="button-prev-page"
-                        >
-                          <ChevronLeft className="h-4 w-4 mr-1" />
-                          Previous
-                        </Button>
-                        
-                        <span className="text-sm text-gray-600 px-3">
-                          Page {pagination?.currentPage || 1} of {pagination?.totalPages || 1}
-                        </span>
-                        
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setCurrentPage(getCurrentPage() + 1)}
-                          disabled={!pagination?.hasNextPage || currentTabData.isLoading}
-                          className="border-[#17B6C3]/20 text-[#17B6C3] hover:bg-[#17B6C3]/5"
-                          data-testid="button-next-page"
-                        >
-                          Next
-                          <ChevronRight className="h-4 w-4 ml-1" />
-                        </Button>
-                      </div>
-                    </div>
-                  )}
+
                 </CardContent>
               </Card>
             </TabsContent>
@@ -1170,43 +1047,7 @@ export default function InvoicesXero() {
                     </div>
                   )}
                   
-                  {/* Pagination */}
-                  {pagination && filteredAndSortedInvoices.length > 0 && (
-                    <div className="flex items-center justify-between mt-6 pt-6 border-t border-gray-200">
-                      <div className="text-sm text-gray-500">
-                        Showing {filteredAndSortedInvoices.length} of {pagination.totalCount.toLocaleString()} invoices
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setCurrentPage(Math.max(1, getCurrentPage() - 1))}
-                          disabled={!pagination?.hasPreviousPage || currentTabData.isLoading}
-                          className="border-[#17B6C3]/20 text-[#17B6C3] hover:bg-[#17B6C3]/5"
-                          data-testid="button-prev-page"
-                        >
-                          <ChevronLeft className="h-4 w-4 mr-1" />
-                          Previous
-                        </Button>
-                        
-                        <span className="text-sm text-gray-600 px-3">
-                          Page {pagination?.currentPage || 1} of {pagination?.totalPages || 1}
-                        </span>
-                        
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setCurrentPage(getCurrentPage() + 1)}
-                          disabled={!pagination?.hasNextPage || currentTabData.isLoading}
-                          className="border-[#17B6C3]/20 text-[#17B6C3] hover:bg-[#17B6C3]/5"
-                          data-testid="button-next-page"
-                        >
-                          Next
-                          <ChevronRight className="h-4 w-4 ml-1" />
-                        </Button>
-                      </div>
-                    </div>
-                  )}
+
                 </CardContent>
               </Card>
             </TabsContent>
