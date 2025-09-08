@@ -552,7 +552,206 @@ export default function InvoicesXero() {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-center py-8 text-muted-foreground">Partially paid invoices will be displayed here.</p>
+                  {currentTabData.isLoading ? (
+                    <div className="text-center py-8">
+                      <p className="text-muted-foreground">Loading partially paid invoices...</p>
+                    </div>
+                  ) : filteredAndSortedInvoices.length === 0 ? (
+                    <div className="text-center py-8">
+                      <div className="w-16 h-16 bg-[#17B6C3]/10 rounded-full flex items-center justify-center mx-auto mb-6">
+                        <FileText className="h-8 w-8 text-[#17B6C3]" />
+                      </div>
+                      <p className="text-lg font-semibold text-slate-900 mb-2">No partially paid invoices found</p>
+                      {search ? (
+                        <p className="text-sm text-muted-foreground mt-2">
+                          Try adjusting your search terms
+                        </p>
+                      ) : (
+                        <div className="mt-6">
+                          <p className="text-muted-foreground mb-4">No partially paid invoices found in your connected Xero account</p>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead>
+                          <tr className="border-b border-slate-200/50">
+                            <th className="text-left py-2 text-xs font-semibold text-slate-700 w-32">
+                              <button 
+                                onClick={() => handleSort("date")}
+                                className="flex items-center space-x-1 hover:text-slate-900"
+                              >
+                                <span>Invoice Date</span>
+                                {getSortIcon("date")}
+                              </button>
+                            </th>
+                            <th className="text-left py-2 text-xs font-semibold text-slate-700 w-32">
+                              <button 
+                                onClick={() => handleSort("invoiceNumber")}
+                                className="flex items-center space-x-1 hover:text-slate-900"
+                              >
+                                <span>Inv No.</span>
+                                {getSortIcon("invoiceNumber")}
+                              </button>
+                            </th>
+                            <th className="text-left py-2 text-xs font-semibold text-slate-700 w-60">
+                              <button 
+                                onClick={() => handleSort("clientName")}
+                                className="flex items-center space-x-1 hover:text-slate-900"
+                              >
+                                <span>Client Name</span>
+                                {getSortIcon("clientName")}
+                              </button>
+                            </th>
+                            <th className="text-left py-2 text-xs font-semibold text-slate-700">
+                              <button 
+                                onClick={() => handleSort("amount")}
+                                className="flex items-center space-x-1 hover:text-slate-900"
+                              >
+                                <span>Amount</span>
+                                {getSortIcon("amount")}
+                              </button>
+                            </th>
+                            <th className="text-left py-2 text-xs font-semibold text-slate-700">
+                              <button 
+                                onClick={() => handleSort("dueDate")}
+                                className="flex items-center space-x-1 hover:text-slate-900"
+                              >
+                                <span>Due Date</span>
+                                {getSortIcon("dueDate")}
+                              </button>
+                            </th>
+                            <th className="text-left py-2 text-xs font-semibold text-slate-700">
+                              <button 
+                                onClick={() => handleSort("paidDate")}
+                                className="flex items-center space-x-1 hover:text-slate-900"
+                              >
+                                <span>Paid Date</span>
+                                {getSortIcon("paidDate")}
+                              </button>
+                            </th>
+                            <th className="text-left py-2 text-xs font-semibold text-slate-700">
+                              <button 
+                                onClick={() => handleSort("age")}
+                                className="flex items-center space-x-1 hover:text-slate-900"
+                              >
+                                <span>Age</span>
+                                {getSortIcon("age")}
+                              </button>
+                            </th>
+                            <th className="text-left py-2 text-xs font-semibold text-slate-700">
+                              <button 
+                                onClick={() => handleSort("status")}
+                                className="flex items-center space-x-1 hover:text-slate-900"
+                              >
+                                <span>Status</span>
+                                {getSortIcon("status")}
+                              </button>
+                            </th>
+                            <th className="text-left py-2 text-xs font-semibold text-slate-700">
+                              <button 
+                                onClick={() => handleSort("collectionStage")}
+                                className="flex items-center space-x-1 hover:text-slate-900"
+                              >
+                                <span>Collection Stage</span>
+                                {getSortIcon("collectionStage")}
+                              </button>
+                            </th>
+                            <th className="text-right py-2 text-xs font-semibold text-slate-700">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-200/50">
+                          {filteredAndSortedInvoices.map((invoice: any) => (
+                            <tr key={invoice.id} className="hover:bg-slate-50/50 transition-colors" data-testid={`row-invoice-${invoice.id}`}>
+                              <td className="py-1 text-xs text-slate-700 w-32" data-testid={`text-issue-date-${invoice.id}`}>
+                                {new Date(invoice.issueDate).toLocaleDateString()}
+                              </td>
+                              <td className="py-1 text-xs font-medium text-slate-900 w-32" data-testid={`text-invoice-number-${invoice.id}`}>
+                                {invoice.invoiceNumber}
+                              </td>
+                              <td className="py-1 text-xs text-slate-700 w-60" data-testid={`text-contact-name-${invoice.id}`}>
+                                {invoice.contact?.name || 'Unknown Contact'}
+                              </td>
+                              <td className="py-1 text-xs font-medium text-slate-900" data-testid={`text-amount-${invoice.id}`}>
+                                {invoice.currency} {Number(invoice.amount).toLocaleString()}
+                              </td>
+                              <td className="py-1 text-xs text-slate-700" data-testid={`text-due-date-${invoice.id}`}>
+                                {new Date(invoice.dueDate).toLocaleDateString()}
+                              </td>
+                              <td className="py-1 text-xs text-slate-700" data-testid={`text-paid-date-${invoice.id}`}>
+                                {invoice.paymentDetails?.paidDate ? 
+                                  new Date(invoice.paymentDetails.paidDate).toLocaleDateString() : 
+                                  <span className="text-gray-400">-</span>
+                                }
+                              </td>
+                              <td className="py-1 text-xs text-slate-700" data-testid={`text-age-${invoice.id}`}>
+                                {Math.floor((Date.now() - new Date(invoice.issueDate).getTime()) / (1000 * 60 * 60 * 24))} days
+                              </td>
+                              <td className="py-1 text-xs text-slate-700" data-testid={`text-status-${invoice.id}`}>
+                                {getStatusBadge(invoice.status)}
+                              </td>
+                              <td className="py-1 text-xs text-slate-700" data-testid={`text-collection-stage-${invoice.id}`}>
+                                <Badge variant="outline" className="text-xs">{invoice.collectionStage || 'initial'}</Badge>
+                              </td>
+                              <td className="py-1 text-right">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => {
+                                    setSelectedInvoice(invoice);
+                                    setShowContactHistory(true);
+                                  }}
+                                  className="text-[#17B6C3] hover:text-[#1396A1] hover:bg-[#17B6C3]/5"
+                                  data-testid={`button-view-${invoice.id}`}
+                                >
+                                  <Eye className="h-4 w-4" />
+                                </Button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                  
+                  {/* Pagination */}
+                  {pagination && filteredAndSortedInvoices.length > 0 && (
+                    <div className="flex items-center justify-between mt-6 pt-6 border-t border-gray-200">
+                      <div className="text-sm text-gray-500">
+                        Showing {filteredAndSortedInvoices.length} of {pagination.totalCount.toLocaleString()} invoices
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setCurrentPage(Math.max(1, getCurrentPage() - 1))}
+                          disabled={!pagination?.hasPreviousPage || currentTabData.isLoading}
+                          className="border-[#17B6C3]/20 text-[#17B6C3] hover:bg-[#17B6C3]/5"
+                          data-testid="button-prev-page"
+                        >
+                          <ChevronLeft className="h-4 w-4 mr-1" />
+                          Previous
+                        </Button>
+                        
+                        <span className="text-sm text-gray-600 px-3">
+                          Page {pagination?.currentPage || 1} of {pagination?.totalPages || 1}
+                        </span>
+                        
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setCurrentPage(getCurrentPage() + 1)}
+                          disabled={!pagination?.hasNextPage || currentTabData.isLoading}
+                          className="border-[#17B6C3]/20 text-[#17B6C3] hover:bg-[#17B6C3]/5"
+                          data-testid="button-next-page"
+                        >
+                          Next
+                          <ChevronRight className="h-4 w-4 ml-1" />
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>
@@ -573,7 +772,206 @@ export default function InvoicesXero() {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-center py-8 text-muted-foreground">Paid invoices will be displayed here.</p>
+                  {currentTabData.isLoading ? (
+                    <div className="text-center py-8">
+                      <p className="text-muted-foreground">Loading paid invoices...</p>
+                    </div>
+                  ) : filteredAndSortedInvoices.length === 0 ? (
+                    <div className="text-center py-8">
+                      <div className="w-16 h-16 bg-[#17B6C3]/10 rounded-full flex items-center justify-center mx-auto mb-6">
+                        <FileText className="h-8 w-8 text-[#17B6C3]" />
+                      </div>
+                      <p className="text-lg font-semibold text-slate-900 mb-2">No paid invoices found</p>
+                      {search ? (
+                        <p className="text-sm text-muted-foreground mt-2">
+                          Try adjusting your search terms
+                        </p>
+                      ) : (
+                        <div className="mt-6">
+                          <p className="text-muted-foreground mb-4">No paid invoices found in your connected Xero account</p>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead>
+                          <tr className="border-b border-slate-200/50">
+                            <th className="text-left py-2 text-xs font-semibold text-slate-700 w-32">
+                              <button 
+                                onClick={() => handleSort("date")}
+                                className="flex items-center space-x-1 hover:text-slate-900"
+                              >
+                                <span>Invoice Date</span>
+                                {getSortIcon("date")}
+                              </button>
+                            </th>
+                            <th className="text-left py-2 text-xs font-semibold text-slate-700 w-32">
+                              <button 
+                                onClick={() => handleSort("invoiceNumber")}
+                                className="flex items-center space-x-1 hover:text-slate-900"
+                              >
+                                <span>Inv No.</span>
+                                {getSortIcon("invoiceNumber")}
+                              </button>
+                            </th>
+                            <th className="text-left py-2 text-xs font-semibold text-slate-700 w-60">
+                              <button 
+                                onClick={() => handleSort("clientName")}
+                                className="flex items-center space-x-1 hover:text-slate-900"
+                              >
+                                <span>Client Name</span>
+                                {getSortIcon("clientName")}
+                              </button>
+                            </th>
+                            <th className="text-left py-2 text-xs font-semibold text-slate-700">
+                              <button 
+                                onClick={() => handleSort("amount")}
+                                className="flex items-center space-x-1 hover:text-slate-900"
+                              >
+                                <span>Amount</span>
+                                {getSortIcon("amount")}
+                              </button>
+                            </th>
+                            <th className="text-left py-2 text-xs font-semibold text-slate-700">
+                              <button 
+                                onClick={() => handleSort("dueDate")}
+                                className="flex items-center space-x-1 hover:text-slate-900"
+                              >
+                                <span>Due Date</span>
+                                {getSortIcon("dueDate")}
+                              </button>
+                            </th>
+                            <th className="text-left py-2 text-xs font-semibold text-slate-700">
+                              <button 
+                                onClick={() => handleSort("paidDate")}
+                                className="flex items-center space-x-1 hover:text-slate-900"
+                              >
+                                <span>Paid Date</span>
+                                {getSortIcon("paidDate")}
+                              </button>
+                            </th>
+                            <th className="text-left py-2 text-xs font-semibold text-slate-700">
+                              <button 
+                                onClick={() => handleSort("age")}
+                                className="flex items-center space-x-1 hover:text-slate-900"
+                              >
+                                <span>Age</span>
+                                {getSortIcon("age")}
+                              </button>
+                            </th>
+                            <th className="text-left py-2 text-xs font-semibold text-slate-700">
+                              <button 
+                                onClick={() => handleSort("status")}
+                                className="flex items-center space-x-1 hover:text-slate-900"
+                              >
+                                <span>Status</span>
+                                {getSortIcon("status")}
+                              </button>
+                            </th>
+                            <th className="text-left py-2 text-xs font-semibold text-slate-700">
+                              <button 
+                                onClick={() => handleSort("collectionStage")}
+                                className="flex items-center space-x-1 hover:text-slate-900"
+                              >
+                                <span>Collection Stage</span>
+                                {getSortIcon("collectionStage")}
+                              </button>
+                            </th>
+                            <th className="text-right py-2 text-xs font-semibold text-slate-700">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-200/50">
+                          {filteredAndSortedInvoices.map((invoice: any) => (
+                            <tr key={invoice.id} className="hover:bg-slate-50/50 transition-colors" data-testid={`row-invoice-${invoice.id}`}>
+                              <td className="py-1 text-xs text-slate-700 w-32" data-testid={`text-issue-date-${invoice.id}`}>
+                                {new Date(invoice.issueDate).toLocaleDateString()}
+                              </td>
+                              <td className="py-1 text-xs font-medium text-slate-900 w-32" data-testid={`text-invoice-number-${invoice.id}`}>
+                                {invoice.invoiceNumber}
+                              </td>
+                              <td className="py-1 text-xs text-slate-700 w-60" data-testid={`text-contact-name-${invoice.id}`}>
+                                {invoice.contact?.name || 'Unknown Contact'}
+                              </td>
+                              <td className="py-1 text-xs font-medium text-slate-900" data-testid={`text-amount-${invoice.id}`}>
+                                {invoice.currency} {Number(invoice.amount).toLocaleString()}
+                              </td>
+                              <td className="py-1 text-xs text-slate-700" data-testid={`text-due-date-${invoice.id}`}>
+                                {new Date(invoice.dueDate).toLocaleDateString()}
+                              </td>
+                              <td className="py-1 text-xs text-slate-700" data-testid={`text-paid-date-${invoice.id}`}>
+                                {invoice.paymentDetails?.paidDate ? 
+                                  new Date(invoice.paymentDetails.paidDate).toLocaleDateString() : 
+                                  <span className="text-gray-400">-</span>
+                                }
+                              </td>
+                              <td className="py-1 text-xs text-slate-700" data-testid={`text-age-${invoice.id}`}>
+                                {Math.floor((Date.now() - new Date(invoice.issueDate).getTime()) / (1000 * 60 * 60 * 24))} days
+                              </td>
+                              <td className="py-1 text-xs text-slate-700" data-testid={`text-status-${invoice.id}`}>
+                                {getStatusBadge(invoice.status)}
+                              </td>
+                              <td className="py-1 text-xs text-slate-700" data-testid={`text-collection-stage-${invoice.id}`}>
+                                <Badge variant="outline" className="text-xs">{invoice.collectionStage || 'initial'}</Badge>
+                              </td>
+                              <td className="py-1 text-right">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => {
+                                    setSelectedInvoice(invoice);
+                                    setShowContactHistory(true);
+                                  }}
+                                  className="text-[#17B6C3] hover:text-[#1396A1] hover:bg-[#17B6C3]/5"
+                                  data-testid={`button-view-${invoice.id}`}
+                                >
+                                  <Eye className="h-4 w-4" />
+                                </Button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                  
+                  {/* Pagination */}
+                  {pagination && filteredAndSortedInvoices.length > 0 && (
+                    <div className="flex items-center justify-between mt-6 pt-6 border-t border-gray-200">
+                      <div className="text-sm text-gray-500">
+                        Showing {filteredAndSortedInvoices.length} of {pagination.totalCount.toLocaleString()} invoices
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setCurrentPage(Math.max(1, getCurrentPage() - 1))}
+                          disabled={!pagination?.hasPreviousPage || currentTabData.isLoading}
+                          className="border-[#17B6C3]/20 text-[#17B6C3] hover:bg-[#17B6C3]/5"
+                          data-testid="button-prev-page"
+                        >
+                          <ChevronLeft className="h-4 w-4 mr-1" />
+                          Previous
+                        </Button>
+                        
+                        <span className="text-sm text-gray-600 px-3">
+                          Page {pagination?.currentPage || 1} of {pagination?.totalPages || 1}
+                        </span>
+                        
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setCurrentPage(getCurrentPage() + 1)}
+                          disabled={!pagination?.hasNextPage || currentTabData.isLoading}
+                          className="border-[#17B6C3]/20 text-[#17B6C3] hover:bg-[#17B6C3]/5"
+                          data-testid="button-next-page"
+                        >
+                          Next
+                          <ChevronRight className="h-4 w-4 ml-1" />
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>
@@ -594,7 +992,206 @@ export default function InvoicesXero() {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-center py-8 text-muted-foreground">Void invoices will be displayed here.</p>
+                  {currentTabData.isLoading ? (
+                    <div className="text-center py-8">
+                      <p className="text-muted-foreground">Loading void invoices...</p>
+                    </div>
+                  ) : filteredAndSortedInvoices.length === 0 ? (
+                    <div className="text-center py-8">
+                      <div className="w-16 h-16 bg-[#17B6C3]/10 rounded-full flex items-center justify-center mx-auto mb-6">
+                        <FileText className="h-8 w-8 text-[#17B6C3]" />
+                      </div>
+                      <p className="text-lg font-semibold text-slate-900 mb-2">No void invoices found</p>
+                      {search ? (
+                        <p className="text-sm text-muted-foreground mt-2">
+                          Try adjusting your search terms
+                        </p>
+                      ) : (
+                        <div className="mt-6">
+                          <p className="text-muted-foreground mb-4">No void invoices found in your connected Xero account</p>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead>
+                          <tr className="border-b border-slate-200/50">
+                            <th className="text-left py-2 text-xs font-semibold text-slate-700 w-32">
+                              <button 
+                                onClick={() => handleSort("date")}
+                                className="flex items-center space-x-1 hover:text-slate-900"
+                              >
+                                <span>Invoice Date</span>
+                                {getSortIcon("date")}
+                              </button>
+                            </th>
+                            <th className="text-left py-2 text-xs font-semibold text-slate-700 w-32">
+                              <button 
+                                onClick={() => handleSort("invoiceNumber")}
+                                className="flex items-center space-x-1 hover:text-slate-900"
+                              >
+                                <span>Inv No.</span>
+                                {getSortIcon("invoiceNumber")}
+                              </button>
+                            </th>
+                            <th className="text-left py-2 text-xs font-semibold text-slate-700 w-60">
+                              <button 
+                                onClick={() => handleSort("clientName")}
+                                className="flex items-center space-x-1 hover:text-slate-900"
+                              >
+                                <span>Client Name</span>
+                                {getSortIcon("clientName")}
+                              </button>
+                            </th>
+                            <th className="text-left py-2 text-xs font-semibold text-slate-700">
+                              <button 
+                                onClick={() => handleSort("amount")}
+                                className="flex items-center space-x-1 hover:text-slate-900"
+                              >
+                                <span>Amount</span>
+                                {getSortIcon("amount")}
+                              </button>
+                            </th>
+                            <th className="text-left py-2 text-xs font-semibold text-slate-700">
+                              <button 
+                                onClick={() => handleSort("dueDate")}
+                                className="flex items-center space-x-1 hover:text-slate-900"
+                              >
+                                <span>Due Date</span>
+                                {getSortIcon("dueDate")}
+                              </button>
+                            </th>
+                            <th className="text-left py-2 text-xs font-semibold text-slate-700">
+                              <button 
+                                onClick={() => handleSort("paidDate")}
+                                className="flex items-center space-x-1 hover:text-slate-900"
+                              >
+                                <span>Paid Date</span>
+                                {getSortIcon("paidDate")}
+                              </button>
+                            </th>
+                            <th className="text-left py-2 text-xs font-semibold text-slate-700">
+                              <button 
+                                onClick={() => handleSort("age")}
+                                className="flex items-center space-x-1 hover:text-slate-900"
+                              >
+                                <span>Age</span>
+                                {getSortIcon("age")}
+                              </button>
+                            </th>
+                            <th className="text-left py-2 text-xs font-semibold text-slate-700">
+                              <button 
+                                onClick={() => handleSort("status")}
+                                className="flex items-center space-x-1 hover:text-slate-900"
+                              >
+                                <span>Status</span>
+                                {getSortIcon("status")}
+                              </button>
+                            </th>
+                            <th className="text-left py-2 text-xs font-semibold text-slate-700">
+                              <button 
+                                onClick={() => handleSort("collectionStage")}
+                                className="flex items-center space-x-1 hover:text-slate-900"
+                              >
+                                <span>Collection Stage</span>
+                                {getSortIcon("collectionStage")}
+                              </button>
+                            </th>
+                            <th className="text-right py-2 text-xs font-semibold text-slate-700">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-200/50">
+                          {filteredAndSortedInvoices.map((invoice: any) => (
+                            <tr key={invoice.id} className="hover:bg-slate-50/50 transition-colors" data-testid={`row-invoice-${invoice.id}`}>
+                              <td className="py-1 text-xs text-slate-700 w-32" data-testid={`text-issue-date-${invoice.id}`}>
+                                {new Date(invoice.issueDate).toLocaleDateString()}
+                              </td>
+                              <td className="py-1 text-xs font-medium text-slate-900 w-32" data-testid={`text-invoice-number-${invoice.id}`}>
+                                {invoice.invoiceNumber}
+                              </td>
+                              <td className="py-1 text-xs text-slate-700 w-60" data-testid={`text-contact-name-${invoice.id}`}>
+                                {invoice.contact?.name || 'Unknown Contact'}
+                              </td>
+                              <td className="py-1 text-xs font-medium text-slate-900" data-testid={`text-amount-${invoice.id}`}>
+                                {invoice.currency} {Number(invoice.amount).toLocaleString()}
+                              </td>
+                              <td className="py-1 text-xs text-slate-700" data-testid={`text-due-date-${invoice.id}`}>
+                                {new Date(invoice.dueDate).toLocaleDateString()}
+                              </td>
+                              <td className="py-1 text-xs text-slate-700" data-testid={`text-paid-date-${invoice.id}`}>
+                                {invoice.paymentDetails?.paidDate ? 
+                                  new Date(invoice.paymentDetails.paidDate).toLocaleDateString() : 
+                                  <span className="text-gray-400">-</span>
+                                }
+                              </td>
+                              <td className="py-1 text-xs text-slate-700" data-testid={`text-age-${invoice.id}`}>
+                                {Math.floor((Date.now() - new Date(invoice.issueDate).getTime()) / (1000 * 60 * 60 * 24))} days
+                              </td>
+                              <td className="py-1 text-xs text-slate-700" data-testid={`text-status-${invoice.id}`}>
+                                {getStatusBadge(invoice.status)}
+                              </td>
+                              <td className="py-1 text-xs text-slate-700" data-testid={`text-collection-stage-${invoice.id}`}>
+                                <Badge variant="outline" className="text-xs">{invoice.collectionStage || 'initial'}</Badge>
+                              </td>
+                              <td className="py-1 text-right">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => {
+                                    setSelectedInvoice(invoice);
+                                    setShowContactHistory(true);
+                                  }}
+                                  className="text-[#17B6C3] hover:text-[#1396A1] hover:bg-[#17B6C3]/5"
+                                  data-testid={`button-view-${invoice.id}`}
+                                >
+                                  <Eye className="h-4 w-4" />
+                                </Button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                  
+                  {/* Pagination */}
+                  {pagination && filteredAndSortedInvoices.length > 0 && (
+                    <div className="flex items-center justify-between mt-6 pt-6 border-t border-gray-200">
+                      <div className="text-sm text-gray-500">
+                        Showing {filteredAndSortedInvoices.length} of {pagination.totalCount.toLocaleString()} invoices
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setCurrentPage(Math.max(1, getCurrentPage() - 1))}
+                          disabled={!pagination?.hasPreviousPage || currentTabData.isLoading}
+                          className="border-[#17B6C3]/20 text-[#17B6C3] hover:bg-[#17B6C3]/5"
+                          data-testid="button-prev-page"
+                        >
+                          <ChevronLeft className="h-4 w-4 mr-1" />
+                          Previous
+                        </Button>
+                        
+                        <span className="text-sm text-gray-600 px-3">
+                          Page {pagination?.currentPage || 1} of {pagination?.totalPages || 1}
+                        </span>
+                        
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setCurrentPage(getCurrentPage() + 1)}
+                          disabled={!pagination?.hasNextPage || currentTabData.isLoading}
+                          className="border-[#17B6C3]/20 text-[#17B6C3] hover:bg-[#17B6C3]/5"
+                          data-testid="button-next-page"
+                        >
+                          Next
+                          <ChevronRight className="h-4 w-4 ml-1" />
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>
