@@ -754,6 +754,15 @@ export default function Invoices() {
                                   <span>Customer Name</span>
                                 </button>
                               </th>
+                              <th className="text-left py-2 text-xs font-semibold text-slate-700 w-20">
+                                <span>Rating</span>
+                              </th>
+                              <th className="text-left py-2 text-xs font-semibold text-slate-700 w-28">
+                                <span>Outstanding</span>
+                              </th>
+                              <th className="text-left py-2 text-xs font-semibold text-slate-700 w-20">
+                                <span>Late</span>
+                              </th>
                               <th className="text-left py-2 text-xs font-semibold text-slate-700 w-48">
                                 <button 
                                   onClick={() => handleSort("companyName")}
@@ -787,15 +796,6 @@ export default function Invoices() {
                                 </button>
                               </th>
                               <th className="text-left py-2 text-xs font-semibold text-slate-700 w-20">
-                                <span>Rating</span>
-                              </th>
-                              <th className="text-left py-2 text-xs font-semibold text-slate-700 w-28">
-                                <span>Outstanding</span>
-                              </th>
-                              <th className="text-left py-2 text-xs font-semibold text-slate-700 w-20">
-                                <span>Late</span>
-                              </th>
-                              <th className="text-left py-2 text-xs font-semibold text-slate-700 w-20">
                                 <button 
                                   onClick={() => handleSort("status")}
                                   className="flex items-center space-x-1 hover:text-slate-900"
@@ -812,6 +812,15 @@ export default function Invoices() {
                                 <td className="py-1 text-xs text-slate-700 w-60" data-testid={`text-contact-name-${contact.id}`}>
                                   {contact.name}
                                 </td>
+                                <td className="py-1 w-20" data-testid={`rating-cell-${contact.id}`}>
+                                  {renderStarRating(getCustomerRating(contact))}
+                                </td>
+                                <td className="py-1 text-xs font-medium text-slate-700 w-28" data-testid={`text-outstanding-${contact.id}`}>
+                                  ${getCustomerOutstanding(contact).toLocaleString()}
+                                </td>
+                                <td className="py-1 text-xs font-medium text-slate-700 w-20" data-testid={`text-late-${contact.id}`}>
+                                  ${getCustomerLateAmount(contact).toLocaleString()}
+                                </td>
                                 <td className="py-1 text-xs text-slate-700 w-48" data-testid={`text-company-${contact.id}`}>
                                   {contact.companyName || '-'}
                                 </td>
@@ -823,15 +832,6 @@ export default function Invoices() {
                                 </td>
                                 <td className="py-1 text-xs text-slate-700 w-20" data-testid={`text-terms-${contact.id}`}>
                                   {contact.paymentTerms ? `${contact.paymentTerms}d` : '-'}
-                                </td>
-                                <td className="py-1 w-20" data-testid={`rating-cell-${contact.id}`}>
-                                  {renderStarRating(getCustomerRating(contact))}
-                                </td>
-                                <td className="py-1 text-xs font-medium text-slate-700 w-28" data-testid={`text-outstanding-${contact.id}`}>
-                                  ${getCustomerOutstanding(contact).toLocaleString()}
-                                </td>
-                                <td className="py-1 text-xs font-medium text-slate-700 w-20" data-testid={`text-late-${contact.id}`}>
-                                  ${getCustomerLateAmount(contact).toLocaleString()}
                                 </td>
                                 <td className="py-1 w-20">
                                   <Badge 
