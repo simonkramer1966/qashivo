@@ -65,6 +65,22 @@ export default function InvoicesXero() {
     enabled: true,
   });
 
+  // Helper function to calculate total amount for invoices
+  const calculateTotal = (invoices: any[] | undefined) => {
+    if (!invoices || invoices.length === 0) return 0;
+    return invoices.reduce((total, invoice) => total + parseFloat(invoice.amount || 0), 0);
+  };
+
+  // Format currency for display
+  const formatCurrency = (amount: number, currency: string = 'USD') => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: currency,
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(amount);
+  };
+
   // Get current tab data
   const getCurrentTabData = () => {
     switch (activeTab) {
@@ -267,16 +283,16 @@ export default function InvoicesXero() {
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid grid-cols-4 w-full max-w-2xl">
               <TabsTrigger value="unpaid" className="text-sm">
-                Unpaid ({unpaidData?.invoices?.length || 0})
+                Unpaid ({formatCurrency(calculateTotal(unpaidData?.invoices))})
               </TabsTrigger>
               <TabsTrigger value="partial" className="text-sm">
-                Partial ({partialData?.invoices?.length || 0})
+                Part Paid ({formatCurrency(calculateTotal(partialData?.invoices))})
               </TabsTrigger>
               <TabsTrigger value="paid" className="text-sm">
-                Paid ({paidData?.invoices?.length || 0})
+                Paid ({formatCurrency(calculateTotal(paidData?.invoices))})
               </TabsTrigger>
               <TabsTrigger value="void" className="text-sm">
-                Void ({voidData?.invoices?.length || 0})
+                Void ({formatCurrency(calculateTotal(voidData?.invoices))})
               </TabsTrigger>
             </TabsList>
 
