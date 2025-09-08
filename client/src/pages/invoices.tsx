@@ -729,20 +729,18 @@ export default function Invoices() {
                     <thead>
                       <tr className="border-b border-slate-200/50">
                         <th className="text-left py-2 text-xs font-semibold text-slate-700 w-60">
-                          <div className="flex items-center space-x-1">
-                            <span>Inv No. / Client</span>
-                            <Select value={invClientSort} onValueChange={setInvClientSort}>
-                              <SelectTrigger className="w-32 h-6 text-xs border-gray-200/30 bg-white/70">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent className="bg-white border-gray-200">
-                                <SelectItem value="inv-asc">Inv No 123</SelectItem>
-                                <SelectItem value="inv-desc">Inv No 321</SelectItem>
-                                <SelectItem value="client-asc">Client A-Z</SelectItem>
-                                <SelectItem value="client-desc">Client Z-A</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
+                          <Select value={invClientSort} onValueChange={setInvClientSort}>
+                            <SelectTrigger className="border-0 bg-transparent p-0 h-auto font-semibold text-xs text-slate-700 hover:text-slate-900 focus:ring-0 data-[state=open]:text-slate-900">
+                              <span>Inv No. / Client</span>
+                              <ChevronDown className="h-3 w-3 ml-1" />
+                            </SelectTrigger>
+                            <SelectContent className="bg-white border-gray-200">
+                              <SelectItem value="inv-asc">Inv No 123</SelectItem>
+                              <SelectItem value="inv-desc">Inv No 321</SelectItem>
+                              <SelectItem value="client-asc">Client A-Z</SelectItem>
+                              <SelectItem value="client-desc">Client Z-A</SelectItem>
+                            </SelectContent>
+                          </Select>
                         </th>
                         <th className="text-left py-2 text-xs font-semibold text-slate-700">
                           <button 
@@ -754,20 +752,18 @@ export default function Invoices() {
                           </button>
                         </th>
                         <th className="text-left py-2 text-xs font-semibold text-slate-700">
-                          <div className="flex items-center space-x-1">
-                            <span>Due Date / Age</span>
-                            <Select value={dueDateAgeSort} onValueChange={setDueDateAgeSort}>
-                              <SelectTrigger className="w-32 h-6 text-xs border-gray-200/30 bg-white/70">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent className="bg-white border-gray-200">
-                                <SelectItem value="due-date-asc">Due Date (earliest)</SelectItem>
-                                <SelectItem value="due-date-desc">Due Date (latest)</SelectItem>
-                                <SelectItem value="age-asc">Age (newest)</SelectItem>
-                                <SelectItem value="age-desc">Age (oldest)</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
+                          <Select value={dueDateAgeSort} onValueChange={setDueDateAgeSort}>
+                            <SelectTrigger className="border-0 bg-transparent p-0 h-auto font-semibold text-xs text-slate-700 hover:text-slate-900 focus:ring-0 data-[state=open]:text-slate-900">
+                              <span>Due Date / Age</span>
+                              <ChevronDown className="h-3 w-3 ml-1" />
+                            </SelectTrigger>
+                            <SelectContent className="bg-white border-gray-200">
+                              <SelectItem value="due-date-asc">Due Date (earliest)</SelectItem>
+                              <SelectItem value="due-date-desc">Due Date (latest)</SelectItem>
+                              <SelectItem value="age-asc">Age (newest)</SelectItem>
+                              <SelectItem value="age-desc">Age (oldest)</SelectItem>
+                            </SelectContent>
+                          </Select>
                         </th>
                         <th className="text-left py-2 text-xs font-semibold text-slate-700">
                           <button 
@@ -788,20 +784,18 @@ export default function Invoices() {
                           </button>
                         </th>
                         <th className="text-left py-2 text-xs font-semibold text-slate-700">
-                          <div className="flex items-center space-x-1">
-                            <span>Next Action</span>
-                            <Select value={nextActionSort} onValueChange={setNextActionSort}>
-                              <SelectTrigger className="w-32 h-6 text-xs border-gray-200/30 bg-white/70">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent className="bg-white border-gray-200">
-                                <SelectItem value="action-date-asc">Action Date (earliest)</SelectItem>
-                                <SelectItem value="action-date-desc">Action Date (latest)</SelectItem>
-                                <SelectItem value="action-type-asc">Action Type A-Z</SelectItem>
-                                <SelectItem value="action-type-desc">Action Type Z-A</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
+                          <Select value={nextActionSort} onValueChange={setNextActionSort}>
+                            <SelectTrigger className="border-0 bg-transparent p-0 h-auto font-semibold text-xs text-slate-700 hover:text-slate-900 focus:ring-0 data-[state=open]:text-slate-900">
+                              <span>Next Action</span>
+                              <ChevronDown className="h-3 w-3 ml-1" />
+                            </SelectTrigger>
+                            <SelectContent className="bg-white border-gray-200">
+                              <SelectItem value="action-date-asc">Action Date (earliest)</SelectItem>
+                              <SelectItem value="action-date-desc">Action Date (latest)</SelectItem>
+                              <SelectItem value="action-type-asc">Action Type A-Z</SelectItem>
+                              <SelectItem value="action-type-desc">Action Type Z-A</SelectItem>
+                            </SelectContent>
+                          </Select>
                         </th>
                         <th className="text-left py-2 text-xs font-semibold text-slate-700">Actions</th>
                       </tr>
