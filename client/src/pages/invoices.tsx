@@ -721,10 +721,10 @@ export default function Invoices() {
                 </div>
               ) : (
                 <div className="overflow-x-auto">
-                  <table className="w-auto">
+                  <table className="w-full">
                     <thead>
                       <tr className="border-b border-slate-200/50">
-                        <th className="text-left py-2 text-xs font-semibold text-slate-700 w-36">
+                        <th className="text-left py-2 text-xs font-semibold text-slate-700 w-52">
                           <Select value={invClientSort} onValueChange={(value) => {
                             setInvClientSort(value);
                             setActiveSortColumn("invClient");
@@ -802,13 +802,13 @@ export default function Invoices() {
                             </SelectContent>
                           </Select>
                         </th>
-                        <th className="text-right py-2 text-xs font-semibold text-slate-700 w-32">Actions</th>
+                        <th className="text-right py-2 text-xs font-semibold text-slate-700">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-200/50">
                       {paginatedInvoices.map((invoice: any) => (
                         <tr key={invoice.id} className="hover:bg-slate-50/50 transition-colors" data-testid={`row-invoice-${invoice.id}`}>
-                          <td className="py-2 w-36" data-testid={`text-invoice-client-${invoice.id}`}>
+                          <td className="py-2 w-52" data-testid={`text-invoice-client-${invoice.id}`}>
                             <div className="text-xs font-medium text-slate-900">
                               {invoice.invoiceNumber}
                             </div>
@@ -844,7 +844,7 @@ export default function Invoices() {
                               {['Email Reminder', 'Phone Call', 'Letter', 'SMS Follow-up'][Math.floor(Math.random() * 4)]}
                             </div>
                           </td>
-                          <td className="py-2 w-32">
+                          <td className="py-2">
                             <div className="flex space-x-1 justify-end">
                               {invoice.contact?.email && (
                                 <Button 
