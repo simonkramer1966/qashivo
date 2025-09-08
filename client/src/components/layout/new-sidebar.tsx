@@ -22,7 +22,7 @@ import nexusLogo from "@assets/Main Nexus Logo copy_1756923544828.png";
 const navigationItems = [
   { name: "Dashboard", href: "/", icon: BarChart3 },
   { name: "Cashflow", href: "/cashflow", icon: TrendingUp },
-  { name: "Invoices", href: "/invoices", icon: FileText },
+  { name: "Receivables", href: "/invoices", icon: FileText },
   { name: "Invoices - Xero", href: "/invoices-xero", icon: ExternalLink },
   { name: "Contacts", href: "/contacts", icon: Users },
   { name: "Collection Workflows", href: "/workflows", icon: Workflow },
@@ -126,11 +126,6 @@ export default function NewSidebar() {
                   {(item as any).ownerOnly && (
                     <span className="ml-auto bg-amber-100 text-amber-800 px-2 py-1 rounded text-xs font-medium">
                       Owner
-                    </span>
-                  )}
-                  {item.name === "Invoices" && (
-                    <span className="ml-auto bg-red-500 text-white px-2 py-1 rounded-full text-xs font-medium">
-                      23
                     </span>
                   )}
                 </button>
