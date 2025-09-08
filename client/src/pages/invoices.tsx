@@ -184,6 +184,12 @@ export default function Invoices() {
       }
     });
 
+  // Calculate pagination for invoices
+  const invoicesTotalPages = Math.ceil(filteredAndSortedInvoices.length / invoicesItemsPerPage);
+  const invoicesStartIndex = (invoicesCurrentPage - 1) * invoicesItemsPerPage;
+  const invoicesEndIndex = invoicesStartIndex + invoicesItemsPerPage;
+  const paginatedInvoices = filteredAndSortedInvoices.slice(invoicesStartIndex, invoicesEndIndex);
+
   // Filter and sort contacts for the customers tab
   const filteredContacts = (contacts as any[]).filter((contact: any) => {
     const searchLower = search.toLowerCase();
@@ -230,6 +236,30 @@ export default function Invoices() {
     if (aValue > bValue) return sortDirection === "asc" ? 1 : -1;
     return 0;
   });
+
+  // Calculate pagination for customers
+  const customersTotalPages = Math.ceil(sortedContacts.length / customersItemsPerPage);
+  const customersStartIndex = (customersCurrentPage - 1) * customersItemsPerPage;
+  const customersEndIndex = customersStartIndex + customersItemsPerPage;
+  const paginatedContacts = sortedContacts.slice(customersStartIndex, customersEndIndex);
+
+  // Reset page to 1 when search or filters change
+  useEffect(() => {
+    setInvoicesCurrentPage(1);
+  }, [search, statusFilter]);
+
+  useEffect(() => {
+    setCustomersCurrentPage(1);
+  }, [search]);
+
+  // Update pagination when items per page changes
+  useEffect(() => {
+    setInvoicesCurrentPage(1);
+  }, [invoicesItemsPerPage]);
+
+  useEffect(() => {
+    setCustomersCurrentPage(1);
+  }, [customersItemsPerPage]);
 
   const getSortIcon = (field: string) => {
     if (sortField !== field) {
