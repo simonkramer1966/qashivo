@@ -600,6 +600,10 @@ export default function Settings() {
   const [organizationName, setOrganizationName] = useState("");
   const [organizationCurrency, setOrganizationCurrency] = useState(DEFAULT_CURRENCY);
 
+  // Xero sync settings state
+  const [autoSync, setAutoSync] = useState(true);
+  const [syncInterval, setSyncInterval] = useState(60); // minutes
+
   // Fetch tenant information
   const { data: tenant } = useQuery<{
     id: string;
@@ -607,12 +611,23 @@ export default function Settings() {
     settings?: {
       companyName?: string;
       tagline?: string;
+      currency?: string;
     };
     xeroAccessToken?: string;
     xeroTenantId?: string;
   }>({
     queryKey: ['/api/tenant'],
     enabled: !!user,
+  });
+
+  // Fetch Xero sync settings
+  const { data: syncSettings } = useQuery<{
+    autoSync: boolean;
+    syncInterval: number;
+    lastSyncAt?: string;
+  }>({
+    queryKey: ['/api/xero/sync/settings'],
+    enabled: !!user && !!tenant?.xeroAccessToken,
   });
 
   // Initialize form values when tenant data loads
@@ -624,6 +639,14 @@ export default function Settings() {
       setOrganizationCurrency(tenant.settings?.currency || DEFAULT_CURRENCY);
     }
   }, [tenant]);
+
+  // Initialize sync settings when loaded
+  useEffect(() => {
+    if (syncSettings) {
+      setAutoSync(syncSettings.autoSync);
+      setSyncInterval(syncSettings.syncInterval);
+    }
+  }, [syncSettings]);
 
   // Mutation to update tenant settings
   const updateTenantMutation = useMutation({
@@ -658,6 +681,28 @@ export default function Settings() {
     },
   });
 
+  // Mutation to update Xero sync settings
+  const updateSyncSettingsMutation = useMutation({
+    mutationFn: async (data: { autoSync: boolean; syncInterval: number }) => {
+      const response = await apiRequest("PUT", "/api/xero/sync/settings", data);
+      return response;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/xero/sync/settings'] });
+      toast({
+        title: "Success",
+        description: "Sync settings updated successfully!",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update sync settings.",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleSaveBranding = () => {
     updateTenantMutation.mutate({
       settings: {
@@ -674,6 +719,13 @@ export default function Settings() {
         ...tenant?.settings,
         currency: organizationCurrency,
       },
+    });
+  };
+
+  const handleSaveSyncSettings = () => {
+    updateSyncSettingsMutation.mutate({
+      autoSync,
+      syncInterval,
     });
   };
 
@@ -940,6 +992,74 @@ export default function Settings() {
                       {isConnecting ? "Connecting..." : tenant?.xeroAccessToken ? "Reconnect" : "Connect"}
                     </Button>
                   </div>
+
+                  {/* Sync Settings - Only show if Xero is connected */}
+                  {tenant?.xeroAccessToken && (
+                    <div className="mt-6 space-y-6">
+                      <Separator />
+                      <div>
+                        <h4 className="text-lg font-semibold text-slate-900 mb-4">Sync Settings</h4>
+                        <div className="space-y-4">
+                          <div className="flex items-center justify-between">
+                            <div className="space-y-0.5">
+                              <Label htmlFor="auto-sync" className="text-base">Auto Sync</Label>
+                              <p className="text-sm text-slate-600">
+                                Automatically sync invoices from Xero at regular intervals
+                              </p>
+                            </div>
+                            <Switch
+                              id="auto-sync"
+                              checked={autoSync}
+                              onCheckedChange={setAutoSync}
+                              data-testid="switch-auto-sync"
+                            />
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label htmlFor="sync-interval" className="text-base">Sync Interval</Label>
+                            <p className="text-sm text-slate-600 mb-2">
+                              How often to sync data from Xero (in minutes)
+                            </p>
+                            <Select 
+                              value={syncInterval.toString()} 
+                              onValueChange={(value) => setSyncInterval(parseInt(value))}
+                            >
+                              <SelectTrigger className="bg-white border-gray-200" data-testid="select-sync-interval">
+                                <SelectValue placeholder="Select interval" />
+                              </SelectTrigger>
+                              <SelectContent className="bg-white border-gray-200">
+                                <SelectItem value="5">Every 5 minutes</SelectItem>
+                                <SelectItem value="15">Every 15 minutes</SelectItem>
+                                <SelectItem value="30">Every 30 minutes</SelectItem>
+                                <SelectItem value="60">Every hour</SelectItem>
+                                <SelectItem value="120">Every 2 hours</SelectItem>
+                                <SelectItem value="360">Every 6 hours</SelectItem>
+                                <SelectItem value="720">Every 12 hours</SelectItem>
+                                <SelectItem value="1440">Every 24 hours</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          {syncSettings?.lastSyncAt && (
+                            <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                              <p className="text-sm text-blue-800">
+                                <strong>Last sync:</strong> {new Date(syncSettings.lastSyncAt).toLocaleString()}
+                              </p>
+                            </div>
+                          )}
+
+                          <Button 
+                            onClick={handleSaveSyncSettings}
+                            disabled={updateSyncSettingsMutation.isPending}
+                            className="bg-[#17B6C3] hover:bg-[#1396A1] text-white"
+                            data-testid="button-save-sync-settings"
+                          >
+                            {updateSyncSettingsMutation.isPending ? "Saving..." : "Save Sync Settings"}
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
 
