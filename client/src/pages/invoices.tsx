@@ -406,6 +406,29 @@ export default function Invoices() {
     return actions[Math.abs(hash) % actions.length];
   };
 
+  // Function to get customer-level rating (average of their invoice ratings)
+  const getCustomerRating = (contact: any) => {
+    const customerInvoices = invoices.filter((invoice: any) => invoice.contact?.id === contact.id);
+    if (customerInvoices.length === 0) return 3; // Default rating
+    
+    const totalRating = customerInvoices.reduce((sum: number, invoice: any) => sum + getPayerRating(invoice), 0);
+    return Math.round(totalRating / customerInvoices.length);
+  };
+
+  // Function to get customer-level outstanding amount (sum of all outstanding invoices)
+  const getCustomerOutstanding = (contact: any) => {
+    const customerInvoices = invoices.filter((invoice: any) => 
+      invoice.contact?.id === contact.id && invoice.status !== 'paid'
+    );
+    return customerInvoices.reduce((sum: number, invoice: any) => sum + Number(invoice.amount), 0);
+  };
+
+  // Function to get customer-level late amount (sum of all late payments)
+  const getCustomerLateAmount = (contact: any) => {
+    const customerInvoices = invoices.filter((invoice: any) => invoice.contact?.id === contact.id);
+    return customerInvoices.reduce((sum: number, invoice: any) => sum + getLateAmount(invoice), 0);
+  };
+
   // Function to render star rating
   const renderStarRating = (rating: number) => {
     return (
@@ -764,6 +787,15 @@ export default function Invoices() {
                                 </button>
                               </th>
                               <th className="text-left py-2 text-xs font-semibold text-slate-700 w-20">
+                                <span>Rating</span>
+                              </th>
+                              <th className="text-left py-2 text-xs font-semibold text-slate-700 w-28">
+                                <span>Outstanding</span>
+                              </th>
+                              <th className="text-left py-2 text-xs font-semibold text-slate-700 w-20">
+                                <span>Late</span>
+                              </th>
+                              <th className="text-left py-2 text-xs font-semibold text-slate-700 w-20">
                                 <button 
                                   onClick={() => handleSort("status")}
                                   className="flex items-center space-x-1 hover:text-slate-900"
@@ -791,6 +823,15 @@ export default function Invoices() {
                                 </td>
                                 <td className="py-1 text-xs text-slate-700 w-20" data-testid={`text-terms-${contact.id}`}>
                                   {contact.paymentTerms ? `${contact.paymentTerms}d` : '-'}
+                                </td>
+                                <td className="py-1 w-20" data-testid={`rating-cell-${contact.id}`}>
+                                  {renderStarRating(getCustomerRating(contact))}
+                                </td>
+                                <td className="py-1 text-xs font-medium text-slate-700 w-28" data-testid={`text-outstanding-${contact.id}`}>
+                                  ${getCustomerOutstanding(contact).toLocaleString()}
+                                </td>
+                                <td className="py-1 text-xs font-medium text-slate-700 w-20" data-testid={`text-late-${contact.id}`}>
+                                  ${getCustomerLateAmount(contact).toLocaleString()}
                                 </td>
                                 <td className="py-1 w-20">
                                   <Badge 
@@ -952,22 +993,11 @@ export default function Invoices() {
                           </Select>
                         </th>
                         <th className="text-left py-2 text-xs font-semibold text-slate-700 w-52">
-                          <span>Rating</span>
-                        </th>
-                        <th className="text-left py-2 text-xs font-semibold text-slate-700 w-52">
                           <button 
                             onClick={() => handleSort("amount")}
                             className="flex items-center space-x-1 hover:text-slate-900"
                           >
                             <span>Outstanding</span>
-                          </button>
-                        </th>
-                        <th className="text-left py-2 text-xs font-semibold text-slate-700 w-52">
-                          <button 
-                            onClick={() => handleSort("late")}
-                            className="flex items-center space-x-1 hover:text-slate-900"
-                          >
-                            <span>Late</span>
                           </button>
                         </th>
                         <th className="text-left py-2 text-xs font-semibold text-slate-700 w-52">
@@ -1032,14 +1062,8 @@ export default function Invoices() {
                               {invoice.contact?.companyName || 'Unknown Company'}
                             </div>
                           </td>
-                          <td className="py-2 w-52" data-testid={`rating-cell-${invoice.id}`}>
-                            {renderStarRating(getPayerRating(invoice))}
-                          </td>
                           <td className="py-2 w-52 text-xs font-medium text-slate-900" data-testid={`text-amount-outstanding-${invoice.id}`}>
                             ${Number(invoice.amount).toLocaleString()}
-                          </td>
-                          <td className="py-2 w-52 text-xs font-medium text-slate-900" data-testid={`text-late-amount-${invoice.id}`}>
-                            ${getLateAmount(invoice).toLocaleString()}
                           </td>
                           <td className="py-2 w-52" data-testid={`text-due-date-age-${invoice.id}`}>
                             <div className="text-xs text-slate-900">
