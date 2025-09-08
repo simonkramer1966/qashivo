@@ -297,19 +297,6 @@ export default function Invoices() {
 
               {/* Customers Content */}
               <div className="space-y-6">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-2xl font-bold tracking-tight flex items-center">
-                    <div className="p-3 bg-[#17B6C3]/10 rounded-xl mr-4">
-                      <Users className="h-6 w-6 text-[#17B6C3]" />
-                    </div>
-                    All Customers ({sortedContacts.length})
-                  </h2>
-                  <Button className="bg-[#17B6C3] hover:bg-[#1396A1] text-white" data-testid="button-new-contact">
-                    <Plus className="mr-2 h-4 w-4" />
-                    New Customer
-                  </Button>
-                </div>
-
                 {/* Customers Table */}
                 <Card className="bg-white border border-gray-200 shadow-sm">
                   <CardHeader>
@@ -804,7 +791,7 @@ export default function Invoices() {
                   <div className="animate-spin w-6 h-6 border-2 border-[#17B6C3] border-t-transparent rounded-full"></div>
                   <span className="ml-2 text-sm text-gray-600">Loading contact history...</span>
                 </div>
-              ) : contactHistory.length === 0 ? (
+              ) : (contactHistory as any[]).length === 0 ? (
                 <div className="text-center py-8">
                   <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                   <p className="text-gray-600 mb-2">No contact history found</p>
@@ -812,7 +799,7 @@ export default function Invoices() {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {contactHistory.map((action: any) => (
+                  {(contactHistory as any[]).map((action: any) => (
                     <div key={action.id} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors">
                       <div className="flex items-start justify-between">
                         <div className="flex items-start gap-3">
