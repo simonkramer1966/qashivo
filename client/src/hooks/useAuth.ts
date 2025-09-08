@@ -10,10 +10,9 @@ export function useAuth() {
     refetchOnWindowFocus: false,
   });
 
-  // Temporarily always return authenticated for demo purposes
   return {
-    user: user || { id: "demo-user", email: "demo@nexusar.com", username: "Demo User" },
-    isLoading: false,
-    isAuthenticated: true, // Always true for demo
+    user,
+    isLoading,
+    isAuthenticated: !!user,
   };
 }
