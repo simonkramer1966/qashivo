@@ -73,7 +73,7 @@ const templateSchema = z.object({
   stage: z.number().min(1).max(10),
   subject: z.string().optional(),
   content: z.string().min(1, "Content is required"),
-  tone: z.enum(["friendly", "professional", "firm", "urgent"]).optional(),
+  toneOfVoice: z.enum(["friendly", "professional", "firm", "urgent"]).optional(),
   isActive: z.boolean().default(true),
 });
 
@@ -100,7 +100,7 @@ export default function TemplateManagement({ className }: TemplateManagementProp
       stage: 1,
       subject: "",
       content: "",
-      tone: "professional",
+      toneOfVoice: "professional",
       isActive: true,
     },
   });
@@ -170,10 +170,10 @@ export default function TemplateManagement({ className }: TemplateManagementProp
     },
     onSuccess: (data) => {
       console.log("AI Generate response:", data); // Debug log
-      if (data.content) {
+      if (data && typeof data === 'object' && 'content' in data && data.content) {
         form.setValue("content", data.content);
       }
-      if (data.subject) {
+      if (data && typeof data === 'object' && 'subject' in data && data.subject) {
         form.setValue("subject", data.subject);
       }
       toast({
@@ -202,11 +202,11 @@ export default function TemplateManagement({ className }: TemplateManagementProp
       name: template.name,
       type: template.type as "email" | "sms" | "whatsapp",
       category: template.category,
-      stage: template.stage,
+      stage: template.stage ?? 1,
       subject: template.subject || "",
       content: template.content,
-      tone: (template.tone as "friendly" | "professional" | "firm" | "urgent") || "professional",
-      isActive: template.isActive,
+      toneOfVoice: (template.toneOfVoice as "friendly" | "professional" | "firm" | "urgent") || "professional",
+      isActive: template.isActive ?? true,
     });
     setIsDialogOpen(true);
   };
@@ -226,8 +226,8 @@ export default function TemplateManagement({ className }: TemplateManagementProp
     }
   };
 
-  const getToneColor = (tone: string) => {
-    switch (tone) {
+  const getToneColor = (toneOfVoice: string | null) => {
+    switch (toneOfVoice) {
       case "friendly": return "bg-green-100 text-green-800";
       case "professional": return "bg-blue-100 text-blue-800";
       case "firm": return "bg-orange-100 text-orange-800";
@@ -381,9 +381,9 @@ export default function TemplateManagement({ className }: TemplateManagementProp
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
-                {template.tone && (
-                  <Badge className={getToneColor(template.tone)}>
-                    {template.tone}
+                {template.toneOfVoice && (
+                  <Badge className={getToneColor(template.toneOfVoice)}>
+                    {template.toneOfVoice}
                   </Badge>
                 )}
                 

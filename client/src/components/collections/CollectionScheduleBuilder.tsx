@@ -180,7 +180,7 @@ export default function CollectionScheduleBuilder({ className }: CollectionSched
       isDefault: schedule.isDefault,
       isActive: schedule.isActive,
     });
-    setSteps(schedule.steps || []);
+    setSteps(Array.isArray(schedule.scheduleSteps) ? schedule.scheduleSteps : []);
     setIsDialogOpen(true);
   };
 
@@ -379,25 +379,25 @@ export default function CollectionScheduleBuilder({ className }: CollectionSched
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-xs text-gray-600">
                   <span>Workflow Steps</span>
-                  <span>{schedule.steps?.length || 0} steps</span>
+                  <span>{Array.isArray(schedule.scheduleSteps) ? schedule.scheduleSteps.length : 0} steps</span>
                 </div>
-                {schedule.steps && schedule.steps.length > 0 && (
+                {Array.isArray(schedule.scheduleSteps) && schedule.scheduleSteps.length > 0 && (
                   <div className="flex items-center gap-1 overflow-x-auto">
-                    {schedule.steps.slice(0, 5).map((step: any, index: number) => {
+                    {schedule.scheduleSteps.slice(0, 5).map((step: any, index: number) => {
                       const StepIcon = getStepIcon(step.type);
                       return (
                         <div key={step.id} className="flex items-center gap-1">
                           <div className={`p-1 rounded border ${getStepColor(step.type)}`}>
                             <StepIcon className="h-3 w-3" />
                           </div>
-                          {index < Math.min(4, schedule.steps.length - 1) && (
+                          {index < Math.min(4, schedule.scheduleSteps.length - 1) && (
                             <ArrowRight className="h-2 w-2 text-gray-400" />
                           )}
                         </div>
                       );
                     })}
-                    {schedule.steps.length > 5 && (
-                      <span className="text-xs text-gray-500">+{schedule.steps.length - 5}</span>
+                    {schedule.scheduleSteps.length > 5 && (
+                      <span className="text-xs text-gray-500">+{schedule.scheduleSteps.length - 5}</span>
                     )}
                   </div>
                 )}
@@ -417,7 +417,7 @@ export default function CollectionScheduleBuilder({ className }: CollectionSched
                     <Clock className="h-3 w-3 text-gray-500" />
                     <span className="text-xs text-gray-600">Duration</span>
                   </div>
-                  <p className="font-medium">{calculateTotalDelay(schedule.steps || [])}</p>
+                  <p className="font-medium">{calculateTotalDelay(Array.isArray(schedule.scheduleSteps) ? schedule.scheduleSteps : [])}</p>
                 </div>
               </div>
 

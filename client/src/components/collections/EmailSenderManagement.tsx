@@ -37,7 +37,7 @@ import type {
 const emailSenderSchema = z.object({
   name: z.string().min(1, "Sender name is required"),
   email: z.string().email("Valid email address is required"),
-  displayName: z.string().min(1, "Display name is required"),
+  fromName: z.string().min(1, "From name is required"),
   signature: z.string().optional(),
   isDefault: z.boolean().default(false),
   isActive: z.boolean().default(true),
@@ -60,7 +60,7 @@ export default function EmailSenderManagement({ className }: EmailSenderManageme
     defaultValues: {
       name: "",
       email: "",
-      displayName: "",
+      fromName: "",
       signature: "",
       isDefault: false,
       isActive: true,
@@ -124,10 +124,10 @@ export default function EmailSenderManagement({ className }: EmailSenderManageme
     form.reset({
       name: sender.name,
       email: sender.email,
-      displayName: sender.displayName,
+      fromName: sender.fromName,
       signature: sender.signature || "",
-      isDefault: sender.isDefault,
-      isActive: sender.isActive,
+      isDefault: sender.isDefault ?? false,
+      isActive: sender.isActive ?? true,
     });
     setIsDialogOpen(true);
   };
