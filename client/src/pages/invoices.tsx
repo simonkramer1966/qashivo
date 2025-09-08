@@ -728,12 +728,7 @@ export default function Invoices() {
                           </Select>
                         </th>
                         <th className="text-left py-2 text-xs font-semibold text-slate-700 w-32">
-                          <button 
-                            onClick={() => handleSort("amount")}
-                            className="flex items-center space-x-1 hover:text-slate-900"
-                          >
-                            <span>Outstanding</span>
-                          </button>
+                          <span>Outstanding</span>
                         </th>
                         <th className="text-left py-2 text-xs font-semibold text-slate-700 w-32">
                           <Select value={dueDateAgeSort} onValueChange={(value) => {
@@ -753,12 +748,7 @@ export default function Invoices() {
                           </Select>
                         </th>
                         <th className="text-left py-2 text-xs font-semibold text-slate-700 w-24">
-                          <button 
-                            onClick={() => handleSort("status")}
-                            className="flex items-center space-x-1 hover:text-slate-900"
-                          >
-                            <span>Status</span>
-                          </button>
+                          <span>Status</span>
                         </th>
                         <th className="text-left py-2 text-xs font-semibold text-slate-700 w-36">
                           <Select value={nextActionSort} onValueChange={(value) => {
