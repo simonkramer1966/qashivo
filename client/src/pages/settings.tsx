@@ -602,7 +602,6 @@ export default function Settings() {
 
   // Xero sync settings state
   const [autoSync, setAutoSync] = useState(true);
-  const [syncInterval, setSyncInterval] = useState(60); // minutes
 
   // Fetch tenant information
   const { data: tenant } = useQuery<{
@@ -623,7 +622,6 @@ export default function Settings() {
   // Fetch Xero sync settings
   const { data: syncSettings } = useQuery<{
     autoSync: boolean;
-    syncInterval: number;
     lastSyncAt?: string;
   }>({
     queryKey: ['/api/xero/sync/settings'],
@@ -644,7 +642,6 @@ export default function Settings() {
   useEffect(() => {
     if (syncSettings) {
       setAutoSync(syncSettings.autoSync);
-      setSyncInterval(syncSettings.syncInterval);
     }
   }, [syncSettings]);
 
@@ -683,7 +680,7 @@ export default function Settings() {
 
   // Mutation to update Xero sync settings
   const updateSyncSettingsMutation = useMutation({
-    mutationFn: async (data: { autoSync: boolean; syncInterval: number }) => {
+    mutationFn: async (data: { autoSync: boolean }) => {
       const response = await apiRequest("PUT", "/api/xero/sync/settings", data);
       return response;
     },
@@ -725,7 +722,6 @@ export default function Settings() {
   const handleSaveSyncSettings = () => {
     updateSyncSettingsMutation.mutate({
       autoSync,
-      syncInterval,
     });
   };
 
@@ -1015,30 +1011,6 @@ export default function Settings() {
                             />
                           </div>
 
-                          <div className="space-y-2">
-                            <Label htmlFor="sync-interval" className="text-base">Sync Interval</Label>
-                            <p className="text-sm text-slate-600 mb-2">
-                              How often to sync data from Xero (in minutes)
-                            </p>
-                            <Select 
-                              value={syncInterval.toString()} 
-                              onValueChange={(value) => setSyncInterval(parseInt(value))}
-                            >
-                              <SelectTrigger className="bg-white border-gray-200" data-testid="select-sync-interval">
-                                <SelectValue placeholder="Select interval" />
-                              </SelectTrigger>
-                              <SelectContent className="bg-white border-gray-200">
-                                <SelectItem value="5">Every 5 minutes</SelectItem>
-                                <SelectItem value="15">Every 15 minutes</SelectItem>
-                                <SelectItem value="30">Every 30 minutes</SelectItem>
-                                <SelectItem value="60">Every hour</SelectItem>
-                                <SelectItem value="120">Every 2 hours</SelectItem>
-                                <SelectItem value="360">Every 6 hours</SelectItem>
-                                <SelectItem value="720">Every 12 hours</SelectItem>
-                                <SelectItem value="1440">Every 24 hours</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
 
                           {syncSettings?.lastSyncAt && (
                             <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
