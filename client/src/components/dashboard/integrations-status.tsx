@@ -9,7 +9,7 @@ export default function IntegrationsStatus() {
   });
 
   // Determine Xero connection status based on API availability
-  const xeroConnected = !!(tenant?.xeroAccessToken && tenant?.xeroTenantId);
+  const xeroConnected = !!(tenant && 'xeroAccessToken' in tenant && 'xeroTenantId' in tenant && tenant.xeroAccessToken && tenant.xeroTenantId);
   
   const integrations = [
     {
