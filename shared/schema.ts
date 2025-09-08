@@ -51,6 +51,9 @@ export const tenants = pgTable("tenants", {
   xeroAccessToken: text("xero_access_token"),
   xeroRefreshToken: text("xero_refresh_token"),
   xeroTenantId: varchar("xero_tenant_id"),
+  xeroSyncInterval: integer("xero_sync_interval").default(60), // minutes
+  xeroLastSyncAt: timestamp("xero_last_sync_at"),
+  xeroAutoSync: boolean("xero_auto_sync").default(true),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -94,6 +97,29 @@ export const invoices = pgTable("invoices", {
   workflowId: varchar("workflow_id"),
   lastReminderSent: timestamp("last_reminder_sent"),
   reminderCount: integer("reminder_count").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Cached Xero invoices table for sync functionality
+export const cachedXeroInvoices = pgTable("cached_xero_invoices", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  xeroInvoiceId: varchar("xero_invoice_id").notNull(),
+  invoiceNumber: varchar("invoice_number").notNull(),
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  amountPaid: decimal("amount_paid", { precision: 10, scale: 2 }).default("0"),
+  taxAmount: decimal("tax_amount", { precision: 10, scale: 2 }).default("0"),
+  status: varchar("status").notNull(),
+  issueDate: timestamp("issue_date").notNull(),
+  dueDate: timestamp("due_date").notNull(),
+  paidDate: timestamp("paid_date"),
+  description: text("description"),
+  currency: varchar("currency").default("USD"),
+  contact: jsonb("contact"), // Store contact data from Xero
+  paymentDetails: jsonb("payment_details"), // Store payment tracking info
+  metadata: jsonb("metadata"), // Additional Xero data
+  syncedAt: timestamp("synced_at").defaultNow(),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -315,6 +341,7 @@ export const tenantsRelations = relations(tenants, ({ many }) => ({
   users: many(users),
   contacts: many(contacts),
   invoices: many(invoices),
+  cachedXeroInvoices: many(cachedXeroInvoices),
   actions: many(actions),
   workflows: many(workflows),
   communicationTemplates: many(communicationTemplates),
@@ -461,6 +488,13 @@ export const voiceCallsRelations = relations(voiceCalls, ({ one }) => ({
   }),
 }));
 
+export const cachedXeroInvoicesRelations = relations(cachedXeroInvoices, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [cachedXeroInvoices.tenantId],
+    references: [tenants.id],
+  }),
+}));
+
 // Insert schemas
 export const insertTenantSchema = createInsertSchema(tenants).omit({
   id: true,
@@ -478,6 +512,13 @@ export const insertInvoiceSchema = createInsertSchema(invoices).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
+});
+
+export const insertCachedXeroInvoiceSchema = createInsertSchema(cachedXeroInvoices).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  syncedAt: true,
 });
 
 export const insertActionSchema = createInsertSchema(actions).omit({
@@ -558,6 +599,8 @@ export type InsertContact = z.infer<typeof insertContactSchema>;
 export type Contact = typeof contacts.$inferSelect;
 export type InsertInvoice = z.infer<typeof insertInvoiceSchema>;
 export type Invoice = typeof invoices.$inferSelect;
+export type InsertCachedXeroInvoice = z.infer<typeof insertCachedXeroInvoiceSchema>;
+export type CachedXeroInvoice = typeof cachedXeroInvoices.$inferSelect;
 export type InsertAction = z.infer<typeof insertActionSchema>;
 export type Action = typeof actions.$inferSelect;
 export type InsertWorkflow = z.infer<typeof insertWorkflowSchema>;
