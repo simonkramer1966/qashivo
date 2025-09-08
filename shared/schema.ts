@@ -210,7 +210,7 @@ export const communicationTemplates = pgTable("communication_templates", {
   tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
   name: varchar("name").notNull(),
   type: varchar("type").notNull(), // "email", "sms", "whatsapp", "voice"
-  category: varchar("category").notNull(), // "reminder", "formal_notice", "urgent", "final_notice", "collection_warning"
+  category: varchar("category").notNull(), // "before_due", "early_overdue", "medium_overdue", "late_overdue", "final_reminder", "thanks_for_paying"
   stage: integer("stage"), // 1-5 for email sequence stages
   subject: varchar("subject"), // For emails
   content: text("content").notNull(),
@@ -219,6 +219,10 @@ export const communicationTemplates = pgTable("communication_templates", {
   isDefault: boolean("is_default").default(false),
   successRate: decimal("success_rate", { precision: 5, scale: 2 }),
   usageCount: integer("usage_count").default(0),
+  sendTiming: jsonb("send_timing"), // When to send: {daysOffset: number, timeOfDay: string, weekdaysOnly: boolean}
+  aiGenerated: boolean("ai_generated").default(false),
+  optimizationScore: decimal("optimization_score", { precision: 5, scale: 2 }), // AI-calculated effectiveness score
+  toneOfVoice: varchar("tone_of_voice").default("professional"), // "professional", "friendly", "urgent", "formal"
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -495,6 +499,116 @@ export const cachedXeroInvoicesRelations = relations(cachedXeroInvoices, ({ one 
   }),
 }));
 
+// Email senders configuration for multi-sender support
+export const emailSenders = pgTable("email_senders", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  name: varchar("name").notNull(), // Display name (e.g., "John Smith - Accounts Receivable")
+  email: varchar("email").notNull(), // Sender email address
+  signature: text("signature"), // HTML email signature
+  isDefault: boolean("is_default").default(false),
+  isActive: boolean("is_active").default(true),
+  replyToEmail: varchar("reply_to_email"), // Different reply-to if needed
+  fromName: varchar("from_name").notNull(), // "From" display name
+  department: varchar("department").default("Accounts Receivable"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Collection schedules that can be assigned to customers (like Chaser's schedules)
+export const collectionSchedules = pgTable("collection_schedules", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  name: varchar("name").notNull(), // e.g., "Standard Collection Process", "VIP Customer Process"
+  description: text("description"),
+  isActive: boolean("is_active").default(true),
+  isDefault: boolean("is_default").default(false),
+  workflow: varchar("workflow").notNull().default("monthly_statement"), // "monthly_statement", "single_invoice", "overdue_only"
+  scheduleSteps: jsonb("schedule_steps").notNull(), // Array of schedule steps with timing and templates
+  successRate: decimal("success_rate", { precision: 5, scale: 2 }),
+  averageDaysToPayment: decimal("average_days_to_payment", { precision: 5, scale: 1 }),
+  totalCustomersAssigned: integer("total_customers_assigned").default(0),
+  sendingSettings: jsonb("sending_settings"), // Time zones, sending windows, holiday settings
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Customer schedule assignments (which customers use which collection schedule)
+export const customerScheduleAssignments = pgTable("customer_schedule_assignments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  contactId: varchar("contact_id").notNull().references(() => contacts.id),
+  scheduleId: varchar("schedule_id").notNull().references(() => collectionSchedules.id),
+  isActive: boolean("is_active").default(true),
+  customSettings: jsonb("custom_settings"), // Customer-specific overrides
+  assignedAt: timestamp("assigned_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Template performance analytics enhanced for AI optimization
+export const templatePerformance = pgTable("template_performance", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  templateId: varchar("template_id").notNull().references(() => communicationTemplates.id),
+  date: timestamp("date").notNull(),
+  customerSegment: varchar("customer_segment"), // "small_business", "enterprise", "individual"
+  timeOfDaySent: varchar("time_of_day_sent"), // "morning", "afternoon", "evening"
+  dayOfWeekSent: integer("day_of_week_sent"), // 1-7 (Monday = 1)
+  sentCount: integer("sent_count").default(0),
+  deliveredCount: integer("delivered_count").default(0),
+  openedCount: integer("opened_count").default(0),
+  clickedCount: integer("clicked_count").default(0),
+  respondedCount: integer("responded_count").default(0),
+  paidCount: integer("paid_count").default(0),
+  disputedCount: integer("disputed_count").default(0),
+  totalAmountPaid: decimal("total_amount_paid", { precision: 10, scale: 2 }).default("0"),
+  averageResponseTime: integer("average_response_time"), // Hours to response
+  sentimentScore: decimal("sentiment_score", { precision: 3, scale: 2 }), // AI-analyzed sentiment of responses
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Enhanced relations
+export const emailSendersRelations = relations(emailSenders, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [emailSenders.tenantId],
+    references: [tenants.id],
+  }),
+}));
+
+export const collectionSchedulesRelations = relations(collectionSchedules, ({ one, many }) => ({
+  tenant: one(tenants, {
+    fields: [collectionSchedules.tenantId],
+    references: [tenants.id],
+  }),
+  customerAssignments: many(customerScheduleAssignments),
+}));
+
+export const customerScheduleAssignmentsRelations = relations(customerScheduleAssignments, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [customerScheduleAssignments.tenantId],
+    references: [tenants.id],
+  }),
+  contact: one(contacts, {
+    fields: [customerScheduleAssignments.contactId],
+    references: [contacts.id],
+  }),
+  schedule: one(collectionSchedules, {
+    fields: [customerScheduleAssignments.scheduleId],
+    references: [collectionSchedules.id],
+  }),
+}));
+
+export const templatePerformanceRelations = relations(templatePerformance, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [templatePerformance.tenantId],
+    references: [tenants.id],
+  }),
+  template: one(communicationTemplates, {
+    fields: [templatePerformance.templateId],
+    references: [communicationTemplates.id],
+  }),
+}));
+
 // Insert schemas
 export const insertTenantSchema = createInsertSchema(tenants).omit({
   id: true,
@@ -590,6 +704,29 @@ export const insertLeadSchema = createInsertSchema(leads).omit({
   updatedAt: true,
 });
 
+export const insertEmailSenderSchema = createInsertSchema(emailSenders).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertCollectionScheduleSchema = createInsertSchema(collectionSchedules).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertCustomerScheduleAssignmentSchema = createInsertSchema(customerScheduleAssignments).omit({
+  id: true,
+  createdAt: true,
+  assignedAt: true,
+});
+
+export const insertTemplatePerformanceSchema = createInsertSchema(templatePerformance).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
@@ -625,6 +762,14 @@ export type InsertVoiceCall = z.infer<typeof insertVoiceCallSchema>;
 export type VoiceCall = typeof voiceCalls.$inferSelect;
 export type InsertLead = z.infer<typeof insertLeadSchema>;
 export type Lead = typeof leads.$inferSelect;
+export type InsertEmailSender = z.infer<typeof insertEmailSenderSchema>;
+export type EmailSender = typeof emailSenders.$inferSelect;
+export type InsertCollectionSchedule = z.infer<typeof insertCollectionScheduleSchema>;
+export type CollectionSchedule = typeof collectionSchedules.$inferSelect;
+export type InsertCustomerScheduleAssignment = z.infer<typeof insertCustomerScheduleAssignmentSchema>;
+export type CustomerScheduleAssignment = typeof customerScheduleAssignments.$inferSelect;
+export type InsertTemplatePerformance = z.infer<typeof insertTemplatePerformanceSchema>;
+export type TemplatePerformance = typeof templatePerformance.$inferSelect;
 
 // Node Configuration Types
 export interface TriggerNodeConfig {
