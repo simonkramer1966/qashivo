@@ -22,8 +22,12 @@ export default function Invoices() {
   const [activeTab, setActiveTab] = useState("invoices");
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [sortField, setSortField] = useState<string>("");
-  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+  const [invClientSort, setInvClientSort] = useState<string>("inv-asc");
+  const [dueDateAgeSort, setDueDateAgeSort] = useState<string>("due-date-asc");
+  const [nextActionSort, setNextActionSort] = useState<string>("action-date-asc");
+  // Basic sorting for customers tab
+  const [customersSortField, setCustomersSortField] = useState<string>("");
+  const [customersSortDirection, setCustomersSortDirection] = useState<"asc" | "desc">("asc");
   const [selectedInvoice, setSelectedInvoice] = useState<any>(null);
   const [showContactHistory, setShowContactHistory] = useState(false);
   
@@ -125,60 +129,82 @@ export default function Invoices() {
     }
   };
 
-  const handleSort = (field: string) => {
-    if (sortField === field) {
-      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
-    } else {
-      setSortField(field);
-      setSortDirection("asc");
-    }
+  const getActiveSortType = () => {
+    // Determine which column is actively sorting based on the selected sort types
+    // We'll use a priority order: Inv/Client first, then Due Date/Age, then Next Action
+    if (invClientSort !== "inv-asc") return invClientSort;
+    if (dueDateAgeSort !== "due-date-asc") return dueDateAgeSort;
+    if (nextActionSort !== "action-date-asc") return nextActionSort;
+    // Default to invoice number ascending
+    return invClientSort;
   };
 
   const filteredAndSortedInvoices = (invoices as any[])
     .filter((invoice: any) => {
       const matchesSearch = invoice.invoiceNumber.toLowerCase().includes(search.toLowerCase()) ||
-                           invoice.contact?.name?.toLowerCase().includes(search.toLowerCase());
+                           invoice.contact?.companyName?.toLowerCase().includes(search.toLowerCase());
       const matchesStatus = statusFilter === "all" || invoice.status === statusFilter;
       return matchesSearch && matchesStatus;
     })
     .sort((a: any, b: any) => {
-      if (!sortField) return 0;
-      
+      const activeSortType = getActiveSortType();
       let aValue, bValue;
       
-      switch (sortField) {
-        case "invoiceNumber":
+      switch (activeSortType) {
+        // Invoice Number / Client sorting
+        case "inv-asc":
           aValue = a.invoiceNumber.toLowerCase();
           bValue = b.invoiceNumber.toLowerCase();
-          break;
-        case "clientName":
-          aValue = (a.contact?.name || 'Unknown Contact').toLowerCase();
-          bValue = (b.contact?.name || 'Unknown Contact').toLowerCase();
-          break;
-        case "amount":
-          aValue = Number(a.amount);
-          bValue = Number(b.amount);
-          break;
-        case "dueDate":
+          return aValue < bValue ? -1 : aValue > bValue ? 1 : 0;
+        case "inv-desc":
+          aValue = a.invoiceNumber.toLowerCase();
+          bValue = b.invoiceNumber.toLowerCase();
+          return aValue > bValue ? -1 : aValue < bValue ? 1 : 0;
+        case "client-asc":
+          aValue = (a.contact?.companyName || 'Unknown Company').toLowerCase();
+          bValue = (b.contact?.companyName || 'Unknown Company').toLowerCase();
+          return aValue < bValue ? -1 : aValue > bValue ? 1 : 0;
+        case "client-desc":
+          aValue = (a.contact?.companyName || 'Unknown Company').toLowerCase();
+          bValue = (b.contact?.companyName || 'Unknown Company').toLowerCase();
+          return aValue > bValue ? -1 : aValue < bValue ? 1 : 0;
+        
+        // Due Date / Age sorting
+        case "due-date-asc":
           aValue = new Date(a.dueDate).getTime();
           bValue = new Date(b.dueDate).getTime();
-          break;
-        case "status":
-          aValue = a.status.toLowerCase();
-          bValue = b.status.toLowerCase();
-          break;
-        case "collectionStage":
-          aValue = (a.collectionStage || 'initial').toLowerCase();
-          bValue = (b.collectionStage || 'initial').toLowerCase();
-          break;
+          return aValue < bValue ? -1 : aValue > bValue ? 1 : 0;
+        case "due-date-desc":
+          aValue = new Date(a.dueDate).getTime();
+          bValue = new Date(b.dueDate).getTime();
+          return aValue > bValue ? -1 : aValue < bValue ? 1 : 0;
+        case "age-asc":
+          aValue = Math.floor((Date.now() - new Date(a.issueDate).getTime()) / (1000 * 60 * 60 * 24));
+          bValue = Math.floor((Date.now() - new Date(b.issueDate).getTime()) / (1000 * 60 * 60 * 24));
+          return aValue < bValue ? -1 : aValue > bValue ? 1 : 0;
+        case "age-desc":
+          aValue = Math.floor((Date.now() - new Date(a.issueDate).getTime()) / (1000 * 60 * 60 * 24));
+          bValue = Math.floor((Date.now() - new Date(b.issueDate).getTime()) / (1000 * 60 * 60 * 24));
+          return aValue > bValue ? -1 : aValue < bValue ? 1 : 0;
+        
+        // Next Action sorting (mock data for now)
+        case "action-date-asc":
+        case "action-date-desc":
+          // Using random dates for next actions
+          aValue = Date.now() + (Math.random() * 7 + 1) * 24 * 60 * 60 * 1000;
+          bValue = Date.now() + (Math.random() * 7 + 1) * 24 * 60 * 60 * 1000;
+          return activeSortType === "action-date-asc" ? aValue - bValue : bValue - aValue;
+        case "action-type-asc":
+        case "action-type-desc":
+          const actions = ['Email Reminder', 'Phone Call', 'Letter', 'SMS Follow-up'];
+          aValue = actions[Math.floor(Math.random() * 4)];
+          bValue = actions[Math.floor(Math.random() * 4)];
+          return activeSortType === "action-type-asc" ? 
+            (aValue < bValue ? -1 : aValue > bValue ? 1 : 0) :
+            (aValue > bValue ? -1 : aValue < bValue ? 1 : 0);
+        
         default:
           return 0;
-      }
-      
-      if (sortDirection === "asc") {
-        return aValue < bValue ? -1 : aValue > bValue ? 1 : 0;
-      } else {
-        return aValue > bValue ? -1 : aValue < bValue ? 1 : 0;
       }
     });
 
@@ -197,11 +223,11 @@ export default function Invoices() {
   });
 
   const sortedContacts = [...filteredContacts].sort((a: any, b: any) => {
-    if (!sortField) return 0;
+    if (!customersSortField) return 0;
     
     let aValue: any, bValue: any;
     
-    switch (sortField) {
+    switch (customersSortField) {
       case "name":
         aValue = a.name?.toLowerCase() || '';
         bValue = b.name?.toLowerCase() || '';
@@ -230,8 +256,8 @@ export default function Invoices() {
         return 0;
     }
     
-    if (aValue < bValue) return sortDirection === "asc" ? -1 : 1;
-    if (aValue > bValue) return sortDirection === "asc" ? 1 : -1;
+    if (aValue < bValue) return customersSortDirection === "asc" ? -1 : 1;
+    if (aValue > bValue) return customersSortDirection === "asc" ? 1 : -1;
     return 0;
   });
 
@@ -259,11 +285,39 @@ export default function Invoices() {
     setCustomersCurrentPage(1);
   }, [customersItemsPerPage]);
 
+  const getSortLabel = (sortType: string) => {
+    const labels: { [key: string]: string } = {
+      "inv-asc": "Inv No 123",
+      "inv-desc": "Inv No 321", 
+      "client-asc": "Client A-Z",
+      "client-desc": "Client Z-A",
+      "due-date-asc": "Due Date (earliest)",
+      "due-date-desc": "Due Date (latest)",
+      "age-asc": "Age (newest)",
+      "age-desc": "Age (oldest)",
+      "action-date-asc": "Action Date (earliest)",
+      "action-date-desc": "Action Date (latest)",
+      "action-type-asc": "Action Type A-Z",
+      "action-type-desc": "Action Type Z-A"
+    };
+    return labels[sortType] || sortType;
+  };
+
+  // Basic sorting functions for customers tab
+  const handleSort = (field: string) => {
+    if (customersSortField === field) {
+      setCustomersSortDirection(customersSortDirection === "asc" ? "desc" : "asc");
+    } else {
+      setCustomersSortField(field);
+      setCustomersSortDirection("asc");
+    }
+  };
+
   const getSortIcon = (field: string) => {
-    if (sortField !== field) {
+    if (customersSortField !== field) {
       return <ChevronUp className="h-3 w-3 text-gray-400" />;
     }
-    return sortDirection === "asc" ? 
+    return customersSortDirection === "asc" ? 
       <ChevronUp className="h-3 w-3 text-slate-700" /> : 
       <ChevronDown className="h-3 w-3 text-slate-700" />;
   };
@@ -675,13 +729,20 @@ export default function Invoices() {
                     <thead>
                       <tr className="border-b border-slate-200/50">
                         <th className="text-left py-2 text-xs font-semibold text-slate-700 w-60">
-                          <button 
-                            onClick={() => handleSort("invoiceNumber")}
-                            className="flex items-center space-x-1 hover:text-slate-900"
-                          >
+                          <div className="flex items-center space-x-1">
                             <span>Inv No. / Client</span>
-                            {getSortIcon("invoiceNumber")}
-                          </button>
+                            <Select value={invClientSort} onValueChange={setInvClientSort}>
+                              <SelectTrigger className="w-32 h-6 text-xs border-gray-200/30 bg-white/70">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent className="bg-white border-gray-200">
+                                <SelectItem value="inv-asc">Inv No 123</SelectItem>
+                                <SelectItem value="inv-desc">Inv No 321</SelectItem>
+                                <SelectItem value="client-asc">Client A-Z</SelectItem>
+                                <SelectItem value="client-desc">Client Z-A</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
                         </th>
                         <th className="text-left py-2 text-xs font-semibold text-slate-700">
                           <button 
@@ -693,13 +754,20 @@ export default function Invoices() {
                           </button>
                         </th>
                         <th className="text-left py-2 text-xs font-semibold text-slate-700">
-                          <button 
-                            onClick={() => handleSort("dueDate")}
-                            className="flex items-center space-x-1 hover:text-slate-900"
-                          >
+                          <div className="flex items-center space-x-1">
                             <span>Due Date / Age</span>
-                            {getSortIcon("dueDate")}
-                          </button>
+                            <Select value={dueDateAgeSort} onValueChange={setDueDateAgeSort}>
+                              <SelectTrigger className="w-32 h-6 text-xs border-gray-200/30 bg-white/70">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent className="bg-white border-gray-200">
+                                <SelectItem value="due-date-asc">Due Date (earliest)</SelectItem>
+                                <SelectItem value="due-date-desc">Due Date (latest)</SelectItem>
+                                <SelectItem value="age-asc">Age (newest)</SelectItem>
+                                <SelectItem value="age-desc">Age (oldest)</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
                         </th>
                         <th className="text-left py-2 text-xs font-semibold text-slate-700">
                           <button 
@@ -720,7 +788,20 @@ export default function Invoices() {
                           </button>
                         </th>
                         <th className="text-left py-2 text-xs font-semibold text-slate-700">
-                          <span>Next Action</span>
+                          <div className="flex items-center space-x-1">
+                            <span>Next Action</span>
+                            <Select value={nextActionSort} onValueChange={setNextActionSort}>
+                              <SelectTrigger className="w-32 h-6 text-xs border-gray-200/30 bg-white/70">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent className="bg-white border-gray-200">
+                                <SelectItem value="action-date-asc">Action Date (earliest)</SelectItem>
+                                <SelectItem value="action-date-desc">Action Date (latest)</SelectItem>
+                                <SelectItem value="action-type-asc">Action Type A-Z</SelectItem>
+                                <SelectItem value="action-type-desc">Action Type Z-A</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
                         </th>
                         <th className="text-left py-2 text-xs font-semibold text-slate-700">Actions</th>
                       </tr>
