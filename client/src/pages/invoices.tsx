@@ -13,6 +13,8 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Checkbox } from "@/components/ui/checkbox";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Mail, Phone, Eye, Plus, Search, Filter, FileText, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, X, MessageSquare, Calendar, CheckCircle, AlertCircle, Clock, Users, User, Building, Database, Star } from "lucide-react";
 
 export default function Invoices() {
@@ -42,6 +44,10 @@ export default function Invoices() {
 
   // Hold state for invoices
   const [heldInvoices, setHeldInvoices] = useState<Set<string>>(new Set());
+
+  // Selection state for bulk actions
+  const [selectedInvoices, setSelectedInvoices] = useState<Set<string>>(new Set());
+  const [showBulkActions, setShowBulkActions] = useState(false);
 
   // Redirect to home if not authenticated
   useEffect(() => {
@@ -419,6 +425,74 @@ export default function Invoices() {
     });
   };
 
+  // Bulk selection functions
+  const toggleInvoiceSelection = (invoiceId: string) => {
+    setSelectedInvoices(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(invoiceId)) {
+        newSet.delete(invoiceId);
+      } else {
+        newSet.add(invoiceId);
+      }
+      return newSet;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedInvoices.size === paginatedInvoices.length) {
+      setSelectedInvoices(new Set());
+    } else {
+      setSelectedInvoices(new Set(paginatedInvoices.map((invoice: any) => invoice.id)));
+    }
+  };
+
+  const handleBulkAction = (action: string) => {
+    const invoiceIds = Array.from(selectedInvoices);
+    
+    switch (action) {
+      case 'hold':
+        setHeldInvoices(prev => {
+          const newSet = new Set(prev);
+          invoiceIds.forEach(id => newSet.add(id));
+          return newSet;
+        });
+        break;
+      case 'active':
+        setHeldInvoices(prev => {
+          const newSet = new Set(prev);
+          invoiceIds.forEach(id => newSet.delete(id));
+          return newSet;
+        });
+        break;
+      case 'voice-call':
+        toast({
+          title: "Voice Call Initiated",
+          description: `Voice call scheduled for ${invoiceIds.length} invoice(s)`,
+        });
+        break;
+      case 'pre-action-call':
+        toast({
+          title: "Pre-Action Call Initiated",
+          description: `Pre-action call scheduled for ${invoiceIds.length} invoice(s)`,
+        });
+        break;
+      case 'debt-recovery':
+        toast({
+          title: "Debt Recovery Initiated",
+          description: `Debt recovery process started for ${invoiceIds.length} invoice(s)`,
+        });
+        break;
+    }
+    
+    // Clear selection after action
+    setSelectedInvoices(new Set());
+  };
+
+  // Update showBulkActions based on selection
+  useEffect(() => {
+    setShowBulkActions(selectedInvoices.size > 0);
+  }, [selectedInvoices]);
+
   return (
     <div className="flex h-screen bg-white">
       <NewSidebar />
@@ -778,9 +852,64 @@ export default function Invoices() {
                 </div>
               ) : (
                 <div className="overflow-x-auto">
+                  {/* Bulk Actions Dropdown */}
+                  {showBulkActions && (
+                    <div className="mb-4 flex items-center justify-start">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button 
+                            className="bg-[#17B6C3] hover:bg-[#17B6C3]/80 text-white h-8 px-4"
+                            data-testid="bulk-actions-dropdown"
+                          >
+                            {selectedInvoices.size} selected
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent className="w-48 bg-white border-gray-200">
+                          <DropdownMenuItem 
+                            onClick={() => handleBulkAction('hold')}
+                            data-testid="bulk-action-hold"
+                          >
+                            Hold
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            onClick={() => handleBulkAction('active')}
+                            data-testid="bulk-action-active"
+                          >
+                            Active
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            onClick={() => handleBulkAction('voice-call')}
+                            data-testid="bulk-action-voice-call"
+                          >
+                            Voice Call
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            onClick={() => handleBulkAction('pre-action-call')}
+                            data-testid="bulk-action-pre-action-call"
+                          >
+                            Pre Action Call
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            onClick={() => handleBulkAction('debt-recovery')}
+                            data-testid="bulk-action-debt-recovery"
+                          >
+                            Debt Recovery
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  )}
+                  
                   <table className="w-full">
                     <thead>
                       <tr className="border-b border-slate-200/50">
+                        <th className="text-center py-2 text-xs font-semibold text-slate-700 w-12">
+                          <Checkbox
+                            checked={selectedInvoices.size === paginatedInvoices.length && paginatedInvoices.length > 0}
+                            onCheckedChange={toggleSelectAll}
+                            data-testid="checkbox-select-all"
+                          />
+                        </th>
                         <th className="text-left py-2 text-xs font-semibold text-slate-700 w-52">
                           <Select value={invClientSort} onValueChange={(value) => {
                             setInvClientSort(value);
@@ -863,6 +992,13 @@ export default function Invoices() {
                     <tbody className="divide-y divide-slate-200/50">
                       {paginatedInvoices.map((invoice: any) => (
                         <tr key={invoice.id} className="hover:bg-slate-50/50 transition-colors" data-testid={`row-invoice-${invoice.id}`}>
+                          <td className="py-2 w-12 text-center" data-testid={`checkbox-cell-${invoice.id}`}>
+                            <Checkbox
+                              checked={selectedInvoices.has(invoice.id)}
+                              onCheckedChange={() => toggleInvoiceSelection(invoice.id)}
+                              data-testid={`checkbox-invoice-${invoice.id}`}
+                            />
+                          </td>
                           <td className="py-2 w-52" data-testid={`text-invoice-client-${invoice.id}`}>
                             <div className="text-xs font-medium text-slate-900">
                               {invoice.invoiceNumber}
