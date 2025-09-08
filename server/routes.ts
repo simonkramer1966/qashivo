@@ -2151,10 +2151,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Xero raw invoice data endpoint with pagination
   app.get("/api/xero/invoices", async (req: any, res) => { // Temporarily disabled auth for demo
     try {
-      // Hardcoded demo tenant for Xero API
-      const tenantId = "9b753407-44c8-4467-8814-acede60a4e39";
+      // Use the logged in user's tenant for Xero API
+      const tenantId = "9ffa8e58-af89-4f6a-adee-7fe09d956295";
       
       const tenant = await storage.getTenant(tenantId);
+      console.log("=== DEBUG TENANT DATA ===");
+      console.log("Tenant ID:", tenantId);
+      console.log("Tenant object:", tenant);
+      console.log("xeroAccessToken present:", !!tenant?.xeroAccessToken);
+      console.log("xeroTenantId:", tenant?.xeroTenantId);
+      
       if (!tenant?.xeroAccessToken) {
         return res.status(400).json({ message: "Xero not connected" });
       }
