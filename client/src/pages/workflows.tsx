@@ -18,9 +18,16 @@ import {
   Plus, Workflow, BarChart3, Activity, Target, Zap, 
   Mail, MessageSquare, Phone, Bot, Settings, 
   ArrowRight, TrendingUp, Clock, Users,
-  Edit, Trash2, Play, Pause, GripVertical, Save
+  Edit, Trash2, Play, Pause, GripVertical, Save,
+  Building2, Calendar, UserCheck
 } from "lucide-react";
 import { useLocation } from "wouter";
+
+// Import our enhanced Collections components
+import TemplateManagement from "@/components/collections/TemplateManagement";
+import EmailSenderManagement from "@/components/collections/EmailSenderManagement";
+import CollectionScheduleBuilder from "@/components/collections/CollectionScheduleBuilder";
+import CustomerAssignmentManager from "@/components/collections/CustomerAssignmentManager";
 
 export default function Workflows() {
   const { toast } = useToast();
@@ -856,22 +863,30 @@ export default function Workflows() {
         
         <div className="p-8" style={{ backgroundColor: '#ffffff' }}>
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-            <TabsList className="grid w-full grid-cols-6 bg-white border border-gray-200">
+            <TabsList className="grid w-full grid-cols-8 bg-white border border-gray-200">
               <TabsTrigger value="dashboard" className="data-[state=active]:bg-[#17B6C3] data-[state=active]:text-white">
                 <BarChart3 className="mr-2 h-4 w-4" />
                 Dashboard
               </TabsTrigger>
+              <TabsTrigger value="templates" className="data-[state=active]:bg-[#17B6C3] data-[state=active]:text-white">
+                <Mail className="mr-2 h-4 w-4" />
+                Templates
+              </TabsTrigger>
+              <TabsTrigger value="schedules" className="data-[state=active]:bg-[#17B6C3] data-[state=active]:text-white">
+                <Target className="mr-2 h-4 w-4" />
+                Schedules
+              </TabsTrigger>
+              <TabsTrigger value="senders" className="data-[state=active]:bg-[#17B6C3] data-[state=active]:text-white">
+                <Building2 className="mr-2 h-4 w-4" />
+                Senders
+              </TabsTrigger>
+              <TabsTrigger value="customers" className="data-[state=active]:bg-[#17B6C3] data-[state=active]:text-white">
+                <UserCheck className="mr-2 h-4 w-4" />
+                Customers
+              </TabsTrigger>
               <TabsTrigger value="email" className="data-[state=active]:bg-[#17B6C3] data-[state=active]:text-white">
                 <Mail className="mr-2 h-4 w-4" />
-                Email Sequence
-              </TabsTrigger>
-              <TabsTrigger value="sms" className="data-[state=active]:bg-[#17B6C3] data-[state=active]:text-white">
-                <MessageSquare className="mr-2 h-4 w-4" />
-                SMS Strategy
-              </TabsTrigger>
-              <TabsTrigger value="whatsapp" className="data-[state=active]:bg-[#17B6C3] data-[state=active]:text-white">
-                <MessageSquare className="mr-2 h-4 w-4" />
-                WhatsApp
+                Legacy Email
               </TabsTrigger>
               <TabsTrigger value="voice" className="data-[state=active]:bg-[#17B6C3] data-[state=active]:text-white">
                 <Phone className="mr-2 h-4 w-4" />
@@ -885,6 +900,22 @@ export default function Workflows() {
 
             <TabsContent value="dashboard">
               <DashboardOverview />
+            </TabsContent>
+
+            <TabsContent value="templates">
+              <TemplateManagement />
+            </TabsContent>
+
+            <TabsContent value="schedules">
+              <CollectionScheduleBuilder />
+            </TabsContent>
+
+            <TabsContent value="senders">
+              <EmailSenderManagement />
+            </TabsContent>
+
+            <TabsContent value="customers">
+              <CustomerAssignmentManager />
             </TabsContent>
 
             <TabsContent value="email">
