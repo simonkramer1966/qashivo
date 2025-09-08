@@ -724,7 +724,7 @@ export default function Invoices() {
                   <table className="w-full">
                     <thead>
                       <tr className="border-b border-slate-200/50">
-                        <th className="text-left py-2 text-xs font-semibold text-slate-700 w-60">
+                        <th className="text-left py-2 text-xs font-semibold text-slate-700 w-30">
                           <Select value={invClientSort} onValueChange={(value) => {
                             setInvClientSort(value);
                             setActiveSortColumn("invClient");
@@ -808,7 +808,7 @@ export default function Invoices() {
                     <tbody className="divide-y divide-slate-200/50">
                       {paginatedInvoices.map((invoice: any) => (
                         <tr key={invoice.id} className="hover:bg-slate-50/50 transition-colors" data-testid={`row-invoice-${invoice.id}`}>
-                          <td className="py-2 w-60" data-testid={`text-invoice-client-${invoice.id}`}>
+                          <td className="py-2 w-30" data-testid={`text-invoice-client-${invoice.id}`}>
                             <div className="text-xs font-medium text-slate-900">
                               {invoice.invoiceNumber}
                             </div>
