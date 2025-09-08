@@ -85,7 +85,7 @@ export default function Header({ title, subtitle, action, noBorder = true, title
                 </AvatarFallback>
               </Avatar>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuContent align="end" className="w-56 bg-white border-gray-200">
               <DropdownMenuItem onClick={handleProfileClick} className="cursor-pointer" data-testid="menu-item-profile">
                 <User className="mr-2 h-4 w-4" />
                 <span>Profile</span>
