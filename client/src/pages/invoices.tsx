@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Mail, Phone, Eye, Plus, Search, Filter, FileText, ChevronUp, ChevronDown, X, MessageSquare, Calendar, CheckCircle, AlertCircle, Clock, Users, User, Building, Database } from "lucide-react";
+import { Mail, Phone, Eye, Plus, Search, Filter, FileText, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, X, MessageSquare, Calendar, CheckCircle, AlertCircle, Clock, Users, User, Building, Database } from "lucide-react";
 
 export default function Invoices() {
   const { toast } = useToast();
@@ -26,6 +26,14 @@ export default function Invoices() {
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const [selectedInvoice, setSelectedInvoice] = useState<any>(null);
   const [showContactHistory, setShowContactHistory] = useState(false);
+  
+  // Pagination state for invoices tab
+  const [invoicesCurrentPage, setInvoicesCurrentPage] = useState(1);
+  const [invoicesItemsPerPage, setInvoicesItemsPerPage] = useState(50);
+  
+  // Pagination state for customers tab  
+  const [customersCurrentPage, setCustomersCurrentPage] = useState(1);
+  const [customersItemsPerPage, setCustomersItemsPerPage] = useState(50);
 
   // Redirect to home if not authenticated
   useEffect(() => {
