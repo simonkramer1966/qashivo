@@ -579,7 +579,7 @@ export default function Invoices() {
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-slate-200/50">
-                            {sortedContacts.map((contact: any) => (
+                            {paginatedContacts.map((contact: any) => (
                               <tr key={contact.id} className="hover:bg-slate-50/50 transition-colors" data-testid={`row-contact-${contact.id}`}>
                                 <td className="py-1 text-xs text-slate-700 w-60" data-testid={`text-contact-name-${contact.id}`}>
                                   {contact.name}
@@ -768,7 +768,7 @@ export default function Invoices() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-200/50">
-                      {filteredAndSortedInvoices.map((invoice: any) => (
+                      {paginatedInvoices.map((invoice: any) => (
                         <tr key={invoice.id} className="hover:bg-slate-50/50 transition-colors" data-testid={`row-invoice-${invoice.id}`}>
                           <td className="py-1 text-xs text-slate-700 w-32" data-testid={`text-issue-date-${invoice.id}`}>
                             {new Date(invoice.issueDate).toLocaleDateString()}
