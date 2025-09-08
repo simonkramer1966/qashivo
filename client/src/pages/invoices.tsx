@@ -258,7 +258,7 @@ export default function Invoices() {
         <div className="p-8 space-y-8">
           {/* Main Tabs */}
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid grid-cols-2 max-w-md mb-8 bg-white border border-gray-200">
+            <TabsList className="grid grid-cols-2 max-w-md mb-6 bg-white border border-gray-200">
               <TabsTrigger value="customers" className="flex items-center gap-2 data-[state=active]:bg-[#17B6C3] data-[state=active]:text-white" data-testid="tab-customers">
                 <Users className="h-4 w-4" />
                 Customers
@@ -269,37 +269,57 @@ export default function Invoices() {
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="customers">
-              {/* Customers Tab Content */}
-              {/* Search */}
-              <Card className="bg-white border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
-                <CardHeader>
-                  <CardTitle className="text-xl font-bold flex items-center">
-                    <div className="p-2 bg-[#17B6C3]/10 rounded-lg mr-3">
-                      <Search className="h-5 w-5 text-[#17B6C3]" />
-                    </div>
-                    Search Customers
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="relative">
-                    <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                    <Input 
-                      placeholder="Search by name, email, or company..."
-                      value={search}
-                      onChange={(e) => setSearch(e.target.value)}
-                      className="pl-9 bg-white/70 border-gray-200/30"
-                      data-testid="input-search-contacts"
-                    />
-                  </div>
-                </CardContent>
-              </Card>
+            {/* Search/Filter Fields */}
+            {activeTab === "customers" && (
+              <div className="mb-6">
+                <div className="relative">
+                  <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input 
+                    placeholder="Search by name, email, or company..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="pl-9 bg-white/70 border-gray-200/30"
+                    data-testid="input-search-contacts"
+                  />
+                </div>
+              </div>
+            )}
 
-              {/* Customers Content */}
-              <div className="space-y-6">
-                {/* Customers Table */}
-                <Card className="bg-white border border-gray-200 shadow-sm">
-                  <CardHeader>
+            {activeTab === "invoices" && (
+              <div className="mb-6">
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <div className="flex-1">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                      <Input 
+                        placeholder="Search invoices or contacts..."
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        className="pl-9 bg-white/70 border-gray-200/30"
+                        data-testid="input-search"
+                      />
+                    </div>
+                  </div>
+                  <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger className="w-[180px] bg-white/70 border-gray-200/30" data-testid="select-status-filter">
+                      <Filter className="mr-2 h-4 w-4" />
+                      <SelectValue placeholder="All Status" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white border-gray-200">
+                      <SelectItem value="all">All Status</SelectItem>
+                      <SelectItem value="pending">Pending</SelectItem>
+                      <SelectItem value="overdue">Overdue</SelectItem>
+                      <SelectItem value="paid">Paid</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            )}
+
+            <TabsContent value="customers" className="mt-0">
+              {/* Customers Table */}
+              <Card className="bg-white border border-gray-200 shadow-sm">
+                <CardHeader>
                     <div className="flex items-center justify-between">
                       <div>
                         <CardTitle className="text-2xl font-bold">All Customers</CardTitle>
@@ -311,8 +331,8 @@ export default function Invoices() {
                         <Users className="h-6 w-6 text-[#17B6C3]" />
                       </div>
                     </div>
-                  </CardHeader>
-                  <CardContent>
+                </CardHeader>
+                <CardContent>
                     {contactsLoading ? (
                       <div className="text-center py-8">
                         <p className="text-muted-foreground">Loading customers...</p>
@@ -463,70 +483,28 @@ export default function Invoices() {
                         </table>
                       </div>
                     )}
-                  </CardContent>
-                </Card>
-              </div>
-            </TabsContent>
-
-            <TabsContent value="invoices">
-              {/* Invoices Tab Content */}
-              {/* Filters */}
-              <Card className="bg-white border border-gray-200 shadow-sm">
-                <CardHeader>
-                  <CardTitle className="text-xl font-bold flex items-center">
-                    <div className="p-2 bg-[#17B6C3]/10 rounded-lg mr-3">
-                      <Filter className="h-5 w-5 text-[#17B6C3]" />
-                    </div>
-                    Filters
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex flex-col sm:flex-row gap-4">
-                    <div className="flex-1">
-                      <div className="relative">
-                        <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                        <Input 
-                          placeholder="Search invoices or contacts..."
-                          value={search}
-                          onChange={(e) => setSearch(e.target.value)}
-                          className="pl-9 bg-white/70 border-gray-200/30"
-                          data-testid="input-search"
-                        />
-                      </div>
-                    </div>
-                    <Select value={statusFilter} onValueChange={setStatusFilter}>
-                      <SelectTrigger className="w-[180px] bg-white/70 border-gray-200/30" data-testid="select-status-filter">
-                        <Filter className="mr-2 h-4 w-4" />
-                        <SelectValue placeholder="All Status" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-white border-gray-200">
-                        <SelectItem value="all">All Status</SelectItem>
-                        <SelectItem value="pending">Pending</SelectItem>
-                        <SelectItem value="overdue">Overdue</SelectItem>
-                        <SelectItem value="paid">Paid</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
                 </CardContent>
               </Card>
+            </TabsContent>
 
-          {/* Invoices Table */}
-          <Card className="bg-white border border-gray-200 shadow-sm">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="text-2xl font-bold">All Invoices</CardTitle>
-                  <CardDescription className="text-base mt-1">
-                    {filteredAndSortedInvoices.length} invoice{filteredAndSortedInvoices.length !== 1 ? 's' : ''} found
-                  </CardDescription>
-                </div>
-                <div className="p-3 bg-[#17B6C3]/10 rounded-xl">
-                  <Eye className="h-6 w-6 text-[#17B6C3]" />
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {invoicesLoading ? (
+            <TabsContent value="invoices" className="mt-0">
+              {/* Invoices Table */}
+              <Card className="bg-white border border-gray-200 shadow-sm">
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="text-2xl font-bold">All Invoices</CardTitle>
+                      <CardDescription className="text-base mt-1">
+                        {filteredAndSortedInvoices.length} invoice{filteredAndSortedInvoices.length !== 1 ? 's' : ''} found
+                      </CardDescription>
+                    </div>
+                    <div className="p-3 bg-[#17B6C3]/10 rounded-xl">
+                      <Eye className="h-6 w-6 text-[#17B6C3]" />
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {invoicesLoading ? (
                 <div className="text-center py-8">
                   <p className="text-muted-foreground">Loading invoices...</p>
                 </div>
