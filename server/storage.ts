@@ -311,7 +311,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Invoice operations
-  async getInvoices(tenantId: string, limit = 50): Promise<(Invoice & { contact: Contact })[]> {
+  async getInvoices(tenantId: string, limit = 10000): Promise<(Invoice & { contact: Contact })[]> {
     const results = await db
       .select()
       .from(invoices)
@@ -492,7 +492,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Action operations
-  async getActions(tenantId: string, limit = 50): Promise<Action[]> {
+  async getActions(tenantId: string, limit = 10000): Promise<Action[]> {
     return await db
       .select()
       .from(actions)
