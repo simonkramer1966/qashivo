@@ -24,7 +24,7 @@ const navigationItems = [
   { name: "Cashflow", href: "/cashflow", icon: TrendingUp },
   { name: "Receivables", href: "/invoices", icon: FileText },
   // { name: "Invoices - Xero", href: "/invoices-xero", icon: ExternalLink },
-  { name: "Contacts", href: "/contacts", icon: Users },
+  // { name: "Contacts", href: "/contacts", icon: Users },
   { name: "Collection Workflows", href: "/workflows", icon: Workflow },
   { name: "AI Suggestions", href: "/ai-suggestions", icon: Bot },
   { name: "Reports", href: "/reports", icon: BarChart },
