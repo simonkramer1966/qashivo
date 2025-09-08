@@ -120,9 +120,32 @@ export default function InvoicesXero() {
     }
   }, [currentTabData.error, toast]);
 
-  if (isLoading || !isAuthenticated) {
-    return <div className="min-h-screen bg-background" />;
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-center">
+            <div className="w-8 h-8 border-4 border-[#17B6C3] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading...</p>
+          </div>
+        </div>
+      </div>
+    );
   }
+
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      toast({
+        title: "Unauthorized", 
+        description: "You are logged out. Logging in again...",
+        variant: "destructive",
+      });
+      setTimeout(() => {
+        window.location.href = "/api/login";
+      }, 500);
+    }
+  }, [isAuthenticated, isLoading, toast]);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
