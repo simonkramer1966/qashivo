@@ -351,15 +351,57 @@ export default function Invoices() {
             {/* Search/Filter Fields */}
             {activeTab === "customers" && (
               <div className="mb-6">
-                <div className="relative">
-                  <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input 
-                    placeholder="Search by name, email, or company..."
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    className="pl-9 bg-white/70 border-gray-200/30"
-                    data-testid="input-search-contacts"
-                  />
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <div className="flex-1">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                      <Input 
+                        placeholder="Search by name, email, or company..."
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        className="pl-9 bg-white/70 border-gray-200/30"
+                        data-testid="input-search-contacts"
+                      />
+                    </div>
+                  </div>
+                  <Select value={customersItemsPerPage.toString()} onValueChange={(value) => setCustomersItemsPerPage(Number(value))}>
+                    <SelectTrigger className="w-[120px] bg-white/70 border-gray-200/30" data-testid="select-customers-per-page">
+                      <SelectValue placeholder="Per page" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white border-gray-200">
+                      <SelectItem value="25">25 per page</SelectItem>
+                      <SelectItem value="50">50 per page</SelectItem>
+                      <SelectItem value="100">100 per page</SelectItem>
+                      <SelectItem value="200">200 per page</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <div className="flex items-center gap-2">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => setCustomersCurrentPage(prev => Math.max(1, prev - 1))}
+                      disabled={customersCurrentPage === 1}
+                      className="px-2 bg-white/70 border-gray-200/30"
+                      data-testid="button-customers-prev-page"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    
+                    <span className="text-sm text-slate-600 min-w-[60px] text-center" data-testid="text-customers-page-info">
+                      {customersCurrentPage} of {customersTotalPages || 1}
+                    </span>
+                    
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => setCustomersCurrentPage(prev => Math.min(customersTotalPages, prev + 1))}
+                      disabled={customersCurrentPage >= customersTotalPages}
+                      className="px-2 bg-white/70 border-gray-200/30"
+                      data-testid="button-customers-next-page"
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
               </div>
             )}
@@ -391,6 +433,44 @@ export default function Invoices() {
                       <SelectItem value="paid">Paid</SelectItem>
                     </SelectContent>
                   </Select>
+                  <Select value={invoicesItemsPerPage.toString()} onValueChange={(value) => setInvoicesItemsPerPage(Number(value))}>
+                    <SelectTrigger className="w-[120px] bg-white/70 border-gray-200/30" data-testid="select-invoices-per-page">
+                      <SelectValue placeholder="Per page" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white border-gray-200">
+                      <SelectItem value="25">25 per page</SelectItem>
+                      <SelectItem value="50">50 per page</SelectItem>
+                      <SelectItem value="100">100 per page</SelectItem>
+                      <SelectItem value="200">200 per page</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <div className="flex items-center gap-2">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => setInvoicesCurrentPage(prev => Math.max(1, prev - 1))}
+                      disabled={invoicesCurrentPage === 1}
+                      className="px-2 bg-white/70 border-gray-200/30"
+                      data-testid="button-invoices-prev-page"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    
+                    <span className="text-sm text-slate-600 min-w-[60px] text-center" data-testid="text-invoices-page-info">
+                      {invoicesCurrentPage} of {invoicesTotalPages || 1}
+                    </span>
+                    
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => setInvoicesCurrentPage(prev => Math.min(invoicesTotalPages, prev + 1))}
+                      disabled={invoicesCurrentPage >= invoicesTotalPages}
+                      className="px-2 bg-white/70 border-gray-200/30"
+                      data-testid="button-invoices-next-page"
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
               </div>
             )}
