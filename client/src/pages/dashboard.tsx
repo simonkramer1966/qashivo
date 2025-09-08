@@ -75,9 +75,6 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <Suspense fallback={<div className="h-64 animate-pulse bg-gray-100 rounded-lg" />}>
-            <WorkflowTemplates />
-          </Suspense>
           <Suspense fallback={<div className="h-48 animate-pulse bg-gray-100 rounded-lg" />}>
             <IntegrationsStatus />
           </Suspense>
