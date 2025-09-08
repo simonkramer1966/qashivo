@@ -1,17 +1,26 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart3, Mail, Bot, MessageSquare } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 
 export default function IntegrationsStatus() {
+  // Fetch tenant data to check Xero connection status
+  const { data: tenant } = useQuery({
+    queryKey: ['/api/tenant'],
+  });
+
+  // Determine Xero connection status based on API availability
+  const xeroConnected = !!(tenant?.xeroAccessToken && tenant?.xeroTenantId);
+  
   const integrations = [
     {
       name: "Xero",
-      status: "Connected",
-      statusColor: "text-green-700",
-      bgColor: "bg-green-50",
-      borderColor: "border-green-200",
+      status: xeroConnected ? "Connected" : "Not Connected",
+      statusColor: xeroConnected ? "text-green-700" : "text-red-700",
+      bgColor: xeroConnected ? "bg-green-50" : "bg-red-50",
+      borderColor: xeroConnected ? "border-green-200" : "border-red-200",
       icon: BarChart3,
-      iconBg: "bg-green-600",
-      description: "Last sync: 2 min ago",
+      iconBg: xeroConnected ? "bg-green-600" : "bg-red-600",
+      description: xeroConnected ? "Last sync: 2 min ago" : "Authentication required",
     },
     {
       name: "SendGrid",
