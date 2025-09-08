@@ -43,6 +43,7 @@ function TestTabContent() {
   const [isTestingVoice, setIsTestingVoice] = useState(false);
   const [isDemoSetup, setIsDemoSetup] = useState(false);
   const [isRegenerating, setIsRegenerating] = useState(false);
+  const [isGeneratingMockData, setIsGeneratingMockData] = useState(false);
   
   // Static test data for communications
   const [testEmail, setTestEmail] = useState<string>(() => 
@@ -314,6 +315,33 @@ function TestTabContent() {
     }
   };
 
+  const handleGenerateMockData = async () => {
+    setIsGeneratingMockData(true);
+    try {
+      const response = await apiRequest("POST", "/api/mock-data/generate", {});
+      
+      if (response.ok) {
+        toast({
+          title: "Mock Data Generated",
+          description: "Successfully generated 80 clients and 1,800+ invoices with realistic AR data",
+        });
+        
+        // Refresh the page data
+        window.location.reload();
+      } else {
+        throw new Error("Failed to generate mock data");
+      }
+    } catch (error) {
+      toast({
+        title: "Generation Failed",
+        description: "Failed to generate mock data. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGeneratingMockData(false);
+    }
+  };
+
   return (
     <Card className="bg-white border border-gray-200 shadow-sm">
       <CardHeader>
@@ -579,6 +607,33 @@ function TestTabContent() {
             <p>• SMS tests will send a brief payment notification</p>
             <p>• Voice tests will initiate a short AI-powered call</p>
             <p>• All tests are clearly marked as test communications</p>
+          </div>
+        </div>
+
+        {/* Generate Mock Data */}
+        <div className="mt-8 pt-6 border-t border-gray-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <h4 className="font-semibold text-lg">Generate Mock Data</h4>
+              <p className="text-sm text-gray-600 mt-1">
+                Generate 80 clients and 1,800+ realistic AR invoices for testing purposes
+              </p>
+            </div>
+            <Button
+              onClick={handleGenerateMockData}
+              disabled={isGeneratingMockData}
+              variant="outline"
+              size="sm"
+              className="bg-[#17B6C3]/10 hover:bg-[#17B6C3]/20 text-[#17B6C3] border-[#17B6C3]/30"
+              data-testid="button-generate-mock-data"
+            >
+              {isGeneratingMockData ? (
+                <div className="w-4 h-4 border-2 border-[#17B6C3] border-t-transparent rounded-full animate-spin mr-2" />
+              ) : (
+                <Database className="h-4 w-4 mr-2" />
+              )}
+              Generate Mock Data
+            </Button>
           </div>
         </div>
       </CardContent>

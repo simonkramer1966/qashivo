@@ -15,7 +15,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Mail, Phone, Eye, Plus, Search, Filter, FileText, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, X, MessageSquare, Calendar, CheckCircle, AlertCircle, Clock, Users, User, Building, Database, Star } from "lucide-react";
+import { Mail, Phone, Eye, Plus, Search, Filter, FileText, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, X, MessageSquare, Calendar, CheckCircle, AlertCircle, Clock, Users, User, Building, Star } from "lucide-react";
 
 export default function Invoices() {
   const { toast } = useToast();
@@ -90,31 +90,6 @@ export default function Invoices() {
     enabled: !!selectedInvoice?.id,
   });
 
-  // Mutation for generating mock data
-  const generateMockDataMutation = useMutation({
-    mutationFn: () => apiRequest("POST", "/api/mock-data/generate", {}),
-    onSuccess: (data: any) => {
-      toast({
-        title: "Mock Data Generated",
-        description: "Successfully generated 80 clients and 1,800+ invoices with realistic AR data",
-      });
-      // Refresh all data
-      queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/contacts"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/metrics"] });
-      // Force refetch contacts to resolve any auth timing issues
-      setTimeout(() => {
-        queryClient.refetchQueries({ queryKey: ["/api/contacts"] });
-      }, 1000);
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Generation Failed",
-        description: error?.message || "Failed to generate mock data",
-        variant: "destructive",
-      });
-    },
-  });
 
   useEffect(() => {
     if (error && isUnauthorizedError(error as Error)) {
@@ -649,23 +624,6 @@ export default function Invoices() {
         <Header 
           title="Receivables" 
           subtitle="Manage your customers and invoices"
-          action={
-            <Button
-              onClick={() => generateMockDataMutation.mutate()}
-              disabled={generateMockDataMutation.isPending}
-              variant="outline"
-              size="sm"
-              className="bg-[#17B6C3]/10 hover:bg-[#17B6C3]/20 text-[#17B6C3] border-[#17B6C3]/30"
-              data-testid="button-generate-mock-data"
-            >
-              {generateMockDataMutation.isPending ? (
-                <div className="w-4 h-4 border-2 border-[#17B6C3] border-t-transparent rounded-full animate-spin mr-2" />
-              ) : (
-                <Database className="h-4 w-4 mr-2" />
-              )}
-              Generate Mock Data
-            </Button>
-          }
         />
         
         <div className="p-8 space-y-8">
