@@ -381,6 +381,31 @@ export default function Invoices() {
     return rating;
   };
 
+  // Function to get consistent next action date for an invoice
+  const getNextActionDate = (invoice: any) => {
+    let hash = 0;
+    for (let i = 0; i < invoice.id.length; i++) {
+      const char = invoice.id.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash; // Convert to 32bit integer
+    }
+    // Generate date 1-7 days from now based on hash
+    const daysFromNow = (Math.abs(hash) % 7) + 1;
+    return new Date(Date.now() + daysFromNow * 24 * 60 * 60 * 1000);
+  };
+
+  // Function to get consistent next action type for an invoice
+  const getNextActionType = (invoice: any) => {
+    const actions = ['Email Reminder', 'Phone Call', 'Letter', 'SMS Follow-up'];
+    let hash = 0;
+    for (let i = 0; i < invoice.id.length; i++) {
+      const char = invoice.id.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash; // Convert to 32bit integer
+    }
+    return actions[Math.abs(hash) % actions.length];
+  };
+
   // Function to render star rating
   const renderStarRating = (rating: number) => {
     return (
@@ -1029,10 +1054,10 @@ export default function Invoices() {
                           </td>
                           <td className="py-2 w-52" data-testid={`text-next-action-${invoice.id}`}>
                             <div className="text-xs text-slate-900">
-                              {new Date(Date.now() + (Math.random() * 7 + 1) * 24 * 60 * 60 * 1000).toLocaleDateString()}
+                              {getNextActionDate(invoice).toLocaleDateString()}
                             </div>
                             <div className="text-xs text-slate-600 mt-0.5">
-                              {['Email Reminder', 'Phone Call', 'Letter', 'SMS Follow-up'][Math.floor(Math.random() * 4)]}
+                              {getNextActionType(invoice)}
                             </div>
                           </td>
                           <td className="py-2 w-52" data-testid={`hold-toggle-${invoice.id}`}>
