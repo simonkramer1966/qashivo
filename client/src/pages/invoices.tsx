@@ -880,7 +880,7 @@ export default function Invoices() {
                                   <span>Contact Name</span>
                                 </button>
                               </th>
-                              <th className="text-left py-2 text-xs font-semibold text-slate-700 w-[20%]">
+                              <th className="text-left py-2 text-xs font-semibold text-slate-700 w-[15%]">
                                 <button 
                                   onClick={() => handleSort("companyName")}
                                   className="flex items-center space-x-1 hover:text-slate-900"
@@ -888,7 +888,7 @@ export default function Invoices() {
                                   <span>Company</span>
                                 </button>
                               </th>
-                              <th className="text-left py-2 text-xs font-semibold text-slate-700 w-[10%]">
+                              <th className="text-left py-2 text-xs font-semibold text-slate-700 w-[15%]">
                                 <span>Collection Rating</span>
                               </th>
                               <th className="text-left py-2 text-xs font-semibold text-slate-700 w-[15%]">
