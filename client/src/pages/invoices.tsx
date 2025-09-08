@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { isUnauthorizedError } from "@/lib/authUtils";
+import { apiRequest } from "@/lib/queryClient";
 import NewSidebar from "@/components/layout/new-sidebar";
 import Header from "@/components/layout/header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,11 +13,12 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Mail, Phone, Eye, Plus, Search, Filter, FileText, ChevronUp, ChevronDown, X, MessageSquare, Calendar, CheckCircle, AlertCircle, Clock, Users, User, Building } from "lucide-react";
+import { Mail, Phone, Eye, Plus, Search, Filter, FileText, ChevronUp, ChevronDown, X, MessageSquare, Calendar, CheckCircle, AlertCircle, Clock, Users, User, Building, Database } from "lucide-react";
 
 export default function Invoices() {
   const { toast } = useToast();
   const { isAuthenticated, isLoading } = useAuth();
+  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState("invoices");
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -55,6 +57,28 @@ export default function Invoices() {
   const { data: contactHistory = [], isLoading: historyLoading } = useQuery({
     queryKey: [`/api/invoices/${selectedInvoice?.id}/contact-history`],
     enabled: !!selectedInvoice?.id,
+  });
+
+  // Mutation for generating mock data
+  const generateMockDataMutation = useMutation({
+    mutationFn: () => apiRequest("POST", "/api/mock-data/generate", {}),
+    onSuccess: (data: any) => {
+      toast({
+        title: "Mock Data Generated",
+        description: "Successfully generated 80 clients and 1,800+ invoices with realistic AR data",
+      });
+      // Refresh all data
+      queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/contacts"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/metrics"] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Generation Failed",
+        description: error?.message || "Failed to generate mock data",
+        variant: "destructive",
+      });
+    },
   });
 
   useEffect(() => {
@@ -253,6 +277,23 @@ export default function Invoices() {
         <Header 
           title="Receivables" 
           subtitle="Manage your customers and invoices"
+          action={
+            <Button
+              onClick={() => generateMockDataMutation.mutate()}
+              disabled={generateMockDataMutation.isPending}
+              variant="outline"
+              size="sm"
+              className="bg-[#17B6C3]/10 hover:bg-[#17B6C3]/20 text-[#17B6C3] border-[#17B6C3]/30"
+              data-testid="button-generate-mock-data"
+            >
+              {generateMockDataMutation.isPending ? (
+                <div className="w-4 h-4 border-2 border-[#17B6C3] border-t-transparent rounded-full animate-spin mr-2" />
+              ) : (
+                <Database className="h-4 w-4 mr-2" />
+              )}
+              Generate Mock Data
+            </Button>
+          }
         />
         
         <div className="p-8 space-y-8">
