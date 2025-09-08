@@ -21,6 +21,7 @@ import { generateCollectionSuggestions, generateEmailDraft } from "./services/op
 import { sendReminderEmail } from "./services/sendgrid";
 import { sendPaymentReminderSMS } from "./services/twilio";
 import { xeroService } from "./services/xero";
+import { XeroSyncService } from "./services/xeroSync";
 import { generateMockData } from "./mock-data";
 import { retellService } from "./retell-service";
 import { createRetellClient } from "./mcp/client";
@@ -2235,6 +2236,125 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching Xero invoices:", error);
       res.status(500).json({ message: "Failed to fetch Xero invoices" });
+    }
+  });
+
+  // Initialize sync service
+  const xeroSyncService = new XeroSyncService();
+
+  // Xero sync endpoints
+  app.post("/api/xero/sync", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      console.log(`Starting manual Xero sync for tenant: ${user.tenantId}`);
+      const result = await xeroSyncService.syncInvoicesForTenant(user.tenantId);
+
+      if (result.success) {
+        res.json({
+          success: true,
+          message: `Successfully synced ${result.invoicesCount} invoices`,
+          invoicesCount: result.invoicesCount,
+          syncedAt: new Date().toISOString(),
+        });
+      } else {
+        res.status(500).json({
+          success: false,
+          message: result.error || "Sync failed",
+        });
+      }
+    } catch (error) {
+      console.error("Error in manual Xero sync:", error);
+      res.status(500).json({ 
+        success: false,
+        message: "Failed to sync invoices" 
+      });
+    }
+  });
+
+  // Get cached invoices endpoint (replaces live Xero calls)
+  app.get("/api/xero/invoices/cached", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const status = req.query.status as string;
+      const invoices = await xeroSyncService.getCachedInvoices(user.tenantId, status);
+
+      // Get sync info
+      const lastSyncTime = await xeroSyncService.getLastSyncTime(user.tenantId);
+      
+      res.json({
+        invoices,
+        lastSyncAt: lastSyncTime?.toISOString() || null,
+        pagination: {
+          currentPage: 1,
+          totalPages: 1,
+          totalItems: invoices.length,
+          itemsPerPage: invoices.length,
+        },
+      });
+    } catch (error) {
+      console.error("Error fetching cached invoices:", error);
+      res.status(500).json({ message: "Failed to fetch cached invoices" });
+    }
+  });
+
+  // Get sync settings
+  app.get("/api/xero/sync/settings", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const settings = await xeroSyncService.getSyncSettings(user.tenantId);
+      if (!settings) {
+        return res.status(404).json({ message: "Sync settings not found" });
+      }
+
+      res.json(settings);
+    } catch (error) {
+      console.error("Error fetching sync settings:", error);
+      res.status(500).json({ message: "Failed to fetch sync settings" });
+    }
+  });
+
+  // Update sync settings
+  app.put("/api/xero/sync/settings", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { syncInterval, autoSync } = req.body;
+      
+      // Validate sync interval (5 minutes to 24 hours)
+      if (syncInterval && (syncInterval < 5 || syncInterval > 1440)) {
+        return res.status(400).json({ 
+          message: "Sync interval must be between 5 minutes and 24 hours" 
+        });
+      }
+
+      const success = await xeroSyncService.updateSyncSettings(user.tenantId, {
+        syncInterval,
+        autoSync,
+      });
+
+      if (success) {
+        res.json({ success: true, message: "Sync settings updated" });
+      } else {
+        res.status(500).json({ message: "Failed to update sync settings" });
+      }
+    } catch (error) {
+      console.error("Error updating sync settings:", error);
+      res.status(500).json({ message: "Failed to update sync settings" });
     }
   });
 
