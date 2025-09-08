@@ -590,6 +590,7 @@ export default function Settings() {
   const { toast } = useToast();
   const { user, isAuthenticated, isLoading } = useAuth();
   const [isConnecting, setIsConnecting] = useState(false);
+  const [isDisconnecting, setIsDisconnecting] = useState(false);
   const [isGeneratingMockData, setIsGeneratingMockData] = useState(false);
   
   // Branding form state
@@ -758,6 +759,42 @@ export default function Settings() {
       });
     } finally {
       setIsConnecting(false);
+    }
+  };
+
+  const handleXeroDisconnect = async () => {
+    setIsDisconnecting(true);
+    try {
+      const response = await fetch('/api/xero/disconnect', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to disconnect from Xero');
+      }
+      
+      const result = await response.json();
+      
+      // Invalidate tenant data to refresh the connection status
+      queryClient.invalidateQueries({ queryKey: ['/api/tenant'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/xero/sync/settings'] });
+      
+      toast({
+        title: "Disconnected",
+        description: result.message,
+        variant: "default",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to disconnect from Xero. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDisconnecting(false);
     }
   };
 
@@ -979,14 +1016,27 @@ export default function Settings() {
                         Sync invoices, contacts, and payment data
                       </p>
                     </div>
-                    <Button 
-                      onClick={handleXeroConnect}
-                      disabled={isConnecting}
-                      className="bg-[#17B6C3] hover:bg-[#1396A1] text-white"
-                      data-testid="button-connect-xero"
-                    >
-                      {isConnecting ? "Connecting..." : tenant?.xeroAccessToken ? "Reconnect" : "Connect"}
-                    </Button>
+                    <div className="flex items-center space-x-2">
+                      <Button 
+                        onClick={handleXeroConnect}
+                        disabled={isConnecting}
+                        className="bg-[#17B6C3] hover:bg-[#1396A1] text-white"
+                        data-testid="button-connect-xero"
+                      >
+                        {isConnecting ? "Connecting..." : tenant?.xeroAccessToken ? "Reconnect" : "Connect"}
+                      </Button>
+                      {tenant?.xeroAccessToken && (
+                        <Button 
+                          onClick={handleXeroDisconnect}
+                          disabled={isDisconnecting}
+                          variant="outline"
+                          className="border-red-300 text-red-600 hover:bg-red-50"
+                          data-testid="button-disconnect-xero"
+                        >
+                          {isDisconnecting ? "Disconnecting..." : "Disconnect"}
+                        </Button>
+                      )}
+                    </div>
                   </div>
 
                   {/* Sync Settings - Only show if Xero is connected */}

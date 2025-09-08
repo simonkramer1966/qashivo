@@ -1880,6 +1880,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Disconnect from Xero
+  app.post("/api/xero/disconnect", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(401).json({ message: "No tenant ID found" });
+      }
+
+      console.log(`🔌 Disconnecting Xero for tenant: ${user.tenantId}`);
+
+      // Clear Xero tokens from tenant record
+      await storage.updateTenant(user.tenantId, {
+        xeroAccessToken: null,
+        xeroRefreshToken: null,
+        xeroTenantId: null,
+      });
+
+      console.log("✅ Xero disconnected successfully");
+
+      res.json({ 
+        success: true, 
+        message: "Xero connection removed successfully" 
+      });
+    } catch (error) {
+      console.error("Error disconnecting Xero:", error);
+      res.status(500).json({ message: "Failed to disconnect from Xero" });
+    }
+  });
+
   // Test endpoint to verify callback URL is reachable
   app.get("/api/xero/test-callback", async (req, res) => {
     res.send(`
