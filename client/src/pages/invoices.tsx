@@ -733,7 +733,7 @@ export default function Invoices() {
                               {invoice.invoiceNumber}
                             </div>
                             <div className="text-xs text-slate-600 mt-0.5">
-                              {invoice.contact?.name || 'Unknown Contact'}
+                              {invoice.contact?.companyName || 'Unknown Company'}
                             </div>
                           </td>
                           <td className="py-2 text-xs font-medium text-slate-900" data-testid={`text-amount-outstanding-${invoice.id}`}>
