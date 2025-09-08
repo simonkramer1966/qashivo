@@ -1402,6 +1402,167 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/collections/templates/ai-generate", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { type, category, tone, stage } = req.body;
+      
+      // Generate AI template content based on parameters
+      let content = "";
+      let subject = "";
+
+      if (type === "email") {
+        subject = generateEmailSubject(category, stage, tone);
+        content = generateEmailContent(category, stage, tone);
+      } else if (type === "sms") {
+        content = generateSMSContent(category, stage, tone);
+      } else if (type === "whatsapp") {
+        content = generateWhatsAppContent(category, stage, tone);
+      }
+
+      res.json({ content, subject });
+    } catch (error) {
+      console.error("Error generating AI template:", error);
+      res.status(500).json({ message: "Failed to generate AI template" });
+    }
+  });
+
+  // AI Template Generation Helper Functions
+  function generateEmailSubject(category: string, stage: number, tone: string): string {
+    const subjectTemplates: Record<string, string[]> = {
+      payment_reminder: [
+        "Payment Reminder - Invoice #{invoiceNumber}",
+        "Friendly Reminder: Payment Due for Invoice #{invoiceNumber}",
+        "Payment Request - Invoice #{invoiceNumber}"
+      ],
+      overdue_notice: [
+        "Overdue Notice - Invoice #{invoiceNumber}",
+        "Important: Payment Past Due for Invoice #{invoiceNumber}",
+        "Action Required: Overdue Payment"
+      ],
+      final_demand: [
+        "FINAL NOTICE - Invoice #{invoiceNumber}",
+        "Urgent: Final Payment Demand",
+        "Last Notice Before Collection Action"
+      ]
+    };
+
+    const subjects = subjectTemplates[category] || subjectTemplates.payment_reminder;
+    return subjects[Math.min(stage - 1, subjects.length - 1)] || subjects[0];
+  }
+
+  function generateEmailContent(category: string, stage: number, tone: string): string {
+    const baseContent: Record<string, Record<string, string>> = {
+      payment_reminder: {
+        friendly: `Dear {customerName},
+
+I hope this message finds you well. This is a friendly reminder that your invoice #{invoiceNumber} for $\{amount} was due on {dueDate}.
+
+We understand that sometimes invoices can be overlooked, so we wanted to bring this to your attention. If you have already sent the payment, please disregard this message.
+
+If you have any questions about this invoice or need to discuss payment arrangements, please don't hesitate to reach out to us.
+
+Thank you for your business!
+
+Best regards,
+{senderName}`,
+        professional: `Dear {customerName},
+
+This is a payment reminder for invoice #{invoiceNumber} in the amount of $\{amount}, which was due on {dueDate}.
+
+Please process payment at your earliest convenience. If payment has already been made, please disregard this notice.
+
+For any questions regarding this invoice, please contact our accounts department.
+
+Thank you for your prompt attention to this matter.
+
+Regards,
+{senderName}`,
+        firm: `Dear {customerName},
+
+Our records indicate that invoice #{invoiceNumber} for $\{amount} is past due as of {dueDate}.
+
+Please remit payment immediately to avoid any potential service interruptions or late fees.
+
+If you believe this notice is in error or need to discuss payment terms, contact us immediately.
+
+{senderName}`,
+        urgent: `Dear {customerName},
+
+URGENT: Invoice #{invoiceNumber} for $\{amount} is significantly overdue (due date: {dueDate}).
+
+Immediate payment is required to avoid collection action and additional fees. This is a serious matter that requires your immediate attention.
+
+Contact us today to resolve this outstanding balance.
+
+{senderName}`
+      }
+    };
+
+    const categoryContent = baseContent[category] || baseContent.payment_reminder;
+    return categoryContent[tone] || categoryContent.professional;
+  }
+
+  function generateSMSContent(category: string, stage: number, tone: string): string {
+    const smsTemplates: Record<string, Record<string, string>> = {
+      payment_reminder: {
+        friendly: "Hi {customerName}! Just a friendly reminder that invoice #{invoiceNumber} for $\{amount} was due on {dueDate}. Thanks!",
+        professional: "Payment reminder: Invoice #{invoiceNumber} ($\{amount}) due {dueDate}. Please process payment. Questions? Reply HELP",
+        firm: "NOTICE: Invoice #{invoiceNumber} ($\{amount}) is past due. Payment required immediately. Contact us to avoid further action.",
+        urgent: "URGENT: Invoice #{invoiceNumber} overdue. $\{amount} payment required NOW to avoid collection action. Call immediately."
+      }
+    };
+
+    const categoryContent = smsTemplates[category] || smsTemplates.payment_reminder;
+    return categoryContent[tone] || categoryContent.professional;
+  }
+
+  function generateWhatsAppContent(category: string, stage: number, tone: string): string {
+    const whatsappTemplates: Record<string, Record<string, string>> = {
+      payment_reminder: {
+        friendly: `Hello {customerName}! 👋
+
+Hope you're doing well. Just a quick reminder about invoice #{invoiceNumber} for $\{amount} that was due on {dueDate}.
+
+If you've already sent payment, please ignore this message. Otherwise, we'd appreciate payment when convenient.
+
+Thanks! 😊`,
+        professional: `Dear {customerName},
+
+Payment reminder for invoice #{invoiceNumber}:
+• Amount: $\{amount}
+• Due date: {dueDate}
+
+Please process payment at your earliest convenience. Reply if you have any questions.
+
+Best regards,
+{senderName}`,
+        firm: `{customerName},
+
+Invoice #{invoiceNumber} for $\{amount} is past due (due: {dueDate}).
+
+Immediate payment required. Contact us if you need to discuss payment arrangements.
+
+{senderName}`,
+        urgent: `🚨 URGENT NOTICE 🚨
+
+{customerName}, invoice #{invoiceNumber} is seriously overdue.
+
+Amount: $\{amount}
+Due date: {dueDate}
+
+Payment required immediately to avoid collection action. Contact us NOW.`
+      }
+    };
+
+    const categoryContent = whatsappTemplates[category] || whatsappTemplates.payment_reminder;
+    return categoryContent[tone] || categoryContent.professional;
+  }
+
   // Email senders management
   app.get("/api/collections/email-senders", isAuthenticated, async (req: any, res) => {
     try {
