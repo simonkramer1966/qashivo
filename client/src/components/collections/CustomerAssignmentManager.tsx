@@ -78,17 +78,17 @@ export default function CustomerAssignmentManager({ className }: CustomerAssignm
   });
 
   // Fetch customer assignments
-  const { data: assignments = [], isLoading } = useQuery({
+  const { data: assignments = [], isLoading } = useQuery<CustomerScheduleAssignment[]>({
     queryKey: ['/api/collections/customer-assignments'],
   });
 
   // Fetch collection schedules
-  const { data: schedules = [] } = useQuery({
+  const { data: schedules = [] } = useQuery<CollectionSchedule[]>({
     queryKey: ['/api/collections/schedules'],
   });
 
   // Fetch contacts
-  const { data: contacts = [] } = useQuery({
+  const { data: contacts = [] } = useQuery<Contact[]>({
     queryKey: ['/api/contacts'],
   });
 
@@ -136,17 +136,17 @@ export default function CustomerAssignmentManager({ className }: CustomerAssignm
     },
   });
 
-  const filteredAssignments = assignments.filter((assignment: CustomerScheduleAssignment) => {
+  const filteredAssignments = (assignments as CustomerScheduleAssignment[]).filter((assignment: CustomerScheduleAssignment) => {
     // Find contact and schedule details
-    const contact = contacts.find((c: Contact) => c.id === assignment.contactId);
-    const schedule = schedules.find((s: CollectionSchedule) => s.id === assignment.scheduleId);
+    const contact = (contacts as Contact[]).find((c: Contact) => c.id === assignment.contactId);
+    const schedule = (schedules as CollectionSchedule[]).find((s: CollectionSchedule) => s.id === assignment.scheduleId);
     
     // Search filter
     if (searchQuery) {
       const searchLower = searchQuery.toLowerCase();
       const contactMatch = contact?.name?.toLowerCase().includes(searchLower) || 
                           contact?.email?.toLowerCase().includes(searchLower) ||
-                          contact?.company?.toLowerCase().includes(searchLower);
+                          contact?.companyName?.toLowerCase().includes(searchLower);
       const scheduleMatch = schedule?.name?.toLowerCase().includes(searchLower);
       
       if (!contactMatch && !scheduleMatch) return false;
@@ -159,19 +159,19 @@ export default function CustomerAssignmentManager({ className }: CustomerAssignm
   });
 
   const getContactDetails = (contactId: string) => {
-    return contacts.find((c: Contact) => c.id === contactId);
+    return (contacts as Contact[]).find((c: Contact) => c.id === contactId);
   };
 
   const getScheduleDetails = (scheduleId: string) => {
-    return schedules.find((s: CollectionSchedule) => s.id === scheduleId);
+    return (schedules as CollectionSchedule[]).find((s: CollectionSchedule) => s.id === scheduleId);
   };
 
   const getUnassignedContacts = () => {
-    const assignedContactIds = assignments
+    const assignedContactIds = (assignments as CustomerScheduleAssignment[])
       .filter((a: CustomerScheduleAssignment) => a.isActive)
       .map((a: CustomerScheduleAssignment) => a.contactId);
     
-    return contacts.filter((c: Contact) => !assignedContactIds.includes(c.id));
+    return (contacts as Contact[]).filter((c: Contact) => !assignedContactIds.includes(c.id));
   };
 
   const onSubmit = (data: AssignmentFormData) => {
@@ -212,7 +212,7 @@ export default function CustomerAssignmentManager({ className }: CustomerAssignm
               <div>
                 <p className="text-sm font-medium text-gray-600">Total Assigned</p>
                 <p className="text-3xl font-bold text-gray-900" data-testid="text-total-assigned">
-                  {assignments.filter((a: CustomerScheduleAssignment) => a.isActive).length}
+                  {(assignments as CustomerScheduleAssignment[]).filter((a: CustomerScheduleAssignment) => a.isActive).length}
                 </p>
               </div>
               <div className="p-2 bg-blue-500/10 rounded-lg">
@@ -327,8 +327,8 @@ export default function CustomerAssignmentManager({ className }: CustomerAssignm
                       <div>
                         <p className="font-medium text-gray-900">{contact.name}</p>
                         <p className="text-sm text-gray-600">{contact.email}</p>
-                        {contact.company && (
-                          <p className="text-xs text-gray-500">{contact.company}</p>
+                        {contact.companyName && (
+                          <p className="text-xs text-gray-500">{contact.companyName}</p>
                         )}
                       </div>
                     </div>
@@ -343,7 +343,7 @@ export default function CustomerAssignmentManager({ className }: CustomerAssignm
                       <div>
                         <p className="font-medium text-gray-900">{schedule.name}</p>
                         <p className="text-sm text-gray-600">
-                          {schedule.steps?.length || 0} steps
+                          {Array.isArray(schedule.scheduleSteps) ? schedule.scheduleSteps.length : 0} steps
                         </p>
                       </div>
                     </div>
@@ -467,7 +467,7 @@ export default function CustomerAssignmentManager({ className }: CustomerAssignm
                               <div>
                                 <p className="font-medium">{schedule.name}</p>
                                 <p className="text-xs text-gray-500">
-                                  {schedule.steps?.length || 0} steps • {schedule.totalCustomersAssigned || 0} assigned
+                                  {Array.isArray(schedule.scheduleSteps) ? schedule.scheduleSteps.length : 0} steps • {schedule.totalCustomersAssigned || 0} assigned
                                 </p>
                               </div>
                             </SelectItem>
