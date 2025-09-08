@@ -44,6 +44,9 @@ export default function Invoices() {
 
   // Hold state for invoices
   const [heldInvoices, setHeldInvoices] = useState<Set<string>>(new Set());
+  
+  // Hold state for customers
+  const [heldCustomers, setHeldCustomers] = useState<Set<string>>(new Set());
 
   // Selection state for bulk actions
   const [selectedInvoices, setSelectedInvoices] = useState<Set<string>>(new Set());
@@ -464,7 +467,7 @@ export default function Invoices() {
     return 0;
   };
 
-  // Function to toggle hold status
+  // Function to toggle hold status for invoices
   const toggleHoldStatus = (invoiceId: string) => {
     setHeldInvoices(prev => {
       const newSet = new Set(prev);
@@ -472,6 +475,19 @@ export default function Invoices() {
         newSet.delete(invoiceId);
       } else {
         newSet.add(invoiceId);
+      }
+      return newSet;
+    });
+  };
+
+  // Function to toggle hold status for customers
+  const toggleCustomerHoldStatus = (customerId: string) => {
+    setHeldCustomers(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(customerId)) {
+        newSet.delete(customerId);
+      } else {
+        newSet.add(customerId);
       }
       return newSet;
     });
@@ -565,6 +581,20 @@ export default function Invoices() {
     const customerIds = Array.from(selectedCustomers);
     
     switch (action) {
+      case 'hold':
+        setHeldCustomers(prev => {
+          const newSet = new Set(prev);
+          customerIds.forEach(id => newSet.add(id));
+          return newSet;
+        });
+        break;
+      case 'active':
+        setHeldCustomers(prev => {
+          const newSet = new Set(prev);
+          customerIds.forEach(id => newSet.delete(id));
+          return newSet;
+        });
+        break;
       case 'send-email':
         toast({
           title: "Email Sent",
@@ -828,6 +858,18 @@ export default function Invoices() {
                               </DropdownMenuTrigger>
                               <DropdownMenuContent className="w-48 bg-white border-gray-200">
                                 <DropdownMenuItem 
+                                  onClick={() => handleCustomerBulkAction('hold')}
+                                  data-testid="bulk-action-hold"
+                                >
+                                  Hold
+                                </DropdownMenuItem>
+                                <DropdownMenuItem 
+                                  onClick={() => handleCustomerBulkAction('active')}
+                                  data-testid="bulk-action-active"
+                                >
+                                  Active
+                                </DropdownMenuItem>
+                                <DropdownMenuItem 
                                   onClick={() => handleCustomerBulkAction('send-email')}
                                   data-testid="bulk-action-send-email"
                                 >
@@ -897,14 +939,7 @@ export default function Invoices() {
                               <th className="text-left py-2 text-xs font-semibold text-slate-700 w-[10%]">
                                 <span>Late</span>
                               </th>
-                              <th className="text-left py-2 text-xs font-semibold text-slate-700 w-[15%]">
-                                <button 
-                                  onClick={() => handleSort("status")}
-                                  className="flex items-center space-x-1 hover:text-slate-900"
-                                >
-                                  <span>Status</span>
-                                </button>
-                              </th>
+                              <th className="text-center py-2 text-xs font-semibold text-slate-700 w-[15%]">Hold</th>
                               <th className="text-right py-2 text-xs font-semibold text-slate-700 w-[10%]">Actions</th>
                             </tr>
                           </thead>
@@ -933,13 +968,21 @@ export default function Invoices() {
                                 <td className="py-1 text-xs font-medium text-slate-700" data-testid={`text-late-${contact.id}`}>
                                   ${getCustomerLateAmount(contact).toLocaleString()}
                                 </td>
-                                <td className="py-1">
-                                  <Badge 
-                                    className={contact.isActive ? "bg-green-100 text-green-800 border-green-200 text-xs" : "bg-gray-100 text-gray-800 border-gray-200 text-xs"} 
-                                    data-testid={`badge-status-${contact.id}`}
-                                  >
-                                    {contact.isActive ? "Active" : "Inactive"}
-                                  </Badge>
+                                <td className="py-1" data-testid={`hold-toggle-${contact.id}`}>
+                                  <div className="flex justify-center">
+                                    <Button 
+                                      variant={heldCustomers.has(contact.id) ? "default" : "outline"}
+                                      size="sm"
+                                      onClick={() => toggleCustomerHoldStatus(contact.id)}
+                                      className={heldCustomers.has(contact.id) 
+                                        ? "bg-red-500 hover:bg-red-600 text-white h-7 px-3" 
+                                        : "border-gray-200 text-gray-300 hover:bg-gray-50 h-7 px-3"
+                                      }
+                                      data-testid={`button-hold-toggle-${contact.id}`}
+                                    >
+                                      {heldCustomers.has(contact.id) ? 'ON HOLD' : 'Active'}
+                                    </Button>
+                                  </div>
                                 </td>
                                 <td className="py-1">
                                   <div className="flex space-x-1 justify-end">
