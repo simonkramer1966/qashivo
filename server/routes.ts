@@ -508,6 +508,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Clean up contacts endpoint - remove old Xero contacts and keep only 80 mock clients
+  app.post('/api/contacts/cleanup', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      console.log('🧹 Cleaning up contacts for tenant:', user.tenantId);
+      await generateMockData(user.tenantId);
+      
+      res.json({ 
+        success: true, 
+        message: "Contacts cleaned up successfully! Now showing only 80 mock clients."
+      });
+    } catch (error) {
+      console.error("Error cleaning up contacts:", error);
+      res.status(500).json({ message: "Failed to clean up contacts" });
+    }
+  });
+
   // Auth routes
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
     try {

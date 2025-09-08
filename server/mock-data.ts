@@ -174,15 +174,17 @@ export async function generateMockData(tenantId: string): Promise<void> {
   // Clear existing data first
   console.log('🧹 Clearing existing mock data...');
   try {
-    // Note: In a real app, you'd want more selective deletion
-    // For demo purposes, we'll clear all data for this tenant
+    // Get counts before clearing
     const existingInvoices = await storage.getInvoices(tenantId, 5000);
     const existingContacts = await storage.getContacts(tenantId);
     
     console.log(`📋 Found ${existingInvoices.length} existing invoices and ${existingContacts.length} existing contacts to clear`);
     
-    // Note: Since we don't have bulk delete methods, we'll let the new data be additive
-    // In production, you'd implement proper deletion methods
+    // Clear all existing data for clean slate
+    await storage.clearAllContacts(tenantId);
+    await storage.clearAllInvoices(tenantId);
+    
+    console.log('✅ Cleared all existing data');
   } catch (error) {
     console.log('⚠️ Could not clear existing data, proceeding with generation...');
   }

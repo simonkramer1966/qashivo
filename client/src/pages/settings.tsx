@@ -592,6 +592,7 @@ export default function Settings() {
   const [isConnecting, setIsConnecting] = useState(false);
   const [isDisconnecting, setIsDisconnecting] = useState(false);
   const [isGeneratingMockData, setIsGeneratingMockData] = useState(false);
+  const [isCleaningContacts, setIsCleaningContacts] = useState(false);
   
   // Branding form state
   const [companyName, setCompanyName] = useState("");
@@ -826,6 +827,42 @@ export default function Settings() {
       });
     } finally {
       setIsGeneratingMockData(false);
+    }
+  };
+
+  const handleCleanupContacts = async () => {
+    setIsCleaningContacts(true);
+    try {
+      const response = await fetch('/api/contacts/cleanup', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to cleanup contacts');
+      }
+      
+      const result = await response.json();
+      
+      // Invalidate contacts and invoices data to refresh
+      queryClient.invalidateQueries({ queryKey: ['/api/contacts'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/invoices'] });
+      
+      toast({
+        title: "Cleanup Complete!",
+        description: result.message,
+        variant: "default",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to cleanup contacts. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsCleaningContacts(false);
     }
   };
 
@@ -1238,6 +1275,29 @@ export default function Settings() {
                       data-testid="button-generate-mock-data"
                     >
                       {isGeneratingMockData ? "Generating..." : "Generate Data"}
+                    </Button>
+                  </div>
+
+                  <div className="flex items-center justify-between p-6 bg-orange-50/80 rounded-xl border border-orange-200/50">
+                    <div>
+                      <p className="font-semibold text-slate-900">
+                        Clean Up Contacts
+                      </p>
+                      <p className="text-sm text-slate-600 mt-1">
+                        Remove old Xero contacts and keep only 80 mock clients
+                      </p>
+                      <p className="text-xs text-slate-500 mt-1">
+                        Recommended after disconnecting from Xero to reduce clutter
+                      </p>
+                    </div>
+                    <Button 
+                      onClick={handleCleanupContacts}
+                      disabled={isCleaningContacts}
+                      variant="outline"
+                      className="border-orange-300 text-orange-600 hover:bg-orange-50 min-w-[120px]"
+                      data-testid="button-cleanup-contacts"
+                    >
+                      {isCleaningContacts ? "Cleaning..." : "Clean Up"}
                     </Button>
                   </div>
                 </CardContent>

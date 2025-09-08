@@ -143,6 +143,10 @@ export interface IStorage {
   createLead(lead: InsertLead): Promise<Lead>;
   updateLead(id: string, updates: Partial<InsertLead>): Promise<Lead>;
   deleteLead(id: string): Promise<void>;
+  
+  // Cleanup operations
+  clearAllContacts(tenantId: string): Promise<void>;
+  clearAllInvoices(tenantId: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -290,6 +294,20 @@ export class DatabaseStorage implements IStorage {
       .update(contacts)
       .set({ isActive: false, updatedAt: new Date() })
       .where(and(eq(contacts.id, id), eq(contacts.tenantId, tenantId)));
+  }
+
+  // Bulk delete methods for cleanup
+  async clearAllContacts(tenantId: string): Promise<void> {
+    await db
+      .update(contacts)
+      .set({ isActive: false, updatedAt: new Date() })
+      .where(eq(contacts.tenantId, tenantId));
+  }
+
+  async clearAllInvoices(tenantId: string): Promise<void> {
+    await db
+      .delete(invoices)
+      .where(eq(invoices.tenantId, tenantId));
   }
 
   // Invoice operations
