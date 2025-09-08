@@ -2172,9 +2172,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         tenantId: tenant.xeroTenantId!,
       };
 
-      // Parse pagination parameters
+      // Parse pagination parameters - if no page/limit provided, fetch all invoices
       const page = parseInt(req.query.page as string) || 1;
-      const limit = Math.min(parseInt(req.query.limit as string) || 50, 100); // Max 100 per page
+      const limit = req.query.page || req.query.limit ? 
+        Math.min(parseInt(req.query.limit as string) || 50, 100) : 
+        1000; // Fetch up to 1000 invoices when no pagination requested
       const status = req.query.status as string || 'all'; // unpaid, partial, paid, void, all
 
       // Get paginated Xero invoices with payment data
