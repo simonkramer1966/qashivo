@@ -688,7 +688,7 @@ export default function Invoices() {
                             onClick={() => handleSort("amount")}
                             className="flex items-center space-x-1 hover:text-slate-900"
                           >
-                            <span>Amount Outstanding</span>
+                            <span>Outstanding</span>
                             {getSortIcon("amount")}
                           </button>
                         </th>
@@ -722,7 +722,7 @@ export default function Invoices() {
                         <th className="text-left py-2 text-xs font-semibold text-slate-700">
                           <span>Next Action</span>
                         </th>
-                        <th className="text-right py-2 text-xs font-semibold text-slate-700">Actions</th>
+                        <th className="text-left py-2 text-xs font-semibold text-slate-700">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-200/50">
@@ -765,7 +765,7 @@ export default function Invoices() {
                             </div>
                           </td>
                           <td className="py-2">
-                            <div className="flex space-x-1 justify-end">
+                            <div className="flex space-x-1 justify-start">
                               {invoice.contact?.email && (
                                 <Button 
                                   variant="outline" 
