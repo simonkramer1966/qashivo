@@ -907,11 +907,11 @@ export default function Invoices() {
                                 onClick={() => toggleHoldStatus(invoice.id)}
                                 className={heldInvoices.has(invoice.id) 
                                   ? "bg-red-500 hover:bg-red-600 text-white h-7 px-3" 
-                                  : "border-gray-300 text-gray-600 hover:bg-gray-100 h-7 px-3"
+                                  : "border-gray-200 text-gray-300 hover:bg-gray-50 h-7 px-3"
                                 }
                                 data-testid={`button-hold-toggle-${invoice.id}`}
                               >
-                                {heldInvoices.has(invoice.id) ? 'ON HOLD' : 'HOLD'}
+                                {heldInvoices.has(invoice.id) ? 'ON HOLD' : 'Active'}
                               </Button>
                             </div>
                           </td>
