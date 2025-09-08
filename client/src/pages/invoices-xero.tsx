@@ -267,16 +267,16 @@ export default function InvoicesXero() {
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid grid-cols-4 w-full max-w-2xl">
               <TabsTrigger value="unpaid" className="text-sm">
-                Unpaid ({unpaidData?.pagination?.totalCount || 0})
+                Unpaid ({unpaidData?.invoices?.length || 0})
               </TabsTrigger>
               <TabsTrigger value="partial" className="text-sm">
-                Partial ({partialData?.pagination?.totalCount || 0})
+                Partial ({partialData?.invoices?.length || 0})
               </TabsTrigger>
               <TabsTrigger value="paid" className="text-sm">
-                Paid ({paidData?.pagination?.totalCount || 0})
+                Paid ({paidData?.invoices?.length || 0})
               </TabsTrigger>
               <TabsTrigger value="void" className="text-sm">
-                Void ({voidData?.pagination?.totalCount || 0})
+                Void ({voidData?.invoices?.length || 0})
               </TabsTrigger>
             </TabsList>
 
