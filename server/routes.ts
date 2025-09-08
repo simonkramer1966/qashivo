@@ -1364,6 +1364,261 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Enhanced template management
+  app.get("/api/collections/templates/by-category/:category", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { category } = req.params;
+      const { type } = req.query;
+      const templates = await storage.getTemplatesByCategory(user.tenantId, category, type);
+      res.json(templates);
+    } catch (error) {
+      console.error("Error fetching templates by category:", error);
+      res.status(500).json({ message: "Failed to fetch templates by category" });
+    }
+  });
+
+  app.get("/api/collections/templates/high-performing", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { type, limit } = req.query;
+      const templates = await storage.getHighPerformingTemplates(
+        user.tenantId,
+        type,
+        limit ? parseInt(limit as string) : 5
+      );
+      res.json(templates);
+    } catch (error) {
+      console.error("Error fetching high-performing templates:", error);
+      res.status(500).json({ message: "Failed to fetch high-performing templates" });
+    }
+  });
+
+  // Email senders management
+  app.get("/api/collections/email-senders", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const senders = await storage.getEmailSenders(user.tenantId);
+      res.json(senders);
+    } catch (error) {
+      console.error("Error fetching email senders:", error);
+      res.status(500).json({ message: "Failed to fetch email senders" });
+    }
+  });
+
+  app.post("/api/collections/email-senders", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const senderData = {
+        ...req.body,
+        tenantId: user.tenantId,
+      };
+
+      const sender = await storage.createEmailSender(senderData);
+      res.status(201).json(sender);
+    } catch (error) {
+      console.error("Error creating email sender:", error);
+      res.status(500).json({ message: "Failed to create email sender" });
+    }
+  });
+
+  app.put("/api/collections/email-senders/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { id } = req.params;
+      const sender = await storage.updateEmailSender(id, user.tenantId, req.body);
+      res.json(sender);
+    } catch (error) {
+      console.error("Error updating email sender:", error);
+      res.status(500).json({ message: "Failed to update email sender" });
+    }
+  });
+
+  app.delete("/api/collections/email-senders/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { id } = req.params;
+      const success = await storage.deleteEmailSender(id, user.tenantId);
+      if (success) {
+        res.json({ message: "Email sender deleted successfully" });
+      } else {
+        res.status(404).json({ message: "Email sender not found" });
+      }
+    } catch (error) {
+      console.error("Error deleting email sender:", error);
+      res.status(500).json({ message: "Failed to delete email sender" });
+    }
+  });
+
+  // Collection schedules management
+  app.get("/api/collections/schedules", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const schedules = await storage.getCollectionSchedules(user.tenantId);
+      res.json(schedules);
+    } catch (error) {
+      console.error("Error fetching collection schedules:", error);
+      res.status(500).json({ message: "Failed to fetch collection schedules" });
+    }
+  });
+
+  app.post("/api/collections/schedules", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const scheduleData = {
+        ...req.body,
+        tenantId: user.tenantId,
+      };
+
+      const schedule = await storage.createCollectionSchedule(scheduleData);
+      res.status(201).json(schedule);
+    } catch (error) {
+      console.error("Error creating collection schedule:", error);
+      res.status(500).json({ message: "Failed to create collection schedule" });
+    }
+  });
+
+  app.put("/api/collections/schedules/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { id } = req.params;
+      const schedule = await storage.updateCollectionSchedule(id, user.tenantId, req.body);
+      res.json(schedule);
+    } catch (error) {
+      console.error("Error updating collection schedule:", error);
+      res.status(500).json({ message: "Failed to update collection schedule" });
+    }
+  });
+
+  app.delete("/api/collections/schedules/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { id } = req.params;
+      const success = await storage.deleteCollectionSchedule(id, user.tenantId);
+      if (success) {
+        res.json({ message: "Collection schedule deleted successfully" });
+      } else {
+        res.status(404).json({ message: "Collection schedule not found" });
+      }
+    } catch (error) {
+      console.error("Error deleting collection schedule:", error);
+      res.status(500).json({ message: "Failed to delete collection schedule" });
+    }
+  });
+
+  // Customer schedule assignments
+  app.get("/api/collections/customer-assignments", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { contactId } = req.query;
+      const assignments = await storage.getCustomerScheduleAssignments(user.tenantId, contactId);
+      res.json(assignments);
+    } catch (error) {
+      console.error("Error fetching customer assignments:", error);
+      res.status(500).json({ message: "Failed to fetch customer assignments" });
+    }
+  });
+
+  app.post("/api/collections/customer-assignments", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const assignmentData = {
+        ...req.body,
+        tenantId: user.tenantId,
+      };
+
+      const assignment = await storage.assignCustomerToSchedule(assignmentData);
+      res.status(201).json(assignment);
+    } catch (error) {
+      console.error("Error creating customer assignment:", error);
+      res.status(500).json({ message: "Failed to create customer assignment" });
+    }
+  });
+
+  app.delete("/api/collections/customer-assignments/:contactId", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { contactId } = req.params;
+      const success = await storage.unassignCustomerFromSchedule(user.tenantId, contactId);
+      if (success) {
+        res.json({ message: "Customer unassigned successfully" });
+      } else {
+        res.status(404).json({ message: "Customer assignment not found" });
+      }
+    } catch (error) {
+      console.error("Error unassigning customer:", error);
+      res.status(500).json({ message: "Failed to unassign customer" });
+    }
+  });
+
+  app.get("/api/collections/customer-assignments/:contactId/active", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { contactId } = req.params;
+      const activeSchedule = await storage.getCustomerActiveSchedule(user.tenantId, contactId);
+      res.json(activeSchedule);
+    } catch (error) {
+      console.error("Error fetching customer active schedule:", error);
+      res.status(500).json({ message: "Failed to fetch customer active schedule" });
+    }
+  });
+
   // AI Agent Configurations
   app.get("/api/collections/ai-agents", isAuthenticated, async (req: any, res) => {
     try {

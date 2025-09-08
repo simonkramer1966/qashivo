@@ -13,6 +13,10 @@ import {
   retellConfigurations,
   voiceCalls,
   leads,
+  emailSenders,
+  collectionSchedules,
+  customerScheduleAssignments,
+  templatePerformance,
   type User,
   type UpsertUser,
   type Tenant,
@@ -41,9 +45,17 @@ import {
   type InsertVoiceCall,
   type Lead,
   type InsertLead,
+  type EmailSender,
+  type InsertEmailSender,
+  type CollectionSchedule,
+  type InsertCollectionSchedule,
+  type CustomerScheduleAssignment,
+  type InsertCustomerScheduleAssignment,
+  type TemplatePerformance,
+  type InsertTemplatePerformance,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, desc, sql, count } from "drizzle-orm";
+import { eq, and, desc, sql, count, ne, isNotNull, gte, lte } from "drizzle-orm";
 
 // Interface for storage operations
 export interface IStorage {
@@ -574,6 +586,284 @@ export class DatabaseStorage implements IStorage {
       .where(and(eq(communicationTemplates.id, id), eq(communicationTemplates.tenantId, tenantId)))
       .returning();
     return template;
+  }
+
+  // Email Senders Management
+  async getEmailSenders(tenantId: string): Promise<EmailSender[]> {
+    return await db
+      .select()
+      .from(emailSenders)
+      .where(eq(emailSenders.tenantId, tenantId))
+      .orderBy(desc(emailSenders.isDefault), emailSenders.name);
+  }
+
+  async createEmailSender(senderData: InsertEmailSender): Promise<EmailSender> {
+    // If this is being set as default, remove default from others
+    if (senderData.isDefault) {
+      await db
+        .update(emailSenders)
+        .set({ isDefault: false })
+        .where(eq(emailSenders.tenantId, senderData.tenantId));
+    }
+
+    const [sender] = await db.insert(emailSenders).values(senderData).returning();
+    return sender;
+  }
+
+  async updateEmailSender(
+    id: string,
+    tenantId: string,
+    updates: Partial<InsertEmailSender>
+  ): Promise<EmailSender> {
+    // If this is being set as default, remove default from others
+    if (updates.isDefault) {
+      await db
+        .update(emailSenders)
+        .set({ isDefault: false })
+        .where(and(eq(emailSenders.tenantId, tenantId), ne(emailSenders.id, id)));
+    }
+
+    const [sender] = await db
+      .update(emailSenders)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(and(eq(emailSenders.id, id), eq(emailSenders.tenantId, tenantId)))
+      .returning();
+    return sender;
+  }
+
+  async deleteEmailSender(id: string, tenantId: string): Promise<boolean> {
+    const result = await db
+      .delete(emailSenders)
+      .where(and(eq(emailSenders.id, id), eq(emailSenders.tenantId, tenantId)));
+    return result.rowCount > 0;
+  }
+
+  async getDefaultEmailSender(tenantId: string): Promise<EmailSender | null> {
+    const [sender] = await db
+      .select()
+      .from(emailSenders)
+      .where(and(eq(emailSenders.tenantId, tenantId), eq(emailSenders.isDefault, true)))
+      .limit(1);
+    return sender || null;
+  }
+
+  // Collection Schedules Management
+  async getCollectionSchedules(tenantId: string): Promise<CollectionSchedule[]> {
+    return await db
+      .select()
+      .from(collectionSchedules)
+      .where(eq(collectionSchedules.tenantId, tenantId))
+      .orderBy(desc(collectionSchedules.isDefault), collectionSchedules.name);
+  }
+
+  async createCollectionSchedule(scheduleData: InsertCollectionSchedule): Promise<CollectionSchedule> {
+    // If this is being set as default, remove default from others
+    if (scheduleData.isDefault) {
+      await db
+        .update(collectionSchedules)
+        .set({ isDefault: false })
+        .where(eq(collectionSchedules.tenantId, scheduleData.tenantId));
+    }
+
+    const [schedule] = await db.insert(collectionSchedules).values(scheduleData).returning();
+    return schedule;
+  }
+
+  async updateCollectionSchedule(
+    id: string,
+    tenantId: string,
+    updates: Partial<InsertCollectionSchedule>
+  ): Promise<CollectionSchedule> {
+    // If this is being set as default, remove default from others
+    if (updates.isDefault) {
+      await db
+        .update(collectionSchedules)
+        .set({ isDefault: false })
+        .where(and(eq(collectionSchedules.tenantId, tenantId), ne(collectionSchedules.id, id)));
+    }
+
+    const [schedule] = await db
+      .update(collectionSchedules)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(and(eq(collectionSchedules.id, id), eq(collectionSchedules.tenantId, tenantId)))
+      .returning();
+    return schedule;
+  }
+
+  async deleteCollectionSchedule(id: string, tenantId: string): Promise<boolean> {
+    const result = await db
+      .delete(collectionSchedules)
+      .where(and(eq(collectionSchedules.id, id), eq(collectionSchedules.tenantId, tenantId)));
+    return result.rowCount > 0;
+  }
+
+  async getDefaultCollectionSchedule(tenantId: string): Promise<CollectionSchedule | null> {
+    const [schedule] = await db
+      .select()
+      .from(collectionSchedules)
+      .where(and(eq(collectionSchedules.tenantId, tenantId), eq(collectionSchedules.isDefault, true)))
+      .limit(1);
+    return schedule || null;
+  }
+
+  // Customer Schedule Assignments
+  async getCustomerScheduleAssignments(tenantId: string, contactId?: string): Promise<CustomerScheduleAssignment[]> {
+    let query = db
+      .select()
+      .from(customerScheduleAssignments)
+      .where(eq(customerScheduleAssignments.tenantId, tenantId));
+
+    if (contactId) {
+      query = query.where(eq(customerScheduleAssignments.contactId, contactId));
+    }
+
+    return await query.orderBy(desc(customerScheduleAssignments.assignedAt));
+  }
+
+  async assignCustomerToSchedule(assignmentData: InsertCustomerScheduleAssignment): Promise<CustomerScheduleAssignment> {
+    // Remove any existing active assignment for this customer
+    await db
+      .update(customerScheduleAssignments)
+      .set({ isActive: false })
+      .where(and(
+        eq(customerScheduleAssignments.tenantId, assignmentData.tenantId),
+        eq(customerScheduleAssignments.contactId, assignmentData.contactId),
+        eq(customerScheduleAssignments.isActive, true)
+      ));
+
+    const [assignment] = await db.insert(customerScheduleAssignments).values(assignmentData).returning();
+    
+    // Update the schedule's customer count
+    await db
+      .update(collectionSchedules)
+      .set({ 
+        totalCustomersAssigned: sql`${collectionSchedules.totalCustomersAssigned} + 1`
+      })
+      .where(eq(collectionSchedules.id, assignmentData.scheduleId));
+
+    return assignment;
+  }
+
+  async unassignCustomerFromSchedule(tenantId: string, contactId: string): Promise<boolean> {
+    const [assignment] = await db
+      .select()
+      .from(customerScheduleAssignments)
+      .where(and(
+        eq(customerScheduleAssignments.tenantId, tenantId),
+        eq(customerScheduleAssignments.contactId, contactId),
+        eq(customerScheduleAssignments.isActive, true)
+      ))
+      .limit(1);
+
+    if (!assignment) return false;
+
+    await db
+      .update(customerScheduleAssignments)
+      .set({ isActive: false })
+      .where(eq(customerScheduleAssignments.id, assignment.id));
+
+    // Update the schedule's customer count
+    await db
+      .update(collectionSchedules)
+      .set({ 
+        totalCustomersAssigned: sql`GREATEST(0, ${collectionSchedules.totalCustomersAssigned} - 1)`
+      })
+      .where(eq(collectionSchedules.id, assignment.scheduleId));
+
+    return true;
+  }
+
+  async getCustomerActiveSchedule(tenantId: string, contactId: string): Promise<{
+    assignment: CustomerScheduleAssignment;
+    schedule: CollectionSchedule;
+  } | null> {
+    const result = await db
+      .select({
+        assignment: customerScheduleAssignments,
+        schedule: collectionSchedules,
+      })
+      .from(customerScheduleAssignments)
+      .innerJoin(collectionSchedules, eq(customerScheduleAssignments.scheduleId, collectionSchedules.id))
+      .where(and(
+        eq(customerScheduleAssignments.tenantId, tenantId),
+        eq(customerScheduleAssignments.contactId, contactId),
+        eq(customerScheduleAssignments.isActive, true)
+      ))
+      .limit(1);
+
+    return result[0] || null;
+  }
+
+  // Enhanced Template Management with AI features
+  async getTemplatesByCategory(
+    tenantId: string,
+    category: string,
+    type?: string
+  ): Promise<CommunicationTemplate[]> {
+    let query = db
+      .select()
+      .from(communicationTemplates)
+      .where(and(
+        eq(communicationTemplates.tenantId, tenantId),
+        eq(communicationTemplates.category, category)
+      ));
+
+    if (type) {
+      query = query.where(eq(communicationTemplates.type, type));
+    }
+
+    return await query.orderBy(communicationTemplates.stage, desc(communicationTemplates.optimizationScore));
+  }
+
+  async getHighPerformingTemplates(
+    tenantId: string,
+    type?: string,
+    limit: number = 5
+  ): Promise<CommunicationTemplate[]> {
+    let query = db
+      .select()
+      .from(communicationTemplates)
+      .where(and(
+        eq(communicationTemplates.tenantId, tenantId),
+        isNotNull(communicationTemplates.successRate)
+      ));
+
+    if (type) {
+      query = query.where(eq(communicationTemplates.type, type));
+    }
+
+    return await query
+      .orderBy(desc(communicationTemplates.successRate), desc(communicationTemplates.usageCount))
+      .limit(limit);
+  }
+
+  // Template Performance Analytics
+  async recordTemplatePerformance(performanceData: InsertTemplatePerformance): Promise<TemplatePerformance> {
+    const [performance] = await db.insert(templatePerformance).values(performanceData).returning();
+    return performance;
+  }
+
+  async getTemplateAnalytics(
+    tenantId: string,
+    templateId: string,
+    dateRange?: { start: Date; end: Date }
+  ): Promise<TemplatePerformance[]> {
+    let query = db
+      .select()
+      .from(templatePerformance)
+      .where(and(
+        eq(templatePerformance.tenantId, tenantId),
+        eq(templatePerformance.templateId, templateId)
+      ));
+
+    if (dateRange) {
+      query = query.where(and(
+        gte(templatePerformance.date, dateRange.start),
+        lte(templatePerformance.date, dateRange.end)
+      ));
+    }
+
+    return await query.orderBy(desc(templatePerformance.date));
   }
 
   async deleteCommunicationTemplate(id: string, tenantId: string): Promise<void> {
