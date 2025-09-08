@@ -721,7 +721,7 @@ export default function Invoices() {
                 </div>
               ) : (
                 <div className="overflow-x-auto">
-                  <table className="w-full">
+                  <table className="w-auto">
                     <thead>
                       <tr className="border-b border-slate-200/50">
                         <th className="text-left py-2 text-xs font-semibold text-slate-700 w-30">
