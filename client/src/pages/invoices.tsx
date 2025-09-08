@@ -506,11 +506,7 @@ export default function Invoices() {
                           <p className="text-sm text-muted-foreground mt-2">
                             Try adjusting your search terms
                           </p>
-                        ) : (
-                          <div className="mt-6">
-                            <p className="text-muted-foreground mb-4">Get started by adding your first customer</p>
-                          </div>
-                        )}
+                        ) : null}
                       </div>
                     ) : (
                       <div className="overflow-x-auto">
@@ -673,11 +669,7 @@ export default function Invoices() {
                     <p className="text-sm text-muted-foreground mt-2">
                       Try adjusting your search terms or filters
                     </p>
-                  ) : (
-                    <div className="mt-6">
-                      <p className="text-muted-foreground mb-4">Get started by creating your first invoice</p>
-                    </div>
-                  )}
+                  ) : null}
                 </div>
               ) : (
                 <div className="overflow-x-auto">
