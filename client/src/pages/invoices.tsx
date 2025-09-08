@@ -40,6 +40,9 @@ export default function Invoices() {
   const [customersCurrentPage, setCustomersCurrentPage] = useState(1);
   const [customersItemsPerPage, setCustomersItemsPerPage] = useState(50);
 
+  // Hold state for invoices
+  const [heldInvoices, setHeldInvoices] = useState<Set<string>>(new Set());
+
   // Redirect to home if not authenticated
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -401,6 +404,19 @@ export default function Invoices() {
     }
     
     return 0;
+  };
+
+  // Function to toggle hold status
+  const toggleHoldStatus = (invoiceId: string) => {
+    setHeldInvoices(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(invoiceId)) {
+        newSet.delete(invoiceId);
+      } else {
+        newSet.add(invoiceId);
+      }
+      return newSet;
+    });
   };
 
   return (
@@ -840,6 +856,7 @@ export default function Invoices() {
                             </SelectContent>
                           </Select>
                         </th>
+                        <th className="text-center py-2 text-xs font-semibold text-slate-700 w-52">Hold</th>
                         <th className="text-right py-2 text-xs font-semibold text-slate-700 w-52">Actions</th>
                       </tr>
                     </thead>
@@ -880,6 +897,22 @@ export default function Invoices() {
                             </div>
                             <div className="text-xs text-slate-600 mt-0.5">
                               {['Email Reminder', 'Phone Call', 'Letter', 'SMS Follow-up'][Math.floor(Math.random() * 4)]}
+                            </div>
+                          </td>
+                          <td className="py-2 w-52" data-testid={`hold-toggle-${invoice.id}`}>
+                            <div className="flex justify-center">
+                              <Button 
+                                variant={heldInvoices.has(invoice.id) ? "default" : "outline"}
+                                size="sm"
+                                onClick={() => toggleHoldStatus(invoice.id)}
+                                className={heldInvoices.has(invoice.id) 
+                                  ? "bg-red-500 hover:bg-red-600 text-white h-7 px-3" 
+                                  : "border-gray-300 text-gray-600 hover:bg-gray-100 h-7 px-3"
+                                }
+                                data-testid={`button-hold-toggle-${invoice.id}`}
+                              >
+                                {heldInvoices.has(invoice.id) ? 'ON HOLD' : 'HOLD'}
+                              </Button>
                             </div>
                           </td>
                           <td className="py-2 w-52">
