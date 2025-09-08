@@ -305,35 +305,7 @@ export default function InvoicesXero() {
         <Header 
           title="Invoices - Xero" 
           subtitle="Live invoice data directly from your Xero accounting system"
-        />
-        
-        <div className="p-8 space-y-8">
-          {/* Search Filter */}
-          <Card className="bg-white border border-gray-200 shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-xl font-bold flex items-center">
-                <div className="p-2 bg-[#17B6C3]/10 rounded-lg mr-3">
-                  <Search className="h-5 w-5 text-[#17B6C3]" />
-                </div>
-                Search
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="relative">
-                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input 
-                  placeholder="Search Xero invoices or contacts..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="pl-9 bg-white/70 border-gray-200/30"
-                  data-testid="input-search"
-                />
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Sync Controls */}
-          <div className="flex items-center justify-between bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+          action={
             <div className="flex items-center space-x-4">
               <Button
                 onClick={() => syncMutation.mutate()}
@@ -364,11 +336,33 @@ export default function InvoicesXero() {
                 )}
               </div>
             </div>
-
-            <div className="text-xs text-gray-500">
-              Data cached from Xero for faster loading
-            </div>
-          </div>
+          }
+        />
+        
+        <div className="p-8 space-y-8">
+          {/* Search Filter */}
+          <Card className="bg-white border border-gray-200 shadow-sm">
+            <CardHeader>
+              <CardTitle className="text-xl font-bold flex items-center">
+                <div className="p-2 bg-[#17B6C3]/10 rounded-lg mr-3">
+                  <Search className="h-5 w-5 text-[#17B6C3]" />
+                </div>
+                Search
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="relative">
+                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Input 
+                  placeholder="Search Xero invoices or contacts..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="pl-9 bg-white/70 border-gray-200/30"
+                  data-testid="input-search"
+                />
+              </div>
+            </CardContent>
+          </Card>
 
           {/* Invoices Tabs */}
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
