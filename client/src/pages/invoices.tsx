@@ -390,6 +390,19 @@ export default function Invoices() {
     );
   };
 
+  // Function to calculate late amount
+  const getLateAmount = (invoice: any) => {
+    const currentDate = new Date();
+    const dueDate = new Date(invoice.dueDate);
+    
+    // If invoice is past due date and not paid, return the outstanding amount
+    if (currentDate > dueDate && invoice.status !== 'paid') {
+      return Number(invoice.amount);
+    }
+    
+    return 0;
+  };
+
   return (
     <div className="flex h-screen bg-white">
       <NewSidebar />
@@ -780,6 +793,14 @@ export default function Invoices() {
                           </button>
                         </th>
                         <th className="text-left py-2 text-xs font-semibold text-slate-700 w-52">
+                          <button 
+                            onClick={() => handleSort("late")}
+                            className="flex items-center space-x-1 hover:text-slate-900"
+                          >
+                            <span>Late</span>
+                          </button>
+                        </th>
+                        <th className="text-left py-2 text-xs font-semibold text-slate-700 w-52">
                           <Select value={dueDateAgeSort} onValueChange={(value) => {
                             setDueDateAgeSort(value);
                             setActiveSortColumn("dueDateAge");
@@ -838,6 +859,9 @@ export default function Invoices() {
                           </td>
                           <td className="py-2 w-52 text-xs font-medium text-slate-900" data-testid={`text-amount-outstanding-${invoice.id}`}>
                             ${Number(invoice.amount).toLocaleString()}
+                          </td>
+                          <td className="py-2 w-52 text-xs font-medium text-slate-900" data-testid={`text-late-amount-${invoice.id}`}>
+                            ${getLateAmount(invoice).toLocaleString()}
                           </td>
                           <td className="py-2 w-52" data-testid={`text-due-date-age-${invoice.id}`}>
                             <div className="text-xs text-slate-900">
