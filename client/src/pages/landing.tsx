@@ -105,14 +105,14 @@ export default function Landing() {
             </div>
           </div>
           <h1 className="text-5xl md:text-7xl font-bold mb-6">
-            Nexus AR
+            Get Paid Faster
           </h1>
           <p className="text-2xl md:text-3xl text-white/90 mb-4">
-            Smart Credit Control & Debtor Management for SMEs
+            Reduce overdue invoices by 60% and get paid 2 weeks faster
           </p>
           <p className="text-xl text-white/80 mb-12 max-w-3xl mx-auto leading-relaxed">
-            Optimize your working capital with intelligent debtor management, proactive credit control, 
-            and automated customer communications designed specifically for SME businesses.
+            Stop chasing late payments manually. Our automated credit control platform helps SMEs 
+            get paid faster while maintaining great customer relationships - all from one simple dashboard.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button 
@@ -143,11 +143,11 @@ export default function Landing() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
-              Strengthen Your Working Capital Management
+              Stop Wasting Time Chasing Payments
             </h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
-              Our intelligent platform improves cash flow timing by 40% and reduces overdue accounts by 60% 
-              for SME businesses through automated workflows and AI-powered insights.
+              Save 10+ hours per week on credit control while getting paid faster. 
+              Our customers collect 2 weeks sooner and reduce bad debt by 50%.
             </p>
           </div>
           
@@ -156,10 +156,10 @@ export default function Landing() {
               <div className="w-16 h-16 bg-[#17B6C3]/10 rounded-2xl flex items-center justify-center mx-auto mb-6">
                 <BarChart3 className="h-8 w-8 text-[#17B6C3]" />
               </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-4">Smart Analytics</h3>
+              <h3 className="text-2xl font-bold text-gray-900 mb-4">Know Who Will Pay Late</h3>
               <p className="text-gray-600 leading-relaxed">
-                Real-time insights into payment patterns, collection performance, and customer behavior 
-                help you make data-driven decisions.
+                Spot payment risks early with predictive analytics. Focus your time on customers 
+                who need attention, not those who always pay on time.
               </p>
             </div>
             
@@ -167,10 +167,10 @@ export default function Landing() {
               <div className="w-16 h-16 bg-[#17B6C3]/10 rounded-2xl flex items-center justify-center mx-auto mb-6">
                 <Users className="h-8 w-8 text-[#17B6C3]" />
               </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-4">Professional Customer Communications</h3>
+              <h3 className="text-2xl font-bold text-gray-900 mb-4">Never Send Another Reminder Email</h3>
               <p className="text-gray-600 leading-relaxed">
-                Proactive customer communications via email, SMS, and phone that preserve valuable 
-                business relationships while ensuring timely payments.
+                Automated, professional payment reminders via email, SMS and phone calls. 
+                Set it once and never worry about chasing payments again.
               </p>
             </div>
             
@@ -178,10 +178,10 @@ export default function Landing() {
               <div className="w-16 h-16 bg-[#17B6C3]/10 rounded-2xl flex items-center justify-center mx-auto mb-6">
                 <Clock className="h-8 w-8 text-[#17B6C3]" />
               </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-4">Smart Payment Workflows</h3>
+              <h3 className="text-2xl font-bold text-gray-900 mb-4">Keep Customers Happy While Getting Paid</h3>
               <p className="text-gray-600 leading-relaxed">
-                Configure smart payment reminder workflows that escalate appropriately while 
-                maintaining customer goodwill and preserving business relationships.
+                Polite, professional reminders that maintain great relationships. 
+                Smart escalation means you only get involved when absolutely necessary.
               </p>
             </div>
           </div>
@@ -197,10 +197,10 @@ export default function Landing() {
         <div className="relative z-10 h-full flex items-center justify-center">
           <div className="text-center text-white max-w-4xl mx-auto px-4">
             <h2 className="text-4xl md:text-5xl font-bold mb-6">
-              Trusted by Leading Businesses
+              "We Get Paid 2 Weeks Faster Now"
             </h2>
             <p className="text-xl text-white/90">
-              Join thousands of companies who have transformed their accounts receivable process
+              Join 2,000+ SMEs who've cut their days sales outstanding and improved cash flow
             </p>
           </div>
         </div>
@@ -212,35 +212,35 @@ export default function Landing() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
             <div>
               <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
-                Complete credit control solution for growing SMEs
+                Works With Your Xero Account in Minutes
               </h2>
               <p className="text-xl text-gray-600 mb-8 leading-relaxed">
-                Our comprehensive platform integrates with your existing systems and automates 
-                your entire debtor management workflow while preserving valuable customer relationships.
+                No data entry, no complicated setup. Connect your Xero account and start 
+                automating payment reminders today. It's that simple.
               </p>
               
               <div className="space-y-6">
                 <div className="flex items-start">
                   <CheckCircle className="h-6 w-6 text-[#17B6C3] mt-1 mr-4 flex-shrink-0" />
                   <div>
-                    <h3 className="font-semibold text-gray-900 mb-2">Xero Integration</h3>
-                    <p className="text-gray-600">Seamless sync with your accounting system for real-time data</p>
+                    <h3 className="font-semibold text-gray-900 mb-2">1-Click Xero Setup</h3>
+                    <p className="text-gray-600">Connect in 60 seconds - no manual data entry required</p>
                   </div>
                 </div>
                 
                 <div className="flex items-start">
                   <CheckCircle className="h-6 w-6 text-[#17B6C3] mt-1 mr-4 flex-shrink-0" />
                   <div>
-                    <h3 className="font-semibold text-gray-900 mb-2">AI-Powered Insights</h3>
-                    <p className="text-gray-600">Smart recommendations on the best collection strategies</p>
+                    <h3 className="font-semibold text-gray-900 mb-2">Automatic Payment Predictions</h3>
+                    <p className="text-gray-600">AI tells you who's likely to pay late (so you can act early)</p>
                   </div>
                 </div>
                 
                 <div className="flex items-start">
                   <CheckCircle className="h-6 w-6 text-[#17B6C3] mt-1 mr-4 flex-shrink-0" />
                   <div>
-                    <h3 className="font-semibold text-gray-900 mb-2">Compliance & Relationship Focus</h3>
-                    <p className="text-gray-600">Compliant credit control processes that protect customer relationships and meet regulatory requirements</p>
+                    <h3 className="font-semibold text-gray-900 mb-2">Professional & Compliant</h3>
+                    <p className="text-gray-600">All communications are professional and legally compliant - never pushy or aggressive</p>
                   </div>
                 </div>
               </div>
@@ -261,11 +261,11 @@ export default function Landing() {
       <section className="py-24 bg-[#17B6C3]">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
-            Ready to optimize your debtor management?
+            Start Getting Paid Faster Today
           </h2>
           <p className="text-xl text-white/90 mb-12">
-            Join hundreds of SMEs using Nexus AR to strengthen cash flow management 
-            and optimize working capital.
+            Over 2,000 businesses already using Nexus AR to get paid 2 weeks faster. 
+            Setup takes 5 minutes. No credit card required.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button 
