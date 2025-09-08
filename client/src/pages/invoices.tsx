@@ -750,7 +750,7 @@ export default function Invoices() {
                             {getSortIcon("amount")}
                           </button>
                         </th>
-                        <th className="text-left py-2 text-xs font-semibold text-slate-700">
+                        <th className="text-left py-2 text-xs font-semibold text-slate-700 w-24">
                           <Select value={dueDateAgeSort} onValueChange={(value) => {
                             setDueDateAgeSort(value);
                             setActiveSortColumn("dueDateAge");
@@ -819,7 +819,7 @@ export default function Invoices() {
                           <td className="py-2 text-xs font-medium text-slate-900" data-testid={`text-amount-outstanding-${invoice.id}`}>
                             ${Number(invoice.amount).toLocaleString()}
                           </td>
-                          <td className="py-2" data-testid={`text-due-date-age-${invoice.id}`}>
+                          <td className="py-2 w-24" data-testid={`text-due-date-age-${invoice.id}`}>
                             <div className="text-xs text-slate-900">
                               {new Date(invoice.dueDate).toLocaleDateString()}
                             </div>
