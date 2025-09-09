@@ -1255,7 +1255,7 @@ export default function VoiceConfig() {
       {/* Voice System Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold">Voice</h2>
+          <h2 className="text-2xl font-bold">Voice Management</h2>
           <p className="text-gray-600">Manage AI-powered voice workflows for debt collection</p>
         </div>
         <div className="flex items-center space-x-4">
