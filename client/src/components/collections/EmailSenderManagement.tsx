@@ -326,7 +326,7 @@ export default function EmailSenderManagement({ className }: EmailSenderManageme
 
               <FormField
                 control={form.control}
-                name="displayName"
+                name="fromName"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Display Name</FormLabel>
