@@ -967,8 +967,8 @@ export default function VoiceConfig() {
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              <SelectItem value="">No phone number</SelectItem>
-                              {phoneNumbers?.map((number: any) => (
+                              <SelectItem value="none">No phone number</SelectItem>
+                              {Array.isArray(phoneNumbers) && phoneNumbers.map((number: any) => (
                                 <SelectItem key={number.id} value={number.phoneNumber}>
                                   {number.phoneNumber} {number.assigned ? '(Assigned)' : ''}
                                 </SelectItem>
@@ -1023,7 +1023,7 @@ export default function VoiceConfig() {
 
           <TabsContent value="library">
             <div className="space-y-6">
-              {retellAgents && retellAgents.length > 0 ? (
+              {Array.isArray(retellAgents) && retellAgents.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {retellAgents.map((agent: any) => (
                     <Card key={agent.agent_id} className="bg-white/70 backdrop-blur-md border-0 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105">
@@ -1117,7 +1117,7 @@ export default function VoiceConfig() {
                 </Button>
               </div>
 
-              {phoneNumbers && phoneNumbers.length > 0 ? (
+              {Array.isArray(phoneNumbers) && phoneNumbers.length > 0 ? (
                 <div className="grid gap-4">
                   {phoneNumbers.map((number: any) => (
                     <Card key={number.id} className="bg-white/70 backdrop-blur-md border-0 shadow-lg">
