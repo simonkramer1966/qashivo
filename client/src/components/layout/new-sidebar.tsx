@@ -20,6 +20,7 @@ import { cn } from "@/lib/utils";
 import nexusLogo from "@assets/Main Nexus Logo copy_1756923544828.png";
 
 const navigationItems = [
+  { name: "AI CFO", href: "/ai-cfo", icon: Bot },
   { name: "Dashboard", href: "/", icon: BarChart3 },
   { name: "Cashflow", href: "/cashflow", icon: TrendingUp },
   { name: "Receivables", href: "/invoices", icon: FileText },
@@ -75,7 +76,7 @@ export default function NewSidebar() {
     let allItems = [...navigationItems];
     
     // Add owner-only items if user is an owner
-    if (user?.role === "owner") {
+    if ((user as any)?.role === "owner") {
       allItems = [...allItems, ...ownerNavigationItems];
     }
     
