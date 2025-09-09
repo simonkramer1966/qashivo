@@ -396,7 +396,7 @@ I can see you currently have ${(dashboardData as any)?.totalOutstanding ? `$${(d
                             : 'bg-gray-100 text-gray-900'
                         }`}
                       >
-                        <p className="text-sm">{message.content}</p>
+                        <div className="text-sm whitespace-pre-line">{message.content}</div>
                         <p className={`text-xs mt-1 ${
                           message.type === 'user' ? 'text-blue-100' : 'text-gray-500'
                         }`}>
