@@ -336,10 +336,13 @@ I can see you currently have ${(dashboardData as any)?.totalOutstanding ? `$${(d
             </Card>
           </div>
 
-          {/* Conversation Interface */}
-          <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
-            <CardHeader>
-              <div className="flex items-center justify-between">
+          {/* Main Content Area - Conversation and Quick Questions Side by Side */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* AI Conversation Interface - Takes up 2/3 of the width */}
+            <div className="lg:col-span-2">
+              <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg h-full">
+                <CardHeader>
+                  <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-3">
                   <div className="p-2 bg-[#17B6C3]/10 rounded-lg">
                     <Brain className="h-6 w-6 text-[#17B6C3]" />
@@ -363,11 +366,11 @@ I can see you currently have ${(dashboardData as any)?.totalOutstanding ? `$${(d
                     Voice
                   </Badge>
                 </div>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Messages Area */}
-              <ScrollArea className="h-96 w-full rounded-md border p-4">
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* Messages Area */}
+                  <ScrollArea className="h-96 w-full rounded-md border p-4">
                 <div className="space-y-4">
                   {messages.map((message) => (
                     <div
@@ -400,32 +403,32 @@ I can see you currently have ${(dashboardData as any)?.totalOutstanding ? `$${(d
                       </div>
                     </div>
                   )}
-                </div>
-              </ScrollArea>
+                    </div>
+                  </ScrollArea>
 
-              {/* Input Area */}
-              {conversationMode === 'text' ? (
-                <div className="flex space-x-2">
-                  <Input
+                  {/* Input Area */}
+                  {conversationMode === 'text' ? (
+                    <div className="flex space-x-2">
+                      <Input
                     value={inputMessage}
                     onChange={(e) => setInputMessage(e.target.value)}
                     placeholder="Ask about your AR performance, collection strategies, or cashflow optimization..."
-                    onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
+                    onKeyDown={(e) => e.key === 'Enter' && !isTyping && inputMessage.trim() && sendMessage()}
                     className="flex-1"
                     data-testid="input-ai-cfo-message"
-                  />
-                  <Button 
-                    onClick={sendMessage} 
+                      />
+                      <Button 
+                    onClick={() => inputMessage.trim() && !isTyping && sendMessage()} 
                     disabled={!inputMessage.trim() || isTyping}
                     className="bg-[#17B6C3] hover:bg-[#1396A1] text-white"
                     data-testid="button-send-message"
                   >
-                    <Send className="h-4 w-4" />
-                  </Button>
-                </div>
-              ) : (
-                <div className="flex items-center justify-center space-x-4">
-                  <Button
+                        <Send className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-center space-x-4">
+                      <Button
                     onClick={toggleRecording}
                     className={`${isRecording 
                       ? 'bg-red-500 hover:bg-red-600' 
@@ -442,48 +445,53 @@ I can see you currently have ${(dashboardData as any)?.totalOutstanding ? `$${(d
                       <>
                         <Mic className="h-5 w-5 mr-2" />
                         Start Voice Chat
-                      </>
-                    )}
-                  </Button>
-                  <p className="text-sm text-gray-600">
-                    {isRecording ? 'Listening... Speak your question' : 'Click to start voice conversation'}
-                  </p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                        </>
+                      )}
+                      </Button>
+                      <p className="text-sm text-gray-600">
+                        {isRecording ? 'Listening... Speak your question' : 'Click to start voice conversation'}
+                      </p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
 
-          {/* Quick Action Suggestions */}
-          <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
-            <CardHeader>
-              <CardTitle className="text-lg font-bold">Quick Questions</CardTitle>
-              <CardDescription>Common AR and cashflow questions to get you started</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {[
-                  "What's my biggest collection opportunity right now?",
-                  "How can I improve my days sales outstanding?",
-                  "Which customers should I prioritize for follow-up?",
-                  "What's causing my collection delays?",
-                  "How does my AR performance compare to industry benchmarks?",
-                  "What collection strategies work best for my customer segments?"
-                ].map((question) => (
-                  <Button
-                    key={question}
-                    variant="outline"
-                    className="text-left h-auto p-3 text-wrap"
-                    onClick={() => {
-                      setInputMessage(question);
-                    }}
-                    data-testid={`button-quick-question-${question.slice(0, 20)}`}
-                  >
-                    <div className="w-full text-sm">{question}</div>
-                  </Button>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+            {/* Quick Questions - Takes up 1/3 of the width */}
+            <div className="lg:col-span-1">
+              <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg h-full">
+                <CardHeader>
+                  <CardTitle className="text-lg font-bold">Quick Questions</CardTitle>
+                  <CardDescription>Click to populate the conversation field</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {[
+                      "What's my biggest collection opportunity right now?",
+                      "How can I improve my days sales outstanding?",
+                      "Which customers should I prioritize for follow-up?",
+                      "What's causing my collection delays?",
+                      "How does my AR performance compare to industry benchmarks?",
+                      "What collection strategies work best for my customer segments?"
+                    ].map((question) => (
+                      <Button
+                        key={question}
+                        variant="outline"
+                        className="text-left h-auto p-3 text-wrap w-full justify-start"
+                        onClick={() => {
+                          setConversationMode('text'); // Switch to text mode if not already
+                          setInputMessage(question);
+                        }}
+                        data-testid={`button-quick-question-${question.slice(0, 20)}`}
+                      >
+                        <div className="w-full text-sm">{question}</div>
+                      </Button>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
         </div>
       </main>
     </div>
