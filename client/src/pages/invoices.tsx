@@ -506,6 +506,28 @@ export default function Invoices() {
     },
   });
 
+  // Schedule removal mutation
+  const removeScheduleMutation = useMutation({
+    mutationFn: async (contactId: string) => {
+      return apiRequest("DELETE", `/api/collections/customer-assignments/${contactId}`, {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/collections/customer-assignments'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/collections/schedules'] });
+      toast({
+        title: "Success",
+        description: "Collection schedule assignment removed successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error", 
+        description: "Failed to remove schedule assignment",
+        variant: "destructive",
+      });
+    },
+  });
+
   // Get current schedule assignment for a customer
   const getCustomerScheduleAssignment = (contactId: string) => {
     return (customerAssignments as any[]).find(
@@ -986,11 +1008,7 @@ export default function Invoices() {
                                       value={getCustomerScheduleAssignment(contact.id)?.scheduleId || ""}
                                       onValueChange={(scheduleId) => {
                                         if (scheduleId === "remove") {
-                                          // Handle removal of schedule assignment
-                                          toast({
-                                            title: "Info",
-                                            description: "Remove assignment functionality to be implemented",
-                                          });
+                                          removeScheduleMutation.mutate(contact.id);
                                         } else if (scheduleId) {
                                           assignScheduleMutation.mutate({ contactId: contact.id, scheduleId });
                                         }
