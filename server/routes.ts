@@ -1787,10 +1787,45 @@ Payment required immediately to avoid collection action. Contact us NOW.`
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
 
+      // Ensure scheduleSteps has a default value if not provided
+      const defaultScheduleSteps = [
+        {
+          id: 1,
+          delay: 0,
+          name: "Initial Reminder",
+          channel: "email",
+          templateId: null,
+          conditions: {}
+        },
+        {
+          id: 2,
+          delay: 7,
+          name: "Follow-up Reminder",
+          channel: "email", 
+          templateId: null,
+          conditions: {}
+        },
+        {
+          id: 3,
+          delay: 14,
+          name: "Final Notice",
+          channel: "email",
+          templateId: null,
+          conditions: {}
+        }
+      ];
+
       const scheduleData = {
         ...req.body,
         tenantId: user.tenantId,
+        scheduleSteps: req.body.scheduleSteps || defaultScheduleSteps,
       };
+
+      console.log("Creating collection schedule with data:", {
+        name: scheduleData.name,
+        workflow: scheduleData.workflow,
+        scheduleStepsCount: scheduleData.scheduleSteps?.length || 0,
+      });
 
       const schedule = await storage.createCollectionSchedule(scheduleData);
       res.status(201).json(schedule);
@@ -4271,7 +4306,6 @@ ${tenant.name}
             totalInvoices: customerInvoices.length,
             totalAmount: totalOwed,
             outstandingAmount: outstandingAmount,
-            outstandingInvoices: outstandingInvoices.length,
             invoiceDetails: outstandingInvoices.slice(0, 10).map(inv => ({
               invoiceNumber: inv.invoiceNumber,
               amount: Number(inv.amount),
@@ -4295,7 +4329,16 @@ ${tenant.name}
       if (arContext.recentInvoices.length > 0) {
         console.log(`🏢 AI CFO: Top customers in analysis:`, arContext.recentInvoices.map(inv => `${inv.customerName}: $${inv.amount}`).join(', '));
       }
-      const aiResponse = await generateAiCfoResponse(message, conversationHistory, arContext, specificCustomerData);
+      const aiResponse = await generateAiCfoResponse(message, conversationHistory, {
+        ...arContext,
+        knowledgeBase: relevantFacts.map(fact => ({
+          title: fact.title,
+          content: fact.content,
+          category: fact.category,
+          priority: fact.priority || 0,
+          source: fact.source || undefined
+        }))
+      }, specificCustomerData);
       console.log(`✅ AI CFO: Response generated, length: ${aiResponse.length}`);
 
       res.json({
