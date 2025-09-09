@@ -168,52 +168,6 @@ export default function EmailSenderManagement({ className }: EmailSenderManageme
         </Button>
       </div>
 
-      {/* Default Sender Highlight */}
-      {emailSenders.length > 0 && (
-        <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-blue-800">
-              <Star className="h-5 w-5" />
-              Default Email Sender
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {(() => {
-              const defaultSender = emailSenders.find((sender: EmailSender) => sender.isDefault);
-              if (!defaultSender) {
-                return (
-                  <div className="flex items-center gap-2 text-amber-700">
-                    <AlertCircle className="h-4 w-4" />
-                    No default sender configured. Please set one for automated emails.
-                  </div>
-                );
-              }
-              return (
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-white rounded-lg">
-                      <Mail className="h-5 w-5 text-blue-600" />
-                    </div>
-                    <div>
-                      <p className="font-medium text-blue-900">{defaultSender.displayName}</p>
-                      <p className="text-sm text-blue-700">{defaultSender.email}</p>
-                    </div>
-                  </div>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => openEditDialog(defaultSender)}
-                    data-testid={`button-edit-default-sender`}
-                  >
-                    <Edit className="h-4 w-4 mr-1" />
-                    Edit
-                  </Button>
-                </div>
-              );
-            })()}
-          </CardContent>
-        </Card>
-      )}
 
       {/* Email Senders Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
