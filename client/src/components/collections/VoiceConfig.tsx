@@ -1252,37 +1252,28 @@ export default function VoiceConfig() {
 
   return (
     <div className="space-y-6">
-      {/* Voice System Overview */}
-      <Card className="bg-gradient-to-r from-[#17B6C3]/5 to-blue-500/5 border-[#17B6C3]/20">
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <div className="p-3 bg-[#17B6C3]/10 rounded-xl">
-                <Phone className="h-8 w-8 text-[#17B6C3]" />
-              </div>
-              <div>
-                <CardTitle className="text-2xl">Voice Communication System</CardTitle>
-                <CardDescription>Advanced AI-powered voice workflows and messaging for debt collection</CardDescription>
-              </div>
-            </div>
-            <div className="flex items-center space-x-4">
-              <Badge 
-                variant="outline" 
-                className={(retellConfig as any)?.isActive 
-                  ? "bg-green-500/10 text-green-600 border-green-500/20" 
-                  : "bg-yellow-500/10 text-yellow-600 border-yellow-500/20"
-                }
-              >
-                {(retellConfig as any)?.isActive ? "System Active" : "Setup Required"}
-              </Badge>
-              <Button variant="outline" size="sm" data-testid="button-voice-settings">
-                <Settings className="h-4 w-4 mr-2" />
-                Settings
-              </Button>
-            </div>
-          </div>
-        </CardHeader>
-      </Card>
+      {/* Voice System Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold">Voice</h2>
+          <p className="text-gray-600">Manage AI-powered voice workflows for debt collection</p>
+        </div>
+        <div className="flex items-center space-x-4">
+          <Badge 
+            variant="outline" 
+            className={(retellConfig as any)?.isActive 
+              ? "bg-green-500/10 text-green-600 border-green-500/20" 
+              : "bg-yellow-500/10 text-yellow-600 border-yellow-500/20"
+            }
+          >
+            {(retellConfig as any)?.isActive ? "System Active" : "Setup Required"}
+          </Badge>
+          <Button variant="outline" size="sm" data-testid="button-voice-settings">
+            <Settings className="h-4 w-4 mr-2" />
+            Settings
+          </Button>
+        </div>
+      </div>
 
       {/* Voice System Tabs */}
       <Tabs value={activeVoiceTab} onValueChange={setActiveVoiceTab} className="space-y-6">
