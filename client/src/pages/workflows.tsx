@@ -707,7 +707,7 @@ export default function Workflows() {
           action={
             <div className="flex items-center gap-3 px-4 py-2 bg-white/70 backdrop-blur-sm border border-gray-200/50 rounded-lg">
               <div className="flex items-center gap-2">
-                <Power className={`h-4 w-4 ${automationStatus?.enabled ? 'text-green-600' : 'text-gray-400'}`} />
+                <Power className={`h-4 w-4 ${automationStatus?.enabled ? 'text-green-600' : 'text-red-500'}`} />
                 <span className="text-sm font-medium text-gray-700">
                   Automation {automationStatus?.enabled ? 'ON' : 'OFF'}
                 </span>
