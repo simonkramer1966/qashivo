@@ -4142,7 +4142,7 @@ ${tenant.name}
       ]);
       
       // Combine and prioritize facts
-      const relevantFacts = [...new Set([...searchFacts, ...allFacts.slice(0, 5)])].slice(0, 8);
+      const relevantFacts = Array.from(new Set([...searchFacts, ...allFacts.slice(0, 5)])).slice(0, 8);
       console.log(`🧠 AI CFO: Found ${allFacts.length} total facts, ${searchFacts.length} relevant to query, using ${relevantFacts.length} in context`);
 
       // Prepare AR context for AI
@@ -4190,35 +4190,34 @@ ${tenant.name}
       };
 
       // Check if user is asking about a specific customer (improved detection)
-      const customerPatterns = [
-        /\b(DeliveryTech Solutions?)\b/i,
-        /\b([A-Z][a-zA-Z]*(?:\s+[A-Z][a-zA-Z]*)*\s+(?:Solutions?|Services?|Inc|LLC|Corp|Company|Group|Technologies?|Tech|Pro|Systems?|Associates?|Partners?|Enterprises?|Industries?|Limited|Ltd))\b/i,
-        /\b([A-Z][a-zA-Z]+\s+[A-Z][a-zA-Z]+)\b/i // Fallback for any two-word company names
-      ];
-      
-      let specificCustomerData = null;
-      let searchedCustomer = null;
-      
       console.log(`🔍 AI CFO: Parsing message for customer names: "${message}"`);
       
-      // Try each pattern to find a customer name
-      for (let i = 0; i < customerPatterns.length; i++) {
-        const pattern = customerPatterns[i];
-        const match = message.match(pattern);
-        console.log(`🔍 AI CFO: Pattern ${i + 1} match:`, match ? match[1] : 'No match');
-        if (match) {
-          searchedCustomer = match[1].trim();
-          console.log(`🔍 AI CFO: Found customer with pattern ${i + 1}: "${searchedCustomer}"`);
-          break;
+      // Simple but effective pattern to extract company names
+      let searchedCustomer = null;
+      
+      // Look for patterns like "FashionTech Pro", "DeliveryTech Solutions", etc.
+      const companyMatch = message.match(/\b([A-Z][a-zA-Z]*(?:Tech|Fashion|Smart|Food|Plastic|Space|Fitness|Home|Delivery|Payment|Green|Health|Auto|Digital|Mobile|Cloud|Data|Cyber|AI|ML|Bio|Nano|Quantum)[A-Za-z]*(?:\s+(?:Pro|Solutions?|Services?|Inc|LLC|Corp|Company|Group|Technologies?|Tech|Systems?|Associates?|Partners?|Enterprises?|Industries?|Limited|Ltd))?)\b/gi);
+      
+      if (companyMatch && companyMatch.length > 0) {
+        searchedCustomer = companyMatch[0].trim();
+        console.log(`🔍 AI CFO: Found company name: "${searchedCustomer}"`);
+      } else {
+        // Fallback: look for any two capitalized words
+        const fallbackMatch = message.match(/\b([A-Z][a-zA-Z]+\s+[A-Z][a-zA-Z]+)\b/);
+        if (fallbackMatch) {
+          searchedCustomer = fallbackMatch[1].trim();
+          console.log(`🔍 AI CFO: Found customer with fallback pattern: "${searchedCustomer}"`);
         }
       }
+      
+      let specificCustomerData = null;
       
       if (searchedCustomer) {
         console.log(`🔍 AI CFO: Searching for customer: "${searchedCustomer}"`);
         
         // Debug: Show some customer names and company names from database
-        const uniquePersons = [...new Set(allInvoices.map(inv => inv.contact?.name).filter(Boolean))].slice(0, 10);
-        const uniqueCompanies = [...new Set(allInvoices.map(inv => inv.contact?.companyName).filter(Boolean))].slice(0, 10);
+        const uniquePersons = Array.from(new Set(allInvoices.map(inv => inv.contact?.name).filter(Boolean))).slice(0, 10);
+        const uniqueCompanies = Array.from(new Set(allInvoices.map(inv => inv.contact?.companyName).filter(Boolean))).slice(0, 10);
         console.log(`🔍 AI CFO: Sample person names:`, uniquePersons);
         console.log(`🔍 AI CFO: Sample company names:`, uniqueCompanies);
         console.log(`🔍 AI CFO: Total unique persons: ${uniquePersons.length}, Total unique companies: ${uniqueCompanies.length}`);
