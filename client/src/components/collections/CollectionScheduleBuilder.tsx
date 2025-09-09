@@ -295,59 +295,6 @@ export default function CollectionScheduleBuilder({ className }: CollectionSched
         </Button>
       </div>
 
-      {/* Default Schedule Highlight */}
-      {schedules.length > 0 && (
-        <Card className="bg-gradient-to-r from-emerald-50 to-teal-50 border-emerald-200">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-emerald-800">
-              <Star className="h-5 w-5" />
-              Default Collection Schedule
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {(() => {
-              const defaultSchedule = (schedules as CollectionSchedule[]).find((schedule: CollectionSchedule) => schedule.isDefault);
-              if (!defaultSchedule) {
-                return (
-                  <div className="flex items-center gap-2 text-amber-700">
-                    <AlertCircle className="h-4 w-4" />
-                    No default schedule configured. Please set one for new customers.
-                  </div>
-                );
-              }
-              return (
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-white rounded-lg">
-                      <Target className="h-5 w-5 text-emerald-600" />
-                    </div>
-                    <div>
-                      <p className="font-medium text-emerald-900">{defaultSchedule.name}</p>
-                      <p className="text-sm text-emerald-700">
-                        {defaultSchedule.steps?.length || 0} steps • {defaultSchedule.totalCustomersAssigned || 0} customers assigned
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Badge className="bg-emerald-100 text-emerald-800">
-                      {calculateTotalDelay(defaultSchedule.steps || [])} duration
-                    </Badge>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => openEditDialog(defaultSchedule)}
-                      data-testid={`button-edit-default-schedule`}
-                    >
-                      <Edit className="h-4 w-4 mr-1" />
-                      Edit
-                    </Button>
-                  </div>
-                </div>
-              );
-            })()}
-          </CardContent>
-        </Card>
-      )}
 
       {/* Schedules Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
