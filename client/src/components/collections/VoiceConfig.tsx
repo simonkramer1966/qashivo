@@ -52,10 +52,11 @@ type VoiceMessageTemplateForm = z.infer<typeof voiceMessageTemplateSchema>;
 
 export default function VoiceConfig() {
   const { toast } = useToast();
-  const [activeVoiceTab, setActiveVoiceTab] = useState("workflows");
+  const [activeVoiceTab, setActiveVoiceTab] = useState("agents");
   const [selectedWorkflow, setSelectedWorkflow] = useState<string | null>(null);
   const [isWorkflowDialogOpen, setIsWorkflowDialogOpen] = useState(false);
   const [isTemplateDialogOpen, setIsTemplateDialogOpen] = useState(false);
+  const [isAgentDialogOpen, setIsAgentDialogOpen] = useState(false);
 
   // Fetch voice workflows
   const { data: voiceWorkflows, isLoading: isLoadingWorkflows } = useQuery({
@@ -75,6 +76,16 @@ export default function VoiceConfig() {
   // Fetch voice calls
   const { data: voiceCalls } = useQuery({
     queryKey: ['/api/retell/calls'],
+  });
+
+  // Fetch Retell agents
+  const { data: retellAgents } = useQuery({
+    queryKey: ['/api/retell/agents'],
+  });
+
+  // Fetch phone numbers
+  const { data: phoneNumbers } = useQuery({
+    queryKey: ['/api/retell/phone-numbers'],
   });
 
   // Voice Workflow Form
@@ -645,7 +656,11 @@ export default function VoiceConfig() {
 
       {/* Voice System Tabs */}
       <Tabs value={activeVoiceTab} onValueChange={setActiveVoiceTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3 bg-white border border-gray-200">
+        <TabsList className="grid w-full grid-cols-4 bg-white border border-gray-200">
+          <TabsTrigger value="agents" className="data-[state=active]:bg-[#17B6C3] data-[state=active]:text-white">
+            <Bot className="mr-2 h-4 w-4" />
+            Agents
+          </TabsTrigger>
           <TabsTrigger value="workflows" className="data-[state=active]:bg-[#17B6C3] data-[state=active]:text-white">
             <Workflow className="mr-2 h-4 w-4" />
             Conversational AI
@@ -659,6 +674,10 @@ export default function VoiceConfig() {
             Analytics
           </TabsTrigger>
         </TabsList>
+
+        <TabsContent value="agents">
+          <AgentsTab />
+        </TabsContent>
 
         <TabsContent value="workflows">
           <VoiceWorkflowsTab />
