@@ -216,14 +216,15 @@ export default function VoiceWorkflowBuilder({ workflowId }: VoiceWorkflowBuilde
       queryClient.invalidateQueries({ queryKey: ['/api/voice/workflows', workflowId] });
       
       // Add node to canvas
-      const stateType = VOICE_STATE_TYPES[newState.type as keyof typeof VOICE_STATE_TYPES];
+      const stateType = VOICE_STATE_TYPES[newState.stateType as keyof typeof VOICE_STATE_TYPES];
       const newNode: Node = {
         id: newState.id,
         type: 'voiceState',
-        position: { x: Math.random() * 400, y: Math.random() * 300 },
+        position: newState.position || { x: Math.random() * 400, y: Math.random() * 300 },
         data: {
           ...newState,
-          label: newState.name,
+          label: newState.label, // Backend now returns 'label' not 'name'
+          stateType: newState.stateType, // Backend returns 'stateType' not 'type'
         },
       };
       setNodes((nds) => [...nds, newNode]);
