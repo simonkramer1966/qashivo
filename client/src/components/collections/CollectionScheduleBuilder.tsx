@@ -63,7 +63,7 @@ const scheduleSchema = z.object({
   description: z.string().optional(),
   isDefault: z.boolean().default(false),
   isActive: z.boolean().default(true),
-  steps: z.array(z.object({
+  scheduleSteps: z.array(z.object({
     id: z.string(),
     order: z.number(),
     type: z.enum(["email", "sms", "whatsapp", "call", "wait"]),
@@ -71,7 +71,7 @@ const scheduleSchema = z.object({
     delayUnit: z.enum(["hours", "days", "weeks"]),
     templateId: z.string().optional(),
     conditions: z.array(z.string()).optional(),
-  })),
+  })).optional(),
 });
 
 type ScheduleFormData = z.infer<typeof scheduleSchema>;
@@ -105,7 +105,7 @@ export default function CollectionScheduleBuilder({ className }: CollectionSched
       description: "",
       isDefault: false,
       isActive: true,
-      steps: [],
+      scheduleSteps: [],
     },
   });
 
@@ -122,13 +122,10 @@ export default function CollectionScheduleBuilder({ className }: CollectionSched
   // Create/Update schedule mutation
   const scheduleMutation = useMutation({
     mutationFn: async (data: ScheduleFormData) => {
+      console.log('Mutation received data:', data);
       const scheduleData = {
         ...data,
-        scheduleSteps: steps, // Fix: use scheduleSteps instead of steps
       };
-      
-      // Remove steps field to avoid confusion
-      delete (scheduleData as any).steps;
       
       if (editingSchedule) {
         return apiRequest("PUT", `/api/collections/schedules/${editingSchedule.id}`, scheduleData);
@@ -269,7 +266,12 @@ export default function CollectionScheduleBuilder({ className }: CollectionSched
   };
 
   const onSubmit = (data: ScheduleFormData) => {
-    scheduleMutation.mutate({ ...data, steps });
+    const submitData = {
+      ...data,
+      scheduleSteps: steps,
+    };
+    console.log('Submitting schedule data:', submitData);
+    scheduleMutation.mutate(submitData);
   };
 
   if (isLoading) {
