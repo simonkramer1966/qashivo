@@ -22,7 +22,7 @@ const navigation = [
   { name: "Cashflow", href: "/cashflow", icon: TrendingUp },
   { name: "Invoices", href: "/invoices", icon: FileText },
   { name: "Contacts", href: "/contacts", icon: Users },
-  { name: "Collection Workflows", href: "/workflows", icon: Workflow },
+  { name: "Workflows", href: "/workflows", icon: Workflow },
   { name: "AI Suggestions", href: "/ai-suggestions", icon: Bot },
   { name: "Reports", href: "/reports", icon: BarChart },
   { name: "Settings", href: "/settings", icon: Settings },
