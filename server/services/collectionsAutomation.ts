@@ -1,0 +1,191 @@
+import { eq, and, lte, gte } from "drizzle-orm";
+import { db } from "../db";
+import { invoices, contacts, collectionSchedules, customerScheduleAssignments, tenants } from "@shared/schema";
+
+export interface CollectionAction {
+  invoiceId: string;
+  contactId: string;
+  invoiceNumber: string;
+  contactName: string;
+  daysOverdue: number;
+  amount: string;
+  action: string;
+  actionType: 'email' | 'sms' | 'voice' | 'manual';
+  scheduleName: string;
+  templateId?: string;
+  priority: 'low' | 'normal' | 'high' | 'urgent';
+  actionDetails: {
+    template?: string;
+    subject?: string;
+    message?: string;
+    escalationLevel?: string;
+  };
+}
+
+export interface CollectionScheduleStep {
+  daysTrigger: number;
+  action: string;
+  actionType: 'email' | 'sms' | 'voice' | 'manual';
+  template?: string;
+  subject?: string;
+  message?: string;
+  priority?: 'low' | 'normal' | 'high' | 'urgent';
+  escalationLevel?: string;
+}
+
+/**
+ * Checks all unpaid invoices against their assigned collection schedules
+ * and returns a list of actions that should be triggered today
+ */
+export async function checkCollectionActions(tenantId: string): Promise<CollectionAction[]> {
+  const today = new Date();
+  const actions: CollectionAction[] = [];
+
+  try {
+    // Check if collections automation is enabled for this tenant
+    const tenant = await db.query.tenants.findFirst({
+      where: eq(tenants.id, tenantId)
+    });
+
+    if (!tenant?.collectionsAutomationEnabled) {
+      console.log(`Collections automation disabled for tenant ${tenantId}`);
+      return [];
+    }
+
+    // Get all unpaid/overdue invoices with their contacts and assignments
+    const overdueInvoices = await db
+      .select({
+        invoice: invoices,
+        contact: contacts,
+        assignment: customerScheduleAssignments,
+        schedule: collectionSchedules,
+      })
+      .from(invoices)
+      .innerJoin(contacts, eq(invoices.contactId, contacts.id))
+      .leftJoin(
+        customerScheduleAssignments,
+        and(
+          eq(customerScheduleAssignments.contactId, contacts.id),
+          eq(customerScheduleAssignments.isActive, true)
+        )
+      )
+      .leftJoin(
+        collectionSchedules,
+        and(
+          eq(collectionSchedules.id, customerScheduleAssignments.scheduleId),
+          eq(collectionSchedules.isActive, true)
+        )
+      )
+      .where(
+        and(
+          eq(invoices.tenantId, tenantId),
+          lte(invoices.dueDate, today), // Invoice is past due
+          gte(invoices.amount, invoices.amountPaid || 0) // Still has outstanding balance
+        )
+      );
+
+    console.log(`Found ${overdueInvoices.length} potentially overdue invoices for tenant ${tenantId}`);
+
+    for (const record of overdueInvoices) {
+      const { invoice, contact, assignment, schedule } = record;
+
+      // Skip if no schedule assigned
+      if (!assignment || !schedule) {
+        continue;
+      }
+
+      // Calculate days overdue
+      const dueDate = new Date(invoice.dueDate);
+      const daysOverdue = Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
+
+      // Skip if not actually overdue
+      if (daysOverdue < 0) {
+        continue;
+      }
+
+      // Parse schedule steps
+      let scheduleSteps: CollectionScheduleStep[] = [];
+      try {
+        scheduleSteps = Array.isArray(schedule.scheduleSteps) 
+          ? schedule.scheduleSteps as CollectionScheduleStep[]
+          : [];
+      } catch (error) {
+        console.error(`Error parsing schedule steps for schedule ${schedule.id}:`, error);
+        continue;
+      }
+
+      // Find matching trigger point
+      const matchingStep = scheduleSteps.find(step => step.daysTrigger === daysOverdue);
+
+      if (matchingStep) {
+        const action: CollectionAction = {
+          invoiceId: invoice.id,
+          contactId: contact.id,
+          invoiceNumber: invoice.invoiceNumber,
+          contactName: contact.name || 'Unknown',
+          daysOverdue,
+          amount: invoice.amount,
+          action: matchingStep.action,
+          actionType: matchingStep.actionType,
+          scheduleName: schedule.name,
+          templateId: matchingStep.template,
+          priority: matchingStep.priority || 'normal',
+          actionDetails: {
+            template: matchingStep.template,
+            subject: matchingStep.subject,
+            message: matchingStep.message,
+            escalationLevel: matchingStep.escalationLevel,
+          },
+        };
+
+        actions.push(action);
+      }
+    }
+
+    console.log(`Generated ${actions.length} collection actions for tenant ${tenantId}`);
+    return actions;
+
+  } catch (error) {
+    console.error('Error checking collection actions:', error);
+    throw new Error(`Failed to check collection actions: ${error.message}`);
+  }
+}
+
+/**
+ * Enables or disables collections automation for a tenant
+ */
+export async function setCollectionsAutomation(tenantId: string, enabled: boolean): Promise<void> {
+  try {
+    await db
+      .update(tenants)
+      .set({ 
+        collectionsAutomationEnabled: enabled,
+        updatedAt: new Date()
+      })
+      .where(eq(tenants.id, tenantId));
+
+    console.log(`Collections automation ${enabled ? 'enabled' : 'disabled'} for tenant ${tenantId}`);
+  } catch (error) {
+    console.error('Error updating collections automation setting:', error);
+    throw new Error(`Failed to update automation setting: ${error.message}`);
+  }
+}
+
+/**
+ * Gets the current collections automation status for a tenant
+ */
+export async function getCollectionsAutomationStatus(tenantId: string): Promise<boolean> {
+  try {
+    const tenant = await db.query.tenants.findFirst({
+      where: eq(tenants.id, tenantId),
+      columns: {
+        collectionsAutomationEnabled: true
+      }
+    });
+
+    return tenant?.collectionsAutomationEnabled ?? false;
+  } catch (error) {
+    console.error('Error getting collections automation status:', error);
+    return false;
+  }
+}

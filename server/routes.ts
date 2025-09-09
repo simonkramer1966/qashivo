@@ -1962,6 +1962,60 @@ Payment required immediately to avoid collection action. Contact us NOW.`
     }
   });
 
+  // Collections Automation
+  app.get("/api/collections/automation/check", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { checkCollectionActions } = await import("../services/collectionsAutomation");
+      const actions = await checkCollectionActions(user.tenantId);
+      res.json(actions);
+    } catch (error) {
+      console.error("Error checking collection actions:", error);
+      res.status(500).json({ message: "Failed to check collection actions" });
+    }
+  });
+
+  app.get("/api/collections/automation/status", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { getCollectionsAutomationStatus } = await import("../services/collectionsAutomation");
+      const enabled = await getCollectionsAutomationStatus(user.tenantId);
+      res.json({ enabled });
+    } catch (error) {
+      console.error("Error getting automation status:", error);
+      res.status(500).json({ message: "Failed to get automation status" });
+    }
+  });
+
+  app.put("/api/collections/automation/status", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { enabled } = req.body;
+      if (typeof enabled !== 'boolean') {
+        return res.status(400).json({ message: "Invalid enabled value - must be boolean" });
+      }
+
+      const { setCollectionsAutomation } = await import("../services/collectionsAutomation");
+      await setCollectionsAutomation(user.tenantId, enabled);
+      res.json({ enabled, message: `Collections automation ${enabled ? 'enabled' : 'disabled'}` });
+    } catch (error) {
+      console.error("Error updating automation status:", error);
+      res.status(500).json({ message: "Failed to update automation status" });
+    }
+  });
+
   // AI Agent Configurations
   app.get("/api/collections/ai-agents", isAuthenticated, async (req: any, res) => {
     try {
