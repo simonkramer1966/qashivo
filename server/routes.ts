@@ -4013,7 +4013,12 @@ ${tenant.name}
   app.post('/api/ai-cfo/chat', isAuthenticated, async (req, res) => {
     try {
       const { message, conversationHistory = [] } = req.body;
-      const user = req.user as any;
+      
+      // Get user with tenant info (same as invoices endpoint)
+      const user = await storage.getUser((req.user as any).claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ error: 'User not associated with a tenant' });
+      }
 
       if (!message || typeof message !== 'string') {
         return res.status(400).json({ error: 'Message is required' });
