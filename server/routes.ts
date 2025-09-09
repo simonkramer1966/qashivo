@@ -4070,6 +4070,13 @@ ${tenant.name}
           customerName: inv.contact?.name || 'Unknown',
           status: inv.status
         })),
+        allCustomers: invoices.map(inv => ({
+          customerName: inv.contact?.name || 'Unknown',
+          amount: Number(inv.amount),
+          daysPastDue: Math.max(0, Math.floor((Date.now() - new Date(inv.dueDate).getTime()) / (1000 * 60 * 60 * 24))),
+          status: inv.status,
+          invoiceNumber: inv.invoiceNumber
+        })),
         cashflowTrends: {
           thirtyDays: invoices.filter(inv => {
             const daysPast = Math.floor((Date.now() - new Date(inv.dueDate).getTime()) / (1000 * 60 * 60 * 24));
@@ -4086,6 +4093,42 @@ ${tenant.name}
         }
       };
 
+      // Check if user is asking about a specific customer
+      const customerSearchMatch = message.match(/\b([A-Z][a-z]+ (?:[A-Z][a-z]+ )*(?:Solutions|Services|Inc|LLC|Corp|Company|Group|Technologies|Tech|Systems|Associates|Partners|Enterprises|Industries|Limited|Ltd))\b/i);
+      let specificCustomerData = null;
+      
+      if (customerSearchMatch) {
+        const searchedCustomer = customerSearchMatch[1];
+        console.log(`🔍 AI CFO: Searching for customer: "${searchedCustomer}"`);
+        
+        const customerInvoices = allInvoices.filter(inv => 
+          inv.contact?.name?.toLowerCase().includes(searchedCustomer.toLowerCase())
+        );
+        
+        if (customerInvoices.length > 0) {
+          const totalOwed = customerInvoices.reduce((sum, inv) => sum + Number(inv.amount), 0);
+          const outstandingInvoices = customerInvoices.filter(inv => inv.status !== 'Paid');
+          const outstandingAmount = outstandingInvoices.reduce((sum, inv) => sum + Number(inv.amount), 0);
+          
+          specificCustomerData = {
+            customerName: searchedCustomer,
+            totalInvoices: customerInvoices.length,
+            totalAmount: totalOwed,
+            outstandingAmount: outstandingAmount,
+            invoiceDetails: customerInvoices.slice(0, 10).map(inv => ({
+              invoiceNumber: inv.invoiceNumber,
+              amount: Number(inv.amount),
+              status: inv.status,
+              daysPastDue: Math.max(0, Math.floor((Date.now() - new Date(inv.dueDate).getTime()) / (1000 * 60 * 60 * 24)))
+            }))
+          };
+          
+          console.log(`✅ AI CFO: Found ${customerInvoices.length} invoices for ${searchedCustomer}, Outstanding: $${outstandingAmount}`);
+        } else {
+          console.log(`❌ AI CFO: No invoices found for "${searchedCustomer}"`);
+        }
+      }
+
       // Generate AI CFO response
       console.log(`🚀 AI CFO: Processing request for message: "${message}"`);
       console.log(`📊 AI CFO: AR Context - Outstanding: $${arContext.totalOutstanding}, Overdue: $${arContext.overdueAmount}`);
@@ -4093,7 +4136,7 @@ ${tenant.name}
       if (arContext.recentInvoices.length > 0) {
         console.log(`🏢 AI CFO: Top customers in analysis:`, arContext.recentInvoices.map(inv => `${inv.customerName}: $${inv.amount}`).join(', '));
       }
-      const aiResponse = await generateAiCfoResponse(message, conversationHistory, arContext);
+      const aiResponse = await generateAiCfoResponse(message, conversationHistory, arContext, specificCustomerData);
       console.log(`✅ AI CFO: Response generated, length: ${aiResponse.length}`);
 
       res.json({

@@ -218,7 +218,19 @@ export async function generateAiCfoResponse(
       sixtyDays: number;
       ninetyDays: number;
     };
-  }
+  },
+  specificCustomerData?: {
+    customerName: string;
+    totalInvoices: number;
+    totalAmount: number;
+    outstandingAmount: number;
+    invoiceDetails: Array<{
+      invoiceNumber: string;
+      amount: number;
+      status: string;
+      daysPastDue: number;
+    }>;
+  } | null
 ): Promise<string> {
   try {
     console.log("🤖 AI CFO: Starting response generation for:", userMessage.substring(0, 50) + "...");
@@ -238,10 +250,27 @@ CURRENT AR DATA:
 • Collection Rate: ${arContext.collectionRate || 85}%
 • Active Outstanding Invoices: ${arContext.activeContacts || 0}
 
-CUSTOMER DATA AVAILABLE TO YOU:
+${specificCustomerData ? `
+SPECIFIC CUSTOMER FOUND: ${specificCustomerData.customerName}
+• Total Invoices: ${specificCustomerData.totalInvoices}
+• Total Amount (All Invoices): $${specificCustomerData.totalAmount.toLocaleString()}
+• Outstanding Amount: $${specificCustomerData.outstandingAmount.toLocaleString()}
+
+DETAILED INVOICE BREAKDOWN:
+${specificCustomerData.invoiceDetails.map(inv => 
+  `• Invoice ${inv.invoiceNumber}: $${inv.amount.toLocaleString()} (${inv.daysPastDue} days past due, ${inv.status})`
+).join('\n')}
+
+ANSWER DIRECTLY: Provide specific details about this customer's outstanding balance and recommend next actions.
+` : `
+COMPLETE CUSTOMER DATABASE ACCESS:
+You have access to ALL customer invoices. When asked about specific customers, I'll search for their exact details.
+
+SAMPLE CUSTOMERS (Top 5 by amount):
 ${arContext.recentInvoices?.map(inv => 
   `• ${inv.customerName}: $${inv.amount.toLocaleString()} (${inv.daysPastDue} days past due, Status: ${inv.status})`
 ).join('\n') || '• No recent invoice data available'}
+`}
 
 CAPABILITIES:
 - Answer specific questions about individual customers and their balances
