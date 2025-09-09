@@ -18,7 +18,7 @@ import {
   Workflow, MessageSquare, Volume2, Edit, Trash2, 
   Play, Pause, Save, Copy, Eye, Clock, Users,
   ArrowRight, Zap, ChevronDown, FileText,
-  Mic, Speaker, PlayCircle, Download
+  Mic, Speaker, PlayCircle, Download, Star
 } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 
@@ -619,6 +619,636 @@ export default function VoiceConfig() {
       )}
     </div>
   );
+
+  // Agent form schema
+  const agentSchema = z.object({
+    name: z.string().min(1, "Agent name is required"),
+    description: z.string().optional(),
+    category: z.enum(['collections', 'sales', 'support', 'custom']),
+    voiceId: z.string().min(1, "Voice ID is required"),
+    voiceTemperature: z.number().min(0).max(2),
+    voiceSpeed: z.number().min(0.5).max(2),
+    language: z.string().default('en-US'),
+    responsiveness: z.number().min(0).max(1),
+    interruptionSensitivity: z.number().min(0).max(1),
+    enableBackchannel: z.boolean().default(true),
+    instructions: z.string().min(1, "Instructions are required"),
+    endCallAfterSilence: z.number().default(30000),
+    assignedPhoneNumber: z.string().optional(),
+  });
+
+  type AgentForm = z.infer<typeof agentSchema>;
+
+  const agentForm = useForm<AgentForm>({
+    resolver: zodResolver(agentSchema),
+    defaultValues: {
+      name: "",
+      description: "",
+      category: "collections",
+      voiceId: "11labs-Adrian",
+      voiceTemperature: 0.8,
+      voiceSpeed: 1.0,
+      language: "en-US",
+      responsiveness: 0.7,
+      interruptionSensitivity: 0.5,
+      enableBackchannel: true,
+      instructions: "",
+      endCallAfterSilence: 30000,
+    },
+  });
+
+  // Create agent mutation
+  const createAgentMutation = useMutation({
+    mutationFn: async (data: AgentForm) => {
+      const response = await fetch('/api/retell/agents', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      if (!response.ok) throw new Error('Failed to create agent');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/retell/agents'] });
+      setIsAgentDialogOpen(false);
+      agentForm.reset();
+      toast({
+        title: "Success",
+        description: "Voice agent created successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create voice agent",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Purchase phone number mutation
+  const purchaseNumberMutation = useMutation({
+    mutationFn: async (data: { areaCode: string; numberType: string }) => {
+      const response = await fetch('/api/retell/phone-numbers/purchase', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      if (!response.ok) throw new Error('Failed to purchase phone number');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/retell/phone-numbers'] });
+      toast({
+        title: "Success",
+        description: "Phone number purchased successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to purchase phone number",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const AGENT_TEMPLATES = {
+    'friendly-collector': {
+      name: 'Friendly Collector',
+      description: 'Professional but warm debt collection agent',
+      voiceId: '11labs-Rachel',
+      voiceTemperature: 0.8,
+      instructions: 'You are a friendly collection agent calling about an outstanding balance. Always maintain a professional and empathetic tone while working towards payment resolution.'
+    },
+    'firm-professional': {
+      name: 'Firm Professional',
+      description: 'Direct and professional collection agent',
+      voiceId: '11labs-Josh',
+      voiceTemperature: 0.3,
+      instructions: 'You are a firm but fair collection agent. Be direct about payment expectations while remaining respectful and professional.'
+    },
+    'payment-reminder': {
+      name: 'Payment Reminder',
+      description: 'Gentle reminder for upcoming due dates',
+      voiceId: '11labs-Bella',
+      voiceTemperature: 0.9,
+      instructions: 'You make courtesy payment reminders for upcoming due dates. Be friendly and helpful, offering payment options and answering questions.'
+    }
+  };
+
+  // AgentsTab Component
+  const AgentsTab = () => {
+    const [activeAgentSection, setActiveAgentSection] = useState("library");
+    const [selectedAgent, setSelectedAgent] = useState(null);
+
+    return (
+      <div className="space-y-6">
+        {/* Agents Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-xl font-bold text-gray-900">Voice Agents</h3>
+            <p className="text-gray-600">Manage AI voice agents and phone numbers for automated collections</p>
+          </div>
+          <div className="flex space-x-2">
+            <Dialog open={isAgentDialogOpen} onOpenChange={setIsAgentDialogOpen}>
+              <DialogTrigger asChild>
+                <Button className="bg-[#17B6C3] hover:bg-[#1396A1] text-white" data-testid="button-create-agent">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Create Agent
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Create Voice Agent</DialogTitle>
+                </DialogHeader>
+                <Form {...agentForm}>
+                  <form onSubmit={agentForm.handleSubmit((data) => createAgentMutation.mutate(data))} className="space-y-6">
+                    <div className="grid grid-cols-2 gap-4">
+                      <FormField
+                        control={agentForm.control}
+                        name="name"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Agent Name</FormLabel>
+                            <FormControl>
+                              <Input {...field} placeholder="e.g., Friendly Collector" data-testid="input-agent-name" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={agentForm.control}
+                        name="category"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Category</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                              <FormControl>
+                                <SelectTrigger data-testid="select-agent-category">
+                                  <SelectValue placeholder="Select category" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="collections">Collections</SelectItem>
+                                <SelectItem value="sales">Sales</SelectItem>
+                                <SelectItem value="support">Support</SelectItem>
+                                <SelectItem value="custom">Custom</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
+                    <FormField
+                      control={agentForm.control}
+                      name="description"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Description</FormLabel>
+                          <FormControl>
+                            <Textarea {...field} placeholder="Brief description of this agent's purpose..." data-testid="input-agent-description" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <div className="grid grid-cols-3 gap-4">
+                      <FormField
+                        control={agentForm.control}
+                        name="voiceId"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Voice</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                              <FormControl>
+                                <SelectTrigger data-testid="select-voice-id">
+                                  <SelectValue />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="11labs-Adrian">Adrian (Professional Male)</SelectItem>
+                                <SelectItem value="11labs-Rachel">Rachel (Friendly Female)</SelectItem>
+                                <SelectItem value="11labs-Josh">Josh (Authoritative Male)</SelectItem>
+                                <SelectItem value="11labs-Bella">Bella (Warm Female)</SelectItem>
+                                <SelectItem value="11labs-Sam">Sam (Casual Male)</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={agentForm.control}
+                        name="voiceTemperature"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Voice Temperature ({field.value})</FormLabel>
+                            <FormControl>
+                              <input
+                                type="range"
+                                min="0"
+                                max="2"
+                                step="0.1"
+                                {...field}
+                                onChange={(e) => field.onChange(parseFloat(e.target.value))}
+                                className="w-full"
+                                data-testid="slider-voice-temperature"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={agentForm.control}
+                        name="voiceSpeed"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Voice Speed ({field.value}x)</FormLabel>
+                            <FormControl>
+                              <input
+                                type="range"
+                                min="0.5"
+                                max="2"
+                                step="0.1"
+                                {...field}
+                                onChange={(e) => field.onChange(parseFloat(e.target.value))}
+                                className="w-full"
+                                data-testid="slider-voice-speed"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <FormField
+                        control={agentForm.control}
+                        name="responsiveness"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Responsiveness ({field.value})</FormLabel>
+                            <FormControl>
+                              <input
+                                type="range"
+                                min="0"
+                                max="1"
+                                step="0.1"
+                                {...field}
+                                onChange={(e) => field.onChange(parseFloat(e.target.value))}
+                                className="w-full"
+                                data-testid="slider-responsiveness"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={agentForm.control}
+                        name="interruptionSensitivity"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Interruption Sensitivity ({field.value})</FormLabel>
+                            <FormControl>
+                              <input
+                                type="range"
+                                min="0"
+                                max="1"
+                                step="0.1"
+                                {...field}
+                                onChange={(e) => field.onChange(parseFloat(e.target.value))}
+                                className="w-full"
+                                data-testid="slider-interruption-sensitivity"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
+                    <FormField
+                      control={agentForm.control}
+                      name="instructions"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Agent Instructions</FormLabel>
+                          <FormControl>
+                            <Textarea 
+                              {...field} 
+                              placeholder="Detailed instructions for how this agent should behave during calls..."
+                              className="min-h-[120px]"
+                              data-testid="textarea-agent-instructions"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={agentForm.control}
+                      name="assignedPhoneNumber"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Phone Number (Optional)</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                              <SelectTrigger data-testid="select-phone-number">
+                                <SelectValue placeholder="Select phone number" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="">No phone number</SelectItem>
+                              {phoneNumbers?.map((number: any) => (
+                                <SelectItem key={number.id} value={number.phoneNumber}>
+                                  {number.phoneNumber} {number.assigned ? '(Assigned)' : ''}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <div className="flex justify-end space-x-2 pt-4 border-t">
+                      <Button type="button" variant="outline" onClick={() => setIsAgentDialogOpen(false)} data-testid="button-cancel-agent">
+                        Cancel
+                      </Button>
+                      <Button 
+                        type="submit" 
+                        className="bg-[#17B6C3] hover:bg-[#1396A1] text-white"
+                        disabled={createAgentMutation.isPending}
+                        data-testid="button-save-agent"
+                      >
+                        {createAgentMutation.isPending ? "Creating..." : "Create Agent"}
+                      </Button>
+                    </div>
+                  </form>
+                </Form>
+              </DialogContent>
+            </Dialog>
+          </div>
+        </div>
+
+        {/* Agent Management Tabs */}
+        <Tabs value={activeAgentSection} onValueChange={setActiveAgentSection} className="space-y-6">
+          <TabsList className="grid w-full grid-cols-4 bg-white border border-gray-200">
+            <TabsTrigger value="library" className="data-[state=active]:bg-[#17B6C3] data-[state=active]:text-white">
+              <Bot className="mr-2 h-4 w-4" />
+              Agent Library
+            </TabsTrigger>
+            <TabsTrigger value="phone-numbers" className="data-[state=active]:bg-[#17B6C3] data-[state=active]:text-white">
+              <Phone className="mr-2 h-4 w-4" />
+              Phone Numbers
+            </TabsTrigger>
+            <TabsTrigger value="templates" className="data-[state=active]:bg-[#17B6C3] data-[state=active]:text-white">
+              <Star className="mr-2 h-4 w-4" />
+              Templates
+            </TabsTrigger>
+            <TabsTrigger value="testing" className="data-[state=active]:bg-[#17B6C3] data-[state=active]:text-white">
+              <PlayCircle className="mr-2 h-4 w-4" />
+              Testing
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="library">
+            <div className="space-y-6">
+              {retellAgents && retellAgents.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {retellAgents.map((agent: any) => (
+                    <Card key={agent.agent_id} className="bg-white/70 backdrop-blur-md border-0 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105">
+                      <CardHeader className="pb-3">
+                        <div className="flex items-start justify-between">
+                          <div className="flex items-center space-x-3">
+                            <div className="p-2 bg-[#17B6C3]/10 rounded-lg">
+                              <Bot className="h-6 w-6 text-[#17B6C3]" />
+                            </div>
+                            <div>
+                              <CardTitle className="text-lg font-bold">{agent.agent_name || 'Unnamed Agent'}</CardTitle>
+                              <Badge variant="outline" className="text-xs">
+                                {agent.voice_id || 'Default Voice'}
+                              </Badge>
+                            </div>
+                          </div>
+                          <div className="flex items-center space-x-1">
+                            <div className={`w-2 h-2 rounded-full ${agent.is_active ? 'bg-green-500' : 'bg-gray-400'}`} />
+                            <span className="text-xs text-gray-600">{agent.is_active ? 'Active' : 'Inactive'}</span>
+                          </div>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <p className="text-sm text-gray-600 line-clamp-2">
+                          {agent.agent_description || 'No description provided'}
+                        </p>
+                        
+                        <div className="grid grid-cols-2 gap-4 text-sm">
+                          <div>
+                            <span className="text-gray-500">Phone:</span>
+                            <p className="font-medium">{agent.assigned_phone_number || 'Not assigned'}</p>
+                          </div>
+                          <div>
+                            <span className="text-gray-500">Category:</span>
+                            <p className="font-medium capitalize">{agent.agent_category || 'General'}</p>
+                          </div>
+                        </div>
+
+                        <div className="flex justify-between items-center pt-2 border-t">
+                          <div className="flex space-x-2">
+                            <Button size="sm" variant="outline" data-testid={`button-test-agent-${agent.agent_id}`}>
+                              <PlayCircle className="h-4 w-4" />
+                            </Button>
+                            <Button size="sm" variant="outline" data-testid={`button-edit-agent-${agent.agent_id}`}>
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button size="sm" variant="outline" data-testid={`button-copy-agent-${agent.agent_id}`}>
+                              <Copy className="h-4 w-4" />
+                            </Button>
+                          </div>
+                          <Badge variant={agent.is_active ? "default" : "secondary"}>
+                            {agent.is_active ? "Active" : "Paused"}
+                          </Badge>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
+                  <CardContent className="text-center py-12">
+                    <Bot className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-xl font-bold text-gray-900 mb-2">No Voice Agents Yet</h3>
+                    <p className="text-gray-600 mb-6 max-w-md mx-auto">
+                      Create your first AI voice agent to start automated debt collection calls with intelligent conversation flows.
+                    </p>
+                    <Button 
+                      onClick={() => setIsAgentDialogOpen(true)}
+                      className="bg-[#17B6C3] hover:bg-[#1396A1] text-white" 
+                      data-testid="button-create-first-agent"
+                    >
+                      <Plus className="mr-2 h-4 w-4" />
+                      Create Your First Agent
+                    </Button>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="phone-numbers">
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="text-lg font-semibold">Phone Numbers</h4>
+                  <p className="text-gray-600">Manage phone numbers for your voice agents</p>
+                </div>
+                <Button className="bg-[#17B6C3] hover:bg-[#1396A1] text-white" data-testid="button-purchase-number">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Purchase Number
+                </Button>
+              </div>
+
+              {phoneNumbers && phoneNumbers.length > 0 ? (
+                <div className="grid gap-4">
+                  {phoneNumbers.map((number: any) => (
+                    <Card key={number.id} className="bg-white/70 backdrop-blur-md border-0 shadow-lg">
+                      <CardContent className="p-6">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-4">
+                            <div className="p-2 bg-[#17B6C3]/10 rounded-lg">
+                              <Phone className="h-5 w-5 text-[#17B6C3]" />
+                            </div>
+                            <div>
+                              <h5 className="font-semibold">{number.phoneNumber}</h5>
+                              <p className="text-sm text-gray-600">
+                                {number.assigned ? `Assigned to ${number.agentName}` : 'Unassigned'}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Badge variant={number.assigned ? "default" : "secondary"}>
+                              {number.assigned ? "In Use" : "Available"}
+                            </Badge>
+                            <Button size="sm" variant="outline" data-testid={`button-manage-number-${number.id}`}>
+                              <Settings className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
+                  <CardContent className="text-center py-12">
+                    <Phone className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-xl font-bold text-gray-900 mb-2">No Phone Numbers</h3>
+                    <p className="text-gray-600 mb-6 max-w-md mx-auto">
+                      Purchase your first phone number to enable voice agents to make outbound calls.
+                    </p>
+                    <Button 
+                      className="bg-[#17B6C3] hover:bg-[#1396A1] text-white" 
+                      data-testid="button-purchase-first-number"
+                    >
+                      <Plus className="mr-2 h-4 w-4" />
+                      Purchase Your First Number
+                    </Button>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="templates">
+            <div className="space-y-6">
+              <div>
+                <h4 className="text-lg font-semibold">Agent Templates</h4>
+                <p className="text-gray-600">Pre-configured agent templates for common use cases</p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {Object.entries(AGENT_TEMPLATES).map(([key, template]) => (
+                  <Card key={key} className="bg-white/70 backdrop-blur-md border-0 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105">
+                    <CardHeader>
+                      <div className="flex items-center space-x-3">
+                        <div className="p-2 bg-[#17B6C3]/10 rounded-lg">
+                          <Star className="h-6 w-6 text-[#17B6C3]" />
+                        </div>
+                        <div>
+                          <CardTitle className="text-lg">{template.name}</CardTitle>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <p className="text-sm text-gray-600">{template.description}</p>
+                      
+                      <div className="space-y-2 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-gray-500">Voice:</span>
+                          <span className="font-medium">{template.voiceId}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-500">Temperature:</span>
+                          <span className="font-medium">{template.voiceTemperature}</span>
+                        </div>
+                      </div>
+
+                      <div className="flex justify-between items-center pt-2 border-t">
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => {
+                            agentForm.reset({
+                              ...agentForm.getValues(),
+                              name: template.name,
+                              description: template.description,
+                              voiceId: template.voiceId,
+                              voiceTemperature: template.voiceTemperature,
+                              instructions: template.instructions,
+                            });
+                            setIsAgentDialogOpen(true);
+                          }}
+                          data-testid={`button-use-template-${key}`}
+                        >
+                          <Plus className="h-4 w-4 mr-1" />
+                          Use Template
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="testing">
+            <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
+              <CardHeader>
+                <CardTitle>Agent Testing</CardTitle>
+                <CardDescription>Test your voice agents with sample calls</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="text-center py-12">
+                  <PlayCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">Testing Interface Coming Soon</h3>
+                  <p className="text-gray-600">Test calling interface and recording playback will be available here</p>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      </div>
+    );
+  };
 
   return (
     <div className="space-y-6">
