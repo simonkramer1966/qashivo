@@ -4016,6 +4016,8 @@ ${tenant.name}
       
       // Get user with tenant info (same as invoices endpoint)
       const user = await storage.getUser((req.user as any).claims.sub);
+      console.log(`🔍 AI CFO Debug: User ID: ${(req.user as any).claims.sub}, User found: ${!!user}, TenantId: ${user?.tenantId}`);
+      
       if (!user?.tenantId) {
         return res.status(400).json({ error: 'User not associated with a tenant' });
       }
@@ -4025,13 +4027,21 @@ ${tenant.name}
       }
 
       // Get current AR context for the user (get ALL invoices for complete visibility)
+      console.log(`🔍 AI CFO Debug: About to fetch invoices for tenant: ${user.tenantId}`);
       const [invoiceMetrics, allInvoices] = await Promise.all([
         storage.getInvoiceMetrics(user.tenantId),
         storage.getInvoices(user.tenantId) // No limit - get all invoices like the invoices page
       ]);
 
+      console.log(`🔍 AI CFO Debug: Raw invoices fetched: ${allInvoices.length}, Invoice metrics: ${JSON.stringify(invoiceMetrics)}`);
+      
       // Get only outstanding invoices for AI context (paid invoices don't matter for AR analysis)
       const invoices = allInvoices.filter(inv => inv.status !== 'Paid');
+      console.log(`🔍 AI CFO Debug: Outstanding invoices after filtering: ${invoices.length}`);
+      
+      if (allInvoices.length > 0) {
+        console.log(`🔍 AI CFO Debug: Sample invoice statuses:`, allInvoices.slice(0, 3).map(inv => `${inv.contact?.name || 'Unknown'}: ${inv.status} - $${inv.amount}`));
+      }
 
       // Calculate additional context
       const overdueInvoices = invoices.filter(inv => {
