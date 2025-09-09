@@ -2195,6 +2195,93 @@ Payment required immediately to avoid collection action. Contact us NOW.`
     }
   });
 
+  // Retell Agents endpoints
+  app.get("/api/retell/agents", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const agents = await retellService.listAgents();
+      res.json(agents);
+    } catch (error) {
+      console.error("Error fetching Retell agents:", error);
+      res.status(500).json({ message: "Failed to fetch Retell agents" });
+    }
+  });
+
+  app.post("/api/retell/agents", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const agentData = req.body;
+      const agent = await retellService.createAgent(agentData);
+      
+      // Store agent configuration in our database
+      const retellConfigData = insertRetellConfigurationSchema.parse({
+        tenantId: user.tenantId,
+        agentId: agent.agent_id,
+        agentName: agentData.name,
+        agentDescription: agentData.description,
+        agentCategory: agentData.category,
+        phoneNumber: agentData.assignedPhoneNumber || null,
+        voiceSettings: {
+          voiceId: agentData.voiceId,
+          voiceTemperature: agentData.voiceTemperature,
+          voiceSpeed: agentData.voiceSpeed,
+          responsiveness: agentData.responsiveness,
+          interruptionSensitivity: agentData.interruptionSensitivity,
+        },
+        isActive: true,
+      });
+
+      await storage.createRetellConfiguration(retellConfigData);
+      res.status(201).json(agent);
+    } catch (error: any) {
+      console.error("Error creating Retell agent:", error);
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create Retell agent" });
+    }
+  });
+
+  // Retell Phone Numbers endpoints
+  app.get("/api/retell/phone-numbers", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const phoneNumbers = await retellService.listPhoneNumbers();
+      res.json(phoneNumbers);
+    } catch (error) {
+      console.error("Error fetching phone numbers:", error);
+      res.status(500).json({ message: "Failed to fetch phone numbers" });
+    }
+  });
+
+  app.post("/api/retell/phone-numbers/purchase", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { areaCode, numberType } = req.body;
+      const phoneNumber = await retellService.purchasePhoneNumber(areaCode, numberType);
+      res.status(201).json(phoneNumber);
+    } catch (error) {
+      console.error("Error purchasing phone number:", error);
+      res.status(500).json({ message: "Failed to purchase phone number" });
+    }
+  });
+
   app.post("/api/retell/webhook", async (req, res) => {
     try {
       console.log("Retell webhook received:", req.body);

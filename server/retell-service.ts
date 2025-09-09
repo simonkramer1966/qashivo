@@ -208,6 +208,24 @@ Keep the call brief and professional.`,
   }
 
   /**
+   * Purchase a phone number
+   */
+  async purchasePhoneNumber(areaCode: string, numberType: string = 'local'): Promise<any> {
+    try {
+      // Note: This is a placeholder implementation
+      // The actual Retell API might have different parameters and endpoints
+      const response = await retell.phoneNumber.create({
+        area_code: areaCode,
+        number_type: numberType,
+      } as any);
+      return response;
+    } catch (error: any) {
+      console.error('Failed to purchase phone number:', error);
+      throw new Error(`Failed to purchase phone number: ${error.message}`);
+    }
+  }
+
+  /**
    * Process webhook data from Retell AI
    */
   processWebhookData(webhookData: any): Partial<InsertVoiceCall> {
