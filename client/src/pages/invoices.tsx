@@ -970,7 +970,7 @@ export default function Invoices() {
                               <th className="text-left py-2 text-xs font-semibold text-slate-700 w-[10%]">
                                 <span>Late</span>
                               </th>
-                              <th className="text-left py-2 text-xs font-semibold text-slate-700 w-[15%]">
+                              <th className="text-left py-2 pl-0.5 text-xs font-semibold text-slate-700 w-[15%]">
                                 <span>Schedule</span>
                               </th>
                               <th className="text-center py-2 text-xs font-semibold text-slate-700 w-[15%]">Hold</th>
