@@ -2710,12 +2710,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
       });
       return;
 
-      await storage.updateUserStripeInfo(user.id, customerId, subscription.id);
-
-      res.json({
-        subscriptionId: subscription.id,
-        clientSecret: (subscription.latest_invoice as any)?.payment_intent?.client_secret,
-      });
+      // Unreachable code removed - this would only execute if the return above is removed
     } catch (error: any) {
       console.error("Error creating subscription:", error);
       res.status(400).json({ error: { message: error.message } });
@@ -3143,8 +3138,8 @@ Payment required immediately to avoid collection action. Contact us NOW.`
           contact: {
             name: xeroInv.Contact.Name,
             contactId: xeroInv.Contact.ContactID,
-            phone: xeroInv.Contact.Phones?.[0]?.PhoneNumber || null,
-            email: xeroInv.Contact.EmailAddress || null
+            phone: (xeroInv.Contact as any).Phones?.[0]?.PhoneNumber || null,
+            email: (xeroInv.Contact as any).EmailAddress || null
           },
           // Payment information from Xero
           paymentDetails: {
@@ -3491,10 +3486,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
         items: [{
           price_data: {
             currency: 'usd',
-            product: {
-              name: 'Nexus AR Pro Plan',
-              description: 'Advanced debt recovery platform with AI-powered automation'
-            },
+            product: 'prod_nexus_ar_pro', // Use actual product ID from Stripe
             unit_amount: 9900, // $99.00 per month
             recurring: {
               interval: 'month',
@@ -3791,18 +3783,18 @@ Payment required immediately to avoid collection action. Contact us NOW.`
         invoiceNumber: invoice.invoiceNumber,
         contactName: invoice.contact.name,
         contactEmail: invoice.contact.email,
-        companyName: invoice.contact.companyName,
+        companyName: invoice.contact.companyName || undefined,
         amount: Number(invoice.amount),
         taxAmount: Number(invoice.taxAmount),
         issueDate: invoice.issueDate.toISOString(),
         dueDate: invoice.dueDate.toISOString(),
         description: invoice.description || 'Professional Services',
-        currency: invoice.currency,
+        currency: invoice.currency || 'USD',
         status: invoice.status,
         fromCompany: tenant.name,
-        fromAddress: tenant.settings?.companyAddress,
-        fromEmail: user.email,
-        fromPhone: tenant.settings?.companyPhone
+        fromAddress: (tenant.settings as any)?.companyAddress || 'Not provided',
+        fromEmail: user.email || 'noreply@company.com',
+        fromPhone: (tenant.settings as any)?.companyPhone || 'Not provided'
       });
 
       console.log(`PDF generated successfully, size: ${Math.round(pdfBuffer.length / 1024)}KB`);
@@ -3866,7 +3858,7 @@ ${tenant.name}
       console.log(`Sending email to ${invoice.contact.email}...`);
       const success = await sendEmailWithAttachment({
         to: invoice.contact.email,
-        from: user.email,
+        from: user.email || 'noreply@company.com',
         subject: emailSubject,
         text: customMessage || defaultMessage,
         html: customMessage ? undefined : htmlMessage,
