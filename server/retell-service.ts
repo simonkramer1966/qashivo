@@ -95,11 +95,10 @@ export class RetellService {
         agent_name: "Nexus AR Collections Agent",
         voice_id: config.voiceId || "11labs-Adrian",
         response_engine: {
-          type: "retell-llm",
-          llm_id: "gpt-4",
-          llm_websocket_url: "wss://api.retellai.com/audio-websocket/llm-general-use"
+          type: "retell-llm" as const,
+          llm_id: "gpt-4"
         },
-        language: "en-US",
+        language: "en-US" as const,
         voice_temperature: 1,
         voice_speed: 1,
         responsiveness: 1,
@@ -109,7 +108,7 @@ export class RetellService {
         backchannel_words: ["yeah", "uh-huh"],
         reminder_trigger_ms: 10000,
         reminder_max_count: 1,
-        ambient_sound: "office",
+        ambient_sound: "call-center" as const,
         ambient_sound_volume: 0.1,
         language_model_latency_optimizations: ["accuracy"],
         pronunciation_dictionary: [],
@@ -158,10 +157,10 @@ export class RetellService {
 2. If this is a demo call (indicated by custom_message), say: "{{custom_message}}"
 
 3. For real collections, reference specific details:
-   - Invoice number: {{invoice_number}} 
-   - Amount: ${{invoice_amount}} or ${{total_outstanding}} if multiple invoices
-   - Days overdue: {{days_overdue}} days
-   - Due date: {{due_date}}
+   - Invoice number: \{\{invoice_number\}\} 
+   - Amount: $\{\{invoice_amount\}\} or $\{\{total_outstanding\}\} if multiple invoices
+   - Days overdue: \{\{days_overdue\}\} days  
+   - Due date: \{\{due_date\}\}
 
 4. Be polite but professional. Offer payment options and ask when they can make payment.
 
@@ -270,6 +269,7 @@ Keep the call brief and professional.`,
 
     // Don't call if we've already called in the last 7 days
     const recentCalls = previousCalls.filter(call => {
+      if (!call.createdAt) return false;
       const callDate = new Date(call.createdAt);
       const daysSinceCall = Math.floor((Date.now() - callDate.getTime()) / (1000 * 60 * 60 * 24));
       return daysSinceCall < 7;
