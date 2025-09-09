@@ -189,3 +189,129 @@ export async function getCollectionsAutomationStatus(tenantId: string): Promise<
     return false;
   }
 }
+
+/**
+ * Manually nudges a specific invoice to advance to its next collection action
+ */
+export async function nudgeInvoiceToNextAction(invoiceId: string, tenantId: string): Promise<CollectionAction | null> {
+  try {
+    // Check if collections automation is enabled for this tenant
+    const tenant = await db.query.tenants.findFirst({
+      where: eq(tenants.id, tenantId)
+    });
+
+    if (!tenant?.collectionsAutomationEnabled) {
+      throw new Error(`Collections automation disabled for tenant ${tenantId}`);
+    }
+
+    // Get the specific invoice with its contact and assignment
+    const invoiceRecord = await db
+      .select({
+        invoice: invoices,
+        contact: contacts,
+        assignment: customerScheduleAssignments,
+        schedule: collectionSchedules,
+      })
+      .from(invoices)
+      .innerJoin(contacts, eq(invoices.contactId, contacts.id))
+      .leftJoin(
+        customerScheduleAssignments,
+        and(
+          eq(customerScheduleAssignments.contactId, contacts.id),
+          eq(customerScheduleAssignments.isActive, true)
+        )
+      )
+      .leftJoin(
+        collectionSchedules,
+        and(
+          eq(collectionSchedules.id, customerScheduleAssignments.scheduleId),
+          eq(collectionSchedules.isActive, true)
+        )
+      )
+      .where(
+        and(
+          eq(invoices.id, invoiceId),
+          eq(invoices.tenantId, tenantId),
+          gte(invoices.amount, invoices.amountPaid || 0) // Still has outstanding balance
+        )
+      );
+
+    if (invoiceRecord.length === 0) {
+      throw new Error(`Invoice ${invoiceId} not found or fully paid`);
+    }
+
+    const { invoice, contact, assignment, schedule } = invoiceRecord[0];
+
+    // Skip if no schedule assigned
+    if (!assignment || !schedule) {
+      throw new Error(`No collection schedule assigned to contact ${contact.name}`);
+    }
+
+    // Calculate days overdue
+    const today = new Date();
+    const dueDate = new Date(invoice.dueDate);
+    const daysOverdue = Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
+
+    // Parse schedule steps
+    let scheduleSteps: CollectionScheduleStep[] = [];
+    try {
+      scheduleSteps = Array.isArray(schedule.scheduleSteps) 
+        ? schedule.scheduleSteps as CollectionScheduleStep[]
+        : [];
+    } catch (error) {
+      console.error(`Error parsing schedule steps for schedule ${schedule.id}:`, error);
+      throw new Error(`Invalid schedule configuration for ${schedule.name}`);
+    }
+
+    if (scheduleSteps.length === 0) {
+      throw new Error(`No collection steps configured for schedule ${schedule.name}`);
+    }
+
+    // Find the next appropriate action step for nudging
+    // Sort steps by daysTrigger to find the right progression
+    const sortedSteps = scheduleSteps.sort((a, b) => a.daysTrigger - b.daysTrigger);
+    
+    // Find the next step that should be triggered based on days overdue
+    let nextStep: CollectionScheduleStep | null = null;
+    
+    // If invoice is not yet overdue, use the first step
+    if (daysOverdue < 0) {
+      nextStep = sortedSteps[0];
+    } else {
+      // Find the next step after the current days overdue
+      nextStep = sortedSteps.find(step => step.daysTrigger > daysOverdue) || sortedSteps[sortedSteps.length - 1];
+    }
+
+    if (!nextStep) {
+      throw new Error(`No appropriate next action found for invoice ${invoice.invoiceNumber}`);
+    }
+
+    // Create the nudge action
+    const nudgeAction: CollectionAction = {
+      invoiceId: invoice.id,
+      contactId: contact.id,
+      invoiceNumber: invoice.invoiceNumber,
+      contactName: contact.name || 'Unknown',
+      daysOverdue: Math.max(0, daysOverdue),
+      amount: invoice.amount,
+      action: nextStep.action,
+      actionType: nextStep.actionType,
+      scheduleName: schedule.name,
+      templateId: nextStep.template,
+      priority: nextStep.priority || 'normal',
+      actionDetails: {
+        template: nextStep.template,
+        subject: nextStep.subject,
+        message: nextStep.message,
+        escalationLevel: nextStep.escalationLevel,
+      },
+    };
+
+    console.log(`Generated nudge action for invoice ${invoice.invoiceNumber}: ${nextStep.action} (${nextStep.actionType})`);
+    return nudgeAction;
+
+  } catch (error) {
+    console.error('Error nudging invoice to next action:', error);
+    throw new Error(`Failed to nudge invoice: ${error.message}`);
+  }
+}
