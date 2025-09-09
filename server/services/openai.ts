@@ -290,7 +290,7 @@ ${contextPrompt}
       model: "gpt-5",
       messages,
       temperature: 0.7,
-      max_tokens: 800,
+      max_completion_tokens: 800,
     });
 
     return response.choices[0].message.content || "I apologize, but I'm having trouble processing your request right now. Please try asking again.";
