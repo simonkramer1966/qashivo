@@ -2051,6 +2051,188 @@ Payment required immediately to avoid collection action. Contact us NOW.`
     }
   });
 
+  // Send single invoice email
+  app.post("/api/invoices/:invoiceId/send-email", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { invoiceId } = req.params;
+      
+      // Get invoice with contact details
+      const invoice = await storage.getInvoice(invoiceId, user.tenantId);
+      if (!invoice) {
+        return res.status(404).json({ message: "Invoice not found" });
+      }
+
+      if (!invoice.contact?.email) {
+        return res.status(400).json({ message: "No email address found for this contact" });
+      }
+
+      // Get default email template and sender
+      const templates = await storage.getCommunicationTemplates(user.tenantId);
+      const defaultTemplate = templates.find(t => t.id === "bf7ffcee-0ce1-4a76-9251-7d434a8f4bd8");
+      const defaultSender = await storage.getDefaultEmailSender(user.tenantId);
+
+      if (!defaultTemplate || !defaultSender) {
+        return res.status(500).json({ message: "Email template or sender not configured" });
+      }
+
+      // Process template variables for single invoice
+      const dueDate = new Date(invoice.dueDate);
+      const today = new Date();
+      const daysOverdue = Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
+      
+      let processedContent = defaultTemplate.content
+        .replace(/\{\{first_name\}\}/g, invoice.contact.name?.split(' ')[0] || 'Valued Customer')
+        .replace(/\{\{your_name\}\}/g, defaultSender.fromName || defaultSender.name)
+        .replace(/£X as unpaid/g, `£${Number(invoice.amount).toLocaleString()} as unpaid`)
+        .replace(/£X due for payment now/g, `£${Number(invoice.amount).toLocaleString()} due for payment ${daysOverdue > 0 ? `${daysOverdue} days ago` : 'now'}`);
+
+      let processedSubject = defaultTemplate.subject;
+      if (daysOverdue > 0) {
+        processedSubject = `Overdue Payment - ${defaultTemplate.subject}`;
+      }
+
+      // Send email using SendGrid
+      const { sendEmail } = await import("./services/sendgrid");
+      const emailSent = await sendEmail({
+        to: invoice.contact.email,
+        from: defaultSender.email,
+        subject: processedSubject,
+        html: processedContent.replace(/\n/g, '<br>')
+      });
+
+      if (emailSent) {
+        console.log(`✅ Email sent for invoice ${invoice.invoiceNumber} to ${invoice.contact.email}`);
+        res.json({ 
+          success: true, 
+          message: `Payment reminder sent to ${invoice.contact.name}` 
+        });
+      } else {
+        res.status(500).json({ 
+          success: false, 
+          message: "Failed to send email" 
+        });
+      }
+    } catch (error) {
+      console.error("Error sending invoice email:", error);
+      res.status(500).json({ 
+        success: false, 
+        message: (error as Error).message || "Failed to send email" 
+      });
+    }
+  });
+
+  // Send customer summary email
+  app.post("/api/contacts/:contactId/send-summary-email", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { contactId } = req.params;
+      
+      // Get contact details
+      const contact = await storage.getContact(contactId, user.tenantId);
+      if (!contact) {
+        return res.status(404).json({ message: "Contact not found" });
+      }
+
+      if (!contact.email) {
+        return res.status(400).json({ message: "No email address found for this contact" });
+      }
+
+      // Get all invoices for this contact that are due/overdue
+      const allInvoices = await storage.getInvoices(user.tenantId);
+      const contactInvoices = allInvoices.filter(inv => 
+        inv.contactId === contactId && 
+        (inv.status === 'pending' || inv.status === 'overdue') &&
+        Number(inv.amount) > (Number(inv.amountPaid) || 0)
+      );
+
+      if (contactInvoices.length === 0) {
+        return res.status(400).json({ message: "No outstanding invoices found for this contact" });
+      }
+
+      // Get default email template and sender
+      const templates = await storage.getCommunicationTemplates(user.tenantId);
+      const defaultTemplate = templates.find(t => t.id === "bf7ffcee-0ce1-4a76-9251-7d434a8f4bd8");
+      const defaultSender = await storage.getDefaultEmailSender(user.tenantId);
+
+      if (!defaultTemplate || !defaultSender) {
+        return res.status(500).json({ message: "Email template or sender not configured" });
+      }
+
+      // Calculate totals and create invoice summary
+      const totalAmount = contactInvoices.reduce((sum, inv) => sum + Number(inv.amount), 0);
+      const today = new Date();
+      
+      const overdueInvoices = contactInvoices.filter(inv => new Date(inv.dueDate) < today);
+      const currentInvoices = contactInvoices.filter(inv => new Date(inv.dueDate) >= today);
+
+      // Create detailed invoice list
+      let invoiceList = '';
+      if (overdueInvoices.length > 0) {
+        invoiceList += '<br><strong>Overdue Invoices:</strong><br>';
+        overdueInvoices.forEach(inv => {
+          const daysOverdue = Math.floor((today.getTime() - new Date(inv.dueDate).getTime()) / (1000 * 60 * 60 * 24));
+          invoiceList += `• Invoice ${inv.invoiceNumber}: £${Number(inv.amount).toLocaleString()} (${daysOverdue} days overdue)<br>`;
+        });
+      }
+      
+      if (currentInvoices.length > 0) {
+        invoiceList += '<br><strong>Current Due:</strong><br>';
+        currentInvoices.forEach(inv => {
+          invoiceList += `• Invoice ${inv.invoiceNumber}: £${Number(inv.amount).toLocaleString()} (due ${new Date(inv.dueDate).toLocaleDateString()})<br>`;
+        });
+      }
+
+      // Process template variables for summary
+      let processedContent = defaultTemplate.content
+        .replace(/\{\{first_name\}\}/g, contact.name?.split(' ')[0] || 'Valued Customer')
+        .replace(/\{\{your_name\}\}/g, defaultSender.fromName || defaultSender.name)
+        .replace(/£X as unpaid/g, `£${totalAmount.toLocaleString()} across ${contactInvoices.length} invoice${contactInvoices.length > 1 ? 's' : ''}`)
+        .replace(/£X due for payment now/g, `£${totalAmount.toLocaleString()} total outstanding`);
+
+      // Add invoice details to the content
+      processedContent += invoiceList + '<br>';
+
+      const processedSubject = `Account Summary - ${totalAmount.toLocaleString()} Outstanding`;
+
+      // Send email using SendGrid
+      const { sendEmail } = await import("./services/sendgrid");
+      const emailSent = await sendEmail({
+        to: contact.email,
+        from: defaultSender.email,
+        subject: processedSubject,
+        html: processedContent.replace(/\n/g, '<br>')
+      });
+
+      if (emailSent) {
+        console.log(`✅ Summary email sent to ${contact.name} (${contact.email}) for ${contactInvoices.length} invoices`);
+        res.json({ 
+          success: true, 
+          message: `Account summary sent to ${contact.name}` 
+        });
+      } else {
+        res.status(500).json({ 
+          success: false, 
+          message: "Failed to send email" 
+        });
+      }
+    } catch (error) {
+      console.error("Error sending customer summary email:", error);
+      res.status(500).json({ 
+        success: false, 
+        message: (error as Error).message || "Failed to send email" 
+      });
+    }
+  });
+
   // AI Agent Configurations
   app.get("/api/collections/ai-agents", isAuthenticated, async (req: any, res) => {
     try {

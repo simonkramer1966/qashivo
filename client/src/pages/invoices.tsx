@@ -549,6 +549,46 @@ export default function Invoices() {
     },
   });
 
+  // Send single invoice email mutation
+  const sendInvoiceEmailMutation = useMutation({
+    mutationFn: async (invoiceId: string) => {
+      return apiRequest("POST", `/api/invoices/${invoiceId}/send-email`, {});
+    },
+    onSuccess: (data: any) => {
+      toast({
+        title: "Email Sent",
+        description: data.message || "Payment reminder sent successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to Send Email", 
+        description: error.message || "Unable to send payment reminder",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Send customer summary email mutation
+  const sendCustomerEmailMutation = useMutation({
+    mutationFn: async (contactId: string) => {
+      return apiRequest("POST", `/api/contacts/${contactId}/send-summary-email`, {});
+    },
+    onSuccess: (data: any) => {
+      toast({
+        title: "Email Sent",
+        description: data.message || "Account summary sent successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to Send Email", 
+        description: error.message || "Unable to send account summary",
+        variant: "destructive",
+      });
+    },
+  });
+
   // Get current schedule assignment for a customer
   const getCustomerScheduleAssignment = (contactId: string) => {
     return (customerAssignments as any[]).find(
@@ -1081,8 +1121,11 @@ export default function Invoices() {
                                       <Button 
                                         variant="outline" 
                                         size="sm" 
+                                        onClick={() => sendCustomerEmailMutation.mutate(contact.id)}
+                                        disabled={sendCustomerEmailMutation.isPending}
                                         className="border-[#17B6C3]/20 text-[#17B6C3] hover:bg-[#17B6C3]/5 h-7 w-7 p-0"
                                         data-testid={`button-email-${contact.id}`}
+                                        title="Send account summary"
                                       >
                                         <Mail className="h-3 w-3" />
                                       </Button>
@@ -1351,8 +1394,11 @@ export default function Invoices() {
                                 <Button 
                                   variant="outline" 
                                   size="sm" 
+                                  onClick={() => sendInvoiceEmailMutation.mutate(invoice.id)}
+                                  disabled={sendInvoiceEmailMutation.isPending}
                                   className="border-[#17B6C3]/20 text-[#17B6C3] hover:bg-[#17B6C3]/5 h-7 w-7 p-0"
                                   data-testid={`button-send-email-${invoice.id}`}
+                                  title="Send payment reminder"
                                 >
                                   <Mail className="h-3 w-3" />
                                 </Button>
