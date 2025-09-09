@@ -15,7 +15,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Mail, Phone, Eye, Plus, Search, Filter, FileText, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, X, MessageSquare, Calendar, CheckCircle, AlertCircle, Clock, Users, User, Building, Star } from "lucide-react";
+import { Mail, Phone, Eye, Plus, Search, Filter, FileText, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, X, MessageSquare, Calendar, CheckCircle, AlertCircle, Clock, Users, User, Building, Star, Target } from "lucide-react";
 
 export default function Invoices() {
   const { toast } = useToast();
@@ -82,6 +82,18 @@ export default function Invoices() {
     enabled: isAuthenticated,
     retry: 3,
     refetchOnMount: true,
+  });
+
+  // Fetch collection schedules for assignment
+  const { data: collectionSchedules = [] } = useQuery({
+    queryKey: ['/api/collections/schedules'],
+    enabled: isAuthenticated,
+  });
+
+  // Fetch customer schedule assignments
+  const { data: customerAssignments = [] } = useQuery({
+    queryKey: ['/api/collections/customer-assignments'],
+    enabled: isAuthenticated,
   });
 
   // Fetch contact history for selected invoice
@@ -466,6 +478,45 @@ export default function Invoices() {
       }
       return newSet;
     });
+  };
+
+  // Schedule assignment mutation
+  const assignScheduleMutation = useMutation({
+    mutationFn: async ({ contactId, scheduleId }: { contactId: string; scheduleId: string }) => {
+      return apiRequest("POST", "/api/collections/customer-assignments", {
+        contactId,
+        scheduleId,
+        isActive: true,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/collections/customer-assignments'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/collections/schedules'] });
+      toast({
+        title: "Success",
+        description: "Customer assigned to collection schedule successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error", 
+        description: "Failed to assign customer to collection schedule",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Get current schedule assignment for a customer
+  const getCustomerScheduleAssignment = (contactId: string) => {
+    return (customerAssignments as any[]).find(
+      (assignment: any) => assignment.contactId === contactId && assignment.isActive
+    );
+  };
+
+  // Get schedule name by ID
+  const getScheduleName = (scheduleId: string) => {
+    const schedule = (collectionSchedules as any[]).find((s: any) => s.id === scheduleId);
+    return schedule?.name || "Unknown Schedule";
   };
 
   // Bulk selection functions
@@ -897,6 +948,9 @@ export default function Invoices() {
                               <th className="text-left py-2 text-xs font-semibold text-slate-700 w-[10%]">
                                 <span>Late</span>
                               </th>
+                              <th className="text-center py-2 text-xs font-semibold text-slate-700 w-[15%]">
+                                <span>Schedule</span>
+                              </th>
                               <th className="text-center py-2 text-xs font-semibold text-slate-700 w-[15%]">Hold</th>
                               <th className="text-right py-2 text-xs font-semibold text-slate-700 w-[10%]">Actions</th>
                             </tr>
@@ -925,6 +979,46 @@ export default function Invoices() {
                                 </td>
                                 <td className="py-1 text-xs font-medium text-slate-700" data-testid={`text-late-${contact.id}`}>
                                   ${getCustomerLateAmount(contact).toLocaleString()}
+                                </td>
+                                <td className="py-1" data-testid={`schedule-assignment-${contact.id}`}>
+                                  <div className="flex justify-center">
+                                    <Select
+                                      value={getCustomerScheduleAssignment(contact.id)?.scheduleId || ""}
+                                      onValueChange={(scheduleId) => {
+                                        if (scheduleId === "remove") {
+                                          // Handle removal of schedule assignment
+                                          toast({
+                                            title: "Info",
+                                            description: "Remove assignment functionality to be implemented",
+                                          });
+                                        } else if (scheduleId) {
+                                          assignScheduleMutation.mutate({ contactId: contact.id, scheduleId });
+                                        }
+                                      }}
+                                    >
+                                      <SelectTrigger className="w-32 h-7 text-xs bg-white/70 border-gray-200/30">
+                                        <SelectValue placeholder="Assign" />
+                                      </SelectTrigger>
+                                      <SelectContent className="bg-white border-gray-200">
+                                        {(collectionSchedules as any[])
+                                          .filter((s: any) => s.isActive)
+                                          .map((schedule: any) => (
+                                            <SelectItem key={schedule.id} value={schedule.id}>
+                                              <div className="flex items-center gap-2">
+                                                <Target className="h-3 w-3 text-[#17B6C3]" />
+                                                <span className="truncate">{schedule.name}</span>
+                                              </div>
+                                            </SelectItem>
+                                          ))
+                                        }
+                                        {getCustomerScheduleAssignment(contact.id) && (
+                                          <SelectItem value="remove">
+                                            <span className="text-red-500">Remove Assignment</span>
+                                          </SelectItem>
+                                        )}
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
                                 </td>
                                 <td className="py-1" data-testid={`hold-toggle-${contact.id}`}>
                                   <div className="flex justify-center">
