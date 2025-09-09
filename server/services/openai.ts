@@ -289,7 +289,6 @@ ${contextPrompt}
     const response = await openai.chat.completions.create({
       model: "gpt-5",
       messages,
-      temperature: 0.7,
       max_completion_tokens: 800,
     });
 
