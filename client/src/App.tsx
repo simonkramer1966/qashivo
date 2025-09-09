@@ -13,6 +13,7 @@ import Workflows from "@/pages/workflows";
 import WorkflowBuilder from "@/pages/workflow-builder";
 import Settings from "@/pages/settings";
 import AiSuggestions from "@/pages/ai-suggestions";
+import AiCfo from "@/pages/ai-cfo";
 import Reports from "@/pages/reports";
 import UIChoices from "@/pages/ui-choices";
 import UIXero from "@/pages/ui-xero";
@@ -60,6 +61,7 @@ function Router() {
         </>
       ) : (
         <>
+          <Route path="/ai-cfo" component={AiCfo} />
           <Route path="/" component={Dashboard} />
           <Route path="/cashflow" component={Cashflow} />
           <Route path="/invoices" component={Invoices} />
