@@ -4019,11 +4019,14 @@ ${tenant.name}
         return res.status(400).json({ error: 'Message is required' });
       }
 
-      // Get current AR context for the user
-      const [invoiceMetrics, invoices] = await Promise.all([
+      // Get current AR context for the user (get ALL invoices for complete visibility)
+      const [invoiceMetrics, allInvoices] = await Promise.all([
         storage.getInvoiceMetrics(user.tenantId),
-        storage.getInvoices(user.tenantId, 10)
+        storage.getInvoices(user.tenantId) // No limit - get all invoices like the invoices page
       ]);
+
+      // Get only outstanding invoices for AI context (paid invoices don't matter for AR analysis)
+      const invoices = allInvoices.filter(inv => inv.status !== 'Paid');
 
       // Calculate additional context
       const overdueInvoices = invoices.filter(inv => {
@@ -4067,6 +4070,10 @@ ${tenant.name}
       // Generate AI CFO response
       console.log(`🚀 AI CFO: Processing request for message: "${message}"`);
       console.log(`📊 AI CFO: AR Context - Outstanding: $${arContext.totalOutstanding}, Overdue: $${arContext.overdueAmount}`);
+      console.log(`📋 AI CFO: Analyzing ${invoices.length} outstanding invoices from ${allInvoices.length} total invoices`);
+      if (arContext.recentInvoices.length > 0) {
+        console.log(`🏢 AI CFO: Top customers in analysis:`, arContext.recentInvoices.map(inv => `${inv.customerName}: $${inv.amount}`).join(', '));
+      }
       const aiResponse = await generateAiCfoResponse(message, conversationHistory, arContext);
       console.log(`✅ AI CFO: Response generated, length: ${aiResponse.length}`);
 
