@@ -1846,7 +1846,22 @@ Payment required immediately to avoid collection action. Contact us NOW.`
       }
 
       const { id } = req.params;
-      const schedule = await storage.updateCollectionSchedule(id, user.tenantId, req.body);
+      
+      // Transform the data like the create endpoint does
+      const updateData = {
+        ...req.body,
+        scheduleSteps: req.body.scheduleSteps || req.body.steps || req.body.scheduleSteps || [],
+      };
+      
+      // Remove the steps field to avoid confusion
+      delete updateData.steps;
+      
+      console.log("Updating collection schedule with data:", {
+        name: updateData.name,
+        scheduleStepsCount: updateData.scheduleSteps?.length || 0,
+      });
+
+      const schedule = await storage.updateCollectionSchedule(id, user.tenantId, updateData);
       res.json(schedule);
     } catch (error) {
       console.error("Error updating collection schedule:", error);
