@@ -4065,7 +4065,10 @@ ${tenant.name}
       };
 
       // Generate AI CFO response
+      console.log(`🚀 AI CFO: Processing request for message: "${message}"`);
+      console.log(`📊 AI CFO: AR Context - Outstanding: $${arContext.totalOutstanding}, Overdue: $${arContext.overdueAmount}`);
       const aiResponse = await generateAiCfoResponse(message, conversationHistory, arContext);
+      console.log(`✅ AI CFO: Response generated, length: ${aiResponse.length}`);
 
       res.json({
         response: aiResponse,
@@ -4081,6 +4084,37 @@ ${tenant.name}
       res.status(500).json({ 
         error: 'Failed to generate AI CFO response',
         message: error.message 
+      });
+    }
+  });
+
+  // Simple OpenAI test endpoint
+  app.post('/api/test-openai', async (req, res) => {
+    try {
+      console.log("🧪 Testing OpenAI connection...");
+      
+      const { default: OpenAI } = await import('openai');
+      const openai = new OpenAI({ 
+        apiKey: process.env.OPENAI_API_KEY 
+      });
+
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [{ role: "user", content: "Say hello in exactly 5 words." }],
+        max_tokens: 50,
+      });
+
+      console.log("✅ OpenAI test successful");
+      res.json({ 
+        success: true, 
+        response: response.choices[0].message.content 
+      });
+    } catch (error: any) {
+      console.error("❌ OpenAI test failed:", error.message);
+      res.status(500).json({ 
+        success: false, 
+        error: error.message,
+        status: error.status 
       });
     }
   });
