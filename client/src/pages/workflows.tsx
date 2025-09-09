@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 import NewSidebar from "@/components/layout/new-sidebar";
 import Header from "@/components/layout/header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,13 +14,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import { useForm } from "react-hook-form";
 import { 
   Plus, Workflow, BarChart3, Activity, Target, Zap, 
   Mail, MessageSquare, Phone, Bot, Settings, 
   ArrowRight, TrendingUp, Clock, Users,
   Edit, Trash2, Play, Pause, GripVertical, Save,
-  Building2, Calendar, UserCheck
+  Building2, Calendar, UserCheck, Power
 } from "lucide-react";
 import { useLocation } from "wouter";
 
@@ -35,6 +37,7 @@ export default function Workflows() {
   const { isAuthenticated, isLoading } = useAuth();
   const [, setLocation] = useLocation();
   const [activeTab, setActiveTab] = useState("dashboard");
+  const queryClient = useQueryClient();
 
   // Fetch collections dashboard data
   const { data: dashboardData, isLoading: isDashboardLoading } = useQuery({
@@ -72,6 +75,33 @@ export default function Workflows() {
   const { data: voiceCalls } = useQuery({
     queryKey: ['/api/retell/calls'],
     enabled: isAuthenticated,
+  });
+
+  // Fetch automation status
+  const { data: automationStatus, isLoading: isAutomationLoading } = useQuery({
+    queryKey: ['/api/collections/automation/status'],
+    enabled: isAuthenticated,
+  });
+
+  // Automation toggle mutation
+  const automationToggleMutation = useMutation({
+    mutationFn: async (enabled: boolean) => {
+      return apiRequest("PUT", "/api/collections/automation/status", { enabled });
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/collections/automation/status'] });
+      toast({
+        title: "Automation Updated",
+        description: `Collections automation ${data.enabled ? 'enabled' : 'disabled'}`,
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update automation status",
+        variant: "destructive",
+      });
+    },
   });
 
   // Redirect to home if not authenticated
@@ -675,14 +705,32 @@ export default function Workflows() {
           title="Collections Workflow" 
           subtitle="Multi-channel debt recovery and customer communication strategies"
           action={
-            <Button 
-              onClick={() => setLocation('/workflow-builder')}
-              className="bg-[#17B6C3] hover:bg-[#1396A1] text-white" 
-              data-testid="button-create-workflow"
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              Create Workflow
-            </Button>
+            <div className="flex items-center gap-4">
+              {/* Master Automation Switch */}
+              <div className="flex items-center gap-3 px-4 py-2 bg-white/70 backdrop-blur-sm border border-gray-200/50 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <Power className={`h-4 w-4 ${automationStatus?.enabled ? 'text-green-600' : 'text-gray-400'}`} />
+                  <span className="text-sm font-medium text-gray-700">
+                    Automation {automationStatus?.enabled ? 'ON' : 'OFF'}
+                  </span>
+                </div>
+                <Switch
+                  checked={automationStatus?.enabled || false}
+                  onCheckedChange={(checked) => automationToggleMutation.mutate(checked)}
+                  disabled={isAutomationLoading || automationToggleMutation.isPending}
+                  data-testid="switch-automation-master"
+                />
+              </div>
+              
+              <Button 
+                onClick={() => setLocation('/workflow-builder')}
+                className="bg-[#17B6C3] hover:bg-[#1396A1] text-white" 
+                data-testid="button-create-workflow"
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Create Workflow
+              </Button>
+            </div>
           }
         />
         
