@@ -759,7 +759,7 @@ export default function CollectionScheduleBuilder({ className }: CollectionSched
                 </Button>
                 <Button
                   type="submit"
-                  disabled={scheduleMutation.isPending || steps.length === 0}
+                  disabled={scheduleMutation.isPending}
                   className="flex-1 bg-[#17B6C3] hover:bg-[#1396A1] text-white"
                   data-testid="button-save-schedule"
                 >

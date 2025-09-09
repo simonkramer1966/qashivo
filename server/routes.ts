@@ -1790,35 +1790,38 @@ Payment required immediately to avoid collection action. Contact us NOW.`
       // Ensure scheduleSteps has a default value if not provided
       const defaultScheduleSteps = [
         {
-          id: 1,
+          id: "step-1",
+          order: 1,
+          type: "email",
           delay: 0,
-          name: "Initial Reminder",
-          channel: "email",
+          delayUnit: "hours",
           templateId: null,
-          conditions: {}
+          conditions: []
         },
         {
-          id: 2,
+          id: "step-2",
+          order: 2,
+          type: "email",
           delay: 7,
-          name: "Follow-up Reminder",
-          channel: "email", 
+          delayUnit: "days",
           templateId: null,
-          conditions: {}
+          conditions: []
         },
         {
-          id: 3,
+          id: "step-3",
+          order: 3,
+          type: "email",
           delay: 14,
-          name: "Final Notice",
-          channel: "email",
+          delayUnit: "days",
           templateId: null,
-          conditions: {}
+          conditions: []
         }
       ];
 
       const scheduleData = {
         ...req.body,
         tenantId: user.tenantId,
-        scheduleSteps: req.body.scheduleSteps || defaultScheduleSteps,
+        scheduleSteps: req.body.scheduleSteps || req.body.steps || [],
       };
 
       console.log("Creating collection schedule with data:", {
