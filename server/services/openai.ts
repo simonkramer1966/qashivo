@@ -221,81 +221,31 @@ export async function generateAiCfoResponse(
   }
 ): Promise<string> {
   try {
-    const contextPrompt = `
-    CURRENT AR PERFORMANCE DATA:
-    - Total Outstanding: $${arContext.totalOutstanding?.toLocaleString() || '0'}
-    - Overdue Amount: $${arContext.overdueAmount?.toLocaleString() || '0'}
-    - Collection Rate: ${arContext.collectionRate || 85}%
-    - Average Days to Pay: ${arContext.averageDaysToPay || 30} days
-    - Active Contacts: ${arContext.activeContacts || 0}
+    console.log("🤖 AI CFO: Starting response generation for:", userMessage.substring(0, 50) + "...");
     
-    ${arContext.recentInvoices ? `
-    RECENT INVOICE STATUS:
-    ${arContext.recentInvoices.slice(0, 5).map(inv => 
-      `- ${inv.customerName}: $${inv.amount} (${inv.daysPastDue} days past due, ${inv.status})`
-    ).join('\n')}
-    ` : ''}
-    
-    ${arContext.cashflowTrends ? `
-    CASHFLOW AGING:
-    - 0-30 days: $${arContext.cashflowTrends.thirtyDays?.toLocaleString() || '0'}
-    - 31-60 days: $${arContext.cashflowTrends.sixtyDays?.toLocaleString() || '0'}
-    - 60+ days: $${arContext.cashflowTrends.ninetyDays?.toLocaleString() || '0'}
-    ` : ''}
-    `;
-
-    const messages: any[] = [
-      {
-        role: "system",
-        content: `You are an experienced CFO and financial advisor specializing in accounts receivable and cashflow optimization. You provide strategic, actionable financial advice to business leaders.
-
-Your expertise includes:
-- Accounts receivable management and optimization
-- Cashflow forecasting and improvement strategies  
-- Credit risk assessment and mitigation
-- Collection strategy optimization
-- Working capital management
-- Financial performance analysis
-- Industry benchmarking and best practices
-
-IMPORTANT GUIDELINES:
-1. Always reference the specific AR data provided to make your advice contextual and relevant
-2. Provide concrete, actionable recommendations with clear next steps
-3. Explain the financial impact and rationale behind your suggestions
-4. Use professional but accessible language suitable for business leaders
-5. Focus on strategic opportunities to improve cashflow and reduce receivables risk
-6. When appropriate, provide industry benchmarks or comparisons
-7. Keep responses comprehensive but concise (200-400 words typically)
-
-CURRENT CONTEXT:
-${contextPrompt}
-`
-      }
-    ];
-
-    // Add conversation history (last 10 messages to maintain context)
-    const recentHistory = conversationHistory.slice(-10);
-    messages.push(...recentHistory.map(msg => ({
-      role: msg.role,
-      content: msg.content
-    })));
-
-    // Add current user message
-    messages.push({
-      role: "user", 
-      content: userMessage
-    });
-
     const response = await openai.chat.completions.create({
       model: "gpt-4o",
-      messages,
+      messages: [
+        {
+          role: "system",
+          content: `You are an experienced CFO providing financial advice on accounts receivable. Current AR data: $${arContext.totalOutstanding?.toLocaleString() || '0'} outstanding, $${arContext.overdueAmount?.toLocaleString() || '0'} overdue, ${arContext.collectionRate || 85}% collection rate.`
+        },
+        {
+          role: "user", 
+          content: userMessage
+        }
+      ],
       temperature: 0.7,
-      max_tokens: 800,
+      max_tokens: 500,
     });
 
+    console.log("🤖 AI CFO: Response received successfully");
     return response.choices[0].message.content || "I apologize, but I'm having trouble processing your request right now. Please try asking again.";
-  } catch (error) {
-    console.error("Error generating AI CFO response:", error);
+  } catch (error: any) {
+    console.error("❌ AI CFO Error:", error.message || error);
+    if (error.status) {
+      console.error("❌ Status:", error.status);
+    }
     return "I apologize for the technical difficulty. As your AI CFO, I'm temporarily unable to provide advice. Please try your question again in a moment.";
   }
 }
