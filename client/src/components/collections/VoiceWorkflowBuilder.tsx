@@ -189,12 +189,27 @@ export default function VoiceWorkflowBuilder({ workflowId }: VoiceWorkflowBuilde
   // Create voice state mutation
   const createStateMutation = useMutation({
     mutationFn: async (data: VoiceStateForm) => {
+      // Map frontend form data to backend schema format
+      const mappedData = {
+        stateType: data.type, // Map 'type' to 'stateType'
+        label: data.name, // Map 'name' to 'label'
+        position: { x: Math.random() * 400, y: Math.random() * 300 }, // Required position field
+        config: data.config || {}, // Ensure config is never undefined
+        prompt: data.description || '', // Use description as prompt
+        expectedResponses: [], // Default empty array
+        isStartState: false, // Default value
+        isEndState: false, // Default value
+      };
+
       const response = await fetch(`/api/voice/workflows/${workflowId}/states`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
+        body: JSON.stringify(mappedData),
       });
-      if (!response.ok) throw new Error('Failed to create state');
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to create state');
+      }
       return response.json();
     },
     onSuccess: (newState: any) => {
