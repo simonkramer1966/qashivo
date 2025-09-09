@@ -14,6 +14,10 @@ import {
   insertWorkflowTemplateSchema,
   insertRetellConfigurationSchema,
   insertVoiceCallSchema,
+  insertVoiceWorkflowSchema,
+  insertVoiceWorkflowStateSchema,
+  insertVoiceStateTransitionSchema,
+  insertVoiceMessageTemplateSchema,
   insertLeadSchema 
 } from "@shared/schema";
 import { z } from "zod";
@@ -2206,6 +2210,350 @@ Payment required immediately to avoid collection action. Contact us NOW.`
     } catch (error) {
       console.error("Error processing Retell webhook:", error);
       res.status(500).json({ message: "Failed to process webhook" });
+    }
+  });
+
+  // Voice Workflow API Routes
+  
+  // Get all voice workflows for a tenant
+  app.get("/api/voice/workflows", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { category, isActive } = req.query;
+      const filters = {
+        category: category as string,
+        isActive: isActive === 'true' ? true : isActive === 'false' ? false : undefined,
+      };
+
+      const workflows = await storage.getVoiceWorkflows(user.tenantId, filters);
+      res.json(workflows);
+    } catch (error) {
+      console.error("Error fetching voice workflows:", error);
+      res.status(500).json({ message: "Failed to fetch voice workflows" });
+    }
+  });
+
+  // Get a specific voice workflow by ID
+  app.get("/api/voice/workflows/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { id } = req.params;
+      const workflow = await storage.getVoiceWorkflow(id, user.tenantId);
+      
+      if (!workflow) {
+        return res.status(404).json({ message: "Voice workflow not found" });
+      }
+
+      res.json(workflow);
+    } catch (error) {
+      console.error("Error fetching voice workflow:", error);
+      res.status(500).json({ message: "Failed to fetch voice workflow" });
+    }
+  });
+
+  // Create a new voice workflow
+  app.post("/api/voice/workflows", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const workflowData = insertVoiceWorkflowSchema.parse({
+        ...req.body,
+        tenantId: user.tenantId,
+      });
+
+      const workflow = await storage.createVoiceWorkflow(workflowData);
+      res.status(201).json(workflow);
+    } catch (error: any) {
+      console.error("Error creating voice workflow:", error);
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ 
+          message: "Invalid voice workflow data", 
+          errors: error.errors 
+        });
+      }
+      res.status(500).json({ message: "Failed to create voice workflow" });
+    }
+  });
+
+  // Update a voice workflow
+  app.put("/api/voice/workflows/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { id } = req.params;
+      const updates = req.body;
+
+      const workflow = await storage.updateVoiceWorkflow(id, user.tenantId, updates);
+      res.json(workflow);
+    } catch (error) {
+      console.error("Error updating voice workflow:", error);
+      res.status(500).json({ message: "Failed to update voice workflow" });
+    }
+  });
+
+  // Delete a voice workflow
+  app.delete("/api/voice/workflows/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { id } = req.params;
+      await storage.deleteVoiceWorkflow(id, user.tenantId);
+      res.json({ message: "Voice workflow deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting voice workflow:", error);
+      res.status(500).json({ message: "Failed to delete voice workflow" });
+    }
+  });
+
+  // Voice Workflow State Routes
+
+  // Get states for a voice workflow
+  app.get("/api/voice/workflows/:workflowId/states", isAuthenticated, async (req: any, res) => {
+    try {
+      const { workflowId } = req.params;
+      const states = await storage.getVoiceWorkflowStates(workflowId);
+      res.json(states);
+    } catch (error) {
+      console.error("Error fetching voice workflow states:", error);
+      res.status(500).json({ message: "Failed to fetch voice workflow states" });
+    }
+  });
+
+  // Create a new voice workflow state
+  app.post("/api/voice/workflows/:workflowId/states", isAuthenticated, async (req: any, res) => {
+    try {
+      const { workflowId } = req.params;
+      const stateData = insertVoiceWorkflowStateSchema.parse({
+        ...req.body,
+        voiceWorkflowId: workflowId,
+      });
+
+      const state = await storage.createVoiceWorkflowState(stateData);
+      res.status(201).json(state);
+    } catch (error: any) {
+      console.error("Error creating voice workflow state:", error);
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ 
+          message: "Invalid voice workflow state data", 
+          errors: error.errors 
+        });
+      }
+      res.status(500).json({ message: "Failed to create voice workflow state" });
+    }
+  });
+
+  // Update a voice workflow state
+  app.put("/api/voice/states/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const updates = req.body;
+
+      const state = await storage.updateVoiceWorkflowState(id, updates);
+      res.json(state);
+    } catch (error) {
+      console.error("Error updating voice workflow state:", error);
+      res.status(500).json({ message: "Failed to update voice workflow state" });
+    }
+  });
+
+  // Delete a voice workflow state
+  app.delete("/api/voice/states/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteVoiceWorkflowState(id);
+      res.json({ message: "Voice workflow state deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting voice workflow state:", error);
+      res.status(500).json({ message: "Failed to delete voice workflow state" });
+    }
+  });
+
+  // Voice State Transition Routes
+
+  // Get transitions for a voice workflow
+  app.get("/api/voice/workflows/:workflowId/transitions", isAuthenticated, async (req: any, res) => {
+    try {
+      const { workflowId } = req.params;
+      const transitions = await storage.getVoiceStateTransitions(workflowId);
+      res.json(transitions);
+    } catch (error) {
+      console.error("Error fetching voice state transitions:", error);
+      res.status(500).json({ message: "Failed to fetch voice state transitions" });
+    }
+  });
+
+  // Create a new voice state transition
+  app.post("/api/voice/workflows/:workflowId/transitions", isAuthenticated, async (req: any, res) => {
+    try {
+      const { workflowId } = req.params;
+      const transitionData = insertVoiceStateTransitionSchema.parse({
+        ...req.body,
+        voiceWorkflowId: workflowId,
+      });
+
+      const transition = await storage.createVoiceStateTransition(transitionData);
+      res.status(201).json(transition);
+    } catch (error: any) {
+      console.error("Error creating voice state transition:", error);
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ 
+          message: "Invalid voice state transition data", 
+          errors: error.errors 
+        });
+      }
+      res.status(500).json({ message: "Failed to create voice state transition" });
+    }
+  });
+
+  // Update a voice state transition
+  app.put("/api/voice/transitions/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const updates = req.body;
+
+      const transition = await storage.updateVoiceStateTransition(id, updates);
+      res.json(transition);
+    } catch (error) {
+      console.error("Error updating voice state transition:", error);
+      res.status(500).json({ message: "Failed to update voice state transition" });
+    }
+  });
+
+  // Delete a voice state transition
+  app.delete("/api/voice/transitions/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteVoiceStateTransition(id);
+      res.json({ message: "Voice state transition deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting voice state transition:", error);
+      res.status(500).json({ message: "Failed to delete voice state transition" });
+    }
+  });
+
+  // Voice Message Template Routes
+
+  // Get all voice message templates for a tenant
+  app.get("/api/voice/templates", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { category, isActive } = req.query;
+      const filters = {
+        category: category as string,
+        isActive: isActive === 'true' ? true : isActive === 'false' ? false : undefined,
+      };
+
+      const templates = await storage.getVoiceMessageTemplates(user.tenantId, filters);
+      res.json(templates);
+    } catch (error) {
+      console.error("Error fetching voice message templates:", error);
+      res.status(500).json({ message: "Failed to fetch voice message templates" });
+    }
+  });
+
+  // Get a specific voice message template by ID
+  app.get("/api/voice/templates/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { id } = req.params;
+      const template = await storage.getVoiceMessageTemplate(id, user.tenantId);
+      
+      if (!template) {
+        return res.status(404).json({ message: "Voice message template not found" });
+      }
+
+      res.json(template);
+    } catch (error) {
+      console.error("Error fetching voice message template:", error);
+      res.status(500).json({ message: "Failed to fetch voice message template" });
+    }
+  });
+
+  // Create a new voice message template
+  app.post("/api/voice/templates", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const templateData = insertVoiceMessageTemplateSchema.parse({
+        ...req.body,
+        tenantId: user.tenantId,
+      });
+
+      const template = await storage.createVoiceMessageTemplate(templateData);
+      res.status(201).json(template);
+    } catch (error: any) {
+      console.error("Error creating voice message template:", error);
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ 
+          message: "Invalid voice message template data", 
+          errors: error.errors 
+        });
+      }
+      res.status(500).json({ message: "Failed to create voice message template" });
+    }
+  });
+
+  // Update a voice message template
+  app.put("/api/voice/templates/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { id } = req.params;
+      const updates = req.body;
+
+      const template = await storage.updateVoiceMessageTemplate(id, user.tenantId, updates);
+      res.json(template);
+    } catch (error) {
+      console.error("Error updating voice message template:", error);
+      res.status(500).json({ message: "Failed to update voice message template" });
+    }
+  });
+
+  // Delete a voice message template
+  app.delete("/api/voice/templates/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { id } = req.params;
+      await storage.deleteVoiceMessageTemplate(id, user.tenantId);
+      res.json({ message: "Voice message template deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting voice message template:", error);
+      res.status(500).json({ message: "Failed to delete voice message template" });
     }
   });
 

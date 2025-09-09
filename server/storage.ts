@@ -12,6 +12,10 @@ import {
   workflowTemplates,
   retellConfigurations,
   voiceCalls,
+  voiceWorkflows,
+  voiceWorkflowStates,
+  voiceStateTransitions,
+  voiceMessageTemplates,
   leads,
   emailSenders,
   collectionSchedules,
@@ -43,6 +47,14 @@ import {
   type InsertRetellConfiguration,
   type VoiceCall,
   type InsertVoiceCall,
+  type VoiceWorkflow,
+  type InsertVoiceWorkflow,
+  type VoiceWorkflowState,
+  type InsertVoiceWorkflowState,
+  type VoiceStateTransition,
+  type InsertVoiceStateTransition,
+  type VoiceMessageTemplate,
+  type InsertVoiceMessageTemplate,
   type Lead,
   type InsertLead,
   type EmailSender,
@@ -148,6 +160,32 @@ export interface IStorage {
   getVoiceCall(id: string, tenantId: string): Promise<(VoiceCall & { contact: Contact; invoice?: Invoice }) | undefined>;
   createVoiceCall(voiceCall: InsertVoiceCall): Promise<VoiceCall>;
   updateVoiceCall(id: string, tenantId: string, updates: Partial<InsertVoiceCall>): Promise<VoiceCall>;
+
+  // Voice Workflow operations
+  getVoiceWorkflows(tenantId: string, filters?: { category?: string; isActive?: boolean }): Promise<(VoiceWorkflow & { states: VoiceWorkflowState[]; transitions: VoiceStateTransition[] })[]>;
+  getVoiceWorkflow(id: string, tenantId: string): Promise<(VoiceWorkflow & { states: VoiceWorkflowState[]; transitions: VoiceStateTransition[] }) | undefined>;
+  createVoiceWorkflow(workflow: InsertVoiceWorkflow): Promise<VoiceWorkflow>;
+  updateVoiceWorkflow(id: string, tenantId: string, updates: Partial<InsertVoiceWorkflow>): Promise<VoiceWorkflow>;
+  deleteVoiceWorkflow(id: string, tenantId: string): Promise<void>;
+
+  // Voice Workflow State operations
+  getVoiceWorkflowStates(voiceWorkflowId: string): Promise<VoiceWorkflowState[]>;
+  createVoiceWorkflowState(state: InsertVoiceWorkflowState): Promise<VoiceWorkflowState>;
+  updateVoiceWorkflowState(id: string, updates: Partial<InsertVoiceWorkflowState>): Promise<VoiceWorkflowState>;
+  deleteVoiceWorkflowState(id: string): Promise<void>;
+
+  // Voice State Transition operations
+  getVoiceStateTransitions(voiceWorkflowId: string): Promise<VoiceStateTransition[]>;
+  createVoiceStateTransition(transition: InsertVoiceStateTransition): Promise<VoiceStateTransition>;
+  updateVoiceStateTransition(id: string, updates: Partial<InsertVoiceStateTransition>): Promise<VoiceStateTransition>;
+  deleteVoiceStateTransition(id: string): Promise<void>;
+
+  // Voice Message Template operations
+  getVoiceMessageTemplates(tenantId: string, filters?: { category?: string; isActive?: boolean }): Promise<VoiceMessageTemplate[]>;
+  getVoiceMessageTemplate(id: string, tenantId: string): Promise<VoiceMessageTemplate | undefined>;
+  createVoiceMessageTemplate(template: InsertVoiceMessageTemplate): Promise<VoiceMessageTemplate>;
+  updateVoiceMessageTemplate(id: string, tenantId: string, updates: Partial<InsertVoiceMessageTemplate>): Promise<VoiceMessageTemplate>;
+  deleteVoiceMessageTemplate(id: string, tenantId: string): Promise<void>;
   
   // Lead operations
   getLeads(): Promise<Lead[]>;
@@ -1275,6 +1313,187 @@ export class DatabaseStorage implements IStorage {
       .where(and(eq(voiceCalls.id, id), eq(voiceCalls.tenantId, tenantId)))
       .returning();
     return call;
+  }
+
+  // Voice Workflow operations
+  async getVoiceWorkflows(tenantId: string, filters?: { category?: string; isActive?: boolean }): Promise<(VoiceWorkflow & { states: VoiceWorkflowState[]; transitions: VoiceStateTransition[] })[]> {
+    let query = db.select().from(voiceWorkflows);
+    
+    const conditions = [eq(voiceWorkflows.tenantId, tenantId)];
+    
+    if (filters?.category) {
+      conditions.push(eq(voiceWorkflows.category, filters.category));
+    }
+    
+    if (filters?.isActive !== undefined) {
+      conditions.push(eq(voiceWorkflows.isActive, filters.isActive));
+    }
+    
+    const workflows = await query.where(and(...conditions));
+    
+    // Get states and transitions for each workflow
+    const workflowsWithDetails = await Promise.all(
+      workflows.map(async (workflow) => {
+        const states = await this.getVoiceWorkflowStates(workflow.id);
+        const transitions = await this.getVoiceStateTransitions(workflow.id);
+        return { ...workflow, states, transitions };
+      })
+    );
+    
+    return workflowsWithDetails;
+  }
+
+  async getVoiceWorkflow(id: string, tenantId: string): Promise<(VoiceWorkflow & { states: VoiceWorkflowState[]; transitions: VoiceStateTransition[] }) | undefined> {
+    const [workflow] = await db
+      .select()
+      .from(voiceWorkflows)
+      .where(and(eq(voiceWorkflows.id, id), eq(voiceWorkflows.tenantId, tenantId)));
+    
+    if (!workflow) return undefined;
+    
+    const states = await this.getVoiceWorkflowStates(workflow.id);
+    const transitions = await this.getVoiceStateTransitions(workflow.id);
+    
+    return { ...workflow, states, transitions };
+  }
+
+  async createVoiceWorkflow(workflow: InsertVoiceWorkflow): Promise<VoiceWorkflow> {
+    const [newWorkflow] = await db
+      .insert(voiceWorkflows)
+      .values(workflow)
+      .returning();
+    return newWorkflow;
+  }
+
+  async updateVoiceWorkflow(id: string, tenantId: string, updates: Partial<InsertVoiceWorkflow>): Promise<VoiceWorkflow> {
+    const [workflow] = await db
+      .update(voiceWorkflows)
+      .set({
+        ...updates,
+        updatedAt: new Date(),
+      })
+      .where(and(eq(voiceWorkflows.id, id), eq(voiceWorkflows.tenantId, tenantId)))
+      .returning();
+    return workflow;
+  }
+
+  async deleteVoiceWorkflow(id: string, tenantId: string): Promise<void> {
+    await db
+      .delete(voiceWorkflows)
+      .where(and(eq(voiceWorkflows.id, id), eq(voiceWorkflows.tenantId, tenantId)));
+  }
+
+  // Voice Workflow State operations
+  async getVoiceWorkflowStates(voiceWorkflowId: string): Promise<VoiceWorkflowState[]> {
+    return await db
+      .select()
+      .from(voiceWorkflowStates)
+      .where(eq(voiceWorkflowStates.voiceWorkflowId, voiceWorkflowId));
+  }
+
+  async createVoiceWorkflowState(state: InsertVoiceWorkflowState): Promise<VoiceWorkflowState> {
+    const [newState] = await db
+      .insert(voiceWorkflowStates)
+      .values(state)
+      .returning();
+    return newState;
+  }
+
+  async updateVoiceWorkflowState(id: string, updates: Partial<InsertVoiceWorkflowState>): Promise<VoiceWorkflowState> {
+    const [state] = await db
+      .update(voiceWorkflowStates)
+      .set(updates)
+      .where(eq(voiceWorkflowStates.id, id))
+      .returning();
+    return state;
+  }
+
+  async deleteVoiceWorkflowState(id: string): Promise<void> {
+    await db
+      .delete(voiceWorkflowStates)
+      .where(eq(voiceWorkflowStates.id, id));
+  }
+
+  // Voice State Transition operations
+  async getVoiceStateTransitions(voiceWorkflowId: string): Promise<VoiceStateTransition[]> {
+    return await db
+      .select()
+      .from(voiceStateTransitions)
+      .where(eq(voiceStateTransitions.voiceWorkflowId, voiceWorkflowId));
+  }
+
+  async createVoiceStateTransition(transition: InsertVoiceStateTransition): Promise<VoiceStateTransition> {
+    const [newTransition] = await db
+      .insert(voiceStateTransitions)
+      .values(transition)
+      .returning();
+    return newTransition;
+  }
+
+  async updateVoiceStateTransition(id: string, updates: Partial<InsertVoiceStateTransition>): Promise<VoiceStateTransition> {
+    const [transition] = await db
+      .update(voiceStateTransitions)
+      .set(updates)
+      .where(eq(voiceStateTransitions.id, id))
+      .returning();
+    return transition;
+  }
+
+  async deleteVoiceStateTransition(id: string): Promise<void> {
+    await db
+      .delete(voiceStateTransitions)
+      .where(eq(voiceStateTransitions.id, id));
+  }
+
+  // Voice Message Template operations
+  async getVoiceMessageTemplates(tenantId: string, filters?: { category?: string; isActive?: boolean }): Promise<VoiceMessageTemplate[]> {
+    let query = db.select().from(voiceMessageTemplates);
+    
+    const conditions = [eq(voiceMessageTemplates.tenantId, tenantId)];
+    
+    if (filters?.category) {
+      conditions.push(eq(voiceMessageTemplates.category, filters.category));
+    }
+    
+    if (filters?.isActive !== undefined) {
+      conditions.push(eq(voiceMessageTemplates.isActive, filters.isActive));
+    }
+    
+    return await query.where(and(...conditions));
+  }
+
+  async getVoiceMessageTemplate(id: string, tenantId: string): Promise<VoiceMessageTemplate | undefined> {
+    const [template] = await db
+      .select()
+      .from(voiceMessageTemplates)
+      .where(and(eq(voiceMessageTemplates.id, id), eq(voiceMessageTemplates.tenantId, tenantId)));
+    return template;
+  }
+
+  async createVoiceMessageTemplate(template: InsertVoiceMessageTemplate): Promise<VoiceMessageTemplate> {
+    const [newTemplate] = await db
+      .insert(voiceMessageTemplates)
+      .values(template)
+      .returning();
+    return newTemplate;
+  }
+
+  async updateVoiceMessageTemplate(id: string, tenantId: string, updates: Partial<InsertVoiceMessageTemplate>): Promise<VoiceMessageTemplate> {
+    const [template] = await db
+      .update(voiceMessageTemplates)
+      .set({
+        ...updates,
+        updatedAt: new Date(),
+      })
+      .where(and(eq(voiceMessageTemplates.id, id), eq(voiceMessageTemplates.tenantId, tenantId)))
+      .returning();
+    return template;
+  }
+
+  async deleteVoiceMessageTemplate(id: string, tenantId: string): Promise<void> {
+    await db
+      .delete(voiceMessageTemplates)
+      .where(and(eq(voiceMessageTemplates.id, id), eq(voiceMessageTemplates.tenantId, tenantId)));
   }
 
   // Lead operations
