@@ -20,7 +20,6 @@ import { cn } from "@/lib/utils";
 import nexusLogo from "@assets/Main Nexus Logo copy_1756923544828.png";
 
 const navigationItems = [
-  { name: "AI CFO", href: "/ai-cfo", icon: Bot },
   { name: "Dashboard", href: "/", icon: BarChart3 },
   { name: "Cashflow", href: "/cashflow", icon: TrendingUp },
   { name: "Receivables", href: "/invoices", icon: FileText },
@@ -135,6 +134,23 @@ export default function NewSidebar() {
           })}
         </ul>
       </nav>
+
+      {/* Footer - CFO Charlie */}
+      <div className="p-4 border-t border-gray-200 bg-gray-50/50">
+        <button
+          onClick={() => handleNavigation("/ai-cfo")}
+          className={cn(
+            "w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 text-left",
+            isActivePath("/ai-cfo")
+              ? "bg-[#17B6C3] text-white shadow-sm"
+              : "text-gray-600 hover:bg-white hover:text-gray-900 hover:shadow-sm"
+          )}
+          data-testid="nav-cfo-charlie"
+        >
+          <Bot className="w-5 h-5" />
+          <span>CFO Charlie</span>
+        </button>
+      </div>
     </aside>
   );
 }
