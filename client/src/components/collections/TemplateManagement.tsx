@@ -370,9 +370,16 @@ export default function TemplateManagement({ className }: TemplateManagementProp
                     <TypeIcon className="h-5 w-5 text-gray-600" />
                     <CardTitle className="text-lg">{template.name}</CardTitle>
                   </div>
-                  <Badge variant={template.isActive ? "default" : "secondary"}>
-                    {template.isActive ? "Active" : "Inactive"}
-                  </Badge>
+                  <div className="flex gap-1">
+                    {template.isDefault && (
+                      <Badge className="bg-yellow-100 text-yellow-800 text-xs">
+                        Default
+                      </Badge>
+                    )}
+                    <Badge variant={template.isActive ? "default" : "secondary"}>
+                      {template.isActive ? "Active" : "Inactive"}
+                    </Badge>
+                  </div>
                 </div>
                 <div className="flex items-center gap-2">
                   <CategoryIcon className="h-4 w-4 text-gray-500" />
@@ -414,6 +421,7 @@ export default function TemplateManagement({ className }: TemplateManagementProp
                       size="sm"
                       variant="outline"
                       onClick={() => deleteMutation.mutate(template.id)}
+                      disabled={template.isDefault}
                       data-testid={`button-delete-${template.id}`}
                     >
                       <Trash2 className="h-4 w-4 text-red-500" />
