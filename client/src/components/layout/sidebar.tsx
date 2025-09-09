@@ -61,7 +61,7 @@ export default function Sidebar() {
             const isActive = location === item.href || (item.href !== "/" && location.startsWith(item.href));
             return (
               <li key={item.name}>
-                <a
+                <Link
                   href={item.href}
                   className={cn(
                     "flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors no-underline",
@@ -73,7 +73,7 @@ export default function Sidebar() {
                 >
                   <item.icon className="w-5 h-5" />
                   <span>{item.name}</span>
-                </a>
+                </Link>
               </li>
             );
           })}
