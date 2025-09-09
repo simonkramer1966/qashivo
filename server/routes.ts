@@ -273,14 +273,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
             case 'get_customer_invoices':
               try {
                 // Get invoices for specific customer from storage
-                const allInvoices = await storage.getInvoices();
+                const allInvoices = await storage.getInvoices('demo-tenant'); // TODO: Get actual tenant ID
                 const customerInvoices = allInvoices.filter(invoice => 
-                  invoice.customerName.toLowerCase().includes(toolArgs.customer_name.toLowerCase())
+                  invoice.contact.name.toLowerCase().includes(toolArgs.customer_name.toLowerCase())
                 );
                 
                 const invoiceData = customerInvoices.map(invoice => ({
                   invoice_number: invoice.invoiceNumber,
-                  amount: invoice.amount,
+                  amount: parseFloat(invoice.amount.toString()),
                   due_date: invoice.dueDate,
                   status: invoice.status,
                   days_overdue: Math.max(0, Math.floor((new Date().getTime() - new Date(invoice.dueDate).getTime()) / (1000 * 60 * 60 * 24))),
@@ -316,7 +316,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
             case 'get_invoice_details':
               try {
-                const allInvoices = await storage.getInvoices();
+                const allInvoices = await storage.getInvoices('demo-tenant'); // TODO: Get actual tenant ID
                 const invoice = allInvoices.find(inv => inv.invoiceNumber === toolArgs.invoice_number);
                 
                 if (!invoice) {
@@ -332,7 +332,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 
                 const invoiceDetails = {
                   invoice_number: invoice.invoiceNumber,
-                  customer_name: invoice.customerName,
+                  customer_name: invoice.contact.name,
                   amount: invoice.amount,
                   due_date: invoice.dueDate,
                   status: invoice.status,
@@ -361,7 +361,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
             case 'get_customer_contact_info':
               try {
-                const allContacts = await storage.getContacts();
+                const allContacts = await storage.getContacts('demo-tenant'); // TODO: Get actual tenant ID
                 const customer = allContacts.find(contact => 
                   contact.name.toLowerCase().includes(toolArgs.customer_name.toLowerCase())
                 );
@@ -382,11 +382,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   email: customer.email,
                   phone: customer.phone,
                   address: customer.address || "Not provided",
-                  contact_person: customer.contactPerson || "Not specified",
+                  contact_person: "Not specified", // Schema doesn't have contactPerson field
                   preferred_contact_method: customer.preferredContactMethod || "Email",
-                  last_contact_date: customer.lastContactDate || "Never",
-                  payment_terms: "Net 30 days",
-                  credit_limit: "Standard terms"
+                  last_contact_date: "Never", // Schema doesn't have lastContactDate field
+                  payment_terms: `Net ${customer.paymentTerms} days`,
+                  credit_limit: customer.creditLimit ? customer.creditLimit.toString() : "Standard terms"
                 };
                 
                 return res.json({
@@ -409,7 +409,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
             case 'update_invoice_status':
               try {
-                const allInvoices = await storage.getInvoices();
+                const allInvoices = await storage.getInvoices('demo-tenant'); // TODO: Get actual tenant ID
                 const invoiceIndex = allInvoices.findIndex(inv => inv.invoiceNumber === toolArgs.invoice_number);
                 
                 if (invoiceIndex === -1) {
