@@ -4251,15 +4251,28 @@ ${tenant.name}
         
         if (customerInvoices.length > 0) {
           const totalOwed = customerInvoices.reduce((sum, inv) => sum + Number(inv.amount), 0);
-          const outstandingInvoices = customerInvoices.filter(inv => inv.status !== 'Paid');
+          
+          // Filter for unpaid/outstanding invoices - case insensitive and multiple status check
+          const outstandingInvoices = customerInvoices.filter(inv => 
+            inv.status?.toLowerCase() !== 'paid' && 
+            inv.status?.toLowerCase() !== 'completed'
+          );
           const outstandingAmount = outstandingInvoices.reduce((sum, inv) => sum + Number(inv.amount), 0);
+          
+          // Debug invoice status breakdown
+          const statusBreakdown = customerInvoices.reduce((acc, inv) => {
+            acc[inv.status || 'unknown'] = (acc[inv.status || 'unknown'] || 0) + Number(inv.amount);
+            return acc;
+          }, {} as Record<string, number>);
+          console.log(`🔍 AI CFO: Invoice status breakdown for ${searchedCustomer}:`, statusBreakdown);
           
           specificCustomerData = {
             customerName: customerInvoices[0].contact?.companyName || customerInvoices[0].contact?.name || searchedCustomer,
             totalInvoices: customerInvoices.length,
             totalAmount: totalOwed,
             outstandingAmount: outstandingAmount,
-            invoiceDetails: customerInvoices.slice(0, 10).map(inv => ({
+            outstandingInvoices: outstandingInvoices.length,
+            invoiceDetails: outstandingInvoices.slice(0, 10).map(inv => ({
               invoiceNumber: inv.invoiceNumber,
               amount: Number(inv.amount),
               status: inv.status,
@@ -4267,7 +4280,9 @@ ${tenant.name}
             }))
           };
           
-          console.log(`✅ AI CFO: Found ${customerInvoices.length} invoices for ${searchedCustomer}, Outstanding: $${outstandingAmount}`);
+          console.log(`✅ AI CFO: Found ${customerInvoices.length} total invoices for ${searchedCustomer}`);
+          console.log(`💰 AI CFO: Outstanding Balance: $${outstandingAmount} (${outstandingInvoices.length} unpaid invoices)`);
+          console.log(`📊 AI CFO: Total Invoiced: $${totalOwed} (includes paid invoices)`);
         } else {
           console.log(`❌ AI CFO: No invoices found for "${searchedCustomer}"`);
         }

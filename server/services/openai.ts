@@ -249,6 +249,12 @@ export async function generateAiCfoResponse(
           role: "system",
           content: `You are an experienced CFO providing financial advice on accounts receivable. 
 
+CRITICAL UNDERSTANDING - "OWE" vs "INVOICED" DISTINCTION:
+When users ask "How much does [Customer] owe us?" they want OUTSTANDING/UNPAID amounts, NOT total invoice amounts.
+• "Owe" = Outstanding Amount = Unpaid invoices only
+• "Total invoiced" = All invoices including paid ones
+• Always prioritize and emphasize OUTSTANDING amounts for "owe" questions
+
 IMPORTANT: You have COMPLETE ACCESS to detailed invoice and customer data. You can and should provide specific information about individual customers, their outstanding balances, payment history, and aging details.
 
 CURRENT AR DATA:
