@@ -4067,7 +4067,7 @@ ${tenant.name}
           id: inv.id,
           amount: Number(inv.amount),
           daysPastDue: Math.max(0, Math.floor((Date.now() - new Date(inv.dueDate).getTime()) / (1000 * 60 * 60 * 24))),
-          customerName: inv.contact?.name || 'Unknown',
+          customerName: inv.contact?.companyName || inv.contact?.name || 'Unknown',
           status: inv.status
         })),
         allCustomers: invoices.map(inv => ({
@@ -4115,22 +4115,27 @@ ${tenant.name}
       if (searchedCustomer) {
         console.log(`🔍 AI CFO: Searching for customer: "${searchedCustomer}"`);
         
-        // Debug: Show some customer names from database
-        const uniqueCustomers = [...new Set(allInvoices.map(inv => inv.contact?.name).filter(Boolean))].slice(0, 10);
-        console.log(`🔍 AI CFO: Sample customer names in database:`, uniqueCustomers);
+        // Debug: Show some customer names and company names from database
+        const uniquePersons = [...new Set(allInvoices.map(inv => inv.contact?.name).filter(Boolean))].slice(0, 5);
+        const uniqueCompanies = [...new Set(allInvoices.map(inv => inv.contact?.companyName).filter(Boolean))].slice(0, 5);
+        console.log(`🔍 AI CFO: Sample person names:`, uniquePersons);
+        console.log(`🔍 AI CFO: Sample company names:`, uniqueCompanies);
         
-        // Search more flexibly - exact match first, then partial match
+        // Search in both name and companyName fields - exact match first
         let customerInvoices = allInvoices.filter(inv => 
-          inv.contact?.name?.toLowerCase() === searchedCustomer.toLowerCase()
+          inv.contact?.name?.toLowerCase() === searchedCustomer.toLowerCase() ||
+          inv.contact?.companyName?.toLowerCase() === searchedCustomer.toLowerCase()
         );
         
-        // If no exact match, try partial match
+        // If no exact match, try partial match in both fields
         if (customerInvoices.length === 0) {
           customerInvoices = allInvoices.filter(inv => 
             inv.contact?.name?.toLowerCase().includes(searchedCustomer.toLowerCase()) ||
-            searchedCustomer.toLowerCase().includes(inv.contact?.name?.toLowerCase() || '')
+            inv.contact?.companyName?.toLowerCase().includes(searchedCustomer.toLowerCase()) ||
+            searchedCustomer.toLowerCase().includes(inv.contact?.name?.toLowerCase() || '') ||
+            searchedCustomer.toLowerCase().includes(inv.contact?.companyName?.toLowerCase() || '')
           );
-          console.log(`🔍 AI CFO: No exact match found, trying partial match...`);
+          console.log(`🔍 AI CFO: No exact match found, trying partial match in both name and company fields...`);
         }
         
         if (customerInvoices.length > 0) {
@@ -4139,7 +4144,7 @@ ${tenant.name}
           const outstandingAmount = outstandingInvoices.reduce((sum, inv) => sum + Number(inv.amount), 0);
           
           specificCustomerData = {
-            customerName: searchedCustomer,
+            customerName: customerInvoices[0].contact?.companyName || customerInvoices[0].contact?.name || searchedCustomer,
             totalInvoices: customerInvoices.length,
             totalAmount: totalOwed,
             outstandingAmount: outstandingAmount,
