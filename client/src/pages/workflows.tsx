@@ -77,32 +77,6 @@ export default function Workflows() {
     enabled: isAuthenticated,
   });
 
-  // Fetch automation status
-  const { data: automationStatus, isLoading: isAutomationLoading } = useQuery({
-    queryKey: ['/api/collections/automation/status'],
-    enabled: isAuthenticated,
-  });
-
-  // Automation toggle mutation
-  const automationToggleMutation = useMutation({
-    mutationFn: async (enabled: boolean) => {
-      return apiRequest("PUT", "/api/collections/automation/status", { enabled });
-    },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['/api/collections/automation/status'] });
-      toast({
-        title: "Automation Updated",
-        description: `Collections automation ${data.enabled ? 'enabled' : 'disabled'}`,
-      });
-    },
-    onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to update automation status",
-        variant: "destructive",
-      });
-    },
-  });
 
   // Redirect to home if not authenticated
   useEffect(() => {
@@ -704,23 +678,6 @@ export default function Workflows() {
         <Header 
           title="Collections Workflow" 
           subtitle="Multi-channel debt recovery and customer communication strategies"
-          action={
-            <div className="flex items-center gap-3 px-4 py-2 bg-white/70 backdrop-blur-sm border border-gray-200/50 rounded-lg">
-              <div className="flex items-center gap-2">
-                <Power className={`h-4 w-4 ${automationStatus?.enabled ? 'text-green-600' : 'text-red-500'}`} />
-                <span className="text-sm font-medium text-gray-700">
-                  Automation {automationStatus?.enabled ? 'ON' : 'OFF'}
-                </span>
-              </div>
-              <Switch
-                checked={automationStatus?.enabled || false}
-                onCheckedChange={(checked) => automationToggleMutation.mutate(checked)}
-                disabled={isAutomationLoading || automationToggleMutation.isPending}
-                className="data-[state=checked]:bg-[#17B6C3] data-[state=unchecked]:bg-gray-200 [&>span]:bg-white [&>span]:data-[state=checked]:bg-white [&>span]:data-[state=unchecked]:bg-white"
-                data-testid="switch-automation-master"
-              />
-            </div>
-          }
         />
         
         <div className="p-8" style={{ backgroundColor: '#ffffff' }}>

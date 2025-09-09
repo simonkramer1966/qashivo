@@ -3,11 +3,12 @@ import { useAuth } from "@/hooks/useAuth";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { LogOut, User, Settings, AlertCircle } from "lucide-react";
+import { LogOut, User, Settings, AlertCircle, Power } from "lucide-react";
 import { useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { Switch } from "@/components/ui/switch";
 
 interface HeaderProps {
   title: string;
@@ -36,6 +37,36 @@ export default function Header({ title, subtitle, action, noBorder = true, title
   });
 
   // Sync mutation for manual refresh
+  // Automation status query
+  const { data: automationStatus, isLoading: isAutomationLoading } = useQuery<{
+    enabled: boolean;
+  }>({
+    queryKey: ['/api/collections/automation/status'],
+    enabled: !!user,
+  });
+
+  // Automation toggle mutation
+  const automationToggleMutation = useMutation({
+    mutationFn: (enabled: boolean) => 
+      apiRequest("PUT", "/api/collections/automation/status", { enabled }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ 
+        queryKey: ['/api/collections/automation/status'] 
+      });
+      toast({
+        title: "Automation Updated",
+        description: `Collections automation ${automationStatus?.enabled ? 'disabled' : 'enabled'}`,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Update Failed",
+        description: error?.message || "Failed to update automation status",
+        variant: "destructive",
+      });
+    },
+  });
+
   const syncMutation = useMutation({
     mutationFn: () => apiRequest("POST", "/api/xero/sync", {}),
     onSuccess: (data: any) => {
@@ -155,6 +186,23 @@ export default function Header({ title, subtitle, action, noBorder = true, title
               </Tooltip>
             </TooltipProvider>
           )}
+
+          {/* Collections Automation Switch */}
+          <div className="flex items-center gap-3 px-4 py-2 bg-white/70 backdrop-blur-sm border border-gray-200/50 rounded-lg min-w-[180px]">
+            <div className="flex items-center gap-2">
+              <Power className={`h-4 w-4 ${automationStatus?.enabled ? 'text-green-600' : 'text-red-500'}`} />
+              <span className="text-sm font-medium text-gray-700 whitespace-nowrap">
+                Automation {automationStatus?.enabled ? 'ON' : 'OFF'}
+              </span>
+            </div>
+            <Switch
+              checked={automationStatus?.enabled || false}
+              onCheckedChange={(checked) => automationToggleMutation.mutate(checked)}
+              disabled={isAutomationLoading || automationToggleMutation.isPending}
+              className="data-[state=checked]:bg-[#17B6C3] data-[state=unchecked]:bg-gray-200 [&>span]:bg-white [&>span]:data-[state=checked]:bg-white [&>span]:data-[state=unchecked]:bg-white"
+              data-testid="switch-automation-master"
+            />
+          </div>
 
           {/* User Profile */}
           <DropdownMenu>
