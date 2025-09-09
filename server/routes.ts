@@ -1970,7 +1970,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
 
-      const { checkCollectionActions } = await import("../services/collectionsAutomation");
+      const { checkCollectionActions } = await import("./services/collectionsAutomation");
       const actions = await checkCollectionActions(user.tenantId);
       res.json(actions);
     } catch (error) {
@@ -1986,7 +1986,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
 
-      const { getCollectionsAutomationStatus } = await import("../services/collectionsAutomation");
+      const { getCollectionsAutomationStatus } = await import("./services/collectionsAutomation");
       const enabled = await getCollectionsAutomationStatus(user.tenantId);
       res.json({ enabled });
     } catch (error) {
@@ -2007,7 +2007,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
         return res.status(400).json({ message: "Invalid enabled value - must be boolean" });
       }
 
-      const { setCollectionsAutomation } = await import("../services/collectionsAutomation");
+      const { setCollectionsAutomation } = await import("./services/collectionsAutomation");
       await setCollectionsAutomation(user.tenantId, enabled);
       res.json({ enabled, message: `Collections automation ${enabled ? 'enabled' : 'disabled'}` });
     } catch (error) {
