@@ -41,6 +41,8 @@ export default function AiCfo() {
   const [isTyping, setIsTyping] = useState(false);
   const [conversationMode, setConversationMode] = useState<'text' | 'voice'>('text');
   const [isRecording, setIsRecording] = useState(false);
+  const [speechRecognition, setSpeechRecognition] = useState<any>(null);
+  const [speechSynthesis, setSpeechSynthesis] = useState<SpeechSynthesis | null>(null);
 
   // Fetch AR data for context
   const { data: dashboardData } = useQuery({
@@ -82,6 +84,53 @@ I can see you currently have ${(dashboardData as any)?.totalOutstanding ? `$${(d
       setMessages([welcomeMessage]);
     }
   }, [isAuthenticated, dashboardData, messages.length]);
+
+  // Initialize speech recognition and synthesis
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      // Initialize Speech Recognition
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      if (SpeechRecognition) {
+        const recognition = new SpeechRecognition();
+        recognition.continuous = false;
+        recognition.interimResults = false;
+        recognition.lang = 'en-US';
+        
+        recognition.onresult = (event: any) => {
+          const transcript = event.results[0][0].transcript;
+          setInputMessage(transcript);
+          setIsRecording(false);
+          // Auto-send the message after speech recognition
+          setTimeout(() => {
+            if (transcript.trim()) {
+              sendMessage();
+            }
+          }, 500);
+        };
+
+        recognition.onerror = (event: any) => {
+          console.error('Speech recognition error:', event.error);
+          setIsRecording(false);
+          toast({
+            title: "Voice Error",
+            description: "Could not recognize speech. Please try again.",
+            variant: "destructive",
+          });
+        };
+
+        recognition.onend = () => {
+          setIsRecording(false);
+        };
+
+        setSpeechRecognition(recognition);
+      }
+
+      // Initialize Speech Synthesis
+      if ('speechSynthesis' in window) {
+        setSpeechSynthesis(window.speechSynthesis);
+      }
+    }
+  }, []);
 
   const sendMessage = async () => {
     if (!inputMessage.trim()) return;
@@ -131,6 +180,15 @@ I can see you currently have ${(dashboardData as any)?.totalOutstanding ? `$${(d
 
       setMessages(prev => [...prev, aiResponse]);
       setIsTyping(false);
+
+      // If in voice mode, read the AI response aloud
+      if (conversationMode === 'voice' && speechSynthesis && data.response) {
+        const utterance = new SpeechSynthesisUtterance(data.response);
+        utterance.rate = 0.9;
+        utterance.pitch = 1.0;
+        utterance.volume = 0.8;
+        speechSynthesis.speak(utterance);
+      }
     } catch (error) {
       setIsTyping(false);
       toast({
@@ -142,15 +200,55 @@ I can see you currently have ${(dashboardData as any)?.totalOutstanding ? `$${(d
   };
 
   const toggleVoiceMode = () => {
-    setConversationMode(prev => prev === 'text' ? 'voice' : 'text');
-    if (conversationMode === 'voice') {
+    const newMode = conversationMode === 'text' ? 'voice' : 'text';
+    setConversationMode(newMode);
+    
+    if (newMode === 'text') {
+      // Stop any ongoing speech recognition when switching to text mode
+      if (speechRecognition && isRecording) {
+        speechRecognition.stop();
+      }
       setIsRecording(false);
+      
+      // Stop any ongoing speech synthesis
+      if (speechSynthesis && speechSynthesis.speaking) {
+        speechSynthesis.cancel();
+      }
+    } else {
+      // Show voice mode instructions
+      toast({
+        title: "Voice Mode Activated",
+        description: "Click the microphone to start speaking to your AI CFO.",
+      });
     }
   };
 
   const toggleRecording = () => {
-    setIsRecording(prev => !prev);
-    // TODO: Implement voice recording functionality
+    if (!speechRecognition) {
+      toast({
+        title: "Speech Recognition Unavailable",
+        description: "Your browser doesn't support speech recognition. Please use text mode.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (isRecording) {
+      speechRecognition.stop();
+      setIsRecording(false);
+    } else {
+      // Stop any ongoing speech synthesis first
+      if (speechSynthesis && speechSynthesis.speaking) {
+        speechSynthesis.cancel();
+      }
+      
+      speechRecognition.start();
+      setIsRecording(true);
+      toast({
+        title: "Listening...",
+        description: "Speak your question to the AI CFO.",
+      });
+    }
   };
 
   if (isLoading || !isAuthenticated) {
