@@ -318,6 +318,79 @@ export const voiceCalls = pgTable("voice_calls", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Voice workflows for conversational AI flows
+export const voiceWorkflows = pgTable("voice_workflows", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  name: varchar("name").notNull(),
+  description: text("description"),
+  category: varchar("category").default("collection"), // "collection", "sales", "support", "custom"
+  isActive: boolean("is_active").default(true),
+  isTemplate: boolean("is_template").default(false),
+  retellAgentId: varchar("retell_agent_id"), // Associated Retell agent
+  canvasData: jsonb("canvas_data"), // Visual workflow builder data (positions, zoom, etc.)
+  voiceSettings: jsonb("voice_settings"), // Voice-specific settings (tone, speed, etc.)
+  successRate: decimal("success_rate", { precision: 5, scale: 2 }),
+  averageCallDuration: integer("average_call_duration"), // Average duration in seconds
+  totalCalls: integer("total_calls").default(0),
+  deploymentStatus: varchar("deployment_status").default("draft"), // "draft", "deployed", "failed"
+  lastDeployedAt: timestamp("last_deployed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Individual states within voice workflows
+export const voiceWorkflowStates = pgTable("voice_workflow_states", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  voiceWorkflowId: varchar("voice_workflow_id").notNull().references(() => voiceWorkflows.id, { onDelete: "cascade" }),
+  stateType: varchar("state_type").notNull(), // "greeting", "information_gathering", "decision_point", "payment_options", "confirmation", "schedule_followup", "call_ending"
+  label: varchar("label").notNull(),
+  position: jsonb("position").notNull(), // {x: number, y: number}
+  config: jsonb("config").notNull(), // State-specific configuration
+  isStartState: boolean("is_start_state").default(false),
+  isEndState: boolean("is_end_state").default(false),
+  prompt: text("prompt"), // What the AI says in this state
+  expectedResponses: jsonb("expected_responses"), // Expected customer responses
+  retellStateId: varchar("retell_state_id"), // Corresponding Retell AI state ID
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Transitions between voice workflow states
+export const voiceStateTransitions = pgTable("voice_state_transitions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  voiceWorkflowId: varchar("voice_workflow_id").notNull().references(() => voiceWorkflows.id, { onDelete: "cascade" }),
+  fromStateId: varchar("from_state_id").notNull().references(() => voiceWorkflowStates.id, { onDelete: "cascade" }),
+  toStateId: varchar("to_state_id").notNull().references(() => voiceWorkflowStates.id, { onDelete: "cascade" }),
+  condition: jsonb("condition"), // Condition for this transition
+  label: varchar("label"), // Optional label for the transition
+  transitionType: varchar("transition_type").default("default"), // "yes", "no", "timeout", "error", "default"
+  confidence: decimal("confidence", { precision: 5, scale: 2 }), // AI confidence for this transition
+  successRate: decimal("success_rate", { precision: 5, scale: 2 }), // Historical success rate
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Voice message templates for non-conversational messages
+export const voiceMessageTemplates = pgTable("voice_message_templates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  name: varchar("name").notNull(),
+  category: varchar("category").notNull(), // "payment_reminder", "overdue_notice", "thank_you", "follow_up", "custom"
+  stage: integer("stage"), // 1-5 for sequence stages
+  subject: varchar("subject"), // Brief description of the message
+  content: text("content").notNull(), // Message text that will be converted to speech
+  variables: jsonb("variables"), // Available variables for personalization
+  voiceSettings: jsonb("voice_settings"), // Voice-specific settings (voice_id, speed, tone)
+  isActive: boolean("is_active").default(true),
+  isDefault: boolean("is_default").default(false),
+  sendTiming: jsonb("send_timing"), // When to send: {daysOffset: number, timeOfDay: string, weekdaysOnly: boolean}
+  successRate: decimal("success_rate", { precision: 5, scale: 2 }),
+  usageCount: integer("usage_count").default(0),
+  averageListenDuration: integer("average_listen_duration"), // Average listening duration in seconds
+  toneOfVoice: varchar("tone_of_voice").default("professional"), // "professional", "friendly", "urgent", "formal"
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Leads table for CRM
 export const leads = pgTable("leads", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -354,6 +427,8 @@ export const tenantsRelations = relations(tenants, ({ many }) => ({
   channelAnalytics: many(channelAnalytics),
   retellConfigurations: many(retellConfigurations),
   voiceCalls: many(voiceCalls),
+  voiceWorkflows: many(voiceWorkflows),
+  voiceMessageTemplates: many(voiceMessageTemplates),
 }));
 
 export const contactsRelations = relations(contacts, ({ one, many }) => ({
@@ -489,6 +564,52 @@ export const voiceCallsRelations = relations(voiceCalls, ({ one }) => ({
   invoice: one(invoices, {
     fields: [voiceCalls.invoiceId],
     references: [invoices.id],
+  }),
+}));
+
+export const voiceWorkflowsRelations = relations(voiceWorkflows, ({ one, many }) => ({
+  tenant: one(tenants, {
+    fields: [voiceWorkflows.tenantId],
+    references: [tenants.id],
+  }),
+  states: many(voiceWorkflowStates),
+  transitions: many(voiceStateTransitions),
+}));
+
+export const voiceWorkflowStatesRelations = relations(voiceWorkflowStates, ({ one, many }) => ({
+  voiceWorkflow: one(voiceWorkflows, {
+    fields: [voiceWorkflowStates.voiceWorkflowId],
+    references: [voiceWorkflows.id],
+  }),
+  outgoingTransitions: many(voiceStateTransitions, {
+    relationName: "fromState",
+  }),
+  incomingTransitions: many(voiceStateTransitions, {
+    relationName: "toState",
+  }),
+}));
+
+export const voiceStateTransitionsRelations = relations(voiceStateTransitions, ({ one }) => ({
+  voiceWorkflow: one(voiceWorkflows, {
+    fields: [voiceStateTransitions.voiceWorkflowId],
+    references: [voiceWorkflows.id],
+  }),
+  fromState: one(voiceWorkflowStates, {
+    fields: [voiceStateTransitions.fromStateId],
+    references: [voiceWorkflowStates.id],
+    relationName: "fromState",
+  }),
+  toState: one(voiceWorkflowStates, {
+    fields: [voiceStateTransitions.toStateId],
+    references: [voiceWorkflowStates.id],
+    relationName: "toState",
+  }),
+}));
+
+export const voiceMessageTemplatesRelations = relations(voiceMessageTemplates, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [voiceMessageTemplates.tenantId],
+    references: [tenants.id],
   }),
 }));
 
@@ -698,6 +819,28 @@ export const insertVoiceCallSchema = createInsertSchema(voiceCalls).omit({
   updatedAt: true,
 });
 
+export const insertVoiceWorkflowSchema = createInsertSchema(voiceWorkflows).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertVoiceWorkflowStateSchema = createInsertSchema(voiceWorkflowStates).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertVoiceStateTransitionSchema = createInsertSchema(voiceStateTransitions).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertVoiceMessageTemplateSchema = createInsertSchema(voiceMessageTemplates).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export const insertLeadSchema = createInsertSchema(leads).omit({
   id: true,
   createdAt: true,
@@ -760,6 +903,14 @@ export type InsertRetellConfiguration = z.infer<typeof insertRetellConfiguration
 export type RetellConfiguration = typeof retellConfigurations.$inferSelect;
 export type InsertVoiceCall = z.infer<typeof insertVoiceCallSchema>;
 export type VoiceCall = typeof voiceCalls.$inferSelect;
+export type InsertVoiceWorkflow = z.infer<typeof insertVoiceWorkflowSchema>;
+export type VoiceWorkflow = typeof voiceWorkflows.$inferSelect;
+export type InsertVoiceWorkflowState = z.infer<typeof insertVoiceWorkflowStateSchema>;
+export type VoiceWorkflowState = typeof voiceWorkflowStates.$inferSelect;
+export type InsertVoiceStateTransition = z.infer<typeof insertVoiceStateTransitionSchema>;
+export type VoiceStateTransition = typeof voiceStateTransitions.$inferSelect;
+export type InsertVoiceMessageTemplate = z.infer<typeof insertVoiceMessageTemplateSchema>;
+export type VoiceMessageTemplate = typeof voiceMessageTemplates.$inferSelect;
 export type InsertLead = z.infer<typeof insertLeadSchema>;
 export type Lead = typeof leads.$inferSelect;
 export type InsertEmailSender = z.infer<typeof insertEmailSenderSchema>;
@@ -874,9 +1025,89 @@ export interface AINodeConfig {
 
 export type NodeConfigUnion = TriggerNodeConfig & ActionNodeConfig & DecisionNodeConfig & AINodeConfig;
 
+// Voice State Configuration Types
+export interface VoiceStateConfig {
+  greeting?: {
+    welcomeMessage: string;
+    customerNamePersonalization: boolean;
+    companyIntroduction: boolean;
+    callPurposeStatement: string;
+    voiceSettings: {
+      tone: 'professional' | 'friendly' | 'warm';
+      speed: number; // 0.5 - 2.0
+      volume: number; // 0.1 - 1.0
+    };
+  };
+  information_gathering?: {
+    questions: Array<{
+      id: string;
+      question: string;
+      expectedResponseType: 'text' | 'yes_no' | 'number' | 'date';
+      required: boolean;
+      followUpPrompts: string[];
+    }>;
+    maxRetries: number;
+    timeoutHandling: string;
+    clarificationPrompts: string[];
+  };
+  decision_point?: {
+    condition: string;
+    branches: Array<{
+      id: string;
+      label: string;
+      condition: string;
+      nextStateId: string;
+    }>;
+    defaultBranch: string;
+    confidenceThreshold: number;
+  };
+  payment_options?: {
+    paymentMethods: Array<{
+      type: 'credit_card' | 'bank_transfer' | 'payment_plan' | 'check';
+      description: string;
+      instructions: string;
+    }>;
+    discountOffers: Array<{
+      percentage: number;
+      conditions: string;
+      timeLimit: string;
+    }>;
+    paymentPlanOptions: boolean;
+  };
+  confirmation?: {
+    summaryPrompt: string;
+    confirmationRequest: string;
+    nextStepsExplanation: string;
+    contactInformation: string;
+    followUpScheduling: boolean;
+  };
+  schedule_followup?: {
+    availableTimeSlots: string[];
+    calendarIntegration: boolean;
+    reminderSettings: {
+      enabled: boolean;
+      timeBefore: number; // hours
+      method: 'call' | 'sms' | 'email';
+    };
+    rescheduleOptions: boolean;
+  };
+  call_ending?: {
+    closingMessage: string;
+    thankYouNote: string;
+    contactInformation: string;
+    nextStepsReminder: string;
+    courtesyCheck: boolean;
+  };
+}
+
 // Enhanced WorkflowNode type for the frontend
 export interface WorkflowNodeWithConfig extends Omit<WorkflowNode, 'config'> {
   config: NodeConfigUnion;
+}
+
+// Enhanced VoiceWorkflowState type for the frontend  
+export interface VoiceWorkflowStateWithConfig extends Omit<VoiceWorkflowState, 'config'> {
+  config: VoiceStateConfig;
 }
 
 // Enhanced WorkflowConnection type for decision branches
