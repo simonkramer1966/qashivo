@@ -112,12 +112,12 @@ export default function CollectionScheduleBuilder({ className }: CollectionSched
   // Fetch collection schedules
   const { data: schedules = [], isLoading } = useQuery({
     queryKey: ['/api/collections/schedules'],
-  });
+  }) as { data: CollectionSchedule[]; isLoading: boolean };
 
   // Fetch templates for step configuration
   const { data: templates = [] } = useQuery({
     queryKey: ['/api/collections/templates'],
-  });
+  }) as { data: CommunicationTemplate[]; isLoading: boolean };
 
   // Create/Update schedule mutation
   const scheduleMutation = useMutation({
@@ -306,7 +306,7 @@ export default function CollectionScheduleBuilder({ className }: CollectionSched
           </CardHeader>
           <CardContent>
             {(() => {
-              const defaultSchedule = schedules.find((schedule: CollectionSchedule) => schedule.isDefault);
+              const defaultSchedule = (schedules as CollectionSchedule[]).find((schedule: CollectionSchedule) => schedule.isDefault);
               if (!defaultSchedule) {
                 return (
                   <div className="flex items-center gap-2 text-amber-700">
@@ -351,7 +351,7 @@ export default function CollectionScheduleBuilder({ className }: CollectionSched
 
       {/* Schedules Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {schedules.map((schedule: CollectionSchedule) => (
+        {(schedules as CollectionSchedule[]).map((schedule: CollectionSchedule) => (
           <Card key={schedule.id} className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg hover:shadow-xl transition-all duration-300">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
@@ -626,7 +626,7 @@ export default function CollectionScheduleBuilder({ className }: CollectionSched
                 <div className="space-y-3">
                   {steps.map((step, index) => {
                     const StepIcon = getStepIcon(step.type);
-                    const availableTemplates = templates.filter((t: CommunicationTemplate) => t.type === step.type);
+                    const availableTemplates = (templates as CommunicationTemplate[]).filter((t: CommunicationTemplate) => t.type === step.type);
                     
                     return (
                       <div 
