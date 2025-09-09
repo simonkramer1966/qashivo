@@ -4020,9 +4020,9 @@ ${tenant.name}
       }
 
       // Get current AR context for the user
-      const [dashboardMetrics, invoices] = await Promise.all([
-        storage.getDashboardMetrics(user.tenantId),
-        storage.getInvoices(user.tenantId, { limit: 10 })
+      const [invoiceMetrics, invoices] = await Promise.all([
+        storage.getInvoiceMetrics(user.tenantId),
+        storage.getInvoices(user.tenantId, 10)
       ]);
 
       // Calculate additional context
@@ -4038,9 +4038,9 @@ ${tenant.name}
       const arContext = {
         totalOutstanding: totalOutstanding,
         overdueAmount: overdueAmount,
-        collectionRate: dashboardMetrics?.collectionRate || 85,
-        averageDaysToPay: dashboardMetrics?.averageDaysToPay || 30,
-        activeContacts: dashboardMetrics?.activeContacts || invoices.length,
+        collectionRate: invoiceMetrics?.collectionRate || 85,
+        averageDaysToPay: invoiceMetrics?.avgDaysToPay || 30,
+        activeContacts: invoices.length,
         recentInvoices: invoices.slice(0, 5).map(inv => ({
           id: inv.id,
           amount: Number(inv.amount),
