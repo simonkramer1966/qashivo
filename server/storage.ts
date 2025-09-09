@@ -740,6 +740,15 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteCollectionSchedule(id: string, tenantId: string): Promise<boolean> {
+    // First, delete any associated customer assignments
+    await db
+      .delete(customerScheduleAssignments)
+      .where(and(
+        eq(customerScheduleAssignments.scheduleId, id),
+        eq(customerScheduleAssignments.tenantId, tenantId)
+      ));
+
+    // Then, delete the schedule itself
     const result = await db
       .delete(collectionSchedules)
       .where(and(eq(collectionSchedules.id, id), eq(collectionSchedules.tenantId, tenantId)));
