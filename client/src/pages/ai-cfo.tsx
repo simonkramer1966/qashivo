@@ -44,6 +44,62 @@ export default function AiCfo() {
   const [speechRecognition, setSpeechRecognition] = useState<any>(null);
   const [speechSynthesis, setSpeechSynthesis] = useState<SpeechSynthesis | null>(null);
 
+  // Dynamic Quick Questions Management
+  const allQuestions = [
+    "What's my biggest collection opportunity right now?",
+    "How can I improve my days sales outstanding?", 
+    "Which customers should I prioritize for follow-up?",
+    "What's causing my collection delays?",
+    "How does my AR performance compare to industry benchmarks?",
+    "What collection strategies work best for my customer segments?",
+    "How can I reduce my overdue receivables?",
+    "What payment terms should I offer new customers?",
+    "Which invoices are at highest risk of non-payment?",
+    "How can I automate my collection process?",
+    "What early warning signs indicate payment issues?",
+    "How should I handle disputed invoices effectively?",
+    "What incentives can encourage faster payments?",
+    "How can I improve my credit approval process?",
+    "What's the optimal follow-up schedule for late payments?",
+    "How can I segment customers by payment behavior?",
+    "What metrics should I track for AR performance?",
+    "How can I forecast my cash flow more accurately?",
+    "What legal options do I have for persistent non-payers?",
+    "How can I build stronger customer relationships while collecting?"
+  ];
+
+  const [displayedQuestions, setDisplayedQuestions] = useState<string[]>([]);
+  const [usedQuestions, setUsedQuestions] = useState<Set<string>>(new Set());
+
+  // Function to get random unused questions
+  const getRandomQuestions = (count: number, excludeSet: Set<string>): string[] => {
+    const availableQuestions = allQuestions.filter(q => !excludeSet.has(q));
+    const shuffled = [...availableQuestions].sort(() => Math.random() - 0.5);
+    return shuffled.slice(0, Math.min(count, shuffled.length));
+  };
+
+  // Function to replace a used question
+  const replaceUsedQuestion = (usedQuestion: string) => {
+    const newUsedSet = new Set(usedQuestions);
+    newUsedSet.add(usedQuestion);
+    
+    // Get a replacement question that hasn't been used
+    const availableQuestions = allQuestions.filter(q => !newUsedSet.has(q) && !displayedQuestions.includes(q));
+    
+    if (availableQuestions.length > 0) {
+      // Replace the used question with a random available one
+      const replacementQuestion = availableQuestions[Math.floor(Math.random() * availableQuestions.length)];
+      setDisplayedQuestions(prev => 
+        prev.map(q => q === usedQuestion ? replacementQuestion : q)
+      );
+    } else {
+      // If no more unused questions, just remove the used one (or keep it)
+      // For better UX, we'll keep it but mark it as used
+    }
+    
+    setUsedQuestions(newUsedSet);
+  };
+
   // Fetch AR data for context
   const { data: dashboardData } = useQuery({
     queryKey: ['/api/dashboard/metrics'],
@@ -69,6 +125,22 @@ export default function AiCfo() {
       return;
     }
   }, [isAuthenticated, isLoading, toast]);
+
+  // Initialize displayed questions on component mount
+  useEffect(() => {
+    if (displayedQuestions.length === 0) {
+      const initialQuestions = getRandomQuestions(6, new Set());
+      setDisplayedQuestions(initialQuestions);
+    }
+  }, []);
+
+  // Reset questions on component unmount
+  useEffect(() => {
+    return () => {
+      setUsedQuestions(new Set());
+      setDisplayedQuestions([]);
+    };
+  }, []);
 
   // Initialize with welcome message
   useEffect(() => {
@@ -478,21 +550,19 @@ I can see you currently have ${(dashboardData as any)?.totalOutstanding ? `$${(d
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
-                    {[
-                      "What's my biggest collection opportunity right now?",
-                      "How can I improve my days sales outstanding?",
-                      "Which customers should I prioritize for follow-up?",
-                      "What's causing my collection delays?",
-                      "How does my AR performance compare to industry benchmarks?",
-                      "What collection strategies work best for my customer segments?"
-                    ].map((question) => (
+                    {displayedQuestions.map((question) => (
                       <Button
                         key={question}
                         variant="outline"
-                        className="text-left h-auto p-3 text-wrap w-full justify-start"
+                        className={`text-left h-auto p-3 text-wrap w-full justify-start transition-all duration-200 ${
+                          usedQuestions.has(question) 
+                            ? 'opacity-60 border-gray-300' 
+                            : 'hover:border-[#17B6C3] hover:shadow-md'
+                        }`}
                         onClick={() => {
                           setConversationMode('text'); // Switch to text mode if not already
                           setInputMessage(question);
+                          replaceUsedQuestion(question); // Replace with new question
                         }}
                         data-testid={`button-quick-question-${question.slice(0, 20)}`}
                       >
@@ -500,6 +570,11 @@ I can see you currently have ${(dashboardData as any)?.totalOutstanding ? `$${(d
                       </Button>
                     ))}
                   </div>
+                  {displayedQuestions.length === 0 && (
+                    <div className="text-center text-gray-500 text-sm py-4">
+                      Loading questions...
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </div>
