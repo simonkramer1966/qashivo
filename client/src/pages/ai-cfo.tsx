@@ -94,22 +94,43 @@ I can see you currently have ${(dashboardData as any)?.totalOutstanding ? `$${(d
     };
 
     setMessages(prev => [...prev, userMessage]);
+    const messageToSend = inputMessage;
     setInputMessage("");
     setIsTyping(true);
 
     try {
-      // TODO: Implement AI CFO API call
-      // For now, simulate a response
-      setTimeout(() => {
-        const aiResponse: Message = {
-          id: (Date.now() + 1).toString(),
-          type: 'assistant',
-          content: "I'm analyzing your AR data and will provide specific recommendations shortly. This feature is being implemented with full access to your receivables data for contextual advice.",
-          timestamp: new Date()
-        };
-        setMessages(prev => [...prev, aiResponse]);
-        setIsTyping(false);
-      }, 2000);
+      // Prepare conversation history for API
+      const conversationHistory = messages.map(msg => ({
+        role: msg.type === 'user' ? 'user' as const : 'assistant' as const,
+        content: msg.content
+      }));
+
+      const response = await fetch('/api/ai-cfo/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: messageToSend,
+          conversationHistory
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to get AI response');
+      }
+
+      const data = await response.json();
+
+      const aiResponse: Message = {
+        id: (Date.now() + 1).toString(),
+        type: 'assistant',
+        content: data.response,
+        timestamp: new Date()
+      };
+
+      setMessages(prev => [...prev, aiResponse]);
+      setIsTyping(false);
     } catch (error) {
       setIsTyping(false);
       toast({
@@ -356,9 +377,6 @@ I can see you currently have ${(dashboardData as any)?.totalOutstanding ? `$${(d
                     className="text-left h-auto p-3 text-wrap"
                     onClick={() => {
                       setInputMessage(question);
-                      if (conversationMode === 'text') {
-                        sendMessage();
-                      }
                     }}
                     data-testid={`button-quick-question-${question.slice(0, 20)}`}
                   >

@@ -21,7 +21,7 @@ import {
   insertLeadSchema 
 } from "@shared/schema";
 import { z } from "zod";
-import { generateCollectionSuggestions, generateEmailDraft } from "./services/openai";
+import { generateCollectionSuggestions, generateEmailDraft, generateAiCfoResponse } from "./services/openai";
 import { sendReminderEmail } from "./services/sendgrid";
 import { sendPaymentReminderSMS } from "./services/twilio";
 import { xeroService } from "./services/xero";
@@ -4005,6 +4005,82 @@ ${tenant.name}
         success: false,
         message: `Failed to send invoice PDF email: ${error.message}`,
         error: error.message 
+      });
+    }
+  });
+
+  // AI CFO Conversation endpoint
+  app.post('/api/ai-cfo/chat', isAuthenticated, async (req, res) => {
+    try {
+      const { message, conversationHistory = [] } = req.body;
+      const user = req.user as any;
+
+      if (!message || typeof message !== 'string') {
+        return res.status(400).json({ error: 'Message is required' });
+      }
+
+      // Get current AR context for the user
+      const [dashboardMetrics, invoices] = await Promise.all([
+        storage.getDashboardMetrics(user.tenantId),
+        storage.getInvoices(user.tenantId, { limit: 10 })
+      ]);
+
+      // Calculate additional context
+      const overdueInvoices = invoices.filter(inv => {
+        const dueDate = new Date(inv.dueDate);
+        return dueDate < new Date();
+      });
+
+      const overdueAmount = overdueInvoices.reduce((total, inv) => total + Number(inv.amount), 0);
+      const totalOutstanding = invoices.reduce((total, inv) => total + Number(inv.amount), 0);
+
+      // Prepare AR context for AI
+      const arContext = {
+        totalOutstanding: totalOutstanding,
+        overdueAmount: overdueAmount,
+        collectionRate: dashboardMetrics?.collectionRate || 85,
+        averageDaysToPay: dashboardMetrics?.averageDaysToPay || 30,
+        activeContacts: dashboardMetrics?.activeContacts || invoices.length,
+        recentInvoices: invoices.slice(0, 5).map(inv => ({
+          id: inv.id,
+          amount: Number(inv.amount),
+          daysPastDue: Math.max(0, Math.floor((Date.now() - new Date(inv.dueDate).getTime()) / (1000 * 60 * 60 * 24))),
+          customerName: inv.contact?.name || 'Unknown',
+          status: inv.status
+        })),
+        cashflowTrends: {
+          thirtyDays: invoices.filter(inv => {
+            const daysPast = Math.floor((Date.now() - new Date(inv.dueDate).getTime()) / (1000 * 60 * 60 * 24));
+            return daysPast >= 0 && daysPast <= 30;
+          }).reduce((sum, inv) => sum + Number(inv.amount), 0),
+          sixtyDays: invoices.filter(inv => {
+            const daysPast = Math.floor((Date.now() - new Date(inv.dueDate).getTime()) / (1000 * 60 * 60 * 24));
+            return daysPast > 30 && daysPast <= 60;
+          }).reduce((sum, inv) => sum + Number(inv.amount), 0),
+          ninetyDays: invoices.filter(inv => {
+            const daysPast = Math.floor((Date.now() - new Date(inv.dueDate).getTime()) / (1000 * 60 * 60 * 24));
+            return daysPast > 60;
+          }).reduce((sum, inv) => sum + Number(inv.amount), 0)
+        }
+      };
+
+      // Generate AI CFO response
+      const aiResponse = await generateAiCfoResponse(message, conversationHistory, arContext);
+
+      res.json({
+        response: aiResponse,
+        context: {
+          totalOutstanding: arContext.totalOutstanding,
+          overdueAmount: arContext.overdueAmount,
+          collectionRate: arContext.collectionRate
+        }
+      });
+
+    } catch (error: any) {
+      console.error("Error in AI CFO chat:", error);
+      res.status(500).json({ 
+        error: 'Failed to generate AI CFO response',
+        message: error.message 
       });
     }
   });
