@@ -586,6 +586,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/invoices", isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.claims.sub);
+      console.log(`📊 Invoices Endpoint Debug: User ID: ${req.user.claims.sub}, TenantId: ${user?.tenantId}`);
+      
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -594,6 +596,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const limit = req.query.limit ? parseInt(req.query.limit) : undefined;
       
       let invoices = await storage.getInvoices(user.tenantId, limit);
+      console.log(`📊 Invoices Endpoint Debug: Fetched ${invoices.length} invoices for tenant ${user.tenantId}`);
       
       // Filter by contact ID if provided
       if (contactId) {
@@ -4019,6 +4022,7 @@ ${tenant.name}
       console.log(`🔍 AI CFO Debug: User ID: ${(req.user as any).claims.sub}, User found: ${!!user}, TenantId: ${user?.tenantId}`);
       
       if (!user?.tenantId) {
+        console.log(`❌ AI CFO Debug: No tenant ID found for user!`);
         return res.status(400).json({ error: 'User not associated with a tenant' });
       }
 
