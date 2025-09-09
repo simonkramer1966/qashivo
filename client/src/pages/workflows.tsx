@@ -716,7 +716,7 @@ export default function Workflows() {
                 checked={automationStatus?.enabled || false}
                 onCheckedChange={(checked) => automationToggleMutation.mutate(checked)}
                 disabled={isAutomationLoading || automationToggleMutation.isPending}
-                className="data-[state=checked]:bg-[#17B6C3] data-[state=checked]:border-[#17B6C3]"
+                className="data-[state=checked]:bg-[#17B6C3] data-[state=unchecked]:bg-gray-200 [&>span]:bg-white [&>span]:data-[state=checked]:bg-white [&>span]:data-[state=unchecked]:bg-white"
                 data-testid="switch-automation-master"
               />
             </div>
