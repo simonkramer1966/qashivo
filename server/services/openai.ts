@@ -206,6 +206,13 @@ export async function generateAiCfoResponse(
     collectionRate: number;
     averageDaysToPay: number;
     activeContacts: number;
+    knowledgeBase?: Array<{
+      title: string;
+      content: string;
+      category: string;
+      priority: number;
+      source?: string;
+    }>;
     recentInvoices?: Array<{
       id: string;
       amount: number;
