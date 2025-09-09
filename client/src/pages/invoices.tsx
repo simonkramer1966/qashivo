@@ -15,7 +15,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Mail, Phone, Eye, Plus, Search, Filter, FileText, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, X, MessageSquare, Calendar, CheckCircle, AlertCircle, Clock, Users, User, Building, Star, Target } from "lucide-react";
+import { Mail, Phone, Eye, Plus, Search, Filter, FileText, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, X, MessageSquare, Calendar, CheckCircle, AlertCircle, Clock, Users, User, Building, Star, Target, ArrowRight } from "lucide-react";
 
 export default function Invoices() {
   const { toast } = useToast();
@@ -523,6 +523,27 @@ export default function Invoices() {
       toast({
         title: "Error", 
         description: "Failed to remove schedule assignment",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Nudge invoice to next action mutation
+  const nudgeInvoiceMutation = useMutation({
+    mutationFn: async (invoiceId: string) => {
+      return apiRequest("POST", `/api/collections/nudge/${invoiceId}`, {});
+    },
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/invoices'] });
+      toast({
+        title: "Success",
+        description: data.message || "Invoice nudged to next action successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error", 
+        description: error.message || "Failed to nudge invoice",
         variant: "destructive",
       });
     },
@@ -1315,6 +1336,17 @@ export default function Invoices() {
                           </td>
                           <td className="py-2 w-52">
                             <div className="flex space-x-1 justify-end">
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => nudgeInvoiceMutation.mutate(invoice.id)}
+                                disabled={nudgeInvoiceMutation.isPending}
+                                className="border-[#17B6C3]/20 text-[#17B6C3] hover:bg-[#17B6C3]/5 h-7 w-7 p-0"
+                                data-testid={`button-nudge-${invoice.id}`}
+                                title="Nudge to next action"
+                              >
+                                <ArrowRight className="h-3 w-3" />
+                              </Button>
                               {invoice.contact?.email && (
                                 <Button 
                                   variant="outline" 

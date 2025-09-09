@@ -2016,6 +2016,41 @@ Payment required immediately to avoid collection action. Contact us NOW.`
     }
   });
 
+  // Nudge invoice to next action
+  app.post("/api/collections/nudge/:invoiceId", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { invoiceId } = req.params;
+      if (!invoiceId) {
+        return res.status(400).json({ message: "Invoice ID is required" });
+      }
+
+      const { nudgeInvoiceToNextAction } = await import("./services/collectionsAutomation");
+      const nudgeAction = await nudgeInvoiceToNextAction(invoiceId, user.tenantId);
+      
+      if (!nudgeAction) {
+        return res.status(404).json({ message: "Unable to determine next action for this invoice" });
+      }
+
+      console.log(`✅ Nudged invoice ${nudgeAction.invoiceNumber} to action: ${nudgeAction.action}`);
+      res.json({ 
+        success: true, 
+        action: nudgeAction,
+        message: `Invoice ${nudgeAction.invoiceNumber} nudged to next action: ${nudgeAction.action}` 
+      });
+    } catch (error) {
+      console.error("Error nudging invoice:", error);
+      res.status(500).json({ 
+        success: false, 
+        message: (error as Error).message || "Failed to nudge invoice" 
+      });
+    }
+  });
+
   // AI Agent Configurations
   app.get("/api/collections/ai-agents", isAuthenticated, async (req: any, res) => {
     try {
