@@ -4093,17 +4093,45 @@ ${tenant.name}
         }
       };
 
-      // Check if user is asking about a specific customer
-      const customerSearchMatch = message.match(/\b([A-Z][a-z]+ (?:[A-Z][a-z]+ )*(?:Solutions|Services|Inc|LLC|Corp|Company|Group|Technologies|Tech|Systems|Associates|Partners|Enterprises|Industries|Limited|Ltd))\b/i);
-      let specificCustomerData = null;
+      // Check if user is asking about a specific customer (improved detection)
+      const customerPatterns = [
+        /\b(DeliveryTech Solutions?)\b/i,
+        /\b([A-Z][a-zA-Z]*(?:\s+[A-Z][a-zA-Z]*)*\s+(?:Solutions?|Services?|Inc|LLC|Corp|Company|Group|Technologies?|Tech|Systems?|Associates?|Partners?|Enterprises?|Industries?|Limited|Ltd))\b/i,
+        /\b([A-Z][a-zA-Z]+\s+[A-Z][a-zA-Z]+)\b/i // Fallback for any two-word company names
+      ];
       
-      if (customerSearchMatch) {
-        const searchedCustomer = customerSearchMatch[1];
+      let specificCustomerData = null;
+      let searchedCustomer = null;
+      
+      // Try each pattern to find a customer name
+      for (const pattern of customerPatterns) {
+        const match = message.match(pattern);
+        if (match) {
+          searchedCustomer = match[1].trim();
+          break;
+        }
+      }
+      
+      if (searchedCustomer) {
         console.log(`🔍 AI CFO: Searching for customer: "${searchedCustomer}"`);
         
-        const customerInvoices = allInvoices.filter(inv => 
-          inv.contact?.name?.toLowerCase().includes(searchedCustomer.toLowerCase())
+        // Debug: Show some customer names from database
+        const uniqueCustomers = [...new Set(allInvoices.map(inv => inv.contact?.name).filter(Boolean))].slice(0, 10);
+        console.log(`🔍 AI CFO: Sample customer names in database:`, uniqueCustomers);
+        
+        // Search more flexibly - exact match first, then partial match
+        let customerInvoices = allInvoices.filter(inv => 
+          inv.contact?.name?.toLowerCase() === searchedCustomer.toLowerCase()
         );
+        
+        // If no exact match, try partial match
+        if (customerInvoices.length === 0) {
+          customerInvoices = allInvoices.filter(inv => 
+            inv.contact?.name?.toLowerCase().includes(searchedCustomer.toLowerCase()) ||
+            searchedCustomer.toLowerCase().includes(inv.contact?.name?.toLowerCase() || '')
+          );
+          console.log(`🔍 AI CFO: No exact match found, trying partial match...`);
+        }
         
         if (customerInvoices.length > 0) {
           const totalOwed = customerInvoices.reduce((sum, inv) => sum + Number(inv.amount), 0);
