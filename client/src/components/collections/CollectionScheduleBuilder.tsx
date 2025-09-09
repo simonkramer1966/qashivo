@@ -177,8 +177,8 @@ export default function CollectionScheduleBuilder({ className }: CollectionSched
     form.reset({
       name: schedule.name,
       description: schedule.description || "",
-      isDefault: schedule.isDefault,
-      isActive: schedule.isActive,
+      isDefault: Boolean(schedule.isDefault),
+      isActive: Boolean(schedule.isActive),
     });
     setSteps(Array.isArray(schedule.scheduleSteps) ? schedule.scheduleSteps : []);
     setIsDialogOpen(true);
