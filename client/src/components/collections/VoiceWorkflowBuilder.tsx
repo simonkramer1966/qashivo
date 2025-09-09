@@ -340,7 +340,7 @@ export default function VoiceWorkflowBuilder({ workflowId }: VoiceWorkflowBuilde
                 Add State
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[500px]">
+            <DialogContent className="sm:max-w-[500px] bg-white border border-gray-200">
               <DialogHeader>
                 <DialogTitle>Add Voice State</DialogTitle>
               </DialogHeader>
@@ -425,7 +425,7 @@ export default function VoiceWorkflowBuilder({ workflowId }: VoiceWorkflowBuilde
                 Add Transition
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[500px]">
+            <DialogContent className="sm:max-w-[500px] bg-white border border-gray-200">
               <DialogHeader>
                 <DialogTitle>Add Voice Transition</DialogTitle>
               </DialogHeader>
@@ -475,7 +475,7 @@ export default function VoiceWorkflowBuilder({ workflowId }: VoiceWorkflowBuilde
                             <SelectContent className="bg-white border-gray-200">
                               {nodes.map((node) => (
                                 <SelectItem key={node.id} value={node.id}>
-                                  {node.data.name}
+                                  {node.data.name as string}
                                 </SelectItem>
                               ))}
                             </SelectContent>
@@ -500,7 +500,7 @@ export default function VoiceWorkflowBuilder({ workflowId }: VoiceWorkflowBuilde
                             <SelectContent className="bg-white border-gray-200">
                               {nodes.map((node) => (
                                 <SelectItem key={node.id} value={node.id}>
-                                  {node.data.name}
+                                  {node.data.name as string}
                                 </SelectItem>
                               ))}
                             </SelectContent>
@@ -602,8 +602,8 @@ export default function VoiceWorkflowBuilder({ workflowId }: VoiceWorkflowBuilde
           <CardContent>
             <div className="space-y-4">
               <div>
-                <h4 className="font-semibold">{selectedNode.data.name}</h4>
-                <p className="text-sm text-gray-600">{selectedNode.data.description}</p>
+                <h4 className="font-semibold">{selectedNode.data.name as string}</h4>
+                <p className="text-sm text-gray-600">{selectedNode.data.description as string}</p>
               </div>
               
               <div className="flex items-center space-x-2">

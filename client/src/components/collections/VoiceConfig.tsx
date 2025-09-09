@@ -178,7 +178,7 @@ export default function VoiceConfig() {
               Create Workflow
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[500px]">
+          <DialogContent className="sm:max-w-[500px] bg-white border border-gray-200">
             <DialogHeader>
               <DialogTitle>Create Voice Workflow</DialogTitle>
             </DialogHeader>
@@ -362,7 +362,7 @@ export default function VoiceConfig() {
               Create Template
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[600px]">
+          <DialogContent className="sm:max-w-[600px] bg-white border border-gray-200">
             <DialogHeader>
               <DialogTitle>Create Voice Message Template</DialogTitle>
             </DialogHeader>
