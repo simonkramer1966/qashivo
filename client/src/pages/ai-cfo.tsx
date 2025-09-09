@@ -353,18 +353,30 @@ I can see you currently have ${(dashboardData as any)?.totalOutstanding ? `$${(d
                   </div>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <Badge variant={conversationMode === 'text' ? 'default' : 'outline'}>
+                  <Button 
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setConversationMode('text')}
+                    className={conversationMode === 'text' 
+                      ? 'bg-[#17B6C3] hover:bg-[#1396A1] text-white border-[#17B6C3]' 
+                      : 'border-[#17B6C3]/20 text-[#17B6C3] hover:bg-[#17B6C3]/5'
+                    }
+                  >
                     <MessageCircle className="h-3 w-3 mr-1" />
                     Text
-                  </Badge>
-                  <Badge 
-                    variant={conversationMode === 'voice' ? 'default' : 'outline'}
-                    className="cursor-pointer"
+                  </Button>
+                  <Button 
+                    variant="outline"
+                    size="sm"
                     onClick={toggleVoiceMode}
+                    className={conversationMode === 'voice' 
+                      ? 'bg-[#17B6C3] hover:bg-[#1396A1] text-white border-[#17B6C3]' 
+                      : 'border-[#17B6C3]/20 text-[#17B6C3] hover:bg-[#17B6C3]/5'
+                    }
                   >
                     <Phone className="h-3 w-3 mr-1" />
                     Voice
-                  </Badge>
+                  </Button>
                 </div>
                   </div>
                 </CardHeader>
