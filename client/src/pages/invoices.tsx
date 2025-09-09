@@ -1077,14 +1077,6 @@ export default function Invoices() {
                                 </td>
                                 <td className="py-1">
                                   <div className="flex space-x-1 justify-end">
-                                    <Button 
-                                      variant="outline" 
-                                      size="sm" 
-                                      className="border-[#17B6C3]/20 text-[#17B6C3] hover:bg-[#17B6C3]/5 h-7 w-7 p-0"
-                                      data-testid={`button-edit-${contact.id}`}
-                                    >
-                                      <Eye className="h-3 w-3" />
-                                    </Button>
                                     {contact.email && (
                                       <Button 
                                         variant="outline" 
@@ -1105,6 +1097,14 @@ export default function Invoices() {
                                         <Phone className="h-3 w-3" />
                                       </Button>
                                     )}
+                                    <Button 
+                                      variant="outline" 
+                                      size="sm" 
+                                      className="border-[#17B6C3]/20 text-[#17B6C3] hover:bg-[#17B6C3]/5 h-7 w-7 p-0"
+                                      data-testid={`button-edit-${contact.id}`}
+                                    >
+                                      <Eye className="h-3 w-3" />
+                                    </Button>
                                   </div>
                                 </td>
                               </tr>
