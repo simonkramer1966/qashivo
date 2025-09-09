@@ -4167,7 +4167,7 @@ ${tenant.name}
           status: inv.status
         })),
         allCustomers: invoices.map(inv => ({
-          customerName: inv.contact?.name || 'Unknown',
+          customerName: inv.contact?.companyName || inv.contact?.name || 'Unknown',
           amount: Number(inv.amount),
           daysPastDue: Math.max(0, Math.floor((Date.now() - new Date(inv.dueDate).getTime()) / (1000 * 60 * 60 * 24))),
           status: inv.status,
@@ -4192,18 +4192,23 @@ ${tenant.name}
       // Check if user is asking about a specific customer (improved detection)
       const customerPatterns = [
         /\b(DeliveryTech Solutions?)\b/i,
-        /\b([A-Z][a-zA-Z]*(?:\s+[A-Z][a-zA-Z]*)*\s+(?:Solutions?|Services?|Inc|LLC|Corp|Company|Group|Technologies?|Tech|Systems?|Associates?|Partners?|Enterprises?|Industries?|Limited|Ltd))\b/i,
+        /\b([A-Z][a-zA-Z]*(?:\s+[A-Z][a-zA-Z]*)*\s+(?:Solutions?|Services?|Inc|LLC|Corp|Company|Group|Technologies?|Tech|Pro|Systems?|Associates?|Partners?|Enterprises?|Industries?|Limited|Ltd))\b/i,
         /\b([A-Z][a-zA-Z]+\s+[A-Z][a-zA-Z]+)\b/i // Fallback for any two-word company names
       ];
       
       let specificCustomerData = null;
       let searchedCustomer = null;
       
+      console.log(`🔍 AI CFO: Parsing message for customer names: "${message}"`);
+      
       // Try each pattern to find a customer name
-      for (const pattern of customerPatterns) {
+      for (let i = 0; i < customerPatterns.length; i++) {
+        const pattern = customerPatterns[i];
         const match = message.match(pattern);
+        console.log(`🔍 AI CFO: Pattern ${i + 1} match:`, match ? match[1] : 'No match');
         if (match) {
           searchedCustomer = match[1].trim();
+          console.log(`🔍 AI CFO: Found customer with pattern ${i + 1}: "${searchedCustomer}"`);
           break;
         }
       }
@@ -4212,10 +4217,11 @@ ${tenant.name}
         console.log(`🔍 AI CFO: Searching for customer: "${searchedCustomer}"`);
         
         // Debug: Show some customer names and company names from database
-        const uniquePersons = [...new Set(allInvoices.map(inv => inv.contact?.name).filter(Boolean))].slice(0, 5);
-        const uniqueCompanies = [...new Set(allInvoices.map(inv => inv.contact?.companyName).filter(Boolean))].slice(0, 5);
+        const uniquePersons = [...new Set(allInvoices.map(inv => inv.contact?.name).filter(Boolean))].slice(0, 10);
+        const uniqueCompanies = [...new Set(allInvoices.map(inv => inv.contact?.companyName).filter(Boolean))].slice(0, 10);
         console.log(`🔍 AI CFO: Sample person names:`, uniquePersons);
         console.log(`🔍 AI CFO: Sample company names:`, uniqueCompanies);
+        console.log(`🔍 AI CFO: Total unique persons: ${uniquePersons.length}, Total unique companies: ${uniqueCompanies.length}`);
         
         // Search in both name and companyName fields - exact match first
         let customerInvoices = allInvoices.filter(inv => 
