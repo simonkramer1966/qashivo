@@ -682,7 +682,7 @@ export default function Workflows() {
         
         <div className="p-8" style={{ backgroundColor: '#ffffff' }}>
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-            <TabsList className="grid w-full grid-cols-8 bg-white border border-gray-200">
+            <TabsList className="grid w-full grid-cols-6 bg-white border border-gray-200">
               <TabsTrigger value="dashboard" className="data-[state=active]:bg-[#17B6C3] data-[state=active]:text-white">
                 <BarChart3 className="mr-2 h-4 w-4" />
                 Dashboard
@@ -698,14 +698,6 @@ export default function Workflows() {
               <TabsTrigger value="senders" className="data-[state=active]:bg-[#17B6C3] data-[state=active]:text-white">
                 <Building2 className="mr-2 h-4 w-4" />
                 Senders
-              </TabsTrigger>
-              <TabsTrigger value="customers" className="data-[state=active]:bg-[#17B6C3] data-[state=active]:text-white">
-                <UserCheck className="mr-2 h-4 w-4" />
-                Customers
-              </TabsTrigger>
-              <TabsTrigger value="email" className="data-[state=active]:bg-[#17B6C3] data-[state=active]:text-white">
-                <Mail className="mr-2 h-4 w-4" />
-                Legacy Email
               </TabsTrigger>
               <TabsTrigger value="voice" className="data-[state=active]:bg-[#17B6C3] data-[state=active]:text-white">
                 <Phone className="mr-2 h-4 w-4" />
@@ -733,13 +725,6 @@ export default function Workflows() {
               <EmailSenderManagement />
             </TabsContent>
 
-            <TabsContent value="customers">
-              <CustomerAssignmentManager />
-            </TabsContent>
-
-            <TabsContent value="email">
-              <EmailSequenceBuilder />
-            </TabsContent>
 
             <TabsContent value="sms">
               <SMSStrategy />
