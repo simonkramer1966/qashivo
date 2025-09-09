@@ -124,8 +124,11 @@ export default function CollectionScheduleBuilder({ className }: CollectionSched
     mutationFn: async (data: ScheduleFormData) => {
       const scheduleData = {
         ...data,
-        steps: steps,
+        scheduleSteps: steps, // Fix: use scheduleSteps instead of steps
       };
+      
+      // Remove steps field to avoid confusion
+      delete (scheduleData as any).steps;
       
       if (editingSchedule) {
         return apiRequest("PUT", `/api/collections/schedules/${editingSchedule.id}`, scheduleData);
