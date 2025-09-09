@@ -4222,21 +4222,31 @@ ${tenant.name}
         console.log(`🔍 AI CFO: Sample company names:`, uniqueCompanies);
         console.log(`🔍 AI CFO: Total unique persons: ${uniquePersons.length}, Total unique companies: ${uniqueCompanies.length}`);
         
-        // Search in both name and companyName fields - exact match first
+        // PRIORITIZE company name search over individual contact names
+        console.log(`🔍 AI CFO: Searching in database - looking for company name first`);
+        
+        // First: Search by exact company name match
         let customerInvoices = allInvoices.filter(inv => 
-          inv.contact?.name?.toLowerCase() === searchedCustomer.toLowerCase() ||
           inv.contact?.companyName?.toLowerCase() === searchedCustomer.toLowerCase()
         );
         
-        // If no exact match, try partial match in both fields
+        // Second: Search by partial company name match  
         if (customerInvoices.length === 0) {
           customerInvoices = allInvoices.filter(inv => 
-            inv.contact?.name?.toLowerCase().includes(searchedCustomer.toLowerCase()) ||
             inv.contact?.companyName?.toLowerCase().includes(searchedCustomer.toLowerCase()) ||
-            searchedCustomer.toLowerCase().includes(inv.contact?.name?.toLowerCase() || '') ||
             searchedCustomer.toLowerCase().includes(inv.contact?.companyName?.toLowerCase() || '')
           );
-          console.log(`🔍 AI CFO: No exact match found, trying partial match in both name and company fields...`);
+          console.log(`🔍 AI CFO: No exact company match, trying partial company name match...`);
+        }
+        
+        // Third: Fallback to individual contact name search (only if no company matches)
+        if (customerInvoices.length === 0) {
+          customerInvoices = allInvoices.filter(inv => 
+            inv.contact?.name?.toLowerCase() === searchedCustomer.toLowerCase() ||
+            inv.contact?.name?.toLowerCase().includes(searchedCustomer.toLowerCase()) ||
+            searchedCustomer.toLowerCase().includes(inv.contact?.name?.toLowerCase() || '')
+          );
+          console.log(`🔍 AI CFO: No company matches found, trying individual contact names as fallback...`);
         }
         
         if (customerInvoices.length > 0) {
