@@ -1277,7 +1277,7 @@ export default function VoiceConfig() {
 
       {/* Voice System Tabs */}
       <Tabs value={activeVoiceTab} onValueChange={setActiveVoiceTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4 bg-white border border-gray-200">
+        <TabsList className="grid w-full grid-cols-3 bg-white border border-gray-200">
           <TabsTrigger value="agents" className="data-[state=active]:bg-[#17B6C3] data-[state=active]:text-white">
             <Bot className="mr-2 h-4 w-4" />
             Agents
@@ -1289,10 +1289,6 @@ export default function VoiceConfig() {
           <TabsTrigger value="templates" className="data-[state=active]:bg-[#17B6C3] data-[state=active]:text-white">
             <MessageSquare className="mr-2 h-4 w-4" />
             Voice Messages
-          </TabsTrigger>
-          <TabsTrigger value="analytics" className="data-[state=active]:bg-[#17B6C3] data-[state=active]:text-white">
-            <Activity className="mr-2 h-4 w-4" />
-            Analytics
           </TabsTrigger>
         </TabsList>
 
@@ -1308,21 +1304,6 @@ export default function VoiceConfig() {
           <VoiceTemplatesTab />
         </TabsContent>
 
-        <TabsContent value="analytics">
-          <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
-            <CardHeader>
-              <CardTitle>Voice Analytics</CardTitle>
-              <CardDescription>Performance metrics for voice communications</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-12">
-                <Activity className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">Analytics Coming Soon</h3>
-                <p className="text-gray-600">Detailed voice performance analytics and insights will be available here</p>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
       </Tabs>
     </div>
   );
