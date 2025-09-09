@@ -405,6 +405,26 @@ export const leads = pgTable("leads", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// AI CFO Facts Database - Knowledge base for accurate AI responses
+export const aiFacts = pgTable("ai_facts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  category: varchar("category").notNull(), // 'policies', 'procedures', 'benchmarks', 'regulations', 'company_info', 'industry_data'
+  title: varchar("title").notNull(),
+  content: text("content").notNull(),
+  tags: jsonb("tags"), // Array of strings for searchability
+  priority: integer("priority").default(5), // 1-10, higher priority facts are referenced first
+  isActive: boolean("is_active").default(true),
+  lastVerified: timestamp("last_verified").defaultNow(),
+  source: varchar("source"), // Where this fact came from (e.g., "company_policy", "regulation", "industry_report")
+  applicableRegions: jsonb("applicable_regions"), // Geographic applicability
+  effectiveDate: timestamp("effective_date"),
+  expirationDate: timestamp("expiration_date"),
+  createdBy: varchar("created_by"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Define relations
 export const usersRelations = relations(users, ({ one, many }) => ({
   tenant: one(tenants, {
@@ -429,6 +449,7 @@ export const tenantsRelations = relations(tenants, ({ many }) => ({
   voiceCalls: many(voiceCalls),
   voiceWorkflows: many(voiceWorkflows),
   voiceMessageTemplates: many(voiceMessageTemplates),
+  aiFacts: many(aiFacts),
 }));
 
 export const contactsRelations = relations(contacts, ({ one, many }) => ({
@@ -609,6 +630,14 @@ export const voiceStateTransitionsRelations = relations(voiceStateTransitions, (
 export const voiceMessageTemplatesRelations = relations(voiceMessageTemplates, ({ one }) => ({
   tenant: one(tenants, {
     fields: [voiceMessageTemplates.tenantId],
+    references: [tenants.id],
+  }),
+}));
+
+// AI Facts relations
+export const aiFactsRelations = relations(aiFacts, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [aiFacts.tenantId],
     references: [tenants.id],
   }),
 }));
@@ -847,6 +876,13 @@ export const insertLeadSchema = createInsertSchema(leads).omit({
   updatedAt: true,
 });
 
+export const insertAiFactSchema = createInsertSchema(aiFacts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  lastVerified: true,
+});
+
 export const insertEmailSenderSchema = createInsertSchema(emailSenders).omit({
   id: true,
   createdAt: true,
@@ -913,6 +949,8 @@ export type InsertVoiceMessageTemplate = z.infer<typeof insertVoiceMessageTempla
 export type VoiceMessageTemplate = typeof voiceMessageTemplates.$inferSelect;
 export type InsertLead = z.infer<typeof insertLeadSchema>;
 export type Lead = typeof leads.$inferSelect;
+export type InsertAiFact = z.infer<typeof insertAiFactSchema>;
+export type AiFact = typeof aiFacts.$inferSelect;
 export type InsertEmailSender = z.infer<typeof insertEmailSenderSchema>;
 export type EmailSender = typeof emailSenders.$inferSelect;
 export type InsertCollectionSchedule = z.infer<typeof insertCollectionScheduleSchema>;

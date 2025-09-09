@@ -17,6 +17,7 @@ import {
   voiceStateTransitions,
   voiceMessageTemplates,
   leads,
+  aiFacts,
   emailSenders,
   collectionSchedules,
   customerScheduleAssignments,
@@ -57,6 +58,8 @@ import {
   type InsertVoiceMessageTemplate,
   type Lead,
   type InsertLead,
+  type AiFact,
+  type InsertAiFact,
   type EmailSender,
   type InsertEmailSender,
   type CollectionSchedule,
@@ -193,6 +196,14 @@ export interface IStorage {
   createLead(lead: InsertLead): Promise<Lead>;
   updateLead(id: string, updates: Partial<InsertLead>): Promise<Lead>;
   deleteLead(id: string): Promise<void>;
+  
+  // AI Facts operations - Knowledge base for AI CFO
+  getAiFacts(tenantId: string, category?: string): Promise<AiFact[]>;
+  getAiFactsByTags(tenantId: string, tags: string[]): Promise<AiFact[]>;
+  searchAiFacts(tenantId: string, searchQuery: string): Promise<AiFact[]>;
+  createAiFact(fact: InsertAiFact): Promise<AiFact>;
+  updateAiFact(id: string, fact: Partial<InsertAiFact>): Promise<AiFact>;
+  deleteAiFact(id: string, tenantId: string): Promise<void>;
   
   // Cleanup operations
   clearAllContacts(tenantId: string): Promise<void>;
@@ -1530,6 +1541,74 @@ export class DatabaseStorage implements IStorage {
     await db
       .delete(leads)
       .where(eq(leads.id, id));
+  }
+
+  // AI Facts operations - Knowledge base for AI CFO
+  async getAiFacts(tenantId: string, category?: string): Promise<AiFact[]> {
+    const conditions = [eq(aiFacts.tenantId, tenantId), eq(aiFacts.isActive, true)];
+    if (category) {
+      conditions.push(eq(aiFacts.category, category));
+    }
+    
+    return await db
+      .select()
+      .from(aiFacts)
+      .where(and(...conditions))
+      .orderBy(desc(aiFacts.priority), desc(aiFacts.createdAt));
+  }
+
+  async getAiFactsByTags(tenantId: string, tags: string[]): Promise<AiFact[]> {
+    return await db
+      .select()
+      .from(aiFacts)
+      .where(
+        and(
+          eq(aiFacts.tenantId, tenantId),
+          eq(aiFacts.isActive, true),
+          sql`${aiFacts.tags} ?& ${tags}` // PostgreSQL array overlap operator
+        )
+      )
+      .orderBy(desc(aiFacts.priority), desc(aiFacts.createdAt));
+  }
+
+  async searchAiFacts(tenantId: string, searchQuery: string): Promise<AiFact[]> {
+    const query = `%${searchQuery.toLowerCase()}%`;
+    return await db
+      .select()
+      .from(aiFacts)
+      .where(
+        and(
+          eq(aiFacts.tenantId, tenantId),
+          eq(aiFacts.isActive, true),
+          sql`(
+            LOWER(${aiFacts.title}) LIKE ${query} OR 
+            LOWER(${aiFacts.content}) LIKE ${query} OR
+            LOWER(${aiFacts.source}) LIKE ${query}
+          )`
+        )
+      )
+      .orderBy(desc(aiFacts.priority), desc(aiFacts.createdAt))
+      .limit(10);
+  }
+
+  async createAiFact(factData: InsertAiFact): Promise<AiFact> {
+    const [fact] = await db.insert(aiFacts).values(factData).returning();
+    return fact;
+  }
+
+  async updateAiFact(id: string, updates: Partial<InsertAiFact>): Promise<AiFact> {
+    const [fact] = await db
+      .update(aiFacts)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(aiFacts.id, id))
+      .returning();
+    return fact;
+  }
+
+  async deleteAiFact(id: string, tenantId: string): Promise<void> {
+    await db
+      .delete(aiFacts)
+      .where(and(eq(aiFacts.id, id), eq(aiFacts.tenantId, tenantId)));
   }
 }
 

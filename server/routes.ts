@@ -4012,6 +4012,80 @@ ${tenant.name}
     }
   });
 
+  // AI Facts endpoints - Knowledge base for AI CFO
+  app.get('/api/ai-facts', isAuthenticated, async (req, res) => {
+    try {
+      const user = await storage.getUser((req.user as any).claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const category = req.query.category as string | undefined;
+      const tags = req.query.tags ? (req.query.tags as string).split(',') : undefined;
+      const search = req.query.search as string | undefined;
+
+      let facts;
+      if (search) {
+        facts = await storage.searchAiFacts(user.tenantId, search);
+      } else if (tags) {
+        facts = await storage.getAiFactsByTags(user.tenantId, tags);
+      } else {
+        facts = await storage.getAiFacts(user.tenantId, category);
+      }
+
+      res.json(facts);
+    } catch (error) {
+      console.error('Error fetching AI facts:', error);
+      res.status(500).json({ message: 'Failed to fetch AI facts' });
+    }
+  });
+
+  app.post('/api/ai-facts', isAuthenticated, async (req, res) => {
+    try {
+      const user = await storage.getUser((req.user as any).claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const fact = await storage.createAiFact({
+        ...req.body,
+        tenantId: user.tenantId,
+        createdBy: user.id,
+      });
+      res.json(fact);
+    } catch (error) {
+      console.error('Error creating AI fact:', error);
+      res.status(500).json({ message: 'Failed to create AI fact' });
+    }
+  });
+
+  app.put('/api/ai-facts/:id', isAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const fact = await storage.updateAiFact(id, req.body);
+      res.json(fact);
+    } catch (error) {
+      console.error('Error updating AI fact:', error);
+      res.status(500).json({ message: 'Failed to update AI fact' });
+    }
+  });
+
+  app.delete('/api/ai-facts/:id', isAuthenticated, async (req, res) => {
+    try {
+      const user = await storage.getUser((req.user as any).claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { id } = req.params;
+      await storage.deleteAiFact(id, user.tenantId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error deleting AI fact:', error);
+      res.status(500).json({ message: 'Failed to delete AI fact' });
+    }
+  });
+
   // AI CFO Conversation endpoint
   app.post('/api/ai-cfo/chat', isAuthenticated, async (req, res) => {
     try {
@@ -4025,6 +4099,10 @@ ${tenant.name}
         console.log(`❌ AI CFO Debug: No tenant ID found for user!`);
         return res.status(400).json({ error: 'User not associated with a tenant' });
       }
+
+      // Seed AI Facts if this is the first time using AI CFO for this tenant
+      const { seedAiFacts } = await import('./seed-ai-facts');
+      await seedAiFacts(user.tenantId);
 
       if (!message || typeof message !== 'string') {
         return res.status(400).json({ error: 'Message is required' });
@@ -4056,6 +4134,17 @@ ${tenant.name}
       const overdueAmount = overdueInvoices.reduce((total, inv) => total + Number(inv.amount), 0);
       const totalOutstanding = invoices.reduce((total, inv) => total + Number(inv.amount), 0);
 
+      // Get relevant AI Facts for enhanced responses
+      console.log(`🧠 AI CFO: Fetching AI Facts for context enhancement...`);
+      const [allFacts, searchFacts] = await Promise.all([
+        storage.getAiFacts(user.tenantId), // Get all facts
+        storage.searchAiFacts(user.tenantId, message).catch(() => []) // Search for relevant facts based on message
+      ]);
+      
+      // Combine and prioritize facts
+      const relevantFacts = [...new Set([...searchFacts, ...allFacts.slice(0, 5)])].slice(0, 8);
+      console.log(`🧠 AI CFO: Found ${allFacts.length} total facts, ${searchFacts.length} relevant to query, using ${relevantFacts.length} in context`);
+
       // Prepare AR context for AI
       const arContext = {
         totalOutstanding: totalOutstanding,
@@ -4063,6 +4152,13 @@ ${tenant.name}
         collectionRate: invoiceMetrics?.collectionRate || 85,
         averageDaysToPay: invoiceMetrics?.avgDaysToPay || 30,
         activeContacts: invoices.length,
+        knowledgeBase: relevantFacts.map(fact => ({
+          title: fact.title,
+          content: fact.content,
+          category: fact.category,
+          priority: fact.priority,
+          source: fact.source
+        })),
         recentInvoices: invoices.slice(0, 5).map(inv => ({
           id: inv.id,
           amount: Number(inv.amount),

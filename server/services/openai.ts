@@ -250,6 +250,17 @@ CURRENT AR DATA:
 • Collection Rate: ${arContext.collectionRate || 85}%
 • Active Outstanding Invoices: ${arContext.activeContacts || 0}
 
+${arContext.knowledgeBase && arContext.knowledgeBase.length > 0 ? `
+KNOWLEDGE BASE (Use this for accurate industry data and best practices):
+${arContext.knowledgeBase.map((fact: any, index: number) => 
+`${index + 1}. **${fact.title}** (${fact.category})
+   ${fact.content}
+   Source: ${fact.source || 'Internal'}`
+).join('\n\n')}
+
+REFERENCE KNOWLEDGE: Always cite the knowledge base facts when providing industry benchmarks, regulatory guidance, or best practices. This ensures accurate and credible advice.
+` : ''}
+
 ${specificCustomerData ? `
 SPECIFIC CUSTOMER FOUND: ${specificCustomerData.customerName}
 • Total Invoices: ${specificCustomerData.totalInvoices}
@@ -277,13 +288,15 @@ CAPABILITIES:
 - Provide detailed aging analysis and payment recommendations  
 - Access complete invoice history and payment patterns
 - Give precise financial advice based on actual data
+- Reference knowledge base for industry benchmarks and compliance requirements
 
 FORMATTING INSTRUCTIONS:
 - Use clear paragraph breaks between different points
 - Start key recommendations with bullet points (•)
 - Use line breaks to separate sections
 - Keep paragraphs concise (2-3 sentences max)
-- When asked about specific customers, search through the available data and provide exact details`
+- When asked about specific customers, search through the available data and provide exact details
+- When referencing knowledge base facts, mention the source for credibility`
         },
         {
           role: "user", 
