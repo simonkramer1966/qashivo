@@ -1425,11 +1425,7 @@ export default function Invoices() {
                                   setPaymentPlanInvoice(invoice);
                                   setShowPaymentPlanDialog(true);
                                 }}
-                                className={`h-7 w-8 p-0 text-xs font-medium transition-colors ${
-                                  invoice.paymentPlanActive 
-                                    ? 'border-red-500 text-red-600 bg-red-50 hover:bg-red-100' 
-                                    : 'border-gray-300 text-gray-400 bg-white hover:bg-gray-50'
-                                }`}
+                                className="border-gray-200 text-gray-300 hover:bg-gray-50 h-7 w-8 p-0 text-xs font-medium"
                                 data-testid={`button-payment-plan-${invoice.id}`}
                                 title="Payment Plan"
                               >
@@ -1442,11 +1438,7 @@ export default function Invoices() {
                                   setDisputeInvoice(invoice);
                                   setShowDisputeDialog(true);
                                 }}
-                                className={`h-7 w-8 p-0 text-xs font-medium transition-colors ${
-                                  invoice.disputeActive 
-                                    ? 'border-red-500 text-red-600 bg-red-50 hover:bg-red-100' 
-                                    : 'border-gray-300 text-gray-400 bg-white hover:bg-gray-50'
-                                }`}
+                                className="border-gray-200 text-gray-300 hover:bg-gray-50 h-7 w-8 p-0 text-xs font-medium"
                                 data-testid={`button-dispute-${invoice.id}`}
                                 title="Dispute"
                               >
