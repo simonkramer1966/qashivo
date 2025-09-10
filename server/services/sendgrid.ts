@@ -50,13 +50,28 @@ export async function sendEmail(params: EmailParams): Promise<boolean> {
       return true;
     }
 
-    await mailService.send({
+    const emailData: any = {
       to: params.to,
       from: params.from,
       subject: params.subject,
-      text: params.text || '',
-      html: params.html,
-    });
+    };
+
+    // SendGrid requires at least one content type
+    if (params.html) {
+      emailData.html = params.html;
+      // If we have HTML, provide a text fallback if none provided
+      if (!params.text) {
+        emailData.text = params.html.replace(/<[^>]*>/g, ''); // Strip HTML tags for text version
+      } else {
+        emailData.text = params.text;
+      }
+    } else if (params.text) {
+      emailData.text = params.text;
+    } else {
+      throw new Error('Email must have either text or html content');
+    }
+
+    await mailService.send(emailData);
     
     console.log(`Email sent successfully to ${params.to}`);
     return true;
