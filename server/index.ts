@@ -39,6 +39,18 @@ app.use((req, res, next) => {
 (async () => {
   const server = await registerRoutes(app);
 
+  // Initialize collections scheduler in production/development
+  if (process.env.NODE_ENV !== 'test') {
+    try {
+      console.log("🔄 Initializing collections automation scheduler...");
+      // Dynamic import to avoid loading in test environment
+      const { collectionsScheduler } = await import("./services/collectionsScheduler");
+      console.log("✅ Collections scheduler initialized");
+    } catch (error) {
+      console.error("❌ Failed to initialize collections scheduler:", error);
+    }
+  }
+
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";

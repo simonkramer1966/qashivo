@@ -2210,6 +2210,63 @@ Payment required immediately to avoid collection action. Contact us NOW.`
     }
   });
 
+  // Collections Scheduler Control Endpoints
+  app.get("/api/collections/scheduler/status", isOwner, async (req: any, res) => {
+    try {
+      const { collectionsScheduler } = await import("./services/collectionsScheduler");
+      const status = collectionsScheduler.getStatus();
+      res.json(status);
+    } catch (error) {
+      console.error("Error getting scheduler status:", error);
+      res.status(500).json({ message: "Failed to get scheduler status" });
+    }
+  });
+
+  app.post("/api/collections/scheduler/start", isOwner, async (req: any, res) => {
+    try {
+      const { collectionsScheduler } = await import("./services/collectionsScheduler");
+      collectionsScheduler.start();
+      res.json({ success: true, message: "Collections scheduler started" });
+    } catch (error) {
+      console.error("Error starting scheduler:", error);
+      res.status(500).json({ message: "Failed to start scheduler" });
+    }
+  });
+
+  app.post("/api/collections/scheduler/stop", isOwner, async (req: any, res) => {
+    try {
+      const { collectionsScheduler } = await import("./services/collectionsScheduler");
+      collectionsScheduler.stop();
+      res.json({ success: true, message: "Collections scheduler stopped" });
+    } catch (error) {
+      console.error("Error stopping scheduler:", error);
+      res.status(500).json({ message: "Failed to stop scheduler" });
+    }
+  });
+
+  app.post("/api/collections/scheduler/run-now", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      // Manually trigger a collection run
+      const { checkCollectionActions } = await import("./services/collectionsAutomation");
+      const actions = await checkCollectionActions(user.tenantId);
+      
+      res.json({ 
+        success: true, 
+        actionsFound: actions.length,
+        actions,
+        message: `Manual collection run completed - ${actions.length} actions found`
+      });
+    } catch (error) {
+      console.error("Error running manual collection:", error);
+      res.status(500).json({ message: "Failed to run manual collection" });
+    }
+  });
+
   // Send single invoice email
   app.post("/api/invoices/:invoiceId/send-email", isAuthenticated, async (req: any, res) => {
     try {

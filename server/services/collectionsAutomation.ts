@@ -145,7 +145,7 @@ export async function checkCollectionActions(tenantId: string): Promise<Collecti
     console.log(`Generated ${actions.length} collection actions for tenant ${tenantId}`);
     return actions;
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error checking collection actions:', error);
     throw new Error(`Failed to check collection actions: ${error.message}`);
   }
@@ -165,7 +165,7 @@ export async function setCollectionsAutomation(tenantId: string, enabled: boolea
       .where(eq(tenants.id, tenantId));
 
     console.log(`Collections automation ${enabled ? 'enabled' : 'disabled'} for tenant ${tenantId}`);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error updating collections automation setting:', error);
     throw new Error(`Failed to update automation setting: ${error.message}`);
   }
@@ -310,7 +310,7 @@ export async function nudgeInvoiceToNextAction(invoiceId: string, tenantId: stri
     console.log(`Generated nudge action for invoice ${invoice.invoiceNumber}: ${nextStep.action} (${nextStep.actionType})`);
     return nudgeAction;
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error nudging invoice to next action:', error);
     throw new Error(`Failed to nudge invoice: ${error.message}`);
   }
