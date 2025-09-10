@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Search, Mail, Phone, Building, User, Users, ChevronUp, ChevronDown, Star } from "lucide-react";
+import { Plus, Search, Mail, Phone, Building, User, Users, ChevronUp, ChevronDown, Star, MoreHorizontal } from "lucide-react";
 
 export default function Customers() {
   const { toast } = useToast();
@@ -320,7 +320,7 @@ export default function Customers() {
                             {getSortIcon("status")}
                           </button>
                         </th>
-                        <th className="text-right py-3 text-sm font-medium text-muted-foreground">Actions</th>
+                        <th className="text-right py-3 text-sm font-medium text-muted-foreground"></th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200">
@@ -373,22 +373,14 @@ export default function Customers() {
                             </Badge>
                           </td>
                           <td className="py-4">
-                            <div className="flex justify-end space-x-2">
+                            <div className="flex justify-end">
                               <Button 
-                                variant="outline" 
+                                variant="ghost" 
                                 size="sm" 
-                                className="border-[#17B6C3]/20 text-[#17B6C3] hover:bg-[#17B6C3]/5"
-                                data-testid={`button-list-edit-${contact.id}`}
+                                className="h-8 w-8 p-0 hover:bg-gray-100"
+                                data-testid={`button-menu-${contact.id}`}
                               >
-                                Edit
-                              </Button>
-                              <Button 
-                                variant="outline" 
-                                size="sm"
-                                className="border-[#17B6C3]/20 text-[#17B6C3] hover:bg-[#17B6C3]/5"
-                                data-testid={`button-list-invoices-${contact.id}`}
-                              >
-                                View Invoices
+                                <MoreHorizontal className="h-4 w-4 text-gray-500" />
                               </Button>
                             </div>
                           </td>
