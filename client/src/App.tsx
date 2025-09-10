@@ -77,7 +77,7 @@ function Router() {
           <Route path="/reports" component={Reports} />
           <Route path="/settings" component={Settings} />
           <Route path="/profile" component={Profile} />
-          <Route path="/health" component={HealthDashboard} />
+          <Route path="/health-dashboard" component={HealthDashboard} />
           <Route path="/ui-choices" component={UIChoices} />
           <Route path="/ui-xero" component={UIXero} />
           <Route path="/ui-quickbooks" component={UIQuickBooks} />

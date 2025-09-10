@@ -150,7 +150,77 @@ export async function setupAuth(app: Express) {
   });
 }
 
+// Development mode authentication bypass
+const isDevelopmentMode = () => {
+  return process.env.NODE_ENV !== 'production' && !process.env.REPL_ID;
+};
+
+// Create demo user session for development
+const createDemoUserSession = async (req: any) => {
+  // Demo user identity
+  const demoUserId = "demo-user-47061483"; // Matches existing demo user
+  const demoTenantId = "demo-tenant-9ffa8e58";
+  
+  // Ensure demo tenant exists
+  let demoTenant = await storage.getTenant(demoTenantId);
+  if (!demoTenant) {
+    demoTenant = await storage.createTenant({
+      id: demoTenantId,
+      name: "Demo Agency",
+      subdomain: "demo",
+    });
+    console.log("✅ Created demo tenant for development mode");
+  }
+  
+  // Ensure demo user exists
+  let demoUser = await storage.getUser(demoUserId);
+  if (!demoUser) {
+    demoUser = await storage.upsertUser({
+      id: demoUserId,
+      email: "demo@studiopow.com",
+      firstName: "Demo",
+      lastName: "User",
+      tenantId: demoTenantId,
+      role: "owner", // Give owner permissions for full access
+    });
+    console.log("✅ Created demo user for development mode");
+  }
+  
+  // Inject demo session
+  req.user = {
+    claims: {
+      sub: demoUserId,
+      email: "demo@studiopow.com",
+      first_name: "Demo",
+      last_name: "User",
+      exp: Math.floor(Date.now() / 1000) + 86400, // Expires in 24 hours
+    },
+    access_token: "demo-access-token",
+    refresh_token: "demo-refresh-token",
+    expires_at: Math.floor(Date.now() / 1000) + 86400, // Expires in 24 hours
+  };
+  
+  // Mock passport methods
+  req.isAuthenticated = () => true;
+  req.login = (user: any, callback: Function) => callback(null);
+  req.logout = (callback: Function) => callback();
+  
+  return true;
+};
+
 export const isAuthenticated: RequestHandler = async (req, res, next) => {
+  // Development mode bypass
+  if (isDevelopmentMode()) {
+    console.log("🔧 Development mode: Using demo authentication bypass");
+    try {
+      await createDemoUserSession(req);
+      return next();
+    } catch (error) {
+      console.error("❌ Failed to create demo user session:", error);
+      return res.status(500).json({ message: "Development auth setup failed" });
+    }
+  }
+  
   const user = req.user as any;
 
   if (!req.isAuthenticated() || !user.expires_at) {
@@ -181,6 +251,18 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
 
 // Owner-only access control middleware
 export const isOwner: RequestHandler = async (req, res, next) => {
+  // Development mode bypass
+  if (isDevelopmentMode()) {
+    console.log("🔧 Development mode: Using demo authentication bypass for owner check");
+    try {
+      await createDemoUserSession(req);
+      return next(); // Demo user has owner role by default
+    } catch (error) {
+      console.error("❌ Failed to create demo user session for owner check:", error);
+      return res.status(500).json({ message: "Development auth setup failed" });
+    }
+  }
+  
   const user = req.user as any;
 
   if (!req.isAuthenticated() || !user.claims) {
