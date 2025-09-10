@@ -226,8 +226,8 @@ export default function NewSidebar() {
                 </DropdownMenuItem>
                 
                 {/* Organization Name Box */}
-                <div className="p-4">
-                  <div className="bg-[#17B6C3] p-4 rounded-lg">
+                <div className="px-4 py-3">
+                  <div className="bg-[#17B6C3] p-3 rounded-lg">
                     <div className="font-bold text-white text-sm leading-relaxed break-words">
                       {tenant?.settings?.companyName || tenant?.name || "Loading..."}
                     </div>
@@ -246,7 +246,7 @@ export default function NewSidebar() {
                 <DropdownMenuSeparator />
                 
                 {/* Section Header */}
-                <div className="pl-4 pr-3 py-2 text-xs font-medium text-gray-500 bg-gray-50">
+                <div className="pl-4 pr-3 py-3 text-xs font-medium text-gray-500 bg-gray-50">
                   Do more with Nexus
                 </div>
                 
