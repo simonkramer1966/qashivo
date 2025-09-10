@@ -1067,7 +1067,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         days_overdue: daysPastDue.toString(),
         company_name: invoice.contact.companyName || 'Customer',
         total_amount_overdue: totalAmountOverdue.toLocaleString(),
-        total_balance: totalBalance.toLocaleString()
+        total_balance: totalBalance.toLocaleString(),
+        your_name: defaultSender?.fromName || 'Simon Kramer'
       };
 
       // Replace template variables in subject and content
