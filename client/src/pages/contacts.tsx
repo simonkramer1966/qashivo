@@ -199,7 +199,7 @@ export default function Customers() {
                             onClick={() => handleSort("companyName")}
                             className="flex items-center space-x-1 hover:text-slate-900"
                           >
-                            <span>Contact</span>
+                            <span>Customer</span>
                             {getSortIcon("companyName")}
                           </button>
                         </th>
