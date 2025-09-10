@@ -1033,16 +1033,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Contact email not available" });
       }
 
-      // Get the email senders/templates for template-based emails
-      const emailSenders = await storage.getEmailSenders(user.tenantId);
-      const geInvoiceTemplate = emailSenders.find(sender => sender.name === 'GE Invoice');
+      // Get the communication templates and email senders
+      const communicationTemplates = await storage.getCommunicationTemplates(user.tenantId);
+      const geInvoiceTemplate = communicationTemplates.find(template => template.name === 'GE Invoice');
       
       if (!geInvoiceTemplate) {
         return res.status(404).json({ message: "GE Invoice template not found" });
       }
 
+      // Get the email sender configuration
+      const emailSenders = await storage.getEmailSenders(user.tenantId);
+      const defaultSender = emailSenders.find(sender => sender.isDefault) || emailSenders[0];
+
       const daysPastDue = Math.max(0, Math.floor((Date.now() - invoice.dueDate.getTime()) / (1000 * 60 * 60 * 24)));
-      const fromEmail = process.env.SENDGRID_FROM_EMAIL || user.email || DEFAULT_FROM_EMAIL;
+      const fromEmail = defaultSender?.email || process.env.SENDGRID_FROM_EMAIL || user.email || DEFAULT_FROM_EMAIL;
 
       // Process template variables
       const templateData = {
