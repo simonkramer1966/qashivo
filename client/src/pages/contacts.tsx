@@ -175,7 +175,6 @@ export default function Customers() {
                     </p>
                   ) : (
                     <div className="mt-6">
-                      <p className="text-muted-foreground mb-4">Get started by adding your first customer</p>
                       <Button className="bg-[#17B6C3] hover:bg-[#1396A1] text-white" data-testid="button-add-first-contact">
                         <Plus className="mr-2 h-4 w-4" />
                         Add Your First Customer
