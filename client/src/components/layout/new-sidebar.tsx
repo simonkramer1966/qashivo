@@ -222,7 +222,6 @@ export default function NewSidebar() {
                   onClick={() => setShowOrgModal(true)}
                   data-testid="menu-item-change-organization"
                 >
-                  <RefreshCw className="h-4 w-4 mr-2 text-[#17B6C3]" />
                   <div className="font-medium text-sm text-[#17B6C3]">Change organisation</div>
                 </DropdownMenuItem>
                 
