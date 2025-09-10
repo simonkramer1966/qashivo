@@ -33,6 +33,10 @@ export default function Invoices() {
   const [customersSortDirection, setCustomersSortDirection] = useState<"asc" | "desc">("asc");
   const [selectedInvoice, setSelectedInvoice] = useState<any>(null);
   const [showContactHistory, setShowContactHistory] = useState(false);
+  const [showPaymentPlanDialog, setShowPaymentPlanDialog] = useState(false);
+  const [showDisputeDialog, setShowDisputeDialog] = useState(false);
+  const [paymentPlanInvoice, setPaymentPlanInvoice] = useState<any>(null);
+  const [disputeInvoice, setDisputeInvoice] = useState<any>(null);
   
   // Pagination state for invoices tab
   const [invoicesCurrentPage, setInvoicesCurrentPage] = useState(1);
@@ -1413,7 +1417,33 @@ export default function Invoices() {
                             </div>
                           </td>
                           <td className="py-2 w-52">
-                            <div className="flex justify-end">
+                            <div className="flex space-x-1 justify-end">
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => {
+                                  setPaymentPlanInvoice(invoice);
+                                  setShowPaymentPlanDialog(true);
+                                }}
+                                className="border-[#17B6C3]/20 text-[#17B6C3] hover:bg-[#17B6C3]/5 h-7 w-8 p-0 text-xs font-medium"
+                                data-testid={`button-payment-plan-${invoice.id}`}
+                                title="Payment Plan"
+                              >
+                                PP
+                              </Button>
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => {
+                                  setDisputeInvoice(invoice);
+                                  setShowDisputeDialog(true);
+                                }}
+                                className="border-[#17B6C3]/20 text-[#17B6C3] hover:bg-[#17B6C3]/5 h-7 w-8 p-0 text-xs font-medium"
+                                data-testid={`button-dispute-${invoice.id}`}
+                                title="Dispute"
+                              >
+                                DI
+                              </Button>
                               <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
                                   <Button 
