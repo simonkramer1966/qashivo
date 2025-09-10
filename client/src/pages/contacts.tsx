@@ -161,11 +161,8 @@ export default function Customers() {
                 <div className="p-2 bg-[#17B6C3]/10 rounded-lg mr-3">
                   <Users className="h-5 w-5 text-[#17B6C3]" />
                 </div>
-                All Customers
+                All Customers ({sortedContacts.length})
               </CardTitle>
-              <CardDescription>
-                Showing {sortedContacts.length} customers
-              </CardDescription>
             </CardHeader>
             <CardContent className="pt-0">
               {contactsLoading ? (
