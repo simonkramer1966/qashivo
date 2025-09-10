@@ -152,10 +152,10 @@ export default function NewSidebar() {
           {!isCollapsed && (
             <div>
               <h1 className="text-xl font-semibold text-gray-900">
-                {tenant?.settings?.companyName || tenant?.name || "Nexus AR"}
+                Nexus AR
               </h1>
               <p className="text-sm text-gray-500">
-                {tenant?.settings?.tagline || "Debt Recovery Suite"}
+                Intelligent Cashflow
               </p>
             </div>
           )}
