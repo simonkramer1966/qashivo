@@ -1339,6 +1339,20 @@ export default function Invoices() {
                           >
                             Debt Recovery
                           </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            onClick={() => handleBulkAction('payment-plan')}
+                            data-testid="bulk-action-payment-plan"
+                          >
+                            <Calendar className="h-3 w-3 mr-2" />
+                            Create Payment Plan
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            onClick={() => handleBulkAction('dispute')}
+                            data-testid="bulk-action-dispute"
+                          >
+                            <AlertCircle className="h-3 w-3 mr-2" />
+                            Create Dispute
+                          </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
