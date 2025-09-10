@@ -333,7 +333,7 @@ export default function Customers() {
                               onValueChange={(value) => handleScheduleChange(contact.id, value)}
                               disabled={updateAssignmentMutation.isPending}
                             >
-                              <SelectTrigger className="w-full bg-white/70 border-gray-200/30">
+                              <SelectTrigger className="w-40 bg-white/70 border-gray-200/30">
                                 <SelectValue placeholder="No schedule" />
                               </SelectTrigger>
                               <SelectContent className="bg-white border-gray-200">
