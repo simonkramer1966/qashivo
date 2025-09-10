@@ -30,6 +30,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import nexusLogo from "@assets/Main Nexus Logo copy_1756923544828.png";
@@ -64,7 +67,6 @@ export default function NewSidebar() {
   const { user } = useAuth();
   const [location, setLocation] = useLocation();
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [showOrgList, setShowOrgList] = useState(false);
   const queryClient = useQueryClient();
 
   // Fetch tenant information
@@ -189,11 +191,7 @@ export default function NewSidebar() {
       {!isCollapsed && (
         <div className="px-4 pb-4 mt-2.5">
           {canSwitchOrganizations ? (
-            <DropdownMenu onOpenChange={(open) => {
-              if (!open) {
-                setShowOrgList(false);
-              }
-            }}>
+            <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
                   variant="outline"
@@ -208,81 +206,13 @@ export default function NewSidebar() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent className="w-56 bg-white border-gray-200" align="start" side="bottom">
-                {!showOrgList ? (
-                  <>
-                    {/* Change Organisation - Regular menu item that opens organization list */}
-                    <DropdownMenuItem 
-                      className="pl-7 pr-3 py-3 cursor-pointer text-[#17B6C3] hover:bg-gray-50"
-                      onClick={() => setShowOrgList(true)}
-                      data-testid="menu-item-change-organization"
-                    >
-                      <div className="font-medium text-sm text-[#17B6C3]">Change organisation</div>
-                    </DropdownMenuItem>
-                    
-                    {/* Organization Name Box */}
-                    <div className="px-4 py-3">
-                      <div className="bg-[#17B6C3] p-3 rounded-lg">
-                        <div className="font-bold text-white text-sm leading-relaxed break-words">
-                          {tenant?.settings?.companyName || tenant?.name || "Loading..."}
-                        </div>
-                      </div>
-                    </div>
-                    
-                    {/* Core Menu Items */}
-                    <DropdownMenuItem 
-                      className="pl-7 pr-3 py-3 cursor-pointer hover:bg-gray-50"
-                      onClick={() => setLocation('/settings')}
-                      data-testid="menu-item-settings"
-                    >
-                      <div className="font-medium text-sm">Settings</div>
-                    </DropdownMenuItem>
-                    
-                    <DropdownMenuSeparator />
-                    
-                    {/* Section Header */}
-                    <div className="pl-7 pr-3 py-3 text-xs font-medium text-gray-500 bg-gray-50">
-                      Do more with Nexus
-                    </div>
-                    
-                    {/* Nexus-specific Items */}
-                    <DropdownMenuItem 
-                      className="pl-7 pr-3 py-3 cursor-pointer hover:bg-gray-50"
-                      onClick={() => setLocation('/reports')}
-                      data-testid="menu-item-kpi"
-                    >
-                      <div className="font-medium text-sm">KPI</div>
-                    </DropdownMenuItem>
-                    
-                    <DropdownMenuItem 
-                      className="pl-7 pr-3 py-3 cursor-pointer hover:bg-gray-50"
-                      onClick={() => setLocation('/hr')}
-                      data-testid="menu-item-hr"
-                    >
-                      <div className="font-medium text-sm">HR</div>
-                    </DropdownMenuItem>
-                    
-                    <DropdownMenuItem 
-                      className="pl-7 pr-3 py-3 cursor-pointer hover:bg-gray-50"
-                      onClick={() => setLocation('/legal')}
-                      data-testid="menu-item-legal"
-                    >
-                      <div className="font-medium text-sm">Legal</div>
-                    </DropdownMenuItem>
-                    
-                    <div className="mx-4 my-2 h-px bg-gray-200"></div>
-                    
-                    {/* Bottom Section */}
-                    <DropdownMenuItem 
-                      className="pl-7 pr-3 py-3 cursor-pointer hover:bg-gray-50"
-                      onClick={() => setLocation('/owner')}
-                      data-testid="menu-item-my-nexus"
-                    >
-                      <div className="font-medium text-sm">My Nexus</div>
-                    </DropdownMenuItem>
-                  </>
-                ) : (
-                  <>
-                    {/* Organization List View */}
+                {/* Change Organisation - Submenu */}
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger className="pl-7 pr-3 py-3 text-[#17B6C3]" data-testid="menu-item-change-organization">
+                    <div className="font-medium text-sm text-[#17B6C3]">Change organisation</div>
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuSubContent className="w-56 bg-white border-gray-200">
+                    {/* Organization List */}
                     {accessibleTenants.map((org) => {
                       const companyName = org.settings?.companyName || org.name;
                       const initials = getCompanyInitials(companyName);
@@ -296,7 +226,6 @@ export default function NewSidebar() {
                             if (!isCurrentOrg) {
                               switchTenantMutation.mutate(org.id);
                             }
-                            setShowOrgList(false);
                           }}
                           data-testid={`dropdown-organization-${org.id}`}
                         >
@@ -323,7 +252,6 @@ export default function NewSidebar() {
                       className="pl-7 pr-3 py-3 cursor-pointer hover:bg-gray-50"
                       onClick={() => {
                         // For now, just close the dropdown - placeholder for future functionality
-                        setShowOrgList(false);
                       }}
                       data-testid="dropdown-add-organization"
                     >
@@ -336,8 +264,69 @@ export default function NewSidebar() {
                         </div>
                       </div>
                     </DropdownMenuItem>
-                  </>
-                )}
+                  </DropdownMenuSubContent>
+                </DropdownMenuSub>
+                
+                {/* Organization Name Box */}
+                <div className="px-4 py-3">
+                  <div className="bg-[#17B6C3] p-3 rounded-lg">
+                    <div className="font-bold text-white text-sm leading-relaxed break-words">
+                      {tenant?.settings?.companyName || tenant?.name || "Loading..."}
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Core Menu Items */}
+                <DropdownMenuItem 
+                  className="pl-7 pr-3 py-3 cursor-pointer hover:bg-gray-50"
+                  onClick={() => setLocation('/settings')}
+                  data-testid="menu-item-settings"
+                >
+                  <div className="font-medium text-sm">Settings</div>
+                </DropdownMenuItem>
+                
+                <DropdownMenuSeparator />
+                
+                {/* Section Header */}
+                <div className="pl-7 pr-3 py-3 text-xs font-medium text-gray-500 bg-gray-50">
+                  Do more with Nexus
+                </div>
+                
+                {/* Nexus-specific Items */}
+                <DropdownMenuItem 
+                  className="pl-7 pr-3 py-3 cursor-pointer hover:bg-gray-50"
+                  onClick={() => setLocation('/reports')}
+                  data-testid="menu-item-kpi"
+                >
+                  <div className="font-medium text-sm">KPI</div>
+                </DropdownMenuItem>
+                
+                <DropdownMenuItem 
+                  className="pl-7 pr-3 py-3 cursor-pointer hover:bg-gray-50"
+                  onClick={() => setLocation('/hr')}
+                  data-testid="menu-item-hr"
+                >
+                  <div className="font-medium text-sm">HR</div>
+                </DropdownMenuItem>
+                
+                <DropdownMenuItem 
+                  className="pl-7 pr-3 py-3 cursor-pointer hover:bg-gray-50"
+                  onClick={() => setLocation('/legal')}
+                  data-testid="menu-item-legal"
+                >
+                  <div className="font-medium text-sm">Legal</div>
+                </DropdownMenuItem>
+                
+                <div className="mx-4 my-2 h-px bg-gray-200"></div>
+                
+                {/* Bottom Section */}
+                <DropdownMenuItem 
+                  className="pl-7 pr-3 py-3 cursor-pointer hover:bg-gray-50"
+                  onClick={() => setLocation('/owner')}
+                  data-testid="menu-item-my-nexus"
+                >
+                  <div className="font-medium text-sm">My Nexus</div>
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
