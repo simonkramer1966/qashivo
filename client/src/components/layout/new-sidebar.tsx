@@ -275,7 +275,7 @@ export default function NewSidebar() {
                   <div className="font-medium text-sm">Legal</div>
                 </DropdownMenuItem>
                 
-                <DropdownMenuSeparator />
+                <div className="mx-4 my-2 h-px bg-gray-200"></div>
                 
                 {/* Bottom Section */}
                 <DropdownMenuItem 
