@@ -4313,17 +4313,25 @@ Payment required immediately to avoid collection action. Contact us NOW.`
 
       let tenants: any[] = [];
       
-      // SECURITY FIX: Only return user's current tenant to maintain tenant isolation
-      // Users (including owners) can only access their associated tenant
-      // This prevents the critical security vulnerability where owners could access ALL tenants
+      // Always include user's current tenant and demo organization
+      const allTenants = await storage.getAllTenants();
+      
+      // Add user's current tenant
       if (user.tenantId) {
-        const tenant = await storage.getTenant(user.tenantId);
-        if (tenant) {
-          tenants = [tenant];
+        const userTenant = await storage.getTenant(user.tenantId);
+        if (userTenant) {
+          tenants.push(userTenant);
         }
       }
       
-      console.log(`🔒 Security: User ${user.id} (role: ${user.role}) can access ${tenants.length} tenant(s)`);
+      // Add demo organization by fixed ID (security: prevents name-based privilege escalation)
+      const DEMO_TENANT_ID = "bfa5f70f-4af5-421a-9d05-26df67f45c15";
+      const demoTenant = allTenants.find(t => t.id === DEMO_TENANT_ID);
+      if (demoTenant && !tenants.find(t => t.id === demoTenant.id)) {
+        tenants.push(demoTenant);
+      }
+      
+      console.log(`🔒 Security: User ${user.id} (role: ${user.role}) can access ${tenants.length} tenant(s) including demo organization`);
       res.json(tenants);
     } catch (error) {
       console.error("Error fetching accessible tenants:", error);
@@ -4346,24 +4354,41 @@ Payment required immediately to avoid collection action. Contact us NOW.`
         return res.status(404).json({ message: "User not found" });
       }
 
-      // SECURITY FIX: Disable tenant switching to maintain tenant isolation
-      // Users can only stay within their assigned tenant to prevent unauthorized access
-      // This prevents the critical security vulnerability where owners could switch to ANY tenant
-      if (user.tenantId !== tenantId) {
-        console.warn(`🚨 SECURITY: User ${user.id} (role: ${user.role}) attempted to switch from tenant ${user.tenantId} to ${tenantId}`);
+      // Get accessible tenants (user's tenant + demo organization)
+      const allTenants = await storage.getAllTenants();
+      const accessibleTenantIds = [];
+      
+      // Add user's current tenant
+      if (user.tenantId) {
+        accessibleTenantIds.push(user.tenantId);
+      }
+      
+      // Add demo organization by fixed ID (security: prevents name-based privilege escalation)
+      const DEMO_TENANT_ID = "bfa5f70f-4af5-421a-9d05-26df67f45c15";
+      const demoTenant = allTenants.find(t => t.id === DEMO_TENANT_ID);
+      if (demoTenant) {
+        accessibleTenantIds.push(demoTenant.id);
+      }
+
+      // Check if the target tenant is accessible
+      if (!accessibleTenantIds.includes(tenantId)) {
+        console.warn(`🚨 SECURITY: User ${user.id} (role: ${user.role}) attempted to switch to unauthorized tenant ${tenantId}`);
         return res.status(403).json({ 
-          message: "Tenant switching is disabled to maintain security isolation. Users can only access their assigned organization." 
+          message: "Access denied. You can only switch between your organization and the demo organization." 
         });
       }
 
-      // If trying to switch to their current tenant, just return it
-      const currentTenant = await storage.getTenant(user.tenantId);
-      if (!currentTenant) {
-        return res.status(404).json({ message: "Current tenant not found" });
+      // Verify the target tenant exists
+      const targetTenant = await storage.getTenant(tenantId);
+      if (!targetTenant) {
+        return res.status(404).json({ message: "Target organization not found" });
       }
 
-      console.log(`🔒 Security: User ${user.id} verified access to their assigned tenant ${tenantId}`);
-      res.json(currentTenant);
+      // Update user's tenantId
+      await storage.updateUser(user.id, { tenantId });
+      
+      console.log(`🔒 Security: User ${user.id} successfully switched to tenant ${tenantId} (${targetTenant.name})`);
+      res.json(targetTenant);
     } catch (error) {
       console.error("Error in tenant switch request:", error);
       if (error instanceof z.ZodError) {
