@@ -180,9 +180,8 @@ export default function Invoices() {
           matchesStatus = displayStatus === statusFilter;
         }
       } else {
-        // For "all" filter, exclude held invoices (they have their own filter)
-        const isHeld = heldInvoices.has(invoice.id);
-        if (isHeld) return false;
+        // For "all" filter, include held invoices
+        // No additional filtering needed for "all" - show everything
       }
       
       return matchesSearch && matchesStatus;
