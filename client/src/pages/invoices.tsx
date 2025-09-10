@@ -146,11 +146,31 @@ export default function Invoices() {
     }
   };
 
+  // Helper function to calculate invoice display status
+  const getInvoiceDisplayStatus = (invoice: any) => {
+    if (invoice.status === 'paid') return 'paid';
+    
+    // Check if invoice is overdue (past due date and not paid)
+    const dueDate = new Date(invoice.dueDate);
+    const today = new Date();
+    if (dueDate < today && invoice.status !== 'paid') {
+      return 'overdue';
+    }
+    
+    return 'pending';
+  };
+
   const filteredAndSortedInvoices = (invoices as any[])
     .filter((invoice: any) => {
       const matchesSearch = invoice.invoiceNumber.toLowerCase().includes(search.toLowerCase()) ||
                            invoice.contact?.companyName?.toLowerCase().includes(search.toLowerCase());
-      const matchesStatus = statusFilter === "all" || invoice.status === statusFilter;
+      
+      let matchesStatus = true;
+      if (statusFilter !== "all") {
+        const displayStatus = getInvoiceDisplayStatus(invoice);
+        matchesStatus = displayStatus === statusFilter;
+      }
+      
       return matchesSearch && matchesStatus;
     })
     .sort((a: any, b: any) => {
@@ -1467,7 +1487,7 @@ export default function Invoices() {
                             </div>
                           </td>
                           <td className="py-2 w-52">
-                            {getStatusBadge(invoice.status)}
+                            {getStatusBadge(getInvoiceDisplayStatus(invoice))}
                           </td>
                           <td className="py-2 w-72" data-testid={`text-next-action-${invoice.id}`}>
                             <div className="flex items-center space-x-3">
@@ -1724,7 +1744,7 @@ export default function Invoices() {
                     <div className="mt-4">
                       <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Status</label>
                       <div className="mt-1">
-                        {getStatusBadge(selectedInvoice.status)}
+                        {getStatusBadge(getInvoiceDisplayStatus(selectedInvoice))}
                       </div>
                     </div>
                     <div className="mt-4">
