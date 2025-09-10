@@ -39,6 +39,7 @@ export function getSession() {
     cookie: {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
       maxAge: sessionTtl,
     },
   });
@@ -222,7 +223,7 @@ const createDemoUserSession = async (req: any) => {
     console.log("✅ Created demo user for development mode");
   }
   
-  // Inject demo session
+  // Inject demo session (don't override Passport methods)
   req.user = {
     claims: {
       sub: demoUserId,
@@ -235,11 +236,6 @@ const createDemoUserSession = async (req: any) => {
     refresh_token: "demo-refresh-token",
     expires_at: Math.floor(Date.now() / 1000) + 86400, // Expires in 24 hours
   };
-  
-  // Mock passport methods
-  req.isAuthenticated = () => true;
-  req.login = (user: any, callback: Function) => callback(null);
-  req.logout = (callback: Function) => callback();
   
   return true;
 };
