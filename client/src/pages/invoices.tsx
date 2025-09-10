@@ -1312,10 +1312,34 @@ export default function Invoices() {
                                             <DropdownMenuItem
                                               onClick={() => sendCustomerEmailMutation.mutate(contact.id)}
                                               disabled={sendCustomerEmailMutation.isPending}
-                                              data-testid={`email-customer-${contact.id}`}
+                                              data-testid={`email-general-chase-${contact.id}`}
                                             >
                                               <Mail className="h-4 w-4 mr-2" />
-                                              Send Email
+                                              General Chase
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem
+                                              onClick={() => {
+                                                toast({
+                                                  title: "Invoice Copy",
+                                                  description: "Invoice copy functionality will be available soon.",
+                                                });
+                                              }}
+                                              data-testid={`email-invoice-copy-${contact.id}`}
+                                            >
+                                              <FileText className="h-4 w-4 mr-2" />
+                                              Send Invoice Copy
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem
+                                              onClick={() => {
+                                                toast({
+                                                  title: "Thank You Message",
+                                                  description: "Thank you message functionality will be available soon.",
+                                                });
+                                              }}
+                                              data-testid={`email-thank-you-${contact.id}`}
+                                            >
+                                              <CheckCircle className="h-4 w-4 mr-2" />
+                                              Thank You Message
                                             </DropdownMenuItem>
                                           </>
                                         )}
@@ -1333,10 +1357,22 @@ export default function Invoices() {
                                                   description: "SMS messaging will be available soon.",
                                                 });
                                               }}
-                                              data-testid={`sms-customer-${contact.id}`}
+                                              data-testid={`sms-general-reminder-${contact.id}`}
                                             >
                                               <MessageSquare className="h-4 w-4 mr-2" />
-                                              Send SMS
+                                              General Reminder
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem
+                                              onClick={() => {
+                                                toast({
+                                                  title: "SMS Integration",
+                                                  description: "SMS messaging will be available soon.",
+                                                });
+                                              }}
+                                              data-testid={`sms-thank-you-${contact.id}`}
+                                            >
+                                              <CheckCircle className="h-4 w-4 mr-2" />
+                                              Thank You SMS
                                             </DropdownMenuItem>
                                           </>
                                         )}
