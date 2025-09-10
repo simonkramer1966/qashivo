@@ -353,7 +353,7 @@ export default function NewSidebar() {
 
     {/* Organization Selection Modal */}
     <Dialog open={showOrgModal} onOpenChange={setShowOrgModal}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="w-64 max-w-none">
         <DialogHeader>
           <DialogTitle className="sr-only">Change Organisation</DialogTitle>
           <button
