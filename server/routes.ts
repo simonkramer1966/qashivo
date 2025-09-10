@@ -1,5 +1,6 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
+import crypto from "crypto";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated, isOwner } from "./replitAuth";
 import { 
@@ -5144,6 +5145,290 @@ ${tenant.name}
         error: error.message,
         status: error.status 
       });
+    }
+  });
+
+  // Health Dashboard API endpoints
+  app.get('/api/health/dashboard', isAuthenticated, async (req, res) => {
+    try {
+      const userId = (req as any).user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.tenantId) {
+        return res.status(400).json({ error: 'No tenant found' });
+      }
+
+      // Import health analyzer service
+      const { InvoiceHealthAnalyzer } = await import('./services/invoiceHealthAnalyzer');
+      const healthAnalyzer = new InvoiceHealthAnalyzer();
+
+      // Get recent invoices for health analysis
+      const recentInvoices = await storage.getInvoices(user.tenantId, 50);
+      
+      // Calculate aggregate health metrics
+      const healthMetrics = {
+        totalInvoices: recentInvoices.length,
+        healthyInvoices: 0,
+        atRiskInvoices: 0,
+        criticalInvoices: 0,
+        averageHealthScore: 0,
+        totalOutstanding: 0,
+        predictedCollectionRate: 0
+      };
+
+      // Process each invoice for health scoring
+      const invoiceHealthScores = [];
+      for (const invoice of recentInvoices.slice(0, 10)) { // Limit to 10 for performance
+        try {
+          const healthAnalysis = await healthAnalyzer.analyzeInvoice(invoice.id, user.tenantId);
+          
+          if (!healthAnalysis) {
+            console.warn(`No health analysis returned for invoice ${invoice.id}`);
+            continue;
+          }
+          
+          const paymentLikelihood = Math.round(healthAnalysis.paymentProbability * 100);
+          
+          invoiceHealthScores.push({
+            invoiceId: invoice.id,
+            invoiceNumber: invoice.invoiceNumber,
+            customerName: invoice.contact?.name || 'Unknown Contact',
+            amount: invoice.amount,
+            dueDate: invoice.dueDate,
+            status: invoice.status,
+            healthScore: healthAnalysis.healthScore,
+            riskLevel: healthAnalysis.healthStatus,
+            keyRiskFactors: healthAnalysis.recommendedActions?.slice(0, 3) || [],
+            paymentLikelihood: paymentLikelihood
+          });
+
+          // Update aggregate metrics
+          if (healthAnalysis.healthScore >= 70) healthMetrics.healthyInvoices++;
+          else if (healthAnalysis.healthScore >= 40) healthMetrics.atRiskInvoices++;
+          else healthMetrics.criticalInvoices++;
+
+          healthMetrics.totalOutstanding += Number(invoice.amount);
+        } catch (error) {
+          console.error(`Error analyzing invoice ${invoice.id}:`, error);
+        }
+      }
+
+      // Calculate averages
+      if (invoiceHealthScores.length > 0) {
+        healthMetrics.averageHealthScore = Math.round(
+          invoiceHealthScores.reduce((sum, score) => sum + score.healthScore, 0) / invoiceHealthScores.length
+        );
+        healthMetrics.predictedCollectionRate = Math.round(
+          invoiceHealthScores.reduce((sum, score) => sum + score.paymentLikelihood, 0) / invoiceHealthScores.length
+        );
+      }
+
+      res.json({
+        metrics: healthMetrics,
+        invoiceHealthScores: invoiceHealthScores.sort((a, b) => a.healthScore - b.healthScore),
+        lastUpdated: new Date().toISOString()
+      });
+    } catch (error: any) {
+      console.error('Health dashboard error:', error);
+      res.status(500).json({ error: 'Failed to generate health dashboard data' });
+    }
+  });
+
+  app.get('/api/health/invoice/:invoiceId', isAuthenticated, async (req, res) => {
+    try {
+      const userId = (req as any).user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.tenantId) {
+        return res.status(400).json({ error: 'No tenant found' });
+      }
+
+      const { invoiceId } = req.params;
+      const invoice = await storage.getInvoice(invoiceId, user.tenantId);
+      
+      if (!invoice) {
+        return res.status(404).json({ error: 'Invoice not found' });
+      }
+
+      // Import health analyzer service
+      const { InvoiceHealthAnalyzer } = await import('./services/invoiceHealthAnalyzer');
+      const healthAnalyzer = new InvoiceHealthAnalyzer();
+
+      // Get detailed health analysis
+      const healthAnalysis = await healthAnalyzer.analyzeInvoice(invoice.id, user.tenantId);
+
+      if (!healthAnalysis) {
+        return res.status(500).json({ error: 'Failed to analyze invoice health' });
+      }
+
+      res.json({
+        invoice: {
+          id: invoice.id,
+          invoiceNumber: invoice.invoiceNumber,
+          customerName: invoice.contact?.name || 'Unknown Contact',
+          amount: invoice.amount,
+          dueDate: invoice.dueDate,
+          status: invoice.status,
+          description: invoice.description
+        },
+        healthAnalysis: {
+          healthScore: healthAnalysis.healthScore,
+          riskLevel: healthAnalysis.healthStatus,
+          paymentProbability: healthAnalysis.paymentProbability,
+          recommendedActions: healthAnalysis.recommendedActions,
+          analysis: healthAnalysis
+        }
+      });
+    } catch (error: any) {
+      console.error('Invoice health analysis error:', error);
+      res.status(500).json({ error: 'Failed to analyze invoice health' });
+    }
+  });
+
+  app.post('/api/health/bulk-analyze', isAuthenticated, async (req, res) => {
+    try {
+      const userId = (req as any).user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.tenantId) {
+        return res.status(400).json({ error: 'No tenant found' });
+      }
+
+      // Import health analyzer service
+      const { InvoiceHealthAnalyzer } = await import('./services/invoiceHealthAnalyzer');
+      const healthAnalyzer = new InvoiceHealthAnalyzer();
+
+      // Get all invoices for analysis
+      const allInvoices = await storage.getInvoices(user.tenantId);
+      const results = [];
+      
+      console.log(`Starting bulk health analysis for ${allInvoices.length} invoices...`);
+
+      // Process in batches to avoid overwhelming the AI service
+      const batchSize = 5;
+      for (let i = 0; i < allInvoices.length; i += batchSize) {
+        const batch = allInvoices.slice(i, i + batchSize);
+        
+        for (const invoice of batch) {
+          try {
+            const healthAnalysis = await healthAnalyzer.analyzeInvoice(invoice.id, user.tenantId);
+            
+            if (!healthAnalysis) {
+              console.warn(`No health analysis returned for invoice ${invoice.id}`);
+              results.push({
+                invoiceId: invoice.id,
+                invoiceNumber: invoice.invoiceNumber,
+                error: 'Analysis failed - no result returned'
+              });
+              continue;
+            }
+            
+            // Store the health score in database with correct field mappings
+            await storage.createInvoiceHealthScore({
+              tenantId: user.tenantId,
+              invoiceId: invoice.id,
+              contactId: invoice.contactId, // Required field that was missing
+              overallRiskScore: healthAnalysis.overallRiskScore,
+              paymentProbability: healthAnalysis.paymentProbability.toString(),
+              timeRiskScore: healthAnalysis.timeRiskScore,
+              amountRiskScore: healthAnalysis.amountRiskScore,
+              customerRiskScore: healthAnalysis.customerRiskScore,
+              communicationRiskScore: healthAnalysis.communicationRiskScore,
+              healthStatus: healthAnalysis.healthStatus,
+              healthScore: healthAnalysis.healthScore,
+              predictedPaymentDate: healthAnalysis.predictedPaymentDate,
+              collectionDifficulty: healthAnalysis.collectionDifficulty,
+              recommendedActions: healthAnalysis.recommendedActions || [],
+              aiConfidence: healthAnalysis.aiConfidence.toString(),
+              modelVersion: "1.0",
+              lastAnalysis: new Date(),
+              trends: healthAnalysis.trends || null
+            });
+
+            results.push({
+              invoiceId: invoice.id,
+              invoiceNumber: invoice.invoiceNumber,
+              healthScore: healthAnalysis.healthScore,
+              riskLevel: healthAnalysis.healthStatus
+            });
+          } catch (error) {
+            console.error(`Error analyzing invoice ${invoice.id}:`, error);
+            results.push({
+              invoiceId: invoice.id,
+              invoiceNumber: invoice.invoiceNumber,
+              error: 'Analysis failed'
+            });
+          }
+        }
+
+        // Brief pause between batches
+        if (i + batchSize < allInvoices.length) {
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+      }
+
+      console.log(`Bulk health analysis completed: ${results.length} invoices processed`);
+
+      res.json({
+        success: true,
+        processedCount: results.length,
+        results: results
+      });
+    } catch (error: any) {
+      console.error('Bulk health analysis error:', error);
+      res.status(500).json({ error: 'Failed to perform bulk health analysis' });
+    }
+  });
+
+  app.get('/api/health/analytics/trends', isAuthenticated, async (req, res) => {
+    try {
+      const userId = (req as any).user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.tenantId) {
+        return res.status(400).json({ error: 'No tenant found' });
+      }
+
+      // Get health scores from the last 30 days
+      const healthScores = await storage.getInvoiceHealthScores(user.tenantId);
+      
+      // Group by date and calculate daily averages
+      const dailyAverages = healthScores.reduce((acc: any, score) => {
+        const date = score.lastAnalysis.toISOString().split('T')[0];
+        if (!acc[date]) {
+          acc[date] = { total: 0, count: 0, scores: [] };
+        }
+        acc[date].total += score.healthScore;
+        acc[date].count += 1;
+        acc[date].scores.push(score.healthScore);
+        return acc;
+      }, {});
+
+      const trends = Object.entries(dailyAverages).map(([date, data]: [string, any]) => ({
+        date,
+        averageScore: Math.round(data.total / data.count),
+        invoiceCount: data.count,
+        scoreDistribution: {
+          healthy: data.scores.filter((s: number) => s >= 70).length,
+          atRisk: data.scores.filter((s: number) => s >= 40 && s < 70).length,
+          critical: data.scores.filter((s: number) => s < 40).length
+        }
+      })).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+      res.json({
+        trends,
+        summary: {
+          totalAnalyzed: healthScores.length,
+          averageHealthScore: healthScores.length > 0 
+            ? Math.round(healthScores.reduce((sum, score) => sum + score.healthScore, 0) / healthScores.length)
+            : 0,
+          riskDistribution: {
+            healthy: healthScores.filter(s => s.healthStatus === 'healthy').length,
+            at_risk: healthScores.filter(s => s.healthStatus === 'at_risk').length,
+            critical: healthScores.filter(s => s.healthStatus === 'critical').length,
+            emergency: healthScores.filter(s => s.healthStatus === 'emergency').length
+          }
+        }
+      });
+    } catch (error: any) {
+      console.error('Health analytics trends error:', error);
+      res.status(500).json({ error: 'Failed to get health analytics trends' });
     }
   });
 

@@ -30,6 +30,7 @@ import Demo from "@/pages/demo";
 import Subscribe from "@/pages/subscribe";
 import Profile from "@/pages/Profile";
 import OwnerDashboard from "@/pages/owner-dashboard";
+import HealthDashboard from "@/pages/HealthDashboard";
 import { useAuth } from "@/hooks/useAuth";
 
 function Router() {
@@ -76,6 +77,7 @@ function Router() {
           <Route path="/reports" component={Reports} />
           <Route path="/settings" component={Settings} />
           <Route path="/profile" component={Profile} />
+          <Route path="/health" component={HealthDashboard} />
           <Route path="/ui-choices" component={UIChoices} />
           <Route path="/ui-xero" component={UIXero} />
           <Route path="/ui-quickbooks" component={UIQuickBooks} />
