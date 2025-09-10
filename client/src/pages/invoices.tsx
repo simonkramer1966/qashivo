@@ -23,7 +23,7 @@ export default function Invoices() {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState("invoices");
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("overdue");
   const [invClientSort, setInvClientSort] = useState<string>("inv-asc");
   const [dueDateAgeSort, setDueDateAgeSort] = useState<string>("due-date-asc");
   const [nextActionSort, setNextActionSort] = useState<string>("action-date-asc");
