@@ -5,6 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
+import NewSidebar from "@/components/layout/new-sidebar";
+import Header from "@/components/layout/header";
 import { 
   TrendingUp, 
   TrendingDown, 
@@ -214,46 +216,52 @@ export default function HealthDashboard() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-teal-50 p-8">
-        <div className="max-w-7xl mx-auto">
-          <Card className="bg-red-50 border-red-200">
-            <CardHeader>
-              <CardTitle className="text-red-800 flex items-center gap-2">
-                <AlertTriangle className="h-5 w-5" />
-                Error Loading Health Dashboard
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-red-700">
-                Failed to load health dashboard data. Please try again.
-              </p>
-              <Button 
-                onClick={() => refetch()} 
-                className="mt-4 bg-red-600 hover:bg-red-700"
-                data-testid="button-retry"
-              >
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Retry
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
+      <div className="flex h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-teal-50">
+        <NewSidebar />
+        <main className="flex-1 overflow-y-auto">
+          <Header 
+            title="Invoice Health Dashboard" 
+            subtitle="AI-powered risk assessment and payment likelihood prediction" 
+          />
+          <div className="p-8">
+            <Card className="bg-red-50 border-red-200">
+              <CardHeader>
+                <CardTitle className="text-red-800 flex items-center gap-2">
+                  <AlertTriangle className="h-5 w-5" />
+                  Error Loading Health Dashboard
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-red-700">
+                  Failed to load health dashboard data. Please try again.
+                </p>
+                <Button 
+                  onClick={() => refetch()} 
+                  className="mt-4 bg-red-600 hover:bg-red-700"
+                  data-testid="button-retry"
+                >
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Retry
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        </main>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-teal-50 p-8">
-      <div className="max-w-7xl mx-auto space-y-8">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Invoice Health Dashboard</h1>
-            <p className="text-gray-600 mt-1">
-              AI-powered risk assessment and payment likelihood prediction
-            </p>
-          </div>
-          <div className="flex items-center gap-3">
+    <div className="flex h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-teal-50">
+      <NewSidebar />
+      <main className="flex-1 overflow-y-auto">
+        <Header 
+          title="Invoice Health Dashboard" 
+          subtitle="AI-powered risk assessment and payment likelihood prediction" 
+        />
+        <div className="p-8 space-y-8">
+          {/* Action Buttons */}
+          <div className="flex justify-end gap-3">
             <Button 
               variant="outline" 
               onClick={() => refetch()}
@@ -272,7 +280,6 @@ export default function HealthDashboard() {
               Run Full Analysis
             </Button>
           </div>
-        </div>
 
         {/* Loading State */}
         {isLoading && (
@@ -459,7 +466,8 @@ export default function HealthDashboard() {
             </div>
           </>
         )}
-      </div>
+        </div>
+      </main>
     </div>
   );
 }
