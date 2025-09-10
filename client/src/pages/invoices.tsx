@@ -282,11 +282,11 @@ export default function Invoices() {
                             </div>
                           </td>
                           <td className="py-4">
-                            <div className="font-medium text-foreground" data-testid={`text-contact-name-${invoice.id}`}>
-                              {invoice.contact?.name || 'Unknown Contact'}
+                            <div className="font-medium text-foreground" data-testid={`text-company-name-${invoice.id}`}>
+                              {invoice.contact?.companyName || 'Unknown Company'}
                             </div>
-                            <div className="text-sm text-muted-foreground" data-testid={`text-contact-email-${invoice.id}`}>
-                              {invoice.contact?.email || 'No email'}
+                            <div className="text-sm text-muted-foreground" data-testid={`text-contact-name-${invoice.id}`}>
+                              {invoice.contact?.name || 'No contact name'}
                             </div>
                           </td>
                           <td className="py-4 font-medium text-foreground" data-testid={`text-amount-${invoice.id}`}>
