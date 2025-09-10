@@ -1140,6 +1140,121 @@ export interface VoiceStateConfig {
   };
 }
 
+// Invoice Health Scores table for AI-powered risk assessment
+export const invoiceHealthScores = pgTable("invoice_health_scores", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  invoiceId: varchar("invoice_id").notNull().references(() => invoices.id),
+  contactId: varchar("contact_id").notNull().references(() => contacts.id),
+  
+  // AI-powered risk scoring (0-100, where 100 is highest risk)
+  overallRiskScore: integer("overall_risk_score").notNull(), // 0-100
+  paymentProbability: decimal("payment_probability", { precision: 5, scale: 2 }).notNull(), // 0.00-1.00
+  
+  // Component risk scores
+  timeRiskScore: integer("time_risk_score").notNull(), // Based on days overdue, payment terms
+  amountRiskScore: integer("amount_risk_score").notNull(), // Based on invoice amount vs customer history
+  customerRiskScore: integer("customer_risk_score").notNull(), // Based on customer payment history
+  communicationRiskScore: integer("communication_risk_score").notNull(), // Based on responsiveness
+  
+  // Health indicators
+  healthStatus: varchar("health_status").notNull(), // healthy, at_risk, critical, emergency
+  healthScore: integer("health_score").notNull(), // 0-100, where 100 is healthiest
+  
+  // Predictive analytics
+  predictedPaymentDate: timestamp("predicted_payment_date"),
+  collectionDifficulty: varchar("collection_difficulty").notNull(), // easy, moderate, difficult, very_difficult
+  recommendedActions: jsonb("recommended_actions"), // AI-generated action recommendations
+  
+  // Confidence and metadata
+  aiConfidence: decimal("ai_confidence", { precision: 5, scale: 2 }).notNull(), // 0.00-1.00
+  modelVersion: varchar("model_version").notNull().default("1.0"),
+  lastAnalysis: timestamp("last_analysis").notNull(),
+  trends: jsonb("trends"), // Historical trend analysis
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Health Analytics Snapshots for trend tracking
+export const healthAnalyticsSnapshots = pgTable("health_analytics_snapshots", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  
+  // Snapshot metadata
+  snapshotDate: timestamp("snapshot_date").notNull(),
+  snapshotType: varchar("snapshot_type").notNull(), // daily, weekly, monthly
+  
+  // Overall portfolio health metrics
+  totalInvoicesAnalyzed: integer("total_invoices_analyzed").notNull(),
+  averageHealthScore: decimal("average_health_score", { precision: 5, scale: 2 }).notNull(),
+  averageRiskScore: decimal("average_risk_score", { precision: 5, scale: 2 }).notNull(),
+  
+  // Risk distribution
+  healthyCount: integer("healthy_count").notNull(),
+  atRiskCount: integer("at_risk_count").notNull(),
+  criticalCount: integer("critical_count").notNull(),
+  emergencyCount: integer("emergency_count").notNull(),
+  
+  // Collection difficulty distribution
+  easyCollectionCount: integer("easy_collection_count").notNull(),
+  moderateCollectionCount: integer("moderate_collection_count").notNull(),
+  difficultCollectionCount: integer("difficult_collection_count").notNull(),
+  veryDifficultCollectionCount: integer("very_difficult_collection_count").notNull(),
+  
+  // Predictive metrics
+  totalValueAtRisk: decimal("total_value_at_risk", { precision: 12, scale: 2 }).notNull(),
+  predictedCollectionRate: decimal("predicted_collection_rate", { precision: 5, scale: 2 }).notNull(),
+  averagePredictedDaysToPayment: decimal("average_predicted_days_to_payment", { precision: 5, scale: 2 }),
+  
+  // AI performance metrics
+  modelAccuracy: decimal("model_accuracy", { precision: 5, scale: 2 }),
+  predictionConfidence: decimal("prediction_confidence", { precision: 5, scale: 2 }).notNull(),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Table relations for health scoring
+export const invoiceHealthScoresRelations = relations(invoiceHealthScores, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [invoiceHealthScores.tenantId],
+    references: [tenants.id],
+  }),
+  invoice: one(invoices, {
+    fields: [invoiceHealthScores.invoiceId],
+    references: [invoices.id],
+  }),
+  contact: one(contacts, {
+    fields: [invoiceHealthScores.contactId],
+    references: [contacts.id],
+  }),
+}));
+
+export const healthAnalyticsSnapshotsRelations = relations(healthAnalyticsSnapshots, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [healthAnalyticsSnapshots.tenantId],
+    references: [tenants.id],
+  }),
+}));
+
+// Zod schemas for health scoring
+export const insertInvoiceHealthScoreSchema = createInsertSchema(invoiceHealthScores).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertHealthAnalyticsSnapshotSchema = createInsertSchema(healthAnalyticsSnapshots).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Types for health scoring
+export type InvoiceHealthScore = typeof invoiceHealthScores.$inferSelect;
+export type InsertInvoiceHealthScore = z.infer<typeof insertInvoiceHealthScoreSchema>;
+export type HealthAnalyticsSnapshot = typeof healthAnalyticsSnapshots.$inferSelect;
+export type InsertHealthAnalyticsSnapshot = z.infer<typeof insertHealthAnalyticsSnapshotSchema>;
+
 // Enhanced WorkflowNode type for the frontend
 export interface WorkflowNodeWithConfig extends Omit<WorkflowNode, 'config'> {
   config: NodeConfigUnion;
