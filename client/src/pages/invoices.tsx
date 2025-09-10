@@ -1629,32 +1629,6 @@ export default function Invoices() {
                               ) : (
                                 <div className="h-7 w-8" />
                               )}
-                              <Button 
-                                variant="outline" 
-                                size="sm"
-                                onClick={() => {
-                                  setPaymentPlanInvoice(invoice);
-                                  setShowPaymentPlanDialog(true);
-                                }}
-                                className="border-gray-200 text-gray-300 hover:bg-gray-50 h-7 w-8 p-0 text-xs font-medium"
-                                data-testid={`button-payment-plan-${invoice.id}`}
-                                title="Payment Plan"
-                              >
-                                PP
-                              </Button>
-                              <Button 
-                                variant="outline" 
-                                size="sm"
-                                onClick={() => {
-                                  setDisputeInvoice(invoice);
-                                  setShowDisputeDialog(true);
-                                }}
-                                className="border-gray-200 text-gray-300 hover:bg-gray-50 h-7 w-8 p-0 text-xs font-medium"
-                                data-testid={`button-dispute-${invoice.id}`}
-                                title="Dispute"
-                              >
-                                DI
-                              </Button>
                               <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
                                   <Button 
@@ -1662,7 +1636,7 @@ export default function Invoices() {
                                     size="sm"
                                     className="border-[#17B6C3]/20 text-[#17B6C3] hover:bg-[#17B6C3]/5 h-7 w-7 p-0"
                                     data-testid={`button-actions-${invoice.id}`}
-                                    title="Communication options"
+                                    title="More actions"
                                   >
                                     <MoreHorizontal className="h-3 w-3" />
                                   </Button>
@@ -1767,6 +1741,31 @@ export default function Invoices() {
                                       </DropdownMenuItem>
                                     </>
                                   )}
+                                  
+                                  {/* Actions */}
+                                  <div className="px-2 py-1.5 text-xs font-medium text-gray-500 border-b border-gray-100">
+                                    Actions
+                                  </div>
+                                  <DropdownMenuItem
+                                    onClick={() => {
+                                      setPaymentPlanInvoice(invoice);
+                                      setShowPaymentPlanDialog(true);
+                                    }}
+                                    data-testid={`payment-plan-${invoice.id}`}
+                                  >
+                                    <Calendar className="h-4 w-4 mr-2" />
+                                    Payment Plan
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={() => {
+                                      setDisputeInvoice(invoice);
+                                      setShowDisputeDialog(true);
+                                    }}
+                                    data-testid={`dispute-${invoice.id}`}
+                                  >
+                                    <AlertCircle className="h-4 w-4 mr-2" />
+                                    Dispute
+                                  </DropdownMenuItem>
                                   
                                   {/* View History */}
                                   <div className="px-2 py-1.5 text-xs font-medium text-gray-500 border-b border-gray-100">
