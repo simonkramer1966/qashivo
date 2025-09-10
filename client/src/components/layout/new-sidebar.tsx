@@ -215,7 +215,7 @@ export default function NewSidebar() {
                   <ChevronDown className="h-4 w-4 text-gray-400" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-80 bg-white border-gray-200" align="start" side="bottom">
+              <DropdownMenuContent className="w-full bg-white border-gray-200" align="start" side="bottom">
                 {/* Change Organisation - Regular menu item that opens modal */}
                 <DropdownMenuItem 
                   className="pl-4 pr-3 py-3 cursor-pointer text-[#17B6C3] hover:bg-gray-50"
@@ -352,7 +352,7 @@ export default function NewSidebar() {
 
     {/* Organization Selection Modal */}
     <Dialog open={showOrgModal} onOpenChange={setShowOrgModal}>
-      <DialogContent className="w-64 max-w-none">
+      <DialogContent className="sm:max-w-md bg-white">
         <DialogHeader>
           <DialogTitle className="sr-only">Change Organisation</DialogTitle>
           <button
