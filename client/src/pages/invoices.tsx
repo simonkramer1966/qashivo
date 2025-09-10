@@ -329,6 +329,60 @@ export default function Invoices() {
                               >
                                 <Eye className="h-4 w-4 text-[#17B6C3]" />
                               </Button>
+                              
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm" 
+                                    className="h-8 w-8 p-0 hover:bg-[#17B6C3]/10"
+                                    data-testid={`button-menu-${invoice.id}`}
+                                  >
+                                    <MoreHorizontal className="h-4 w-4 text-[#17B6C3]" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="bg-white border-gray-200">
+                                  <DropdownMenuItem 
+                                    onClick={() => openContactHistory(invoice)}
+                                    data-testid={`menu-view-history-${invoice.id}`}
+                                  >
+                                    <Eye className="mr-2 h-4 w-4" />
+                                    View History
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem 
+                                    onClick={() => {
+                                      setPaymentPlanInvoice(invoice);
+                                      setShowPaymentPlanDialog(true);
+                                    }}
+                                    data-testid={`menu-payment-plan-${invoice.id}`}
+                                  >
+                                    <Calendar className="mr-2 h-4 w-4" />
+                                    Payment Plan
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem 
+                                    onClick={() => {
+                                      setDisputeInvoice(invoice);
+                                      setShowDisputeDialog(true);
+                                    }}
+                                    data-testid={`menu-dispute-${invoice.id}`}
+                                  >
+                                    <AlertCircle className="mr-2 h-4 w-4" />
+                                    Mark as Disputed
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem 
+                                    data-testid={`menu-hold-${invoice.id}`}
+                                  >
+                                    <Pause className="mr-2 h-4 w-4" />
+                                    {invoice.status === 'on-hold' ? 'Remove Hold' : 'Put on Hold'}
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem 
+                                    data-testid={`menu-mark-paid-${invoice.id}`}
+                                  >
+                                    <CheckCircle className="mr-2 h-4 w-4" />
+                                    Mark as Paid
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
                             </div>
                           </td>
                         </tr>
@@ -386,6 +440,135 @@ export default function Invoices() {
               ))}
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Payment Plan Dialog */}
+      <Dialog open={showPaymentPlanDialog} onOpenChange={setShowPaymentPlanDialog}>
+        <DialogContent className="max-w-2xl bg-white">
+          <DialogHeader>
+            <DialogTitle>Setup Payment Plan</DialogTitle>
+            <DialogDescription>
+              Create a payment plan for invoice {paymentPlanInvoice?.invoiceNumber} (£{Number(paymentPlanInvoice?.amount || 0).toLocaleString()})
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium">Number of Payments</label>
+                <Select defaultValue="3">
+                  <SelectTrigger className="bg-white border-gray-200">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white border-gray-200">
+                    <SelectItem value="2">2 payments</SelectItem>
+                    <SelectItem value="3">3 payments</SelectItem>
+                    <SelectItem value="4">4 payments</SelectItem>
+                    <SelectItem value="6">6 payments</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="text-sm font-medium">Payment Frequency</label>
+                <Select defaultValue="monthly">
+                  <SelectTrigger className="bg-white border-gray-200">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white border-gray-200">
+                    <SelectItem value="weekly">Weekly</SelectItem>
+                    <SelectItem value="monthly">Monthly</SelectItem>
+                    <SelectItem value="quarterly">Quarterly</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            
+            <div>
+              <label className="text-sm font-medium">First Payment Date</label>
+              <Input type="date" className="bg-white border-gray-200" />
+            </div>
+            
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <h4 className="font-medium mb-2">Payment Schedule Preview</h4>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span>Payment 1:</span>
+                  <span>£{Math.ceil(Number(paymentPlanInvoice?.amount || 0) / 3).toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Payment 2:</span>
+                  <span>£{Math.ceil(Number(paymentPlanInvoice?.amount || 0) / 3).toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Payment 3:</span>
+                  <span>£{Math.ceil(Number(paymentPlanInvoice?.amount || 0) / 3).toLocaleString()}</span>
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setShowPaymentPlanDialog(false)}>
+                Cancel
+              </Button>
+              <Button className="bg-[#17B6C3] hover:bg-[#1396A1] text-white">
+                Create Payment Plan
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dispute Dialog */}
+      <Dialog open={showDisputeDialog} onOpenChange={setShowDisputeDialog}>
+        <DialogContent className="max-w-2xl bg-white">
+          <DialogHeader>
+            <DialogTitle>Mark Invoice as Disputed</DialogTitle>
+            <DialogDescription>
+              Mark invoice {disputeInvoice?.invoiceNumber} as disputed and add details
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium">Dispute Reason</label>
+              <Select>
+                <SelectTrigger className="bg-white border-gray-200">
+                  <SelectValue placeholder="Select dispute reason" />
+                </SelectTrigger>
+                <SelectContent className="bg-white border-gray-200">
+                  <SelectItem value="service-quality">Service Quality Issue</SelectItem>
+                  <SelectItem value="billing-error">Billing Error</SelectItem>
+                  <SelectItem value="delivery-issue">Delivery Issue</SelectItem>
+                  <SelectItem value="unauthorized">Unauthorized Charge</SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div>
+              <label className="text-sm font-medium">Dispute Details</label>
+              <textarea 
+                className="w-full p-3 border border-gray-200 rounded-md resize-none bg-white" 
+                rows={4}
+                placeholder="Provide details about the dispute..."
+              />
+            </div>
+            
+            <div>
+              <label className="text-sm font-medium">Expected Resolution Date</label>
+              <Input type="date" className="bg-white border-gray-200" />
+            </div>
+            
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setShowDisputeDialog(false)}>
+                Cancel
+              </Button>
+              <Button className="bg-red-500 hover:bg-red-600 text-white">
+                Mark as Disputed
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
