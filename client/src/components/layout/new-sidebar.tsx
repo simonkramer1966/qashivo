@@ -238,7 +238,7 @@ export default function NewSidebar() {
                 </DropdownMenuSub>
                 
                 {/* Large Organization Card */}
-                <div className="p-4 border-b border-gray-100">
+                <div className="p-4">
                   <div className="flex items-center space-x-3">
                     <div className="w-12 h-12 rounded-lg bg-[#17B6C3] flex items-center justify-center text-white font-bold text-lg">
                       {getCompanyInitials(tenant?.settings?.companyName || tenant?.name || "")}
