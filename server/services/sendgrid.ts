@@ -96,66 +96,8 @@ export async function sendReminderEmail(
   fromEmail: string,
   customMessage?: string
 ): Promise<boolean> {
-  const subject = `Payment Reminder - Invoice ${invoiceData.invoiceNumber}`;
-  
-  const defaultMessage = `
-Dear ${invoiceData.contactName},
-
-We hope this message finds you well. We wanted to remind you that Invoice ${invoiceData.invoiceNumber} for $${invoiceData.amount} was due on ${invoiceData.dueDate} and is now ${invoiceData.daysPastDue} days overdue.
-
-We understand that sometimes invoices can be overlooked or there may be circumstances affecting payment. If you have any questions about this invoice or need to discuss payment arrangements, please don't hesitate to reach out to us.
-
-To make payment, you can:
-- Log into your account portal
-- Send a check to our mailing address
-- Call us to arrange payment over the phone
-
-We appreciate your prompt attention to this matter and value our business relationship.
-
-Best regards,
-Accounts Receivable Team
-  `.trim();
-
-  const htmlMessage = `
-<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-  <h2 style="color: #333;">Payment Reminder</h2>
-  
-  <p>Dear ${invoiceData.contactName},</p>
-  
-  <p>We hope this message finds you well. We wanted to remind you that:</p>
-  
-  <div style="background: #f8f9fa; padding: 20px; border-left: 4px solid #007bff; margin: 20px 0;">
-    <strong>Invoice #${invoiceData.invoiceNumber}</strong><br>
-    <strong>Amount:</strong> $${invoiceData.amount}<br>
-    <strong>Due Date:</strong> ${invoiceData.dueDate}<br>
-    <strong>Days Past Due:</strong> ${invoiceData.daysPastDue}
-  </div>
-  
-  <p>We understand that sometimes invoices can be overlooked or there may be circumstances affecting payment. If you have any questions about this invoice or need to discuss payment arrangements, please don't hesitate to reach out to us.</p>
-  
-  <div style="margin: 30px 0;">
-    <h3 style="color: #333;">Payment Options:</h3>
-    <ul>
-      <li>Log into your account portal</li>
-      <li>Send a check to our mailing address</li>
-      <li>Call us to arrange payment over the phone</li>
-    </ul>
-  </div>
-  
-  <p>We appreciate your prompt attention to this matter and value our business relationship.</p>
-  
-  <p>Best regards,<br>
-  <strong>Accounts Receivable Team</strong></p>
-</div>
-  `;
-
-  return await sendEmail({
-    to: invoiceData.contactEmail,
-    from: fromEmail || DEFAULT_FROM,
-    subject,
-    text: customMessage || defaultMessage,
-    html: customMessage ? undefined : htmlMessage,
-  });
+  // This function is deprecated - all email sending should use templates from Collections Workflow
+  throw new Error('sendReminderEmail is deprecated. Use template-based email sending instead.');
 }
 
 export async function sendBulkEmails(params: BulkEmailParams): Promise<{

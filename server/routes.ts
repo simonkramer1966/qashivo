@@ -2199,6 +2199,10 @@ Payment required immediately to avoid collection action. Contact us NOW.`
       let processedContent = defaultTemplate.content
         .replace(/\{\{first_name\}\}/g, invoice.contact.name?.split(' ')[0] || 'Valued Customer')
         .replace(/\{\{your_name\}\}/g, defaultSender.fromName || defaultSender.name || 'Accounts Receivable')
+        .replace(/\{\{invoice_number\}\}/g, invoice.invoiceNumber)
+        .replace(/\{\{amount\}\}/g, `£${Number(invoice.amount).toLocaleString()}`)
+        .replace(/\{\{due_date\}\}/g, new Date(invoice.dueDate).toLocaleDateString())
+        .replace(/\{\{days_overdue\}\}/g, daysOverdue.toString())
         .replace(/£X as unpaid/g, `£${Number(invoice.amount).toLocaleString()} as unpaid`)
         .replace(/£X due for payment now/g, `£${Number(invoice.amount).toLocaleString()} due for payment ${daysOverdue > 0 ? `${daysOverdue} days ago` : 'now'}`);
 
@@ -2293,6 +2297,10 @@ Payment required immediately to avoid collection action. Contact us NOW.`
           processedContent = templateToUse.content
             .replace(/\{\{first_name\}\}/g, invoice.contact.name?.split(' ')[0] || 'Valued Customer')
             .replace(/\{\{your_name\}\}/g, defaultSender.fromName || defaultSender.name || 'Accounts Receivable')
+            .replace(/\{\{invoice_number\}\}/g, invoice.invoiceNumber)
+            .replace(/\{\{amount\}\}/g, `£${Number(invoice.amount).toLocaleString()}`)
+            .replace(/\{\{due_date\}\}/g, new Date(invoice.dueDate).toLocaleDateString())
+            .replace(/\{\{days_overdue\}\}/g, daysOverdue.toString())
             .replace(/£X as unpaid/g, `£${Number(invoice.amount).toLocaleString()} as unpaid`)
             .replace(/£X due for payment now/g, `£${Number(invoice.amount).toLocaleString()} due for payment ${daysOverdue > 0 ? `${daysOverdue} days ago` : 'now'}`);
 
@@ -2495,7 +2503,9 @@ Payment required immediately to avoid collection action. Contact us NOW.`
       // Process template variables for summary
       let processedContent = defaultTemplate.content
         .replace(/\{\{first_name\}\}/g, contact.name?.split(' ')[0] || 'Valued Customer')
-        .replace(/\{\{your_name\}\}/g, defaultSender.fromName || defaultSender.name)
+        .replace(/\{\{your_name\}\}/g, defaultSender.fromName || defaultSender.name || 'Accounts Receivable')
+        .replace(/\{\{total_amount\}\}/g, `£${totalAmount.toLocaleString()}`)
+        .replace(/\{\{invoice_count\}\}/g, contactInvoices.length.toString())
         .replace(/£X as unpaid/g, `£${totalAmount.toLocaleString()} across ${contactInvoices.length} invoice${contactInvoices.length > 1 ? 's' : ''}`)
         .replace(/£X due for payment now/g, `£${totalAmount.toLocaleString()} total outstanding`);
 
