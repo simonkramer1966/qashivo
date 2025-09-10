@@ -89,7 +89,7 @@ function HealthMetricCard({ title, value, change, icon: Icon, color = "text-blue
   );
 }
 
-function InvoiceHealthList({ invoices }: { invoices: InvoiceHealthScore[] }) {
+function InvoiceHealthList({ invoices, isLoading }: { invoices: InvoiceHealthScore[]; isLoading?: boolean }) {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
   
@@ -110,6 +110,7 @@ function InvoiceHealthList({ invoices }: { invoices: InvoiceHealthScore[] }) {
         </CardTitle>
         <CardDescription>
           Invoices sorted by health score (lowest risk first) • Showing {startIndex + 1}-{Math.min(endIndex, invoices.length)} of {invoices.length}
+          {isLoading && <span className="text-blue-600 ml-2">• Refreshing AI analysis...</span>}
         </CardDescription>
       </CardHeader>
       <CardContent className="pt-0">
@@ -449,7 +450,7 @@ export default function HealthDashboard() {
 
             {/* Invoice Health Scores */}
             {healthData.invoiceHealthScores.length > 0 && (
-              <InvoiceHealthList invoices={healthData.invoiceHealthScores} />
+              <InvoiceHealthList invoices={healthData.invoiceHealthScores} isLoading={isLoading} />
             )}
 
             {/* Last Updated */}

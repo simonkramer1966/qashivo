@@ -1,5 +1,7 @@
 import OpenAI from "openai";
 import { storage } from "../storage";
+import { jobQueue } from "./jobQueue";
+import crypto from "crypto";
 import { 
   InvoiceHealthScore, 
   InsertInvoiceHealthScore,
@@ -7,8 +9,13 @@ import {
   InsertHealthAnalyticsSnapshot 
 } from "../../shared/schema";
 
+// Secure OpenAI initialization with proper error handling
+if (!process.env.OPENAI_API_KEY) {
+  console.error("❌ OPENAI_API_KEY is required for AI features");
+}
+
 const openai = new OpenAI({ 
-  apiKey: process.env.OPENAI_API_KEY || process.env.OPENAI_API_KEY_ENV_VAR || "default_key" 
+  apiKey: process.env.OPENAI_API_KEY 
 });
 
 interface InvoiceAnalysisData {
@@ -75,7 +82,95 @@ interface RiskAnalysisResult {
  * Core AI-powered risk scoring algorithm
  */
 export class InvoiceHealthAnalyzer {
-  private modelVersion = "1.0";
+  private modelVersion = "1.1"; // Updated for optimizations
+  private readonly CACHE_TTL_HOURS = 24; // Cache health scores for 24 hours
+
+  constructor() {
+    // Register background job handler for AI analysis
+    jobQueue.addHandler('analyze-invoice-health', this.handleBackgroundAnalysis.bind(this));
+  }
+
+  /**
+   * Get cached health scores for multiple invoices
+   */
+  async getCachedHealthScores(tenantId: string, invoiceIds: string[]): Promise<{
+    cached: InvoiceHealthScore[];
+    stale: string[];
+    missing: string[];
+  }> {
+    try {
+      const existingScores = await storage.getInvoiceHealthScores(tenantId);
+      const scoreMap = new Map(existingScores.map(score => [score.invoiceId, score]));
+      
+      const cached: InvoiceHealthScore[] = [];
+      const stale: string[] = [];
+      const missing: string[] = [];
+      
+      for (const invoiceId of invoiceIds) {
+        const score = scoreMap.get(invoiceId);
+        if (!score) {
+          missing.push(invoiceId);
+        } else if (this.isCacheStale(score)) {
+          stale.push(invoiceId);
+        } else {
+          cached.push(score);
+        }
+      }
+      
+      return { cached, stale, missing };
+    } catch (error) {
+      console.error('Error checking cached health scores:', error);
+      return { cached: [], stale: [], missing: invoiceIds };
+    }
+  }
+
+  /**
+   * Check if a cached health score is stale
+   */
+  private isCacheStale(score: InvoiceHealthScore): boolean {
+    if (!score.lastAnalysis) return true;
+    
+    const ageHours = (Date.now() - new Date(score.lastAnalysis).getTime()) / (1000 * 60 * 60);
+    return ageHours > this.CACHE_TTL_HOURS;
+  }
+
+  /**
+   * Generate input hash for cache invalidation
+   */
+  private generateInputHash(invoiceData: any): string {
+    const key = JSON.stringify({
+      amount: invoiceData.amount,
+      dueDate: invoiceData.dueDate,
+      status: invoiceData.status,
+      reminderCount: invoiceData.reminderCount,
+      modelVersion: this.modelVersion
+    });
+    return crypto.createHash('md5').update(key).digest('hex');
+  }
+
+  /**
+   * Background job handler for AI analysis
+   */
+  private async handleBackgroundAnalysis(job: any): Promise<void> {
+    const { invoiceId, tenantId } = job.data;
+    console.log(`🔍 Background analysis for invoice ${invoiceId}`);
+    
+    const result = await this.analyzeInvoice(invoiceId, tenantId);
+    if (result) {
+      await this.persistHealthScore(invoiceId, tenantId, result);
+      console.log(`💾 Persisted health score for invoice ${invoiceId}`);
+    }
+  }
+
+  /**
+   * Enqueue background analysis for stale/missing scores
+   */
+  enqueueAnalysis(invoiceIds: string[], tenantId: string): void {
+    for (const invoiceId of invoiceIds) {
+      jobQueue.enqueue('analyze-invoice-health', { invoiceId, tenantId });
+    }
+    console.log(`📋 Enqueued ${invoiceIds.length} invoices for background analysis`);
+  }
 
   /**
    * Analyze a single invoice and generate comprehensive health scoring
@@ -106,7 +201,7 @@ export class InvoiceHealthAnalyzer {
         communicationRisk
       });
 
-      // Get AI-enhanced insights
+      // Get AI-enhanced insights (skip in background processing if API unavailable)
       const aiInsights = await this.getAIEnhancedInsights(analysisData, {
         timeRisk,
         amountRisk,
@@ -347,12 +442,17 @@ Provide analysis in JSON format:
 }
       `;
 
+      // Skip AI processing if no API key available
+      if (!process.env.OPENAI_API_KEY) {
+        return this.getFallbackInsights(scores);
+      }
+
       const response = await openai.chat.completions.create({
-        model: "gpt-4o",
+        model: "gpt-4o-mini", // Faster model
         messages: [
           {
             role: "system",
-            content: "You are an expert accounts receivable analyst with 15+ years of experience in debt collection and payment behavior prediction."
+            content: "Expert AR analyst. Return JSON with payment prediction."
           },
           {
             role: "user",
@@ -360,6 +460,8 @@ Provide analysis in JSON format:
           }
         ],
         response_format: { type: "json_object" },
+        max_tokens: 300, // Limit response size
+        temperature: 0.2, // More deterministic
       });
 
       const result = JSON.parse(response.choices[0].message.content || '{}');
@@ -381,18 +483,58 @@ Provide analysis in JSON format:
 
     } catch (error) {
       console.error("Error getting AI insights:", error);
-      return {
-        paymentProbability: 0.5,
-        predictedPaymentDate: undefined,
-        collectionDifficulty: 'moderate',
-        recommendedActions: [],
-        confidence: 0.5,
-        trends: {
-          riskTrend: 'stable',
-          paymentPattern: 'Analysis unavailable',
-          seasonalFactors: []
-        }
-      };
+      return this.getFallbackInsights(scores);
+    }
+  }
+
+  /**
+   * Fallback insights when AI is unavailable
+   */
+  private getFallbackInsights(scores: any): any {
+    return {
+      paymentProbability: Math.max(0.1, 1 - (scores.overallRisk / 100)),
+      predictedPaymentDate: undefined,
+      collectionDifficulty: scores.overallRisk > 70 ? 'high' : scores.overallRisk > 40 ? 'moderate' : 'low',
+      recommendedActions: [],
+      confidence: 0.5,
+      trends: {
+        riskTrend: 'stable',
+        paymentPattern: 'Analysis unavailable',
+        seasonalFactors: []
+      }
+    };
+  }
+
+  /**
+   * Persist health score to database
+   */
+  private async persistHealthScore(invoiceId: string, tenantId: string, result: RiskAnalysisResult): Promise<void> {
+    try {
+      const invoice = await storage.getInvoice(invoiceId, tenantId);
+      if (!invoice) return;
+
+      await storage.createInvoiceHealthScore({
+        tenantId,
+        contactId: invoice.contactId,
+        invoiceId,
+        overallRiskScore: result.overallRiskScore,
+        paymentProbability: result.paymentProbability.toString(),
+        timeRiskScore: result.timeRiskScore || 0,
+        amountRiskScore: result.amountRiskScore || 0,
+        customerRiskScore: result.customerRiskScore || 0,
+        communicationRiskScore: result.communicationRiskScore || 0,
+        healthStatus: result.healthStatus,
+        healthScore: result.healthScore,
+        predictedPaymentDate: result.predictedPaymentDate,
+        collectionDifficulty: result.collectionDifficulty,
+        recommendedActions: result.recommendedActions,
+        aiConfidence: result.aiConfidence.toString(),
+        modelVersion: this.modelVersion,
+        lastAnalysis: new Date(),
+        trends: result.trends
+      });
+    } catch (error) {
+      console.error(`Failed to persist health score for invoice ${invoiceId}:`, error);
     }
   }
 

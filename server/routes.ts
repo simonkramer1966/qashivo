@@ -5160,14 +5160,52 @@ ${tenant.name}
         return res.status(400).json({ error: 'No tenant found' });
       }
 
+      console.log(`🚀 Health dashboard request for tenant ${user.tenantId}`);
+
       // Import health analyzer service
       const { InvoiceHealthAnalyzer } = await import('./services/invoiceHealthAnalyzer');
       const healthAnalyzer = new InvoiceHealthAnalyzer();
 
       // Get recent invoices for health analysis
-      const recentInvoices = await storage.getInvoices(user.tenantId, 50);
+      const recentInvoices = await storage.getInvoices(user.tenantId, 25);
+      const invoiceIds = recentInvoices.map(inv => inv.id);
       
-      // Calculate aggregate health metrics
+      // Check cache status
+      const cacheStatus = await healthAnalyzer.getCachedHealthScores(user.tenantId, invoiceIds);
+      
+      // Enqueue background processing for stale/missing scores
+      const needsProcessing = [...cacheStatus.stale, ...cacheStatus.missing];
+      if (needsProcessing.length > 0) {
+        healthAnalyzer.enqueueAnalysis(needsProcessing, user.tenantId);
+        console.log(`📋 Enqueued ${needsProcessing.length} invoices for background processing`);
+      }
+
+      // Create invoice map for quick lookup
+      const invoiceMap = new Map(recentInvoices.map(inv => [inv.id, inv]));
+      
+      // Build health scores array from cached data + invoice details
+      const invoiceHealthScores = cacheStatus.cached.map(healthScore => {
+        const invoice = invoiceMap.get(healthScore.invoiceId);
+        if (!invoice) return null;
+        
+        return {
+          invoiceId: healthScore.invoiceId,
+          invoiceNumber: invoice.invoiceNumber,
+          customerName: invoice.contact?.name || 'Unknown Contact',
+          amount: invoice.amount,
+          dueDate: invoice.dueDate,
+          status: invoice.status,
+          healthScore: healthScore.healthScore,
+          riskLevel: healthScore.healthStatus,
+          keyRiskFactors: Array.isArray(healthScore.recommendedActions) 
+            ? healthScore.recommendedActions.slice(0, 3) 
+            : [],
+          paymentLikelihood: Math.round(parseFloat(healthScore.paymentProbability) * 100),
+          isRefreshing: needsProcessing.includes(healthScore.invoiceId)
+        };
+      }).filter(Boolean);
+
+      // Calculate aggregate health metrics from cached data
       const healthMetrics = {
         totalInvoices: recentInvoices.length,
         healthyInvoices: 0,
@@ -5181,146 +5219,58 @@ ${tenant.name}
         averageHealthScore: 0,
         totalOutstanding: 0,
         totalValueAtRisk: 0,
-        predictedCollectionRate: 0
+        predictedCollectionRate: 0,
+        cacheStatus: {
+          cached: cacheStatus.cached.length,
+          refreshing: needsProcessing.length,
+          total: invoiceIds.length
+        }
       };
 
-      // Process each invoice for health scoring and persist results
-      const invoiceHealthScores = [];
-      const healthScoreSum = { total: 0, count: 0, paymentLikelihoodSum: 0 };
+      // Calculate metrics from available data
+      let healthScoreSum = 0;
+      let paymentLikelihoodSum = 0;
       
-      for (const invoice of recentInvoices.slice(0, 10)) { // Limit to 10 for performance
-        try {
-          const healthAnalysis = await healthAnalyzer.analyzeInvoice(invoice.id, user.tenantId);
-          
-          if (!healthAnalysis) {
-            console.warn(`No health analysis returned for invoice ${invoice.id}`);
-            continue;
-          }
-          
-          const paymentLikelihood = Math.round(healthAnalysis.paymentProbability * 100);
-          
-          // Persist health score to database
-          try {
-            await storage.createInvoiceHealthScore({
-              tenantId: user.tenantId,
-              contactId: invoice.contactId,
-              invoiceId: invoice.id,
-              overallRiskScore: healthAnalysis.overallRiskScore,
-              paymentProbability: healthAnalysis.paymentProbability.toString(),
-              timeRiskScore: healthAnalysis.timeRiskScore || 0,
-              amountRiskScore: healthAnalysis.amountRiskScore || 0,
-              customerRiskScore: healthAnalysis.customerRiskScore || 0,
-              communicationRiskScore: healthAnalysis.communicationRiskScore || 0,
-              healthStatus: healthAnalysis.healthStatus,
-              healthScore: healthAnalysis.healthScore,
-              predictedPaymentDate: healthAnalysis.predictedPaymentDate,
-              collectionDifficulty: healthAnalysis.collectionDifficulty,
-              recommendedActions: healthAnalysis.recommendedActions,
-              aiConfidence: healthAnalysis.aiConfidence.toString(),
-              modelVersion: "1.0",
-              lastAnalysis: new Date(),
-              trends: healthAnalysis.trends
-            });
-          } catch (dbError) {
-            console.error(`Failed to persist health score for invoice ${invoice.id}:`, dbError);
-          }
-          
-          invoiceHealthScores.push({
-            invoiceId: invoice.id,
-            invoiceNumber: invoice.invoiceNumber,
-            customerName: invoice.contact?.name || 'Unknown Contact',
-            amount: invoice.amount,
-            dueDate: invoice.dueDate,
-            status: invoice.status,
-            healthScore: healthAnalysis.healthScore,
-            riskLevel: healthAnalysis.healthStatus,
-            keyRiskFactors: healthAnalysis.recommendedActions?.slice(0, 3) || [],
-            paymentLikelihood: paymentLikelihood
-          });
+      for (const scoreData of invoiceHealthScores) {
+        if (!scoreData) continue;
+        const invoice = invoiceMap.get(scoreData.invoiceId);
+        if (!invoice) continue;
 
-          // Accumulate for aggregate metrics calculation
-          healthScoreSum.total += healthAnalysis.healthScore;
-          healthScoreSum.paymentLikelihoodSum += paymentLikelihood;
-          healthScoreSum.count += 1;
+        healthScoreSum += scoreData.healthScore;
+        paymentLikelihoodSum += scoreData.paymentLikelihood;
+        healthMetrics.totalOutstanding += Number(invoice.amount);
 
-          // Update aggregate metrics by health status
-          switch (healthAnalysis.healthStatus) {
-            case 'healthy':
-              healthMetrics.healthyInvoices++;
-              break;
-            case 'at_risk':
-              healthMetrics.atRiskInvoices++;
-              healthMetrics.totalValueAtRisk += Number(invoice.amount);
-              break;
-            case 'critical':
-              healthMetrics.criticalInvoices++;
-              healthMetrics.totalValueAtRisk += Number(invoice.amount);
-              break;
-            case 'emergency':
-              healthMetrics.emergencyInvoices++;
-              healthMetrics.totalValueAtRisk += Number(invoice.amount);
-              break;
-          }
-
-          // Update collection difficulty metrics
-          switch (healthAnalysis.collectionDifficulty) {
-            case 'easy':
-              healthMetrics.easyCollectionInvoices++;
-              break;
-            case 'moderate':
-              healthMetrics.moderateCollectionInvoices++;
-              break;
-            case 'difficult':
-              healthMetrics.difficultCollectionInvoices++;
-              break;
-            case 'very_difficult':
-              healthMetrics.veryDifficultCollectionInvoices++;
-              break;
-          }
-
-          healthMetrics.totalOutstanding += Number(invoice.amount);
-        } catch (error) {
-          console.error(`Error analyzing invoice ${invoice.id}:`, error);
+        // Update aggregate metrics by health status
+        switch (scoreData.riskLevel) {
+          case 'healthy':
+            healthMetrics.healthyInvoices++;
+            break;
+          case 'at_risk':
+            healthMetrics.atRiskInvoices++;
+            healthMetrics.totalValueAtRisk += Number(invoice.amount);
+            break;
+          case 'critical':
+            healthMetrics.criticalInvoices++;
+            healthMetrics.totalValueAtRisk += Number(invoice.amount);
+            break;
+          case 'emergency':
+            healthMetrics.emergencyInvoices++;
+            healthMetrics.totalValueAtRisk += Number(invoice.amount);
+            break;
         }
       }
 
       // Calculate final aggregate metrics
-      if (healthScoreSum.count > 0) {
-        healthMetrics.averageHealthScore = Math.round(healthScoreSum.total / healthScoreSum.count);
-        healthMetrics.predictedCollectionRate = Math.round(healthScoreSum.paymentLikelihoodSum / healthScoreSum.count);
+      if (invoiceHealthScores.length > 0) {
+        healthMetrics.averageHealthScore = Math.round(healthScoreSum / invoiceHealthScores.length);
+        healthMetrics.predictedCollectionRate = Math.round(paymentLikelihoodSum / invoiceHealthScores.length);
       }
 
-      // Create analytics snapshot for historical tracking
-      try {
-        const averageRiskScore = healthMetrics.averageHealthScore > 0 ? (100 - healthMetrics.averageHealthScore) : 50;
-        await storage.createHealthAnalyticsSnapshot({
-          tenantId: user.tenantId,
-          snapshotType: 'dashboard',
-          snapshotDate: new Date(),
-          totalInvoicesAnalyzed: invoiceHealthScores.length,
-          averageHealthScore: healthMetrics.averageHealthScore.toString(),
-          averageRiskScore: averageRiskScore.toString(),
-          healthyCount: healthMetrics.healthyInvoices,
-          atRiskCount: healthMetrics.atRiskInvoices,
-          criticalCount: healthMetrics.criticalInvoices,
-          emergencyCount: healthMetrics.emergencyInvoices,
-          easyCollectionCount: healthMetrics.easyCollectionInvoices,
-          moderateCollectionCount: healthMetrics.moderateCollectionInvoices,
-          difficultCollectionCount: healthMetrics.difficultCollectionInvoices,
-          veryDifficultCollectionCount: healthMetrics.veryDifficultCollectionInvoices,
-          totalValueAtRisk: healthMetrics.totalValueAtRisk.toString(),
-          predictedCollectionRate: (healthMetrics.predictedCollectionRate / 100).toString(),
-          averagePredictedDaysToPayment: "30.00",
-          modelAccuracy: "0.85",
-          predictionConfidence: "0.80"
-        });
-      } catch (snapshotError) {
-        console.error('Failed to create health analytics snapshot:', snapshotError);
-      }
+      console.log(`✅ Health dashboard response: ${invoiceHealthScores.length} cached, ${needsProcessing.length} refreshing`);
 
       res.json({
         metrics: healthMetrics,
-        invoiceHealthScores: invoiceHealthScores.sort((a, b) => a.healthScore - b.healthScore),
+        invoiceHealthScores: invoiceHealthScores.filter(Boolean).sort((a, b) => (a?.healthScore || 0) - (b?.healthScore || 0)),
         lastUpdated: new Date().toISOString()
       });
     } catch (error: any) {
