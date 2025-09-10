@@ -138,6 +138,30 @@ export async function setupAuth(app: Express) {
     })(req, res, next);
   });
 
+  // Development mode direct login
+  app.get("/api/dev-login", async (req, res) => {
+    if (!isDevelopmentMode()) {
+      return res.status(404).json({ message: "Not found" });
+    }
+    
+    try {
+      // Create demo user session
+      await createDemoUserSession(req);
+      
+      // Log the user in using passport
+      req.login(req.user, (err) => {
+        if (err) {
+          console.error("Failed to login demo user:", err);
+          return res.status(500).json({ message: "Login failed" });
+        }
+        res.redirect("/");
+      });
+    } catch (error) {
+      console.error("Development login failed:", error);
+      res.status(500).json({ message: "Development login failed" });
+    }
+  });
+
   app.get("/api/logout", (req, res) => {
     req.logout(() => {
       res.redirect(
@@ -152,23 +176,36 @@ export async function setupAuth(app: Express) {
 
 // Development mode authentication bypass
 const isDevelopmentMode = () => {
-  return process.env.NODE_ENV !== 'production' && !process.env.REPL_ID;
+  return process.env.NODE_ENV === 'development' || process.env.AUTH_DEV_BYPASS === 'true';
 };
 
 // Create demo user session for development
 const createDemoUserSession = async (req: any) => {
   // Demo user identity
-  const demoUserId = "demo-user-47061483"; // Matches existing demo user
-  const demoTenantId = "demo-tenant-9ffa8e58";
+  const demoUserId = "demo-user-47061483";
   
-  // Ensure demo tenant exists
-  let demoTenant = await storage.getTenant(demoTenantId);
-  if (!demoTenant) {
+  // Find or create demo tenant by subdomain  
+  let demoTenant;
+  try {
+    // Create new demo tenant (will fail if subdomain already exists)
     demoTenant = await storage.createTenant({
       name: "Demo Agency",
       subdomain: "demo",
     });
     console.log("✅ Created demo tenant for development mode");
+  } catch (error) {
+    console.log("🔧 Using existing demo tenant");
+    // If creation fails (likely due to existing subdomain), use the existing tenant
+    // For development, we'll use the first available tenant as fallback
+    const existingUserId = "47061483"; // Use existing user ID from logs
+    const existingUser = await storage.getUser(existingUserId);
+    if (existingUser) {
+      demoTenant = await storage.getTenant(existingUser.tenantId);
+    }
+  }
+  
+  if (!demoTenant) {
+    throw new Error("Failed to create or find demo tenant");
   }
   
   // Ensure demo user exists
@@ -179,7 +216,7 @@ const createDemoUserSession = async (req: any) => {
       email: "demo@studiopow.com",
       firstName: "Demo",
       lastName: "User",
-      tenantId: demoTenantId,
+      tenantId: demoTenant.id, // Use the actual tenant ID
       role: "owner", // Give owner permissions for full access
     });
     console.log("✅ Created demo user for development mode");
