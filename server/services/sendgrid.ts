@@ -3,8 +3,16 @@ import { MailService } from '@sendgrid/mail';
 const mailService = new MailService();
 const apiKey = process.env.SENDGRID_API_KEY || process.env.SENDGRID_API_KEY_ENV_VAR || "default_key";
 
+// Centralized sender configuration
+export const DEFAULT_FROM_EMAIL = process.env.SENDGRID_FROM_EMAIL || 'noreply@nexusar.com';
+export const DEFAULT_FROM_NAME = process.env.SENDGRID_FROM_NAME || 'Nexus AR';
+export const DEFAULT_FROM = `${DEFAULT_FROM_NAME} <${DEFAULT_FROM_EMAIL}>`;
+
 if (apiKey && apiKey !== "default_key") {
   mailService.setApiKey(apiKey);
+  console.log(`✅ SendGrid configured successfully with sender: ${DEFAULT_FROM}`);
+} else {
+  console.log("⚠️ SendGrid API key not configured, emails will be skipped");
 }
 
 interface EmailParams {
@@ -125,7 +133,7 @@ Accounts Receivable Team
 
   return await sendEmail({
     to: invoiceData.contactEmail,
-    from: fromEmail,
+    from: fromEmail || DEFAULT_FROM,
     subject,
     text: customMessage || defaultMessage,
     html: customMessage ? undefined : htmlMessage,
