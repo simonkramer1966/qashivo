@@ -2184,11 +2184,11 @@ Payment required immediately to avoid collection action. Contact us NOW.`
 
       // Get default email template and sender
       const templates = await storage.getCommunicationTemplates(user.tenantId);
-      const defaultTemplate = templates.find(t => t.id === "bf7ffcee-0ce1-4a76-9251-7d434a8f4bd8");
+      const defaultTemplate = templates.find(t => t.name === "General Email");
       const defaultSender = await storage.getDefaultEmailSender(user.tenantId);
 
       if (!defaultTemplate || !defaultSender) {
-        return res.status(500).json({ message: "Email template or sender not configured" });
+        return res.status(500).json({ message: "General Email template or sender not configured. Please create a 'General Email' template in Collections Workflow." });
       }
 
       // Process template variables for single invoice
@@ -2281,9 +2281,9 @@ Payment required immediately to avoid collection action. Contact us NOW.`
 
       switch (actionType) {
         case 'general-chase':
-          templateToUse = templates.find(t => t.id === "bf7ffcee-0ce1-4a76-9251-7d434a8f4bd8"); // Default Email template
+          templateToUse = templates.find(t => t.name === "General Email"); // General Email template
           if (!templateToUse) {
-            return res.status(500).json({ message: "General chase template not found" });
+            return res.status(500).json({ message: "General Email template not found. Please create a 'General Email' template in Collections Workflow." });
           }
           
           const dueDate = new Date(invoice.dueDate);
@@ -2461,11 +2461,11 @@ Payment required immediately to avoid collection action. Contact us NOW.`
 
       // Get default email template and sender
       const templates = await storage.getCommunicationTemplates(user.tenantId);
-      const defaultTemplate = templates.find(t => t.id === "bf7ffcee-0ce1-4a76-9251-7d434a8f4bd8");
+      const defaultTemplate = templates.find(t => t.name === "General Email");
       const defaultSender = await storage.getDefaultEmailSender(user.tenantId);
 
       if (!defaultTemplate || !defaultSender) {
-        return res.status(500).json({ message: "Email template or sender not configured" });
+        return res.status(500).json({ message: "General Email template or sender not configured. Please create a 'General Email' template in Collections Workflow." });
       }
 
       // Calculate totals and create invoice summary
