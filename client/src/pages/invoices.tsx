@@ -647,8 +647,31 @@ export default function Invoices() {
     }
   };
 
+  // Validate that all selected invoices belong to the same customer
+  const validateSameCustomer = (invoiceIds: string[]) => {
+    const customers = invoiceIds.map(id => {
+      const invoice = (invoices as any[]).find(inv => inv.id === id);
+      return invoice?.contact?.id;
+    });
+    
+    const uniqueCustomers = new Set(customers.filter(Boolean));
+    return uniqueCustomers.size === 1;
+  };
+
   const handleBulkAction = (action: string) => {
     const invoiceIds = Array.from(selectedInvoices);
+    
+    // For payment plan and dispute actions, validate same customer
+    if (action === 'payment-plan' || action === 'dispute') {
+      if (!validateSameCustomer(invoiceIds)) {
+        toast({
+          title: "Different Customers Selected",
+          description: "Payment plans and disputes can only be created for invoices from the same customer. Please select invoices from one customer only.",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
     
     switch (action) {
       case 'hold':
@@ -683,10 +706,26 @@ export default function Invoices() {
           description: `Debt recovery process started for ${invoiceIds.length} invoice(s)`,
         });
         break;
+      case 'payment-plan':
+        const selectedInvoicesForPP = invoiceIds.map(id => 
+          (invoices as any[]).find(inv => inv.id === id)
+        ).filter(Boolean);
+        setPaymentPlanInvoice(selectedInvoicesForPP);
+        setShowPaymentPlanDialog(true);
+        break;
+      case 'dispute':
+        const selectedInvoicesForDispute = invoiceIds.map(id => 
+          (invoices as any[]).find(inv => inv.id === id)
+        ).filter(Boolean);
+        setDisputeInvoice(selectedInvoicesForDispute);
+        setShowDisputeDialog(true);
+        break;
     }
     
-    // Clear selection after action
-    setSelectedInvoices(new Set());
+    // Clear selection after action (except for payment plan and dispute as dialogs will handle this)
+    if (action !== 'payment-plan' && action !== 'dispute') {
+      setSelectedInvoices(new Set());
+    }
   };
 
   // Customer bulk selection functions
