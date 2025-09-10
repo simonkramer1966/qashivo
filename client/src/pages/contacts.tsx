@@ -196,6 +196,18 @@ export default function Customers() {
         aValue = a.phone || '';
         bValue = b.phone || '';
         break;
+      case "rating":
+        aValue = getCustomerRating(a.id);
+        bValue = getCustomerRating(b.id);
+        break;
+      case "schedule":
+        const aScheduleId = getAssignedSchedule(a.id);
+        const bScheduleId = getAssignedSchedule(b.id);
+        const aScheduleName = aScheduleId ? (schedules as any[]).find(s => s.id === aScheduleId)?.name || '' : '';
+        const bScheduleName = bScheduleId ? (schedules as any[]).find(s => s.id === bScheduleId)?.name || '' : '';
+        aValue = aScheduleName.toLowerCase();
+        bValue = bScheduleName.toLowerCase();
+        break;
       case "status":
         aValue = a.isActive ? 'active' : 'inactive';
         bValue = b.isActive ? 'active' : 'inactive';
@@ -279,19 +291,25 @@ export default function Customers() {
                           </button>
                         </th>
                         <th className="text-left py-3 text-sm font-medium text-muted-foreground">
-                          <span>Rating</span>
-                        </th>
-                        <th className="text-left py-3 text-sm font-medium text-muted-foreground">
                           <button 
-                            onClick={() => handleSort("phone")}
+                            onClick={() => handleSort("rating")}
                             className="flex items-center space-x-1 hover:text-slate-900"
                           >
-                            <span>Contact Details</span>
-                            {getSortIcon("phone")}
+                            <span>Rating</span>
+                            {getSortIcon("rating")}
                           </button>
                         </th>
                         <th className="text-left py-3 text-sm font-medium text-muted-foreground">
-                          <span>Schedule</span>
+                          <span>Contact Details</span>
+                        </th>
+                        <th className="text-left py-3 text-sm font-medium text-muted-foreground">
+                          <button 
+                            onClick={() => handleSort("schedule")}
+                            className="flex items-center space-x-1 hover:text-slate-900"
+                          >
+                            <span>Schedule</span>
+                            {getSortIcon("schedule")}
+                          </button>
                         </th>
                         <th className="text-left py-3 text-sm font-medium text-muted-foreground">
                           <button 
