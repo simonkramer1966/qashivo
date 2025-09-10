@@ -17,6 +17,13 @@ import {
   Target,
   Zap
 } from "lucide-react";
+import { 
+  HealthDashboardData, 
+  InvoiceHealthScore, 
+  HealthMetrics,
+  RiskLevel 
+} from "../../../shared/healthTypes";
+
 // Utility function for currency formatting
 const formatCurrency = (amount: number) => {
   return new Intl.NumberFormat('en-US', {
@@ -24,35 +31,6 @@ const formatCurrency = (amount: number) => {
     currency: 'USD'
   }).format(amount);
 };
-
-interface HealthMetrics {
-  totalInvoices: number;
-  healthyInvoices: number;
-  atRiskInvoices: number;
-  criticalInvoices: number;
-  averageHealthScore: number;
-  totalOutstanding: number;
-  predictedCollectionRate: number;
-}
-
-interface InvoiceHealthScore {
-  invoiceId: string;
-  invoiceNumber: string;
-  customerName: string;
-  amount: number;
-  dueDate: string;
-  status: string;
-  healthScore: number;
-  riskLevel: string;
-  keyRiskFactors: string[];
-  paymentLikelihood: number;
-}
-
-interface HealthDashboardData {
-  metrics: HealthMetrics;
-  invoiceHealthScores: InvoiceHealthScore[];
-  lastUpdated: string;
-}
 
 function getRiskColor(riskLevel: string): string {
   switch (riskLevel.toLowerCase()) {
@@ -150,7 +128,7 @@ function InvoiceHealthList({ invoices }: { invoices: InvoiceHealthScore[] }) {
                 {invoice.keyRiskFactors.length > 0 && (
                   <div className="mt-2">
                     <div className="flex flex-wrap gap-1">
-                      {invoice.keyRiskFactors.slice(0, 2).map((factor, index) => (
+                      {invoice.keyRiskFactors.slice(0, 2).map((factor: string, index: number) => (
                         <span
                           key={index}
                           className="text-xs px-2 py-1 bg-gray-100 rounded-full text-gray-600"

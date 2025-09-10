@@ -94,6 +94,9 @@ export class InvoiceHealthAnalyzer {
       const amountRisk = this.calculateAmountRiskScore(analysisData);
       const customerRisk = this.calculateCustomerRiskScore(analysisData);
       const communicationRisk = this.calculateCommunicationRiskScore(analysisData);
+      
+      // Debug: Log calculated risk scores
+      console.log(`Risk scores for invoice ${invoiceId}: time=${timeRisk}, amount=${amountRisk}, customer=${customerRisk}, communication=${communicationRisk}`);
 
       // Calculate overall risk using weighted algorithm
       const overallRisk = this.calculateOverallRiskScore({
@@ -111,8 +114,15 @@ export class InvoiceHealthAnalyzer {
         communicationRisk,
         overallRisk
       });
+      
+      // Debug: Log AI insights
+      console.log(`AI insights for invoice ${invoiceId}:`, {
+        paymentProbability: aiInsights.paymentProbability,
+        collectionDifficulty: aiInsights.collectionDifficulty,
+        confidence: aiInsights.confidence
+      });
 
-      return {
+      const result = {
         overallRiskScore: overallRisk,
         paymentProbability: aiInsights.paymentProbability,
         timeRiskScore: timeRisk,
@@ -127,6 +137,16 @@ export class InvoiceHealthAnalyzer {
         aiConfidence: aiInsights.confidence,
         trends: aiInsights.trends
       };
+      
+      console.log(`Final analysis result for invoice ${invoiceId}:`, {
+        overallRiskScore: result.overallRiskScore,
+        communicationRiskScore: result.communicationRiskScore,
+        healthStatus: result.healthStatus,
+        collectionDifficulty: result.collectionDifficulty,
+        aiConfidence: result.aiConfidence
+      });
+      
+      return result;
 
     } catch (error) {
       console.error(`Error analyzing invoice ${invoiceId}:`, error);
@@ -225,10 +245,11 @@ export class InvoiceHealthAnalyzer {
     let commRisk = 20; // Base risk
 
     // Risk increases with reminder count
-    commRisk += Math.min(40, reminderCount * 10);
+    commRisk += Math.min(40, (reminderCount || 0) * 10);
 
     // Risk increases based on responsiveness
-    commRisk += (1 - communicationResponsiveness) * 30;
+    const responsiveness = communicationResponsiveness || 0.7; // Default if undefined
+    commRisk += (1 - responsiveness) * 30;
 
     // Risk increases if recent reminders were ignored
     if (lastReminderSent) {
@@ -238,7 +259,9 @@ export class InvoiceHealthAnalyzer {
       }
     }
 
-    return Math.min(100, Math.round(commRisk));
+    const result = Math.min(100, Math.round(commRisk));
+    console.log(`Communication risk calculation: reminderCount=${reminderCount}, responsiveness=${responsiveness}, result=${result}`);
+    return result;
   }
 
   /**
@@ -325,7 +348,7 @@ Provide analysis in JSON format:
       `;
 
       const response = await openai.chat.completions.create({
-        model: "gpt-5",
+        model: "gpt-4o",
         messages: [
           {
             role: "system",
@@ -360,6 +383,7 @@ Provide analysis in JSON format:
       console.error("Error getting AI insights:", error);
       return {
         paymentProbability: 0.5,
+        predictedPaymentDate: undefined,
         collectionDifficulty: 'moderate',
         recommendedActions: [],
         confidence: 0.5,
