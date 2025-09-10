@@ -530,10 +530,27 @@ export default function Invoices() {
     }
   });
 
+  // Helper function to check if an invoice can be put on hold
+  const canInvoiceBeHeld = (invoice: any) => {
+    const status = getInvoiceDisplayStatus(invoice);
+    return status === 'overdue' || status === 'pending';
+  };
+
   // Function to toggle hold status for invoices
   const toggleHoldStatus = (invoiceId: string) => {
     const invoice = (invoices as any[]).find(inv => inv.id === invoiceId);
     if (!invoice) return;
+
+    // Check if invoice can be put on hold
+    if (!canInvoiceBeHeld(invoice)) {
+      toast({
+        title: "Cannot Place On Hold",
+        description: "Only pending and overdue invoices can be placed on hold.",
+        variant: "destructive",
+        className: "bg-white border-gray-200",
+      });
+      return;
+    }
 
     if (invoice.isOnHold === true) {
       unholdInvoiceMutation.mutate(invoiceId);
@@ -747,13 +764,38 @@ export default function Invoices() {
     
     switch (action) {
       case 'hold':
-        // Hold multiple invoices
-        invoiceIds.forEach(id => holdInvoiceMutation.mutate(id));
-        toast({
-          title: "Invoices Placed On Hold",
-          description: `${invoiceIds.length} invoice(s) have been removed from the collections workflow.`,
-          className: "bg-white border-gray-200",
+        // Filter invoices that can be held
+        const holdableInvoices = invoiceIds.filter(id => {
+          const invoice = (invoices as any[]).find(inv => inv.id === id);
+          return invoice && canInvoiceBeHeld(invoice);
         });
+        
+        if (holdableInvoices.length === 0) {
+          toast({
+            title: "Cannot Place On Hold",
+            description: "Only pending and overdue invoices can be placed on hold.",
+            variant: "destructive",
+            className: "bg-white border-gray-200",
+          });
+          return;
+        }
+        
+        if (holdableInvoices.length < invoiceIds.length) {
+          toast({
+            title: "Partial Hold",
+            description: `${holdableInvoices.length} of ${invoiceIds.length} invoice(s) placed on hold. Only pending and overdue invoices can be held.`,
+            className: "bg-white border-gray-200",
+          });
+        } else {
+          toast({
+            title: "Invoices Placed On Hold",
+            description: `${holdableInvoices.length} invoice(s) have been removed from the collections workflow.`,
+            className: "bg-white border-gray-200",
+          });
+        }
+        
+        // Hold only the eligible invoices
+        holdableInvoices.forEach(id => holdInvoiceMutation.mutate(id));
         break;
       case 'active':
         // Unhold multiple invoices
@@ -1569,20 +1611,24 @@ export default function Invoices() {
                           </td>
                           <td className="py-2 w-52">
                             <div className="flex space-x-1 justify-end">
-                              <Button 
-                                variant="outline" 
-                                size="sm"
-                                onClick={() => toggleHoldStatus(invoice.id)}
-                                className={`h-7 w-8 p-0 text-xs font-medium ${
-                                  invoice.isOnHold === true
-                                    ? "border-gray-400 text-gray-600 bg-gray-50 hover:bg-gray-100" 
-                                    : "border-gray-200 text-gray-300 hover:bg-gray-50"
-                                }`}
-                                data-testid={`button-pause-${invoice.id}`}
-                                title={invoice.isOnHold === true ? "Remove from Hold" : "Place on Hold"}
-                              >
-                                <Pause className="h-3 w-3" />
-                              </Button>
+                              {canInvoiceBeHeld(invoice) ? (
+                                <Button 
+                                  variant="outline" 
+                                  size="sm"
+                                  onClick={() => toggleHoldStatus(invoice.id)}
+                                  className={`h-7 w-8 p-0 text-xs font-medium ${
+                                    invoice.isOnHold === true
+                                      ? "border-gray-400 text-gray-600 bg-gray-50 hover:bg-gray-100" 
+                                      : "border-gray-200 text-gray-300 hover:bg-gray-50"
+                                  }`}
+                                  data-testid={`button-pause-${invoice.id}`}
+                                  title={invoice.isOnHold === true ? "Remove from Hold" : "Place on Hold"}
+                                >
+                                  <Pause className="h-3 w-3" />
+                                </Button>
+                              ) : (
+                                <div className="h-7 w-8" />
+                              )}
                               <Button 
                                 variant="outline" 
                                 size="sm"
