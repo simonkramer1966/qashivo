@@ -334,7 +334,7 @@ export default function NewSidebar() {
                                   <div className="font-medium text-sm text-gray-900">{companyName}</div>
                                 </div>
                                 {isCurrentOrg && (
-                                  <Check className="h-4 w-4 text-[#17B6C3]" />
+                                  <Check className="h-4 w-4 text-[#17B6C3] stroke-[3]" />
                                 )}
                               </div>
                             </DropdownMenuItem>
