@@ -137,9 +137,9 @@ export default function Customers() {
           }
         />
         
-        <div className="p-8 space-y-8" style={{ backgroundColor: '#ffffff' }}>
+        <div className="p-8 space-y-8">
           {/* Search */}
-          <Card className="bg-white border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+          <Card className="bg-white/80 backdrop-blur-sm border border-white/50 shadow-lg">
             <CardHeader>
               <CardTitle className="text-xl font-bold flex items-center">
                 <div className="p-2 bg-[#17B6C3]/10 rounded-lg mr-3">
@@ -191,7 +191,7 @@ export default function Customers() {
                     <p className="text-muted-foreground">Loading customers...</p>
                   </div>
                 ) : sortedContacts.length === 0 ? (
-                  <Card className="bg-white border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+                  <Card className="bg-white/80 backdrop-blur-sm border border-white/50 shadow-lg">
                     <CardContent className="text-center py-8">
                       <div className="w-16 h-16 bg-[#17B6C3]/10 rounded-full flex items-center justify-center mx-auto mb-6">
                         <User className="h-8 w-8 text-[#17B6C3]" />
@@ -215,7 +215,7 @@ export default function Customers() {
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                     {sortedContacts.map((contact: any) => (
-                      <Card key={contact.id} className="bg-white border border-gray-200 shadow-sm hover:shadow-md transition-shadow" data-testid={`card-contact-${contact.id}`}>
+                      <Card key={contact.id} className="bg-white/80 backdrop-blur-sm border border-white/50 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105" data-testid={`card-contact-${contact.id}`}>
                         <CardHeader className="pb-4">
                           <div className="flex items-start justify-between">
                             <div className="flex items-center space-x-3">
@@ -270,7 +270,7 @@ export default function Customers() {
                             )}
                           </div>
                           
-                          <div className="flex justify-between items-center mt-6 pt-4 border-t border-slate-200/50">
+                          <div className="flex justify-between items-center mt-6 pt-4 border-t border-gray-200">
                             <div className="text-xs text-slate-500">
                               Created: {formatDate(contact.createdAt)}
                             </div>
@@ -306,7 +306,7 @@ export default function Customers() {
                     <p className="text-muted-foreground">Loading customers...</p>
                   </div>
                 ) : sortedContacts.length === 0 ? (
-                  <Card className="bg-white border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+                  <Card className="bg-white/80 backdrop-blur-sm border border-white/50 shadow-lg">
                     <CardContent className="text-center py-8">
                       <div className="w-16 h-16 bg-[#17B6C3]/10 rounded-full flex items-center justify-center mx-auto mb-6">
                         <User className="h-8 w-8 text-[#17B6C3]" />
@@ -328,12 +328,12 @@ export default function Customers() {
                     </CardContent>
                   </Card>
                 ) : (
-                  <Card className="bg-white border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+                  <Card className="bg-white/80 backdrop-blur-sm border border-white/50 shadow-lg">
                     <CardContent className="p-0">
                       <div className="overflow-x-auto">
                         <table className="w-full">
                           <thead>
-                            <tr className="border-b border-slate-200/50">
+                            <tr className="border-b border-gray-200">
                               <th className="text-left py-2 px-6 text-xs font-semibold text-slate-700 w-60">
                                 <button 
                                   onClick={() => handleSort("name")}
@@ -391,7 +391,7 @@ export default function Customers() {
                               <th className="text-right py-2 px-6 text-xs font-semibold text-slate-700">Actions</th>
                             </tr>
                           </thead>
-                          <tbody className="divide-y divide-slate-200/50">
+                          <tbody className="divide-y divide-gray-200">
                             {sortedContacts.map((contact: any) => (
                               <tr key={contact.id} className="hover:bg-slate-50/50 transition-colors" data-testid={`row-contact-${contact.id}`}>
                                 <td className="py-1 px-6 text-xs text-slate-700 w-60" data-testid={`text-list-name-${contact.id}`}>
