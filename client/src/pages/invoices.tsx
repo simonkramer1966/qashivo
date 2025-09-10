@@ -134,8 +134,29 @@ export default function Invoices() {
     setInvoicesCurrentPage(1);
   }, [invoicesItemsPerPage]);
 
+  // Helper function for status badges
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'paid':
+        return <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Paid</Badge>;
+      case 'overdue':
+        return <Badge className="bg-red-100 text-red-800 hover:bg-red-100">Overdue</Badge>;
+      case 'pending':
+        return <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">Pending</Badge>;
+      case 'on-hold':
+        return <Badge className="bg-gray-100 text-gray-800 hover:bg-gray-100">On Hold</Badge>;
+      default:
+        return <Badge variant="outline">{status}</Badge>;
+    }
+  };
+
+  const openContactHistory = (invoice: any) => {
+    setSelectedInvoice(invoice);
+    setShowContactHistory(true);
+  };
+
   return (
-    <div className="flex h-screen bg-white">
+    <div className="flex h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-teal-50">
       <NewSidebar />
       <main className="flex-1 overflow-y-auto">
         <Header 
@@ -213,8 +234,8 @@ export default function Invoices() {
             </div>
           </div>
 
-          {/* Invoices Content */}
-          <Card className="bg-white border border-gray-200 shadow-sm">
+          {/* Professional Invoices Table */}
+          <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
             <CardHeader className="pb-4">
               <CardTitle className="text-xl font-bold flex items-center">
                 <div className="p-2 bg-[#17B6C3]/10 rounded-lg mr-3">
@@ -223,39 +244,150 @@ export default function Invoices() {
                 All Invoices ({sortedInvoices.length})
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {invoicesLoading ? (
-                  <div className="text-center py-8">
-                    <p className="text-muted-foreground">Loading invoices...</p>
+            <CardContent className="p-6">
+              {invoicesLoading ? (
+                <div className="text-center py-8">
+                  <p className="text-muted-foreground">Loading invoices...</p>
+                </div>
+              ) : sortedInvoices.length === 0 ? (
+                <div className="text-center py-8">
+                  <div className="w-16 h-16 bg-[#17B6C3]/10 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <FileText className="h-8 w-8 text-[#17B6C3]" />
                   </div>
-                ) : sortedInvoices.length === 0 ? (
-                  <div className="text-center py-8">
-                    <p className="text-muted-foreground">No invoices found</p>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    {paginatedInvoices.map((invoice: any) => (
-                      <div key={invoice.id} className="p-4 border border-gray-200 rounded-lg">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="font-medium">{invoice.invoiceNumber}</p>
-                            <p className="text-sm text-gray-600">{invoice.contact?.name}</p>
-                          </div>
-                          <div className="text-right">
-                            <p className="font-medium">£{Number(invoice.amount).toLocaleString()}</p>
-                            <p className="text-sm text-gray-600">{formatDate(invoice.dueDate)}</p>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
+                  <p className="text-lg font-semibold text-slate-900 mb-2">No invoices found</p>
+                  <p className="text-sm text-muted-foreground">Try adjusting your filters or search terms</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-gray-200">
+                        <th className="text-left py-3 text-sm font-medium text-muted-foreground">Invoice</th>
+                        <th className="text-left py-3 text-sm font-medium text-muted-foreground">Contact</th>
+                        <th className="text-left py-3 text-sm font-medium text-muted-foreground">Amount</th>
+                        <th className="text-left py-3 text-sm font-medium text-muted-foreground">Due Date</th>
+                        <th className="text-left py-3 text-sm font-medium text-muted-foreground">Status</th>
+                        <th className="text-left py-3 text-sm font-medium text-muted-foreground">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      {paginatedInvoices.map((invoice: any) => (
+                        <tr key={invoice.id} className="hover:bg-gray-50/50" data-testid={`row-invoice-${invoice.id}`}>
+                          <td className="py-4">
+                            <div className="font-medium text-foreground" data-testid={`text-invoice-number-${invoice.id}`}>
+                              {invoice.invoiceNumber}
+                            </div>
+                            <div className="text-sm text-muted-foreground" data-testid={`text-issue-date-${invoice.id}`}>
+                              {formatDate(invoice.issueDate)}
+                            </div>
+                          </td>
+                          <td className="py-4">
+                            <div className="font-medium text-foreground" data-testid={`text-contact-name-${invoice.id}`}>
+                              {invoice.contact?.name || 'Unknown Contact'}
+                            </div>
+                            <div className="text-sm text-muted-foreground" data-testid={`text-contact-email-${invoice.id}`}>
+                              {invoice.contact?.email || 'No email'}
+                            </div>
+                          </td>
+                          <td className="py-4 font-medium text-foreground" data-testid={`text-amount-${invoice.id}`}>
+                            £{Number(invoice.amount).toLocaleString()}
+                          </td>
+                          <td className="py-4 text-sm text-foreground" data-testid={`text-due-date-${invoice.id}`}>
+                            {formatDate(invoice.dueDate)}
+                          </td>
+                          <td className="py-4">
+                            {getStatusBadge(invoice.status)}
+                          </td>
+                          <td className="py-4">
+                            <div className="flex space-x-2">
+                              {invoice.contact?.email && (
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  className="h-8 w-8 p-0 hover:bg-[#17B6C3]/10"
+                                  data-testid={`button-send-email-${invoice.id}`}
+                                >
+                                  <Mail className="h-4 w-4 text-[#17B6C3]" />
+                                </Button>
+                              )}
+                              {invoice.contact?.phone && (
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm"
+                                  className="h-8 w-8 p-0 hover:bg-[#17B6C3]/10"
+                                  data-testid={`button-send-sms-${invoice.id}`}
+                                >
+                                  <Phone className="h-4 w-4 text-[#17B6C3]" />
+                                </Button>
+                              )}
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="h-8 w-8 p-0 hover:bg-[#17B6C3]/10"
+                                onClick={() => openContactHistory(invoice)}
+                                data-testid={`button-view-invoice-${invoice.id}`}
+                              >
+                                <Eye className="h-4 w-4 text-[#17B6C3]" />
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
       </main>
+
+      {/* Contact History Dialog */}
+      <Dialog open={showContactHistory} onOpenChange={setShowContactHistory}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto bg-white">
+          <DialogHeader>
+            <DialogTitle>Contact History - {selectedInvoice?.contact?.name}</DialogTitle>
+            <DialogDescription>
+              Invoice: {selectedInvoice?.invoiceNumber} | Amount: £{Number(selectedInvoice?.amount || 0).toLocaleString()}
+            </DialogDescription>
+          </DialogHeader>
+          
+          {historyLoading ? (
+            <div className="text-center py-8">
+              <p className="text-muted-foreground">Loading contact history...</p>
+            </div>
+          ) : contactHistory.length === 0 ? (
+            <div className="text-center py-8">
+              <MessageSquare className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+              <p className="text-muted-foreground">No contact history found for this invoice</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {contactHistory.map((entry: any, index: number) => (
+                <div key={index} className="border border-gray-200 rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      {entry.type === 'email' && <Mail className="h-4 w-4 text-blue-500" />}
+                      {entry.type === 'sms' && <Phone className="h-4 w-4 text-green-500" />}
+                      {entry.type === 'note' && <MessageSquare className="h-4 w-4 text-gray-500" />}
+                      <span className="font-medium capitalize">{entry.type}</span>
+                    </div>
+                    <span className="text-sm text-muted-foreground">
+                      {formatDate(entry.createdAt)}
+                    </span>
+                  </div>
+                  <p className="text-sm text-gray-700">{entry.content || entry.subject}</p>
+                  {entry.response && (
+                    <div className="mt-2 p-2 bg-gray-50 rounded">
+                      <p className="text-sm text-gray-600">Response: {entry.response}</p>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
