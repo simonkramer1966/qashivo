@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel } from "@/components/ui/dropdown-menu";
 import { Mail, Phone, Eye, Plus, Search, Filter, FileText, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, X, MessageSquare, Calendar, CheckCircle, AlertCircle, Clock, Users, User, Building, Star, Target, ArrowRight, MoreHorizontal, Pause } from "lucide-react";
 
 export default function Invoices() {
@@ -351,7 +351,10 @@ export default function Invoices() {
                                     <MoreHorizontal className="h-4 w-4 text-[#17B6C3]" />
                                   </Button>
                                 </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end" className="bg-white border-gray-200 w-48">
+                                <DropdownMenuContent align="end" className="bg-white border-gray-200 w-52">
+                                  <DropdownMenuLabel className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                                    Email
+                                  </DropdownMenuLabel>
                                   <DropdownMenuItem 
                                     data-testid={`menu-general-chase-${invoice.id}`}
                                   >
@@ -376,24 +379,44 @@ export default function Invoices() {
                                     <Clock className="mr-2 h-4 w-4" />
                                     General Reminder
                                   </DropdownMenuItem>
+                                  
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuLabel className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                                    SMS
+                                  </DropdownMenuLabel>
                                   <DropdownMenuItem 
                                     data-testid={`menu-thank-you-sms-${invoice.id}`}
                                   >
                                     <Phone className="mr-2 h-4 w-4" />
                                     Thank You SMS
                                   </DropdownMenuItem>
+                                  
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuLabel className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                                    WhatsApp
+                                  </DropdownMenuLabel>
                                   <DropdownMenuItem 
                                     data-testid={`menu-send-whatsapp-${invoice.id}`}
                                   >
                                     <MessageSquare className="mr-2 h-4 w-4" />
                                     Send WhatsApp
                                   </DropdownMenuItem>
+                                  
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuLabel className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                                    Voice
+                                  </DropdownMenuLabel>
                                   <DropdownMenuItem 
                                     data-testid={`menu-make-voice-call-${invoice.id}`}
                                   >
                                     <Phone className="mr-2 h-4 w-4" />
                                     Make Voice Call
                                   </DropdownMenuItem>
+                                  
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuLabel className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                                    Other
+                                  </DropdownMenuLabel>
                                   <DropdownMenuItem 
                                     onClick={() => {
                                       setPaymentPlanInvoice(invoice);
