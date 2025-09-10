@@ -267,15 +267,6 @@ export default function NewSidebar() {
                   </DropdownMenuSubContent>
                 </DropdownMenuSub>
                 
-                {/* Organization Name Box */}
-                <div className="px-4 py-3">
-                  <div className="bg-[#17B6C3] p-3 rounded-lg">
-                    <div className="font-bold text-white text-sm leading-relaxed break-words">
-                      {tenant?.settings?.companyName || tenant?.name || "Loading..."}
-                    </div>
-                  </div>
-                </div>
-                
                 {/* Core Menu Items */}
                 <DropdownMenuItem 
                   className="pl-7 pr-3 py-3 cursor-pointer hover:bg-gray-50"
