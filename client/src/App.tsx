@@ -25,6 +25,7 @@ import AiCapabilities from "@/pages/ai-capabilities";
 import Pricing from "@/pages/pricing";
 import About from "@/pages/about";
 import Contact from "@/pages/contact";
+import Investors from "@/pages/investors";
 import Demo from "@/pages/demo";
 import Subscribe from "@/pages/subscribe";
 import Profile from "@/pages/Profile";
@@ -56,6 +57,7 @@ function Router() {
           <Route path="/pricing" component={Pricing} />
           <Route path="/demo" component={Demo} />
           <Route path="/about" component={About} />
+          <Route path="/investors" component={Investors} />
           <Route path="/contact" component={Contact} />
           <Route component={NotFound} />
         </>
