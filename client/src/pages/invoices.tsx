@@ -292,8 +292,18 @@ export default function Invoices() {
                           <td className="py-4 font-medium text-foreground" data-testid={`text-amount-${invoice.id}`}>
                             £{Number(invoice.amount).toLocaleString()}
                           </td>
-                          <td className="py-4 text-sm text-foreground" data-testid={`text-due-date-${invoice.id}`}>
-                            {formatDate(invoice.dueDate)}
+                          <td className="py-4">
+                            <div className="text-sm text-foreground" data-testid={`text-due-date-${invoice.id}`}>
+                              {formatDate(invoice.dueDate)}
+                            </div>
+                            {(() => {
+                              const daysOverdue = Math.floor((Date.now() - new Date(invoice.dueDate).getTime()) / (1000 * 60 * 60 * 24));
+                              return daysOverdue > 0 ? (
+                                <div className="text-xs text-red-600 font-medium" data-testid={`text-days-overdue-${invoice.id}`}>
+                                  {daysOverdue} days overdue
+                                </div>
+                              ) : null;
+                            })()}
                           </td>
                           <td className="py-4">
                             {getStatusBadge(invoice.status)}
