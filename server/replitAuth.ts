@@ -24,13 +24,22 @@ const getOidcConfig = memoize(
 
 export function getSession() {
   const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 1 week
-  const pgStore = connectPg(session);
-  const sessionStore = new pgStore({
-    conString: process.env.DATABASE_URL,
-    createTableIfMissing: false,
-    ttl: sessionTtl,
-    tableName: "sessions",
-  });
+  
+  let sessionStore;
+  if (process.env.NODE_ENV === 'development') {
+    // Use memory store in development for reliability
+    sessionStore = new session.MemoryStore();
+    console.log("🔧 Using MemoryStore for development sessions");
+  } else {
+    // Use PostgreSQL store in production
+    const pgStore = connectPg(session);
+    sessionStore = new pgStore({
+      conString: process.env.DATABASE_URL,
+      createTableIfMissing: true, // Auto-create table
+      ttl: sessionTtl,
+      tableName: "sessions",
+    });
+  }
   return session({
     secret: process.env.SESSION_SECRET!,
     store: sessionStore,
@@ -155,7 +164,16 @@ export async function setupAuth(app: Express) {
           console.error("Failed to login demo user:", err);
           return res.status(500).json({ message: "Login failed" });
         }
-        res.redirect("/");
+        
+        // Explicitly save session before redirecting
+        req.session.save((saveErr) => {
+          if (saveErr) {
+            console.error("Failed to save session:", saveErr);
+            return res.status(500).json({ message: "Session save failed" });
+          }
+          console.log("✅ Demo user session saved successfully, SessionID:", req.sessionID);
+          res.redirect("/");
+        });
       });
     } catch (error) {
       console.error("Development login failed:", error);
@@ -195,13 +213,15 @@ const createDemoUserSession = async (req: any) => {
     });
     console.log("✅ Created demo tenant for development mode");
   } catch (error) {
-    console.log("🔧 Using existing demo tenant");
-    // If creation fails (likely due to existing subdomain), use the existing tenant
-    // For development, we'll use the first available tenant as fallback
-    const existingUserId = "47061483"; // Use existing user ID from logs
-    const existingUser = await storage.getUser(existingUserId);
-    if (existingUser) {
-      demoTenant = await storage.getTenant(existingUser.tenantId);
+    console.log("🔧 Demo tenant already exists, using it");
+    // For development, find any existing tenant to use as fallback
+    try {
+      // For development fallback, just use the main tenant ID from logs
+      const fallbackTenantId = "9ffa8e58-af89-4f6a-adee-7fe09d956295"; // Nexus AR tenant from logs
+      demoTenant = await storage.getTenant(fallbackTenantId);
+    } catch (fallbackError) {
+      console.error("Failed to find fallback tenant:", fallbackError);
+      throw new Error("Could not create or find demo tenant for development");
     }
   }
   
