@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plus, Search, Mail, Phone, Building, User, Users, Grid3X3, List, ChevronUp, ChevronDown } from "lucide-react";
 
-export default function Contacts() {
+export default function Customers() {
   const { toast } = useToast();
   const { isAuthenticated, isLoading } = useAuth();
   const [search, setSearch] = useState("");
@@ -127,8 +127,8 @@ export default function Contacts() {
       <NewSidebar />
       <main className="flex-1 overflow-y-auto">
         <Header 
-          title="Contacts" 
-          subtitle="Manage your customer contacts and information"
+          title="Customers" 
+          subtitle="Manage your customers and relationships"
           action={
             <Button className="bg-[#17B6C3] hover:bg-[#1396A1] text-white" data-testid="button-new-contact">
               <Plus className="mr-2 h-4 w-4" />
@@ -145,7 +145,7 @@ export default function Contacts() {
                 <div className="p-2 bg-[#17B6C3]/10 rounded-lg mr-3">
                   <Search className="h-5 w-5 text-[#17B6C3]" />
                 </div>
-                Search Contacts
+                Search Customers
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -169,7 +169,7 @@ export default function Contacts() {
                 <div className="p-3 bg-[#17B6C3]/10 rounded-xl mr-4">
                   <Users className="h-6 w-6 text-[#17B6C3]" />
                 </div>
-                All Contacts ({sortedContacts.length})
+                All Customers ({sortedContacts.length})
               </h2>
             </div>
 
@@ -188,7 +188,7 @@ export default function Contacts() {
               <TabsContent value="cards">
                 {contactsLoading ? (
                   <div className="text-center py-8">
-                    <p className="text-muted-foreground">Loading contacts...</p>
+                    <p className="text-muted-foreground">Loading customers...</p>
                   </div>
                 ) : sortedContacts.length === 0 ? (
                   <Card className="bg-white border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
@@ -303,7 +303,7 @@ export default function Contacts() {
               <TabsContent value="list">
                 {contactsLoading ? (
                   <div className="text-center py-8">
-                    <p className="text-muted-foreground">Loading contacts...</p>
+                    <p className="text-muted-foreground">Loading customers...</p>
                   </div>
                 ) : sortedContacts.length === 0 ? (
                   <Card className="bg-white border border-gray-200 shadow-sm hover:shadow-md transition-shadow">

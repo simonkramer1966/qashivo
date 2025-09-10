@@ -66,6 +66,7 @@ function Router() {
           <Route path="/ai-cfo" component={AiCfo} />
           <Route path="/" component={Dashboard} />
           <Route path="/cashflow" component={Cashflow} />
+          <Route path="/customers" component={Contacts} />
           <Route path="/invoices" component={Invoices} />
           <Route path="/invoices-xero" component={InvoicesXero} />
           <Route path="/contacts" component={Contacts} />
