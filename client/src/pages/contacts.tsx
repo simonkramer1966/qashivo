@@ -173,14 +173,7 @@ export default function Customers() {
                     <p className="text-sm text-muted-foreground mt-2">
                       Try adjusting your search terms
                     </p>
-                  ) : (
-                    <div className="mt-6">
-                      <Button className="bg-[#17B6C3] hover:bg-[#1396A1] text-white" data-testid="button-add-first-contact">
-                        <Plus className="mr-2 h-4 w-4" />
-                        Add Your First Customer
-                      </Button>
-                    </div>
-                  )}
+                  ) : null}
                 </div>
               ) : (
                 <div className="overflow-x-auto">
