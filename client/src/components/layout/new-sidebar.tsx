@@ -278,18 +278,7 @@ export default function NewSidebar() {
                 
                 <DropdownMenuSeparator />
                 
-                {/* Bottom Section with External Links */}
-                <DropdownMenuItem 
-                  className="pl-4 pr-3 py-3 cursor-pointer hover:bg-gray-50"
-                  onClick={() => window.open('https://nexuskpi.com', '_blank')}
-                  data-testid="menu-item-nexus-hq"
-                >
-                  <div className="flex items-center justify-between w-full">
-                    <div className="font-medium text-sm">Nexus HQ</div>
-                    <ExternalLink className="h-4 w-4 text-gray-400" />
-                  </div>
-                </DropdownMenuItem>
-                
+                {/* Bottom Section */}
                 <DropdownMenuItem 
                   className="pl-4 pr-3 py-3 cursor-pointer hover:bg-gray-50"
                   onClick={() => setLocation('/owner')}
