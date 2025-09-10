@@ -1033,9 +1033,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Contact email not available" });
       }
 
-      // Get the collection workflow sender for template-based emails
-      const workflowSenders = await storage.getCollectionWorkflowSenders(user.tenantId);
-      const geInvoiceTemplate = workflowSenders.find(sender => sender.name === 'GE Invoice');
+      // Get the email senders/templates for template-based emails
+      const emailSenders = await storage.getEmailSenders(user.tenantId);
+      const geInvoiceTemplate = emailSenders.find(sender => sender.name === 'GE Invoice');
       
       if (!geInvoiceTemplate) {
         return res.status(404).json({ message: "GE Invoice template not found" });
