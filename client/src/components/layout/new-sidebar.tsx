@@ -56,9 +56,7 @@ const navigationItems = [
 ];
 
 // Owner-only navigation items
-const ownerNavigationItems = [
-  { name: "My Nexus", href: "/owner", icon: Building2, ownerOnly: true },
-];
+const ownerNavigationItems: typeof navigationItems = [];
 
 // Helper function to generate company initials
 const getCompanyInitials = (companyName: string): string => {
@@ -273,6 +271,17 @@ export default function NewSidebar() {
                   data-testid="menu-item-legal"
                 >
                   <div className="font-medium text-sm">Legal</div>
+                </DropdownMenuItem>
+                
+                <div className="mx-4 my-2 h-px bg-gray-200"></div>
+                
+                {/* Bottom Section */}
+                <DropdownMenuItem 
+                  className="pl-4 pr-3 py-3 cursor-pointer hover:bg-gray-50"
+                  onClick={() => setLocation('/owner')}
+                  data-testid="menu-item-my-nexus"
+                >
+                  <div className="font-medium text-sm">My Nexus</div>
                 </DropdownMenuItem>
                 
               </DropdownMenuContent>
