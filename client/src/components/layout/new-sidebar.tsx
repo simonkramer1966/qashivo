@@ -208,7 +208,7 @@ export default function NewSidebar() {
               <DropdownMenuContent className="w-80 bg-white border-gray-200" align="start" side="bottom">
                 {/* Change Organisation - Top level with teal color */}
                 <DropdownMenuSub>
-                  <DropdownMenuSubTrigger className="p-3 cursor-pointer text-[#17B6C3] hover:bg-gray-50">
+                  <DropdownMenuSubTrigger className="pl-4 pr-3 py-3 cursor-pointer text-[#17B6C3] hover:bg-gray-50">
                     <RefreshCw className="h-4 w-4 mr-2 text-[#17B6C3]" />
                     <div className="font-medium text-sm text-[#17B6C3]">Change organisation</div>
                   </DropdownMenuSubTrigger>
@@ -253,7 +253,7 @@ export default function NewSidebar() {
                 
                 {/* Core Menu Items */}
                 <DropdownMenuItem 
-                  className="p-3 cursor-pointer hover:bg-gray-50"
+                  className="pl-4 pr-3 py-3 cursor-pointer hover:bg-gray-50"
                   onClick={() => setLocation('/settings')}
                   data-testid="menu-item-settings"
                 >
@@ -263,13 +263,13 @@ export default function NewSidebar() {
                 <DropdownMenuSeparator />
                 
                 {/* Section Header */}
-                <div className="px-3 py-2 text-xs font-medium text-gray-500 bg-gray-50">
+                <div className="pl-4 pr-3 py-2 text-xs font-medium text-gray-500 bg-gray-50">
                   Do more with Nexus
                 </div>
                 
                 {/* Nexus-specific Items */}
                 <DropdownMenuItem 
-                  className="p-3 cursor-pointer hover:bg-gray-50"
+                  className="pl-4 pr-3 py-3 cursor-pointer hover:bg-gray-50"
                   onClick={() => setLocation('/reports')}
                   data-testid="menu-item-kpi"
                 >
@@ -280,7 +280,7 @@ export default function NewSidebar() {
                 
                 {/* Bottom Section with External Links */}
                 <DropdownMenuItem 
-                  className="p-3 cursor-pointer hover:bg-gray-50"
+                  className="pl-4 pr-3 py-3 cursor-pointer hover:bg-gray-50"
                   onClick={() => window.open('https://nexuskpi.com', '_blank')}
                   data-testid="menu-item-nexus-hq"
                 >
@@ -291,7 +291,7 @@ export default function NewSidebar() {
                 </DropdownMenuItem>
                 
                 <DropdownMenuItem 
-                  className="p-3 cursor-pointer hover:bg-gray-50"
+                  className="pl-4 pr-3 py-3 cursor-pointer hover:bg-gray-50"
                   onClick={() => setLocation('/owner')}
                   data-testid="menu-item-my-nexus"
                 >
