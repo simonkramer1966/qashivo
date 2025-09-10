@@ -2211,9 +2211,20 @@ Payment required immediately to avoid collection action. Contact us NOW.`
         .replace(/£X as unpaid/g, `£${Number(invoice.amount).toLocaleString()} as unpaid`)
         .replace(/£X due for payment now/g, `£${Number(invoice.amount).toLocaleString()} due for payment ${daysOverdue > 0 ? `${daysOverdue} days ago` : 'now'}`);
 
+      // Process template subject line with variables
       let processedSubject: string = defaultTemplate.subject || 'Payment Reminder';
+      processedSubject = processedSubject
+        .replace(/\{\{first_name\}\}/g, invoice.contact.name?.split(' ')[0] || 'Valued Customer')
+        .replace(/\{\{your_name\}\}/g, defaultSender.fromName || defaultSender.name || 'Accounts Receivable')
+        .replace(/\{\{invoice_number\}\}/g, invoice.invoiceNumber)
+        .replace(/\{\{amount\}\}/g, `£${Number(invoice.amount).toLocaleString()}`)
+        .replace(/\{\{total_balance\}\}/g, `£${Number(invoice.amount).toLocaleString()}`)
+        .replace(/\{\{due_date\}\}/g, formatDate(invoice.dueDate))
+        .replace(/\{\{days_overdue\}\}/g, daysOverdue.toString())
+        .replace(/\{\{total_amount_overdue\}\}/g, `£${amountOverdue.toLocaleString()}`);
+        
       if (daysOverdue > 0) {
-        processedSubject = `Overdue Payment - ${defaultTemplate.subject || 'Payment Reminder'}`;
+        processedSubject = `Overdue Payment - ${processedSubject}`;
       }
 
       // Send email using SendGrid with properly formatted sender from Collection Workflow
@@ -2313,7 +2324,21 @@ Payment required immediately to avoid collection action. Contact us NOW.`
             .replace(/£X as unpaid/g, `£${Number(invoice.amount).toLocaleString()} as unpaid`)
             .replace(/£X due for payment now/g, `£${Number(invoice.amount).toLocaleString()} due for payment ${daysOverdue > 0 ? `${daysOverdue} days ago` : 'now'}`);
 
-          processedSubject = daysOverdue > 0 ? `Overdue Payment - ${templateToUse.subject || 'Payment Reminder'}` : templateToUse.subject || 'Payment Reminder';
+          // Process template subject line with variables
+          processedSubject = templateToUse.subject || 'Payment Reminder';
+          processedSubject = processedSubject
+            .replace(/\{\{first_name\}\}/g, invoice.contact.name?.split(' ')[0] || 'Valued Customer')
+            .replace(/\{\{your_name\}\}/g, defaultSender.fromName || defaultSender.name || 'Accounts Receivable')
+            .replace(/\{\{invoice_number\}\}/g, invoice.invoiceNumber)
+            .replace(/\{\{amount\}\}/g, `£${Number(invoice.amount).toLocaleString()}`)
+            .replace(/\{\{total_balance\}\}/g, `£${Number(invoice.amount).toLocaleString()}`)
+            .replace(/\{\{due_date\}\}/g, formatDate(invoice.dueDate))
+            .replace(/\{\{days_overdue\}\}/g, daysOverdue.toString())
+            .replace(/\{\{total_amount_overdue\}\}/g, `£${amountOverdue.toLocaleString()}`);
+            
+          if (daysOverdue > 0) {
+            processedSubject = `Overdue Payment - ${processedSubject}`;
+          }
           successMessage = `Payment reminder sent to ${invoice.contact.name}`;
           break;
 
