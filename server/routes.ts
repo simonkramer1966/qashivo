@@ -1048,6 +1048,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const daysPastDue = Math.max(0, Math.floor((Date.now() - invoice.dueDate.getTime()) / (1000 * 60 * 60 * 24)));
       const fromEmail = defaultSender?.email || process.env.SENDGRID_FROM_EMAIL || user.email || DEFAULT_FROM_EMAIL;
 
+      // Get all invoices for this contact to calculate totals
+      const contactInvoices = await storage.getInvoices(user.tenantId, { contactId: invoice.contactId });
+      
+      // Calculate total amounts
+      const totalBalance = contactInvoices.reduce((sum, inv) => sum + Number(inv.amount), 0);
+      const totalAmountOverdue = contactInvoices
+        .filter(inv => inv.status === 'overdue' || (inv.dueDate < new Date() && inv.status !== 'paid'))
+        .reduce((sum, inv) => sum + Number(inv.amount), 0);
+
       // Process template variables
       const templateData = {
         first_name: invoice.contact.name?.split(' ')[0] || invoice.contact.name,
@@ -1055,7 +1064,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         amount: Number(invoice.amount).toLocaleString(),
         due_date: formatDate(invoice.dueDate),
         days_overdue: daysPastDue.toString(),
-        company_name: invoice.contact.companyName || 'Customer'
+        company_name: invoice.contact.companyName || 'Customer',
+        total_amount_overdue: totalAmountOverdue.toLocaleString(),
+        total_balance: totalBalance.toLocaleString()
       };
 
       // Replace template variables in subject and content
