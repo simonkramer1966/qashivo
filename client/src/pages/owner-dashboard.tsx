@@ -102,7 +102,7 @@ export default function OwnerDashboard() {
     <div className="flex h-screen" style={{ backgroundColor: '#ffffff' }}>
       <NewSidebar />
       <main className="flex-1 overflow-y-auto" style={{ backgroundColor: '#ffffff' }}>
-        <Header title="Owner Dashboard" subtitle="Manage all your organizations and tenants" />
+        <Header title="My Nexus" subtitle="Manage all your organizations and tenants" />
         
         <div className="p-8 space-y-8" style={{ backgroundColor: '#ffffff' }}>
           {/* Overview Stats */}
