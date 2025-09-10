@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { formatDate } from "../../../shared/utils/dateFormatter";
 import { useAuth } from "@/hooks/useAuth";
 import { isUnauthorizedError } from "@/lib/authUtils";
@@ -10,6 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Search, Mail, Phone, Building, User, Users, ChevronUp, ChevronDown, Star } from "lucide-react";
 
 export default function Customers() {
@@ -37,6 +39,52 @@ export default function Customers() {
   const { data: contacts = [], isLoading: contactsLoading, error } = useQuery({
     queryKey: ["/api/contacts"],
     enabled: isAuthenticated,
+  });
+
+  // Fetch available collection schedules
+  const { data: schedules = [] } = useQuery({
+    queryKey: ["/api/collections/schedules"],
+    enabled: isAuthenticated,
+  });
+
+  // Fetch customer schedule assignments
+  const { data: assignments = [] } = useQuery({
+    queryKey: ["/api/collections/customer-assignments"],
+    enabled: isAuthenticated,
+  });
+
+  // Mutation for updating customer schedule assignments
+  const updateAssignmentMutation = useMutation({
+    mutationFn: async ({ contactId, scheduleId }: { contactId: string; scheduleId: string | null }) => {
+      if (scheduleId === null) {
+        // Remove assignment
+        const response = await apiRequest('DELETE', `/api/collections/customer-assignments/${contactId}`);
+        return response.json();
+      } else {
+        // Create/update assignment
+        const response = await apiRequest('POST', '/api/collections/customer-assignments', {
+          contactId,
+          scheduleId,
+          isActive: true
+        });
+        return response.json();
+      }
+    },
+    onSuccess: () => {
+      // Invalidate and refetch assignments
+      queryClient.invalidateQueries({ queryKey: ['/api/collections/customer-assignments'] });
+      toast({
+        title: "Success",
+        description: "Customer schedule updated successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: "Failed to update customer schedule",
+        variant: "destructive",
+      });
+    },
   });
 
   useEffect(() => {
@@ -105,6 +153,20 @@ export default function Customers() {
     );
   };
 
+  // Get assigned schedule for a customer
+  const getAssignedSchedule = (contactId: string) => {
+    const assignment = (assignments as any[]).find((a: any) => 
+      a.contactId === contactId && a.isActive
+    );
+    return assignment?.scheduleId || null;
+  };
+
+  // Handle schedule change
+  const handleScheduleChange = (contactId: string, scheduleId: string) => {
+    const newScheduleId = scheduleId === "none" ? null : scheduleId;
+    updateAssignmentMutation.mutate({ contactId, scheduleId: newScheduleId });
+  };
+
   const filteredContacts = (contacts as any[]).filter((contact: any) => {
     const searchLower = search.toLowerCase();
     return contact.name?.toLowerCase().includes(searchLower) ||
@@ -133,10 +195,6 @@ export default function Customers() {
       case "phone":
         aValue = a.phone || '';
         bValue = b.phone || '';
-        break;
-      case "paymentTerms":
-        aValue = a.paymentTerms || 0;
-        bValue = b.paymentTerms || 0;
         break;
       case "status":
         aValue = a.isActive ? 'active' : 'inactive';
@@ -233,13 +291,7 @@ export default function Customers() {
                           </button>
                         </th>
                         <th className="text-left py-3 text-sm font-medium text-muted-foreground">
-                          <button 
-                            onClick={() => handleSort("paymentTerms")}
-                            className="flex items-center space-x-1 hover:text-slate-900"
-                          >
-                            <span>Terms</span>
-                            {getSortIcon("paymentTerms")}
-                          </button>
+                          <span>Schedule</span>
                         </th>
                         <th className="text-left py-3 text-sm font-medium text-muted-foreground">
                           <button 
@@ -275,8 +327,24 @@ export default function Customers() {
                               {contact.email || '-'}
                             </div>
                           </td>
-                          <td className="py-4 font-medium text-foreground" data-testid={`text-list-terms-${contact.id}`}>
-                            {contact.paymentTerms ? `${contact.paymentTerms}d` : '-'}
+                          <td className="py-4" data-testid={`cell-schedule-${contact.id}`}>
+                            <Select
+                              value={getAssignedSchedule(contact.id) || "none"}
+                              onValueChange={(value) => handleScheduleChange(contact.id, value)}
+                              disabled={updateAssignmentMutation.isPending}
+                            >
+                              <SelectTrigger className="w-full bg-white/70 border-gray-200/30">
+                                <SelectValue placeholder="No schedule" />
+                              </SelectTrigger>
+                              <SelectContent className="bg-white border-gray-200">
+                                <SelectItem value="none">No schedule</SelectItem>
+                                {(schedules as any[]).map((schedule) => (
+                                  <SelectItem key={schedule.id} value={schedule.id}>
+                                    {schedule.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
                           </td>
                           <td className="py-4">
                             <Badge 
