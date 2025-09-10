@@ -15,7 +15,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Mail, Phone, Eye, Plus, Search, Filter, FileText, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, X, MessageSquare, Calendar, CheckCircle, AlertCircle, Clock, Users, User, Building, Star, Target, ArrowRight } from "lucide-react";
+import { Mail, Phone, Eye, Plus, Search, Filter, FileText, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, X, MessageSquare, Calendar, CheckCircle, AlertCircle, Clock, Users, User, Building, Star, Target, ArrowRight, MoreHorizontal } from "lucide-react";
 
 export default function Invoices() {
   const { toast } = useToast();
@@ -1410,86 +1410,132 @@ export default function Invoices() {
                               >
                                 <ArrowRight className="h-3 w-3" />
                               </Button>
-                              {invoice.contact?.email && (
-                                <DropdownMenu>
-                                  <DropdownMenuTrigger asChild>
-                                    <Button 
-                                      variant="outline" 
-                                      size="sm" 
-                                      disabled={sendInvoiceEmailMutation.isPending}
-                                      className="border-[#17B6C3]/20 text-[#17B6C3] hover:bg-[#17B6C3]/5 h-7 w-7 p-0"
-                                      data-testid={`button-send-email-${invoice.id}`}
-                                      title="Email options"
-                                    >
-                                      <Mail className="h-3 w-3" />
-                                    </Button>
-                                  </DropdownMenuTrigger>
-                                  <DropdownMenuContent className="w-48 bg-white border-gray-200">
-                                    <DropdownMenuItem
-                                      onClick={() => sendInvoiceEmailMutation.mutate({ invoiceId: invoice.id, actionType: 'general-chase' })}
-                                      disabled={sendInvoiceEmailMutation.isPending}
-                                      data-testid={`email-general-chase-${invoice.id}`}
-                                    >
-                                      🔔 General Chase
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem
-                                      onClick={() => sendInvoiceEmailMutation.mutate({ invoiceId: invoice.id, actionType: 'invoice-copy' })}
-                                      disabled={sendInvoiceEmailMutation.isPending}
-                                      data-testid={`email-invoice-copy-${invoice.id}`}
-                                    >
-                                      📄 Invoice To Client
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem
-                                      onClick={() => sendInvoiceEmailMutation.mutate({ invoiceId: invoice.id, actionType: 'thank-you' })}
-                                      disabled={sendInvoiceEmailMutation.isPending}
-                                      data-testid={`email-thank-you-${invoice.id}`}
-                                    >
-                                      🎉 Thank You For Payment
-                                    </DropdownMenuItem>
-                                  </DropdownMenuContent>
-                                </DropdownMenu>
-                              )}
-                              {invoice.contact?.phone && (
-                                <DropdownMenu>
-                                  <DropdownMenuTrigger asChild>
-                                    <Button 
-                                      variant="outline" 
-                                      size="sm"
-                                      disabled={sendInvoiceSMSMutation.isPending}
-                                      className="border-[#17B6C3]/20 text-[#17B6C3] hover:bg-[#17B6C3]/5 h-7 w-7 p-0"
-                                      data-testid={`button-call-${invoice.id}`}
-                                      title="SMS options"
-                                    >
-                                      <Phone className="h-3 w-3" />
-                                    </Button>
-                                  </DropdownMenuTrigger>
-                                  <DropdownMenuContent className="w-48 bg-white border-gray-200">
-                                    <DropdownMenuItem
-                                      onClick={() => sendInvoiceSMSMutation.mutate({ invoiceId: invoice.id, actionType: 'general-reminder' })}
-                                      disabled={sendInvoiceSMSMutation.isPending}
-                                      data-testid={`sms-general-reminder-${invoice.id}`}
-                                    >
-                                      📱 General SMS
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem
-                                      onClick={() => sendInvoiceSMSMutation.mutate({ invoiceId: invoice.id, actionType: 'thank-you' })}
-                                      disabled={sendInvoiceSMSMutation.isPending}
-                                      data-testid={`sms-thank-you-${invoice.id}`}
-                                    >
-                                      🎉 Thank You For Payment
-                                    </DropdownMenuItem>
-                                  </DropdownMenuContent>
-                                </DropdownMenu>
-                              )}
-                              <Button 
-                                variant="outline" 
-                                size="sm"
-                                onClick={() => openContactHistory(invoice)}
-                                className="border-[#17B6C3]/20 text-[#17B6C3] hover:bg-[#17B6C3]/5 h-7 w-7 p-0"
-                                data-testid={`button-view-${invoice.id}`}
-                              >
-                                <Eye className="h-3 w-3" />
-                              </Button>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button 
+                                    variant="outline" 
+                                    size="sm"
+                                    className="border-[#17B6C3]/20 text-[#17B6C3] hover:bg-[#17B6C3]/5 h-7 w-7 p-0"
+                                    data-testid={`button-actions-${invoice.id}`}
+                                    title="Communication options"
+                                  >
+                                    <MoreHorizontal className="h-3 w-3" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent className="w-56 bg-white border-gray-200">
+                                  {/* Email Options */}
+                                  {invoice.contact?.email && (
+                                    <>
+                                      <div className="px-2 py-1.5 text-xs font-medium text-gray-500 border-b border-gray-100">
+                                        Email
+                                      </div>
+                                      <DropdownMenuItem
+                                        onClick={() => sendInvoiceEmailMutation.mutate({ invoiceId: invoice.id, actionType: 'general-chase' })}
+                                        disabled={sendInvoiceEmailMutation.isPending}
+                                        data-testid={`email-general-chase-${invoice.id}`}
+                                      >
+                                        <Mail className="h-4 w-4 mr-2" />
+                                        General Chase
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem
+                                        onClick={() => sendInvoiceEmailMutation.mutate({ invoiceId: invoice.id, actionType: 'invoice-copy' })}
+                                        disabled={sendInvoiceEmailMutation.isPending}
+                                        data-testid={`email-invoice-copy-${invoice.id}`}
+                                      >
+                                        <FileText className="h-4 w-4 mr-2" />
+                                        Send Invoice Copy
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem
+                                        onClick={() => sendInvoiceEmailMutation.mutate({ invoiceId: invoice.id, actionType: 'thank-you' })}
+                                        disabled={sendInvoiceEmailMutation.isPending}
+                                        data-testid={`email-thank-you-${invoice.id}`}
+                                      >
+                                        <CheckCircle className="h-4 w-4 mr-2" />
+                                        Thank You Message
+                                      </DropdownMenuItem>
+                                    </>
+                                  )}
+                                  
+                                  {/* SMS Options */}
+                                  {invoice.contact?.phone && (
+                                    <>
+                                      <div className="px-2 py-1.5 text-xs font-medium text-gray-500 border-b border-gray-100">
+                                        SMS
+                                      </div>
+                                      <DropdownMenuItem
+                                        onClick={() => sendInvoiceSMSMutation.mutate({ invoiceId: invoice.id, actionType: 'general-reminder' })}
+                                        disabled={sendInvoiceSMSMutation.isPending}
+                                        data-testid={`sms-general-reminder-${invoice.id}`}
+                                      >
+                                        <MessageSquare className="h-4 w-4 mr-2" />
+                                        General Reminder
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem
+                                        onClick={() => sendInvoiceSMSMutation.mutate({ invoiceId: invoice.id, actionType: 'thank-you' })}
+                                        disabled={sendInvoiceSMSMutation.isPending}
+                                        data-testid={`sms-thank-you-${invoice.id}`}
+                                      >
+                                        <CheckCircle className="h-4 w-4 mr-2" />
+                                        Thank You SMS
+                                      </DropdownMenuItem>
+                                    </>
+                                  )}
+                                  
+                                  {/* WhatsApp Options */}
+                                  {invoice.contact?.phone && (
+                                    <>
+                                      <div className="px-2 py-1.5 text-xs font-medium text-gray-500 border-b border-gray-100">
+                                        WhatsApp
+                                      </div>
+                                      <DropdownMenuItem
+                                        onClick={() => {
+                                          toast({
+                                            title: "WhatsApp Integration",
+                                            description: "WhatsApp messaging will be available soon.",
+                                          });
+                                        }}
+                                        data-testid={`whatsapp-reminder-${invoice.id}`}
+                                      >
+                                        <MessageSquare className="h-4 w-4 mr-2" />
+                                        Send WhatsApp
+                                      </DropdownMenuItem>
+                                    </>
+                                  )}
+                                  
+                                  {/* Voice Options */}
+                                  {invoice.contact?.phone && (
+                                    <>
+                                      <div className="px-2 py-1.5 text-xs font-medium text-gray-500 border-b border-gray-100">
+                                        Voice
+                                      </div>
+                                      <DropdownMenuItem
+                                        onClick={() => {
+                                          toast({
+                                            title: "Voice Call Integration",
+                                            description: "Voice calling will be available soon.",
+                                          });
+                                        }}
+                                        data-testid={`voice-call-${invoice.id}`}
+                                      >
+                                        <Phone className="h-4 w-4 mr-2" />
+                                        Make Voice Call
+                                      </DropdownMenuItem>
+                                    </>
+                                  )}
+                                  
+                                  {/* View History */}
+                                  <div className="px-2 py-1.5 text-xs font-medium text-gray-500 border-b border-gray-100">
+                                    View
+                                  </div>
+                                  <DropdownMenuItem
+                                    onClick={() => openContactHistory(invoice)}
+                                    data-testid={`view-history-${invoice.id}`}
+                                  >
+                                    <Eye className="h-4 w-4 mr-2" />
+                                    Contact History
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
                             </div>
                           </td>
                         </tr>
