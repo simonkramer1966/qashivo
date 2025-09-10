@@ -659,14 +659,14 @@ export default function Invoices() {
             <div className="text-center py-8">
               <p className="text-muted-foreground">Loading contact history...</p>
             </div>
-          ) : contactHistory.length === 0 ? (
+          ) : (contactHistory as any[]).length === 0 ? (
             <div className="text-center py-8">
               <MessageSquare className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
               <p className="text-muted-foreground">No contact history found for this invoice</p>
             </div>
           ) : (
             <div className="space-y-4">
-              {contactHistory.map((entry: any, index: number) => (
+              {(contactHistory as any[]).map((entry: any, index: number) => (
                 <div key={index} className="border border-gray-200 rounded-lg p-4">
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">

@@ -604,19 +604,20 @@ export class DatabaseStorage implements IStorage {
     tenantId: string,
     filters?: { type?: string; category?: string }
   ): Promise<CommunicationTemplate[]> {
-    let query = db
-      .select()
-      .from(communicationTemplates)
-      .where(eq(communicationTemplates.tenantId, tenantId));
+    const conditions = [eq(communicationTemplates.tenantId, tenantId)];
 
     if (filters?.type) {
-      query = query.where(eq(communicationTemplates.type, filters.type));
+      conditions.push(eq(communicationTemplates.type, filters.type));
     }
     if (filters?.category) {
-      query = query.where(eq(communicationTemplates.category, filters.category));
+      conditions.push(eq(communicationTemplates.category, filters.category));
     }
 
-    return await query.orderBy(communicationTemplates.stage, desc(communicationTemplates.createdAt));
+    return await db
+      .select()
+      .from(communicationTemplates)
+      .where(and(...conditions))
+      .orderBy(communicationTemplates.stage, desc(communicationTemplates.createdAt));
   }
 
   async createCommunicationTemplate(templateData: InsertCommunicationTemplate): Promise<CommunicationTemplate> {
@@ -684,7 +685,7 @@ export class DatabaseStorage implements IStorage {
     const result = await db
       .delete(emailSenders)
       .where(and(eq(emailSenders.id, id), eq(emailSenders.tenantId, tenantId)));
-    return result.rowCount > 0;
+    return (result.rowCount ?? 0) > 0;
   }
 
   async getDefaultEmailSender(tenantId: string): Promise<EmailSender | null> {
@@ -752,7 +753,7 @@ export class DatabaseStorage implements IStorage {
     const result = await db
       .delete(collectionSchedules)
       .where(and(eq(collectionSchedules.id, id), eq(collectionSchedules.tenantId, tenantId)));
-    return result.rowCount > 0;
+    return (result.rowCount ?? 0) > 0;
   }
 
   async getDefaultCollectionSchedule(tenantId: string): Promise<CollectionSchedule | null> {
@@ -766,16 +767,17 @@ export class DatabaseStorage implements IStorage {
 
   // Customer Schedule Assignments
   async getCustomerScheduleAssignments(tenantId: string, contactId?: string): Promise<CustomerScheduleAssignment[]> {
-    let query = db
-      .select()
-      .from(customerScheduleAssignments)
-      .where(eq(customerScheduleAssignments.tenantId, tenantId));
+    const conditions = [eq(customerScheduleAssignments.tenantId, tenantId)];
 
     if (contactId) {
-      query = query.where(eq(customerScheduleAssignments.contactId, contactId));
+      conditions.push(eq(customerScheduleAssignments.contactId, contactId));
     }
 
-    return await query.orderBy(desc(customerScheduleAssignments.assignedAt));
+    return await db
+      .select()
+      .from(customerScheduleAssignments)
+      .where(and(...conditions))
+      .orderBy(desc(customerScheduleAssignments.assignedAt));
   }
 
   async assignCustomerToSchedule(assignmentData: InsertCustomerScheduleAssignment): Promise<CustomerScheduleAssignment> {
@@ -858,19 +860,20 @@ export class DatabaseStorage implements IStorage {
     category: string,
     type?: string
   ): Promise<CommunicationTemplate[]> {
-    let query = db
-      .select()
-      .from(communicationTemplates)
-      .where(and(
-        eq(communicationTemplates.tenantId, tenantId),
-        eq(communicationTemplates.category, category)
-      ));
+    const conditions = [
+      eq(communicationTemplates.tenantId, tenantId),
+      eq(communicationTemplates.category, category)
+    ];
 
     if (type) {
-      query = query.where(eq(communicationTemplates.type, type));
+      conditions.push(eq(communicationTemplates.type, type));
     }
 
-    return await query.orderBy(communicationTemplates.stage, desc(communicationTemplates.optimizationScore));
+    return await db
+      .select()
+      .from(communicationTemplates)
+      .where(and(...conditions))
+      .orderBy(communicationTemplates.stage, desc(communicationTemplates.optimizationScore));
   }
 
   async getHighPerformingTemplates(
@@ -878,19 +881,19 @@ export class DatabaseStorage implements IStorage {
     type?: string,
     limit: number = 5
   ): Promise<CommunicationTemplate[]> {
-    let query = db
-      .select()
-      .from(communicationTemplates)
-      .where(and(
-        eq(communicationTemplates.tenantId, tenantId),
-        isNotNull(communicationTemplates.successRate)
-      ));
+    const conditions = [
+      eq(communicationTemplates.tenantId, tenantId),
+      isNotNull(communicationTemplates.successRate)
+    ];
 
     if (type) {
-      query = query.where(eq(communicationTemplates.type, type));
+      conditions.push(eq(communicationTemplates.type, type));
     }
 
-    return await query
+    return await db
+      .select()
+      .from(communicationTemplates)
+      .where(and(...conditions))
       .orderBy(desc(communicationTemplates.successRate), desc(communicationTemplates.usageCount))
       .limit(limit);
   }
@@ -906,22 +909,23 @@ export class DatabaseStorage implements IStorage {
     templateId: string,
     dateRange?: { start: Date; end: Date }
   ): Promise<TemplatePerformance[]> {
-    let query = db
-      .select()
-      .from(templatePerformance)
-      .where(and(
-        eq(templatePerformance.tenantId, tenantId),
-        eq(templatePerformance.templateId, templateId)
-      ));
+    const conditions = [
+      eq(templatePerformance.tenantId, tenantId),
+      eq(templatePerformance.templateId, templateId)
+    ];
 
     if (dateRange) {
-      query = query.where(and(
+      conditions.push(
         gte(templatePerformance.date, dateRange.start),
         lte(templatePerformance.date, dateRange.end)
-      ));
+      );
     }
 
-    return await query.orderBy(desc(templatePerformance.date));
+    return await db
+      .select()
+      .from(templatePerformance)
+      .where(and(...conditions))
+      .orderBy(desc(templatePerformance.date));
   }
 
   async deleteCommunicationTemplate(id: string, tenantId: string): Promise<void> {
@@ -934,16 +938,17 @@ export class DatabaseStorage implements IStorage {
     tenantId: string,
     filters?: { type?: string }
   ): Promise<AiAgentConfig[]> {
-    let query = db
-      .select()
-      .from(aiAgentConfigs)
-      .where(eq(aiAgentConfigs.tenantId, tenantId));
+    const conditions = [eq(aiAgentConfigs.tenantId, tenantId)];
 
     if (filters?.type) {
-      query = query.where(eq(aiAgentConfigs.type, filters.type));
+      conditions.push(eq(aiAgentConfigs.type, filters.type));
     }
 
-    return await query.orderBy(desc(aiAgentConfigs.createdAt));
+    return await db
+      .select()
+      .from(aiAgentConfigs)
+      .where(and(...conditions))
+      .orderBy(desc(aiAgentConfigs.createdAt));
   }
 
   async createAiAgentConfig(configData: InsertAiAgentConfig): Promise<AiAgentConfig> {
@@ -994,22 +999,23 @@ export class DatabaseStorage implements IStorage {
     tenantId: string,
     filters?: { channel?: string; startDate?: string; endDate?: string }
   ): Promise<ChannelAnalytics[]> {
-    let query = db
-      .select()
-      .from(channelAnalytics)
-      .where(eq(channelAnalytics.tenantId, tenantId));
+    const conditions = [eq(channelAnalytics.tenantId, tenantId)];
 
     if (filters?.channel) {
-      query = query.where(eq(channelAnalytics.channel, filters.channel));
+      conditions.push(eq(channelAnalytics.channel, filters.channel));
     }
     if (filters?.startDate) {
-      query = query.where(sql`${channelAnalytics.date} >= ${filters.startDate}`);
+      conditions.push(sql`${channelAnalytics.date} >= ${filters.startDate}`);
     }
     if (filters?.endDate) {
-      query = query.where(sql`${channelAnalytics.date} <= ${filters.endDate}`);
+      conditions.push(sql`${channelAnalytics.date} <= ${filters.endDate}`);
     }
 
-    return await query.orderBy(desc(channelAnalytics.date));
+    return await db
+      .select()
+      .from(channelAnalytics)
+      .where(and(...conditions))
+      .orderBy(desc(channelAnalytics.date));
   }
 
   async createChannelAnalytics(analyticsData: InsertChannelAnalytics): Promise<ChannelAnalytics> {
@@ -1070,13 +1076,21 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getWorkflowTemplates(filters?: { category?: string; industry?: string }): Promise<WorkflowTemplate[]> {
-    let query = db.select().from(workflowTemplates);
+    const conditions = [];
 
     if (filters?.category) {
-      query = query.where(eq(workflowTemplates.category, filters.category));
+      conditions.push(eq(workflowTemplates.category, filters.category));
     }
     if (filters?.industry) {
-      query = query.where(eq(workflowTemplates.industry, filters.industry));
+      conditions.push(eq(workflowTemplates.industry, filters.industry));
+    }
+
+    const query = db.select().from(workflowTemplates);
+    
+    if (conditions.length > 0) {
+      return await query
+        .where(and(...conditions))
+        .orderBy(desc(workflowTemplates.usageCount), desc(workflowTemplates.createdAt));
     }
 
     return await query.orderBy(desc(workflowTemplates.usageCount), desc(workflowTemplates.createdAt));
@@ -1216,11 +1230,88 @@ export class DatabaseStorage implements IStorage {
       .leftJoin(invoices, eq(voiceCalls.invoiceId, invoices.id))
       .where(eq(voiceCalls.tenantId, tenantId));
 
+    const additionalConditions = [];
     if (filters?.contactId) {
-      query = query.where(and(eq(voiceCalls.tenantId, tenantId), eq(voiceCalls.contactId, filters.contactId)));
+      additionalConditions.push(eq(voiceCalls.contactId, filters.contactId));
     }
     if (filters?.status) {
-      query = query.where(and(eq(voiceCalls.tenantId, tenantId), eq(voiceCalls.status, filters.status)));
+      additionalConditions.push(eq(voiceCalls.status, filters.status));
+    }
+
+    if (additionalConditions.length > 0) {
+      query = db
+        .select({
+          id: voiceCalls.id,
+          tenantId: voiceCalls.tenantId,
+          contactId: voiceCalls.contactId,
+          invoiceId: voiceCalls.invoiceId,
+          retellCallId: voiceCalls.retellCallId,
+          retellAgentId: voiceCalls.retellAgentId,
+          fromNumber: voiceCalls.fromNumber,
+          toNumber: voiceCalls.toNumber,
+          direction: voiceCalls.direction,
+          status: voiceCalls.status,
+          duration: voiceCalls.duration,
+          cost: voiceCalls.cost,
+          transcript: voiceCalls.transcript,
+          recordingUrl: voiceCalls.recordingUrl,
+          startedAt: voiceCalls.startedAt,
+          endedAt: voiceCalls.endedAt,
+          metadata: voiceCalls.metadata,
+          agentConfigId: voiceCalls.agentConfigId,
+          escalatedToHuman: voiceCalls.escalatedToHuman,
+          escalationReason: voiceCalls.escalationReason,
+          humanAgentId: voiceCalls.humanAgentId,
+          humanJoinedAt: voiceCalls.humanJoinedAt,
+          humanLeftAt: voiceCalls.humanLeftAt,
+          humanNotes: voiceCalls.humanNotes,
+          callbackRequested: voiceCalls.callbackRequested,
+          callbackScheduledFor: voiceCalls.callbackScheduledFor,
+          paymentIntentCreated: voiceCalls.paymentIntentCreated,
+          paymentAmount: voiceCalls.paymentAmount,
+          paymentStatus: voiceCalls.paymentStatus,
+          createdAt: voiceCalls.createdAt,
+          updatedAt: voiceCalls.updatedAt,
+          contact: {
+            id: contacts.id,
+            tenantId: contacts.tenantId,
+            name: contacts.name,
+            email: contacts.email,
+            phone: contacts.phone,
+            company: contacts.company,
+            address: contacts.address,
+            notes: contacts.notes,
+            tags: contacts.tags,
+            isActive: contacts.isActive,
+            createdAt: contacts.createdAt,
+            updatedAt: contacts.updatedAt,
+          },
+          invoice: {
+            id: invoices.id,
+            tenantId: invoices.tenantId,
+            contactId: invoices.contactId,
+            xeroInvoiceId: invoices.xeroInvoiceId,
+            invoiceNumber: invoices.invoiceNumber,
+            amount: invoices.amount,
+            amountPaid: invoices.amountPaid,
+            taxAmount: invoices.taxAmount,
+            status: invoices.status,
+            issueDate: invoices.issueDate,
+            dueDate: invoices.dueDate,
+            paidDate: invoices.paidDate,
+            description: invoices.description,
+            currency: invoices.currency,
+            workflowId: invoices.workflowId,
+            lastReminderSent: invoices.lastReminderSent,
+            reminderCount: invoices.reminderCount,
+            createdAt: invoices.createdAt,
+            updatedAt: invoices.updatedAt,
+          }
+        })
+        .from(voiceCalls)
+        .leftJoin(contacts, eq(voiceCalls.contactId, contacts.id))
+        .leftJoin(invoices, eq(voiceCalls.invoiceId, invoices.id))
+        .where(and(eq(voiceCalls.tenantId, tenantId), ...additionalConditions));
     }
 
     const result = await query

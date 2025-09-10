@@ -1072,8 +1072,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
 
       // Replace template variables in subject and content
-      let processedSubject = geInvoiceTemplate.subject;
-      let processedContent = geInvoiceTemplate.content;
+      let processedSubject = geInvoiceTemplate.subject || 'Invoice Reminder';
+      let processedContent = geInvoiceTemplate.content || 'Please see attached invoice.';
 
       Object.entries(templateData).forEach(([key, value]) => {
         const placeholder = `{{${key}}}`;
@@ -1102,7 +1102,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           type: 'email',
           status: 'completed',
           subject: processedSubject,
-          content: customMessage || 'GE Invoice template email sent with PDF attachment',
+          content: customMessage || 'GE Invoice template email sent',
           completedAt: new Date(),
         });
 
