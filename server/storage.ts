@@ -22,6 +22,8 @@ import {
   collectionSchedules,
   customerScheduleAssignments,
   templatePerformance,
+  invoiceHealthScores,
+  healthAnalyticsSnapshots,
   type User,
   type UpsertUser,
   type Tenant,
@@ -68,6 +70,10 @@ import {
   type InsertCustomerScheduleAssignment,
   type TemplatePerformance,
   type InsertTemplatePerformance,
+  type InvoiceHealthScore,
+  type InsertInvoiceHealthScore,
+  type HealthAnalyticsSnapshot,
+  type InsertHealthAnalyticsSnapshot,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, sql, count, ne, isNotNull, gte, lte } from "drizzle-orm";
@@ -208,6 +214,15 @@ export interface IStorage {
   // Cleanup operations
   clearAllContacts(tenantId: string): Promise<void>;
   clearAllInvoices(tenantId: string): Promise<void>;
+  
+  // Health scoring operations
+  getInvoicesByContact(contactId: string, tenantId: string): Promise<Invoice[]>;
+  getInvoiceHealthScore(invoiceId: string, tenantId: string): Promise<InvoiceHealthScore | undefined>;
+  getInvoiceHealthScores(tenantId: string): Promise<InvoiceHealthScore[]>;
+  createInvoiceHealthScore(healthScore: InsertInvoiceHealthScore): Promise<InvoiceHealthScore>;
+  updateInvoiceHealthScore(id: string, tenantId: string, updates: Partial<InsertInvoiceHealthScore>): Promise<InvoiceHealthScore>;
+  getHealthAnalyticsSnapshot(tenantId: string, snapshotType?: string): Promise<HealthAnalyticsSnapshot | undefined>;
+  createHealthAnalyticsSnapshot(snapshot: InsertHealthAnalyticsSnapshot): Promise<HealthAnalyticsSnapshot>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1709,6 +1724,83 @@ export class DatabaseStorage implements IStorage {
     await db
       .delete(aiFacts)
       .where(and(eq(aiFacts.id, id), eq(aiFacts.tenantId, tenantId)));
+  }
+
+  // Health scoring operations
+  async getInvoicesByContact(contactId: string, tenantId: string): Promise<Invoice[]> {
+    const result = await db
+      .select()
+      .from(invoices)
+      .where(and(eq(invoices.contactId, contactId), eq(invoices.tenantId, tenantId)))
+      .orderBy(desc(invoices.createdAt));
+    
+    return result;
+  }
+
+  async getInvoiceHealthScore(invoiceId: string, tenantId: string): Promise<InvoiceHealthScore | undefined> {
+    const result = await db
+      .select()
+      .from(invoiceHealthScores)
+      .where(and(eq(invoiceHealthScores.invoiceId, invoiceId), eq(invoiceHealthScores.tenantId, tenantId)))
+      .orderBy(desc(invoiceHealthScores.lastAnalysis))
+      .limit(1);
+    
+    return result[0];
+  }
+
+  async getInvoiceHealthScores(tenantId: string): Promise<InvoiceHealthScore[]> {
+    const result = await db
+      .select()
+      .from(invoiceHealthScores)
+      .where(eq(invoiceHealthScores.tenantId, tenantId))
+      .orderBy(desc(invoiceHealthScores.lastAnalysis));
+    
+    return result;
+  }
+
+  async createInvoiceHealthScore(healthScore: InsertInvoiceHealthScore): Promise<InvoiceHealthScore> {
+    const result = await db
+      .insert(invoiceHealthScores)
+      .values(healthScore)
+      .returning();
+    
+    return result[0];
+  }
+
+  async updateInvoiceHealthScore(id: string, tenantId: string, updates: Partial<InsertInvoiceHealthScore>): Promise<InvoiceHealthScore> {
+    const result = await db
+      .update(invoiceHealthScores)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(and(eq(invoiceHealthScores.id, id), eq(invoiceHealthScores.tenantId, tenantId)))
+      .returning();
+    
+    return result[0];
+  }
+
+  async getHealthAnalyticsSnapshot(tenantId: string, snapshotType?: string): Promise<HealthAnalyticsSnapshot | undefined> {
+    let query = db
+      .select()
+      .from(healthAnalyticsSnapshots)
+      .where(eq(healthAnalyticsSnapshots.tenantId, tenantId));
+
+    if (snapshotType) {
+      query = query.where(eq(healthAnalyticsSnapshots.snapshotType, snapshotType));
+    }
+
+    const result = await query
+      .orderBy(desc(healthAnalyticsSnapshots.snapshotDate))
+      .limit(1);
+    
+    return result[0];
+  }
+
+  async createHealthAnalyticsSnapshot(snapshot: InsertHealthAnalyticsSnapshot): Promise<HealthAnalyticsSnapshot> {
+    const result = await db
+      .insert(healthAnalyticsSnapshots)
+      .values(snapshot)
+      .returning();
+    
+    return result[0];
   }
 }
 
