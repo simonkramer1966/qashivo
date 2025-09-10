@@ -6,6 +6,8 @@ import { Building2, Users, DollarSign, AlertCircle, TrendingUp, Calendar, Phone,
 import { Link } from "wouter";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { formatDate as universalFormatDate } from "../../../shared/utils/dateFormatter";
+import NewSidebar from "@/components/layout/new-sidebar";
+import Header from "@/components/layout/header";
 
 interface TenantMetrics {
   totalOutstanding: number;
@@ -53,72 +55,58 @@ export default function OwnerDashboard() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-teal-50">
-        <div className="max-w-7xl mx-auto p-8">
-          <div className="animate-pulse">
-            <div className="h-8 bg-gray-200 rounded w-64 mb-6"></div>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-              {[1, 2, 3, 4].map((i) => (
-                <div key={i} className="h-32 bg-gray-200 rounded-lg"></div>
-              ))}
+      <div className="flex h-screen" style={{ backgroundColor: '#ffffff' }}>
+        <NewSidebar />
+        <main className="flex-1 overflow-y-auto" style={{ backgroundColor: '#ffffff' }}>
+          <Header title="Owner Dashboard" subtitle="Manage all your organizations and tenants" />
+          <div className="p-8">
+            <div className="animate-pulse">
+              <div className="h-8 bg-gray-200 rounded w-64 mb-6"></div>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                {[1, 2, 3, 4].map((i) => (
+                  <div key={i} className="h-32 bg-gray-200 rounded-lg"></div>
+                ))}
+              </div>
             </div>
           </div>
-        </div>
+        </main>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-teal-50">
-        <div className="max-w-7xl mx-auto p-8">
-          <Card className="bg-red-50 border-red-200">
-            <CardHeader>
-              <CardTitle className="text-red-800 flex items-center">
-                <AlertCircle className="mr-2 h-5 w-5" />
-                Access Denied
-              </CardTitle>
-              <CardDescription className="text-red-600">
-                You don't have permission to access the owner dashboard.
-              </CardDescription>
-            </CardHeader>
-          </Card>
-        </div>
+      <div className="flex h-screen" style={{ backgroundColor: '#ffffff' }}>
+        <NewSidebar />
+        <main className="flex-1 overflow-y-auto" style={{ backgroundColor: '#ffffff' }}>
+          <Header title="Owner Dashboard" subtitle="Manage all your organizations and tenants" />
+          <div className="p-8">
+            <Card className="bg-red-50 border-red-200">
+              <CardHeader>
+                <CardTitle className="text-red-800 flex items-center">
+                  <AlertCircle className="mr-2 h-5 w-5" />
+                  Access Denied
+                </CardTitle>
+                <CardDescription className="text-red-600">
+                  You don't have permission to access the owner dashboard.
+                </CardDescription>
+              </CardHeader>
+            </Card>
+          </div>
+        </main>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-teal-50">
-      {/* Navigation Header */}
-      <nav className="bg-white/95 backdrop-blur-md border-b border-gray-200/20 shadow-lg">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-2">
-                <div className="w-8 h-8 bg-[#17B6C3]/10 rounded-lg flex items-center justify-center">
-                  <Building2 className="h-5 w-5 text-[#17B6C3]" />
-                </div>
-                <h1 className="text-xl font-bold text-gray-900" data-testid="text-owner-dashboard">
-                  Owner Dashboard
-                </h1>
-              </div>
-            </div>
-            
-            <div className="flex items-center space-x-4">
-              <Link href="/">
-                <Button variant="outline" size="sm" data-testid="button-back-home">
-                  Back to App
-                </Button>
-              </Link>
-            </div>
-          </div>
-        </div>
-      </nav>
-
-      <div className="max-w-7xl mx-auto p-8">
-        {/* Overview Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+    <div className="flex h-screen" style={{ backgroundColor: '#ffffff' }}>
+      <NewSidebar />
+      <main className="flex-1 overflow-y-auto" style={{ backgroundColor: '#ffffff' }}>
+        <Header title="Owner Dashboard" subtitle="Manage all your organizations and tenants" />
+        
+        <div className="p-8 space-y-8" style={{ backgroundColor: '#ffffff' }}>
+          {/* Overview Stats */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           <Card className="bg-white/70 backdrop-blur-md border-0 shadow-xl">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Clients</CardTitle>
@@ -285,7 +273,8 @@ export default function OwnerDashboard() {
             </div>
           </CardContent>
         </Card>
-      </div>
+        </div>
+      </main>
     </div>
   );
 }
