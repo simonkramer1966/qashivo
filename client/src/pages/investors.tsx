@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { ArrowRight } from "lucide-react";
 import { Link } from "wouter";
 import nexusLogo from "@assets/Main Nexus Logo copy_1756923544828.png";
@@ -94,25 +95,38 @@ export default function Investors() {
 
       {/* Hero Section with Background Image */}
       <section 
-        className="relative min-h-screen flex items-center justify-center bg-cover bg-center"
+        className="relative pt-32 pb-20 bg-cover bg-center"
         style={{ backgroundImage: `url(${investorsHeroImage})` }}
       >
         <div className="absolute inset-0 bg-gradient-to-br from-[#17B6C3]/85 via-[#1396A1]/80 to-slate-900/85"></div>
-        <div className="relative z-10 text-center text-white max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-center items-center mb-8">
-            <div className="w-24 h-24 bg-white/10 backdrop-blur-sm rounded-2xl flex items-center justify-center p-4">
-              <img src={nexusLogo} alt="Nexus AR" className="w-full h-full object-contain" />
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <Badge className="bg-white/20 text-white border-white/30 mb-6 backdrop-blur-sm" data-testid="badge-investors-hero">
+              Investment Opportunity
+            </Badge>
+            <h1 className="text-5xl md:text-6xl font-bold text-white mb-8" data-testid="text-investors-hero-title">
+              Investors
+            </h1>
+            <p className="text-xl text-white/90 max-w-4xl mx-auto leading-relaxed" data-testid="text-investors-hero-description">
+              Discover the opportunity to transform how small and medium businesses manage their cash flow and collections.
+            </p>
+          </div>
+
+          {/* Investment Stats Row */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="text-center bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/20">
+              <div className="text-3xl font-bold text-white mb-2" data-testid="text-stat-market-size">£24B</div>
+              <div className="text-white/80">UK SME AR Market</div>
+            </div>
+            <div className="text-center bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/20">
+              <div className="text-3xl font-bold text-white mb-2" data-testid="text-stat-automation">95%</div>
+              <div className="text-white/80">Process Automation</div>
+            </div>
+            <div className="text-center bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/20">
+              <div className="text-3xl font-bold text-white mb-2" data-testid="text-stat-growth">3x</div>
+              <div className="text-white/80">Revenue Growth Target</div>
             </div>
           </div>
-          <h1 className="text-5xl md:text-7xl font-bold mb-6">
-            Investors
-          </h1>
-          <p className="text-2xl md:text-3xl text-white/90 mb-4">
-            Revolutionizing SME Credit Control
-          </p>
-          <p className="text-xl text-white/80 mb-12 max-w-3xl mx-auto leading-relaxed">
-            Discover the opportunity to transform how small and medium businesses manage their cash flow and collections.
-          </p>
         </div>
       </section>
 
