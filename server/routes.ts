@@ -2184,11 +2184,11 @@ Payment required immediately to avoid collection action. Contact us NOW.`
 
       // Get default email template and sender
       const templates = await storage.getCommunicationTemplates(user.tenantId);
-      const defaultTemplate = templates.find(t => t.name === "General Email");
+      const defaultTemplate = templates.find(t => t.name === "GE Invoice");
       const defaultSender = await storage.getDefaultEmailSender(user.tenantId);
 
       if (!defaultTemplate || !defaultSender) {
-        return res.status(500).json({ message: "General Email template or sender not configured. Please create a 'General Email' template in Collections Workflow." });
+        return res.status(500).json({ message: "GE Invoice template or sender not configured. Please create a 'GE Invoice' template in Collections Workflow." });
       }
 
       // Process template variables for single invoice
@@ -2289,9 +2289,9 @@ Payment required immediately to avoid collection action. Contact us NOW.`
 
       switch (actionType) {
         case 'general-chase':
-          templateToUse = templates.find(t => t.name === "General Email"); // General Email template
+          templateToUse = templates.find(t => t.name === "GE Invoice"); // GE Invoice template
           if (!templateToUse) {
-            return res.status(500).json({ message: "General Email template not found. Please create a 'General Email' template in Collections Workflow." });
+            return res.status(500).json({ message: "GE Invoice template not found. Please create a 'GE Invoice' template in Collections Workflow." });
           }
           
           const dueDate = new Date(invoice.dueDate);
@@ -2477,11 +2477,11 @@ Payment required immediately to avoid collection action. Contact us NOW.`
 
       // Get default email template and sender
       const templates = await storage.getCommunicationTemplates(user.tenantId);
-      const defaultTemplate = templates.find(t => t.name === "General Email");
+      const defaultTemplate = templates.find(t => t.name === "GE Client");
       const defaultSender = await storage.getDefaultEmailSender(user.tenantId);
 
       if (!defaultTemplate || !defaultSender) {
-        return res.status(500).json({ message: "General Email template or sender not configured. Please create a 'General Email' template in Collections Workflow." });
+        return res.status(500).json({ message: "GE Client template or sender not configured. Please create a 'GE Client' template in Collections Workflow." });
       }
 
       // Calculate totals and create invoice summary
