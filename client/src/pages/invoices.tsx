@@ -165,7 +165,7 @@ export default function Invoices() {
       
       let matchesStatus = true;
       if (statusFilter !== "all") {
-        const isHeld = invoice.isOnHold;
+        const isHeld = invoice.isOnHold === true;
         
         if (statusFilter === "on-hold") {
           // Show only held invoices
@@ -535,7 +535,7 @@ export default function Invoices() {
     const invoice = (invoices as any[]).find(inv => inv.id === invoiceId);
     if (!invoice) return;
 
-    if (invoice.isOnHold) {
+    if (invoice.isOnHold === true) {
       unholdInvoiceMutation.mutate(invoiceId);
     } else {
       holdInvoiceMutation.mutate(invoiceId);
@@ -1574,12 +1574,12 @@ export default function Invoices() {
                                 size="sm"
                                 onClick={() => toggleHoldStatus(invoice.id)}
                                 className={`h-7 w-8 p-0 text-xs font-medium ${
-                                  invoice.isOnHold 
+                                  invoice.isOnHold === true
                                     ? "border-gray-400 text-gray-600 bg-gray-50 hover:bg-gray-100" 
                                     : "border-gray-200 text-gray-300 hover:bg-gray-50"
                                 }`}
                                 data-testid={`button-pause-${invoice.id}`}
-                                title={invoice.isOnHold ? "Remove from Hold" : "Place on Hold"}
+                                title={invoice.isOnHold === true ? "Remove from Hold" : "Place on Hold"}
                               >
                                 <Pause className="h-3 w-3" />
                               </Button>
