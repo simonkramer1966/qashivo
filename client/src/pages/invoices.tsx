@@ -273,7 +273,7 @@ export default function Invoices() {
                 All Invoices ({sortedInvoices.length})
               </CardTitle>
             </CardHeader>
-            <CardContent className="p-6">
+            <CardContent className="pt-0">
               {invoicesLoading ? (
                 <div className="text-center py-8">
                   <p className="text-muted-foreground">Loading invoices...</p>
