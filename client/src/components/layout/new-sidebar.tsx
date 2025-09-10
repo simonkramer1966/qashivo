@@ -173,7 +173,7 @@ export default function NewSidebar() {
 
       {/* Organization Dropdown - Similar to Xero */}
       {!isCollapsed && (
-        <div className="px-4 pb-4">
+        <div className="px-4 pb-4 mt-2.5">
           {canSwitchOrganizations ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -228,7 +228,7 @@ export default function NewSidebar() {
       )}
       
       {/* Navigation */}
-      <nav className={cn("flex-1", isCollapsed ? "px-2" : "px-4")}>
+      <nav className={cn("flex-1 mt-2.5", isCollapsed ? "px-2" : "px-4")}>
         <ul className="space-y-1">
           {getAllNavigationItems().map((item) => {
             const isActive = isActivePath(item.href);
