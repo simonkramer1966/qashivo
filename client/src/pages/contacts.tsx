@@ -320,7 +320,7 @@ export default function Customers() {
                             {getSortIcon("status")}
                           </button>
                         </th>
-                        <th className="text-right py-3 text-sm font-medium text-muted-foreground"></th>
+                        <th className="text-right py-3 text-sm font-medium text-muted-foreground">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200">
@@ -380,7 +380,7 @@ export default function Customers() {
                                 className="h-8 w-8 p-0 hover:bg-gray-100"
                                 data-testid={`button-menu-${contact.id}`}
                               >
-                                <MoreHorizontal className="h-4 w-4 text-gray-500" />
+                                <MoreHorizontal className="h-4 w-4 text-[#17B6C3]" />
                               </Button>
                             </div>
                           </td>
