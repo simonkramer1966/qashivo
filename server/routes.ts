@@ -2195,6 +2195,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
       const dueDate = new Date(invoice.dueDate);
       const today = new Date();
       const daysOverdue = Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
+      const amountOverdue = daysOverdue > 0 ? Number(invoice.amount) : 0;
       
       let processedContent = defaultTemplate.content
         .replace(/\{\{first_name\}\}/g, invoice.contact.name?.split(' ')[0] || 'Valued Customer')
@@ -2203,6 +2204,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
         .replace(/\{\{amount\}\}/g, `£${Number(invoice.amount).toLocaleString()}`)
         .replace(/\{\{due_date\}\}/g, new Date(invoice.dueDate).toLocaleDateString())
         .replace(/\{\{days_overdue\}\}/g, daysOverdue.toString())
+        .replace(/\{\{total_amount_overdue\}\}/g, `£${amountOverdue.toLocaleString()}`)
         .replace(/£X as unpaid/g, `£${Number(invoice.amount).toLocaleString()} as unpaid`)
         .replace(/£X due for payment now/g, `£${Number(invoice.amount).toLocaleString()} due for payment ${daysOverdue > 0 ? `${daysOverdue} days ago` : 'now'}`);
 
@@ -2293,6 +2295,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
           const dueDate = new Date(invoice.dueDate);
           const today = new Date();
           const daysOverdue = Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
+          const amountOverdue = daysOverdue > 0 ? Number(invoice.amount) : 0;
           
           processedContent = templateToUse.content
             .replace(/\{\{first_name\}\}/g, invoice.contact.name?.split(' ')[0] || 'Valued Customer')
@@ -2301,6 +2304,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
             .replace(/\{\{amount\}\}/g, `£${Number(invoice.amount).toLocaleString()}`)
             .replace(/\{\{due_date\}\}/g, new Date(invoice.dueDate).toLocaleDateString())
             .replace(/\{\{days_overdue\}\}/g, daysOverdue.toString())
+            .replace(/\{\{total_amount_overdue\}\}/g, `£${amountOverdue.toLocaleString()}`)
             .replace(/£X as unpaid/g, `£${Number(invoice.amount).toLocaleString()} as unpaid`)
             .replace(/£X due for payment now/g, `£${Number(invoice.amount).toLocaleString()} due for payment ${daysOverdue > 0 ? `${daysOverdue} days ago` : 'now'}`);
 
@@ -2482,6 +2486,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
       
       const overdueInvoices = contactInvoices.filter(inv => new Date(inv.dueDate) < today);
       const currentInvoices = contactInvoices.filter(inv => new Date(inv.dueDate) >= today);
+      const totalAmountOverdue = overdueInvoices.reduce((sum, inv) => sum + Number(inv.amount), 0);
 
       // Create detailed invoice list
       let invoiceList = '';
@@ -2505,6 +2510,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
         .replace(/\{\{first_name\}\}/g, contact.name?.split(' ')[0] || 'Valued Customer')
         .replace(/\{\{your_name\}\}/g, defaultSender.fromName || defaultSender.name || 'Accounts Receivable')
         .replace(/\{\{total_amount\}\}/g, `£${totalAmount.toLocaleString()}`)
+        .replace(/\{\{total_amount_overdue\}\}/g, `£${totalAmountOverdue.toLocaleString()}`)
         .replace(/\{\{invoice_count\}\}/g, contactInvoices.length.toString())
         .replace(/£X as unpaid/g, `£${totalAmount.toLocaleString()} across ${contactInvoices.length} invoice${contactInvoices.length > 1 ? 's' : ''}`)
         .replace(/£X due for payment now/g, `£${totalAmount.toLocaleString()} total outstanding`);
