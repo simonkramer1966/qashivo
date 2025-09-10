@@ -1068,41 +1068,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         processedContent = processedContent.replace(new RegExp(placeholder, 'g'), value);
       });
 
-      // Use the new email sending system with attachment
-      const { sendEmailWithAttachment } = await import('./services/sendgrid.js');
-      const { generateInvoicePDF } = await import('./services/invoicePDF.js');
+      // Use the simple email sending system without PDF for now
+      const { sendEmail } = await import('./services/sendgrid.js');
 
-      // Generate invoice PDF
-      const pdfBuffer = await generateInvoicePDF({
-        invoiceNumber: invoice.invoiceNumber,
-        contactName: invoice.contact.name,
-        contactEmail: invoice.contact.email,
-        companyName: invoice.contact.companyName,
-        amount: Number(invoice.amount),
-        taxAmount: 0, // Default to 0 if not available
-        issueDate: invoice.issueDate?.toISOString() || new Date().toISOString(),
-        dueDate: invoice.dueDate.toISOString(),
-        description: invoice.description || 'Payment Required',
-        currency: 'GBP',
-        status: invoice.status,
-        fromCompany: 'Nexus AR',
-        fromEmail: fromEmail,
-        fromAddress: 'London, UK',
-        fromPhone: '+44 20 1234 5678'
-      });
-
-      const success = await sendEmailWithAttachment({
+      const success = await sendEmail({
         to: invoice.contact.email,
         from: fromEmail,
         subject: processedSubject,
         text: processedContent,
-        html: processedContent.replace(/\n/g, '<br>'),
-        attachments: [{
-          content: pdfBuffer,
-          filename: `Invoice-${invoice.invoiceNumber}.pdf`,
-          type: 'application/pdf',
-          disposition: 'attachment'
-        }]
+        html: processedContent.replace(/\n/g, '<br>')
       });
 
       if (success) {
