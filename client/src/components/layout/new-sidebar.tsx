@@ -224,14 +224,20 @@ export default function NewSidebar() {
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
-            <div className="p-3 bg-white border border-gray-200 rounded-md">
-              <div className="font-medium text-sm">
-                {tenant?.settings?.companyName || tenant?.name || "Loading..."}
+            <Button
+              variant="outline"
+              className="w-full justify-between h-auto p-3 bg-white border-gray-200 cursor-default"
+              data-testid="button-organization-display"
+            >
+              <div className="text-left">
+                <div className="font-medium text-sm">
+                  {tenant?.settings?.companyName || tenant?.name || "Loading..."}
+                </div>
+                <div className="text-xs text-gray-500">
+                  {tenant?.settings?.tagline || "Current Organization"}
+                </div>
               </div>
-              <div className="text-xs text-gray-500">
-                {tenant?.settings?.tagline || "Current Organization"}
-              </div>
-            </div>
+            </Button>
           )}
         </div>
       )}
