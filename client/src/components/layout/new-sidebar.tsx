@@ -2,6 +2,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import { 
   BarChart3, 
   FileText, 
@@ -15,7 +16,8 @@ import {
   User,
   Building2,
   ExternalLink,
-  Activity
+  Activity,
+  Menu
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import nexusLogo from "@assets/Main Nexus Logo copy_1756923544828.png";
@@ -40,6 +42,7 @@ const ownerNavigationItems = [
 export default function NewSidebar() {
   const { user } = useAuth();
   const [location, setLocation] = useLocation();
+  const [isCollapsed, setIsCollapsed] = useState(false);
 
   // Fetch tenant information
   const { data: tenant } = useQuery<{
@@ -85,26 +88,46 @@ export default function NewSidebar() {
   };
 
   return (
-    <aside className="w-64 bg-gray-50 border-r border-gray-200 flex flex-col h-full">
+    <aside className={cn(
+      "bg-gray-50 border-r border-gray-200 flex flex-col h-full transition-all duration-300",
+      isCollapsed ? "w-16" : "w-64"
+    )}>
       {/* Header */}
-      <div className="p-6">
-        <div className="flex items-center space-x-3">
+      <div className={cn(
+        "flex items-center justify-between p-4",
+        isCollapsed ? "flex-col space-y-2" : "space-x-3"
+      )}>
+        <div className={cn(
+          "flex items-center",
+          isCollapsed ? "flex-col space-y-2" : "space-x-3"
+        )}>
           <div className="w-10 h-10 rounded-lg flex items-center justify-center">
             <img src={nexusLogo} alt="Nexus AR" className="w-full h-full object-contain" />
           </div>
-          <div>
-            <h1 className="text-xl font-semibold text-gray-900">
-              {tenant?.settings?.companyName || tenant?.name || "Nexus AR"}
-            </h1>
-            <p className="text-sm text-gray-500">
-              {tenant?.settings?.tagline || "Debt Recovery Suite"}
-            </p>
-          </div>
+          {!isCollapsed && (
+            <div>
+              <h1 className="text-xl font-semibold text-gray-900">
+                {tenant?.settings?.companyName || tenant?.name || "Nexus AR"}
+              </h1>
+              <p className="text-sm text-gray-500">
+                {tenant?.settings?.tagline || "Debt Recovery Suite"}
+              </p>
+            </div>
+          )}
         </div>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setIsCollapsed(!isCollapsed)}
+          className="h-8 w-8 p-0"
+          data-testid="button-toggle-sidebar"
+        >
+          <Menu className="h-4 w-4" />
+        </Button>
       </div>
       
       {/* Navigation */}
-      <nav className="flex-1 px-4">
+      <nav className={cn("flex-1", isCollapsed ? "px-2" : "px-4")}>
         <ul className="space-y-1">
           {getAllNavigationItems().map((item) => {
             const isActive = isActivePath(item.href);
@@ -115,20 +138,26 @@ export default function NewSidebar() {
                 <button
                   onClick={() => handleNavigation(item.href)}
                   className={cn(
-                    "w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 text-left",
+                    "w-full flex items-center rounded-lg text-sm font-medium transition-all duration-200 text-left",
+                    isCollapsed ? "justify-center px-2 py-3" : "space-x-3 px-4 py-3",
                     isActive
                       ? "bg-[#17B6C3] text-white shadow-sm"
                       : "text-gray-600 hover:bg-white hover:text-gray-900 hover:shadow-sm",
-                    (item as any).ownerOnly && "border-t border-gray-300 mt-2 pt-2"
+                    (item as any).ownerOnly && !isCollapsed && "border-t border-gray-300 mt-2 pt-2"
                   )}
                   data-testid={`nav-${item.name.toLowerCase().replace(/\s+/g, '-')}`}
+                  title={isCollapsed ? item.name : undefined}
                 >
                   <Icon className="w-5 h-5" />
-                  <span>{item.name}</span>
-                  {(item as any).ownerOnly && (
-                    <span className="ml-auto bg-amber-100 text-amber-800 px-2 py-1 rounded text-xs font-medium">
-                      Owner
-                    </span>
+                  {!isCollapsed && (
+                    <>
+                      <span>{item.name}</span>
+                      {(item as any).ownerOnly && (
+                        <span className="ml-auto bg-amber-100 text-amber-800 px-2 py-1 rounded text-xs font-medium">
+                          Owner
+                        </span>
+                      )}
+                    </>
                   )}
                 </button>
               </li>
@@ -138,19 +167,21 @@ export default function NewSidebar() {
       </nav>
 
       {/* Footer - CFO Charlie */}
-      <div className="p-4 border-t border-gray-200 bg-gray-50/50">
+      <div className={cn("border-t border-gray-200 bg-gray-50/50", isCollapsed ? "p-2" : "p-4")}>
         <button
           onClick={() => handleNavigation("/ai-cfo")}
           className={cn(
-            "w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 text-left",
+            "w-full flex items-center rounded-lg text-sm font-medium transition-all duration-200 text-left",
+            isCollapsed ? "justify-center px-2 py-3" : "space-x-3 px-4 py-3",
             isActivePath("/ai-cfo")
               ? "bg-[#17B6C3] text-white shadow-sm"
               : "text-gray-600 hover:bg-white hover:text-gray-900 hover:shadow-sm"
           )}
           data-testid="nav-cfo-charlie"
+          title={isCollapsed ? "CFO Charlie" : undefined}
         >
           <Bot className="w-5 h-5" />
-          <span>CFO Charlie</span>
+          {!isCollapsed && <span>CFO Charlie</span>}
         </button>
       </div>
     </aside>
