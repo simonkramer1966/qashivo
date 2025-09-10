@@ -1836,7 +1836,12 @@ export default function Invoices() {
       </Dialog>
 
       {/* Payment Plan Dialog */}
-      <Dialog open={showPaymentPlanDialog} onOpenChange={setShowPaymentPlanDialog}>
+      <Dialog open={showPaymentPlanDialog} onOpenChange={(open) => {
+        setShowPaymentPlanDialog(open);
+        if (!open) {
+          setSelectedInvoices(new Set());
+        }
+      }}>
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden bg-white">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -1913,7 +1918,12 @@ export default function Invoices() {
       </Dialog>
 
       {/* Dispute Dialog */}
-      <Dialog open={showDisputeDialog} onOpenChange={setShowDisputeDialog}>
+      <Dialog open={showDisputeDialog} onOpenChange={(open) => {
+        setShowDisputeDialog(open);
+        if (!open) {
+          setSelectedInvoices(new Set());
+        }
+      }}>
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden bg-white">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
