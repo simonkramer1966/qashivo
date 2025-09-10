@@ -2100,7 +2100,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
       const { sendEmail } = await import("./services/sendgrid");
       const emailSent = await sendEmail({
         to: invoice.contact.email,
-        from: defaultSender.email,
+        from: defaultSender.email || defaultSender.name,
         subject: processedSubject,
         html: processedContent.replace(/\n/g, '<br>')
       });
@@ -2212,7 +2212,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
       const { sendEmail } = await import("./services/sendgrid");
       const emailSent = await sendEmail({
         to: invoice.contact.email,
-        from: defaultSender.email,
+        from: defaultSender.email || defaultSender.name,
         subject: processedSubject,
         html: processedContent
       });
