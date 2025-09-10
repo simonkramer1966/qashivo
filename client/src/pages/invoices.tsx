@@ -80,6 +80,28 @@ export default function Invoices() {
     enabled: !!selectedInvoice?.id,
   });
 
+  // Email sending mutation
+  const sendEmailMutation = useMutation({
+    mutationFn: async (invoiceId: string) => {
+      const response = await apiRequest("POST", "/api/communications/send-email", { invoiceId });
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Email Sent",
+        description: "General chase email has been sent successfully.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Failed to send email. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
   useEffect(() => {
     if (error && isUnauthorizedError(error as Error)) {
       toast({
@@ -356,6 +378,8 @@ export default function Invoices() {
                                     Email
                                   </DropdownMenuLabel>
                                   <DropdownMenuItem 
+                                    onClick={() => sendEmailMutation.mutate(invoice.id)}
+                                    disabled={sendEmailMutation.isPending || !invoice.contact?.email}
                                     data-testid={`menu-general-chase-${invoice.id}`}
                                   >
                                     <Mail className="mr-2 h-4 w-4" />
