@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Building2, Users, DollarSign, AlertCircle, TrendingUp, Calendar, Phone, Mail } from "lucide-react";
 import { Link } from "wouter";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { formatDate as universalFormatDate } from "../../../shared/utils/dateFormatter";
 
 interface TenantMetrics {
   totalOutstanding: number;
@@ -32,13 +33,7 @@ function formatCurrency(amount: number): string {
   }).format(amount);
 }
 
-function formatDate(dateString: string): string {
-  return new Date(dateString).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  });
-}
+// Use the universal date formatter for consistency
 
 export default function OwnerDashboard() {
   const { data: tenants, isLoading, error } = useQuery<TenantWithMetrics[]>({
@@ -212,7 +207,7 @@ export default function OwnerDashboard() {
                             <div className="flex items-center space-x-4 text-sm text-gray-500">
                               <span data-testid={`text-tenant-created-${tenant.id}`}>
                                 <Calendar className="inline w-3 h-3 mr-1" />
-                                {formatDate(tenant.createdAt)}
+                                {universalFormatDate(tenant.createdAt)}
                               </span>
                               {tenant.xeroTenantId && (
                                 <Badge variant="secondary" className="text-xs">

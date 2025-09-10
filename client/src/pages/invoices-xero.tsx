@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import { formatDate } from "../../../shared/utils/dateFormatter";
 import { useAuth } from "@/hooks/useAuth";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import NewSidebar from "@/components/layout/new-sidebar";
@@ -455,7 +456,7 @@ export default function InvoicesXero() {
                       {filteredAndSortedInvoices.map((invoice: any) => (
                         <tr key={invoice.id} className="hover:bg-slate-50/50 transition-colors" data-testid={`row-invoice-${invoice.id}`}>
                           <td className="py-1 text-xs text-slate-700 w-32" data-testid={`text-issue-date-${invoice.id}`}>
-                            {new Date(invoice.issueDate).toLocaleDateString()}
+                            {formatDate(invoice.issueDate)}
                           </td>
                           <td className="py-1 text-xs font-medium text-slate-900 w-32" data-testid={`text-invoice-number-${invoice.id}`}>
                             {invoice.invoiceNumber}
@@ -467,11 +468,11 @@ export default function InvoicesXero() {
                             {invoice.currency} {Number(invoice.amount).toLocaleString()}
                           </td>
                           <td className="py-1 text-xs text-slate-700" data-testid={`text-due-date-${invoice.id}`}>
-                            {new Date(invoice.dueDate).toLocaleDateString()}
+                            {formatDate(invoice.dueDate)}
                           </td>
                           <td className="py-1 text-xs text-slate-700" data-testid={`text-paid-date-${invoice.id}`}>
                             {invoice.paymentDetails?.paidDate ? 
-                              new Date(invoice.paymentDetails.paidDate).toLocaleDateString() : 
+                              formatDate(invoice.paymentDetails.paidDate) : 
                               <span className="text-gray-400">-</span>
                             }
                           </td>
@@ -660,7 +661,7 @@ export default function InvoicesXero() {
                           {filteredAndSortedInvoices.map((invoice: any) => (
                             <tr key={invoice.id} className="hover:bg-slate-50/50 transition-colors" data-testid={`row-invoice-${invoice.id}`}>
                               <td className="py-1 text-xs text-slate-700 w-32" data-testid={`text-issue-date-${invoice.id}`}>
-                                {new Date(invoice.issueDate).toLocaleDateString()}
+                                {formatDate(invoice.issueDate)}
                               </td>
                               <td className="py-1 text-xs font-medium text-slate-900 w-32" data-testid={`text-invoice-number-${invoice.id}`}>
                                 {invoice.invoiceNumber}
@@ -672,11 +673,11 @@ export default function InvoicesXero() {
                                 {invoice.currency} {Number(invoice.amount).toLocaleString()}
                               </td>
                               <td className="py-1 text-xs text-slate-700" data-testid={`text-due-date-${invoice.id}`}>
-                                {new Date(invoice.dueDate).toLocaleDateString()}
+                                {formatDate(invoice.dueDate)}
                               </td>
                               <td className="py-1 text-xs text-slate-700" data-testid={`text-paid-date-${invoice.id}`}>
                                 {invoice.paymentDetails?.paidDate ? 
-                                  new Date(invoice.paymentDetails.paidDate).toLocaleDateString() : 
+                                  formatDate(invoice.paymentDetails.paidDate) : 
                                   <span className="text-gray-400">-</span>
                                 }
                               </td>
@@ -849,7 +850,7 @@ export default function InvoicesXero() {
                           {filteredAndSortedInvoices.map((invoice: any) => (
                             <tr key={invoice.id} className="hover:bg-slate-50/50 transition-colors" data-testid={`row-invoice-${invoice.id}`}>
                               <td className="py-1 text-xs text-slate-700 w-32" data-testid={`text-issue-date-${invoice.id}`}>
-                                {new Date(invoice.issueDate).toLocaleDateString()}
+                                {formatDate(invoice.issueDate)}
                               </td>
                               <td className="py-1 text-xs font-medium text-slate-900 w-32" data-testid={`text-invoice-number-${invoice.id}`}>
                                 {invoice.invoiceNumber}
@@ -861,11 +862,11 @@ export default function InvoicesXero() {
                                 {invoice.currency} {Number(invoice.amount).toLocaleString()}
                               </td>
                               <td className="py-1 text-xs text-slate-700" data-testid={`text-due-date-${invoice.id}`}>
-                                {new Date(invoice.dueDate).toLocaleDateString()}
+                                {formatDate(invoice.dueDate)}
                               </td>
                               <td className="py-1 text-xs text-slate-700" data-testid={`text-paid-date-${invoice.id}`}>
                                 {invoice.paymentDetails?.paidDate ? 
-                                  new Date(invoice.paymentDetails.paidDate).toLocaleDateString() : 
+                                  formatDate(invoice.paymentDetails.paidDate) : 
                                   <span className="text-gray-400">-</span>
                                 }
                               </td>
@@ -1038,7 +1039,7 @@ export default function InvoicesXero() {
                           {filteredAndSortedInvoices.map((invoice: any) => (
                             <tr key={invoice.id} className="hover:bg-slate-50/50 transition-colors" data-testid={`row-invoice-${invoice.id}`}>
                               <td className="py-1 text-xs text-slate-700 w-32" data-testid={`text-issue-date-${invoice.id}`}>
-                                {new Date(invoice.issueDate).toLocaleDateString()}
+                                {formatDate(invoice.issueDate)}
                               </td>
                               <td className="py-1 text-xs font-medium text-slate-900 w-32" data-testid={`text-invoice-number-${invoice.id}`}>
                                 {invoice.invoiceNumber}
@@ -1050,11 +1051,11 @@ export default function InvoicesXero() {
                                 {invoice.currency} {Number(invoice.amount).toLocaleString()}
                               </td>
                               <td className="py-1 text-xs text-slate-700" data-testid={`text-due-date-${invoice.id}`}>
-                                {new Date(invoice.dueDate).toLocaleDateString()}
+                                {formatDate(invoice.dueDate)}
                               </td>
                               <td className="py-1 text-xs text-slate-700" data-testid={`text-paid-date-${invoice.id}`}>
                                 {invoice.paymentDetails?.paidDate ? 
-                                  new Date(invoice.paymentDetails.paidDate).toLocaleDateString() : 
+                                  formatDate(invoice.paymentDetails.paidDate) : 
                                   <span className="text-gray-400">-</span>
                                 }
                               </td>
@@ -1137,11 +1138,11 @@ export default function InvoicesXero() {
                     </div>
                     <div>
                       <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Issue Date</label>
-                      <p className="text-sm text-gray-700">{new Date(selectedInvoice.issueDate).toLocaleDateString()}</p>
+                      <p className="text-sm text-gray-700">{formatDate(selectedInvoice.issueDate)}</p>
                     </div>
                     <div>
                       <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Due Date</label>
-                      <p className="text-sm text-gray-700">{new Date(selectedInvoice.dueDate).toLocaleDateString()}</p>
+                      <p className="text-sm text-gray-700">{formatDate(selectedInvoice.dueDate)}</p>
                     </div>
                     
                     {/* Second Row: Status, Contact Name, Phone, Email */}
@@ -1233,7 +1234,7 @@ export default function InvoicesXero() {
                           <div className="space-y-2">
                             {selectedInvoice.paymentDetails.allPayments.map((payment: any, index: number) => (
                               <div key={index} className="flex justify-between items-center text-sm bg-white rounded p-2">
-                                <span>{new Date(payment.date).toLocaleDateString()}</span>
+                                <span>{formatDate(payment.date)}</span>
                                 <span className="font-medium">{selectedInvoice.currency} {Number(payment.amount).toLocaleString()}</span>
                                 <span className="text-gray-600">{payment.method || 'N/A'}</span>
                                 {payment.reference && <span className="text-gray-500 text-xs">{payment.reference}</span>}

@@ -1,6 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { sendEmailWithAttachment } from '../../services/sendgrid.js';
 import { generateInvoicePDF } from '../../services/invoicePDF.js';
+import { formatDate } from '../../shared/utils/dateFormatter.js';
 
 export const registerEmailTools = (server: McpServer) => {
   server.tool(
@@ -82,12 +83,12 @@ Please find attached invoice ${data.invoiceNumber} for ${data.currency} ${data.a
 
 Invoice Details:
 - Invoice Number: ${data.invoiceNumber}
-- Issue Date: ${new Date(data.issueDate).toLocaleDateString()}
-- Due Date: ${new Date(data.dueDate).toLocaleDateString()}
+- Issue Date: ${formatDate(data.issueDate)}
+- Due Date: ${formatDate(data.dueDate)}
 - Amount: ${data.currency} ${data.amount.toFixed(2)}
 - Status: ${data.status.charAt(0).toUpperCase() + data.status.slice(1)}
 
-Payment is due by ${new Date(data.dueDate).toLocaleDateString()}. If you have any questions about this invoice or need to discuss payment arrangements, please don't hesitate to contact us.
+Payment is due by ${formatDate(data.dueDate)}. If you have any questions about this invoice or need to discuss payment arrangements, please don't hesitate to contact us.
 
 Best regards,
 ${data.fromCompany}
@@ -107,13 +108,13 @@ ${data.fromCompany}
   <div style="background: #f8f9fa; padding: 20px; border-left: 4px solid #17B6C3; margin: 20px 0;">
     <h3 style="margin: 0 0 10px 0; color: #333;">Invoice Details</h3>
     <p style="margin: 5px 0;"><strong>Invoice Number:</strong> ${data.invoiceNumber}</p>
-    <p style="margin: 5px 0;"><strong>Issue Date:</strong> ${new Date(data.issueDate).toLocaleDateString()}</p>
-    <p style="margin: 5px 0;"><strong>Due Date:</strong> ${new Date(data.dueDate).toLocaleDateString()}</p>
+    <p style="margin: 5px 0;"><strong>Issue Date:</strong> ${formatDate(data.issueDate)}</p>
+    <p style="margin: 5px 0;"><strong>Due Date:</strong> ${formatDate(data.dueDate)}</p>
     <p style="margin: 5px 0;"><strong>Amount:</strong> ${data.currency} ${data.amount.toFixed(2)}</p>
     <p style="margin: 5px 0;"><strong>Status:</strong> <span style="color: ${data.status === 'paid' ? '#10B981' : data.status === 'overdue' ? '#EF4444' : '#F59E0B'};">${data.status.charAt(0).toUpperCase() + data.status.slice(1)}</span></p>
   </div>
   
-  <p>Payment is due by <strong>${new Date(data.dueDate).toLocaleDateString()}</strong>. If you have any questions about this invoice or need to discuss payment arrangements, please don't hesitate to contact us.</p>
+  <p>Payment is due by <strong>${formatDate(data.dueDate)}</strong>. If you have any questions about this invoice or need to discuss payment arrangements, please don't hesitate to contact us.</p>
   
   <div style="margin: 30px 0; padding: 15px; background: #f0f9ff; border-radius: 4px;">
     <p style="margin: 0; color: #0369a1; font-size: 14px;"><strong>📎 PDF Invoice attached</strong> - Please open the attached PDF for the complete invoice details.</p>

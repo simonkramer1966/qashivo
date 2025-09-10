@@ -1,4 +1,5 @@
 import puppeteer from 'puppeteer';
+import { formatDate } from '../../shared/utils/dateFormatter';
 
 export interface InvoicePDFData {
   invoiceNumber: string;
@@ -40,16 +41,8 @@ export async function generateInvoicePDF(data: InvoicePDFData): Promise<Buffer> 
     const total = data.amount;
     
     // Format dates
-    const issueDate = new Date(data.issueDate).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    });
-    const dueDate = new Date(data.dueDate).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    });
+    const issueDate = formatDate(data.issueDate);
+    const dueDate = formatDate(data.dueDate);
     
     // Get status color
     const getStatusColor = (status: string) => {
@@ -360,7 +353,7 @@ export async function generateInvoicePDF(data: InvoicePDFData): Promise<Buffer> 
           <!-- Footer -->
           <div class="invoice-footer">
             <p>Thank you for your business!</p>
-            <p>Generated on ${new Date().toLocaleDateString()}</p>
+            <p>Generated on ${formatDate(new Date())}</p>
           </div>
         </div>
       </body>

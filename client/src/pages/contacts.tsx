@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import { formatDate } from "../../../shared/utils/dateFormatter";
 import { useAuth } from "@/hooks/useAuth";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import NewSidebar from "@/components/layout/new-sidebar";
@@ -271,7 +272,7 @@ export default function Contacts() {
                           
                           <div className="flex justify-between items-center mt-6 pt-4 border-t border-slate-200/50">
                             <div className="text-xs text-slate-500">
-                              Created: {new Date(contact.createdAt).toLocaleDateString()}
+                              Created: {formatDate(contact.createdAt)}
                             </div>
                             <div className="flex space-x-2">
                               <Button 

@@ -24,6 +24,7 @@ import { z } from "zod";
 import { generateCollectionSuggestions, generateEmailDraft, generateAiCfoResponse } from "./services/openai";
 import { sendReminderEmail, DEFAULT_FROM, DEFAULT_FROM_EMAIL } from "./services/sendgrid";
 import { sendPaymentReminderSMS } from "./services/twilio";
+import { formatDate } from "../shared/utils/dateFormatter";
 import { xeroService } from "./services/xero";
 import { XeroSyncService } from "./services/xeroSync";
 import { generateMockData } from "./mock-data";
@@ -1040,7 +1041,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         contactName: invoice.contact.name,
         invoiceNumber: invoice.invoiceNumber,
         amount: Number(invoice.amount),
-        dueDate: invoice.dueDate.toLocaleDateString(),
+        dueDate: formatDate(invoice.dueDate),
         daysPastDue,
       }, fromEmail, customMessage);
 
@@ -1157,7 +1158,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         contactName: contact.name,
         invoiceNumber: "TEST-001",
         amount: 100.00,
-        dueDate: new Date().toLocaleDateString(),
+        dueDate: formatDate(new Date()),
         daysPastDue: 0,
       }, fromEmail, "[TEST EMAIL] This is a test communication from Nexus AR");
 
@@ -1271,7 +1272,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         total_outstanding: totalOutstanding || "0.00",
         days_overdue: daysOverdue || "0",
         invoice_count: invoiceCount || "1",
-        due_date: dueDate || new Date().toLocaleDateString(),
+        due_date: dueDate || formatDate(new Date()),
         organisation_name: organisationName || tenant?.name || "Nexus AR",
         demo_message: demoMessage || "This is a professional collection call regarding outstanding invoices."
       };
@@ -2204,7 +2205,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
         .replace(/\{\{amount\}\}/g, `£${Number(invoice.amount).toLocaleString()}`)
         .replace(/\{\{total_balance\}\}/g, `£${Number(invoice.amount).toLocaleString()}`)
         .replace(/\{\{invoice_count\}\}/g, '1')
-        .replace(/\{\{due_date\}\}/g, new Date(invoice.dueDate).toLocaleDateString())
+        .replace(/\{\{due_date\}\}/g, formatDate(invoice.dueDate))
         .replace(/\{\{days_overdue\}\}/g, daysOverdue.toString())
         .replace(/\{\{total_amount_overdue\}\}/g, `£${amountOverdue.toLocaleString()}`)
         .replace(/£X as unpaid/g, `£${Number(invoice.amount).toLocaleString()} as unpaid`)
@@ -2306,7 +2307,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
             .replace(/\{\{amount\}\}/g, `£${Number(invoice.amount).toLocaleString()}`)
             .replace(/\{\{total_balance\}\}/g, `£${Number(invoice.amount).toLocaleString()}`)
             .replace(/\{\{invoice_count\}\}/g, '1')
-            .replace(/\{\{due_date\}\}/g, new Date(invoice.dueDate).toLocaleDateString())
+            .replace(/\{\{due_date\}\}/g, formatDate(invoice.dueDate))
             .replace(/\{\{days_overdue\}\}/g, daysOverdue.toString())
             .replace(/\{\{total_amount_overdue\}\}/g, `£${amountOverdue.toLocaleString()}`)
             .replace(/£X as unpaid/g, `£${Number(invoice.amount).toLocaleString()} as unpaid`)
@@ -2323,7 +2324,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
             <strong>Invoice Details:</strong><br>
             • Invoice Number: ${invoice.invoiceNumber}<br>
             • Amount: £${Number(invoice.amount).toLocaleString()}<br>
-            • Due Date: ${new Date(invoice.dueDate).toLocaleDateString()}<br><br>
+            • Due Date: ${formatDate(invoice.dueDate)}<br><br>
             If you have any questions, please don't hesitate to contact us.<br><br>
             Best regards,<br>
             ${defaultSender.fromName || defaultSender.name || 'Accounts Receivable'}`;
@@ -2506,7 +2507,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
         if (invoiceDetails) invoiceDetails += '<br>'; // Add spacing if we have overdue invoices
         invoiceDetails += '<strong>Current Due:</strong><br>';
         currentInvoices.forEach(inv => {
-          invoiceDetails += `• Invoice ${inv.invoiceNumber}: £${Number(inv.amount).toLocaleString()} (due ${new Date(inv.dueDate).toLocaleDateString()})<br>`;
+          invoiceDetails += `• Invoice ${inv.invoiceNumber}: £${Number(inv.amount).toLocaleString()} (due ${formatDate(inv.dueDate)})<br>`;
         });
       }
 
@@ -4319,8 +4320,8 @@ Payment required immediately to avoid collection action. Contact us NOW.`
     return {
       invoiceNumber,
       outstandingAmount: outstandingAmount.toFixed(2),
-      invoiceDate: invoiceDate.toLocaleDateString(),
-      dueDate: dueDate.toLocaleDateString(),
+      invoiceDate: formatDate(invoiceDate),
+      dueDate: formatDate(dueDate),
       daysOverdue: daysOverdue.toString(),
       invoiceCount: "1",
       totalOutstanding: outstandingAmount.toFixed(2)
@@ -4552,12 +4553,12 @@ Please find attached invoice ${invoice.invoiceNumber} for ${invoice.currency} ${
 
 Invoice Details:
 - Invoice Number: ${invoice.invoiceNumber}
-- Issue Date: ${invoice.issueDate.toLocaleDateString()}
-- Due Date: ${invoice.dueDate.toLocaleDateString()}
+- Issue Date: ${formatDate(invoice.issueDate)}
+- Due Date: ${formatDate(invoice.dueDate)}
 - Amount: ${invoice.currency} ${Number(invoice.amount).toFixed(2)}
 - Status: ${invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1)}
 
-Payment is due by ${invoice.dueDate.toLocaleDateString()}. If you have any questions about this invoice or need to discuss payment arrangements, please don't hesitate to contact us.
+Payment is due by ${formatDate(invoice.dueDate)}. If you have any questions about this invoice or need to discuss payment arrangements, please don't hesitate to contact us.
 
 Best regards,
 ${tenant.name}
@@ -4577,13 +4578,13 @@ ${tenant.name}
   <div style="background: #f8f9fa; padding: 20px; border-left: 4px solid #17B6C3; margin: 20px 0;">
     <h3 style="margin: 0 0 10px 0; color: #333;">Invoice Details</h3>
     <p style="margin: 5px 0;"><strong>Invoice Number:</strong> ${invoice.invoiceNumber}</p>
-    <p style="margin: 5px 0;"><strong>Issue Date:</strong> ${invoice.issueDate.toLocaleDateString()}</p>
-    <p style="margin: 5px 0;"><strong>Due Date:</strong> ${invoice.dueDate.toLocaleDateString()}</p>
+    <p style="margin: 5px 0;"><strong>Issue Date:</strong> ${formatDate(invoice.issueDate)}</p>
+    <p style="margin: 5px 0;"><strong>Due Date:</strong> ${formatDate(invoice.dueDate)}</p>
     <p style="margin: 5px 0;"><strong>Amount:</strong> ${invoice.currency} ${Number(invoice.amount).toFixed(2)}</p>
     <p style="margin: 5px 0;"><strong>Status:</strong> <span style="color: ${invoice.status === 'paid' ? '#10B981' : invoice.status === 'overdue' ? '#EF4444' : '#F59E0B'};">${invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1)}</span></p>
   </div>
   
-  <p>Payment is due by <strong>${invoice.dueDate.toLocaleDateString()}</strong>. If you have any questions about this invoice or need to discuss payment arrangements, please don't hesitate to contact us.</p>
+  <p>Payment is due by <strong>${formatDate(invoice.dueDate)}</strong>. If you have any questions about this invoice or need to discuss payment arrangements, please don't hesitate to contact us.</p>
   
   <div style="margin: 30px 0; padding: 15px; background: #f0f9ff; border-radius: 4px;">
     <p style="margin: 0; color: #0369a1; font-size: 14px;"><strong>📎 PDF Invoice attached</strong> - Please open the attached PDF for the complete invoice details.</p>

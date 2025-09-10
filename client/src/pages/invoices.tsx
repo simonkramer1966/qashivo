@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import { formatDate } from "../../../shared/utils/dateFormatter";
 import { useAuth } from "@/hooks/useAuth";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { apiRequest } from "@/lib/queryClient";
@@ -1672,7 +1673,7 @@ export default function Invoices() {
                           </td>
                           <td className="py-2 w-52" data-testid={`text-due-date-age-${invoice.id}`}>
                             <div className="text-xs text-slate-900">
-                              {new Date(invoice.dueDate).toLocaleDateString()}
+                              {formatDate(invoice.dueDate)}
                             </div>
                             <div className="text-xs text-slate-600 mt-0.5">
                               {Math.floor((Date.now() - new Date(invoice.issueDate).getTime()) / (1000 * 60 * 60 * 24))} days
@@ -1696,7 +1697,7 @@ export default function Invoices() {
                               </Button>
                               <div className="flex-1">
                                 <div className="text-xs text-slate-900">
-                                  {getNextActionDate(invoice).toLocaleDateString()}
+                                  {formatDate(getNextActionDate(invoice))}
                                 </div>
                                 <div className="text-xs text-slate-600 mt-0.5">
                                   {getNextActionType(invoice)}
@@ -1914,11 +1915,11 @@ export default function Invoices() {
                     </div>
                     <div>
                       <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Issue Date</label>
-                      <p className="text-sm text-gray-700">{new Date(selectedInvoice.issueDate).toLocaleDateString()}</p>
+                      <p className="text-sm text-gray-700">{formatDate(selectedInvoice.issueDate)}</p>
                     </div>
                     <div>
                       <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Due Date</label>
-                      <p className="text-sm text-gray-700">{new Date(selectedInvoice.dueDate).toLocaleDateString()}</p>
+                      <p className="text-sm text-gray-700">{formatDate(selectedInvoice.dueDate)}</p>
                     </div>
                     
                     {/* Second Row: Status, Contact Name, Phone, Email */}

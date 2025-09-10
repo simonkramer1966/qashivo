@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { formatDate } from "../../../../shared/utils/dateFormatter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -117,7 +118,7 @@ export default function RecentInvoices() {
                         {invoice.invoiceNumber}
                       </div>
                       <div className="text-sm text-muted-foreground" data-testid={`text-issue-date-${invoice.id}`}>
-                        {new Date(invoice.issueDate).toLocaleDateString()}
+                        {formatDate(invoice.issueDate)}
                       </div>
                     </td>
                     <td className="py-4">
@@ -132,7 +133,7 @@ export default function RecentInvoices() {
                       ${Number(invoice.amount).toLocaleString()}
                     </td>
                     <td className="py-4 text-sm text-foreground" data-testid={`text-due-date-${invoice.id}`}>
-                      {new Date(invoice.dueDate).toLocaleDateString()}
+                      {formatDate(invoice.dueDate)}
                     </td>
                     <td className="py-4">
                       {getStatusBadge(invoice.status)}

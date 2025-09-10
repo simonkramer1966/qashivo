@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { formatDate } from "../../../../shared/utils/dateFormatter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -354,7 +355,7 @@ export default function CustomerAssignmentManager({ className }: CustomerAssignm
                     <div className="text-right text-sm">
                       <div className="flex items-center gap-1 text-gray-600">
                         <Calendar className="h-3 w-3" />
-                        <span>Assigned {new Date(assignment.assignedAt).toLocaleDateString()}</span>
+                        <span>Assigned {assignment.assignedAt ? formatDate(assignment.assignedAt) : 'Unknown'}</span>
                       </div>
                       {assignment.isActive && (
                         <div className="flex items-center gap-1 text-green-600 mt-1">

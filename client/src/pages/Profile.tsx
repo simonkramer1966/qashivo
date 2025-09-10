@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { formatDate } from "../../../shared/utils/dateFormatter";
 import { useAuth } from "@/hooks/useAuth";
 import NewSidebar from "@/components/layout/new-sidebar";
 import Header from "@/components/layout/header";
@@ -236,7 +237,7 @@ export default function Profile() {
                 <div>
                   <label className="text-sm font-medium text-gray-600">Member Since</label>
                   <p className="text-lg font-medium text-gray-900" data-testid="text-user-created">
-                    {user?.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'N/A'}
+                    {user?.createdAt ? formatDate(user.createdAt) : 'N/A'}
                   </p>
                 </div>
               </div>
@@ -278,8 +279,8 @@ export default function Profile() {
                         Current Period
                       </label>
                       <p className="text-sm text-gray-900 mt-1" data-testid="text-billing-period">
-                        {new Date(subscription.currentPeriodStart).toLocaleDateString()} - {' '}
-                        {new Date(subscription.currentPeriodEnd).toLocaleDateString()}
+                        {formatDate(subscription.currentPeriodStart)} - {' '}
+                        {formatDate(subscription.currentPeriodEnd)}
                       </p>
                     </div>
                     <div>
