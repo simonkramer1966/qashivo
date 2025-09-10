@@ -127,12 +127,6 @@ export default function Customers() {
         <Header 
           title="Customers" 
           subtitle="Manage your customers and relationships"
-          action={
-            <Button className="bg-[#17B6C3] hover:bg-[#1396A1] text-white" data-testid="button-new-contact">
-              <Plus className="mr-2 h-4 w-4" />
-              New Contact
-            </Button>
-          }
         />
         
         <div className="p-8 space-y-8">
