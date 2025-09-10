@@ -351,13 +351,48 @@ export default function Invoices() {
                                     <MoreHorizontal className="h-4 w-4 text-[#17B6C3]" />
                                   </Button>
                                 </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end" className="bg-white border-gray-200">
+                                <DropdownMenuContent align="end" className="bg-white border-gray-200 w-48">
                                   <DropdownMenuItem 
-                                    onClick={() => openContactHistory(invoice)}
-                                    data-testid={`menu-view-history-${invoice.id}`}
+                                    data-testid={`menu-general-chase-${invoice.id}`}
                                   >
-                                    <Eye className="mr-2 h-4 w-4" />
-                                    View History
+                                    <Mail className="mr-2 h-4 w-4" />
+                                    General Chase
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem 
+                                    data-testid={`menu-send-invoice-copy-${invoice.id}`}
+                                  >
+                                    <FileText className="mr-2 h-4 w-4" />
+                                    Send Invoice Copy
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem 
+                                    data-testid={`menu-thank-you-message-${invoice.id}`}
+                                  >
+                                    <MessageSquare className="mr-2 h-4 w-4" />
+                                    Thank You Message
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem 
+                                    data-testid={`menu-general-reminder-${invoice.id}`}
+                                  >
+                                    <Clock className="mr-2 h-4 w-4" />
+                                    General Reminder
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem 
+                                    data-testid={`menu-thank-you-sms-${invoice.id}`}
+                                  >
+                                    <Phone className="mr-2 h-4 w-4" />
+                                    Thank You SMS
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem 
+                                    data-testid={`menu-send-whatsapp-${invoice.id}`}
+                                  >
+                                    <MessageSquare className="mr-2 h-4 w-4" />
+                                    Send WhatsApp
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem 
+                                    data-testid={`menu-make-voice-call-${invoice.id}`}
+                                  >
+                                    <Phone className="mr-2 h-4 w-4" />
+                                    Make Voice Call
                                   </DropdownMenuItem>
                                   <DropdownMenuItem 
                                     onClick={() => {
@@ -377,7 +412,14 @@ export default function Invoices() {
                                     data-testid={`menu-dispute-${invoice.id}`}
                                   >
                                     <AlertCircle className="mr-2 h-4 w-4" />
-                                    Mark as Disputed
+                                    Dispute
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem 
+                                    onClick={() => openContactHistory(invoice)}
+                                    data-testid={`menu-view-history-${invoice.id}`}
+                                  >
+                                    <Eye className="mr-2 h-4 w-4" />
+                                    View History
                                   </DropdownMenuItem>
                                   <DropdownMenuItem 
                                     data-testid={`menu-hold-${invoice.id}`}
