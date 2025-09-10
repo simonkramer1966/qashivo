@@ -374,6 +374,15 @@ export default function Invoices() {
                                   </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end" className="bg-white border-gray-200 w-52">
+                                  <DropdownMenuItem 
+                                    onClick={() => openContactHistory(invoice)}
+                                    data-testid={`menu-view-invoice-${invoice.id}`}
+                                  >
+                                    <Eye className="mr-2 h-4 w-4" />
+                                    View Invoice
+                                  </DropdownMenuItem>
+                                  
+                                  <DropdownMenuSeparator />
                                   <DropdownMenuLabel className="text-xs font-medium text-gray-500 uppercase tracking-wide">
                                     Email
                                   </DropdownMenuLabel>
