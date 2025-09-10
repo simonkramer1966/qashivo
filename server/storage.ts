@@ -1272,19 +1272,13 @@ export class DatabaseStorage implements IStorage {
           recordingUrl: voiceCalls.recordingUrl,
           startedAt: voiceCalls.startedAt,
           endedAt: voiceCalls.endedAt,
-          metadata: voiceCalls.metadata,
-          agentConfigId: voiceCalls.agentConfigId,
-          escalatedToHuman: voiceCalls.escalatedToHuman,
-          escalationReason: voiceCalls.escalationReason,
-          humanAgentId: voiceCalls.humanAgentId,
-          humanJoinedAt: voiceCalls.humanJoinedAt,
-          humanLeftAt: voiceCalls.humanLeftAt,
-          humanNotes: voiceCalls.humanNotes,
-          callbackRequested: voiceCalls.callbackRequested,
-          callbackScheduledFor: voiceCalls.callbackScheduledFor,
-          paymentIntentCreated: voiceCalls.paymentIntentCreated,
-          paymentAmount: voiceCalls.paymentAmount,
-          paymentStatus: voiceCalls.paymentStatus,
+          callAnalysis: voiceCalls.callAnalysis,
+          userSentiment: voiceCalls.userSentiment,
+          callSuccessful: voiceCalls.callSuccessful,
+          disconnectionReason: voiceCalls.disconnectionReason,
+          customerResponse: voiceCalls.customerResponse,
+          followUpRequired: voiceCalls.followUpRequired,
+          scheduledAt: voiceCalls.scheduledAt,
           createdAt: voiceCalls.createdAt,
           updatedAt: voiceCalls.updatedAt,
           contact: {
@@ -1293,11 +1287,14 @@ export class DatabaseStorage implements IStorage {
             name: contacts.name,
             email: contacts.email,
             phone: contacts.phone,
-            company: contacts.company,
+            companyName: contacts.companyName,
+            xeroContactId: contacts.xeroContactId,
             address: contacts.address,
-            notes: contacts.notes,
-            tags: contacts.tags,
             isActive: contacts.isActive,
+            paymentTerms: contacts.paymentTerms,
+            creditLimit: contacts.creditLimit,
+            preferredContactMethod: contacts.preferredContactMethod,
+            notes: contacts.notes,
             createdAt: contacts.createdAt,
             updatedAt: contacts.updatedAt,
           },
@@ -1778,14 +1775,16 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getHealthAnalyticsSnapshot(tenantId: string, snapshotType?: string): Promise<HealthAnalyticsSnapshot | undefined> {
-    let query = db
+    const conditions = [eq(healthAnalyticsSnapshots.tenantId, tenantId)];
+    
+    if (snapshotType) {
+      conditions.push(eq(healthAnalyticsSnapshots.snapshotType, snapshotType));
+    }
+
+    const query = db
       .select()
       .from(healthAnalyticsSnapshots)
-      .where(eq(healthAnalyticsSnapshots.tenantId, tenantId));
-
-    if (snapshotType) {
-      query = query.where(eq(healthAnalyticsSnapshots.snapshotType, snapshotType));
-    }
+      .where(and(...conditions));
 
     const result = await query
       .orderBy(desc(healthAnalyticsSnapshots.snapshotDate))
