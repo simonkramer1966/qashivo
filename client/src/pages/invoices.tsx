@@ -549,21 +549,41 @@ export default function Invoices() {
     },
   });
 
-  // Send single invoice email mutation
+  // Send invoice email mutations for different action types
   const sendInvoiceEmailMutation = useMutation({
-    mutationFn: async (invoiceId: string) => {
-      return apiRequest("POST", `/api/invoices/${invoiceId}/send-email`, {});
+    mutationFn: async ({ invoiceId, actionType }: { invoiceId: string; actionType: string }) => {
+      return apiRequest("POST", `/api/invoices/${invoiceId}/send-email/${actionType}`, {});
     },
     onSuccess: (data: any) => {
       toast({
         title: "Email Sent",
-        description: data.message || "Payment reminder sent successfully",
+        description: data.message || "Email sent successfully",
       });
     },
     onError: (error: any) => {
       toast({
         title: "Failed to Send Email", 
-        description: error.message || "Unable to send payment reminder",
+        description: error.message || "Unable to send email",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Send SMS mutations for different action types
+  const sendInvoiceSMSMutation = useMutation({
+    mutationFn: async ({ invoiceId, actionType }: { invoiceId: string; actionType: string }) => {
+      return apiRequest("POST", `/api/invoices/${invoiceId}/send-sms/${actionType}`, {});
+    },
+    onSuccess: (data: any) => {
+      toast({
+        title: "SMS Sent",
+        description: data.message || "SMS sent successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to Send SMS", 
+        description: error.message || "Unable to send SMS",
         variant: "destructive",
       });
     },
@@ -1391,27 +1411,75 @@ export default function Invoices() {
                                 <ArrowRight className="h-3 w-3" />
                               </Button>
                               {invoice.contact?.email && (
-                                <Button 
-                                  variant="outline" 
-                                  size="sm" 
-                                  onClick={() => sendInvoiceEmailMutation.mutate(invoice.id)}
-                                  disabled={sendInvoiceEmailMutation.isPending}
-                                  className="border-[#17B6C3]/20 text-[#17B6C3] hover:bg-[#17B6C3]/5 h-7 w-7 p-0"
-                                  data-testid={`button-send-email-${invoice.id}`}
-                                  title="Send payment reminder"
-                                >
-                                  <Mail className="h-3 w-3" />
-                                </Button>
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button 
+                                      variant="outline" 
+                                      size="sm" 
+                                      disabled={sendInvoiceEmailMutation.isPending}
+                                      className="border-[#17B6C3]/20 text-[#17B6C3] hover:bg-[#17B6C3]/5 h-7 w-7 p-0"
+                                      data-testid={`button-send-email-${invoice.id}`}
+                                      title="Email options"
+                                    >
+                                      <Mail className="h-3 w-3" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent className="w-48 bg-white border-gray-200">
+                                    <DropdownMenuItem
+                                      onClick={() => sendInvoiceEmailMutation.mutate({ invoiceId: invoice.id, actionType: 'general-chase' })}
+                                      disabled={sendInvoiceEmailMutation.isPending}
+                                      data-testid={`email-general-chase-${invoice.id}`}
+                                    >
+                                      🔔 General Chase
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem
+                                      onClick={() => sendInvoiceEmailMutation.mutate({ invoiceId: invoice.id, actionType: 'invoice-copy' })}
+                                      disabled={sendInvoiceEmailMutation.isPending}
+                                      data-testid={`email-invoice-copy-${invoice.id}`}
+                                    >
+                                      📄 Invoice To Client
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem
+                                      onClick={() => sendInvoiceEmailMutation.mutate({ invoiceId: invoice.id, actionType: 'thank-you' })}
+                                      disabled={sendInvoiceEmailMutation.isPending}
+                                      data-testid={`email-thank-you-${invoice.id}`}
+                                    >
+                                      🎉 Thank You For Payment
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
                               )}
                               {invoice.contact?.phone && (
-                                <Button 
-                                  variant="outline" 
-                                  size="sm"
-                                  className="border-[#17B6C3]/20 text-[#17B6C3] hover:bg-[#17B6C3]/5 h-7 w-7 p-0"
-                                  data-testid={`button-call-${invoice.id}`}
-                                >
-                                  <Phone className="h-3 w-3" />
-                                </Button>
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button 
+                                      variant="outline" 
+                                      size="sm"
+                                      disabled={sendInvoiceSMSMutation.isPending}
+                                      className="border-[#17B6C3]/20 text-[#17B6C3] hover:bg-[#17B6C3]/5 h-7 w-7 p-0"
+                                      data-testid={`button-call-${invoice.id}`}
+                                      title="SMS options"
+                                    >
+                                      <Phone className="h-3 w-3" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent className="w-48 bg-white border-gray-200">
+                                    <DropdownMenuItem
+                                      onClick={() => sendInvoiceSMSMutation.mutate({ invoiceId: invoice.id, actionType: 'general-reminder' })}
+                                      disabled={sendInvoiceSMSMutation.isPending}
+                                      data-testid={`sms-general-reminder-${invoice.id}`}
+                                    >
+                                      📱 General SMS
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem
+                                      onClick={() => sendInvoiceSMSMutation.mutate({ invoiceId: invoice.id, actionType: 'thank-you' })}
+                                      disabled={sendInvoiceSMSMutation.isPending}
+                                      data-testid={`sms-thank-you-${invoice.id}`}
+                                    >
+                                      🎉 Thank You For Payment
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
                               )}
                               <Button 
                                 variant="outline" 
