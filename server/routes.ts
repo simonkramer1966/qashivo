@@ -2126,6 +2126,178 @@ Payment required immediately to avoid collection action. Contact us NOW.`
     }
   });
 
+  // New dropdown email endpoints
+  app.post("/api/invoices/:invoiceId/send-email/:actionType", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { invoiceId, actionType } = req.params;
+      
+      // Get invoice with contact details
+      const invoice = await storage.getInvoice(invoiceId, user.tenantId);
+      if (!invoice) {
+        return res.status(404).json({ message: "Invoice not found" });
+      }
+
+      if (!invoice.contact?.email) {
+        return res.status(400).json({ message: "No email address found for this contact" });
+      }
+
+      // Get templates and sender
+      const templates = await storage.getCommunicationTemplates(user.tenantId);
+      const defaultSender = await storage.getDefaultEmailSender(user.tenantId);
+
+      if (!defaultSender) {
+        return res.status(500).json({ message: "Email sender not configured" });
+      }
+
+      let templateToUse;
+      let processedSubject;
+      let processedContent;
+      let successMessage;
+
+      switch (actionType) {
+        case 'general-chase':
+          templateToUse = templates.find(t => t.id === "bf7ffcee-0ce1-4a76-9251-7d434a8f4bd8"); // Default Email template
+          if (!templateToUse) {
+            return res.status(500).json({ message: "General chase template not found" });
+          }
+          
+          const dueDate = new Date(invoice.dueDate);
+          const today = new Date();
+          const daysOverdue = Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
+          
+          processedContent = templateToUse.content
+            .replace(/\{\{first_name\}\}/g, invoice.contact.name?.split(' ')[0] || 'Valued Customer')
+            .replace(/\{\{your_name\}\}/g, defaultSender.fromName || defaultSender.name)
+            .replace(/£X as unpaid/g, `£${Number(invoice.amount).toLocaleString()} as unpaid`)
+            .replace(/£X due for payment now/g, `£${Number(invoice.amount).toLocaleString()} due for payment ${daysOverdue > 0 ? `${daysOverdue} days ago` : 'now'}`);
+
+          processedSubject = daysOverdue > 0 ? `Overdue Payment - ${templateToUse.subject}` : templateToUse.subject;
+          successMessage = `Payment reminder sent to ${invoice.contact.name}`;
+          break;
+
+        case 'invoice-copy':
+          processedSubject = `Invoice Copy - ${invoice.invoiceNumber}`;
+          processedContent = `Dear ${invoice.contact.name?.split(' ')[0] || 'Valued Customer'},<br><br>
+            Please find attached a copy of your invoice as requested.<br><br>
+            <strong>Invoice Details:</strong><br>
+            • Invoice Number: ${invoice.invoiceNumber}<br>
+            • Amount: £${Number(invoice.amount).toLocaleString()}<br>
+            • Due Date: ${new Date(invoice.dueDate).toLocaleDateString()}<br><br>
+            If you have any questions, please don't hesitate to contact us.<br><br>
+            Best regards,<br>
+            ${defaultSender.fromName || defaultSender.name}`;
+          successMessage = `Invoice copy sent to ${invoice.contact.name}`;
+          break;
+
+        case 'thank-you':
+          processedSubject = `Thank You for Your Payment - ${invoice.invoiceNumber}`;
+          processedContent = `Dear ${invoice.contact.name?.split(' ')[0] || 'Valued Customer'},<br><br>
+            Thank you for your recent payment of £${Number(invoice.amount).toLocaleString()} for invoice ${invoice.invoiceNumber}.<br><br>
+            We appreciate your prompt payment and your continued business with us.<br><br>
+            Best regards,<br>
+            ${defaultSender.fromName || defaultSender.name}`;
+          successMessage = `Thank you message sent to ${invoice.contact.name}`;
+          break;
+
+        default:
+          return res.status(400).json({ message: "Invalid action type" });
+      }
+
+      // Send email using SendGrid
+      const { sendEmail } = await import("./services/sendgrid");
+      const emailSent = await sendEmail({
+        to: invoice.contact.email,
+        from: defaultSender.email,
+        subject: processedSubject,
+        html: processedContent
+      });
+
+      if (emailSent) {
+        console.log(`✅ Email (${actionType}) sent for invoice ${invoice.invoiceNumber} to ${invoice.contact.email}`);
+        res.json({ 
+          success: true, 
+          message: successMessage
+        });
+      } else {
+        res.status(500).json({ 
+          success: false, 
+          message: "Failed to send email" 
+        });
+      }
+    } catch (error) {
+      console.error(`Error sending invoice email (${req.params.actionType}):`, error);
+      res.status(500).json({ 
+        success: false, 
+        message: (error as Error).message || "Failed to send email" 
+      });
+    }
+  });
+
+  // New dropdown SMS endpoints
+  app.post("/api/invoices/:invoiceId/send-sms/:actionType", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { invoiceId, actionType } = req.params;
+      
+      // Get invoice with contact details
+      const invoice = await storage.getInvoice(invoiceId, user.tenantId);
+      if (!invoice) {
+        return res.status(404).json({ message: "Invoice not found" });
+      }
+
+      if (!invoice.contact?.phone) {
+        return res.status(400).json({ message: "No phone number found for this contact" });
+      }
+
+      let smsMessage;
+      let successMessage;
+
+      switch (actionType) {
+        case 'general-reminder':
+          const dueDate = new Date(invoice.dueDate);
+          const today = new Date();
+          const daysOverdue = Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
+          
+          smsMessage = `Payment reminder: Invoice ${invoice.invoiceNumber} for £${Number(invoice.amount).toLocaleString()} is ${daysOverdue > 0 ? `${daysOverdue} days overdue` : 'due for payment'}. Please contact us to arrange payment.`;
+          successMessage = `SMS reminder sent to ${invoice.contact.name}`;
+          break;
+
+        case 'thank-you':
+          smsMessage = `Thank you for your payment of £${Number(invoice.amount).toLocaleString()} for invoice ${invoice.invoiceNumber}. We appreciate your business!`;
+          successMessage = `Thank you SMS sent to ${invoice.contact.name}`;
+          break;
+
+        default:
+          return res.status(400).json({ message: "Invalid SMS action type" });
+      }
+
+      // Send SMS using Twilio (when implemented)
+      // For now, we'll simulate the SMS sending
+      console.log(`📱 SMS (${actionType}) would be sent to ${invoice.contact.phone}: ${smsMessage}`);
+      
+      res.json({ 
+        success: true, 
+        message: `${successMessage} (SMS functionality simulated)` 
+      });
+
+    } catch (error) {
+      console.error(`Error sending invoice SMS (${req.params.actionType}):`, error);
+      res.status(500).json({ 
+        success: false, 
+        message: (error as Error).message || "Failed to send SMS" 
+      });
+    }
+  });
+
   // Send customer summary email
   app.post("/api/contacts/:contactId/send-summary-email", isAuthenticated, async (req: any, res) => {
     try {
