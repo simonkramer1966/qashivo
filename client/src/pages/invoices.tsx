@@ -338,37 +338,7 @@ export default function Invoices() {
                             {getStatusBadge(invoice.status)}
                           </td>
                           <td className="py-4">
-                            <div className="flex space-x-2">
-                              {invoice.contact?.email && (
-                                <Button 
-                                  variant="ghost" 
-                                  size="sm" 
-                                  className="h-8 w-8 p-0 hover:bg-[#17B6C3]/10"
-                                  data-testid={`button-send-email-${invoice.id}`}
-                                >
-                                  <Mail className="h-4 w-4 text-[#17B6C3]" />
-                                </Button>
-                              )}
-                              {invoice.contact?.phone && (
-                                <Button 
-                                  variant="ghost" 
-                                  size="sm"
-                                  className="h-8 w-8 p-0 hover:bg-[#17B6C3]/10"
-                                  data-testid={`button-send-sms-${invoice.id}`}
-                                >
-                                  <Phone className="h-4 w-4 text-[#17B6C3]" />
-                                </Button>
-                              )}
-                              <Button 
-                                variant="ghost" 
-                                size="sm" 
-                                className="h-8 w-8 p-0 hover:bg-[#17B6C3]/10"
-                                onClick={() => openContactHistory(invoice)}
-                                data-testid={`button-view-invoice-${invoice.id}`}
-                              >
-                                <Eye className="h-4 w-4 text-[#17B6C3]" />
-                              </Button>
-                              
+                            <div className="flex justify-end">
                               <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
                                   <Button 
