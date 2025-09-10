@@ -491,11 +491,9 @@ export default function Invoices() {
 
   // Mutations for hold/unhold operations
   const holdInvoiceMutation = useMutation({
-    mutationFn: (invoiceId: string) => apiRequest(`/api/invoices/${invoiceId}/hold`, {
-      method: 'PUT',
-    }),
+    mutationFn: (invoiceId: string) => apiRequest(`/api/invoices/${invoiceId}/hold`, 'PUT'),
     onSuccess: () => {
-      queryClient.invalidateQueries(["/api/invoices"]);
+      queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
       toast({
         title: "Invoice Placed On Hold",
         description: "Invoice has been removed from the collections workflow.",
@@ -513,11 +511,9 @@ export default function Invoices() {
   });
 
   const unholdInvoiceMutation = useMutation({
-    mutationFn: (invoiceId: string) => apiRequest(`/api/invoices/${invoiceId}/unhold`, {
-      method: 'PUT',
-    }),
+    mutationFn: (invoiceId: string) => apiRequest(`/api/invoices/${invoiceId}/unhold`, 'PUT'),
     onSuccess: () => {
-      queryClient.invalidateQueries(["/api/invoices"]);
+      queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
       toast({
         title: "Invoice Activated",
         description: "Invoice has been returned to the collections workflow.",
@@ -1573,18 +1569,20 @@ export default function Invoices() {
                           </td>
                           <td className="py-2 w-52">
                             <div className="flex space-x-1 justify-end">
-                              {invoice.isOnHold && (
-                                <Button 
-                                  variant="outline" 
-                                  size="sm"
-                                  onClick={() => toggleHoldStatus(invoice.id)}
-                                  className="border-gray-400 text-gray-500 hover:bg-gray-50 h-7 w-7 p-0"
-                                  data-testid={`button-pause-${invoice.id}`}
-                                  title="Remove from Hold"
-                                >
-                                  <Pause className="h-3 w-3" />
-                                </Button>
-                              )}
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => toggleHoldStatus(invoice.id)}
+                                className={`h-7 w-8 p-0 text-xs font-medium ${
+                                  invoice.isOnHold 
+                                    ? "border-gray-400 text-gray-600 bg-gray-50 hover:bg-gray-100" 
+                                    : "border-gray-200 text-gray-300 hover:bg-gray-50"
+                                }`}
+                                data-testid={`button-pause-${invoice.id}`}
+                                title={invoice.isOnHold ? "Remove from Hold" : "Place on Hold"}
+                              >
+                                <Pause className="h-3 w-3" />
+                              </Button>
                               <Button 
                                 variant="outline" 
                                 size="sm"
