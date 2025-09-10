@@ -1144,34 +1144,36 @@ export default function Invoices() {
                                   Active
                                 </DropdownMenuItem>
                                 <DropdownMenuItem 
-                                  onClick={() => handleCustomerBulkAction('send-email')}
-                                  data-testid="bulk-action-send-email"
+                                  onClick={() => handleCustomerBulkAction('voice-call')}
+                                  data-testid="bulk-action-voice-call"
                                 >
-                                  Send Email
+                                  Voice Call
                                 </DropdownMenuItem>
                                 <DropdownMenuItem 
-                                  onClick={() => handleCustomerBulkAction('send-sms')}
-                                  data-testid="bulk-action-send-sms"
+                                  onClick={() => handleCustomerBulkAction('pre-action-call')}
+                                  data-testid="bulk-action-pre-action-call"
                                 >
-                                  Send SMS
+                                  Pre Action Call
                                 </DropdownMenuItem>
                                 <DropdownMenuItem 
-                                  onClick={() => handleCustomerBulkAction('mark-priority')}
-                                  data-testid="bulk-action-mark-priority"
+                                  onClick={() => handleCustomerBulkAction('debt-recovery')}
+                                  data-testid="bulk-action-debt-recovery"
                                 >
-                                  Mark as Priority
+                                  Debt Recovery
                                 </DropdownMenuItem>
                                 <DropdownMenuItem 
-                                  onClick={() => handleCustomerBulkAction('export')}
-                                  data-testid="bulk-action-export"
+                                  onClick={() => handleCustomerBulkAction('payment-plan')}
+                                  data-testid="bulk-action-payment-plan"
                                 >
-                                  Export Selected
+                                  <Calendar className="h-3 w-3 mr-2" />
+                                  Create Payment Plan
                                 </DropdownMenuItem>
                                 <DropdownMenuItem 
-                                  onClick={() => handleCustomerBulkAction('delete')}
-                                  data-testid="bulk-action-delete"
+                                  onClick={() => handleCustomerBulkAction('dispute')}
+                                  data-testid="bulk-action-dispute"
                                 >
-                                  Delete Selected
+                                  <AlertCircle className="h-3 w-3 mr-2" />
+                                  Create Dispute
                                 </DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
