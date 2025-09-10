@@ -21,7 +21,10 @@ import {
   Menu,
   ChevronDown,
   Check,
-  RefreshCw
+  RefreshCw,
+  Search,
+  Plus,
+  X
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -29,10 +32,14 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
   DropdownMenuSeparator,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import nexusLogo from "@assets/Main Nexus Logo copy_1756923544828.png";
 
@@ -68,6 +75,8 @@ export default function NewSidebar() {
   const { user } = useAuth();
   const [location, setLocation] = useLocation();
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [showOrgModal, setShowOrgModal] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const queryClient = useQueryClient();
 
   // Fetch tenant information
@@ -149,6 +158,7 @@ export default function NewSidebar() {
   const canSwitchOrganizations = (user as any)?.role === "owner" && accessibleTenants.length > 1;
 
   return (
+    <>
     <aside className={cn(
       "bg-gray-50 border-r border-gray-200 flex flex-col h-full transition-all duration-300",
       isCollapsed ? "w-16" : "w-64"
@@ -206,36 +216,15 @@ export default function NewSidebar() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent className="w-80 bg-white border-gray-200" align="start" side="bottom">
-                {/* Change Organisation - Top level with teal color */}
-                <DropdownMenuSub>
-                  <DropdownMenuSubTrigger className="pl-4 pr-3 py-3 cursor-pointer text-[#17B6C3] hover:bg-gray-50">
-                    <RefreshCw className="h-4 w-4 mr-2 text-[#17B6C3]" />
-                    <div className="font-medium text-sm text-[#17B6C3]">Change organisation</div>
-                  </DropdownMenuSubTrigger>
-                  <DropdownMenuSubContent className="w-56 bg-white border-gray-200">
-                    {accessibleTenants.map((org) => (
-                      <DropdownMenuItem
-                        key={org.id}
-                        onClick={() => {
-                          if (org.id !== tenant?.id) {
-                            switchTenantMutation.mutate(org.id);
-                          }
-                        }}
-                        className="p-3 cursor-pointer"
-                        data-testid={`menu-item-organization-${org.id}`}
-                      >
-                        <div className="flex items-center justify-between w-full">
-                          <div className="font-medium text-sm">
-                            {org.settings?.companyName || org.name}
-                          </div>
-                          {org.id === tenant?.id && (
-                            <Check className="h-4 w-4 text-[#17B6C3]" />
-                          )}
-                        </div>
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuSubContent>
-                </DropdownMenuSub>
+                {/* Change Organisation - Regular menu item that opens modal */}
+                <DropdownMenuItem 
+                  className="pl-4 pr-3 py-3 cursor-pointer text-[#17B6C3] hover:bg-gray-50"
+                  onClick={() => setShowOrgModal(true)}
+                  data-testid="menu-item-change-organization"
+                >
+                  <RefreshCw className="h-4 w-4 mr-2 text-[#17B6C3]" />
+                  <div className="font-medium text-sm text-[#17B6C3]">Change organisation</div>
+                </DropdownMenuItem>
                 
                 {/* Large Organization Card */}
                 <div className="p-4">
@@ -361,5 +350,100 @@ export default function NewSidebar() {
         </button>
       </div>
     </aside>
+
+    {/* Organization Selection Modal */}
+    <Dialog open={showOrgModal} onOpenChange={setShowOrgModal}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="sr-only">Change Organisation</DialogTitle>
+          <button
+            onClick={() => setShowOrgModal(false)}
+            className="absolute right-4 top-4 rounded-sm opacity-70 transition-opacity hover:opacity-100"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </DialogHeader>
+        
+        {/* Search Bar */}
+        <div className="relative mb-4">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+          <Input
+            placeholder="Search organisations"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10 pr-10"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery("")}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+
+        {/* Organizations List */}
+        <div className="max-h-80 overflow-y-auto">
+          {accessibleTenants
+            .filter(org => 
+              (org.settings?.companyName || org.name)
+                .toLowerCase()
+                .includes(searchQuery.toLowerCase())
+            )
+            .map((org) => {
+              const companyName = org.settings?.companyName || org.name;
+              const initials = getCompanyInitials(companyName);
+              const isCurrentOrg = org.id === tenant?.id;
+              
+              return (
+                <button
+                  key={org.id}
+                  onClick={() => {
+                    if (!isCurrentOrg) {
+                      switchTenantMutation.mutate(org.id);
+                    }
+                    setShowOrgModal(false);
+                    setSearchQuery("");
+                  }}
+                  className="w-full flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-50 transition-colors"
+                  data-testid={`modal-organization-${org.id}`}
+                >
+                  <div className="w-10 h-10 rounded-lg bg-[#17B6C3] flex items-center justify-center text-white font-bold text-sm">
+                    {initials}
+                  </div>
+                  <div className="flex-1 text-left">
+                    <div className="font-medium text-gray-900">{companyName}</div>
+                  </div>
+                  {isCurrentOrg && (
+                    <Check className="h-4 w-4 text-[#17B6C3]" />
+                  )}
+                </button>
+              );
+            })}
+        </div>
+
+        {/* Add New Organisation */}
+        <div className="border-t pt-4 mt-4">
+          <button
+            onClick={() => {
+              // For now, just close the modal - placeholder for future functionality
+              setShowOrgModal(false);
+              setSearchQuery("");
+            }}
+            className="w-full flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-50 transition-colors text-[#17B6C3]"
+            data-testid="modal-add-organization"
+          >
+            <div className="w-10 h-10 rounded-lg border-2 border-dashed border-[#17B6C3] flex items-center justify-center">
+              <Plus className="h-4 w-4 text-[#17B6C3]" />
+            </div>
+            <div className="flex-1 text-left">
+              <div className="font-medium text-[#17B6C3]">Add a new organisation</div>
+            </div>
+          </button>
+        </div>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }
