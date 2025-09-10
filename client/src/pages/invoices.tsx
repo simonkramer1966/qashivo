@@ -1618,7 +1618,7 @@ export default function Invoices() {
                                   onClick={() => toggleHoldStatus(invoice.id)}
                                   className={`h-7 w-8 p-0 text-xs font-medium ${
                                     invoice.isOnHold === true
-                                      ? "border-gray-400 text-gray-600 bg-gray-50 hover:bg-gray-100" 
+                                      ? "border-gray-200 text-red-500 bg-white hover:bg-gray-50" 
                                       : "border-gray-200 text-gray-300 hover:bg-gray-50"
                                   }`}
                                   data-testid={`button-pause-${invoice.id}`}
