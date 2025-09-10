@@ -8,8 +8,14 @@ import handshakeImage from "@assets/generated_images/Professional_business_hands
 import dashboardImage from "@assets/generated_images/Financial_dashboard_interface_design_7156625d.png";
 
 export default function Landing() {
+  const isDevelopment = import.meta.env.DEV;
+  
   const handleLogin = () => {
     window.location.href = "/api/login";
+  };
+  
+  const handleDevLogin = () => {
+    window.location.href = "/api/dev-login";
   };
 
   return (
@@ -60,6 +66,16 @@ export default function Landing() {
 
             {/* CTA Section */}
             <div className="flex items-center space-x-4">
+              {isDevelopment && (
+                <Button 
+                  onClick={handleDevLogin}
+                  variant="outline"
+                  className="text-[#17B6C3] border-[#17B6C3] hover:bg-[#17B6C3] hover:text-white font-medium"
+                  data-testid="button-nav-dev-login"
+                >
+                  Dev Login
+                </Button>
+              )}
               <Button 
                 onClick={handleLogin}
                 variant="ghost"
@@ -118,6 +134,16 @@ export default function Landing() {
             get paid faster while maintaining great customer relationships - all from one simple dashboard.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            {isDevelopment && (
+              <Button 
+                onClick={handleDevLogin}
+                size="lg"
+                className="text-lg px-8 py-4 bg-yellow-500 hover:bg-yellow-600 text-black font-semibold"
+                data-testid="button-hero-dev-login"
+              >
+                🔧 Development Login
+              </Button>
+            )}
             <Button 
               onClick={handleLogin}
               size="lg"
