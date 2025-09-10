@@ -167,8 +167,22 @@ export default function Invoices() {
       
       let matchesStatus = true;
       if (statusFilter !== "all") {
-        const displayStatus = getInvoiceDisplayStatus(invoice);
-        matchesStatus = displayStatus === statusFilter;
+        const isHeld = heldInvoices.has(invoice.id);
+        
+        if (statusFilter === "on-hold") {
+          // Show only held invoices
+          matchesStatus = isHeld;
+        } else {
+          // For all other filters, exclude held invoices
+          if (isHeld) return false;
+          
+          const displayStatus = getInvoiceDisplayStatus(invoice);
+          matchesStatus = displayStatus === statusFilter;
+        }
+      } else {
+        // For "all" filter, exclude held invoices (they have their own filter)
+        const isHeld = heldInvoices.has(invoice.id);
+        if (isHeld) return false;
       }
       
       return matchesSearch && matchesStatus;
@@ -701,12 +715,22 @@ export default function Invoices() {
           invoiceIds.forEach(id => newSet.add(id));
           return newSet;
         });
+        toast({
+          title: "Invoices Placed On Hold",
+          description: `${invoiceIds.length} invoice(s) have been removed from the collections workflow.`,
+          className: "bg-white border-gray-200",
+        });
         break;
       case 'active':
         setHeldInvoices(prev => {
           const newSet = new Set(prev);
           invoiceIds.forEach(id => newSet.delete(id));
           return newSet;
+        });
+        toast({
+          title: "Invoices Activated",
+          description: `${invoiceIds.length} invoice(s) have been returned to the collections workflow.`,
+          className: "bg-white border-gray-200",
         });
         break;
       case 'voice-call':
@@ -941,6 +965,7 @@ export default function Invoices() {
                       <SelectItem value="pending">Pending</SelectItem>
                       <SelectItem value="overdue">Overdue</SelectItem>
                       <SelectItem value="paid">Paid</SelectItem>
+                      <SelectItem value="on-hold">On Hold</SelectItem>
                     </SelectContent>
                   </Select>
                   <Select value={invoicesItemsPerPage.toString()} onValueChange={(value) => setInvoicesItemsPerPage(Number(value))}>
