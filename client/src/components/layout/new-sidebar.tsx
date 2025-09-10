@@ -20,7 +20,8 @@ import {
   Activity,
   Menu,
   ChevronDown,
-  Check
+  Check,
+  RefreshCw
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -51,6 +52,17 @@ const navigationItems = [
 const ownerNavigationItems = [
   { name: "Owner Dashboard", href: "/owner", icon: Building2, ownerOnly: true },
 ];
+
+// Helper function to generate company initials
+const getCompanyInitials = (companyName: string): string => {
+  if (!companyName) return "?";
+  
+  const words = companyName.split(" ").filter(word => word.length > 0);
+  if (words.length === 1) {
+    return words[0].substring(0, 2).toUpperCase();
+  }
+  return words.slice(0, 2).map(word => word[0]).join("").toUpperCase();
+};
 
 export default function NewSidebar() {
   const { user } = useAuth();
@@ -193,11 +205,12 @@ export default function NewSidebar() {
                   <ChevronDown className="h-4 w-4 text-gray-400" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-64 bg-white border-gray-200" align="start" side="bottom">
-                {/* Change Organisation with submenu */}
+              <DropdownMenuContent className="w-80 bg-white border-gray-200" align="start" side="bottom">
+                {/* Change Organisation - Top level with teal color */}
                 <DropdownMenuSub>
-                  <DropdownMenuSubTrigger className="p-3 cursor-pointer">
-                    <div className="font-medium text-sm">Change Organisation</div>
+                  <DropdownMenuSubTrigger className="p-3 cursor-pointer text-[#17B6C3] hover:bg-gray-50">
+                    <RefreshCw className="h-4 w-4 mr-2 text-[#17B6C3]" />
+                    <div className="font-medium text-sm text-[#17B6C3]">Change organisation</div>
                   </DropdownMenuSubTrigger>
                   <DropdownMenuSubContent className="w-56 bg-white border-gray-200">
                     {accessibleTenants.map((org) => (
@@ -224,16 +237,21 @@ export default function NewSidebar() {
                   </DropdownMenuSubContent>
                 </DropdownMenuSub>
                 
-                <DropdownMenuSeparator />
-                
-                {/* Current Organization Name in Bold */}
-                <DropdownMenuItem className="p-3 cursor-default">
-                  <div className="font-bold text-sm">
-                    {tenant?.settings?.companyName || tenant?.name || "Loading..."}
+                {/* Large Organization Card */}
+                <div className="p-4 border-b border-gray-100">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-12 h-12 rounded-lg bg-[#17B6C3] flex items-center justify-center text-white font-bold text-lg">
+                      {getCompanyInitials(tenant?.settings?.companyName || tenant?.name || "")}
+                    </div>
+                    <div>
+                      <div className="font-semibold text-base text-gray-900">
+                        {tenant?.settings?.companyName || tenant?.name || "Loading..."}
+                      </div>
+                    </div>
                   </div>
-                </DropdownMenuItem>
+                </div>
                 
-                {/* Settings */}
+                {/* Core Menu Items */}
                 <DropdownMenuItem 
                   className="p-3 cursor-pointer hover:bg-gray-50"
                   onClick={() => setLocation('/settings')}
@@ -244,7 +262,12 @@ export default function NewSidebar() {
                 
                 <DropdownMenuSeparator />
                 
-                {/* Department Links */}
+                {/* Section Header */}
+                <div className="px-3 py-2 text-xs font-medium text-gray-500 bg-gray-50">
+                  Do more with Nexus
+                </div>
+                
+                {/* Nexus-specific Items */}
                 <DropdownMenuItem 
                   className="p-3 cursor-pointer hover:bg-gray-50"
                   onClick={() => setLocation('/reports')}
@@ -253,25 +276,20 @@ export default function NewSidebar() {
                   <div className="font-medium text-sm">KPI</div>
                 </DropdownMenuItem>
                 
-                <DropdownMenuItem 
-                  className="p-3 cursor-pointer hover:bg-gray-50"
-                  onClick={() => setLocation('/contacts')}
-                  data-testid="menu-item-hr"
-                >
-                  <div className="font-medium text-sm">HR</div>
-                </DropdownMenuItem>
-                
-                <DropdownMenuItem 
-                  className="p-3 cursor-pointer hover:bg-gray-50"
-                  onClick={() => setLocation('/settings')}
-                  data-testid="menu-item-legal"
-                >
-                  <div className="font-medium text-sm">Legal</div>
-                </DropdownMenuItem>
-                
                 <DropdownMenuSeparator />
                 
-                {/* My Nexus - Owner Dashboard */}
+                {/* Bottom Section with External Links */}
+                <DropdownMenuItem 
+                  className="p-3 cursor-pointer hover:bg-gray-50"
+                  onClick={() => window.open('https://nexuskpi.com', '_blank')}
+                  data-testid="menu-item-nexus-hq"
+                >
+                  <div className="flex items-center justify-between w-full">
+                    <div className="font-medium text-sm">Nexus HQ</div>
+                    <ExternalLink className="h-4 w-4 text-gray-400" />
+                  </div>
+                </DropdownMenuItem>
+                
                 <DropdownMenuItem 
                   className="p-3 cursor-pointer hover:bg-gray-50"
                   onClick={() => setLocation('/owner')}
