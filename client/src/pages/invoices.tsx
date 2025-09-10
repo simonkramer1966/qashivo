@@ -1216,13 +1216,18 @@ export default function Invoices() {
                               <th className="text-left py-2 pl-0.5 text-xs font-semibold text-slate-700 w-[15%]">
                                 <span>Schedule</span>
                               </th>
-                              <th className="text-center py-2 text-xs font-semibold text-slate-700 w-[15%]">Hold</th>
                               <th className="text-right py-2 text-xs font-semibold text-slate-700 w-[10%]">Actions</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-slate-200/50">
                             {paginatedContacts.map((contact: any) => (
-                              <tr key={contact.id} className="hover:bg-slate-50/50 transition-colors" data-testid={`row-contact-${contact.id}`}>
+                              <tr 
+                                key={contact.id} 
+                                className="hover:bg-slate-50/50 transition-colors cursor-pointer" 
+                                data-testid={`row-contact-${contact.id}`}
+                                onDoubleClick={() => openContactHistory(contact)}
+                                title="Double-click to view contact history"
+                              >
                                 <td className="py-1 text-center" data-testid={`checkbox-cell-customer-${contact.id}`}>
                                   <Checkbox
                                     checked={selectedCustomers.has(contact.id)}
@@ -1281,50 +1286,8 @@ export default function Invoices() {
                                     </Select>
                                   </div>
                                 </td>
-                                <td className="py-1" data-testid={`hold-toggle-${contact.id}`}>
-                                  <div className="flex justify-center">
-                                    <Button 
-                                      variant={heldCustomers.has(contact.id) ? "default" : "outline"}
-                                      size="sm"
-                                      onClick={() => toggleCustomerHoldStatus(contact.id)}
-                                      className={heldCustomers.has(contact.id) 
-                                        ? "bg-red-500 hover:bg-red-600 text-white h-7 px-3" 
-                                        : "border-gray-200 text-gray-300 hover:bg-gray-50 h-7 px-3"
-                                      }
-                                      data-testid={`button-hold-toggle-${contact.id}`}
-                                    >
-                                      {heldCustomers.has(contact.id) ? 'ON HOLD' : 'Active'}
-                                    </Button>
-                                  </div>
-                                </td>
                                 <td className="py-1">
                                   <div className="flex space-x-1 justify-end">
-                                    <Button 
-                                      variant="outline" 
-                                      size="sm"
-                                      onClick={() => {
-                                        setPaymentPlanInvoice(contact);
-                                        setShowPaymentPlanDialog(true);
-                                      }}
-                                      className="border-gray-200 text-gray-300 hover:bg-gray-50 h-7 w-8 p-0 text-xs font-medium"
-                                      data-testid={`button-payment-plan-${contact.id}`}
-                                      title="Payment Plan"
-                                    >
-                                      PP
-                                    </Button>
-                                    <Button 
-                                      variant="outline" 
-                                      size="sm"
-                                      onClick={() => {
-                                        setDisputeInvoice(contact);
-                                        setShowDisputeDialog(true);
-                                      }}
-                                      className="border-gray-200 text-gray-300 hover:bg-gray-50 h-7 w-8 p-0 text-xs font-medium"
-                                      data-testid={`button-dispute-${contact.id}`}
-                                      title="Dispute"
-                                    >
-                                      DI
-                                    </Button>
                                     <DropdownMenu>
                                       <DropdownMenuTrigger asChild>
                                         <Button 
@@ -1332,39 +1295,115 @@ export default function Invoices() {
                                           size="sm"
                                           className="border-[#17B6C3]/20 text-[#17B6C3] hover:bg-[#17B6C3]/5 h-7 w-7 p-0"
                                           data-testid={`button-actions-${contact.id}`}
+                                          title="More actions"
                                         >
                                           <MoreHorizontal className="h-3 w-3" />
                                         </Button>
                                       </DropdownMenuTrigger>
-                                      <DropdownMenuContent className="bg-white border-gray-200" align="end">
-                                        <DropdownMenuItem 
-                                          onClick={() => sendCustomerEmailMutation.mutate(contact.id)}
-                                          disabled={!contact.email || sendCustomerEmailMutation.isPending}
-                                          data-testid={`action-email-${contact.id}`}
+                                      <DropdownMenuContent className="w-56 bg-white border-gray-200">
+                                        {/* Email Options */}
+                                        {contact.email && (
+                                          <>
+                                            <div className="px-2 py-1.5 text-xs font-medium text-gray-500 border-b border-gray-100">
+                                              Email
+                                            </div>
+                                            <DropdownMenuItem
+                                              onClick={() => sendCustomerEmailMutation.mutate(contact.id)}
+                                              disabled={sendCustomerEmailMutation.isPending}
+                                              data-testid={`email-customer-${contact.id}`}
+                                            >
+                                              <Mail className="h-4 w-4 mr-2" />
+                                              Send Email
+                                            </DropdownMenuItem>
+                                          </>
+                                        )}
+                                        
+                                        {/* SMS Options */}
+                                        {contact.phone && (
+                                          <>
+                                            <div className="px-2 py-1.5 text-xs font-medium text-gray-500 border-b border-gray-100">
+                                              SMS
+                                            </div>
+                                            <DropdownMenuItem
+                                              onClick={() => {
+                                                toast({
+                                                  title: "SMS Integration",
+                                                  description: "SMS messaging will be available soon.",
+                                                });
+                                              }}
+                                              data-testid={`sms-customer-${contact.id}`}
+                                            >
+                                              <MessageSquare className="h-4 w-4 mr-2" />
+                                              Send SMS
+                                            </DropdownMenuItem>
+                                          </>
+                                        )}
+                                        
+                                        {/* WhatsApp Options */}
+                                        {contact.phone && (
+                                          <>
+                                            <div className="px-2 py-1.5 text-xs font-medium text-gray-500 border-b border-gray-100">
+                                              WhatsApp
+                                            </div>
+                                            <DropdownMenuItem
+                                              onClick={() => {
+                                                toast({
+                                                  title: "WhatsApp Integration",
+                                                  description: "WhatsApp messaging will be available soon.",
+                                                });
+                                              }}
+                                              data-testid={`whatsapp-customer-${contact.id}`}
+                                            >
+                                              <MessageSquare className="h-4 w-4 mr-2" />
+                                              Send WhatsApp
+                                            </DropdownMenuItem>
+                                          </>
+                                        )}
+                                        
+                                        {/* Voice Options */}
+                                        {contact.phone && (
+                                          <>
+                                            <div className="px-2 py-1.5 text-xs font-medium text-gray-500 border-b border-gray-100">
+                                              Voice
+                                            </div>
+                                            <DropdownMenuItem
+                                              onClick={() => {
+                                                toast({
+                                                  title: "Voice Call Integration",
+                                                  description: "Voice calling will be available soon.",
+                                                });
+                                              }}
+                                              data-testid={`voice-customer-${contact.id}`}
+                                            >
+                                              <Phone className="h-4 w-4 mr-2" />
+                                              Make Voice Call
+                                            </DropdownMenuItem>
+                                          </>
+                                        )}
+                                        
+                                        {/* Actions */}
+                                        <div className="px-2 py-1.5 text-xs font-medium text-gray-500 border-b border-gray-100">
+                                          Actions
+                                        </div>
+                                        <DropdownMenuItem
+                                          onClick={() => {
+                                            setPaymentPlanInvoice(contact);
+                                            setShowPaymentPlanDialog(true);
+                                          }}
+                                          data-testid={`payment-plan-customer-${contact.id}`}
                                         >
-                                          <Mail className="h-3 w-3 mr-2" />
-                                          Email
+                                          <Calendar className="h-4 w-4 mr-2" />
+                                          Payment Plan
                                         </DropdownMenuItem>
-                                        <DropdownMenuItem 
-                                          disabled={!contact.phone}
-                                          data-testid={`action-sms-${contact.id}`}
+                                        <DropdownMenuItem
+                                          onClick={() => {
+                                            setDisputeInvoice(contact);
+                                            setShowDisputeDialog(true);
+                                          }}
+                                          data-testid={`dispute-customer-${contact.id}`}
                                         >
-                                          <MessageSquare className="h-3 w-3 mr-2" />
-                                          SMS
-                                        </DropdownMenuItem>
-                                        <DropdownMenuItem 
-                                          disabled={!contact.phone}
-                                          data-testid={`action-whatsapp-${contact.id}`}
-                                        >
-                                          <MessageSquare className="h-3 w-3 mr-2" />
-                                          WhatsApp
-                                        </DropdownMenuItem>
-                                        <DropdownMenuItem 
-                                          disabled={!contact.phone}
-                                          data-testid={`action-voice-${contact.id}`}
-                                        >
-                                          <Phone className="h-3 w-3 mr-2" />
-                                          Voice
+                                          <AlertCircle className="h-4 w-4 mr-2" />
+                                          Dispute
                                         </DropdownMenuItem>
                                       </DropdownMenuContent>
                                     </DropdownMenu>
