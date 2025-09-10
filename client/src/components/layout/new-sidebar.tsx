@@ -201,7 +201,13 @@ export default function NewSidebar() {
       // If we have fewer recent orgs than available, fill with remaining ones
       if (recentOrgs.length < 5) {
         const remainingOrgs = accessibleTenants.filter(org => !recentOrgIds.includes(org.id));
-        return [...recentOrgs, ...remainingOrgs].slice(0, 5);
+        // Sort remaining orgs alphabetically by company name
+        const sortedRemainingOrgs = remainingOrgs.sort((a, b) => {
+          const nameA = a.settings?.companyName || a.name;
+          const nameB = b.settings?.companyName || b.name;
+          return nameA.localeCompare(nameB);
+        });
+        return [...recentOrgs, ...sortedRemainingOrgs].slice(0, 5);
       }
       
       return recentOrgs.slice(0, 5);
