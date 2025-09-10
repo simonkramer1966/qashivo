@@ -143,12 +143,12 @@ function InvoiceHealthList({ invoices, isLoading }: { invoices: InvoiceHealthSco
                 {invoice.keyRiskFactors.length > 0 && (
                   <div className="mt-1">
                     <div className="flex flex-wrap gap-1">
-                      {invoice.keyRiskFactors.slice(0, 2).map((factor: string, index: number) => (
+                      {invoice.keyRiskFactors.slice(0, 2).map((factor: any, index: number) => (
                         <span
                           key={index}
                           className="text-xs px-1.5 py-0.5 bg-gray-100 rounded text-gray-600"
                         >
-                          {factor}
+                          {typeof factor === 'string' ? factor : factor.description || factor.type || 'Risk Factor'}
                         </span>
                       ))}
                       {invoice.keyRiskFactors.length > 2 && (
