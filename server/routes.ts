@@ -1011,7 +1011,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Send reminder email
+  // Send reminder email using template-based system
   app.post("/api/communications/send-email", isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.claims.sub);
@@ -1033,17 +1033,73 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Contact email not available" });
       }
 
-      const daysPastDue = Math.max(0, Math.floor((Date.now() - invoice.dueDate.getTime()) / (1000 * 60 * 60 * 24)));
-      const fromEmail = user.email || DEFAULT_FROM_EMAIL;
+      // Get the collection workflow sender for template-based emails
+      const workflowSenders = await storage.getCollectionWorkflowSenders(user.tenantId);
+      const geInvoiceTemplate = workflowSenders.find(sender => sender.name === 'GE Invoice');
+      
+      if (!geInvoiceTemplate) {
+        return res.status(404).json({ message: "GE Invoice template not found" });
+      }
 
-      const success = await sendReminderEmail({
-        contactEmail: invoice.contact.email,
-        contactName: invoice.contact.name,
+      const daysPastDue = Math.max(0, Math.floor((Date.now() - invoice.dueDate.getTime()) / (1000 * 60 * 60 * 24)));
+      const fromEmail = process.env.SENDGRID_FROM_EMAIL || user.email || DEFAULT_FROM_EMAIL;
+
+      // Process template variables
+      const templateData = {
+        first_name: invoice.contact.name?.split(' ')[0] || invoice.contact.name,
+        invoice_number: invoice.invoiceNumber,
+        amount: Number(invoice.amount).toLocaleString(),
+        due_date: formatDate(invoice.dueDate),
+        days_overdue: daysPastDue.toString(),
+        company_name: invoice.contact.companyName || 'Customer'
+      };
+
+      // Replace template variables in subject and content
+      let processedSubject = geInvoiceTemplate.subject;
+      let processedContent = geInvoiceTemplate.content;
+
+      Object.entries(templateData).forEach(([key, value]) => {
+        const placeholder = `{{${key}}}`;
+        processedSubject = processedSubject.replace(new RegExp(placeholder, 'g'), value);
+        processedContent = processedContent.replace(new RegExp(placeholder, 'g'), value);
+      });
+
+      // Use the new email sending system with attachment
+      const { sendEmailWithAttachment } = await import('./services/sendgrid.js');
+      const { generateInvoicePDF } = await import('./services/invoicePDF.js');
+
+      // Generate invoice PDF
+      const pdfBuffer = await generateInvoicePDF({
         invoiceNumber: invoice.invoiceNumber,
+        contactName: invoice.contact.name,
+        contactEmail: invoice.contact.email,
+        companyName: invoice.contact.companyName,
         amount: Number(invoice.amount),
-        dueDate: formatDate(invoice.dueDate),
-        daysPastDue,
-      }, fromEmail, customMessage);
+        taxAmount: 0, // Default to 0 if not available
+        issueDate: invoice.issueDate?.toISOString() || new Date().toISOString(),
+        dueDate: invoice.dueDate.toISOString(),
+        description: invoice.description || 'Payment Required',
+        currency: 'GBP',
+        status: invoice.status,
+        fromCompany: 'Nexus AR',
+        fromEmail: fromEmail,
+        fromAddress: 'London, UK',
+        fromPhone: '+44 20 1234 5678'
+      });
+
+      const success = await sendEmailWithAttachment({
+        to: invoice.contact.email,
+        from: fromEmail,
+        subject: processedSubject,
+        text: processedContent,
+        html: processedContent.replace(/\n/g, '<br>'),
+        attachments: [{
+          content: pdfBuffer,
+          filename: `Invoice-${invoice.invoiceNumber}.pdf`,
+          type: 'application/pdf',
+          disposition: 'attachment'
+        }]
+      });
 
       if (success) {
         // Log the action
@@ -1054,8 +1110,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           userId: user.id,
           type: 'email',
           status: 'completed',
-          subject: `Payment Reminder - Invoice ${invoice.invoiceNumber}`,
-          content: customMessage || 'Standard reminder email sent',
+          subject: processedSubject,
+          content: customMessage || 'GE Invoice template email sent with PDF attachment',
           completedAt: new Date(),
         });
 
@@ -1068,8 +1124,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json({ success, message: success ? 'Email sent successfully' : 'Failed to send email' });
     } catch (error) {
-      console.error("Error sending reminder email:", error);
-      res.status(500).json({ message: "Failed to send reminder email" });
+      console.error("Error sending collection email:", error);
+      res.status(500).json({ message: "Failed to send collection email" });
     }
   });
 
