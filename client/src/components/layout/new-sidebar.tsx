@@ -179,17 +179,12 @@ export default function NewSidebar() {
               <DropdownMenuTrigger asChild>
                 <Button
                   variant="outline"
-                  className="w-full justify-between h-auto p-3 bg-white hover:bg-gray-50 border-gray-200"
+                  className="w-full justify-between p-3 bg-white hover:bg-gray-50 border-gray-200"
                   disabled={switchTenantMutation.isPending}
                   data-testid="button-organization-dropdown"
                 >
-                  <div className="text-left">
-                    <div className="font-medium text-sm">
-                      {tenant?.settings?.companyName || tenant?.name || "Loading..."}
-                    </div>
-                    <div className="text-xs text-gray-500">
-                      {tenant?.settings?.tagline || "Current Organization"}
-                    </div>
+                  <div className="font-medium text-sm">
+                    {tenant?.settings?.companyName || tenant?.name || "Loading..."}
                   </div>
                   <ChevronDown className="h-4 w-4 text-gray-400" />
                 </Button>
@@ -207,13 +202,8 @@ export default function NewSidebar() {
                     data-testid={`menu-item-organization-${org.id}`}
                   >
                     <div className="flex items-center justify-between w-full">
-                      <div>
-                        <div className="font-medium text-sm">
-                          {org.settings?.companyName || org.name}
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          {org.settings?.tagline || "Organization"}
-                        </div>
+                      <div className="font-medium text-sm">
+                        {org.settings?.companyName || org.name}
                       </div>
                       {org.id === tenant?.id && (
                         <Check className="h-4 w-4 text-[#17B6C3]" />
@@ -226,16 +216,11 @@ export default function NewSidebar() {
           ) : (
             <Button
               variant="outline"
-              className="w-full justify-between h-auto p-3 bg-white border-gray-200 cursor-default"
+              className="w-full p-3 bg-white border-gray-200 cursor-default"
               data-testid="button-organization-display"
             >
-              <div className="text-left">
-                <div className="font-medium text-sm">
-                  {tenant?.settings?.companyName || tenant?.name || "Loading..."}
-                </div>
-                <div className="text-xs text-gray-500">
-                  {tenant?.settings?.tagline || "Current Organization"}
-                </div>
+              <div className="font-medium text-sm">
+                {tenant?.settings?.companyName || tenant?.name || "Loading..."}
               </div>
             </Button>
           )}
