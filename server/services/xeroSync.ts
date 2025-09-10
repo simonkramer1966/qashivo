@@ -80,7 +80,6 @@ export class XeroSyncService {
       }
 
       // Fetch only collection-relevant invoices from Xero (filtering out unnecessary data)
-      const collectionRelevantStatuses = ['AUTHORISED', 'SUBMITTED']; // Focus on unpaid invoices only
       let totalInvoicesCount = 0;
 
       // Clear existing cached invoices for this tenant
@@ -89,10 +88,14 @@ export class XeroSyncService {
         .where(eq(cachedXeroInvoices.tenantId, tenantId));
 
       console.log("Cleared existing cached invoices");
-      console.log("🎯 Syncing only collection-relevant invoices (AUTHORISED, SUBMITTED with outstanding balances)");
+      console.log("🎯 Syncing only collection-relevant invoices (unpaid with outstanding balances)");
 
-      // Fetch invoices for each collection-relevant status
-      for (const status of collectionRelevantStatuses) {
+      // Fetch unpaid invoices (AUTHORISED/SUBMITTED with outstanding balances)
+      // Use 'unpaid' status which maps to: Status==AUTHORISED AND AmountDue>0
+      let currentPage = 1;
+      let hasNextPage = true;
+      
+      while (hasNextPage) {
         try {
           const response = await xeroService.getInvoicesPaginated(
             {
@@ -101,43 +104,58 @@ export class XeroSyncService {
               expiresAt: new Date(Date.now() + 3600000),
               tenantId: tenant.xeroTenantId!,
             },
-            1, // page
+            currentPage,
             100, // pageSize  
-            status.toLowerCase()
+            'unpaid', // Maps to AUTHORISED invoices with AmountDue>0
+            tenantId // Pass tenant ID for automatic token refresh and DB updates
           );
 
           if (response.invoices && response.invoices.length > 0) {
-            // Transform and insert invoices
+            // Transform and insert invoices - map Xero API fields to database schema
             const invoicesToInsert = response.invoices.map((invoice: any) => ({
               tenantId,
-              xeroInvoiceId: invoice.id,
-              invoiceNumber: invoice.invoiceNumber,
-              amount: invoice.amount.toString(),
-              amountPaid: invoice.paymentDetails?.amountPaid?.toString() || "0",
-              taxAmount: invoice.taxAmount?.toString() || "0",
-              status: this.mapXeroStatus(invoice.status, invoice.paymentDetails),
-              issueDate: new Date(invoice.issueDate),
-              dueDate: new Date(invoice.dueDate),
-              paidDate: invoice.paymentDetails?.paidDate ? new Date(invoice.paymentDetails.paidDate) : null,
-              description: invoice.description || null,
-              currency: invoice.currency || "USD",
-              contact: invoice.contact || null,
-              paymentDetails: invoice.paymentDetails || null,
+              xeroInvoiceId: invoice.InvoiceID,
+              invoiceNumber: invoice.InvoiceNumber,
+              amount: invoice.Total.toString(),
+              amountPaid: invoice.AmountPaid?.toString() || "0",
+              taxAmount: invoice.TotalTax?.toString() || "0",
+              status: this.mapXeroStatus(invoice.Status, { amountPaid: invoice.AmountPaid, totalAmount: invoice.Total }),
+              issueDate: new Date(invoice.DateString),
+              dueDate: new Date(invoice.DueDateString),
+              paidDate: invoice.Status === 'PAID' && invoice.AmountPaid ? new Date(invoice.DateString) : null,
+              description: `Invoice ${invoice.InvoiceNumber}` || null,
+              currency: invoice.CurrencyCode || "USD",
+              contact: invoice.Contact || null,
+              paymentDetails: {
+                amountPaid: invoice.AmountPaid || 0,
+                amountDue: invoice.AmountDue || 0,
+                totalAmount: invoice.Total || 0
+              },
               metadata: {
-                xeroStatus: invoice.status,
-                lineItems: invoice.lineItems || [],
-                branding: invoice.branding || null,
+                xeroStatus: invoice.Status,
+                invoiceType: invoice.Type,
+                subTotal: invoice.SubTotal,
+                lineItems: invoice.LineItems || [],
+                branding: invoice.BrandingThemeID || null,
               },
             }));
 
             await db.insert(cachedXeroInvoices).values(invoicesToInsert);
             totalInvoicesCount += invoicesToInsert.length;
             
-            console.log(`Cached ${invoicesToInsert.length} ${status} invoices`);
+            console.log(`📄 Cached ${invoicesToInsert.length} unpaid invoices from page ${currentPage}`);
           }
-        } catch (statusError) {
-          console.error(`Error fetching ${status} invoices:`, statusError);
-          // Continue with other statuses even if one fails
+
+          // Update pagination control
+          hasNextPage = response.pagination.hasNextPage;
+          currentPage++;
+          
+          console.log(`📋 Page ${currentPage - 1} complete. HasNextPage: ${hasNextPage}, Total cached so far: ${totalInvoicesCount}`);
+          
+        } catch (pageError) {
+          console.error(`Error fetching page ${currentPage}:`, pageError);
+          // For page errors, break the loop to avoid infinite retry
+          hasNextPage = false;
         }
       }
 
@@ -185,17 +203,16 @@ export class XeroSyncService {
 
   async getCachedInvoices(tenantId: string, status?: string): Promise<any[]> {
     try {
-      let query = db
+      const whereConditions = [eq(cachedXeroInvoices.tenantId, tenantId)];
+      
+      if (status) {
+        whereConditions.push(eq(cachedXeroInvoices.status, status));
+      }
+
+      const query = db
         .select()
         .from(cachedXeroInvoices)
-        .where(eq(cachedXeroInvoices.tenantId, tenantId));
-
-      if (status) {
-        query = query.where(and(
-          eq(cachedXeroInvoices.tenantId, tenantId),
-          eq(cachedXeroInvoices.status, status)
-        ));
-      }
+        .where(and(...whereConditions));
 
       const invoices = await query;
       

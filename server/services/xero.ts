@@ -82,19 +82,24 @@ class XeroService {
     tokens: XeroTokens,
     endpoint: string,
     method: 'GET' | 'POST' | 'PUT' = 'GET',
-    data?: any
+    data?: any,
+    tenantIdForDbUpdate?: string  // Optional tenant ID for database token updates
   ): Promise<any> {
     if (this.config.clientId === "default_client_id") {
       console.log(`Xero API not configured, mocking request to ${endpoint}`);
-      return { error: "Xero API not configured" };
+      throw new Error("Xero API not configured. Please set XERO_CLIENT_ID and XERO_CLIENT_SECRET environment variables.");
     }
 
-    try {
+    const makeRequest = async (accessToken: string): Promise<any> => {
+      if (!tokens.tenantId) {
+        throw new Error('Xero tenant ID is required for API requests');
+      }
+      
       const url = `https://api.xero.com/api.xro/2.0/${endpoint}`;
       const response = await fetch(url, {
         method,
         headers: {
-          'Authorization': `Bearer ${tokens.accessToken}`,
+          'Authorization': `Bearer ${accessToken}`,
           'Xero-tenant-id': tokens.tenantId,
           'Content-Type': 'application/json',
           'Accept': 'application/json',
@@ -103,17 +108,88 @@ class XeroService {
       });
 
       if (!response.ok) {
-        throw new Error(`Xero API error: ${response.status} ${response.statusText}`);
+        const errorText = await response.text();
+        
+        // Handle 401 unauthorized errors specifically
+        if (response.status === 401) {
+          throw new Error(`XERO_AUTH_ERROR:${response.status}:${errorText}`);
+        }
+        
+        throw new Error(`Xero API error: ${response.status} ${response.statusText} - ${errorText}`);
       }
 
       return await response.json();
+    };
+
+    try {
+      // Try the request with current access token
+      return await makeRequest(tokens.accessToken);
+      
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      
+      // Check if this is a 401 authentication error
+      if (errorMessage.includes('XERO_AUTH_ERROR:401')) {
+        console.warn('🔄 Xero access token expired, attempting refresh...');
+        
+        try {
+          // Attempt to refresh the token
+          const refreshedTokens = await this.refreshAccessToken(tokens.refreshToken, tokens.tenantId);
+          
+          if (!refreshedTokens) {
+            throw new Error('Failed to refresh Xero access token');
+          }
+          
+          console.log('✅ Xero token refreshed successfully');
+          
+          // Update the database with new tokens if tenant ID provided
+          if (tenantIdForDbUpdate) {
+            await this.updateTenantTokens(tenantIdForDbUpdate, refreshedTokens);
+          }
+          
+          // Update the tokens object for this request
+          tokens.accessToken = refreshedTokens.accessToken;
+          tokens.refreshToken = refreshedTokens.refreshToken;
+          tokens.expiresAt = refreshedTokens.expiresAt;
+          
+          // Retry the original request with new token
+          console.log('🔄 Retrying original request with refreshed token...');
+          return await makeRequest(refreshedTokens.accessToken);
+          
+        } catch (refreshError) {
+          console.error('❌ Failed to refresh Xero token:', refreshError);
+          throw new Error(`Xero authentication failed: ${refreshError instanceof Error ? refreshError.message : 'Token refresh failed'}`);
+        }
+      }
+      
+      // Re-throw non-auth errors
       console.error('Xero API request failed:', error);
       throw error;
     }
   }
 
-  async refreshAccessToken(refreshToken: string): Promise<XeroTokens | null> {
+  private async updateTenantTokens(tenantId: string, tokens: XeroTokens): Promise<void> {
+    try {
+      const { db } = await import('../db');
+      const { tenants } = await import('@shared/schema');
+      const { eq } = await import('drizzle-orm');
+      
+      await db
+        .update(tenants)
+        .set({
+          xeroAccessToken: tokens.accessToken,
+          xeroRefreshToken: tokens.refreshToken,
+        })
+        .where(eq(tenants.id, tenantId));
+        
+      console.log('✅ Updated tenant Xero tokens in database');
+    } catch (dbError) {
+      console.error('❌ Failed to update tenant tokens in database:', dbError);
+      // Don't throw here - we still want the API request to succeed even if DB update fails
+    }
+  }
+
+  async refreshAccessToken(refreshToken: string, currentTenantId?: string): Promise<XeroTokens | null> {
     if (this.config.clientId === "default_client_id") {
       console.log("Xero API not configured, mocking token refresh");
       return null;
@@ -137,11 +213,31 @@ class XeroService {
       }
 
       const tokenData = await response.json();
+      
+      // Get tenant ID from connections endpoint if not provided
+      let tenantId = currentTenantId || '';
+      if (!tenantId) {
+        try {
+          const connectionsResponse = await fetch('https://api.xero.com/connections', {
+            headers: {
+              'Authorization': `Bearer ${tokenData.access_token}`,
+            },
+          });
+          
+          if (connectionsResponse.ok) {
+            const connections = await connectionsResponse.json();
+            tenantId = connections[0]?.tenantId || '';
+          }
+        } catch (connectionsError) {
+          console.warn('Failed to fetch connections during token refresh:', connectionsError);
+        }
+      }
+      
       return {
         accessToken: tokenData.access_token,
         refreshToken: tokenData.refresh_token,
         expiresAt: new Date(Date.now() + tokenData.expires_in * 1000),
-        tenantId: tokenData.tenant_id || '',
+        tenantId,
       };
     } catch (error) {
       console.error('Failed to refresh Xero token:', error);
@@ -154,7 +250,7 @@ class XeroService {
     activeOnly?: boolean;
     recentActivityMonths?: number;
     minOutstandingAmount?: number;
-  }): Promise<XeroContact[]> {
+  }, tenantIdForDbUpdate?: string): Promise<XeroContact[]> {
     try {
       let endpoint = 'Contacts';
       const whereClauses: string[] = [];
@@ -171,7 +267,7 @@ class XeroService {
       }
 
       console.log(`Fetching Xero contacts with endpoint: ${endpoint}`);
-      const response = await this.makeAuthenticatedRequest(tokens, endpoint);
+      const response = await this.makeAuthenticatedRequest(tokens, endpoint, 'GET', undefined, tenantIdForDbUpdate);
       let contacts = response.Contacts || [];
 
       console.log(`Fetched ${contacts.length} active contacts from Xero`);
@@ -179,12 +275,17 @@ class XeroService {
       // Additional filtering that requires invoice analysis
       if (filters?.hasOutstandingInvoices || filters?.recentActivityMonths || filters?.minOutstandingAmount) {
         console.log('Applying invoice-based filtering...');
-        contacts = await this.filterContactsByInvoiceActivity(tokens, contacts, filters);
+        contacts = await this.filterContactsByInvoiceActivity(tokens, contacts, filters, tenantIdForDbUpdate);
       }
 
       return contacts;
     } catch (error) {
       console.error('Failed to fetch Xero contacts:', error);
+      // For configuration errors, rethrow to fail fast
+      if (error instanceof Error && error.message.includes('not configured')) {
+        throw error;
+      }
+      // For other errors, return empty array to allow graceful degradation
       return [];
     }
   }
@@ -196,7 +297,8 @@ class XeroService {
       hasOutstandingInvoices?: boolean;
       recentActivityMonths?: number;
       minOutstandingAmount?: number;
-    }
+    },
+    tenantIdForDbUpdate?: string
   ): Promise<XeroContact[]> {
     const filteredContacts: XeroContact[] = [];
     const recentDate = filters.recentActivityMonths 
@@ -216,7 +318,7 @@ class XeroService {
           const whereClause = `Contact.ContactID=guid"${contact.ContactID}" AND Type=="ACCREC" AND (Status=="AUTHORISED" OR Status=="SUBMITTED")`;
           const invoiceEndpoint = `Invoices?where=${encodeURIComponent(whereClause)}`;
           
-          const invoiceResponse = await this.makeAuthenticatedRequest(tokens, invoiceEndpoint);
+          const invoiceResponse = await this.makeAuthenticatedRequest(tokens, invoiceEndpoint, 'GET', undefined, tenantIdForDbUpdate);
           const invoices = invoiceResponse.Invoices || [];
           
           if (invoices.length === 0) {
@@ -322,11 +424,16 @@ class XeroService {
       return response.Invoices || [];
     } catch (error) {
       console.error('Failed to fetch Xero invoices:', error);
+      // For configuration errors, rethrow to fail fast
+      if (error instanceof Error && error.message.includes('not configured')) {
+        throw error;
+      }
+      // For other errors, return empty array to allow graceful degradation
       return [];
     }
   }
 
-  async getInvoicesPaginated(tokens: XeroTokens, page: number = 1, limit: number = 50, status: string = 'all'): Promise<{
+  async getInvoicesPaginated(tokens: XeroTokens, page: number = 1, limit: number = 50, status: string = 'all', tenantIdForDbUpdate?: string): Promise<{
     invoices: XeroInvoice[];
     payments: Map<string, XeroPayment[]>;
     pagination: {
@@ -369,7 +476,7 @@ class XeroService {
       
       const endpoint = `Invoices?where=${whereClause}&page=${xeroPage}`;
       
-      const response = await this.makeAuthenticatedRequest(tokens, endpoint);
+      const response = await this.makeAuthenticatedRequest(tokens, endpoint, 'GET', undefined, tenantIdForDbUpdate);
       const invoices = response.Invoices || [];
       
       // Calculate pagination info based on Xero's response
@@ -387,9 +494,9 @@ class XeroService {
       const batchSize = 10;
       for (let i = 0; i < limitedInvoices.length; i += batchSize) {
         const batch = limitedInvoices.slice(i, i + batchSize);
-        const paymentPromises = batch.map(async (invoice) => {
+        const paymentPromises = batch.map(async (invoice: XeroInvoice) => {
           try {
-            const payments = await this.getInvoicePayments(tokens, invoice.InvoiceID);
+            const payments = await this.getInvoicePayments(tokens, invoice.InvoiceID, tenantIdForDbUpdate);
             return { invoiceId: invoice.InvoiceID, payments };
           } catch (error) {
             console.warn(`Failed to fetch payments for invoice ${invoice.InvoiceID}:`, error);
@@ -455,9 +562,9 @@ class XeroService {
     }
   }
 
-  async getInvoicePayments(tokens: XeroTokens, invoiceId: string): Promise<XeroPayment[]> {
+  async getInvoicePayments(tokens: XeroTokens, invoiceId: string, tenantIdForDbUpdate?: string): Promise<XeroPayment[]> {
     try {
-      const response = await this.makeAuthenticatedRequest(tokens, `Invoices/${invoiceId}/Payments`);
+      const response = await this.makeAuthenticatedRequest(tokens, `Invoices/${invoiceId}/Payments`, 'GET', undefined, tenantIdForDbUpdate);
       return response.Payments || [];
     } catch (error) {
       console.error('Failed to fetch Xero invoice payments:', error);
@@ -483,7 +590,7 @@ class XeroService {
         minOutstandingAmount: 1                 // Minimum $1 outstanding balance (very flexible)
       };
       
-      const xeroContacts = await this.getContacts(tokens, filterConfig);
+      const xeroContacts = await this.getContacts(tokens, filterConfig, tenantId);
       results.filtered = xeroContacts.length;
       
       console.log(`✅ Filtered contacts: ${xeroContacts.length} relevant customers found (vs ~15,000+ total)`);
