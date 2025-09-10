@@ -189,7 +189,7 @@ export default function NewSidebar() {
                   <ChevronDown className="h-4 w-4 text-gray-400" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-56 bg-white" align="start" side="bottom">
+              <DropdownMenuContent className="w-56 bg-white border-gray-200" align="start" side="bottom">
                 {accessibleTenants.map((org) => (
                   <DropdownMenuItem
                     key={org.id}
