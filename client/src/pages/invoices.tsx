@@ -1141,37 +1141,75 @@ export default function Invoices() {
                                 </td>
                                 <td className="py-1">
                                   <div className="flex space-x-1 justify-end">
-                                    {contact.email && (
-                                      <Button 
-                                        variant="outline" 
-                                        size="sm" 
-                                        onClick={() => sendCustomerEmailMutation.mutate(contact.id)}
-                                        disabled={sendCustomerEmailMutation.isPending}
-                                        className="border-[#17B6C3]/20 text-[#17B6C3] hover:bg-[#17B6C3]/5 h-7 w-7 p-0"
-                                        data-testid={`button-email-${contact.id}`}
-                                        title="Send account summary"
-                                      >
-                                        <Mail className="h-3 w-3" />
-                                      </Button>
-                                    )}
-                                    {contact.phone && (
-                                      <Button 
-                                        variant="outline" 
-                                        size="sm"
-                                        className="border-[#17B6C3]/20 text-[#17B6C3] hover:bg-[#17B6C3]/5 h-7 w-7 p-0"
-                                        data-testid={`button-call-${contact.id}`}
-                                      >
-                                        <Phone className="h-3 w-3" />
-                                      </Button>
-                                    )}
                                     <Button 
                                       variant="outline" 
-                                      size="sm" 
-                                      className="border-[#17B6C3]/20 text-[#17B6C3] hover:bg-[#17B6C3]/5 h-7 w-7 p-0"
-                                      data-testid={`button-edit-${contact.id}`}
+                                      size="sm"
+                                      onClick={() => {
+                                        setPaymentPlanInvoice(contact);
+                                        setShowPaymentPlanDialog(true);
+                                      }}
+                                      className="border-gray-200 text-gray-300 hover:bg-gray-50 h-7 w-8 p-0 text-xs font-medium"
+                                      data-testid={`button-payment-plan-${contact.id}`}
+                                      title="Payment Plan"
                                     >
-                                      <Eye className="h-3 w-3" />
+                                      PP
                                     </Button>
+                                    <Button 
+                                      variant="outline" 
+                                      size="sm"
+                                      onClick={() => {
+                                        setDisputeInvoice(contact);
+                                        setShowDisputeDialog(true);
+                                      }}
+                                      className="border-gray-200 text-gray-300 hover:bg-gray-50 h-7 w-8 p-0 text-xs font-medium"
+                                      data-testid={`button-dispute-${contact.id}`}
+                                      title="Dispute"
+                                    >
+                                      DI
+                                    </Button>
+                                    <DropdownMenu>
+                                      <DropdownMenuTrigger asChild>
+                                        <Button 
+                                          variant="outline" 
+                                          size="sm"
+                                          className="border-[#17B6C3]/20 text-[#17B6C3] hover:bg-[#17B6C3]/5 h-7 w-7 p-0"
+                                          data-testid={`button-actions-${contact.id}`}
+                                        >
+                                          <MoreHorizontal className="h-3 w-3" />
+                                        </Button>
+                                      </DropdownMenuTrigger>
+                                      <DropdownMenuContent className="bg-white border-gray-200" align="end">
+                                        <DropdownMenuItem 
+                                          onClick={() => sendCustomerEmailMutation.mutate(contact.id)}
+                                          disabled={!contact.email || sendCustomerEmailMutation.isPending}
+                                          data-testid={`action-email-${contact.id}`}
+                                        >
+                                          <Mail className="h-3 w-3 mr-2" />
+                                          Email
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem 
+                                          disabled={!contact.phone}
+                                          data-testid={`action-sms-${contact.id}`}
+                                        >
+                                          <MessageSquare className="h-3 w-3 mr-2" />
+                                          SMS
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem 
+                                          disabled={!contact.phone}
+                                          data-testid={`action-whatsapp-${contact.id}`}
+                                        >
+                                          <MessageSquare className="h-3 w-3 mr-2" />
+                                          WhatsApp
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem 
+                                          disabled={!contact.phone}
+                                          data-testid={`action-voice-${contact.id}`}
+                                        >
+                                          <Phone className="h-3 w-3 mr-2" />
+                                          Voice
+                                        </DropdownMenuItem>
+                                      </DropdownMenuContent>
+                                    </DropdownMenu>
                                   </div>
                                 </td>
                               </tr>
