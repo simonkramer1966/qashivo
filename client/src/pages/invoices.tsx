@@ -1312,22 +1312,34 @@ export default function Invoices() {
                                             <DropdownMenuItem
                                               onClick={() => sendCustomerEmailMutation.mutate(contact.id)}
                                               disabled={sendCustomerEmailMutation.isPending}
-                                              data-testid={`email-general-chase-${contact.id}`}
+                                              data-testid={`email-general-summary-${contact.id}`}
                                             >
                                               <Mail className="h-4 w-4 mr-2" />
-                                              General Chase
+                                              General Summary
                                             </DropdownMenuItem>
                                             <DropdownMenuItem
                                               onClick={() => {
                                                 toast({
-                                                  title: "Invoice Copy",
-                                                  description: "Invoice copy functionality will be available soon.",
+                                                  title: "Invoice Copies",
+                                                  description: "Invoice copies functionality will be available soon.",
                                                 });
                                               }}
-                                              data-testid={`email-invoice-copy-${contact.id}`}
+                                              data-testid={`email-invoice-copies-${contact.id}`}
                                             >
                                               <FileText className="h-4 w-4 mr-2" />
-                                              Send Invoice Copy
+                                              Send Invoice Copies
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem
+                                              onClick={() => {
+                                                toast({
+                                                  title: "Send Statement",
+                                                  description: "Send statement functionality will be available soon.",
+                                                });
+                                              }}
+                                              data-testid={`email-send-statement-${contact.id}`}
+                                            >
+                                              <FileText className="h-4 w-4 mr-2" />
+                                              Send Statement
                                             </DropdownMenuItem>
                                             <DropdownMenuItem
                                               onClick={() => {
