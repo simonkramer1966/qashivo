@@ -1846,8 +1846,20 @@ export default function Invoices() {
             <DialogDescription>
               {paymentPlanInvoice && (
                 <>
-                  Set up a payment plan for invoice <strong>{paymentPlanInvoice.invoiceNumber}</strong> - 
-                  ${Number(paymentPlanInvoice.amount).toLocaleString()} for <strong>{paymentPlanInvoice.contact?.companyName || 'Unknown Company'}</strong>
+                  {Array.isArray(paymentPlanInvoice) ? (
+                    <>
+                      Set up a payment plan for <strong>{paymentPlanInvoice.length} invoices</strong> totaling 
+                      ${paymentPlanInvoice.reduce((sum, inv) => sum + Number(inv.amount), 0).toLocaleString()} for <strong>{paymentPlanInvoice[0]?.contact?.companyName || 'Unknown Company'}</strong>
+                      <div className="mt-2 text-xs text-gray-600">
+                        Invoices: {paymentPlanInvoice.map(inv => inv.invoiceNumber).join(', ')}
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      Set up a payment plan for invoice <strong>{paymentPlanInvoice.invoiceNumber}</strong> - 
+                      ${Number(paymentPlanInvoice.amount).toLocaleString()} for <strong>{paymentPlanInvoice.contact?.companyName || 'Unknown Company'}</strong>
+                    </>
+                  )}
                 </>
               )}
             </DialogDescription>
@@ -1876,7 +1888,10 @@ export default function Invoices() {
           <div className="flex justify-end space-x-2 pt-4 border-t border-gray-200">
             <Button 
               variant="outline" 
-              onClick={() => setShowPaymentPlanDialog(false)}
+              onClick={() => {
+                setShowPaymentPlanDialog(false);
+                setSelectedInvoices(new Set());
+              }}
             >
               Cancel
             </Button>
@@ -1888,6 +1903,7 @@ export default function Invoices() {
                   description: "Payment plan functionality coming soon.",
                 });
                 setShowPaymentPlanDialog(false);
+                setSelectedInvoices(new Set());
               }}
             >
               Set Up Plan
@@ -1907,8 +1923,20 @@ export default function Invoices() {
             <DialogDescription>
               {disputeInvoice && (
                 <>
-                  Manage dispute for invoice <strong>{disputeInvoice.invoiceNumber}</strong> - 
-                  ${Number(disputeInvoice.amount).toLocaleString()} for <strong>{disputeInvoice.contact?.companyName || 'Unknown Company'}</strong>
+                  {Array.isArray(disputeInvoice) ? (
+                    <>
+                      Manage dispute for <strong>{disputeInvoice.length} invoices</strong> totaling 
+                      ${disputeInvoice.reduce((sum, inv) => sum + Number(inv.amount), 0).toLocaleString()} for <strong>{disputeInvoice[0]?.contact?.companyName || 'Unknown Company'}</strong>
+                      <div className="mt-2 text-xs text-gray-600">
+                        Invoices: {disputeInvoice.map(inv => inv.invoiceNumber).join(', ')}
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      Manage dispute for invoice <strong>{disputeInvoice.invoiceNumber}</strong> - 
+                      ${Number(disputeInvoice.amount).toLocaleString()} for <strong>{disputeInvoice.contact?.companyName || 'Unknown Company'}</strong>
+                    </>
+                  )}
                 </>
               )}
             </DialogDescription>
@@ -1937,7 +1965,10 @@ export default function Invoices() {
           <div className="flex justify-end space-x-2 pt-4 border-t border-gray-200">
             <Button 
               variant="outline" 
-              onClick={() => setShowDisputeDialog(false)}
+              onClick={() => {
+                setShowDisputeDialog(false);
+                setSelectedInvoices(new Set());
+              }}
             >
               Cancel
             </Button>
@@ -1949,6 +1980,7 @@ export default function Invoices() {
                   description: "Dispute management functionality coming soon.",
                 });
                 setShowDisputeDialog(false);
+                setSelectedInvoices(new Set());
               }}
             >
               Manage Dispute
