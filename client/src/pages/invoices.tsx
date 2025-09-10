@@ -1556,7 +1556,13 @@ export default function Invoices() {
                     </thead>
                     <tbody className="divide-y divide-slate-200/50">
                       {paginatedInvoices.map((invoice: any) => (
-                        <tr key={invoice.id} className="hover:bg-slate-50/50 transition-colors" data-testid={`row-invoice-${invoice.id}`}>
+                        <tr 
+                          key={invoice.id} 
+                          className="hover:bg-slate-50/50 transition-colors cursor-pointer" 
+                          data-testid={`row-invoice-${invoice.id}`}
+                          onDoubleClick={() => openContactHistory(invoice)}
+                          title="Double-click to view contact history"
+                        >
                           <td className="py-2 w-12 text-center" data-testid={`checkbox-cell-${invoice.id}`}>
                             <Checkbox
                               checked={selectedInvoices.has(invoice.id)}
@@ -1765,18 +1771,6 @@ export default function Invoices() {
                                   >
                                     <AlertCircle className="h-4 w-4 mr-2" />
                                     Dispute
-                                  </DropdownMenuItem>
-                                  
-                                  {/* View History */}
-                                  <div className="px-2 py-1.5 text-xs font-medium text-gray-500 border-b border-gray-100">
-                                    View
-                                  </div>
-                                  <DropdownMenuItem
-                                    onClick={() => openContactHistory(invoice)}
-                                    data-testid={`view-history-${invoice.id}`}
-                                  >
-                                    <Eye className="h-4 w-4 mr-2" />
-                                    Contact History
                                   </DropdownMenuItem>
                                 </DropdownMenuContent>
                               </DropdownMenu>
