@@ -2492,20 +2492,21 @@ Payment required immediately to avoid collection action. Contact us NOW.`
       const currentInvoices = contactInvoices.filter(inv => new Date(inv.dueDate) >= today);
       const totalAmountOverdue = overdueInvoices.reduce((sum, inv) => sum + Number(inv.amount), 0);
 
-      // Create detailed invoice list
-      let invoiceList = '';
+      // Create detailed invoice list for template variable
+      let invoiceDetails = '';
       if (overdueInvoices.length > 0) {
-        invoiceList += '<br><strong>Overdue Invoices:</strong><br>';
+        invoiceDetails += '<strong>Overdue Invoices:</strong><br>';
         overdueInvoices.forEach(inv => {
           const daysOverdue = Math.floor((today.getTime() - new Date(inv.dueDate).getTime()) / (1000 * 60 * 60 * 24));
-          invoiceList += `• Invoice ${inv.invoiceNumber}: £${Number(inv.amount).toLocaleString()} (${daysOverdue} days overdue)<br>`;
+          invoiceDetails += `• Invoice ${inv.invoiceNumber}: £${Number(inv.amount).toLocaleString()} (${daysOverdue} days overdue)<br>`;
         });
       }
       
       if (currentInvoices.length > 0) {
-        invoiceList += '<br><strong>Current Due:</strong><br>';
+        if (invoiceDetails) invoiceDetails += '<br>'; // Add spacing if we have overdue invoices
+        invoiceDetails += '<strong>Current Due:</strong><br>';
         currentInvoices.forEach(inv => {
-          invoiceList += `• Invoice ${inv.invoiceNumber}: £${Number(inv.amount).toLocaleString()} (due ${new Date(inv.dueDate).toLocaleDateString()})<br>`;
+          invoiceDetails += `• Invoice ${inv.invoiceNumber}: £${Number(inv.amount).toLocaleString()} (due ${new Date(inv.dueDate).toLocaleDateString()})<br>`;
         });
       }
 
@@ -2517,11 +2518,9 @@ Payment required immediately to avoid collection action. Contact us NOW.`
         .replace(/\{\{total_balance\}\}/g, `£${totalAmount.toLocaleString()}`)
         .replace(/\{\{total_amount_overdue\}\}/g, `£${totalAmountOverdue.toLocaleString()}`)
         .replace(/\{\{invoice_count\}\}/g, contactInvoices.length.toString())
+        .replace(/\{\{invoice_details\}\}/g, invoiceDetails)
         .replace(/£X as unpaid/g, `£${totalAmount.toLocaleString()} across ${contactInvoices.length} invoice${contactInvoices.length > 1 ? 's' : ''}`)
         .replace(/£X due for payment now/g, `£${totalAmount.toLocaleString()} total outstanding`);
-
-      // Add invoice details to the content
-      processedContent += invoiceList + '<br>';
 
       const processedSubject = `Account Summary - ${totalAmount.toLocaleString()} Outstanding`;
 
