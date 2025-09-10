@@ -148,7 +148,7 @@ function InvoiceHealthList({ invoices, isLoading }: { invoices: InvoiceHealthSco
                           key={index}
                           className="text-xs px-1.5 py-0.5 bg-gray-100 rounded text-gray-600"
                         >
-                          {typeof factor === 'string' ? factor : factor.description || factor.type || 'Risk Factor'}
+                          {factor}
                         </span>
                       ))}
                       {invoice.keyRiskFactors.length > 2 && (
