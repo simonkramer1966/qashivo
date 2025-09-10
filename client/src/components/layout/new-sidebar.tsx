@@ -179,7 +179,7 @@ export default function NewSidebar() {
               <DropdownMenuTrigger asChild>
                 <Button
                   variant="outline"
-                  className="w-full justify-between p-3 bg-white hover:bg-gray-50 border-gray-200"
+                  className="w-full justify-between px-4 py-3 bg-white hover:bg-gray-50 border-gray-200"
                   disabled={switchTenantMutation.isPending}
                   data-testid="button-organization-dropdown"
                 >
@@ -216,7 +216,7 @@ export default function NewSidebar() {
           ) : (
             <Button
               variant="outline"
-              className="w-full p-3 bg-white border-gray-200 cursor-default"
+              className="w-full px-4 py-3 bg-white border-gray-200 cursor-default"
               data-testid="button-organization-display"
             >
               <div className="font-medium text-sm">
