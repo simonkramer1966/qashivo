@@ -199,29 +199,11 @@ export default function Customers() {
                       <tr className="border-b border-gray-200">
                         <th className="text-left py-3 text-sm font-medium text-muted-foreground">
                           <button 
-                            onClick={() => handleSort("name")}
-                            className="flex items-center space-x-1 hover:text-slate-900"
-                          >
-                            <span>Contact</span>
-                            {getSortIcon("name")}
-                          </button>
-                        </th>
-                        <th className="text-left py-3 text-sm font-medium text-muted-foreground">
-                          <button 
                             onClick={() => handleSort("companyName")}
                             className="flex items-center space-x-1 hover:text-slate-900"
                           >
-                            <span>Company</span>
+                            <span>Contact</span>
                             {getSortIcon("companyName")}
-                          </button>
-                        </th>
-                        <th className="text-left py-3 text-sm font-medium text-muted-foreground">
-                          <button 
-                            onClick={() => handleSort("email")}
-                            className="flex items-center space-x-1 hover:text-slate-900"
-                          >
-                            <span>Email</span>
-                            {getSortIcon("email")}
                           </button>
                         </th>
                         <th className="text-left py-3 text-sm font-medium text-muted-foreground">
@@ -229,7 +211,7 @@ export default function Customers() {
                             onClick={() => handleSort("phone")}
                             className="flex items-center space-x-1 hover:text-slate-900"
                           >
-                            <span>Phone</span>
+                            <span>Contact Details</span>
                             {getSortIcon("phone")}
                           </button>
                         </th>
@@ -254,22 +236,26 @@ export default function Customers() {
                         <th className="text-right py-3 text-sm font-medium text-muted-foreground">Actions</th>
                       </tr>
                     </thead>
-                    <tbody>
+                    <tbody className="divide-y divide-gray-200">
                       {sortedContacts.map((contact: any) => (
-                        <tr key={contact.id} className="border-b border-gray-100 hover:bg-gray-50/50 transition-colors" data-testid={`row-contact-${contact.id}`}>
-                          <td className="py-4 text-sm font-medium text-gray-900" data-testid={`text-list-name-${contact.id}`}>
-                            {contact.name}
+                        <tr key={contact.id} className="hover:bg-gray-50/50" data-testid={`row-contact-${contact.id}`}>
+                          <td className="py-4">
+                            <div className="font-medium text-foreground" data-testid={`text-company-name-${contact.id}`}>
+                              {contact.companyName || 'Unknown Company'}
+                            </div>
+                            <div className="text-sm text-muted-foreground" data-testid={`text-contact-name-${contact.id}`}>
+                              {contact.name || 'No contact name'}
+                            </div>
                           </td>
-                          <td className="py-4 text-sm text-gray-600" data-testid={`text-list-company-${contact.id}`}>
-                            {contact.companyName || '-'}
+                          <td className="py-4">
+                            <div className="font-medium text-foreground" data-testid={`text-phone-${contact.id}`}>
+                              {contact.phone || '-'}
+                            </div>
+                            <div className="text-sm text-muted-foreground" data-testid={`text-email-${contact.id}`}>
+                              {contact.email || '-'}
+                            </div>
                           </td>
-                          <td className="py-4 text-sm text-gray-600" data-testid={`text-list-email-${contact.id}`}>
-                            {contact.email || '-'}
-                          </td>
-                          <td className="py-4 text-sm text-gray-600" data-testid={`text-list-phone-${contact.id}`}>
-                            {contact.phone || '-'}
-                          </td>
-                          <td className="py-4 text-sm text-gray-600" data-testid={`text-list-terms-${contact.id}`}>
+                          <td className="py-4 font-medium text-foreground" data-testid={`text-list-terms-${contact.id}`}>
                             {contact.paymentTerms ? `${contact.paymentTerms}d` : '-'}
                           </td>
                           <td className="py-4">
