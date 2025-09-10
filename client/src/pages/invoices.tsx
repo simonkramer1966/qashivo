@@ -668,6 +668,7 @@ export default function Invoices() {
           title: "Different Customers Selected",
           description: "Payment plans and disputes can only be created for invoices from the same customer. Please select invoices from one customer only.",
           variant: "destructive",
+          className: "bg-white border-gray-200",
         });
         return;
       }
