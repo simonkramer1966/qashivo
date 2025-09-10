@@ -189,16 +189,16 @@ export default function Invoices() {
         // Next Action sorting - generate consistent mock data based on invoice ID
         case "action-date-asc":
         case "action-date-desc":
-          const hashA = a.id.split('').reduce((hash, char) => hash + char.charCodeAt(0), 0);
-          const hashB = b.id.split('').reduce((hash, char) => hash + char.charCodeAt(0), 0);
+          const hashA = a.id.split('').reduce((hash: number, char: string) => hash + char.charCodeAt(0), 0);
+          const hashB = b.id.split('').reduce((hash: number, char: string) => hash + char.charCodeAt(0), 0);
           aValue = Date.now() + ((hashA % 7) + 1) * 24 * 60 * 60 * 1000;
           bValue = Date.now() + ((hashB % 7) + 1) * 24 * 60 * 60 * 1000;
           return activeSortType === "action-date-asc" ? aValue - bValue : bValue - aValue;
         case "action-type-asc":
         case "action-type-desc":
           const actions = ['Email Reminder', 'Phone Call', 'Letter', 'SMS Follow-up'];
-          aValue = actions[a.id.split('').reduce((hash, char) => hash + char.charCodeAt(0), 0) % 4];
-          bValue = actions[b.id.split('').reduce((hash, char) => hash + char.charCodeAt(0), 0) % 4];
+          aValue = actions[a.id.split('').reduce((hash: number, char: string) => hash + char.charCodeAt(0), 0) % 4];
+          bValue = actions[b.id.split('').reduce((hash: number, char: string) => hash + char.charCodeAt(0), 0) % 4];
           return activeSortType === "action-type-asc" ? 
             aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
         
@@ -402,7 +402,7 @@ export default function Invoices() {
 
   // Function to get customer-level rating (average of their invoice ratings)
   const getCustomerRating = (contact: any) => {
-    const customerInvoices = invoices.filter((invoice: any) => invoice.contact?.id === contact.id);
+    const customerInvoices = (invoices as any[]).filter((invoice: any) => invoice.contact?.id === contact.id);
     if (customerInvoices.length === 0) return 3; // Default rating
     
     const totalRating = customerInvoices.reduce((sum: number, invoice: any) => sum + getPayerRating(invoice), 0);
@@ -411,7 +411,7 @@ export default function Invoices() {
 
   // Function to get customer-level outstanding amount (sum of all outstanding invoices)
   const getCustomerOutstanding = (contact: any) => {
-    const customerInvoices = invoices.filter((invoice: any) => 
+    const customerInvoices = (invoices as any[]).filter((invoice: any) => 
       invoice.contact?.id === contact.id && invoice.status !== 'paid'
     );
     return customerInvoices.reduce((sum: number, invoice: any) => sum + Number(invoice.amount), 0);
@@ -419,7 +419,7 @@ export default function Invoices() {
 
   // Function to get customer-level late amount (sum of all late payments)
   const getCustomerLateAmount = (contact: any) => {
-    const customerInvoices = invoices.filter((invoice: any) => invoice.contact?.id === contact.id);
+    const customerInvoices = (invoices as any[]).filter((invoice: any) => invoice.contact?.id === contact.id);
     return customerInvoices.reduce((sum: number, invoice: any) => sum + getLateAmount(invoice), 0);
   };
 
