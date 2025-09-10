@@ -5,8 +5,8 @@ export function useAuth() {
   const { data: user, isLoading, error, isError } = useQuery({
     queryKey: ["/api/auth/user"],
     queryFn: getQueryFn({ on401: "returnNull" }),
-    staleTime: 30 * 60 * 1000, // 30 minutes for auth
-    refetchOnMount: true, // Always check auth on mount for dev mode
+    staleTime: 0, // Force fresh requests for development auth
+    refetchOnMount: 'always', // Always check auth on mount for dev mode
     refetchOnWindowFocus: false,
     retry: (failureCount, error) => {
       // Don't retry on auth errors to prevent endless loops
