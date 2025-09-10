@@ -4303,6 +4303,76 @@ Payment required immediately to avoid collection action. Contact us NOW.`
     }
   });
 
+  // Get accessible tenants for organization dropdown
+  app.get("/api/user/accessible-tenants", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      let tenants: any[] = [];
+      
+      // SECURITY FIX: Only return user's current tenant to maintain tenant isolation
+      // Users (including owners) can only access their associated tenant
+      // This prevents the critical security vulnerability where owners could access ALL tenants
+      if (user.tenantId) {
+        const tenant = await storage.getTenant(user.tenantId);
+        if (tenant) {
+          tenants = [tenant];
+        }
+      }
+      
+      console.log(`🔒 Security: User ${user.id} (role: ${user.role}) can access ${tenants.length} tenant(s)`);
+      res.json(tenants);
+    } catch (error) {
+      console.error("Error fetching accessible tenants:", error);
+      res.status(500).json({ message: "Failed to fetch accessible tenants" });
+    }
+  });
+
+  // Switch organization (SECURITY ENHANCED)
+  app.post("/api/user/switch-tenant", isAuthenticated, async (req: any, res) => {
+    try {
+      // Validate request body with Zod
+      const switchTenantSchema = z.object({
+        tenantId: z.string().uuid("Tenant ID must be a valid UUID"),
+      });
+      
+      const { tenantId } = switchTenantSchema.parse(req.body);
+      const user = await storage.getUser(req.user.claims.sub);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // SECURITY FIX: Disable tenant switching to maintain tenant isolation
+      // Users can only stay within their assigned tenant to prevent unauthorized access
+      // This prevents the critical security vulnerability where owners could switch to ANY tenant
+      if (user.tenantId !== tenantId) {
+        console.warn(`🚨 SECURITY: User ${user.id} (role: ${user.role}) attempted to switch from tenant ${user.tenantId} to ${tenantId}`);
+        return res.status(403).json({ 
+          message: "Tenant switching is disabled to maintain security isolation. Users can only access their assigned organization." 
+        });
+      }
+
+      // If trying to switch to their current tenant, just return it
+      const currentTenant = await storage.getTenant(user.tenantId);
+      if (!currentTenant) {
+        return res.status(404).json({ message: "Current tenant not found" });
+      }
+
+      console.log(`🔒 Security: User ${user.id} verified access to their assigned tenant ${tenantId}`);
+      res.json(currentTenant);
+    } catch (error) {
+      console.error("Error in tenant switch request:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid request data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to process organization request" });
+    }
+  });
+
   app.put('/api/tenant/settings', isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.claims.sub);

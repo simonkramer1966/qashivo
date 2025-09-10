@@ -1,7 +1,8 @@
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 import { useState } from "react";
 import { 
   BarChart3, 
@@ -17,8 +18,16 @@ import {
   Building2,
   ExternalLink,
   Activity,
-  Menu
+  Menu,
+  ChevronDown,
+  Check
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import nexusLogo from "@assets/Main Nexus Logo copy_1756923544828.png";
 
@@ -43,6 +52,7 @@ export default function NewSidebar() {
   const { user } = useAuth();
   const [location, setLocation] = useLocation();
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const queryClient = useQueryClient();
 
   // Fetch tenant information
   const { data: tenant } = useQuery<{
@@ -57,6 +67,39 @@ export default function NewSidebar() {
     enabled: !!user,
     staleTime: 15 * 60 * 1000, // 15 minutes
     gcTime: 30 * 60 * 1000, // 30 minutes
+  });
+
+  // Fetch accessible tenants for organization dropdown
+  const { data: accessibleTenants = [] } = useQuery<Array<{
+    id: string;
+    name: string;
+    settings?: {
+      companyName?: string;
+      tagline?: string;
+    };
+  }>>({
+    queryKey: ['/api/user/accessible-tenants'],
+    enabled: !!user,
+    staleTime: 15 * 60 * 1000, // 15 minutes
+    gcTime: 30 * 60 * 1000, // 30 minutes
+  });
+
+  // Switch tenant mutation
+  const switchTenantMutation = useMutation({
+    mutationFn: async (tenantId: string) => {
+      const response = await apiRequest('POST', '/api/user/switch-tenant', { tenantId });
+      return response.json();
+    },
+    onSuccess: () => {
+      // Invalidate specific queries to refresh data for the new tenant
+      queryClient.invalidateQueries({ queryKey: ['/api/tenant'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/user/accessible-tenants'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/dashboard/metrics'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/contacts'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/collections'] });
+    },
   });
 
   const handleNavigation = (href: string) => {
@@ -86,6 +129,8 @@ export default function NewSidebar() {
     
     return allItems;
   };
+
+  const canSwitchOrganizations = (user as any)?.role === "owner" && accessibleTenants.length > 1;
 
   return (
     <aside className={cn(
@@ -125,6 +170,71 @@ export default function NewSidebar() {
           <Menu className="h-4 w-4" />
         </Button>
       </div>
+
+      {/* Organization Dropdown - Similar to Xero */}
+      {!isCollapsed && (
+        <div className="px-4 pb-4">
+          {canSwitchOrganizations ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="w-full justify-between h-auto p-3 bg-white hover:bg-gray-50 border-gray-200"
+                  disabled={switchTenantMutation.isPending}
+                  data-testid="button-organization-dropdown"
+                >
+                  <div className="text-left">
+                    <div className="font-medium text-sm">
+                      {tenant?.settings?.companyName || tenant?.name || "Loading..."}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      {tenant?.settings?.tagline || "Current Organization"}
+                    </div>
+                  </div>
+                  <ChevronDown className="h-4 w-4 text-gray-400" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-56" align="start" side="bottom">
+                {accessibleTenants.map((org) => (
+                  <DropdownMenuItem
+                    key={org.id}
+                    onClick={() => {
+                      if (org.id !== tenant?.id) {
+                        switchTenantMutation.mutate(org.id);
+                      }
+                    }}
+                    className="p-3 cursor-pointer"
+                    data-testid={`menu-item-organization-${org.id}`}
+                  >
+                    <div className="flex items-center justify-between w-full">
+                      <div>
+                        <div className="font-medium text-sm">
+                          {org.settings?.companyName || org.name}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {org.settings?.tagline || "Organization"}
+                        </div>
+                      </div>
+                      {org.id === tenant?.id && (
+                        <Check className="h-4 w-4 text-[#17B6C3]" />
+                      )}
+                    </div>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <div className="p-3 bg-white border border-gray-200 rounded-md">
+              <div className="font-medium text-sm">
+                {tenant?.settings?.companyName || tenant?.name || "Loading..."}
+              </div>
+              <div className="text-xs text-gray-500">
+                {tenant?.settings?.tagline || "Current Organization"}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
       
       {/* Navigation */}
       <nav className={cn("flex-1", isCollapsed ? "px-2" : "px-4")}>
