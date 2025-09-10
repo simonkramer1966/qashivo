@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { 
   BarChart3, 
   FileText, 
@@ -22,7 +22,9 @@ import {
   ChevronDown,
   Check,
   RefreshCw,
-  Plus
+  Plus,
+  Search,
+  X
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -34,6 +36,7 @@ import {
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import nexusLogo from "@assets/Main Nexus Logo copy_1756923544828.png";
 
@@ -63,11 +66,45 @@ const getCompanyInitials = (companyName: string): string => {
   return words.slice(0, 2).map(word => word[0]).join("").toUpperCase();
 };
 
+// Recent organizations localStorage utilities
+const RECENT_ORGS_KEY = "nexus-recent-organizations";
+
+const getRecentOrganizations = (): string[] => {
+  try {
+    const stored = localStorage.getItem(RECENT_ORGS_KEY);
+    return stored ? JSON.parse(stored) : [];
+  } catch {
+    return [];
+  }
+};
+
+const saveRecentOrganizations = (orgIds: string[]) => {
+  try {
+    localStorage.setItem(RECENT_ORGS_KEY, JSON.stringify(orgIds));
+  } catch {
+    // Ignore localStorage errors
+  }
+};
+
+const addToRecentOrganizations = (orgId: string) => {
+  const recent = getRecentOrganizations();
+  const filtered = recent.filter(id => id !== orgId);
+  const updated = [orgId, ...filtered].slice(0, 5); // Keep only last 5
+  saveRecentOrganizations(updated);
+};
+
 export default function NewSidebar() {
   const { user } = useAuth();
   const [location, setLocation] = useLocation();
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [orgSearchQuery, setOrgSearchQuery] = useState("");
+  const [recentOrgIds, setRecentOrgIds] = useState<string[]>([]);
   const queryClient = useQueryClient();
+
+  // Load recent organizations from localStorage on mount
+  useEffect(() => {
+    setRecentOrgIds(getRecentOrganizations());
+  }, []);
 
   // Fetch tenant information
   const { data: tenant } = useQuery<{
@@ -147,6 +184,47 @@ export default function NewSidebar() {
 
   const canSwitchOrganizations = (user as any)?.role === "owner" && accessibleTenants.length > 1;
 
+  // Computed properties for organization filtering
+  const organizationsToShow = useMemo(() => {
+    if (orgSearchQuery.trim()) {
+      // Show search results
+      return accessibleTenants.filter(org => {
+        const companyName = org.settings?.companyName || org.name;
+        return companyName.toLowerCase().includes(orgSearchQuery.toLowerCase());
+      });
+    } else {
+      // Show recent organizations (last 5 selected)
+      const recentOrgs = recentOrgIds
+        .map(id => accessibleTenants.find(org => org.id === id))
+        .filter(Boolean) as typeof accessibleTenants;
+      
+      // If we have fewer recent orgs than available, fill with remaining ones
+      if (recentOrgs.length < 5) {
+        const remainingOrgs = accessibleTenants.filter(org => !recentOrgIds.includes(org.id));
+        return [...recentOrgs, ...remainingOrgs].slice(0, 5);
+      }
+      
+      return recentOrgs.slice(0, 5);
+    }
+  }, [accessibleTenants, recentOrgIds, orgSearchQuery]);
+
+  // Handle organization selection with recent tracking
+  const handleOrganizationSelect = (orgId: string) => {
+    const isCurrentOrg = orgId === tenant?.id;
+    
+    if (!isCurrentOrg) {
+      // Add to recent selections before switching
+      addToRecentOrganizations(orgId);
+      setRecentOrgIds(getRecentOrganizations());
+      
+      // Switch tenant
+      switchTenantMutation.mutate(orgId);
+    }
+    
+    // Clear search query
+    setOrgSearchQuery("");
+  };
+
   return (
     <>
     <aside className={cn(
@@ -211,47 +289,73 @@ export default function NewSidebar() {
                   <DropdownMenuSubTrigger className="pl-7 pr-3 py-3 text-[#17B6C3]" data-testid="menu-item-change-organization">
                     <div className="font-medium text-sm text-[#17B6C3]">Change organisation</div>
                   </DropdownMenuSubTrigger>
-                  <DropdownMenuSubContent className="w-56 bg-white border-gray-200">
-                    {/* Organization List */}
-                    {accessibleTenants.map((org) => {
-                      const companyName = org.settings?.companyName || org.name;
-                      const initials = getCompanyInitials(companyName);
-                      const isCurrentOrg = org.id === tenant?.id;
-                      
-                      return (
-                        <DropdownMenuItem
-                          key={org.id}
-                          className="pl-7 pr-3 py-3 cursor-pointer hover:bg-gray-50"
-                          onClick={() => {
-                            if (!isCurrentOrg) {
-                              switchTenantMutation.mutate(org.id);
-                            }
-                          }}
-                          data-testid={`dropdown-organization-${org.id}`}
+                  <DropdownMenuSubContent className="w-64 bg-white border-gray-200">
+                    {/* Search Bar */}
+                    <div className="relative p-2">
+                      <Search className="absolute left-5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                      <Input
+                        placeholder="Search organisations"
+                        value={orgSearchQuery}
+                        onChange={(e) => setOrgSearchQuery(e.target.value)}
+                        className="pl-10 pr-10 h-8 text-sm bg-white border-gray-200"
+                        data-testid="input-organization-search"
+                      />
+                      {orgSearchQuery && (
+                        <button
+                          onClick={() => setOrgSearchQuery("")}
+                          className="absolute right-5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                          data-testid="button-clear-search"
                         >
-                          <div className="flex items-center space-x-3 w-full">
-                            <div className="w-8 h-8 rounded-lg bg-[#17B6C3] flex items-center justify-center text-white font-bold text-xs">
-                              {initials}
-                            </div>
-                            <div className="flex-1 text-left">
-                              <div className="font-medium text-sm text-gray-900">{companyName}</div>
-                            </div>
-                            {isCurrentOrg && (
-                              <Check className="h-4 w-4 text-[#17B6C3]" />
-                            )}
-                          </div>
-                        </DropdownMenuItem>
-                      );
-                    })}
+                          <X className="h-4 w-4" />
+                        </button>
+                      )}
+                    </div>
+                    
+                    {/* Organization List */}
+                    <div className="max-h-64 overflow-y-auto">
+                      {organizationsToShow.length > 0 ? (
+                        organizationsToShow.map((org) => {
+                          const companyName = org.settings?.companyName || org.name;
+                          const initials = getCompanyInitials(companyName);
+                          const isCurrentOrg = org.id === tenant?.id;
+                          
+                          return (
+                            <DropdownMenuItem
+                              key={org.id}
+                              className="pl-3 pr-3 py-3 cursor-pointer hover:bg-gray-50 mx-2"
+                              onClick={() => handleOrganizationSelect(org.id)}
+                              data-testid={`dropdown-organization-${org.id}`}
+                            >
+                              <div className="flex items-center space-x-3 w-full">
+                                <div className="w-8 h-8 rounded-lg bg-[#17B6C3] flex items-center justify-center text-white font-bold text-xs">
+                                  {initials}
+                                </div>
+                                <div className="flex-1 text-left">
+                                  <div className="font-medium text-sm text-gray-900">{companyName}</div>
+                                </div>
+                                {isCurrentOrg && (
+                                  <Check className="h-4 w-4 text-[#17B6C3]" />
+                                )}
+                              </div>
+                            </DropdownMenuItem>
+                          );
+                        })
+                      ) : (
+                        <div className="px-5 py-3 text-sm text-gray-500 text-center">
+                          {orgSearchQuery ? "No organizations found" : "No organizations available"}
+                        </div>
+                      )}
+                    </div>
                     
                     {/* Grey dividing line */}
                     <div className="mx-4 my-2 h-px bg-gray-200"></div>
                     
                     {/* Add a new organisation */}
                     <DropdownMenuItem 
-                      className="pl-7 pr-3 py-3 cursor-pointer hover:bg-gray-50"
+                      className="pl-3 pr-3 py-3 cursor-pointer hover:bg-gray-50 mx-2"
                       onClick={() => {
                         // For now, just close the dropdown - placeholder for future functionality
+                        setOrgSearchQuery("");
                       }}
                       data-testid="dropdown-add-organization"
                     >
