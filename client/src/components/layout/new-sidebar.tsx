@@ -27,6 +27,10 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import nexusLogo from "@assets/Main Nexus Logo copy_1756923544828.png";
@@ -189,28 +193,92 @@ export default function NewSidebar() {
                   <ChevronDown className="h-4 w-4 text-gray-400" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-56 bg-white border-gray-200" align="start" side="bottom">
-                {accessibleTenants.map((org) => (
-                  <DropdownMenuItem
-                    key={org.id}
-                    onClick={() => {
-                      if (org.id !== tenant?.id) {
-                        switchTenantMutation.mutate(org.id);
-                      }
-                    }}
-                    className="p-3 cursor-pointer"
-                    data-testid={`menu-item-organization-${org.id}`}
-                  >
-                    <div className="flex items-center justify-between w-full">
-                      <div className="font-medium text-sm">
-                        {org.settings?.companyName || org.name}
-                      </div>
-                      {org.id === tenant?.id && (
-                        <Check className="h-4 w-4 text-[#17B6C3]" />
-                      )}
-                    </div>
-                  </DropdownMenuItem>
-                ))}
+              <DropdownMenuContent className="w-64 bg-white border-gray-200" align="start" side="bottom">
+                {/* Change Organisation with submenu */}
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger className="p-3 cursor-pointer">
+                    <div className="font-medium text-sm">Change Organisation</div>
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuSubContent className="w-56 bg-white border-gray-200">
+                    {accessibleTenants.map((org) => (
+                      <DropdownMenuItem
+                        key={org.id}
+                        onClick={() => {
+                          if (org.id !== tenant?.id) {
+                            switchTenantMutation.mutate(org.id);
+                          }
+                        }}
+                        className="p-3 cursor-pointer"
+                        data-testid={`menu-item-organization-${org.id}`}
+                      >
+                        <div className="flex items-center justify-between w-full">
+                          <div className="font-medium text-sm">
+                            {org.settings?.companyName || org.name}
+                          </div>
+                          {org.id === tenant?.id && (
+                            <Check className="h-4 w-4 text-[#17B6C3]" />
+                          )}
+                        </div>
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuSubContent>
+                </DropdownMenuSub>
+                
+                <DropdownMenuSeparator />
+                
+                {/* Current Organization Name in Bold */}
+                <DropdownMenuItem className="p-3 cursor-default">
+                  <div className="font-bold text-sm">
+                    {tenant?.settings?.companyName || tenant?.name || "Loading..."}
+                  </div>
+                </DropdownMenuItem>
+                
+                {/* Settings */}
+                <DropdownMenuItem 
+                  className="p-3 cursor-pointer hover:bg-gray-50"
+                  onClick={() => setLocation('/settings')}
+                  data-testid="menu-item-settings"
+                >
+                  <div className="font-medium text-sm">Settings</div>
+                </DropdownMenuItem>
+                
+                <DropdownMenuSeparator />
+                
+                {/* Department Links */}
+                <DropdownMenuItem 
+                  className="p-3 cursor-pointer hover:bg-gray-50"
+                  onClick={() => setLocation('/reports')}
+                  data-testid="menu-item-kpi"
+                >
+                  <div className="font-medium text-sm">KPI</div>
+                </DropdownMenuItem>
+                
+                <DropdownMenuItem 
+                  className="p-3 cursor-pointer hover:bg-gray-50"
+                  onClick={() => setLocation('/contacts')}
+                  data-testid="menu-item-hr"
+                >
+                  <div className="font-medium text-sm">HR</div>
+                </DropdownMenuItem>
+                
+                <DropdownMenuItem 
+                  className="p-3 cursor-pointer hover:bg-gray-50"
+                  onClick={() => setLocation('/settings')}
+                  data-testid="menu-item-legal"
+                >
+                  <div className="font-medium text-sm">Legal</div>
+                </DropdownMenuItem>
+                
+                <DropdownMenuSeparator />
+                
+                {/* My Nexus - Owner Dashboard */}
+                <DropdownMenuItem 
+                  className="p-3 cursor-pointer hover:bg-gray-50"
+                  onClick={() => setLocation('/owner')}
+                  data-testid="menu-item-my-nexus"
+                >
+                  <div className="font-medium text-sm">My Nexus</div>
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
