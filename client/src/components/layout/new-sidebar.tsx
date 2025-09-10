@@ -225,16 +225,11 @@ export default function NewSidebar() {
                   <div className="font-medium text-sm text-[#17B6C3]">Change organisation</div>
                 </DropdownMenuItem>
                 
-                {/* Large Organization Card */}
+                {/* Organization Name Box */}
                 <div className="p-4">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-12 h-12 rounded-lg bg-[#17B6C3] flex items-center justify-center text-white font-bold text-lg">
-                      {getCompanyInitials(tenant?.settings?.companyName || tenant?.name || "")}
-                    </div>
-                    <div>
-                      <div className="font-semibold text-base text-gray-900">
-                        {tenant?.settings?.companyName || tenant?.name || "Loading..."}
-                      </div>
+                  <div className="bg-[#17B6C3] p-4 rounded-lg">
+                    <div className="font-bold text-white text-sm leading-relaxed break-words">
+                      {tenant?.settings?.companyName || tenant?.name || "Loading..."}
                     </div>
                   </div>
                 </div>
