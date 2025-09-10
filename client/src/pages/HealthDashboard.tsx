@@ -120,7 +120,7 @@ function InvoiceHealthList({ invoices, isLoading }: { invoices: InvoiceHealthSco
           {currentInvoices.map((invoice) => (
             <div
               key={invoice.invoiceId}
-              className="flex items-center justify-between p-3 rounded-lg border bg-white/50 hover:bg-white/70 transition-colors"
+              className="flex items-center justify-between p-3 rounded-lg border-gray-200 border bg-white/50 hover:bg-white/70 transition-colors"
               data-testid={`invoice-health-${invoice.invoiceId}`}
             >
               <div className="flex-1 min-w-0">

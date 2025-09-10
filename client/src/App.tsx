@@ -48,45 +48,41 @@ function Router() {
     );
   }
 
-  return (
+  return !isAuthenticated ? (
     <Switch>
-      {!isAuthenticated ? (
-        <>
-          <Route path="/" component={Landing} />
-          <Route path="/features" component={Features} />
-          <Route path="/ai-capabilities" component={AiCapabilities} />
-          <Route path="/pricing" component={Pricing} />
-          <Route path="/demo" component={Demo} />
-          <Route path="/about" component={About} />
-          <Route path="/investors" component={Investors} />
-          <Route path="/contact" component={Contact} />
-          <Route component={NotFound} />
-        </>
-      ) : (
-        <>
-          <Route path="/ai-cfo" component={AiCfo} />
-          <Route path="/" component={Dashboard} />
-          <Route path="/cashflow" component={Cashflow} />
-          <Route path="/customers" component={Contacts} />
-          <Route path="/invoices" component={Invoices} />
-          <Route path="/invoices-xero" component={InvoicesXero} />
-          <Route path="/contacts" component={Contacts} />
-          <Route path="/workflows" component={Workflows} />
-          <Route path="/workflow-builder" component={WorkflowBuilder} />
-          <Route path="/ai-suggestions" component={AiSuggestions} />
-          <Route path="/reports" component={Reports} />
-          <Route path="/settings" component={Settings} />
-          <Route path="/profile" component={Profile} />
-          <Route path="/health-dashboard" component={HealthDashboard} />
-          <Route path="/ui-choices" component={UIChoices} />
-          <Route path="/ui-xero" component={UIXero} />
-          <Route path="/ui-quickbooks" component={UIQuickBooks} />
-          <Route path="/ui-sage" component={UISage} />
-          <Route path="/subscribe" component={Subscribe} />
-          <Route path="/owner" component={OwnerDashboard} />
-          <Route component={NotFound} />
-        </>
-      )}
+      <Route path="/" component={Landing} />
+      <Route path="/features" component={Features} />
+      <Route path="/ai-capabilities" component={AiCapabilities} />
+      <Route path="/pricing" component={Pricing} />
+      <Route path="/demo" component={Demo} />
+      <Route path="/about" component={About} />
+      <Route path="/investors" component={Investors} />
+      <Route path="/contact" component={Contact} />
+      <Route component={NotFound} />
+    </Switch>
+  ) : (
+    <Switch>
+      <Route path="/ai-cfo" component={AiCfo} />
+      <Route path="/" component={Dashboard} />
+      <Route path="/cashflow" component={Cashflow} />
+      <Route path="/customers" component={Contacts} />
+      <Route path="/invoices" component={Invoices} />
+      <Route path="/invoices-xero" component={InvoicesXero} />
+      <Route path="/contacts" component={Contacts} />
+      <Route path="/workflows" component={Workflows} />
+      <Route path="/workflow-builder" component={WorkflowBuilder} />
+      <Route path="/ai-suggestions" component={AiSuggestions} />
+      <Route path="/reports" component={Reports} />
+      <Route path="/settings" component={Settings} />
+      <Route path="/profile" component={Profile} />
+      <Route path="/health-dashboard" component={HealthDashboard} />
+      <Route path="/ui-choices" component={UIChoices} />
+      <Route path="/ui-xero" component={UIXero} />
+      <Route path="/ui-quickbooks" component={UIQuickBooks} />
+      <Route path="/ui-sage" component={UISage} />
+      <Route path="/subscribe" component={Subscribe} />
+      <Route path="/owner" component={OwnerDashboard} />
+      <Route component={NotFound} />
     </Switch>
   );
 }
