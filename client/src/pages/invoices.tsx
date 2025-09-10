@@ -15,7 +15,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Mail, Phone, Eye, Plus, Search, Filter, FileText, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, X, MessageSquare, Calendar, CheckCircle, AlertCircle, Clock, Users, User, Building, Star, Target, ArrowRight, MoreHorizontal } from "lucide-react";
+import { Mail, Phone, Eye, Plus, Search, Filter, FileText, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, X, MessageSquare, Calendar, CheckCircle, AlertCircle, Clock, Users, User, Building, Star, Target, ArrowRight, MoreHorizontal, Pause } from "lucide-react";
 
 export default function Invoices() {
   const { toast } = useToast();
@@ -1478,7 +1478,6 @@ export default function Invoices() {
                             </SelectContent>
                           </Select>
                         </th>
-                        <th className="text-center py-2 text-xs font-semibold text-slate-700 w-52">Hold</th>
                         <th className="text-right py-2 text-xs font-semibold text-slate-700 w-52">Actions</th>
                       </tr>
                     </thead>
@@ -1537,24 +1536,20 @@ export default function Invoices() {
                               </div>
                             </div>
                           </td>
-                          <td className="py-2 w-52" data-testid={`hold-toggle-${invoice.id}`}>
-                            <div className="flex justify-center">
-                              <Button 
-                                variant={heldInvoices.has(invoice.id) ? "default" : "outline"}
-                                size="sm"
-                                onClick={() => toggleHoldStatus(invoice.id)}
-                                className={heldInvoices.has(invoice.id) 
-                                  ? "bg-red-500 hover:bg-red-600 text-white h-7 px-3" 
-                                  : "border-gray-200 text-gray-300 hover:bg-gray-50 h-7 px-3"
-                                }
-                                data-testid={`button-hold-toggle-${invoice.id}`}
-                              >
-                                {heldInvoices.has(invoice.id) ? 'ON HOLD' : 'Active'}
-                              </Button>
-                            </div>
-                          </td>
                           <td className="py-2 w-52">
                             <div className="flex space-x-1 justify-end">
+                              {heldInvoices.has(invoice.id) && (
+                                <Button 
+                                  variant="outline" 
+                                  size="sm"
+                                  onClick={() => toggleHoldStatus(invoice.id)}
+                                  className="border-gray-400 text-gray-500 hover:bg-gray-50 h-7 w-7 p-0"
+                                  data-testid={`button-pause-${invoice.id}`}
+                                  title="Remove from Hold"
+                                >
+                                  <Pause className="h-3 w-3" />
+                                </Button>
+                              )}
                               <Button 
                                 variant="outline" 
                                 size="sm"
