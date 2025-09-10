@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -89,9 +90,18 @@ function HealthMetricCard({ title, value, change, icon: Icon, color = "text-blue
 }
 
 function InvoiceHealthList({ invoices }: { invoices: InvoiceHealthScore[] }) {
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+  
+  // Calculate pagination
+  const totalPages = Math.ceil(invoices.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentInvoices = invoices.slice(startIndex, endIndex);
+
   return (
     <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
-      <CardHeader>
+      <CardHeader className="pb-4">
         <CardTitle className="text-xl font-bold flex items-center gap-2">
           <div className="p-2 bg-[#17B6C3]/10 rounded-lg">
             <BarChart3 className="h-5 w-5 text-[#17B6C3]" />
@@ -99,64 +109,97 @@ function InvoiceHealthList({ invoices }: { invoices: InvoiceHealthScore[] }) {
           Invoice Health Scores
         </CardTitle>
         <CardDescription>
-          Invoices sorted by health score (lowest risk first)
+          Invoices sorted by health score (lowest risk first) • Showing {startIndex + 1}-{Math.min(endIndex, invoices.length)} of {invoices.length}
         </CardDescription>
       </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
-          {invoices.map((invoice) => (
+      <CardContent className="pt-0">
+        <div className="space-y-2">
+          {currentInvoices.map((invoice) => (
             <div
               key={invoice.invoiceId}
-              className="flex items-center justify-between p-4 rounded-lg border bg-white/50 hover:bg-white/70 transition-colors"
+              className="flex items-center justify-between p-3 rounded-lg border bg-white/50 hover:bg-white/70 transition-colors"
               data-testid={`invoice-health-${invoice.invoiceId}`}
             >
-              <div className="flex-1">
-                <div className="flex items-center gap-3 mb-2">
-                  <h4 className="font-semibold text-gray-900">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1">
+                  <h4 className="font-semibold text-gray-900 text-sm truncate">
                     {invoice.invoiceNumber}
                   </h4>
-                  <Badge className={getRiskColor(invoice.riskLevel)}>
+                  <Badge className={`text-xs px-1.5 py-0.5 ${getRiskColor(invoice.riskLevel)}`}>
                     {invoice.riskLevel.replace('_', ' ').toUpperCase()}
                   </Badge>
                 </div>
-                <div className="text-sm text-gray-600">
-                  <p className="font-medium">{invoice.customerName}</p>
-                  <p>
-                    {formatCurrency(invoice.amount)} • Due: {new Date(invoice.dueDate).toLocaleDateString()}
-                  </p>
+                <div className="text-xs text-gray-600">
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium truncate pr-2">{invoice.customerName}</span>
+                    <span className="whitespace-nowrap">
+                      {formatCurrency(invoice.amount)} • Due: {new Date(invoice.dueDate).toLocaleDateString()}
+                    </span>
+                  </div>
                 </div>
                 {invoice.keyRiskFactors.length > 0 && (
-                  <div className="mt-2">
+                  <div className="mt-1">
                     <div className="flex flex-wrap gap-1">
                       {invoice.keyRiskFactors.slice(0, 2).map((factor: string, index: number) => (
                         <span
                           key={index}
-                          className="text-xs px-2 py-1 bg-gray-100 rounded-full text-gray-600"
+                          className="text-xs px-1.5 py-0.5 bg-gray-100 rounded text-gray-600"
                         >
                           {typeof factor === 'string' ? factor : factor.description || factor.type || 'Risk Factor'}
                         </span>
                       ))}
                       {invoice.keyRiskFactors.length > 2 && (
-                        <span className="text-xs px-2 py-1 bg-gray-100 rounded-full text-gray-600">
-                          +{invoice.keyRiskFactors.length - 2} more
+                        <span className="text-xs px-1.5 py-0.5 bg-gray-100 rounded text-gray-600">
+                          +{invoice.keyRiskFactors.length - 2}
                         </span>
                       )}
                     </div>
                   </div>
                 )}
               </div>
-              <div className="text-right">
-                <div className={`text-2xl font-bold ${getHealthScoreColor(invoice.healthScore)}`}>
+              <div className="text-right ml-4">
+                <div className={`text-xl font-bold ${getHealthScoreColor(invoice.healthScore)}`}>
                   {invoice.healthScore}
                 </div>
-                <div className="text-sm text-gray-500">Health Score</div>
-                <div className="text-sm font-medium text-gray-700 mt-1">
-                  {invoice.paymentLikelihood}% likely to pay
+                <div className="text-xs text-gray-500">Health Score</div>
+                <div className="text-xs font-medium text-gray-700">
+                  {invoice.paymentLikelihood}% likely
                 </div>
               </div>
             </div>
           ))}
         </div>
+        
+        {/* Pagination Controls */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between mt-6 pt-4 border-t border-gray-200">
+            <div className="text-sm text-gray-500">
+              Page {currentPage} of {totalPages}
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(currentPage - 1)}
+                disabled={currentPage === 1}
+                data-testid="button-prev-page"
+              >
+                <ChevronRight className="h-4 w-4 rotate-180" />
+                Previous
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(currentPage + 1)}
+                disabled={currentPage === totalPages}
+                data-testid="button-next-page"
+              >
+                Next
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
