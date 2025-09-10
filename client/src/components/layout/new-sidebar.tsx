@@ -22,7 +22,7 @@ import nexusLogo from "@assets/Main Nexus Logo copy_1756923544828.png";
 const navigationItems = [
   { name: "Dashboard", href: "/", icon: BarChart3 },
   { name: "Cashflow", href: "/cashflow", icon: TrendingUp },
-  { name: "Receivables", href: "/invoices", icon: FileText },
+  { name: "Invoices", href: "/invoices", icon: FileText },
   // { name: "Invoices - Xero", href: "/invoices-xero", icon: ExternalLink },
   // { name: "Contacts", href: "/contacts", icon: Users },
   { name: "Workflows", href: "/workflows", icon: Workflow },

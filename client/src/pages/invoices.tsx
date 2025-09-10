@@ -820,7 +820,7 @@ export default function Invoices() {
       <NewSidebar />
       <main className="flex-1 overflow-y-auto">
         <Header 
-          title="Receivables" 
+          title="Invoices" 
           subtitle="Manage your customers and invoices"
         />
         
