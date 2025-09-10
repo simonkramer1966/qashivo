@@ -1321,16 +1321,13 @@ export default function Invoices() {
                             <span>Status</span>
                           </button>
                         </th>
-                        <th className="text-center py-2 text-xs font-semibold text-slate-700 w-20">
-                          <span>Nudge</span>
-                        </th>
-                        <th className="text-left py-2 text-xs font-semibold text-slate-700 w-52">
+                        <th className="text-left py-2 text-xs font-semibold text-slate-700 w-72">
                           <Select value={nextActionSort} onValueChange={(value) => {
                             setNextActionSort(value);
                             setActiveSortColumn("nextAction");
                           }}>
                             <SelectTrigger className="border-0 bg-transparent p-0 h-auto font-semibold text-xs text-slate-700 hover:text-slate-900 focus:ring-0 data-[state=open]:text-slate-900">
-                              <span>Next Action</span>
+                              <span>Next Action & Nudge</span>
                             </SelectTrigger>
                             <SelectContent className="bg-white border-gray-200">
                               <SelectItem value="action-date-asc">Action Date (earliest)</SelectItem>
@@ -1376,27 +1373,27 @@ export default function Invoices() {
                           <td className="py-2 w-52">
                             {getStatusBadge(invoice.status)}
                           </td>
-                          <td className="py-2 w-20">
-                            <div className="flex justify-center">
+                          <td className="py-2 w-72" data-testid={`text-next-action-${invoice.id}`}>
+                            <div className="flex items-center space-x-3">
                               <Button 
                                 variant="outline" 
                                 size="sm"
                                 onClick={() => nudgeInvoiceMutation.mutate(invoice.id)}
                                 disabled={nudgeInvoiceMutation.isPending}
-                                className="border-[#17B6C3]/20 text-[#17B6C3] hover:bg-[#17B6C3]/5 h-7 w-7 p-0"
+                                className="border-[#17B6C3]/20 text-[#17B6C3] hover:bg-[#17B6C3]/5 h-7 w-7 p-0 flex-shrink-0"
                                 data-testid={`button-nudge-${invoice.id}`}
                                 title="Nudge to next action"
                               >
                                 <ArrowRight className="h-3 w-3" />
                               </Button>
-                            </div>
-                          </td>
-                          <td className="py-2 w-52" data-testid={`text-next-action-${invoice.id}`}>
-                            <div className="text-xs text-slate-900">
-                              {getNextActionDate(invoice).toLocaleDateString()}
-                            </div>
-                            <div className="text-xs text-slate-600 mt-0.5">
-                              {getNextActionType(invoice)}
+                              <div className="flex-1">
+                                <div className="text-xs text-slate-900">
+                                  {getNextActionDate(invoice).toLocaleDateString()}
+                                </div>
+                                <div className="text-xs text-slate-600 mt-0.5">
+                                  {getNextActionType(invoice)}
+                                </div>
+                              </div>
                             </div>
                           </td>
                           <td className="py-2 w-52" data-testid={`hold-toggle-${invoice.id}`}>
