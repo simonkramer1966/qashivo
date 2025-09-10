@@ -38,7 +38,7 @@ export function getSession() {
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      secure: true,
+      secure: process.env.NODE_ENV === 'production',
       maxAge: sessionTtl,
     },
   });
@@ -165,7 +165,6 @@ const createDemoUserSession = async (req: any) => {
   let demoTenant = await storage.getTenant(demoTenantId);
   if (!demoTenant) {
     demoTenant = await storage.createTenant({
-      id: demoTenantId,
       name: "Demo Agency",
       subdomain: "demo",
     });
