@@ -4313,25 +4313,24 @@ Payment required immediately to avoid collection action. Contact us NOW.`
 
       let tenants: any[] = [];
       
-      // Always include user's current tenant and demo organization
+      // Always include both Nexus AR and Demo Agency organizations
       const allTenants = await storage.getAllTenants();
+      const NEXUS_AR_TENANT_ID = "9ffa8e58-af89-4f6a-adee-7fe09d956295";
+      const DEMO_TENANT_ID = "bfa5f70f-4af5-421a-9d05-26df67f45c15";
       
-      // Add user's current tenant
-      if (user.tenantId) {
-        const userTenant = await storage.getTenant(user.tenantId);
-        if (userTenant) {
-          tenants.push(userTenant);
-        }
+      // Add Nexus AR tenant
+      const nexusTenant = allTenants.find(t => t.id === NEXUS_AR_TENANT_ID);
+      if (nexusTenant) {
+        tenants.push(nexusTenant);
       }
       
       // Add demo organization by fixed ID (security: prevents name-based privilege escalation)
-      const DEMO_TENANT_ID = "bfa5f70f-4af5-421a-9d05-26df67f45c15";
       const demoTenant = allTenants.find(t => t.id === DEMO_TENANT_ID);
-      if (demoTenant && !tenants.find(t => t.id === demoTenant.id)) {
+      if (demoTenant) {
         tenants.push(demoTenant);
       }
       
-      console.log(`🔒 Security: User ${user.id} (role: ${user.role}) can access ${tenants.length} tenant(s) including demo organization`);
+      console.log(`🔒 Security: User ${user.id} (role: ${user.role}) can access ${tenants.length} tenant(s) (Nexus AR + Demo)`);
       res.json(tenants);
     } catch (error) {
       console.error("Error fetching accessible tenants:", error);
@@ -4354,21 +4353,10 @@ Payment required immediately to avoid collection action. Contact us NOW.`
         return res.status(404).json({ message: "User not found" });
       }
 
-      // Get accessible tenants (user's tenant + demo organization)
-      const allTenants = await storage.getAllTenants();
-      const accessibleTenantIds = [];
-      
-      // Add user's current tenant
-      if (user.tenantId) {
-        accessibleTenantIds.push(user.tenantId);
-      }
-      
-      // Add demo organization by fixed ID (security: prevents name-based privilege escalation)
+      // Get accessible tenants (Nexus AR + Demo Agency)
+      const NEXUS_AR_TENANT_ID = "9ffa8e58-af89-4f6a-adee-7fe09d956295";
       const DEMO_TENANT_ID = "bfa5f70f-4af5-421a-9d05-26df67f45c15";
-      const demoTenant = allTenants.find(t => t.id === DEMO_TENANT_ID);
-      if (demoTenant) {
-        accessibleTenantIds.push(demoTenant.id);
-      }
+      const accessibleTenantIds = [NEXUS_AR_TENANT_ID, DEMO_TENANT_ID];
 
       // Check if the target tenant is accessible
       if (!accessibleTenantIds.includes(tenantId)) {
