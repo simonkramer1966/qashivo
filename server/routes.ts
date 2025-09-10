@@ -1048,8 +1048,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const daysPastDue = Math.max(0, Math.floor((Date.now() - invoice.dueDate.getTime()) / (1000 * 60 * 60 * 24)));
       const fromEmail = defaultSender?.email || process.env.SENDGRID_FROM_EMAIL || user.email || DEFAULT_FROM_EMAIL;
 
-      // Get all invoices for this contact to calculate totals
-      const contactInvoices = await storage.getInvoices(user.tenantId, { contactId: invoice.contactId });
+      // Get all invoices and filter for this contact
+      const allInvoices = await storage.getInvoices(user.tenantId);
+      const contactInvoices = allInvoices.filter(inv => inv.contactId === invoice.contactId);
       
       // Calculate total amounts
       const totalBalance = contactInvoices.reduce((sum, inv) => sum + Number(inv.amount), 0);
