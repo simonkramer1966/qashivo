@@ -29,10 +29,12 @@ export default function Invoices() {
   const [activeSortColumn, setActiveSortColumn] = useState<string>("invClient");
   const [selectedInvoice, setSelectedInvoice] = useState<any>(null);
   const [showContactHistory, setShowContactHistory] = useState(false);
+  const [showViewInvoiceDialog, setShowViewInvoiceDialog] = useState(false);
   const [showPaymentPlanDialog, setShowPaymentPlanDialog] = useState(false);
   const [showDisputeDialog, setShowDisputeDialog] = useState(false);
   const [paymentPlanInvoice, setPaymentPlanInvoice] = useState<any>(null);
   const [disputeInvoice, setDisputeInvoice] = useState<any>(null);
+  const [viewInvoice, setViewInvoice] = useState<any>(null);
   
   // Pagination state for invoices
   const [invoicesCurrentPage, setInvoicesCurrentPage] = useState(1);
@@ -175,6 +177,11 @@ export default function Invoices() {
   const openContactHistory = (invoice: any) => {
     setSelectedInvoice(invoice);
     setShowContactHistory(true);
+  };
+
+  const openViewInvoice = (invoice: any) => {
+    setViewInvoice(invoice);
+    setShowViewInvoiceDialog(true);
   };
 
   return (
@@ -375,7 +382,7 @@ export default function Invoices() {
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end" className="bg-white border-gray-200 w-52">
                                   <DropdownMenuItem 
-                                    onClick={() => openContactHistory(invoice)}
+                                    onClick={() => openViewInvoice(invoice)}
                                     data-testid={`menu-view-invoice-${invoice.id}`}
                                   >
                                     <Eye className="mr-2 h-4 w-4" />
@@ -503,6 +510,140 @@ export default function Invoices() {
           </Card>
         </div>
       </main>
+
+      {/* View Invoice Dialog */}
+      <Dialog open={showViewInvoiceDialog} onOpenChange={setShowViewInvoiceDialog}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-white border-0 shadow-2xl">
+          <DialogHeader className="border-b border-gray-100 pb-4">
+            <DialogTitle className="text-xl font-bold">Invoice Preview</DialogTitle>
+            <DialogDescription>
+              Invoice {viewInvoice?.invoiceNumber} - {viewInvoice?.contact?.name}
+            </DialogDescription>
+          </DialogHeader>
+          
+          {viewInvoice && (
+            <div className="bg-white p-8 space-y-8">
+              {/* Invoice Header */}
+              <div className="flex justify-between items-start border-b border-gray-200 pb-6">
+                <div>
+                  <h1 className="text-2xl font-bold text-[#17B6C3] mb-2">Nexus AR</h1>
+                  <p className="text-gray-600 text-sm">Professional Accounts Receivable</p>
+                  <p className="text-gray-600 text-sm">London, UK</p>
+                  <p className="text-gray-600 text-sm">+44 20 1234 5678</p>
+                </div>
+                <div className="text-right">
+                  <h2 className="text-3xl font-bold text-gray-800 mb-2">INVOICE</h2>
+                  <p className="text-lg text-gray-600 mb-1">{viewInvoice.invoiceNumber}</p>
+                  <div className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${
+                    viewInvoice.status === 'paid' ? 'bg-green-100 text-green-800' :
+                    viewInvoice.status === 'overdue' ? 'bg-red-100 text-red-800' :
+                    viewInvoice.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                    'bg-gray-100 text-gray-800'
+                  }`}>
+                    {viewInvoice.status?.toUpperCase()}
+                  </div>
+                </div>
+              </div>
+
+              {/* Invoice Details */}
+              <div className="grid grid-cols-2 gap-8">
+                <div>
+                  <h3 className="font-semibold text-gray-800 mb-3">Bill To:</h3>
+                  <div className="space-y-1">
+                    <p className="font-medium">{viewInvoice.contact?.companyName || 'Company Name'}</p>
+                    <p className="text-gray-600">{viewInvoice.contact?.name}</p>
+                    <p className="text-gray-600">{viewInvoice.contact?.email}</p>
+                    {viewInvoice.contact?.phone && (
+                      <p className="text-gray-600">{viewInvoice.contact.phone}</p>
+                    )}
+                  </div>
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-800 mb-3">Invoice Details:</h3>
+                  <div className="space-y-2">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Issue Date:</span>
+                      <span>{formatDate(viewInvoice.issueDate)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Due Date:</span>
+                      <span className="font-medium">{formatDate(viewInvoice.dueDate)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Payment Terms:</span>
+                      <span>Net 30</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Invoice Items */}
+              <div className="border border-gray-200 rounded-lg overflow-hidden">
+                <table className="w-full">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-sm font-medium text-gray-800">Description</th>
+                      <th className="px-4 py-3 text-right text-sm font-medium text-gray-800">Quantity</th>
+                      <th className="px-4 py-3 text-right text-sm font-medium text-gray-800">Unit Price</th>
+                      <th className="px-4 py-3 text-right text-sm font-medium text-gray-800">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    <tr>
+                      <td className="px-4 py-3 text-sm">{viewInvoice.description || 'Professional Services'}</td>
+                      <td className="px-4 py-3 text-sm text-right">1</td>
+                      <td className="px-4 py-3 text-sm text-right">£{Number(viewInvoice.amount).toLocaleString()}</td>
+                      <td className="px-4 py-3 text-sm text-right font-medium">£{Number(viewInvoice.amount).toLocaleString()}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Invoice Totals */}
+              <div className="flex justify-end">
+                <div className="w-80">
+                  <div className="space-y-2">
+                    <div className="flex justify-between border-t border-gray-200 pt-4">
+                      <span className="text-lg font-semibold">Total Due:</span>
+                      <span className="text-xl font-bold text-[#17B6C3]">£{Number(viewInvoice.amount).toLocaleString()}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Payment Information */}
+              <div className="bg-gray-50 p-6 rounded-lg">
+                <h3 className="font-semibold text-gray-800 mb-3">Payment Information</h3>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <p className="text-gray-600 mb-1">Bank Name:</p>
+                    <p className="font-medium">Nexus Bank UK</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-600 mb-1">Sort Code:</p>
+                    <p className="font-medium">12-34-56</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-600 mb-1">Account Number:</p>
+                    <p className="font-medium">12345678</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-600 mb-1">Reference:</p>
+                    <p className="font-medium">{viewInvoice.invoiceNumber}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Terms and Conditions */}
+              <div className="text-xs text-gray-500 space-y-1">
+                <p><strong>Terms & Conditions:</strong></p>
+                <p>Payment is due within 30 days of invoice date. Late payment may incur charges.</p>
+                <p>Please include the invoice number in your payment reference.</p>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Contact History Dialog */}
       <Dialog open={showContactHistory} onOpenChange={setShowContactHistory}>
