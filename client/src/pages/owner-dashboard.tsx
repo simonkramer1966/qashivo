@@ -58,7 +58,7 @@ export default function OwnerDashboard() {
       <div className="flex h-screen" style={{ backgroundColor: '#ffffff' }}>
         <NewSidebar />
         <main className="flex-1 overflow-y-auto" style={{ backgroundColor: '#ffffff' }}>
-          <Header title="Owner Dashboard" subtitle="Manage all your organizations and tenants" />
+          <Header title="My Nexus" subtitle="Manage all your organizations and tenants" />
           <div className="p-8">
             <div className="animate-pulse">
               <div className="h-8 bg-gray-200 rounded w-64 mb-6"></div>
@@ -79,7 +79,7 @@ export default function OwnerDashboard() {
       <div className="flex h-screen" style={{ backgroundColor: '#ffffff' }}>
         <NewSidebar />
         <main className="flex-1 overflow-y-auto" style={{ backgroundColor: '#ffffff' }}>
-          <Header title="Owner Dashboard" subtitle="Manage all your organizations and tenants" />
+          <Header title="My Nexus" subtitle="Manage all your organizations and tenants" />
           <div className="p-8">
             <Card className="bg-red-50 border-red-200">
               <CardHeader>

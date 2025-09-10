@@ -57,7 +57,7 @@ const navigationItems = [
 
 // Owner-only navigation items
 const ownerNavigationItems = [
-  { name: "Owner Dashboard", href: "/owner", icon: Building2, ownerOnly: true },
+  { name: "My Nexus", href: "/owner", icon: Building2, ownerOnly: true },
 ];
 
 // Helper function to generate company initials
