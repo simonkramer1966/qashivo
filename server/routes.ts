@@ -2523,7 +2523,15 @@ Payment required immediately to avoid collection action. Contact us NOW.`
         .replace(/£X as unpaid/g, `£${totalAmount.toLocaleString()} across ${contactInvoices.length} invoice${contactInvoices.length > 1 ? 's' : ''}`)
         .replace(/£X due for payment now/g, `£${totalAmount.toLocaleString()} total outstanding`);
 
-      const processedSubject = `Account Summary - ${totalAmount.toLocaleString()} Outstanding`;
+      // Process template subject line with variables
+      let processedSubject = defaultTemplate.subject || 'Account Summary';
+      processedSubject = processedSubject
+        .replace(/\{\{first_name\}\}/g, contact.name?.split(' ')[0] || 'Valued Customer')
+        .replace(/\{\{your_name\}\}/g, defaultSender.fromName || defaultSender.name || 'Accounts Receivable')
+        .replace(/\{\{total_amount\}\}/g, `£${totalAmount.toLocaleString()}`)
+        .replace(/\{\{total_balance\}\}/g, `£${totalAmount.toLocaleString()}`)
+        .replace(/\{\{total_amount_overdue\}\}/g, `£${totalAmountOverdue.toLocaleString()}`)
+        .replace(/\{\{invoice_count\}\}/g, contactInvoices.length.toString());
 
       // Send email using SendGrid with properly formatted sender from Collection Workflow
       const { sendEmail } = await import("./services/sendgrid");
