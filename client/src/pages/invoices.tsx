@@ -46,8 +46,6 @@ export default function Invoices() {
   const [customersCurrentPage, setCustomersCurrentPage] = useState(1);
   const [customersItemsPerPage, setCustomersItemsPerPage] = useState(50);
 
-  // Hold state for invoices
-  const [heldInvoices, setHeldInvoices] = useState<Set<string>>(new Set());
   
   // Hold state for customers
   const [heldCustomers, setHeldCustomers] = useState<Set<string>>(new Set());
@@ -167,7 +165,7 @@ export default function Invoices() {
       
       let matchesStatus = true;
       if (statusFilter !== "all") {
-        const isHeld = heldInvoices.has(invoice.id);
+        const isHeld = invoice.isOnHold;
         
         if (statusFilter === "on-hold") {
           // Show only held invoices
@@ -491,17 +489,61 @@ export default function Invoices() {
     return 0;
   };
 
+  // Mutations for hold/unhold operations
+  const holdInvoiceMutation = useMutation({
+    mutationFn: (invoiceId: string) => apiRequest(`/api/invoices/${invoiceId}/hold`, {
+      method: 'PUT',
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries(["/api/invoices"]);
+      toast({
+        title: "Invoice Placed On Hold",
+        description: "Invoice has been removed from the collections workflow.",
+        className: "bg-white border-gray-200",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Failed to place invoice on hold. Please try again.",
+        variant: "destructive",
+        className: "bg-white border-gray-200",
+      });
+    }
+  });
+
+  const unholdInvoiceMutation = useMutation({
+    mutationFn: (invoiceId: string) => apiRequest(`/api/invoices/${invoiceId}/unhold`, {
+      method: 'PUT',
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries(["/api/invoices"]);
+      toast({
+        title: "Invoice Activated",
+        description: "Invoice has been returned to the collections workflow.",
+        className: "bg-white border-gray-200",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Failed to activate invoice. Please try again.",
+        variant: "destructive",
+        className: "bg-white border-gray-200",
+      });
+    }
+  });
+
   // Function to toggle hold status for invoices
   const toggleHoldStatus = (invoiceId: string) => {
-    setHeldInvoices(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(invoiceId)) {
-        newSet.delete(invoiceId);
-      } else {
-        newSet.add(invoiceId);
-      }
-      return newSet;
-    });
+    const invoice = (invoices as any[]).find(inv => inv.id === invoiceId);
+    if (!invoice) return;
+
+    if (invoice.isOnHold) {
+      unholdInvoiceMutation.mutate(invoiceId);
+    } else {
+      holdInvoiceMutation.mutate(invoiceId);
+    }
   };
 
   // Function to toggle hold status for customers
@@ -709,11 +751,8 @@ export default function Invoices() {
     
     switch (action) {
       case 'hold':
-        setHeldInvoices(prev => {
-          const newSet = new Set(prev);
-          invoiceIds.forEach(id => newSet.add(id));
-          return newSet;
-        });
+        // Hold multiple invoices
+        invoiceIds.forEach(id => holdInvoiceMutation.mutate(id));
         toast({
           title: "Invoices Placed On Hold",
           description: `${invoiceIds.length} invoice(s) have been removed from the collections workflow.`,
@@ -721,11 +760,8 @@ export default function Invoices() {
         });
         break;
       case 'active':
-        setHeldInvoices(prev => {
-          const newSet = new Set(prev);
-          invoiceIds.forEach(id => newSet.delete(id));
-          return newSet;
-        });
+        // Unhold multiple invoices
+        invoiceIds.forEach(id => unholdInvoiceMutation.mutate(id));
         toast({
           title: "Invoices Activated",
           description: `${invoiceIds.length} invoice(s) have been returned to the collections workflow.`,
@@ -1537,7 +1573,7 @@ export default function Invoices() {
                           </td>
                           <td className="py-2 w-52">
                             <div className="flex space-x-1 justify-end">
-                              {heldInvoices.has(invoice.id) && (
+                              {invoice.isOnHold && (
                                 <Button 
                                   variant="outline" 
                                   size="sm"

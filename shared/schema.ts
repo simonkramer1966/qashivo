@@ -90,6 +90,7 @@ export const invoices = pgTable("invoices", {
   taxAmount: decimal("tax_amount", { precision: 10, scale: 2 }).default("0"),
   status: varchar("status").notNull().default("pending"), // pending, paid, overdue, cancelled
   collectionStage: varchar("collection_stage").default("initial"), // initial, reminder_1, reminder_2, formal_notice, final_notice, escalated
+  isOnHold: boolean("is_on_hold").default(false), // whether invoice is on hold (excluded from collections workflow)
   issueDate: timestamp("issue_date").notNull(),
   dueDate: timestamp("due_date").notNull(),
   paidDate: timestamp("paid_date"),

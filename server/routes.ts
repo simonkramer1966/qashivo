@@ -643,6 +643,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Hold invoice endpoint
+  app.put("/api/invoices/:id/hold", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const invoice = await storage.updateInvoice(req.params.id, user.tenantId, {
+        isOnHold: true,
+      });
+
+      res.json(invoice);
+    } catch (error) {
+      console.error("Error holding invoice:", error);
+      res.status(500).json({ message: "Failed to hold invoice" });
+    }
+  });
+
+  // Unhold invoice endpoint
+  app.put("/api/invoices/:id/unhold", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const invoice = await storage.updateInvoice(req.params.id, user.tenantId, {
+        isOnHold: false,
+      });
+
+      res.json(invoice);
+    } catch (error) {
+      console.error("Error unholding invoice:", error);
+      res.status(500).json({ message: "Failed to unhold invoice" });
+    }
+  });
+
   app.post("/api/invoices", isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.claims.sub);
