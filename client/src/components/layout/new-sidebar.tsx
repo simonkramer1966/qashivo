@@ -216,7 +216,7 @@ export default function NewSidebar() {
               <DropdownMenuContent className="w-56 bg-white border-gray-200" align="start" side="bottom">
                 {/* Change Organisation - Regular menu item that opens modal */}
                 <DropdownMenuItem 
-                  className="pl-4 pr-3 py-3 cursor-pointer text-[#17B6C3] hover:bg-gray-50"
+                  className="pl-7 pr-3 py-3 cursor-pointer text-[#17B6C3] hover:bg-gray-50"
                   onClick={() => setShowOrgModal(true)}
                   data-testid="menu-item-change-organization"
                 >
@@ -234,7 +234,7 @@ export default function NewSidebar() {
                 
                 {/* Core Menu Items */}
                 <DropdownMenuItem 
-                  className="pl-4 pr-3 py-3 cursor-pointer hover:bg-gray-50"
+                  className="pl-7 pr-3 py-3 cursor-pointer hover:bg-gray-50"
                   onClick={() => setLocation('/settings')}
                   data-testid="menu-item-settings"
                 >
@@ -244,13 +244,13 @@ export default function NewSidebar() {
                 <DropdownMenuSeparator />
                 
                 {/* Section Header */}
-                <div className="pl-4 pr-3 py-3 text-xs font-medium text-gray-500 bg-gray-50">
+                <div className="pl-7 pr-3 py-3 text-xs font-medium text-gray-500 bg-gray-50">
                   Do more with Nexus
                 </div>
                 
                 {/* Nexus-specific Items */}
                 <DropdownMenuItem 
-                  className="pl-4 pr-3 py-3 cursor-pointer hover:bg-gray-50"
+                  className="pl-7 pr-3 py-3 cursor-pointer hover:bg-gray-50"
                   onClick={() => setLocation('/reports')}
                   data-testid="menu-item-kpi"
                 >
@@ -258,7 +258,7 @@ export default function NewSidebar() {
                 </DropdownMenuItem>
                 
                 <DropdownMenuItem 
-                  className="pl-4 pr-3 py-3 cursor-pointer hover:bg-gray-50"
+                  className="pl-7 pr-3 py-3 cursor-pointer hover:bg-gray-50"
                   onClick={() => setLocation('/hr')}
                   data-testid="menu-item-hr"
                 >
@@ -266,7 +266,7 @@ export default function NewSidebar() {
                 </DropdownMenuItem>
                 
                 <DropdownMenuItem 
-                  className="pl-4 pr-3 py-3 cursor-pointer hover:bg-gray-50"
+                  className="pl-7 pr-3 py-3 cursor-pointer hover:bg-gray-50"
                   onClick={() => setLocation('/legal')}
                   data-testid="menu-item-legal"
                 >
@@ -277,7 +277,7 @@ export default function NewSidebar() {
                 
                 {/* Bottom Section */}
                 <DropdownMenuItem 
-                  className="pl-4 pr-3 py-3 cursor-pointer hover:bg-gray-50"
+                  className="pl-7 pr-3 py-3 cursor-pointer hover:bg-gray-50"
                   onClick={() => setLocation('/owner')}
                   data-testid="menu-item-my-nexus"
                 >
