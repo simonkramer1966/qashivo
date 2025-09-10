@@ -284,7 +284,6 @@ export default function Invoices() {
                     <FileText className="h-8 w-8 text-[#17B6C3]" />
                   </div>
                   <p className="text-lg font-semibold text-slate-900 mb-2">No invoices found</p>
-                  <p className="text-sm text-muted-foreground">Try adjusting your filters or search terms</p>
                 </div>
               ) : (
                 <div className="overflow-x-auto">
