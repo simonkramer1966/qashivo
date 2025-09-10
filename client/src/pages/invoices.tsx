@@ -1743,6 +1743,128 @@ export default function Invoices() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Payment Plan Dialog */}
+      <Dialog open={showPaymentPlanDialog} onOpenChange={setShowPaymentPlanDialog}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden bg-white">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Calendar className="h-5 w-5 text-[#17B6C3]" />
+              Payment Plan Setup
+            </DialogTitle>
+            <DialogDescription>
+              {paymentPlanInvoice && (
+                <>
+                  Set up a payment plan for invoice <strong>{paymentPlanInvoice.invoiceNumber}</strong> - 
+                  ${Number(paymentPlanInvoice.amount).toLocaleString()} for <strong>{paymentPlanInvoice.contact?.companyName || 'Unknown Company'}</strong>
+                </>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="py-6">
+            <div className="text-center py-12">
+              <Calendar className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Payment Plan Management</h3>
+              <p className="text-gray-600 mb-4">
+                Configure payment schedules, installment amounts, and due dates for this invoice.
+              </p>
+              <p className="text-sm text-gray-500">
+                Payment plan functionality will be implemented here, including:
+              </p>
+              <ul className="text-sm text-gray-500 mt-2 text-left max-w-md mx-auto">
+                <li>• Installment schedule setup</li>
+                <li>• Payment amount configuration</li>
+                <li>• Due date management</li>
+                <li>• Automatic reminder settings</li>
+                <li>• Progress tracking</li>
+              </ul>
+            </div>
+          </div>
+          
+          <div className="flex justify-end space-x-2 pt-4 border-t border-gray-200">
+            <Button 
+              variant="outline" 
+              onClick={() => setShowPaymentPlanDialog(false)}
+            >
+              Cancel
+            </Button>
+            <Button 
+              className="bg-[#17B6C3] hover:bg-[#1396A1] text-white"
+              onClick={() => {
+                toast({
+                  title: "Payment Plan Feature",
+                  description: "Payment plan functionality coming soon.",
+                });
+                setShowPaymentPlanDialog(false);
+              }}
+            >
+              Set Up Plan
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dispute Dialog */}
+      <Dialog open={showDisputeDialog} onOpenChange={setShowDisputeDialog}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden bg-white">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertCircle className="h-5 w-5 text-[#17B6C3]" />
+              Dispute Management
+            </DialogTitle>
+            <DialogDescription>
+              {disputeInvoice && (
+                <>
+                  Manage dispute for invoice <strong>{disputeInvoice.invoiceNumber}</strong> - 
+                  ${Number(disputeInvoice.amount).toLocaleString()} for <strong>{disputeInvoice.contact?.companyName || 'Unknown Company'}</strong>
+                </>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="py-6">
+            <div className="text-center py-12">
+              <AlertCircle className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Dispute Resolution</h3>
+              <p className="text-gray-600 mb-4">
+                Track and manage customer disputes, documentation, and resolution process.
+              </p>
+              <p className="text-sm text-gray-500">
+                Dispute management functionality will be implemented here, including:
+              </p>
+              <ul className="text-sm text-gray-500 mt-2 text-left max-w-md mx-auto">
+                <li>• Dispute reason tracking</li>
+                <li>• Documentation upload</li>
+                <li>• Resolution timeline</li>
+                <li>• Communication logs</li>
+                <li>• Status updates</li>
+              </ul>
+            </div>
+          </div>
+          
+          <div className="flex justify-end space-x-2 pt-4 border-t border-gray-200">
+            <Button 
+              variant="outline" 
+              onClick={() => setShowDisputeDialog(false)}
+            >
+              Cancel
+            </Button>
+            <Button 
+              className="bg-[#17B6C3] hover:bg-[#1396A1] text-white"
+              onClick={() => {
+                toast({
+                  title: "Dispute Management Feature",
+                  description: "Dispute management functionality coming soon.",
+                });
+                setShowDisputeDialog(false);
+              }}
+            >
+              Manage Dispute
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
