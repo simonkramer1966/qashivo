@@ -491,7 +491,7 @@ export default function Invoices() {
 
   // Mutations for hold/unhold operations
   const holdInvoiceMutation = useMutation({
-    mutationFn: (invoiceId: string) => apiRequest(`/api/invoices/${invoiceId}/hold`, 'PUT'),
+    mutationFn: (invoiceId: string) => apiRequest('PUT', `/api/invoices/${invoiceId}/hold`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
       toast({
@@ -511,7 +511,7 @@ export default function Invoices() {
   });
 
   const unholdInvoiceMutation = useMutation({
-    mutationFn: (invoiceId: string) => apiRequest(`/api/invoices/${invoiceId}/unhold`, 'PUT'),
+    mutationFn: (invoiceId: string) => apiRequest('PUT', `/api/invoices/${invoiceId}/unhold`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
       toast({
