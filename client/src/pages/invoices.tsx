@@ -373,17 +373,17 @@ export default function Invoices() {
                                     <MessageSquare className="mr-2 h-4 w-4" />
                                     Thank You Message
                                   </DropdownMenuItem>
+                                  
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuLabel className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                                    SMS
+                                  </DropdownMenuLabel>
                                   <DropdownMenuItem 
                                     data-testid={`menu-general-reminder-${invoice.id}`}
                                   >
                                     <Clock className="mr-2 h-4 w-4" />
                                     General Reminder
                                   </DropdownMenuItem>
-                                  
-                                  <DropdownMenuSeparator />
-                                  <DropdownMenuLabel className="text-xs font-medium text-gray-500 uppercase tracking-wide">
-                                    SMS
-                                  </DropdownMenuLabel>
                                   <DropdownMenuItem 
                                     data-testid={`menu-thank-you-sms-${invoice.id}`}
                                   >
