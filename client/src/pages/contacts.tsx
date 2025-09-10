@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Plus, Search, Mail, Phone, Building, User, Users, ChevronUp, ChevronDown } from "lucide-react";
+import { Plus, Search, Mail, Phone, Building, User, Users, ChevronUp, ChevronDown, Star } from "lucide-react";
 
 export default function Customers() {
   const { toast } = useToast();
@@ -72,6 +72,37 @@ export default function Customers() {
     return sortDirection === "asc" ? 
       <ChevronUp className="h-3 w-3 text-slate-700" /> : 
       <ChevronDown className="h-3 w-3 text-slate-700" />;
+  };
+
+  // Generate a consistent random rating (1-5) based on customer ID
+  const getCustomerRating = (customerId: string) => {
+    // Create a simple hash from customer ID to ensure consistent ratings
+    let hash = 0;
+    for (let i = 0; i < customerId.length; i++) {
+      const char = customerId.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash; // Convert to 32-bit integer
+    }
+    // Return rating between 1-5
+    return Math.abs(hash % 5) + 1;
+  };
+
+  // Render star rating
+  const renderStarRating = (rating: number) => {
+    return (
+      <div className="flex items-center space-x-0.5">
+        {[1, 2, 3, 4, 5].map((star) => (
+          <Star
+            key={star}
+            className={`h-4 w-4 ${
+              star <= rating 
+                ? "text-yellow-400 fill-yellow-400" 
+                : "text-gray-200 fill-gray-200"
+            }`}
+          />
+        ))}
+      </div>
+    );
   };
 
   const filteredContacts = (contacts as any[]).filter((contact: any) => {
@@ -190,6 +221,9 @@ export default function Customers() {
                           </button>
                         </th>
                         <th className="text-left py-3 text-sm font-medium text-muted-foreground">
+                          <span>Rating</span>
+                        </th>
+                        <th className="text-left py-3 text-sm font-medium text-muted-foreground">
                           <button 
                             onClick={() => handleSort("phone")}
                             className="flex items-center space-x-1 hover:text-slate-900"
@@ -229,6 +263,9 @@ export default function Customers() {
                             <div className="text-sm text-muted-foreground" data-testid={`text-contact-name-${contact.id}`}>
                               {contact.name || 'No contact name'}
                             </div>
+                          </td>
+                          <td className="py-4" data-testid={`cell-rating-${contact.id}`}>
+                            {renderStarRating(getCustomerRating(contact.id))}
                           </td>
                           <td className="py-4">
                             <div className="font-medium text-foreground" data-testid={`text-phone-${contact.id}`}>
