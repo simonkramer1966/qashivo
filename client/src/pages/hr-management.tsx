@@ -122,7 +122,7 @@ export default function HRManagement() {
             </Badge>
             <h1 className="text-5xl md:text-7xl font-bold text-white mb-8" data-testid="text-hero-title">
               Replace Your HR Department
-              <span className="block text-4xl md:text-5xl mt-4 text-[#17B6C3]">
+              <span className="block text-4xl md:text-5xl mt-4 text-white">
                 with AI Automation
               </span>
             </h1>
