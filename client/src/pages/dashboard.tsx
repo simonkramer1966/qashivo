@@ -54,10 +54,10 @@ export default function Dashboard() {
   return (
     <div className="flex h-screen page-gradient">
       <NewSidebar />
-      <main className="flex-1 overflow-y-auto bg-white">
+      <main className="flex-1 overflow-y-auto">
         <Header title="Dashboard" subtitle="Overview of your accounts receivable performance" />
         
-        <div className="p-8 space-y-8 bg-white">
+        <div className="p-8 space-y-8">
           <Suspense fallback={<div className="h-32 animate-pulse bg-gray-100 rounded-lg" />}>
             <MetricsOverview />
           </Suspense>

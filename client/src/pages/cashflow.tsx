@@ -44,13 +44,13 @@ export default function Cashflow() {
   return (
     <div className="flex h-screen page-gradient">
       <NewSidebar />
-      <main className="flex-1 overflow-y-auto bg-white">
+      <main className="flex-1 overflow-y-auto">
         <Header 
           title="Cashflow Analytics" 
           subtitle="Monitor and forecast your business cash position"
         />
         
-        <div className="p-8 space-y-8 bg-white">
+        <div className="p-8 space-y-8">
           {/* Key Metrics Row */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
             <Card className="bg-white border border-gray-200 shadow-sm hover:shadow-md transition-shadow" data-testid="card-net-cashflow">
