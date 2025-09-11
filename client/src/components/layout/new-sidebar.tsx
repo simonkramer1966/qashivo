@@ -24,7 +24,8 @@ import {
   RefreshCw,
   Plus,
   Search,
-  X
+  X,
+  Gauge
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -41,8 +42,8 @@ import { cn } from "@/lib/utils";
 import nexusLogo from "@assets/Main Nexus Logo copy_1756923544828.png";
 
 const navigationItems = [
-  { name: "Dashboard", href: "/", icon: BarChart3 },
-  { name: "Cashflow", href: "/cashflow", icon: TrendingUp },
+  { name: "Cashboard", href: "/", icon: Gauge },
+  { name: "Advanced Cashflow", href: "/cashflow", icon: TrendingUp },
   { name: "Customers", href: "/customers", icon: Users },
   { name: "Invoices", href: "/invoices", icon: FileText },
   { name: "Invoice Health", href: "/health-dashboard", icon: Activity },

@@ -23,6 +23,7 @@ import UIXero from "@/pages/ui-xero";
 import UIQuickBooks from "@/pages/ui-quickbooks";
 import UISage from "@/pages/ui-sage";
 import Cashflow from "@/pages/cashflow";
+import Cashboard from "@/pages/cashboard";
 import Features from "@/pages/features";
 import AiCapabilities from "@/pages/ai-capabilities";
 import Pricing from "@/pages/pricing";
@@ -67,6 +68,7 @@ function Router() {
   ) : (
     <Switch>
       <Route path="/ai-cfo" component={AiCfo} />
+      <Route path="/cashboard" component={Cashboard} />
       <Route path="/cashflow" component={Cashflow} />
       <Route path="/customers" component={Contacts} />
       <Route path="/invoices" component={Invoices} />
@@ -88,7 +90,7 @@ function Router() {
       <Route path="/subscribe" component={Subscribe} />
       <Route path="/owner" component={OwnerDashboard} />
       <Route path="/test-dialog" component={TestCommunicationDialog} />
-      <Route path="/" component={Dashboard} />
+      <Route path="/" component={Cashboard} />
       <Route path="/:rest*" component={NotFound} />
     </Switch>
   );
