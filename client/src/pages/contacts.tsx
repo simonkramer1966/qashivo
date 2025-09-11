@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Search, Mail, Phone, Building, User, Users, ChevronUp, ChevronDown, Star, MoreHorizontal, Eye, MessageSquare, Calendar, AlertCircle, CheckCircle, Pause } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel } from "@/components/ui/dropdown-menu";
+import { CommunicationPreviewDialog } from "@/components/ui/communication-preview-dialog";
 
 export default function Customers() {
   const { toast } = useToast();
@@ -21,6 +22,13 @@ export default function Customers() {
   const [search, setSearch] = useState("");
   const [sortField, setSortField] = useState<string>("");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+  
+  // Communication dialog state
+  const [communicationDialog, setCommunicationDialog] = useState({
+    isOpen: false,
+    type: 'email' as 'email' | 'sms' | 'voice',
+    contactId: '',
+  });
 
   // Redirect to home if not authenticated
   useEffect(() => {
@@ -52,6 +60,48 @@ export default function Customers() {
   const { data: assignments = [] } = useQuery({
     queryKey: ["/api/collections/customer-assignments"],
     enabled: isAuthenticated,
+  });
+
+  // Mutation for sending communications
+  const sendCommunicationMutation = useMutation({
+    mutationFn: async ({ type, content, recipient, subject, contactId }: {
+      type: 'email' | 'sms' | 'voice';
+      content: string;
+      recipient: string;
+      subject?: string;
+      contactId: string;
+    }) => {
+      const endpoint = `/api/communications/send-${type}`;
+      const payload: any = {
+        content,
+        recipient,
+        contactId,
+      };
+      
+      if (type === 'email' && subject) {
+        payload.subject = subject;
+      }
+      
+      const response = await apiRequest('POST', endpoint, payload);
+      return response.json();
+    },
+    onSuccess: (data, variables) => {
+      const typeLabel = variables.type === 'email' ? 'Email' : 
+                       variables.type === 'sms' ? 'SMS' : 'Voice call';
+      toast({
+        title: "Communication Sent",
+        description: `${typeLabel} sent successfully to ${variables.recipient}`,
+      });
+    },
+    onError: (error: any, variables) => {
+      const typeLabel = variables.type === 'email' ? 'email' : 
+                       variables.type === 'sms' ? 'SMS' : 'voice call';
+      toast({
+        title: "Communication Failed",
+        description: `Failed to send ${typeLabel}. Please try again.`,
+        variant: "destructive",
+      });
+    },
   });
 
   // Mutation for updating customer schedule assignments
@@ -166,6 +216,40 @@ export default function Customers() {
   const handleScheduleChange = (contactId: string, scheduleId: string) => {
     const newScheduleId = scheduleId === "none" ? null : scheduleId;
     updateAssignmentMutation.mutate({ contactId, scheduleId: newScheduleId });
+  };
+
+  // Handle communication dialog opening
+  const openCommunicationDialog = (type: 'email' | 'sms' | 'voice', contactId: string) => {
+    setCommunicationDialog({
+      isOpen: true,
+      type,
+      contactId,
+    });
+  };
+
+  // Handle communication dialog closing
+  const closeCommunicationDialog = () => {
+    setCommunicationDialog({
+      isOpen: false,
+      type: 'email',
+      contactId: '',
+    });
+  };
+
+  // Handle sending communication from dialog
+  const handleSendCommunication = (data: {
+    subject?: string;
+    content: string;
+    recipient: string;
+    templateId?: string;
+  }) => {
+    sendCommunicationMutation.mutate({
+      type: communicationDialog.type,
+      content: data.content,
+      recipient: data.recipient,
+      subject: data.subject,
+      contactId: communicationDialog.contactId,
+    });
   };
 
   const filteredContacts = (contacts as any[]).filter((contact: any) => {
@@ -400,6 +484,7 @@ export default function Customers() {
                                   </DropdownMenuLabel>
                                   <DropdownMenuItem 
                                     disabled={!contact.email}
+                                    onClick={() => openCommunicationDialog('email', contact.id)}
                                     data-testid={`menu-send-email-${contact.id}`}
                                   >
                                     <Mail className="mr-2 h-4 w-4" />
@@ -407,6 +492,7 @@ export default function Customers() {
                                   </DropdownMenuItem>
                                   <DropdownMenuItem 
                                     disabled={!contact.phone}
+                                    onClick={() => openCommunicationDialog('sms', contact.id)}
                                     data-testid={`menu-send-sms-${contact.id}`}
                                   >
                                     <MessageSquare className="mr-2 h-4 w-4" />
@@ -414,6 +500,7 @@ export default function Customers() {
                                   </DropdownMenuItem>
                                   <DropdownMenuItem 
                                     disabled={!contact.phone}
+                                    onClick={() => openCommunicationDialog('voice', contact.id)}
                                     data-testid={`menu-call-customer-${contact.id}`}
                                   >
                                     <Phone className="mr-2 h-4 w-4" />
@@ -476,6 +563,16 @@ export default function Customers() {
           </Card>
         </div>
       </main>
+      
+      {/* Communication Preview Dialog */}
+      <CommunicationPreviewDialog
+        isOpen={communicationDialog.isOpen}
+        onClose={closeCommunicationDialog}
+        type={communicationDialog.type}
+        context="customer"
+        contextId={communicationDialog.contactId}
+        onSend={handleSendCommunication}
+      />
     </div>
   );
 }
