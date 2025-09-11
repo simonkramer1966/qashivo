@@ -108,7 +108,7 @@ function VoiceStateNode({ data, selected }: { data: any; selected: boolean }) {
   const Icon = stateType?.icon || MessageSquare;
 
   return (
-    <div className={`px-4 py-3 shadow-lg rounded-lg bg-white border-2 min-w-[200px] ${
+    <div className={`px-4 py-3 shadow-lg rounded-lg bg-white/70 backdrop-blur-sm border-2 border-gray-200/30 min-w-[200px] ${
       selected ? 'border-[#17B6C3]' : 'border-gray-200'
     }`}>
       <div className="flex items-center space-x-3">
@@ -356,7 +356,7 @@ export default function VoiceWorkflowBuilder({ workflowId }: VoiceWorkflowBuilde
                 Add State
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[500px] bg-white border border-gray-200">
+            <DialogContent className="sm:max-w-[500px] bg-white/70 backdrop-blur-sm border border-gray-200/30">
               <DialogHeader>
                 <DialogTitle>Add Voice State</DialogTitle>
               </DialogHeader>
@@ -388,7 +388,7 @@ export default function VoiceWorkflowBuilder({ workflowId }: VoiceWorkflowBuilde
                               <SelectValue placeholder="Select state type" />
                             </SelectTrigger>
                           </FormControl>
-                          <SelectContent className="bg-white border-gray-200">
+                          <SelectContent className="bg-white/70 backdrop-blur-sm border border-gray-200/30">
                             {Object.entries(VOICE_STATE_TYPES).map(([key, type]) => {
                               const Icon = type.icon;
                               return (
@@ -441,7 +441,7 @@ export default function VoiceWorkflowBuilder({ workflowId }: VoiceWorkflowBuilde
                 Add Transition
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[500px] bg-white border border-gray-200">
+            <DialogContent className="sm:max-w-[500px] bg-white/70 backdrop-blur-sm border border-gray-200/30">
               <DialogHeader>
                 <DialogTitle>Add Voice Transition</DialogTitle>
               </DialogHeader>
@@ -488,7 +488,7 @@ export default function VoiceWorkflowBuilder({ workflowId }: VoiceWorkflowBuilde
                                 <SelectValue placeholder="Select from state" />
                               </SelectTrigger>
                             </FormControl>
-                            <SelectContent className="bg-white border-gray-200">
+                            <SelectContent className="bg-white/70 backdrop-blur-sm border border-gray-200/30">
                               {nodes.map((node) => (
                                 <SelectItem key={node.id} value={node.id}>
                                   {node.data.name as string}
@@ -513,7 +513,7 @@ export default function VoiceWorkflowBuilder({ workflowId }: VoiceWorkflowBuilde
                                 <SelectValue placeholder="Select to state" />
                               </SelectTrigger>
                             </FormControl>
-                            <SelectContent className="bg-white border-gray-200">
+                            <SelectContent className="bg-white/70 backdrop-blur-sm border border-gray-200/30">
                               {nodes.map((node) => (
                                 <SelectItem key={node.id} value={node.id}>
                                   {node.data.name as string}
@@ -553,7 +553,7 @@ export default function VoiceWorkflowBuilder({ workflowId }: VoiceWorkflowBuilde
       </div>
 
       {/* React Flow Canvas */}
-      <Card className="bg-white border border-gray-200 shadow-sm">
+      <Card className="bg-white/70 backdrop-blur-sm border border-gray-200/30 shadow-sm">
         <CardContent className="p-0">
           <div style={{ width: '100%', height: '600px' }}>
             <ReactFlow
@@ -611,7 +611,7 @@ export default function VoiceWorkflowBuilder({ workflowId }: VoiceWorkflowBuilde
 
       {/* Selected Node Details */}
       {selectedNode && (
-        <Card className="bg-white border border-gray-200 shadow-sm">
+        <Card className="bg-white/70 backdrop-blur-sm border border-gray-200/30 shadow-sm">
           <CardHeader>
             <CardTitle className="text-lg">State Configuration</CardTitle>
           </CardHeader>

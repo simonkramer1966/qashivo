@@ -417,7 +417,7 @@ export default function CollectionScheduleBuilder({ className }: CollectionSched
 
       {/* Create/Edit Schedule Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-white">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-white/70 backdrop-blur-sm border border-gray-200/30">
           <DialogHeader>
             <DialogTitle>
               {editingSchedule ? 'Edit Collection Schedule' : 'Create New Collection Schedule'}
@@ -641,7 +641,7 @@ export default function CollectionScheduleBuilder({ className }: CollectionSched
                                   <SelectTrigger className="w-24" data-testid={`select-step-delay-unit-${step.id}`}>
                                     <SelectValue />
                                   </SelectTrigger>
-                                  <SelectContent className="bg-white">
+                                  <SelectContent className="bg-white/70 backdrop-blur-sm border border-gray-200/30">
                                     <SelectItem value="hours">Hours</SelectItem>
                                     <SelectItem value="days">Days</SelectItem>
                                     <SelectItem value="weeks">Weeks</SelectItem>
@@ -661,7 +661,7 @@ export default function CollectionScheduleBuilder({ className }: CollectionSched
                                   <SelectTrigger data-testid={`select-step-template-${step.id}`}>
                                     <SelectValue placeholder="Select template" />
                                   </SelectTrigger>
-                                  <SelectContent className="bg-white">
+                                  <SelectContent className="bg-white/70 backdrop-blur-sm border border-gray-200/30">
                                     {availableTemplates.map((template: CommunicationTemplate) => (
                                       <SelectItem key={template.id} value={template.id}>
                                         {template.name}

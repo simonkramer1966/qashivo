@@ -284,7 +284,7 @@ export default function TemplateManagement({ className }: TemplateManagementProp
                 return (
                   <div
                     key={template.id}
-                    className="bg-white p-4 rounded-lg shadow-sm border border-yellow-200"
+                    className="bg-white/70 backdrop-blur-sm p-4 rounded-lg shadow-sm border border-yellow-200/30"
                   >
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-2">
@@ -317,14 +317,14 @@ export default function TemplateManagement({ className }: TemplateManagementProp
       )}
 
       {/* Filters and Categories */}
-      <div className="flex flex-wrap gap-4 items-center bg-white p-4 rounded-lg shadow-sm">
+      <div className="flex flex-wrap gap-4 items-center bg-white/70 backdrop-blur-sm p-4 rounded-lg shadow-sm border border-gray-200/30">
         <div className="flex items-center gap-2">
           <Label htmlFor="category-filter">Category:</Label>
           <Select value={selectedCategory} onValueChange={setSelectedCategory}>
             <SelectTrigger className="w-[200px]" id="category-filter">
               <SelectValue placeholder="All Categories" />
             </SelectTrigger>
-            <SelectContent className="bg-white">
+            <SelectContent className="bg-white/70 backdrop-blur-sm border border-gray-200/30">
               <SelectItem value="all">All Categories</SelectItem>
               {templateCategories.map(category => (
                 <SelectItem key={category.value} value={category.value}>
@@ -341,7 +341,7 @@ export default function TemplateManagement({ className }: TemplateManagementProp
             <SelectTrigger className="w-[150px]" id="type-filter">
               <SelectValue placeholder="All Types" />
             </SelectTrigger>
-            <SelectContent className="bg-white">
+            <SelectContent className="bg-white/70 backdrop-blur-sm border border-gray-200/30">
               <SelectItem value="all">All Types</SelectItem>
               <SelectItem value="email">Email</SelectItem>
               <SelectItem value="sms">SMS</SelectItem>
@@ -441,7 +441,7 @@ export default function TemplateManagement({ className }: TemplateManagementProp
 
       {/* Create/Edit Template Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-white">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-white/70 backdrop-blur-sm border border-gray-200/30">
           <DialogHeader>
             <DialogTitle>
               {editingTemplate ? 'Edit Template' : 'Create New Template'}
@@ -477,7 +477,7 @@ export default function TemplateManagement({ className }: TemplateManagementProp
                             <SelectValue placeholder="Select type" />
                           </SelectTrigger>
                         </FormControl>
-                        <SelectContent className="bg-white">
+                        <SelectContent className="bg-white/70 backdrop-blur-sm border border-gray-200/30">
                           <SelectItem value="email">Email</SelectItem>
                           <SelectItem value="sms">SMS</SelectItem>
                           <SelectItem value="whatsapp">WhatsApp</SelectItem>
@@ -502,7 +502,7 @@ export default function TemplateManagement({ className }: TemplateManagementProp
                             <SelectValue placeholder="Select category" />
                           </SelectTrigger>
                         </FormControl>
-                        <SelectContent className="bg-white">
+                        <SelectContent className="bg-white/70 backdrop-blur-sm border border-gray-200/30">
                           {templateCategories.map(category => (
                             <SelectItem key={category.value} value={category.value}>
                               {category.label}
@@ -548,7 +548,7 @@ export default function TemplateManagement({ className }: TemplateManagementProp
                             <SelectValue placeholder="Select tone" />
                           </SelectTrigger>
                         </FormControl>
-                        <SelectContent className="bg-white">
+                        <SelectContent className="bg-white/70 backdrop-blur-sm border border-gray-200/30">
                           <SelectItem value="friendly">Friendly</SelectItem>
                           <SelectItem value="professional">Professional</SelectItem>
                           <SelectItem value="firm">Firm</SelectItem>

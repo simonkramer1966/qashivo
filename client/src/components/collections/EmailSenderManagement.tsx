@@ -241,7 +241,7 @@ export default function EmailSenderManagement({ className }: EmailSenderManageme
 
       {/* Create/Edit Sender Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-lg bg-white">
+        <DialogContent className="max-w-lg bg-white/70 backdrop-blur-sm border border-gray-200/30">
           <DialogHeader>
             <DialogTitle>
               {editingSender ? 'Edit Email Sender' : 'Add New Email Sender'}
