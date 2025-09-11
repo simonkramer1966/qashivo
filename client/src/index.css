@@ -404,3 +404,207 @@
   border-radius: 16px !important;
   box-shadow: var(--glass-shadow-strong) !important;
 }
+
+/* ==== ENHANCED DASHBOARD STYLING ==== */
+
+/* Gradient Cards for Dashboard */
+.gradient-card {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.7) 100%);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  @apply rounded-xl transition-all duration-300;
+}
+
+.gradient-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+/* Dashboard Section Organization */
+.dashboard-section {
+  @apply space-y-6 mb-8;
+}
+
+.dashboard-section-header {
+  @apply flex items-center justify-between mb-6;
+}
+
+.dashboard-section-title {
+  @apply flex items-center space-x-2;
+}
+
+.dashboard-section-title h2 {
+  @apply text-xl font-bold text-slate-900 dark:text-slate-100;
+}
+
+/* Enhanced Chart Containers */
+.chart-container {
+  @apply w-full h-full;
+}
+
+.chart-tooltip {
+  background: var(--glass-bg-strong);
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow-strong);
+  @apply rounded-lg p-3 text-sm;
+}
+
+/* Dashboard Mobile Optimizations */
+@media (max-width: 768px) {
+  .dashboard-section {
+    @apply space-y-4 mb-6;
+  }
+  
+  .dashboard-section-header {
+    @apply flex-col items-start space-y-2 mb-4;
+  }
+  
+  .glass-card {
+    @apply mx-2;
+  }
+}
+
+/* Enhanced Status Badges */
+.status-badge-success {
+  @apply bg-emerald-100 text-emerald-800 border-emerald-200;
+}
+
+.status-badge-warning {
+  @apply bg-amber-100 text-amber-800 border-amber-200;
+}
+
+.status-badge-error {
+  @apply bg-red-100 text-red-800 border-red-200;
+}
+
+.status-badge-info {
+  @apply bg-blue-100 text-blue-800 border-blue-200;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .glass-card, .gradient-card {
+    border: 2px solid rgba(0, 0, 0, 0.3);
+    background: rgba(255, 255, 255, 0.95);
+  }
+  
+  .dark .glass-card, .dark .gradient-card {
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    background: rgba(0, 0, 0, 0.95);
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .glass-card-hover,
+  .metrics-card,
+  .gradient-card {
+    @apply transform-none transition-none;
+  }
+  
+  .dashboard-loading {
+    @apply animate-none;
+  }
+}
+
+/* Custom scrollbar for dashboard */
+.dashboard-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(23, 182, 195, 0.3) transparent;
+}
+
+.dashboard-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.dashboard-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.dashboard-scroll::-webkit-scrollbar-thumb {
+  background: rgba(23, 182, 195, 0.3);
+  border-radius: 3px;
+}
+
+.dashboard-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(23, 182, 195, 0.5);
+}
+
+/* Animation classes for dashboard */
+.fade-in {
+  animation: fadeIn 0.6s ease-in-out;
+}
+
+.slide-up {
+  animation: slideUp 0.6s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Focus indicators for accessibility */
+.focus-ring {
+  @apply focus:outline-none focus:ring-2 focus:ring-[#17B6C3] focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-slate-900;
+}
+
+/* Screen reader only class */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Utility classes */
+.text-primary {
+  @apply text-[#17B6C3];
+}
+
+.bg-primary-light {
+  @apply bg-[#17B6C3]/10;
+}
+
+.border-primary-light {
+  @apply border-[#17B6C3]/20;
+}
+
+.hover-lift {
+  @apply transition-transform duration-300 hover:scale-105 hover:-translate-y-1;
+}
+
+/* Responsive utilities */
+.mobile-stack {
+  @apply flex flex-col sm:flex-row sm:items-center sm:justify-between;
+}
+
+.mobile-hide {
+  @apply hidden sm:block;
+}
+
+.mobile-show {
+  @apply block sm:hidden;
+}
