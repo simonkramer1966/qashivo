@@ -63,7 +63,9 @@ export default {
         },
       },
       fontFamily: {
-        sans: ["Avenir", "system-ui", "sans-serif"],
+        sans: ["Nunito", "system-ui", "sans-serif"],
+        nunito: ["Nunito", "sans-serif"],
+        archivo: ["Archivo", "sans-serif"],
         serif: ["Georgia", "serif"],
         mono: ["Geist Mono", "monospace"],
       },

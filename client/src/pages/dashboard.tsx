@@ -53,7 +53,7 @@ export default function Dashboard() {
 
   return (
     <div className="flex h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-teal-50">
-      {/* <NewSidebar /> */}
+      <NewSidebar />
       <main className="flex-1 overflow-y-auto bg-white">
         <Header title="Dashboard" subtitle="Overview of your accounts receivable performance" />
         

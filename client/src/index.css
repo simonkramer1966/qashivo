@@ -1,119 +1,90 @@
-@import url('https://fonts.googleapis.com/css2?family=Avenir:wght@300;400;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Archivo:wght@300;400;600;700;900&family=Nunito:wght@300;400;500;600;700&display=swap');
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Render reset to guarantee visibility */
-html, body, #root { 
-  position: relative !important; 
-  visibility: visible !important; 
-  opacity: 1 !important; 
-  pointer-events: auto !important; 
-  z-index: 0 !important; 
-  background: #fff; 
-  color: #111; 
-}
-
 @layer base {
   :root {
     --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    --foreground: 210 11% 15%;
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 210 11% 15%;
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
+    --popover-foreground: 210 11% 15%;
+    --primary: 188 74% 42%;
+    --primary-foreground: 0 0% 100%;
     --secondary: 210 40% 96%;
-    --secondary-foreground: 222.2 84% 4.9%;
+    --secondary-foreground: 210 11% 15%;
     --muted: 210 40% 96%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --muted-foreground: 215 16% 47%;
     --accent: 210 40% 96%;
-    --accent-foreground: 222.2 84% 4.9%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
-    --sidebar: 0 0% 100%;
-    --sidebar-foreground: 222.2 84% 4.9%;
-    --sidebar-primary: 221.2 83.2% 53.3%;
-    --sidebar-primary-foreground: 210 40% 98%;
-    --sidebar-accent: 210 40% 96%;
-    --sidebar-accent-foreground: 222.2 84% 4.9%;
-    --sidebar-border: 214.3 31.8% 91.4%;
-    --sidebar-ring: 221.2 83.2% 53.3%;
+    --accent-foreground: 210 11% 15%;
+    --destructive: 0 63% 31%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 188 74% 42%;
     --radius: 0.5rem;
   }
- 
+
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 84% 4.9%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
+    --background: 210 11% 15%;
+    --foreground: 0 0% 100%;
+    --card: 210 11% 15%;
+    --card-foreground: 0 0% 100%;
+    --popover: 210 11% 15%;
+    --popover-foreground: 0 0% 100%;
+    --primary: 188 74% 42%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 217 33% 18%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 217 33% 18%;
+    --muted-foreground: 215 20% 65%;
+    --accent: 217 33% 18%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 63% 31%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 217 33% 18%;
+    --input: 217 33% 18%;
+    --ring: 188 74% 42%;
   }
 }
-
 
 @layer base {
   * {
     @apply border-border;
   }
-
   body {
-    @apply font-sans antialiased bg-white text-gray-900;
-    font-family: 'Avenir', system-ui, sans-serif;
+    @apply bg-background text-foreground;
+    font-family: 'Nunito', sans-serif;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    @apply text-black font-bold;
+    font-family: 'Archivo', sans-serif;
+  }
+  p, span, div, a, button {
+    @apply text-gray-700;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-[#17B6C3] hover:bg-[#1396A1] text-white font-medium px-4 py-2 rounded-lg transition-colors;
   }
   
-  html, body, #root {
-    min-height: 100%;
+  .btn-secondary {
+    @apply border border-[#17B6C3]/20 text-[#17B6C3] hover:bg-[#17B6C3]/5 font-medium px-4 py-2 rounded-lg transition-colors;
+  }
+  
+  .card-glass {
+    @apply bg-white/80 backdrop-blur-sm border border-white/50 shadow-lg rounded-lg;
+  }
+  
+  .metrics-card {
+    @apply bg-white/70 backdrop-blur-md border-0 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 rounded-lg;
+  }
+  
+  .page-gradient {
+    @apply bg-gradient-to-br from-slate-50 via-blue-50 to-teal-50;
   }
 }
-
-.sidebar-active {
-  background-color: hsl(var(--primary));
-  color: hsl(var(--primary-foreground));
-}
-
-.metric-card {
-  transition: transform 0.2s ease-in-out;
-}
-
-.metric-card:hover {
-  transform: translateY(-2px);
-}
-
-.status-overdue { 
-  background-color: hsl(0, 84.2%, 60.2%, 0.1);
-  color: hsl(0, 84.2%, 60.2%);
-}
-
-.status-pending { 
-  background-color: hsl(45, 93%, 47%, 0.1);
-  color: hsl(45, 93%, 47%);
-}
-
-.status-paid { 
-  background-color: hsl(142, 71%, 45%, 0.1);
-  color: hsl(142, 71%, 45%);
-}
-
-.workflow-step {
-  background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(221.2, 83.2%, 43.3%) 100%);
-}
-
