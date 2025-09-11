@@ -360,71 +360,34 @@ export default function Invoices() {
                                   
                                   <DropdownMenuSeparator />
                                   <DropdownMenuLabel className="text-xs font-medium text-gray-500 uppercase tracking-wide">
-                                    Email
+                                    Communication
                                   </DropdownMenuLabel>
                                   <DropdownMenuItem 
                                     onClick={() => sendEmailMutation.mutate(invoice.id)}
                                     disabled={sendEmailMutation.isPending || !invoice.contact?.email}
-                                    data-testid={`menu-general-chase-${invoice.id}`}
+                                    data-testid={`menu-send-email-${invoice.id}`}
                                   >
                                     <Mail className="mr-2 h-4 w-4" />
-                                    General Chase
+                                    Send Email
                                   </DropdownMenuItem>
                                   <DropdownMenuItem 
-                                    data-testid={`menu-send-invoice-copy-${invoice.id}`}
-                                  >
-                                    <FileText className="mr-2 h-4 w-4" />
-                                    Send Invoice Copy
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem 
-                                    data-testid={`menu-thank-you-message-${invoice.id}`}
+                                    disabled={!invoice.contact?.phone}
+                                    data-testid={`menu-send-sms-${invoice.id}`}
                                   >
                                     <MessageSquare className="mr-2 h-4 w-4" />
-                                    Thank You Message
-                                  </DropdownMenuItem>
-                                  
-                                  <DropdownMenuSeparator />
-                                  <DropdownMenuLabel className="text-xs font-medium text-gray-500 uppercase tracking-wide">
-                                    SMS
-                                  </DropdownMenuLabel>
-                                  <DropdownMenuItem 
-                                    data-testid={`menu-general-reminder-${invoice.id}`}
-                                  >
-                                    <Clock className="mr-2 h-4 w-4" />
-                                    General Reminder
+                                    Send SMS
                                   </DropdownMenuItem>
                                   <DropdownMenuItem 
-                                    data-testid={`menu-thank-you-sms-${invoice.id}`}
+                                    disabled={!invoice.contact?.phone}
+                                    data-testid={`menu-call-customer-${invoice.id}`}
                                   >
                                     <Phone className="mr-2 h-4 w-4" />
-                                    Thank You SMS
+                                    Call Customer
                                   </DropdownMenuItem>
                                   
                                   <DropdownMenuSeparator />
                                   <DropdownMenuLabel className="text-xs font-medium text-gray-500 uppercase tracking-wide">
-                                    WhatsApp
-                                  </DropdownMenuLabel>
-                                  <DropdownMenuItem 
-                                    data-testid={`menu-send-whatsapp-${invoice.id}`}
-                                  >
-                                    <MessageSquare className="mr-2 h-4 w-4" />
-                                    Send WhatsApp
-                                  </DropdownMenuItem>
-                                  
-                                  <DropdownMenuSeparator />
-                                  <DropdownMenuLabel className="text-xs font-medium text-gray-500 uppercase tracking-wide">
-                                    Voice
-                                  </DropdownMenuLabel>
-                                  <DropdownMenuItem 
-                                    data-testid={`menu-make-voice-call-${invoice.id}`}
-                                  >
-                                    <Phone className="mr-2 h-4 w-4" />
-                                    Make Voice Call
-                                  </DropdownMenuItem>
-                                  
-                                  <DropdownMenuSeparator />
-                                  <DropdownMenuLabel className="text-xs font-medium text-gray-500 uppercase tracking-wide">
-                                    Other
+                                    Account Management
                                   </DropdownMenuLabel>
                                   <DropdownMenuItem 
                                     onClick={() => {
@@ -434,30 +397,34 @@ export default function Invoices() {
                                     data-testid={`menu-payment-plan-${invoice.id}`}
                                   >
                                     <Calendar className="mr-2 h-4 w-4" />
-                                    Payment Plan
+                                    Create Payment Plan
                                   </DropdownMenuItem>
                                   <DropdownMenuItem 
                                     onClick={() => {
                                       setDisputeInvoice(invoice);
                                       setShowDisputeDialog(true);
                                     }}
-                                    data-testid={`menu-dispute-${invoice.id}`}
+                                    data-testid={`menu-create-dispute-${invoice.id}`}
                                   >
                                     <AlertCircle className="mr-2 h-4 w-4" />
-                                    Dispute
+                                    Create Dispute
                                   </DropdownMenuItem>
                                   <DropdownMenuItem 
                                     onClick={() => openContactHistory(invoice)}
                                     data-testid={`menu-view-history-${invoice.id}`}
                                   >
                                     <Eye className="mr-2 h-4 w-4" />
-                                    View History
+                                    View Comms History
                                   </DropdownMenuItem>
                                   <DropdownMenuItem 
-                                    data-testid={`menu-hold-${invoice.id}`}
+                                    data-testid={`menu-hold-invoice-${invoice.id}`}
+                                    onClick={() => toast({ 
+                                      title: "Hold Invoice", 
+                                      description: `Invoice ${invoice.invoiceNumber} hold toggled` 
+                                    })}
                                   >
                                     <Pause className="mr-2 h-4 w-4" />
-                                    {invoice.status === 'on-hold' ? 'Remove Hold' : 'Put on Hold'}
+                                    Hold Invoice
                                   </DropdownMenuItem>
                                   <DropdownMenuItem 
                                     data-testid={`menu-mark-paid-${invoice.id}`}
