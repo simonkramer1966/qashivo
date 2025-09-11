@@ -84,20 +84,20 @@
     @apply text-foreground min-h-screen;
   }
   
-  /* Auto-apply backdrop blur to all glass token surfaces */
-  [class*="bg-card"],
-  [class*="bg-popover"],
-  [class*="bg-background"],
-  [class*="bg-secondary"],
-  [class*="bg-muted"],
-  [class*="bg-accent"] {
+  /* Auto-apply backdrop blur to shadcn glass token surfaces only */
+  .bg-card,
+  .bg-popover,
+  .bg-background,
+  .bg-secondary,
+  .bg-muted,
+  .bg-accent {
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
   }
   
   /* Enhanced blur for interactive elements */
-  [class*="bg-card"]:hover,
-  [class*="bg-popover"]:hover {
+  .bg-card:hover,
+  .bg-popover:hover {
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
   }
