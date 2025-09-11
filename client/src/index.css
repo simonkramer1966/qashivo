@@ -3,71 +3,59 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --background: hsl(0, 0%, 100%);
-  --foreground: hsl(222.2, 84%, 4.9%);
-  --card: hsl(0, 0%, 100%);
-  --card-foreground: hsl(222.2, 84%, 4.9%);
-  --popover: hsl(0, 0%, 100%);
-  --popover-foreground: hsl(222.2, 84%, 4.9%);
-  --primary: hsl(221.2, 83.2%, 53.3%);
-  --primary-foreground: hsl(210, 40%, 98%);
-  --secondary: hsl(210, 40%, 96%);
-  --secondary-foreground: hsl(222.2, 84%, 4.9%);
-  --muted: hsl(210, 40%, 96%);
-  --muted-foreground: hsl(215.4, 16.3%, 46.9%);
-  --accent: hsl(210, 40%, 96%);
-  --accent-foreground: hsl(222.2, 84%, 4.9%);
-  --destructive: hsl(0, 84.2%, 60.2%);
-  --destructive-foreground: hsl(210, 40%, 98%);
-  --border: hsl(214.3, 31.8%, 91.4%);
-  --input: hsl(214.3, 31.8%, 91.4%);
-  --ring: hsl(221.2, 83.2%, 53.3%);
-  --chart-1: hsl(221.2, 83.2%, 53.3%);
-  --chart-2: hsl(159.7826, 100%, 36.0784%);
-  --chart-3: hsl(42.0290, 92.8251%, 56.2745%);
-  --chart-4: hsl(147.1429, 78.5047%, 41.9608%);
-  --chart-5: hsl(341.4894, 75.2000%, 50.9804%);
-  --sidebar: hsl(0, 0%, 100%);
-  --sidebar-foreground: hsl(222.2, 84%, 4.9%);
-  --sidebar-primary: hsl(221.2, 83.2%, 53.3%);
-  --sidebar-primary-foreground: hsl(210, 40%, 98%);
-  --sidebar-accent: hsl(210, 40%, 96%);
-  --sidebar-accent-foreground: hsl(221.2, 83.2%, 53.3%);
-  --sidebar-border: hsl(214.3, 31.8%, 91.4%);
-  --sidebar-ring: hsl(221.2, 83.2%, 53.3%);
-  --font-sans: 'Avenir', system-ui, sans-serif;
-  --font-serif: Georgia, serif;
-  --font-mono: 'Geist Mono', monospace;
-  --radius: 0.5rem;
+/* Kill replit overlay if present */
+#replit-dev-tools, .replit-devtools-banner, [id*="replit"], [class*="replit-dev"] { 
+  display: none !important; 
+  visibility: hidden !important; 
 }
 
-.dark {
-  --background: hsl(222.2, 84%, 4.9%);
-  --foreground: hsl(210, 40%, 98%);
-  --card: hsl(222.2, 84%, 4.9%);
-  --card-foreground: hsl(210, 40%, 98%);
-  --popover: hsl(222.2, 84%, 4.9%);
-  --popover-foreground: hsl(210, 40%, 98%);
-  --primary: hsl(221.2, 83.2%, 53.3%);
-  --primary-foreground: hsl(210, 40%, 98%);
-  --secondary: hsl(217.2, 32.6%, 17.5%);
-  --secondary-foreground: hsl(210, 40%, 98%);
-  --muted: hsl(217.2, 32.6%, 17.5%);
-  --muted-foreground: hsl(215, 20.2%, 65.1%);
-  --accent: hsl(217.2, 32.6%, 17.5%);
-  --accent-foreground: hsl(210, 40%, 98%);
-  --destructive: hsl(0, 62.8%, 30.6%);
-  --destructive-foreground: hsl(210, 40%, 98%);
-  --border: hsl(217.2, 32.6%, 17.5%);
-  --input: hsl(217.2, 32.6%, 17.5%);
-  --ring: hsl(221.2, 83.2%, 53.3%);
-  --chart-1: hsl(220, 70%, 50%);
-  --chart-2: hsl(160, 60%, 45%);
-  --chart-3: hsl(30, 80%, 55%);
-  --chart-4: hsl(280, 65%, 60%);
-  --chart-5: hsl(340, 75%, 55%);
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+    --primary: 222.2 47.4% 11.2%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 222.2 84% 4.9%;
+    --muted: 210 40% 96%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 210 40% 96%;
+    --accent-foreground: 222.2 84% 4.9%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 222.2 84% 4.9%;
+    --radius: 0.5rem;
+  }
+ 
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 210 40% 98%;
+    --primary-foreground: 222.2 84% 4.9%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 212.7 26.8% 83.9%;
+  }
 }
+
 
 @layer base {
   * {
@@ -75,9 +63,12 @@
   }
 
   body {
-    @apply font-sans antialiased text-foreground;
-    background-color: #ffffff !important;
+    @apply font-sans antialiased bg-white text-gray-900;
     font-family: 'Avenir', system-ui, sans-serif;
+  }
+  
+  html, body, #root {
+    min-height: 100%;
   }
 }
 
@@ -113,13 +104,3 @@
   background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(221.2, 83.2%, 43.3%) 100%);
 }
 
-/* Fix website navigation z-index only */
-nav.fixed {
-  z-index: 9999 !important;
-}
-
-/* Ensure sidebar navigation works */
-aside button, aside a {
-  pointer-events: auto !important;
-  position: relative !important;
-}

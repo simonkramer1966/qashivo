@@ -1,4 +1,5 @@
 import { Switch, Route } from "wouter";
+import { Suspense } from "react";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -50,7 +51,6 @@ function Router() {
 
   return !isAuthenticated ? (
     <Switch>
-      <Route path="/" component={Landing} />
       <Route path="/features" component={Features} />
       <Route path="/ai-capabilities" component={AiCapabilities} />
       <Route path="/pricing" component={Pricing} />
@@ -58,12 +58,12 @@ function Router() {
       <Route path="/about" component={About} />
       <Route path="/investors" component={Investors} />
       <Route path="/contact" component={Contact} />
-      <Route component={NotFound} />
+      <Route path="/" component={Landing} />
+      <Route path="/:rest*" component={NotFound} />
     </Switch>
   ) : (
     <Switch>
       <Route path="/ai-cfo" component={AiCfo} />
-      <Route path="/" component={Dashboard} />
       <Route path="/cashflow" component={Cashflow} />
       <Route path="/customers" component={Contacts} />
       <Route path="/invoices" component={Invoices} />
@@ -82,7 +82,8 @@ function Router() {
       <Route path="/ui-sage" component={UISage} />
       <Route path="/subscribe" component={Subscribe} />
       <Route path="/owner" component={OwnerDashboard} />
-      <Route component={NotFound} />
+      <Route path="/" component={Dashboard} />
+      <Route path="/:rest*" component={NotFound} />
     </Switch>
   );
 }
@@ -91,8 +92,17 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <Router />
-        <Toaster />
+        <Suspense fallback={
+          <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
+            <div className="text-center">
+              <div className="w-8 h-8 border-4 border-[#17B6C3] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+              <p className="text-muted-foreground">Loading...</p>
+            </div>
+          </div>
+        }>
+          <Router />
+          <Toaster />
+        </Suspense>
       </TooltipProvider>
     </QueryClientProvider>
   );

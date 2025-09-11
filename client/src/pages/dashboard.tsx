@@ -52,12 +52,12 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="flex h-screen" style={{ backgroundColor: '#ffffff' }}>
+    <div className="flex h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-teal-50">
       <NewSidebar />
-      <main className="flex-1 overflow-y-auto" style={{ backgroundColor: '#ffffff' }}>
+      <main className="flex-1 overflow-y-auto bg-white">
         <Header title="Dashboard" subtitle="Overview of your accounts receivable performance" />
         
-        <div className="p-8 space-y-8" style={{ backgroundColor: '#ffffff' }}>
+        <div className="p-8 space-y-8 bg-white">
           <Suspense fallback={<div className="h-32 animate-pulse bg-gray-100 rounded-lg" />}>
             <MetricsOverview />
           </Suspense>
