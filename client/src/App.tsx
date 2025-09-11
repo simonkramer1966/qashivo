@@ -15,7 +15,9 @@ import WorkflowBuilder from "@/pages/workflow-builder";
 import Settings from "@/pages/settings";
 import AiSuggestions from "@/pages/ai-suggestions";
 import AiCfo from "@/pages/ai-cfo";
-import Reports from "@/pages/reports";
+import KPIAIForecasting from "@/pages/kpi-ai-forecasting";
+import HRManagement from "@/pages/hr-management";
+import LegalCompliance from "@/pages/legal-compliance";
 import UIChoices from "@/pages/ui-choices";
 import UIXero from "@/pages/ui-xero";
 import UIQuickBooks from "@/pages/ui-quickbooks";
@@ -72,7 +74,9 @@ function Router() {
       <Route path="/workflows" component={Workflows} />
       <Route path="/workflow-builder" component={WorkflowBuilder} />
       <Route path="/ai-suggestions" component={AiSuggestions} />
-      <Route path="/reports" component={Reports} />
+      <Route path="/reports" component={KPIAIForecasting} />
+      <Route path="/hr" component={HRManagement} />
+      <Route path="/legal" component={LegalCompliance} />
       <Route path="/settings" component={Settings} />
       <Route path="/profile" component={Profile} />
       <Route path="/health-dashboard" component={HealthDashboard} />
