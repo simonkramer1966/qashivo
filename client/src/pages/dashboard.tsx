@@ -37,9 +37,6 @@ import CustomerRiskMatrix from "@/components/dashboard/customer-risk-matrix";
 import PaymentTrendAnalysis from "@/components/dashboard/payment-trend-analysis";
 import CollectionMethodPerformance from "@/components/dashboard/collection-method-performance";
 import AutomationPerformanceMetrics from "@/components/dashboard/automation-performance";
-import RecentInvoices from "@/components/dashboard/recent-invoices";
-import AIInsights from "@/components/dashboard/ai-insights";
-import IntegrationsStatus from "@/components/dashboard/integrations-status";
 
 // Error Boundary Component for Dashboard Sections
 interface ErrorBoundaryState {
@@ -490,44 +487,8 @@ export default function Dashboard() {
               </Suspense>
             </DashboardErrorBoundary>
             
-            {/* Recent Invoices & AI Insights - Side by Side */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div className="lg:col-span-2">
-                <DashboardErrorBoundary section="Recent Invoices">
-                  <Suspense fallback={
-                    <div className="dashboard-loading h-96" role="status" aria-label="Loading recent invoices" />
-                  }>
-                    <RecentInvoices />
-                  </Suspense>
-                </DashboardErrorBoundary>
-              </div>
-              <div>
-                <DashboardErrorBoundary section="AI Insights">
-                  <Suspense fallback={
-                    <div className="dashboard-loading h-96" role="status" aria-label="Loading AI insights" />
-                  }>
-                    <AIInsights />
-                  </Suspense>
-                </DashboardErrorBoundary>
-              </div>
-            </div>
           </div>
 
-          {/* Section 7: System Status & Integration Health */}
-          <div className="space-y-6" data-testid="section-system-status">
-            <div className="flex items-center space-x-2">
-              <Activity className="h-5 w-5 text-[#17B6C3]" />
-              <h2 className="text-xl font-bold text-slate-900">System Status & Integration Health</h2>
-            </div>
-            
-            <DashboardErrorBoundary section="Integrations Status">
-              <Suspense fallback={
-                <div className="dashboard-loading h-48" role="status" aria-label="Loading integrations status" />
-              }>
-                <IntegrationsStatus />
-              </Suspense>
-            </DashboardErrorBoundary>
-          </div>
 
           {/* Dashboard Footer with Navigation */}
           <div className="flex items-center justify-between glass-card p-4 rounded-lg border-t border-white/10 mt-8" data-testid="dashboard-footer">
