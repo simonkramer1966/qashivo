@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, useMemo, lazy, Suspense } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import NewSidebar from "@/components/layout/new-sidebar";
@@ -16,6 +16,16 @@ import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+
+// Advanced Feature Imports
+import { useKeyboardShortcuts, getCommonShortcuts, getTabNavigationShortcuts } from "@/hooks/useKeyboardShortcuts";
+import KeyboardShortcutsModal from "@/components/ui/keyboard-shortcuts-modal";
+import UserPreferencesPanel from "@/components/ui/user-preferences-panel";
+// Lazy loaded chart components for better performance
+const ScenarioComparisonChart = lazy(() => import("@/components/cashflow/ScenarioComparisonChart"));
+const TimelineVisualization = lazy(() => import("@/components/cashflow/TimelineVisualization"));
+const WaterfallChart = lazy(() => import("@/components/cashflow/WaterfallChart"));
+const HeatmapVisualization = lazy(() => import("@/components/cashflow/HeatmapVisualization"));
 import { 
   TrendingUp, 
   TrendingDown, 
@@ -120,6 +130,90 @@ export default function Cashflow() {
   const [stressTestResults, setStressTestResults] = useState<any>(null);
   const [expandedRiskCategory, setExpandedRiskCategory] = useState<string | null>(null);
 
+  // Advanced Features State
+  const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false);
+  const [showUserPreferences, setShowUserPreferences] = useState(false);
+  const [userPreferences, setUserPreferences] = useState({
+    theme: 'system' as 'light' | 'dark' | 'system',
+    accentColor: '#17B6C3',
+    reducedMotion: false,
+    compactMode: false,
+    dashboardLayout: [],
+    defaultTab: 'scenario',
+    sidebarCollapsed: false,
+    cashRunwayWarning: 6,
+    overduePaymentAlert: 30,
+    collectionTargetThreshold: 85,
+    automationAlerts: true,
+    defaultExportFormat: 'xlsx' as 'xlsx' | 'csv' | 'pdf',
+    defaultCurrency: 'USD',
+    defaultDateRange: '6m' as '1m' | '3m' | '6m' | '1y',
+    includeCharts: true,
+    autoSaveScenarios: true,
+    showTooltips: true,
+    enableKeyboardShortcuts: true,
+    animationsEnabled: true,
+    quickActions: [
+      { id: '1', label: 'Export Report', action: 'export', icon: 'Download', enabled: true },
+      { id: '2', label: 'New Scenario', action: 'new-scenario', icon: 'Plus', enabled: true },
+      { id: '3', label: 'Sync Data', action: 'sync', icon: 'RefreshCw', enabled: true },
+      { id: '4', label: 'View Analytics', action: 'analytics', icon: 'BarChart3', enabled: false }
+    ]
+  });
+  const [advancedViewMode, setAdvancedViewMode] = useState<'standard' | 'advanced'>('standard');
+
+  // Load preferences from localStorage on component mount
+  useEffect(() => {
+    const savedPreferences = localStorage.getItem('cashflow-preferences');
+    if (savedPreferences) {
+      try {
+        const parsed = JSON.parse(savedPreferences);
+        setUserPreferences(prev => ({ ...prev, ...parsed }));
+        setAdvancedViewMode(parsed.advancedViewMode || 'standard');
+        
+        // Apply theme immediately
+        if (parsed.theme === 'dark') {
+          document.documentElement.classList.add('dark');
+        } else if (parsed.theme === 'light') {
+          document.documentElement.classList.remove('dark');
+        } else {
+          // System theme
+          const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+          document.documentElement.classList.toggle('dark', isDark);
+        }
+      } catch (error) {
+        console.warn('Failed to parse saved preferences:', error);
+      }
+    }
+  }, []);
+
+  // Save preferences to localStorage whenever they change
+  useEffect(() => {
+    const prefsToSave = { ...userPreferences, advancedViewMode };
+    localStorage.setItem('cashflow-preferences', JSON.stringify(prefsToSave));
+  }, [userPreferences, advancedViewMode]);
+
+  // Handle theme changes
+  const handleThemeChange = useCallback((newTheme: 'light' | 'dark' | 'system') => {
+    setUserPreferences(prev => ({ ...prev, theme: newTheme }));
+    
+    if (newTheme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else if (newTheme === 'light') {
+      document.documentElement.classList.remove('dark');
+    } else {
+      // System theme
+      const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      document.documentElement.classList.toggle('dark', isDark);
+    }
+  }, []);
+
+  // Handle advanced view mode toggle
+  const toggleAdvancedMode = useCallback(() => {
+    setAdvancedViewMode(prev => prev === 'standard' ? 'advanced' : 'standard');
+  }, []);
+
+
   // Mock data for realistic scenarios
   const currentCashData = {
     totalAvailable: 246230,
@@ -130,6 +224,302 @@ export default function Cashflow() {
     criticalPayments: 65100,
     status: "healthy" // healthy, warning, critical
   };
+
+  // Mock data for advanced visualizations
+  const mockScenarioData = useMemo(() => [
+    {
+      id: '1',
+      name: 'Conservative',
+      color: '#059669',
+      style: 'line' as const,
+      data: [
+        { month: 'Jan 2025', cashflow: 45000, runway: 18.5, inflow: 125000, outflow: 80000 },
+        { month: 'Feb 2025', cashflow: 48000, runway: 19.2, inflow: 130000, outflow: 82000 },
+        { month: 'Mar 2025', cashflow: 52000, runway: 20.1, inflow: 135000, outflow: 83000 },
+        { month: 'Apr 2025', cashflow: 46000, runway: 19.5, inflow: 128000, outflow: 82000 },
+        { month: 'May 2025', cashflow: 49000, runway: 19.8, inflow: 132000, outflow: 83000 },
+        { month: 'Jun 2025', cashflow: 53000, runway: 20.5, inflow: 138000, outflow: 85000 }
+      ]
+    },
+    {
+      id: '2',
+      name: 'Aggressive',
+      color: '#DC2626',
+      style: 'line' as const,
+      data: [
+        { month: 'Jan 2025', cashflow: 58000, runway: 22.1, inflow: 145000, outflow: 87000 },
+        { month: 'Feb 2025', cashflow: 62000, runway: 23.2, inflow: 152000, outflow: 90000 },
+        { month: 'Mar 2025', cashflow: 66000, runway: 24.5, inflow: 158000, outflow: 92000 },
+        { month: 'Apr 2025', cashflow: 59000, runway: 23.8, inflow: 148000, outflow: 89000 },
+        { month: 'May 2025', cashflow: 63000, runway: 24.2, inflow: 155000, outflow: 92000 },
+        { month: 'Jun 2025', cashflow: 68000, runway: 25.1, inflow: 162000, outflow: 94000 }
+      ]
+    },
+    {
+      id: '3',
+      name: 'Current Plan',
+      color: '#17B6C3',
+      style: 'line' as const,
+      data: [
+        { month: 'Jan 2025', cashflow: 48327, runway: 18.5, inflow: 127500, outflow: 79173 },
+        { month: 'Feb 2025', cashflow: 51200, runway: 19.1, inflow: 132000, outflow: 80800 },
+        { month: 'Mar 2025', cashflow: 54800, runway: 19.8, inflow: 137500, outflow: 82700 },
+        { month: 'Apr 2025', cashflow: 49500, runway: 19.2, inflow: 130000, outflow: 80500 },
+        { month: 'May 2025', cashflow: 52300, runway: 19.6, inflow: 134500, outflow: 82200 },
+        { month: 'Jun 2025', cashflow: 56100, runway: 20.3, inflow: 140000, outflow: 83900 }
+      ]
+    }
+  ], []);
+
+  const mockTimelineData = useMemo(() => [
+    {
+      date: '2025-01-01',
+      timestamp: new Date('2025-01-01').getTime(),
+      cashflow: 48327,
+      cumulativeCash: 246230,
+      runway: 18.5,
+      projectedMin: 45000,
+      projectedMax: 52000,
+      events: []
+    },
+    {
+      date: '2025-02-01',
+      timestamp: new Date('2025-02-01').getTime(),
+      cashflow: 51200,
+      cumulativeCash: 297430,
+      runway: 19.1,
+      projectedMin: 48000,
+      projectedMax: 55000,
+      events: [
+        {
+          date: '2025-02-15',
+          type: 'payment' as const,
+          title: 'Major Client Payment',
+          amount: 75000,
+          description: 'Large contract payment expected',
+          severity: 'low' as const
+        }
+      ]
+    },
+    {
+      date: '2025-03-01',
+      timestamp: new Date('2025-03-01').getTime(),
+      cashflow: 54800,
+      cumulativeCash: 352230,
+      runway: 19.8,
+      projectedMin: 51000,
+      projectedMax: 58000,
+      events: []
+    }
+  ], []);
+
+  const mockWaterfallData = useMemo(() => [
+    {
+      category: 'starting',
+      label: 'Starting Cash',
+      amount: 246230,
+      type: 'start' as const,
+      description: 'Beginning cash position'
+    },
+    {
+      category: 'revenue',
+      label: 'Collections',
+      amount: 127500,
+      type: 'positive' as const,
+      description: 'Customer payments received'
+    },
+    {
+      category: 'revenue',
+      label: 'New Sales',
+      amount: 25000,
+      type: 'positive' as const,
+      description: 'New contract revenue'
+    },
+    {
+      category: 'expenses',
+      label: 'Operating Costs',
+      amount: -65000,
+      type: 'negative' as const,
+      description: 'Monthly operational expenses'
+    },
+    {
+      category: 'expenses',
+      label: 'Payroll',
+      amount: -35000,
+      type: 'negative' as const,
+      description: 'Employee salaries and benefits'
+    },
+    {
+      category: 'total',
+      label: 'Ending Cash',
+      amount: 298730,
+      type: 'total' as const,
+      description: 'Projected end-of-period cash'
+    }
+  ], []);
+
+  const mockHeatmapData = useMemo(() => [
+    {
+      x: 'Jan 2025',
+      y: 'Customer Risk',
+      value: 65,
+      severity: 'medium' as const,
+      trend: 'up' as const,
+      events: [
+        { title: 'Payment Delay Risk', description: 'Client ABC payment delayed', impact: 15000 }
+      ]
+    },
+    {
+      x: 'Feb 2025',
+      y: 'Customer Risk',
+      value: 45,
+      severity: 'low' as const,
+      trend: 'down' as const,
+      events: []
+    },
+    {
+      x: 'Jan 2025',
+      y: 'Market Risk',
+      value: 35,
+      severity: 'low' as const,
+      trend: 'stable' as const,
+      events: []
+    },
+    {
+      x: 'Feb 2025',
+      y: 'Market Risk',
+      value: 55,
+      severity: 'medium' as const,
+      trend: 'up' as const,
+      events: [
+        { title: 'Economic Uncertainty', description: 'Industry outlook mixed', impact: 8000 }
+      ]
+    },
+    {
+      x: 'Jan 2025',
+      y: 'Operational Risk',
+      value: 75,
+      severity: 'high' as const,
+      trend: 'up' as const,
+      events: [
+        { title: 'Collection Efficiency', description: 'DSO increasing', impact: 12000 }
+      ]
+    },
+    {
+      x: 'Feb 2025',
+      y: 'Operational Risk',
+      value: 60,
+      severity: 'medium' as const,
+      trend: 'down' as const,
+      events: []
+    }
+  ], []);
+
+  // Action callbacks for advanced features
+  const handleExportReport = useCallback(() => {
+    const data = {
+      scenarios: savedScenarios,
+      currentData: currentCashData,
+      timestamp: new Date().toISOString()
+    };
+    
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `cashflow-report-${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    
+    toast({
+      title: "Report Exported",
+      description: "Cashflow report has been downloaded successfully",
+    });
+  }, [savedScenarios, currentCashData, toast]);
+
+  const handleNewScenario = useCallback(() => {
+    setNewScenarioName('');
+    setScenarioInputs({
+      collectionRate: [75],
+      paymentDelays: [15],
+      newInvoices: [25000],
+      expenseChanges: [0]
+    });
+    
+    toast({
+      title: "New Scenario",
+      description: "Scenario inputs have been reset. Configure and save when ready.",
+    });
+  }, [toast]);
+
+  const handleToggleAdvancedView = useCallback(() => {
+    setAdvancedViewMode(prev => prev === 'standard' ? 'advanced' : 'standard');
+    toast({
+      title: `${advancedViewMode === 'standard' ? 'Advanced' : 'Standard'} View Enabled`,
+      description: `Switched to ${advancedViewMode === 'standard' ? 'advanced charts and analysis' : 'standard view'}`,
+    });
+  }, [advancedViewMode, toast]);
+
+  const handleToggleSidebar = useCallback(() => {
+    setIsActionSidebarOpen(prev => !prev);
+  }, []);
+
+  // Keyboard shortcuts setup
+  const keyboardShortcuts = useMemo(() => [
+    ...getCommonShortcuts({
+      save: () => {
+        if (newScenarioName.trim()) {
+          saveCurrentScenario();
+        } else {
+          toast({
+            title: "Save Scenario",
+            description: "Please enter a scenario name first",
+            variant: "destructive"
+          });
+        }
+      },
+      new: handleNewScenario,
+      export: handleExportReport,
+      help: () => setShowKeyboardShortcuts(true),
+      toggleSidebar: handleToggleSidebar,
+    }),
+    ...getTabNavigationShortcuts([
+      { id: 'scenario', name: 'Scenario Planning', action: () => setActiveTab('scenario') },
+      { id: 'collection', name: 'Collection Optimization', action: () => setActiveTab('collection') },
+      { id: 'insights', name: 'AI Insights', action: () => setActiveTab('insights') },
+      { id: 'risk', name: 'Risk Analysis', action: () => setActiveTab('risk') }
+    ]),
+    {
+      key: 'v',
+      ctrl: true,
+      description: 'Toggle advanced view mode',
+      action: handleToggleAdvancedView,
+      category: 'Views',
+    },
+    {
+      key: 'p',
+      ctrl: true,
+      description: 'Open user preferences',
+      action: () => setShowUserPreferences(true),
+      category: 'Settings',
+    }
+  ], [
+    newScenarioName, 
+    saveCurrentScenario, 
+    handleNewScenario, 
+    handleExportReport, 
+    handleToggleSidebar, 
+    handleToggleAdvancedView, 
+    toast
+  ]);
+
+  // Initialize keyboard shortcuts
+  useKeyboardShortcuts({
+    shortcuts: keyboardShortcuts,
+    disabled: !userPreferences.enableKeyboardShortcuts,
+  });
 
   // Mobile detection
   useEffect(() => {
@@ -513,6 +903,38 @@ export default function Cashflow() {
           <Header 
             title="Cash Flow Command Center" 
             subtitle="Real-time cash management and scenario planning"
+            action={
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleToggleAdvancedView}
+                  className={advancedViewMode === 'advanced' ? 'bg-[#17B6C3]/10 border-[#17B6C3]' : ''}
+                  data-testid="button-toggle-view-mode"
+                >
+                  <BarChart3 className="h-4 w-4 mr-2" />
+                  {advancedViewMode === 'advanced' ? 'Advanced' : 'Standard'}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowKeyboardShortcuts(true)}
+                  data-testid="button-keyboard-shortcuts"
+                  title="Keyboard Shortcuts (? key)"
+                >
+                  <Calculator className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowUserPreferences(true)}
+                  data-testid="button-user-preferences"
+                  title="User Preferences (Ctrl+P)"
+                >
+                  <Settings className="h-4 w-4" />
+                </Button>
+              </div>
+            }
           />
         
         {/* Command Center Header - Sticky */}
@@ -973,6 +1395,109 @@ export default function Cashflow() {
                   </CardContent>
                 </Card>
               </div>
+
+              {/* Advanced Visualizations - Only show in advanced mode */}
+              {advancedViewMode === 'advanced' && (
+                <div className="space-y-8">
+                  <div className="text-center py-4">
+                    <Badge variant="outline" className="bg-[#17B6C3]/10 border-[#17B6C3] text-[#17B6C3]">
+                      Advanced Analytics Mode
+                    </Badge>
+                  </div>
+
+                  {/* Advanced Chart Grid */}
+                  <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+                    {/* Scenario Comparison Chart */}
+                    <Suspense fallback={
+                      <div className="flex items-center justify-center p-8 xl:col-span-2">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#17B6C3]"></div>
+                        <span className="ml-2 text-sm text-gray-600">Loading chart...</span>
+                      </div>
+                    }>
+                      <ScenarioComparisonChart
+                        scenarios={mockScenarioData}
+                        onExport={(format) => {
+                          toast({
+                            title: "Chart Exported",
+                            description: `Scenario comparison chart exported as ${format.toUpperCase()}`,
+                          });
+                        }}
+                        className="xl:col-span-2"
+                      />
+                    </Suspense>
+
+                    {/* Timeline Visualization */}
+                    <TimelineVisualization
+                      data={mockTimelineData}
+                      events={[
+                        {
+                          date: '2025-02-15',
+                          type: 'payment',
+                          title: 'Major Client Payment',
+                          amount: 75000,
+                          description: 'Large contract payment expected'
+                        },
+                        {
+                          date: '2025-03-01',
+                          type: 'milestone',
+                          title: 'Quarterly Review',
+                          description: 'Q1 financial review and planning'
+                        }
+                      ]}
+                      onEventClick={(event) => {
+                        toast({
+                          title: "Event Details",
+                          description: event.description,
+                        });
+                      }}
+                    />
+
+                    {/* Waterfall Chart */}
+                    <Suspense fallback={
+                      <div className="flex items-center justify-center p-8">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#17B6C3]"></div>
+                        <span className="ml-2 text-sm text-gray-600">Loading waterfall...</span>
+                      </div>
+                    }>
+                      <WaterfallChart
+                        components={mockWaterfallData}
+                        title="Cash Flow Breakdown"
+                        subtitle="Monthly cash flow component analysis"
+                        onExport={() => {
+                          toast({
+                            title: "Waterfall Chart Exported",
+                            description: "Cash flow breakdown exported successfully",
+                          });
+                        }}
+                      />
+                    </Suspense>
+                  </div>
+
+                  {/* Risk Heatmap - Full Width */}
+                  <Suspense fallback={
+                    <div className="flex items-center justify-center p-8">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#17B6C3]"></div>
+                      <span className="ml-2 text-sm text-gray-600">Loading heatmap...</span>
+                    </div>
+                  }>
+                    <HeatmapVisualization
+                      data={mockHeatmapData}
+                      onCellClick={(cell) => {
+                        toast({
+                          title: `Risk Factor: ${cell.y}`,
+                          description: `${cell.x} - Severity: ${cell.severity} (${cell.value}/100)`,
+                        });
+                      }}
+                      onExport={() => {
+                        toast({
+                          title: "Heatmap Exported",
+                          description: "Risk factor heatmap exported successfully",
+                        });
+                      }}
+                    />
+                  </Suspense>
+                </div>
+              )}
             </TabsContent>
 
             {/* Collection Strategy Tab */}
@@ -1685,6 +2210,21 @@ export default function Cashflow() {
           </SheetContent>
         </Sheet>
       )}
+
+      {/* Advanced Features Modals */}
+      <KeyboardShortcutsModal
+        isOpen={showKeyboardShortcuts}
+        onClose={() => setShowKeyboardShortcuts(false)}
+        shortcuts={keyboardShortcuts}
+        title="Cashflow Command Center Shortcuts"
+      />
+
+      <UserPreferencesPanel
+        isOpen={showUserPreferences}
+        onOpenChange={setShowUserPreferences}
+        preferences={userPreferences}
+        onPreferencesChange={setUserPreferences}
+      />
       </div>
     </div>
   );

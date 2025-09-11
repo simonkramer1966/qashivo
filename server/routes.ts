@@ -6847,13 +6847,13 @@ ${tenant.name}
           yourPerformance: {
             coverageRate: automationCoveragePercentage,
             successRate: averageSuccessRate,
-            roi: costSavingsThisMonth > 0 ? Math.round((costSavingsThisMonth - (totalActions * estimatedAutomatedCostPerAction)) / (totalActions * estimatedAutomatedCostPerAction) * 100) : 0,
+            roi: costSavingsThisMonth > 0 ? Math.round((costSavingsThisMonth - (totalActionsInTimeframe * estimatedAutomatedCostPerAction)) / (totalActionsInTimeframe * estimatedAutomatedCostPerAction) * 100) : 0,
             responseTime: 8.5
           },
           performanceGap: {
             coverage: automationCoveragePercentage - 65,
             success: averageSuccessRate - 72,
-            roi: (costSavingsThisMonth > 0 ? Math.round((costSavingsThisMonth - (totalActions * estimatedAutomatedCostPerAction)) / (totalActions * estimatedAutomatedCostPerAction) * 100) : 0) - 185,
+            roi: (costSavingsThisMonth > 0 ? Math.round((costSavingsThisMonth - (totalActionsInTimeframe * estimatedAutomatedCostPerAction)) / (totalActionsInTimeframe * estimatedAutomatedCostPerAction) * 100) : 0) - 185,
             speed: 14 - 8.5
           },
           ranking: automationCoveragePercentage > 80 && averageSuccessRate > 85 ? 'top_quartile' as const :
