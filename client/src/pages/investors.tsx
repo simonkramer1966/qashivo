@@ -1068,7 +1068,7 @@ export default function Investors() {
               Investors
             </h1>
             <p className="text-xl text-white/90 max-w-4xl mx-auto leading-relaxed" data-testid="text-investors-hero-description">
-              Join us in revolutionizing SME financial management with AI-driven solutions. We're building the complete platform that transforms cash flow operations and embedded finance.
+              Join us in revolutionizing SME financial management with AI-driven solutions. We're building the complete platform that transforms credit control operations, predicts cashflow and enables embedded finance solutions.
             </p>
           </div>
 
