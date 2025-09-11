@@ -633,8 +633,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
 
-      const metrics = await storage.getInvoiceMetrics(user.tenantId);
-      res.json(metrics);
+      const [metrics, debtRecoveryMetrics] = await Promise.all([
+        storage.getInvoiceMetrics(user.tenantId),
+        storage.getDebtRecoveryMetrics(user.tenantId)
+      ]);
+      
+      res.json({
+        ...metrics,
+        ...debtRecoveryMetrics
+      });
     } catch (error) {
       console.error("Error fetching dashboard metrics:", error);
       res.status(500).json({ message: "Failed to fetch metrics" });

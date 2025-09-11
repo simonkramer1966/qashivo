@@ -5,6 +5,7 @@ import { formatDate } from "../../../shared/utils/dateFormatter";
 import { useAuth } from "@/hooks/useAuth";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { apiRequest } from "@/lib/queryClient";
+import { useLocation } from "wouter";
 import NewSidebar from "@/components/layout/new-sidebar";
 import Header from "@/components/layout/header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,8 +23,17 @@ export default function Invoices() {
   const { toast } = useToast();
   const { isAuthenticated, isLoading } = useAuth();
   const queryClient = useQueryClient();
+  const [location] = useLocation();
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("overdue");
+  
+  // Parse URL parameters to set initial filter
+  const getInitialFilter = () => {
+    const urlParams = new URLSearchParams(location.split('?')[1] || '');
+    const filter = urlParams.get('filter');
+    return filter === 'escalated' ? 'escalated' : filter === 'overdue' ? 'overdue' : 'overdue';
+  };
+  
+  const [statusFilter, setStatusFilter] = useState(getInitialFilter());
   const [invClientSort, setInvClientSort] = useState<string>("inv-asc");
   const [dueDateAgeSort, setDueDateAgeSort] = useState<string>("due-date-asc");
   const [nextActionSort, setNextActionSort] = useState<string>("action-date-asc");
@@ -172,7 +182,8 @@ export default function Invoices() {
       (statusFilter === "pending" && invoice.status === "pending") ||
       (statusFilter === "overdue" && invoice.status === "overdue") ||
       (statusFilter === "paid" && invoice.status === "paid") ||
-      (statusFilter === "on-hold" && invoice.status === "on-hold");
+      (statusFilter === "on-hold" && invoice.status === "on-hold") ||
+      (statusFilter === "escalated" && invoice.collectionStage === "escalated");
 
     return matchesSearch && matchesStatus;
   });
@@ -259,6 +270,7 @@ export default function Invoices() {
                   <SelectItem value="overdue">Overdue</SelectItem>
                   <SelectItem value="paid">Paid</SelectItem>
                   <SelectItem value="on-hold">On Hold</SelectItem>
+                  <SelectItem value="escalated">Debt Recovery</SelectItem>
                 </SelectContent>
               </Select>
               <Select value={invoicesItemsPerPage.toString()} onValueChange={(value) => setInvoicesItemsPerPage(Number(value))}>

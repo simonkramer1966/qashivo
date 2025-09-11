@@ -127,6 +127,10 @@ export interface IStorage {
     collectionsWithinTerms: number;
     dso: number;
   }>;
+  getDebtRecoveryMetrics(tenantId: string): Promise<{
+    escalatedCount: number;
+    escalatedValue: number;
+  }>;
   
   // Action operations
   getActions(tenantId: string, limit?: number): Promise<Action[]>;
@@ -625,6 +629,33 @@ export class DatabaseStorage implements IStorage {
       avgDaysToPay: Math.round(Number(avgDaysToPay)),
       collectionsWithinTerms: Number(collectionsWithinTerms.toFixed(1)),
       dso: Math.round(Number(dso)),
+    };
+  }
+
+  async getDebtRecoveryMetrics(tenantId: string): Promise<{
+    escalatedCount: number;
+    escalatedValue: number;
+  }> {
+    const escalatedResult = await db
+      .select({
+        count: count(),
+        total: sql<number>`SUM(${invoices.amount} - ${invoices.amountPaid})`,
+      })
+      .from(invoices)
+      .where(
+        and(
+          eq(invoices.tenantId, tenantId),
+          eq(invoices.collectionStage, "escalated"),
+          sql`${invoices.status} IN ('pending', 'overdue')`
+        )
+      );
+
+    const escalatedCount = escalatedResult[0]?.count || 0;
+    const escalatedValue = escalatedResult[0]?.total || 0;
+
+    return {
+      escalatedCount,
+      escalatedValue: Number(escalatedValue),
     };
   }
 

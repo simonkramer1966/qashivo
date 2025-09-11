@@ -28,7 +28,8 @@ import {
   Download,
   RefreshCw,
   Eye,
-  Settings
+  Settings,
+  Scale
 } from "lucide-react";
 import NewSidebar from "@/components/layout/new-sidebar";
 import { formatCurrency } from "@/lib/utils";
@@ -44,6 +45,8 @@ interface CashMetrics {
   avgDaysToPay: number;
   collectionsWithinTerms: number;
   dso: number;
+  escalatedCount: number;
+  escalatedValue: number;
   // Note: totalPaid, totalUnpaid, cashPosition, projectedRunway not available from API
 }
 
@@ -151,9 +154,9 @@ export default function Cashboard() {
   const healthStatus = getCashHealthStatus();
 
   // Helper functions for action item status determination
-  const getCollectionsWithinTermsStatus = (percentage: number): 'urgent' | 'attention' | 'opportunity' => {
-    if (percentage < 70) return 'urgent';
-    if (percentage < 85) return 'attention';
+  const getDebtRecoveryStatus = (count: number): 'urgent' | 'attention' | 'opportunity' => {
+    if (count >= 6) return 'urgent';
+    if (count >= 3) return 'attention';
     return 'opportunity';
   };
 
@@ -183,17 +186,17 @@ export default function Cashboard() {
     },
     {
       id: '2',
-      type: getCollectionsWithinTermsStatus(metrics?.collectionsWithinTerms || 0),
-      title: 'Collections within Terms',
-      description: `${metrics?.collectionsWithinTerms || 0}% paid on time | Target: 85%`,
-      value: totalOutstanding * ((85 - (metrics?.collectionsWithinTerms || 0)) / 100), // Potential improvement
-      action: 'Review Process',
-      icon: Target,
+      type: getDebtRecoveryStatus(metrics?.escalatedCount || 0),
+      title: 'Debt Recovery',
+      description: `${metrics?.escalatedCount || 0} invoices in legal process | ${formatCurrency(metrics?.escalatedValue || 0)} at risk`,
+      value: metrics?.escalatedValue || 0,
+      action: 'Manage Cases',
+      icon: Scale,
       onClick: () => {
-        setLocation('/workflows');
+        setLocation('/invoices?filter=escalated');
         toast({
-          title: "Optimizing Collections Process",
-          description: "Review payment terms and follow-up workflows."
+          title: "Managing Debt Recovery Cases",
+          description: "Review invoices in legal collection process."
         });
       }
     },
