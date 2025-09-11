@@ -66,16 +66,6 @@ export default function Landing() {
 
             {/* CTA Section */}
             <div className="flex items-center space-x-4">
-              {isDevelopment && (
-                <Button 
-                  onClick={handleDevLogin}
-                  variant="outline"
-                  className="text-[#17B6C3] border-[#17B6C3] hover:bg-[#17B6C3] hover:text-white font-medium"
-                  data-testid="button-nav-dev-login"
-                >
-                  Dev Login
-                </Button>
-              )}
               <Button 
                 onClick={handleLogin}
                 variant="ghost"
@@ -134,16 +124,6 @@ export default function Landing() {
             get paid faster while maintaining great customer relationships - all from one simple dashboard.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            {isDevelopment && (
-              <Button 
-                onClick={handleDevLogin}
-                size="lg"
-                className="text-lg px-8 py-4 bg-yellow-500 hover:bg-yellow-600 text-black font-semibold"
-                data-testid="button-hero-dev-login"
-              >
-                🔧 Development Login
-              </Button>
-            )}
             <Button 
               onClick={handleLogin}
               size="lg"
@@ -326,8 +306,24 @@ export default function Landing() {
       {/* Footer */}
       <footer className="py-12 bg-gray-900">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center text-gray-400">
-            <p>&copy; 2025 Qashivo Limited. All Rights Reserved.</p>
+          <div className="flex justify-between items-center">
+            <div className="flex items-center">
+              {isDevelopment && (
+                <Button 
+                  onClick={handleDevLogin}
+                  variant="outline"
+                  size="sm"
+                  className="text-yellow-400 border-yellow-400 hover:bg-yellow-400 hover:text-black font-medium"
+                  data-testid="button-footer-dev-login"
+                >
+                  🔧 Dev Login
+                </Button>
+              )}
+            </div>
+            <div className="text-center text-gray-400">
+              <p>&copy; 2025 Qashivo Limited. All Rights Reserved.</p>
+            </div>
+            <div></div> {/* Empty div for balanced spacing */}
           </div>
         </div>
       </footer>
