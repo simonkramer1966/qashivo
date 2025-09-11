@@ -207,7 +207,7 @@ export default function CustomerAssignmentManager({ className }: CustomerAssignm
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card className="bg-white/70 backdrop-blur-md border-0 shadow-xl">
+        <Card className="metrics-card">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -223,7 +223,7 @@ export default function CustomerAssignmentManager({ className }: CustomerAssignm
           </CardContent>
         </Card>
 
-        <Card className="bg-white/70 backdrop-blur-md border-0 shadow-xl">
+        <Card className="metrics-card">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -239,7 +239,7 @@ export default function CustomerAssignmentManager({ className }: CustomerAssignm
           </CardContent>
         </Card>
 
-        <Card className="bg-white/70 backdrop-blur-md border-0 shadow-xl">
+        <Card className="metrics-card">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -255,7 +255,7 @@ export default function CustomerAssignmentManager({ className }: CustomerAssignm
           </CardContent>
         </Card>
 
-        <Card className="bg-white/70 backdrop-blur-md border-0 shadow-xl">
+        <Card className="metrics-card">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -316,7 +316,7 @@ export default function CustomerAssignmentManager({ className }: CustomerAssignm
           if (!contact || !schedule) return null;
           
           return (
-            <Card key={assignment.id} className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
+            <Card key={assignment.id} className="card-glass">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
@@ -389,7 +389,7 @@ export default function CustomerAssignmentManager({ className }: CustomerAssignm
         })}
 
         {filteredAssignments.length === 0 && (
-          <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
+          <Card className="card-glass">
             <CardContent className="p-12 text-center">
               <Users className="h-12 w-12 mx-auto mb-4 text-gray-400" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">No assignments found</h3>

@@ -207,7 +207,7 @@ export default function About() {
             </div>
             <div className="grid grid-cols-2 gap-6">
               {values.map((value, index) => (
-                <Card key={index} className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg hover:shadow-xl transition-all duration-300" data-testid={`card-value-${index}`}>
+                <Card key={index} className="card-glass" data-testid={`card-value-${index}`}>
                   <CardContent className="p-6 text-center">
                     <div className="p-3 bg-[#17B6C3]/10 rounded-xl mx-auto mb-4 w-fit">
                       <value.icon className="h-6 w-6 text-[#17B6C3]" />
@@ -240,7 +240,7 @@ export default function About() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {teamMembers.map((member, index) => (
-              <Card key={index} className="bg-white/70 backdrop-blur-md border-0 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105" data-testid={`card-team-${index}`}>
+              <Card key={index} className="metrics-card" data-testid={`card-team-${index}`}>
                 <CardHeader>
                   <div className="flex items-center space-x-4">
                     <div className="w-16 h-16 bg-gradient-to-br from-[#17B6C3]/20 to-purple-500/20 rounded-full flex items-center justify-center">
@@ -277,7 +277,7 @@ export default function About() {
 
           <div className="space-y-8">
             {milestones.map((milestone, index) => (
-              <Card key={index} className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg" data-testid={`card-milestone-${index}`}>
+              <Card key={index} className="card-glass" data-testid={`card-milestone-${index}`}>
                 <CardContent className="p-6">
                   <div className="flex items-center space-x-4">
                     <div className="flex-shrink-0">

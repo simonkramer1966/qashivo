@@ -181,7 +181,7 @@ export default function Demo() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-stretch">
             {/* Video Section - Left Side */}
             <div className="h-full">
-              <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-xl h-full flex flex-col">
+              <Card className="card-glass h-full flex flex-col">
                 <CardHeader className="pb-4">
                   <CardTitle className="text-2xl font-bold flex items-center mb-2">
                     <div className="p-2 bg-[#17B6C3]/10 rounded-lg mr-3">
@@ -233,7 +233,7 @@ export default function Demo() {
 
             {/* Lead Capture Form - Right Side */}
             <div className="h-full">
-              <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-xl h-full flex flex-col">
+              <Card className="card-glass h-full flex flex-col">
                 <CardHeader className="pb-4">
                   <CardTitle className="text-2xl font-bold mb-2">
                     Get a Live Demo
@@ -365,7 +365,7 @@ export default function Demo() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <Card className="bg-white/70 backdrop-blur-md border-0 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105">
+            <Card className="metrics-card">
               <CardContent className="p-6 text-center">
                 <div className="p-3 bg-[#17B6C3]/10 rounded-xl mx-auto mb-4 w-fit">
                   <Mail className="h-8 w-8 text-[#17B6C3]" />
@@ -375,7 +375,7 @@ export default function Demo() {
               </CardContent>
             </Card>
 
-            <Card className="bg-white/70 backdrop-blur-md border-0 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105">
+            <Card className="metrics-card">
               <CardContent className="p-6 text-center">
                 <div className="p-3 bg-[#17B6C3]/10 rounded-xl mx-auto mb-4 w-fit">
                   <MessageSquare className="h-8 w-8 text-[#17B6C3]" />
@@ -385,7 +385,7 @@ export default function Demo() {
               </CardContent>
             </Card>
 
-            <Card className="bg-white/70 backdrop-blur-md border-0 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105">
+            <Card className="metrics-card">
               <CardContent className="p-6 text-center">
                 <div className="p-3 bg-[#17B6C3]/10 rounded-xl mx-auto mb-4 w-fit">
                   <Phone className="h-8 w-8 text-[#17B6C3]" />

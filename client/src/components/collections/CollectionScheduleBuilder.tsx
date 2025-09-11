@@ -304,7 +304,7 @@ export default function CollectionScheduleBuilder({ className }: CollectionSched
       {/* Schedules Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {(schedules as CollectionSchedule[]).map((schedule: CollectionSchedule) => (
-          <Card key={schedule.id} className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg hover:shadow-xl transition-all duration-300">
+          <Card key={schedule.id} className="card-glass">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-lg flex items-center gap-2">
@@ -342,7 +342,7 @@ export default function CollectionScheduleBuilder({ className }: CollectionSched
                           <div className={`p-1 rounded border ${getStepColor(step.type)}`}>
                             <StepIcon className="h-3 w-3" />
                           </div>
-                          {index < Math.min(4, schedule.scheduleSteps.length - 1) && (
+                          {index < Math.min(4, (schedule.scheduleSteps as any[]).length - 1) && (
                             <ArrowRight className="h-2 w-2 text-gray-400" />
                           )}
                         </div>
@@ -378,9 +378,9 @@ export default function CollectionScheduleBuilder({ className }: CollectionSched
                 <div className="space-y-2">
                   <div className="flex items-center justify-between text-xs">
                     <span className="text-gray-600">Success Rate</span>
-                    <span className="font-medium">{Math.round(schedule.successRate * 100)}%</span>
+                    <span className="font-medium">{Math.round(((schedule.successRate ?? 0) as number) * 100)}%</span>
                   </div>
-                  <Progress value={schedule.successRate * 100} className="h-2" />
+                  <Progress value={((schedule.successRate ?? 0) as number) * 100} className="h-2" />
                 </div>
               )}
 
@@ -398,7 +398,7 @@ export default function CollectionScheduleBuilder({ className }: CollectionSched
                     size="sm"
                     variant="outline"
                     onClick={() => deleteMutation.mutate(schedule.id)}
-                    disabled={schedule.isDefault}
+                    disabled={schedule.isDefault === true}
                     data-testid={`button-delete-schedule-${schedule.id}`}
                   >
                     <Trash2 className="h-4 w-4 text-red-500" />

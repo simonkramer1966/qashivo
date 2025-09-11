@@ -160,7 +160,7 @@ export default function Profile() {
         <main className="flex-1 overflow-y-auto">
           <Header title="Profile" subtitle="Manage your account settings and subscription" />
           <div className="p-8">
-            <Card className="bg-white/80 backdrop-blur-sm border-red-200/50">
+            <Card className="card-glass border-red-200/50">
               <CardContent className="p-8 text-center">
                 <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">Error Loading Profile</h3>
@@ -198,7 +198,7 @@ export default function Profile() {
           <div className="max-w-4xl mx-auto">
             <div className="grid gap-8">
               {/* User Profile Card */}
-              <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg" data-testid="card-user-profile">
+              <Card className="card-glass" data-testid="card-user-profile">
             <CardHeader className="pb-4">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-[#17B6C3]/10 rounded-lg">
@@ -245,7 +245,7 @@ export default function Profile() {
           </Card>
 
           {/* Subscription Card */}
-          <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg" data-testid="card-subscription">
+          <Card className="card-glass" data-testid="card-subscription">
             <CardHeader className="pb-4">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-[#17B6C3]/10 rounded-lg">

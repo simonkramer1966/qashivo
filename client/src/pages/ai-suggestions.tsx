@@ -123,7 +123,7 @@ export default function AiSuggestions() {
       {/* AI Insights Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {insights.map((insight, index) => (
-          <Card key={index} className="bg-white border border-gray-200 shadow-sm" data-testid={`card-insight-${index}`}>
+          <Card key={index} className="metrics-card" data-testid={`card-insight-${index}`}>
             <CardContent className="p-6">
               <div className="flex items-center space-x-3 mb-3">
                 <Brain className="h-5 w-5 text-[#17B6C3]" />
@@ -150,7 +150,7 @@ export default function AiSuggestions() {
 
         <div className="grid grid-cols-1 gap-6">
           {suggestions.map((suggestion) => (
-            <Card key={suggestion.id} className="bg-white border border-gray-200 shadow-sm hover:shadow-md transition-shadow" data-testid={`card-suggestion-${suggestion.id}`}>
+            <Card key={suggestion.id} className="card-glass" data-testid={`card-suggestion-${suggestion.id}`}>
               <CardHeader>
                 <div className="flex items-start justify-between">
                   <div className="flex items-center space-x-3">
@@ -209,7 +209,7 @@ export default function AiSuggestions() {
       </div>
 
       {/* AI Performance Stats */}
-      <Card className="bg-gradient-to-r from-[#17B6C3]/5 to-purple-500/5 border-[#17B6C3]/20">
+      <Card className="card-glass bg-gradient-to-r from-[#17B6C3]/5 to-purple-500/5">
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
             <TrendingUp className="h-5 w-5 text-[#17B6C3]" />

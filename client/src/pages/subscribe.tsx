@@ -55,7 +55,7 @@ const SubscribeForm = () => {
   }
 
   return (
-    <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
+    <Card className="card-glass">
       <CardHeader className="text-center">
         <CardTitle className="text-xl font-bold text-gray-900">Complete Your Subscription</CardTitle>
         <CardDescription>
@@ -158,7 +158,7 @@ export default function Subscribe() {
     return (
       <div className="min-h-screen page-gradient p-8">
         <div className="max-w-4xl mx-auto">
-          <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg text-center">
+          <Card className="card-glass text-center">
             <CardContent className="pt-8 pb-8">
               <div className="p-4 bg-[#17B6C3]/10 rounded-full w-20 h-20 mx-auto mb-6 flex items-center justify-center">
                 <CheckCircle className="h-10 w-10 text-[#17B6C3]" />

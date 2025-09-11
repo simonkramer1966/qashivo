@@ -68,7 +68,7 @@ export default function EmailSenderManagement({ className }: EmailSenderManageme
   });
 
   // Fetch email senders
-  const { data: emailSenders = [], isLoading } = useQuery({
+  const { data: emailSenders = [], isLoading } = useQuery<EmailSender[]>({
     queryKey: ['/api/collections/email-senders'],
   });
 
@@ -171,8 +171,8 @@ export default function EmailSenderManagement({ className }: EmailSenderManageme
 
       {/* Email Senders Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {emailSenders.map((sender: EmailSender) => (
-          <Card key={sender.id} className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg hover:shadow-xl transition-all duration-300">
+        {(emailSenders as EmailSender[]).map((sender: EmailSender) => (
+          <Card key={sender.id} className="card-glass">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -194,7 +194,7 @@ export default function EmailSenderManagement({ className }: EmailSenderManageme
             <CardContent className="space-y-4">
               <div className="flex items-center gap-2">
                 <User className="h-4 w-4 text-gray-500" />
-                <span className="text-sm font-medium">{sender.displayName}</span>
+                <span className="text-sm font-medium">{sender.fromName}</span>
               </div>
               
               <div className="flex items-center gap-2">
@@ -222,7 +222,7 @@ export default function EmailSenderManagement({ className }: EmailSenderManageme
                     size="sm"
                     variant="outline"
                     onClick={() => deleteMutation.mutate(sender.id)}
-                    disabled={sender.isDefault}
+                    disabled={sender.isDefault === true}
                     data-testid={`button-delete-sender-${sender.id}`}
                   >
                     <Trash2 className="h-4 w-4 text-red-500" />

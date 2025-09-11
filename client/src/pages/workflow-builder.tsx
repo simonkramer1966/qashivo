@@ -416,7 +416,7 @@ export default function WorkflowBuilder() {
         <div className="flex-1 flex">
           {/* Left Panel - Toolbox */}
           <div className="w-80 bg-white/80 backdrop-blur-sm border-r border-white/50 shadow-lg p-4 overflow-y-auto">
-            <Card className="mb-4 bg-white/70 backdrop-blur-md border-0 shadow-xl">
+            <Card className="mb-4 metrics-card">
               <CardHeader className="pb-3">
                 <CardTitle className="text-lg">Workflow Settings</CardTitle>
               </CardHeader>
@@ -446,7 +446,7 @@ export default function WorkflowBuilder() {
               
               <TabsContent value="triggers" className="space-y-4">
                 {/* Trigger Nodes */}
-                <Card className="bg-white/70 backdrop-blur-md border-0 shadow-xl">
+                <Card className="metrics-card">
                   <CardHeader className="pb-3">
                     <CardTitle className="text-sm flex items-center">
                       <Zap className="mr-2 h-4 w-4 text-red-500" />
@@ -472,7 +472,7 @@ export default function WorkflowBuilder() {
                 </Card>
 
                 {/* Decision Nodes */}
-                <Card className="bg-white/70 backdrop-blur-md border-0 shadow-xl">
+                <Card className="metrics-card">
                   <CardHeader className="pb-3">
                     <CardTitle className="text-sm flex items-center">
                       <GitBranch className="mr-2 h-4 w-4 text-purple-500" />
@@ -500,7 +500,7 @@ export default function WorkflowBuilder() {
 
               <TabsContent value="actions" className="space-y-4">
                 {/* Action Nodes */}
-                <Card className="bg-white/70 backdrop-blur-md border-0 shadow-xl">
+                <Card className="metrics-card">
                   <CardHeader className="pb-3">
                     <CardTitle className="text-sm flex items-center">
                       <Target className="mr-2 h-4 w-4 text-blue-500" />
@@ -526,7 +526,7 @@ export default function WorkflowBuilder() {
                 </Card>
 
                 {/* Delay Nodes */}
-                <Card className="bg-white/70 backdrop-blur-md border-0 shadow-xl">
+                <Card className="metrics-card">
                   <CardHeader className="pb-3">
                     <CardTitle className="text-sm flex items-center">
                       <Clock className="mr-2 h-4 w-4 text-yellow-500" />
@@ -746,7 +746,7 @@ export default function WorkflowBuilder() {
                     }}
                     data-testid={`node-${node.id}`}
                   >
-                    <Card className="bg-white shadow-lg border-2 border-gray-200 hover:shadow-xl transition-all min-w-[160px] relative">
+                    <Card className="card-glass min-w-[160px] relative">
                       {/* Delete button for selected node */}
                       {selectedNode?.id === node.id && (
                         <Button
@@ -841,7 +841,7 @@ export default function WorkflowBuilder() {
           {/* Right Panel - Properties */}
           <div className="w-80 bg-white/80 backdrop-blur-sm border-l border-white/50 shadow-lg p-4 overflow-y-auto">
             {selectedNode ? (
-              <Card className="bg-white/70 backdrop-blur-md border-0 shadow-xl">
+              <Card className="metrics-card">
                 <CardHeader>
                   <CardTitle className="text-lg flex items-center justify-between">
                     <div className="flex items-center">
@@ -1637,7 +1637,7 @@ export default function WorkflowBuilder() {
                 </CardContent>
               </Card>
             ) : (
-              <Card className="bg-white/70 backdrop-blur-md border-0 shadow-xl">
+              <Card className="metrics-card">
                 <CardContent className="pt-6">
                   <div className="text-center text-gray-500">
                     <Settings className="h-8 w-8 mx-auto mb-3 opacity-50" />

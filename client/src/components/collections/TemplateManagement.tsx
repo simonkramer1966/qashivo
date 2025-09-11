@@ -106,12 +106,12 @@ export default function TemplateManagement({ className }: TemplateManagementProp
   });
 
   // Fetch templates
-  const { data: templates = [], isLoading } = useQuery({
+  const { data: templates = [], isLoading } = useQuery<CommunicationTemplate[]>({
     queryKey: ['/api/collections/templates'],
   });
 
   // Fetch high-performing templates
-  const { data: highPerformingTemplates = [] } = useQuery({
+  const { data: highPerformingTemplates = [] } = useQuery<CommunicationTemplate[]>({
     queryKey: ['/api/collections/templates/high-performing'],
   });
 
@@ -168,12 +168,12 @@ export default function TemplateManagement({ className }: TemplateManagementProp
     mutationFn: async (data: { type: string; category: string; tone: string; stage: number }) => {
       return apiRequest("POST", "/api/collections/templates/ai-generate", data);
     },
-    onSuccess: (data) => {
+    onSuccess: (data: any) => {
       console.log("AI Generate response:", data); // Debug log
-      if (data && typeof data === 'object' && 'content' in data && data.content) {
+      if (data && typeof data === 'object' && 'content' in data && typeof data.content === 'string') {
         form.setValue("content", data.content);
       }
-      if (data && typeof data === 'object' && 'subject' in data && data.subject) {
+      if (data && typeof data === 'object' && 'subject' in data && typeof data.subject === 'string') {
         form.setValue("subject", data.subject);
       }
       toast({
@@ -190,7 +190,7 @@ export default function TemplateManagement({ className }: TemplateManagementProp
     },
   });
 
-  const filteredTemplates = templates.filter((template: CommunicationTemplate) => {
+  const filteredTemplates = (templates as CommunicationTemplate[]).filter((template: CommunicationTemplate) => {
     if (selectedCategory !== "all" && template.category !== selectedCategory) return false;
     if (selectedType !== "all" && template.type !== selectedType) return false;
     return true;
@@ -206,7 +206,7 @@ export default function TemplateManagement({ className }: TemplateManagementProp
       subject: template.subject || "",
       content: template.content,
       toneOfVoice: (template.toneOfVoice as "friendly" | "professional" | "firm" | "urgent") || "professional",
-      isActive: template.isActive ?? true,
+      isActive: template.isActive !== null ? template.isActive : true,
     });
     setIsDialogOpen(true);
   };
@@ -279,7 +279,7 @@ export default function TemplateManagement({ className }: TemplateManagementProp
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {highPerformingTemplates.slice(0, 3).map((template: CommunicationTemplate) => {
+              {(highPerformingTemplates as CommunicationTemplate[]).slice(0, 3).map((template: CommunicationTemplate) => {
                 const TypeIcon = getTypeIcon(template.type);
                 return (
                   <div
@@ -292,7 +292,7 @@ export default function TemplateManagement({ className }: TemplateManagementProp
                         <span className="font-medium text-sm">{template.name}</span>
                       </div>
                       <Badge className="bg-yellow-100 text-yellow-800 text-xs">
-                        {Math.round((template.successRate || 0) * 100)}% success
+                        {Math.round(((template.successRate ?? 0) as number) * 100)}% success
                       </Badge>
                     </div>
                     <p className="text-xs text-gray-600 line-clamp-2">{template.content}</p>
@@ -363,7 +363,7 @@ export default function TemplateManagement({ className }: TemplateManagementProp
           const CategoryIcon = categoryInfo?.icon || Target;
           
           return (
-            <Card key={template.id} className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg hover:shadow-xl transition-all duration-300">
+            <Card key={template.id} className="card-glass">
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
@@ -401,9 +401,9 @@ export default function TemplateManagement({ className }: TemplateManagementProp
                   <div className="space-y-2">
                     <div className="flex items-center justify-between text-xs">
                       <span className="text-gray-600">Success Rate</span>
-                      <span className="font-medium">{Math.round(template.successRate * 100)}%</span>
+                      <span className="font-medium">{Math.round(Number(template.successRate ?? 0) * 100)}%</span>
                     </div>
-                    <Progress value={template.successRate * 100} className="h-2" />
+                    <Progress value={Number(template.successRate ?? 0) * 100} className="h-2" />
                   </div>
                 )}
 
@@ -421,7 +421,7 @@ export default function TemplateManagement({ className }: TemplateManagementProp
                       size="sm"
                       variant="outline"
                       onClick={() => deleteMutation.mutate(template.id)}
-                      disabled={template.isDefault}
+                      disabled={template.isDefault === true}
                       data-testid={`button-delete-${template.id}`}
                     >
                       <Trash2 className="h-4 w-4 text-red-500" />
@@ -538,7 +538,7 @@ export default function TemplateManagement({ className }: TemplateManagementProp
 
                 <FormField
                   control={form.control}
-                  name="tone"
+                  name="toneOfVoice"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Tone</FormLabel>
@@ -593,7 +593,7 @@ export default function TemplateManagement({ className }: TemplateManagementProp
                           aiGenerateMutation.mutate({
                             type: formData.type,
                             category: formData.category,
-                            tone: formData.tone || "professional",
+                            tone: formData.toneOfVoice || "professional",
                             stage: formData.stage,
                           });
                         }}

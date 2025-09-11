@@ -49,7 +49,7 @@ export default function WorkflowTemplates() {
   ];
 
   return (
-    <Card className="bg-white border border-gray-200 shadow-sm">
+    <Card className="card-glass">
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle className="text-2xl font-bold flex items-center" data-testid="text-workflow-templates-title">
@@ -69,7 +69,7 @@ export default function WorkflowTemplates() {
           {mockTemplates.map((template) => (
             <div 
               key={template.id} 
-              className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow flex flex-col"
+              className="card-glass p-6 flex flex-col"
               data-testid={`card-workflow-template-${template.id}`}
             >
               <div className="flex items-center justify-between mb-4">
