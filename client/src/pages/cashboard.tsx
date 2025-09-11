@@ -42,6 +42,8 @@ interface CashMetrics {
   overdueCount: number;
   collectionRate: number;
   avgDaysToPay: number;
+  collectionsWithinTerms: number;
+  dso: number;
   // Note: totalPaid, totalUnpaid, cashPosition, projectedRunway not available from API
 }
 
@@ -148,6 +150,19 @@ export default function Cashboard() {
 
   const healthStatus = getCashHealthStatus();
 
+  // Helper functions for action item status determination
+  const getCollectionsWithinTermsStatus = (percentage: number): 'urgent' | 'attention' | 'opportunity' => {
+    if (percentage < 70) return 'urgent';
+    if (percentage < 85) return 'attention';
+    return 'opportunity';
+  };
+
+  const getDSOStatus = (days: number): 'urgent' | 'attention' | 'opportunity' => {
+    if (days > 50) return 'urgent';
+    if (days > 35) return 'attention';
+    return 'opportunity';
+  };
+
   // Priority action items with real navigation and actions
   const actionItems: ActionItem[] = [
     {
@@ -168,33 +183,33 @@ export default function Cashboard() {
     },
     {
       id: '2',
-      type: 'attention',
-      title: 'Collection Rate Below Target',
-      description: `Current: ${metrics?.collectionRate || 0}% | Target: 85%`,
-      value: totalOutstanding * 0.15, // Potential improvement
-      action: 'Check Status',
+      type: getCollectionsWithinTermsStatus(metrics?.collectionsWithinTerms || 0),
+      title: 'Collections within Terms',
+      description: `${metrics?.collectionsWithinTerms || 0}% paid on time | Target: 85%`,
+      value: totalOutstanding * ((85 - (metrics?.collectionsWithinTerms || 0)) / 100), // Potential improvement
+      action: 'Review Process',
       icon: Target,
       onClick: () => {
-        setLocation('/dashboard');
+        setLocation('/workflows');
         toast({
-          title: "Opening Collection Analytics",
-          description: "Review collection performance and optimize workflows."
+          title: "Optimizing Collections Process",
+          description: "Review payment terms and follow-up workflows."
         });
       }
     },
     {
       id: '3',
-      type: 'opportunity',
-      title: 'Early Payment Incentives',
-      description: 'Offer 2% discount for early payment',
-      value: totalOutstanding * 0.02,
-      action: 'Set Up Discounts',
-      icon: TrendingUp,
+      type: getDSOStatus(metrics?.dso || 0),
+      title: 'DSO (Days Sales Outstanding)',
+      description: `${metrics?.dso || 0} days average | Target: <35 days`,
+      value: totalOutstanding * (Math.max(0, (metrics?.dso || 0) - 35) / 100), // Cost of delayed collections
+      action: 'Optimize Process',
+      icon: Clock,
       onClick: () => {
-        setLocation('/workflows');
+        setLocation('/invoices');
         toast({
-          title: "Setting Up Discount Campaign",
-          description: "Create automated early payment discount workflows."
+          title: "Optimizing Collection Time",
+          description: "Review credit terms and collection workflows."
         });
       }
     }

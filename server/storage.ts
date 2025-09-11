@@ -99,6 +99,8 @@ export interface IStorage {
       overdueCount: number;
       collectionRate: number;
       avgDaysToPay: number;
+      collectionsWithinTerms: number;
+      dso: number;
       userCount: number;
       invoiceCount: number;
     }
@@ -122,6 +124,8 @@ export interface IStorage {
     overdueCount: number;
     collectionRate: number;
     avgDaysToPay: number;
+    collectionsWithinTerms: number;
+    dso: number;
   }>;
   
   // Action operations
@@ -307,6 +311,8 @@ export class DatabaseStorage implements IStorage {
       overdueCount: number;
       collectionRate: number;
       avgDaysToPay: number;
+      collectionsWithinTerms: number;
+      dso: number;
       userCount: number;
       invoiceCount: number;
     }
@@ -517,6 +523,8 @@ export class DatabaseStorage implements IStorage {
     overdueCount: number;
     collectionRate: number;
     avgDaysToPay: number;
+    collectionsWithinTerms: number;
+    dso: number;
   }> {
     const outstandingResult = await db
       .select({
@@ -565,6 +573,36 @@ export class DatabaseStorage implements IStorage {
         )
       );
 
+    // Calculate Collections within Terms (paid invoices within their payment terms)
+    const withinTermsResult = await db
+      .select({
+        totalPaidInvoices: count(),
+        paidWithinTerms: sql<number>`COUNT(CASE WHEN EXTRACT(DAY FROM (${invoices.paidDate} - ${invoices.dueDate})) <= 0 THEN 1 END)`
+      })
+      .from(invoices)
+      .innerJoin(contacts, eq(invoices.contactId, contacts.id))
+      .where(
+        and(
+          eq(invoices.tenantId, tenantId),
+          eq(invoices.status, "paid"),
+          sql`${invoices.paidDate} IS NOT NULL`
+        )
+      );
+
+    // Calculate DSO (Days Sales Outstanding) - average time from invoice issue to payment
+    const dsoResult = await db
+      .select({
+        avgDSO: sql<number>`AVG(EXTRACT(DAY FROM (${invoices.paidDate} - ${invoices.issueDate})))`
+      })
+      .from(invoices)
+      .where(
+        and(
+          eq(invoices.tenantId, tenantId),
+          eq(invoices.status, "paid"),
+          sql`${invoices.paidDate} IS NOT NULL`
+        )
+      );
+
     const totalOutstanding = outstandingResult[0]?.total || 0;
     const overdueCount = overdueResult[0]?.count || 0;
     const paidCount = paidInvoicesResult[0]?.count || 0;
@@ -572,11 +610,21 @@ export class DatabaseStorage implements IStorage {
     const avgDaysToPay = paidInvoicesResult[0]?.avgDays || 0;
     const collectionRate = (paidCount / totalCount) * 100;
 
+    // Calculate Collections within Terms percentage
+    const totalPaidInvoices = withinTermsResult[0]?.totalPaidInvoices || 1;
+    const paidWithinTerms = withinTermsResult[0]?.paidWithinTerms || 0;
+    const collectionsWithinTerms = (paidWithinTerms / totalPaidInvoices) * 100;
+
+    // Get DSO value
+    const dso = dsoResult[0]?.avgDSO || 0;
+
     return {
       totalOutstanding: Number(totalOutstanding),
       overdueCount,
       collectionRate: Number(collectionRate.toFixed(1)),
       avgDaysToPay: Math.round(Number(avgDaysToPay)),
+      collectionsWithinTerms: Number(collectionsWithinTerms.toFixed(1)),
+      dso: Math.round(Number(dso)),
     };
   }
 
