@@ -431,6 +431,16 @@ export default function Customers() {
                                     Create Payment Plan
                                   </DropdownMenuItem>
                                   <DropdownMenuItem 
+                                    data-testid={`menu-create-dispute-${contact.id}`}
+                                    onClick={() => toast({ 
+                                      title: "Create Dispute", 
+                                      description: `Dispute creation for ${contact.companyName || contact.name}` 
+                                    })}
+                                  >
+                                    <AlertCircle className="mr-2 h-4 w-4" />
+                                    Create Dispute
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem 
                                     data-testid={`menu-view-history-${contact.id}`}
                                   >
                                     <Eye className="mr-2 h-4 w-4" />
