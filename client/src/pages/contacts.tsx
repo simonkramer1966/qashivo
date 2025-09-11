@@ -444,7 +444,7 @@ export default function Customers() {
                                     data-testid={`menu-view-history-${contact.id}`}
                                   >
                                     <Eye className="mr-2 h-4 w-4" />
-                                    View Communication History
+                                    View Comms History
                                   </DropdownMenuItem>
                                   <DropdownMenuItem 
                                     data-testid={`menu-hold-${contact.id}`}
