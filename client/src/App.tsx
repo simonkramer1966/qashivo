@@ -34,6 +34,7 @@ import Subscribe from "@/pages/subscribe";
 import Profile from "@/pages/Profile";
 import OwnerDashboard from "@/pages/owner-dashboard";
 import HealthDashboard from "@/pages/HealthDashboard";
+import TestCommunicationDialog from "@/pages/test-communication-dialog";
 import { useAuth } from "@/hooks/useAuth";
 
 function Router() {
@@ -86,6 +87,7 @@ function Router() {
       <Route path="/ui-sage" component={UISage} />
       <Route path="/subscribe" component={Subscribe} />
       <Route path="/owner" component={OwnerDashboard} />
+      <Route path="/test-dialog" component={TestCommunicationDialog} />
       <Route path="/" component={Dashboard} />
       <Route path="/:rest*" component={NotFound} />
     </Switch>
