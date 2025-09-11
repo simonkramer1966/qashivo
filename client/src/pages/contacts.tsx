@@ -447,6 +447,16 @@ export default function Customers() {
                                     View Comms History
                                   </DropdownMenuItem>
                                   <DropdownMenuItem 
+                                    data-testid={`menu-hold-customer-${contact.id}`}
+                                    onClick={() => toast({ 
+                                      title: "Hold Customer", 
+                                      description: `Customer hold for ${contact.companyName || contact.name}` 
+                                    })}
+                                  >
+                                    <Pause className="mr-2 h-4 w-4" />
+                                    Hold Customer
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem 
                                     data-testid={`menu-hold-${contact.id}`}
                                   >
                                     <Pause className="mr-2 h-4 w-4" />
