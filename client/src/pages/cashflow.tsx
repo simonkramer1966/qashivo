@@ -466,6 +466,52 @@ export default function Cashflow() {
     setIsActionSidebarOpen(prev => !prev);
   }, []);
 
+  // Calculate scenario impact
+  const calculateScenarioImpact = (inputs = scenarioInputs) => {
+    const baseCollection = 127500;
+    const baseExpenses = 98200;
+    
+    const adjustedCollection = baseCollection * (inputs.collectionRate[0] / 100);
+    const adjustedExpenses = baseExpenses * (1 + inputs.expenseChanges[0] / 100);
+    const delayImpact = inputs.paymentDelays[0] * 1000; // rough calculation
+    
+    return {
+      projectedInflow: adjustedCollection + inputs.newInvoices[0],
+      projectedOutflow: adjustedExpenses,
+      netImpact: (adjustedCollection + inputs.newInvoices[0]) - adjustedExpenses - delayImpact,
+      newRunway: currentCashData.cashRunway + ((adjustedCollection - adjustedExpenses) / 10000)
+    };
+  };
+
+  // Save current scenario
+  const saveCurrentScenario = useCallback(() => {
+    if (!newScenarioName.trim()) {
+      toast({
+        title: "Name Required",
+        description: "Please enter a name for your scenario",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const impact = calculateScenarioImpact();
+    const newScenario: SavedScenario = {
+      id: Date.now().toString(),
+      name: newScenarioName,
+      description: `Collection: ${scenarioInputs.collectionRate[0]}%, Delays: ${scenarioInputs.paymentDelays[0]} days`,
+      inputs: { ...scenarioInputs },
+      impact,
+      createdAt: new Date().toISOString().split('T')[0]
+    };
+
+    setSavedScenarios(prev => [...prev, newScenario]);
+    setNewScenarioName('');
+    toast({
+      title: "Scenario Saved",
+      description: `"${newScenario.name}" has been saved successfully`
+    });
+  }, [newScenarioName, scenarioInputs, calculateScenarioImpact, toast]);
+
   // Keyboard shortcuts setup
   const keyboardShortcuts = useMemo(() => [
     ...getCommonShortcuts({
@@ -585,52 +631,6 @@ export default function Cashflow() {
       }
     ]);
   }, []);
-
-  // Calculate scenario impact
-  const calculateScenarioImpact = (inputs = scenarioInputs) => {
-    const baseCollection = 127500;
-    const baseExpenses = 98200;
-    
-    const adjustedCollection = baseCollection * (inputs.collectionRate[0] / 100);
-    const adjustedExpenses = baseExpenses * (1 + inputs.expenseChanges[0] / 100);
-    const delayImpact = inputs.paymentDelays[0] * 1000; // rough calculation
-    
-    return {
-      projectedInflow: adjustedCollection + inputs.newInvoices[0],
-      projectedOutflow: adjustedExpenses,
-      netImpact: (adjustedCollection + inputs.newInvoices[0]) - adjustedExpenses - delayImpact,
-      newRunway: currentCashData.cashRunway + ((adjustedCollection - adjustedExpenses) / 10000)
-    };
-  };
-
-  // Save current scenario
-  const saveCurrentScenario = () => {
-    if (!newScenarioName.trim()) {
-      toast({
-        title: "Name Required",
-        description: "Please enter a name for your scenario",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    const impact = calculateScenarioImpact();
-    const newScenario: SavedScenario = {
-      id: Date.now().toString(),
-      name: newScenarioName,
-      description: `Collection: ${scenarioInputs.collectionRate[0]}%, Delays: ${scenarioInputs.paymentDelays[0]} days`,
-      inputs: { ...scenarioInputs },
-      impact,
-      createdAt: new Date().toISOString().split('T')[0]
-    };
-
-    setSavedScenarios(prev => [...prev, newScenario]);
-    setNewScenarioName('');
-    toast({
-      title: "Scenario Saved",
-      description: `"${newScenario.name}" has been saved successfully`
-    });
-  };
 
   // Load saved scenario
   const loadScenario = (scenario: SavedScenario) => {
