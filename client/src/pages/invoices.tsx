@@ -16,6 +16,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Checkbox } from "@/components/ui/checkbox";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel } from "@/components/ui/dropdown-menu";
 import { Mail, Phone, Eye, Plus, Search, Filter, FileText, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, X, MessageSquare, Calendar, CheckCircle, AlertCircle, Clock, Users, User, Building, Star, Target, ArrowRight, MoreHorizontal, Pause } from "lucide-react";
+import { CommunicationPreviewDialog } from "@/components/ui/communication-preview-dialog";
 
 export default function Invoices() {
   const { toast } = useToast();
@@ -43,6 +44,11 @@ export default function Invoices() {
   // Selection state for bulk actions
   const [selectedInvoices, setSelectedInvoices] = useState<Set<string>>(new Set());
   const [showBulkActions, setShowBulkActions] = useState(false);
+
+  // Communication preview dialog state
+  const [showCommunicationDialog, setShowCommunicationDialog] = useState(false);
+  const [communicationType, setCommunicationType] = useState<'email' | 'sms' | 'voice'>('email');
+  const [selectedInvoiceForComm, setSelectedInvoiceForComm] = useState<any>(null);
 
   // Redirect to home if not authenticated
   useEffect(() => {
@@ -82,27 +88,60 @@ export default function Invoices() {
     enabled: !!selectedInvoice?.id,
   });
 
-  // Email sending mutation
-  const sendEmailMutation = useMutation({
-    mutationFn: async (invoiceId: string) => {
-      const response = await apiRequest("POST", "/api/communications/send-email", { invoiceId });
+  // Communication sending mutations
+  const sendCommunicationMutation = useMutation({
+    mutationFn: async (data: { type: 'email' | 'sms' | 'voice'; invoiceId: string; subject?: string; content: string; recipient: string; templateId?: string }) => {
+      const endpoint = `/api/communications/send-${data.type}`;
+      const payload = {
+        invoiceId: data.invoiceId,
+        subject: data.subject,
+        content: data.content,
+        recipient: data.recipient,
+        templateId: data.templateId,
+      };
+      const response = await apiRequest("POST", endpoint, payload);
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data, variables) => {
+      const typeLabel = variables.type === 'email' ? 'Email' : variables.type === 'sms' ? 'SMS' : 'Voice call';
       toast({
-        title: "Email Sent",
-        description: "General chase email has been sent successfully.",
+        title: `${typeLabel} Sent`,
+        description: `${typeLabel} has been sent successfully.`,
       });
       queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
+      setShowCommunicationDialog(false);
+      setSelectedInvoiceForComm(null);
     },
-    onError: (error) => {
+    onError: (error, variables) => {
+      const typeLabel = variables.type === 'email' ? 'email' : variables.type === 'sms' ? 'SMS' : 'voice call';
       toast({
         title: "Error",
-        description: "Failed to send email. Please try again.",
+        description: `Failed to send ${typeLabel}. Please try again.`,
         variant: "destructive",
       });
     },
   });
+
+  // Helper functions to open communication dialog
+  const openCommunicationDialog = (invoice: any, type: 'email' | 'sms' | 'voice') => {
+    setSelectedInvoiceForComm(invoice);
+    setCommunicationType(type);
+    setShowCommunicationDialog(true);
+  };
+
+  // Handle communication send from preview dialog
+  const handleCommunicationSend = (content: { subject?: string; content: string; recipient: string; templateId?: string }) => {
+    if (!selectedInvoiceForComm) return;
+    
+    sendCommunicationMutation.mutate({
+      type: communicationType,
+      invoiceId: selectedInvoiceForComm.id,
+      subject: content.subject,
+      content: content.content,
+      recipient: content.recipient,
+      templateId: content.templateId,
+    });
+  };
 
   useEffect(() => {
     if (error && isUnauthorizedError(error as Error)) {
@@ -363,14 +402,15 @@ export default function Invoices() {
                                     Communication
                                   </DropdownMenuLabel>
                                   <DropdownMenuItem 
-                                    onClick={() => sendEmailMutation.mutate(invoice.id)}
-                                    disabled={sendEmailMutation.isPending || !invoice.contact?.email}
+                                    onClick={() => openCommunicationDialog(invoice, 'email')}
+                                    disabled={!invoice.contact?.email}
                                     data-testid={`menu-send-email-${invoice.id}`}
                                   >
                                     <Mail className="mr-2 h-4 w-4" />
                                     Send Email
                                   </DropdownMenuItem>
                                   <DropdownMenuItem 
+                                    onClick={() => openCommunicationDialog(invoice, 'sms')}
                                     disabled={!invoice.contact?.phone}
                                     data-testid={`menu-send-sms-${invoice.id}`}
                                   >
@@ -378,6 +418,7 @@ export default function Invoices() {
                                     Send SMS
                                   </DropdownMenuItem>
                                   <DropdownMenuItem 
+                                    onClick={() => openCommunicationDialog(invoice, 'voice')}
                                     disabled={!invoice.contact?.phone}
                                     data-testid={`menu-call-customer-${invoice.id}`}
                                   >
@@ -756,6 +797,19 @@ export default function Invoices() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Communication Preview Dialog */}
+      <CommunicationPreviewDialog
+        isOpen={showCommunicationDialog}
+        onClose={() => {
+          setShowCommunicationDialog(false);
+          setSelectedInvoiceForComm(null);
+        }}
+        type={communicationType}
+        context="invoice"
+        contextId={selectedInvoiceForComm?.id || ""}
+        onSend={handleCommunicationSend}
+      />
     </div>
   );
 }
