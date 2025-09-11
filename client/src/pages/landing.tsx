@@ -207,7 +207,7 @@ export default function Landing() {
         <div className="absolute inset-0 bg-[#17B6C3]/80"></div>
         <div className="relative z-10 h-full flex items-center justify-center">
           <div className="text-center text-white max-w-4xl mx-auto px-4">
-            <h2 className="text-4xl md:text-5xl font-bold mb-6">
+            <h2 className="text-4xl md:text-5xl font-bold mb-6 text-white">
               "We Get Paid 2 Weeks Faster Now"
             </h2>
             <p className="text-xl text-white/90">
