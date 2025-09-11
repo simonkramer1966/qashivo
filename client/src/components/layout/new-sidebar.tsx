@@ -247,15 +247,15 @@ export default function NewSidebar() {
           isCollapsed ? "flex-col space-y-2" : "space-x-3"
         )}>
           <div className="w-10 h-10 rounded-lg flex items-center justify-center">
-            <img src={nexusLogo} alt="Nexus AR" className="w-full h-full object-contain" />
+            <img src={nexusLogo} alt="Qashivo" className="w-full h-full object-contain" />
           </div>
           {!isCollapsed && (
             <div>
               <h1 className="text-xl font-semibold text-gray-900">
-                Nexus AR
+                Qashivo
               </h1>
               <p className="text-sm text-gray-500">
-                Intelligent Cashflow
+                Cashflow Simplified
               </p>
             </div>
           )}
