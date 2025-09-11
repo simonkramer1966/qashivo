@@ -129,6 +129,14 @@ const RISK_LEVEL_CONFIG = {
     description: "Reliable payment history",
     icon: CheckCircle
   },
+  "low-medium": {
+    color: "#84cc16",
+    bgColor: "bg-lime-100",
+    textColor: "text-lime-800",
+    label: "Low-Medium Risk",
+    description: "Good payment history",
+    icon: CheckCircle
+  },
   medium: {
     color: "#eab308", 
     bgColor: "bg-yellow-100",
