@@ -113,7 +113,7 @@ export default function Landing() {
               <img src={nexusLogo} alt="Qashivo" className="w-full h-full object-contain" />
             </div>
           </div>
-          <h1 className="text-5xl md:text-7xl font-bold mb-6">
+          <h1 className="text-5xl md:text-7xl font-bold mb-6 text-white">
             Get Paid Faster
           </h1>
           <p className="text-2xl md:text-3xl text-white/90 mb-4">
