@@ -87,7 +87,7 @@ export default function KPIAIForecasting() {
                   Qashivo
                 </h1>
                 <p className="text-xs text-[#17B6C3] font-medium tracking-wide uppercase">
-                  KPI & AI Forecasting
+                  KPI Reporting & AI Forecasting
                 </p>
               </div>
             </div>
