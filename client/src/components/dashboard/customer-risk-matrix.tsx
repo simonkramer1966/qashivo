@@ -409,11 +409,14 @@ export default function CustomerRiskMatrix() {
     fill: RISK_LEVEL_CONFIG[customer.riskLevel].color
   }));
 
-  // Prepare distribution chart data
-  const pieData = riskDistribution.map(dist => ({
-    ...dist,
-    fill: RISK_LEVEL_CONFIG[dist.riskLevel as keyof typeof RISK_LEVEL_CONFIG].color
-  }));
+  // Prepare distribution chart data - convert object to array format
+  const pieData = riskDistribution && typeof riskDistribution === 'object' 
+    ? Object.entries(riskDistribution).map(([riskLevel, count]) => ({
+        riskLevel,
+        count,
+        fill: RISK_LEVEL_CONFIG[riskLevel as keyof typeof RISK_LEVEL_CONFIG]?.color || '#94a3b8'
+      }))
+    : [];
 
   // Get high-risk customers (high and critical)
   const highRiskCustomers = customers
