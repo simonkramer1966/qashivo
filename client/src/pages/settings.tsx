@@ -343,7 +343,7 @@ function TestTabContent() {
   };
 
   return (
-    <Card className="bg-white border border-gray-200 shadow-sm">
+    <Card className="card-glass">
       <CardHeader>
         <CardTitle className="text-xl font-bold flex items-center">
           <div className="p-2 bg-[#17B6C3]/10 rounded-lg mr-3">
@@ -922,7 +922,7 @@ export default function Settings() {
   };
 
   return (
-    <div className="flex h-screen bg-white">
+    <div className="flex h-screen page-gradient">
       <NewSidebar />
       <main className="flex-1 overflow-y-auto">
         <Header 
@@ -932,7 +932,7 @@ export default function Settings() {
         
         <div className="p-8 max-w-5xl mx-auto space-y-8">
           <Tabs defaultValue="general" className="space-y-8">
-            <Card className="bg-white border border-gray-200 shadow-sm">
+            <Card className="card-glass">
               <CardHeader>
                 <CardTitle className="text-xl font-bold flex items-center">
                   <div className="p-2 bg-[#17B6C3]/10 rounded-lg mr-3">
@@ -955,7 +955,7 @@ export default function Settings() {
 
             <TabsContent value="general" className="space-y-8">
               {/* Profile Settings */}
-              <Card className="bg-white border border-gray-200 shadow-sm">
+              <Card className="card-glass">
                 <CardHeader>
                   <CardTitle className="text-xl font-bold flex items-center">
                     <div className="p-2 bg-[#17B6C3]/10 rounded-lg mr-3">
@@ -1007,7 +1007,7 @@ export default function Settings() {
               </Card>
 
               {/* Tenant Settings */}
-              <Card className="bg-white border border-gray-200 shadow-sm">
+              <Card className="card-glass">
                 <CardHeader>
                   <CardTitle className="text-xl font-bold flex items-center">
                     <div className="p-2 bg-[#17B6C3]/10 rounded-lg mr-3">
@@ -1077,7 +1077,7 @@ export default function Settings() {
 
             <TabsContent value="integrations" className="space-y-8">
               {/* Xero Integration */}
-              <Card className="bg-white border border-gray-200 shadow-sm">
+              <Card className="card-glass">
                 <CardHeader>
                   <CardTitle className="text-xl font-bold flex items-center justify-between">
                     <div className="flex items-center">
@@ -1178,7 +1178,7 @@ export default function Settings() {
               </Card>
 
               {/* Email Integration */}
-              <Card className="bg-white border border-gray-200 shadow-sm">
+              <Card className="card-glass">
                 <CardHeader>
                   <CardTitle className="text-xl font-bold flex items-center justify-between">
                     <div className="flex items-center">
@@ -1220,7 +1220,7 @@ export default function Settings() {
               </Card>
 
               {/* SMS Integration */}
-              <Card className="bg-white border border-gray-200 shadow-sm">
+              <Card className="card-glass">
                 <CardHeader>
                   <CardTitle className="text-xl font-bold flex items-center justify-between">
                     <div className="flex items-center">
@@ -1252,7 +1252,7 @@ export default function Settings() {
               </Card>
 
               {/* AI Integration */}
-              <Card className="bg-white border border-gray-200 shadow-sm">
+              <Card className="card-glass">
                 <CardHeader>
                   <CardTitle className="text-xl font-bold flex items-center justify-between">
                     <div className="flex items-center">
@@ -1292,7 +1292,7 @@ export default function Settings() {
               </Card>
 
               {/* Developer Tools */}
-              <Card className="bg-white border border-gray-200 shadow-sm">
+              <Card className="card-glass">
                 <CardHeader>
                   <CardTitle className="text-xl font-bold flex items-center justify-between">
                     <div className="flex items-center">
@@ -1360,7 +1360,7 @@ export default function Settings() {
             </TabsContent>
 
             <TabsContent value="notifications" className="space-y-8">
-              <Card className="bg-white border border-gray-200 shadow-sm">
+              <Card className="card-glass">
                 <CardHeader>
                   <CardTitle className="text-xl font-bold flex items-center">
                     <div className="p-2 bg-[#17B6C3]/10 rounded-lg mr-3">
@@ -1419,7 +1419,7 @@ export default function Settings() {
             </TabsContent>
 
             <TabsContent value="security" className="space-y-8">
-              <Card className="bg-white border border-gray-200 shadow-sm">
+              <Card className="card-glass">
                 <CardHeader>
                   <CardTitle className="text-xl font-bold flex items-center">
                     <div className="p-2 bg-[#17B6C3]/10 rounded-lg mr-3">
@@ -1474,7 +1474,7 @@ export default function Settings() {
             </TabsContent>
 
             <TabsContent value="branding" className="space-y-8">
-              <Card className="bg-white border border-gray-200 shadow-sm">
+              <Card className="card-glass">
                 <CardHeader>
                   <CardTitle className="text-xl font-bold flex items-center">
                     <div className="p-2 bg-[#17B6C3]/10 rounded-lg mr-3">

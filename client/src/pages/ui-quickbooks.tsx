@@ -64,11 +64,11 @@ export default function UIQuickBooks() {
   }, [isAuthenticated, isLoading, toast]);
 
   if (isLoading || !isAuthenticated) {
-    return <div className="min-h-screen bg-background" />;
+    return <div className="min-h-screen page-gradient" />;
   }
 
   return (
-    <div className="flex h-screen bg-slate-50">
+    <div className="flex h-screen page-gradient">
       <Sidebar />
       <main className="flex-1 overflow-y-auto">
         <Header 
@@ -79,11 +79,11 @@ export default function UIQuickBooks() {
           subtitleSize="text-base"
         />
         
-        <div className="p-6 space-y-6 bg-slate-50">
+        <div className="p-6 space-y-6">
           {/* Key Metrics - QuickBooks Style Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
             {/* Total Outstanding */}
-            <Card className="bg-white border-0 rounded-xl shadow-md hover:shadow-lg transition-all duration-300">
+            <Card className="metrics-card border-0 rounded-xl">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between mb-4">
                   <div className="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center">
@@ -102,7 +102,7 @@ export default function UIQuickBooks() {
             </Card>
 
             {/* Overdue Amount */}
-            <Card className="bg-white border-0 rounded-xl shadow-md hover:shadow-lg transition-all duration-300">
+            <Card className="metrics-card border-0 rounded-xl">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between mb-4">
                   <div className="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center">
@@ -121,7 +121,7 @@ export default function UIQuickBooks() {
             </Card>
 
             {/* Collected This Month */}
-            <Card className="bg-white border-0 rounded-xl shadow-md hover:shadow-lg transition-all duration-300">
+            <Card className="metrics-card border-0 rounded-xl">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between mb-4">
                   <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
@@ -140,7 +140,7 @@ export default function UIQuickBooks() {
             </Card>
 
             {/* Average DSO */}
-            <Card className="bg-white border-0 rounded-xl shadow-md hover:shadow-lg transition-all duration-300">
+            <Card className="metrics-card border-0 rounded-xl">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between mb-4">
                   <div className="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center">
@@ -162,7 +162,7 @@ export default function UIQuickBooks() {
           {/* Performance Overview Section */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Collection Performance */}
-            <Card className="lg:col-span-2 bg-white border-0 rounded-xl shadow-md">
+            <Card className="lg:col-span-2 card-glass border-0 rounded-xl">
               <CardHeader className="pb-4">
                 <div className="flex items-center justify-between">
                   <div>
@@ -202,7 +202,7 @@ export default function UIQuickBooks() {
             </Card>
 
             {/* Quick Actions */}
-            <Card className="bg-white border-0 rounded-xl shadow-md">
+            <Card className="card-glass border-0 rounded-xl">
               <CardHeader className="pb-4">
                 <CardTitle className="text-xl font-bold text-slate-800">Quick Actions</CardTitle>
                 <CardDescription className="text-sm text-slate-600">Common collection tasks</CardDescription>
@@ -244,7 +244,7 @@ export default function UIQuickBooks() {
           </div>
 
           {/* Recent Activity Section */}
-          <Card className="bg-white border-0 rounded-xl shadow-md">
+          <Card className="card-glass border-0 rounded-xl">
             <CardHeader className="pb-4">
               <div className="flex items-center justify-between">
                 <div>

@@ -325,7 +325,7 @@ I can see you currently have ${(dashboardData as any)?.totalOutstanding ? `$${(d
 
   if (isLoading || !isAuthenticated) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
+      <div className="min-h-screen page-gradient flex items-center justify-center">
         <div className="text-center">
           <div className="w-8 h-8 border-4 border-[#17B6C3] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-gray-600">Loading AI CFO...</p>
@@ -335,12 +335,12 @@ I can see you currently have ${(dashboardData as any)?.totalOutstanding ? `$${(d
   }
 
   return (
-    <div className="flex h-screen" style={{ backgroundColor: '#ffffff' }}>
+    <div className="flex h-screen page-gradient">
       <NewSidebar />
-      <main className="flex-1 overflow-y-auto" style={{ backgroundColor: '#ffffff' }}>
+      <main className="flex-1 overflow-y-auto">
         <Header title="AI CFO" subtitle="Your intelligent financial advisor for accounts receivable optimization" />
         
-        <div className="p-8 space-y-6" style={{ backgroundColor: '#ffffff' }}>
+        <div className="p-8 space-y-6">
           {/* AI CFO Overview */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             <Card className="bg-white/70 backdrop-blur-md border-0 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105">

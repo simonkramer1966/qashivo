@@ -55,9 +55,9 @@ export default function OwnerDashboard() {
 
   if (isLoading) {
     return (
-      <div className="flex h-screen" style={{ backgroundColor: '#ffffff' }}>
+      <div className="flex h-screen page-gradient">
         <NewSidebar />
-        <main className="flex-1 overflow-y-auto" style={{ backgroundColor: '#ffffff' }}>
+        <main className="flex-1 overflow-y-auto">
           <Header title="My Nexus" subtitle="Manage all your organizations" />
           <div className="p-8">
             <div className="animate-pulse">
@@ -76,9 +76,9 @@ export default function OwnerDashboard() {
 
   if (error) {
     return (
-      <div className="flex h-screen" style={{ backgroundColor: '#ffffff' }}>
+      <div className="flex h-screen page-gradient">
         <NewSidebar />
-        <main className="flex-1 overflow-y-auto" style={{ backgroundColor: '#ffffff' }}>
+        <main className="flex-1 overflow-y-auto">
           <Header title="My Nexus" subtitle="Manage all your organizations" />
           <div className="p-8">
             <Card className="bg-red-50 border-red-200">

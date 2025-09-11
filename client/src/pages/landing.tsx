@@ -19,7 +19,7 @@ export default function Landing() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen page-gradient">
       {/* Premium Navigation Header */}
       <nav className="bg-white/95 backdrop-blur-md border-b border-gray-200/20 fixed w-full z-50 shadow-lg">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -168,9 +168,10 @@ export default function Landing() {
       </section>
 
       {/* Content Section - Benefits */}
-      <section className="py-24 bg-white">
+      <section className="py-24">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
+          <div className="card-glass p-16">
+            <div className="text-center mb-16">
             <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
               Stop Wasting Time Chasing Payments
             </h2>
@@ -214,6 +215,7 @@ export default function Landing() {
               </p>
             </div>
           </div>
+          </div>
         </div>
       </section>
 
@@ -236,9 +238,10 @@ export default function Landing() {
       </section>
 
       {/* Content Section - Features */}
-      <section className="py-24 bg-gray-50">
+      <section className="py-24">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+          <div className="card-glass p-16">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
             <div>
               <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
                 Works With Your Xero Account in Minutes
@@ -282,6 +285,7 @@ export default function Landing() {
                 className="rounded-2xl shadow-2xl w-full"
               />
             </div>
+          </div>
           </div>
         </div>
       </section>

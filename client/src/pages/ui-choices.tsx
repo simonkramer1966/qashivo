@@ -66,11 +66,11 @@ export default function UIChoices() {
   }, [isAuthenticated, isLoading, toast]);
 
   if (isLoading || !isAuthenticated) {
-    return <div className="min-h-screen bg-background" />;
+    return <div className="min-h-screen page-gradient" />;
   }
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex h-screen page-gradient">
       <Sidebar />
       <main className="flex-1 overflow-y-auto">
         <Header 
@@ -81,11 +81,11 @@ export default function UIChoices() {
           subtitleSize="text-base"
         />
         
-        <div className="p-6 space-y-6 bg-white">
+        <div className="p-6 space-y-6">
           {/* Key Metrics - Xero Style Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
             {/* Total Outstanding */}
-            <Card className="bg-white border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+            <Card className="metrics-card">
               <CardContent className="p-5">
                 <div className="flex items-center justify-between mb-3">
                   <div className="w-8 h-8 bg-[#17B6C3]/10 rounded-full flex items-center justify-center">
@@ -101,7 +101,7 @@ export default function UIChoices() {
             </Card>
 
             {/* Overdue Amount */}
-            <Card className="bg-white border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+            <Card className="metrics-card">
               <CardContent className="p-5">
                 <div className="flex items-center justify-between mb-3">
                   <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
@@ -117,7 +117,7 @@ export default function UIChoices() {
             </Card>
 
             {/* Collected This Month */}
-            <Card className="bg-white border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+            <Card className="metrics-card">
               <CardContent className="p-5">
                 <div className="flex items-center justify-between mb-3">
                   <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
@@ -133,7 +133,7 @@ export default function UIChoices() {
             </Card>
 
             {/* Average DSO */}
-            <Card className="bg-white border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+            <Card className="metrics-card">
               <CardContent className="p-5">
                 <div className="flex items-center justify-between mb-3">
                   <div className="w-8 h-8 bg-[#17B6C3]/10 rounded-full flex items-center justify-center">
@@ -152,7 +152,7 @@ export default function UIChoices() {
           {/* Performance Overview Section */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Collection Performance */}
-            <Card className="lg:col-span-2 bg-white border border-gray-200 shadow-sm">
+            <Card className="lg:col-span-2 card-glass">
               <CardHeader className="pb-3 border-b border-gray-100">
                 <div className="flex items-center justify-between">
                   <div>
@@ -192,7 +192,7 @@ export default function UIChoices() {
             </Card>
 
             {/* Quick Actions */}
-            <Card className="bg-white border border-gray-200 shadow-sm">
+            <Card className="card-glass">
               <CardHeader className="pb-3 border-b border-gray-100">
                 <CardTitle className="text-lg font-semibold text-gray-900">Quick Actions</CardTitle>
                 <CardDescription className="text-sm text-gray-600">Common collection tasks</CardDescription>
@@ -234,7 +234,7 @@ export default function UIChoices() {
           </div>
 
           {/* Recent Activity Section */}
-          <Card className="bg-white border border-gray-200 shadow-sm">
+          <Card className="card-glass">
             <CardHeader className="pb-3 border-b border-gray-100">
               <div className="flex items-center justify-between">
                 <div>

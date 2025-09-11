@@ -64,11 +64,11 @@ export default function UIXero() {
   }, [isAuthenticated, isLoading, toast]);
 
   if (isLoading || !isAuthenticated) {
-    return <div className="min-h-screen bg-background" />;
+    return <div className="min-h-screen page-gradient" />;
   }
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex h-screen page-gradient">
       <Sidebar />
       <main className="flex-1 overflow-y-auto">
         <Header 

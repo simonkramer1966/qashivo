@@ -41,7 +41,7 @@ export default function Reports() {
   }, [isAuthenticated, isLoading, toast]);
 
   if (isLoading || !isAuthenticated) {
-    return <div className="min-h-screen bg-background" />;
+    return <div className="min-h-screen page-gradient" />;
   }
   const kpiCards = [
     {
@@ -137,7 +137,7 @@ export default function Reports() {
   ];
 
   return (
-    <div className="flex h-screen bg-white">
+    <div className="flex h-screen page-gradient">
       <NewSidebar />
       <main className="flex-1 overflow-y-auto">
         <Header 

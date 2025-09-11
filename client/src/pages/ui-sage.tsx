@@ -64,11 +64,11 @@ export default function UISage() {
   }, [isAuthenticated, isLoading, toast]);
 
   if (isLoading || !isAuthenticated) {
-    return <div className="min-h-screen bg-background" />;
+    return <div className="min-h-screen page-gradient" />;
   }
 
   return (
-    <div className="flex h-screen bg-blue-50">
+    <div className="flex h-screen page-gradient">
       <Sidebar />
       <main className="flex-1 overflow-y-auto">
         <Header 
@@ -79,11 +79,11 @@ export default function UISage() {
           subtitleSize="text-base"
         />
         
-        <div className="p-6 space-y-6 bg-blue-50">
+        <div className="p-6 space-y-6">
           {/* Key Metrics - Sage Style Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
             {/* Total Outstanding */}
-            <Card className="bg-white border border-blue-200 shadow-lg hover:shadow-xl transition-shadow">
+            <Card className="metrics-card border border-blue-200">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between mb-4">
                   <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center shadow-md">
@@ -102,7 +102,7 @@ export default function UISage() {
             </Card>
 
             {/* Overdue Amount */}
-            <Card className="bg-white border border-blue-200 shadow-lg hover:shadow-xl transition-shadow">
+            <Card className="metrics-card border border-blue-200">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between mb-4">
                   <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-red-500 rounded-lg flex items-center justify-center shadow-md">
@@ -121,7 +121,7 @@ export default function UISage() {
             </Card>
 
             {/* Collected This Month */}
-            <Card className="bg-white border border-blue-200 shadow-lg hover:shadow-xl transition-shadow">
+            <Card className="metrics-card border border-blue-200">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between mb-4">
                   <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-green-600 rounded-lg flex items-center justify-center shadow-md">
@@ -140,7 +140,7 @@ export default function UISage() {
             </Card>
 
             {/* Average DSO */}
-            <Card className="bg-white border border-blue-200 shadow-lg hover:shadow-xl transition-shadow">
+            <Card className="metrics-card border border-blue-200">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between mb-4">
                   <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg flex items-center justify-center shadow-md">
@@ -162,7 +162,7 @@ export default function UISage() {
           {/* Performance Overview Section */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Collection Performance */}
-            <Card className="lg:col-span-2 bg-white border border-blue-200 shadow-lg">
+            <Card className="lg:col-span-2 card-glass border border-blue-200">
               <CardHeader className="pb-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-t-lg">
                 <div className="flex items-center justify-between">
                   <div>
@@ -202,7 +202,7 @@ export default function UISage() {
             </Card>
 
             {/* Quick Actions */}
-            <Card className="bg-white border border-blue-200 shadow-lg">
+            <Card className="card-glass border border-blue-200">
               <CardHeader className="pb-4 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-t-lg">
                 <CardTitle className="text-xl font-bold">Quick Actions</CardTitle>
                 <CardDescription className="text-orange-100 text-sm">Common collection tasks</CardDescription>
@@ -244,7 +244,7 @@ export default function UISage() {
           </div>
 
           {/* Recent Activity Section */}
-          <Card className="bg-white border border-blue-200 shadow-lg">
+          <Card className="card-glass border border-blue-200">
             <CardHeader className="pb-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-t-lg">
               <div className="flex items-center justify-between">
                 <div>

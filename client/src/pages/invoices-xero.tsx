@@ -124,7 +124,7 @@ export default function InvoicesXero() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen page-gradient">
         <div className="flex items-center justify-center min-h-screen">
           <div className="text-center">
             <div className="w-8 h-8 border-4 border-[#17B6C3] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
@@ -277,7 +277,7 @@ export default function InvoicesXero() {
   };
 
   return (
-    <div className="flex h-screen bg-white">
+    <div className="flex h-screen page-gradient">
       <NewSidebar />
       <main className="flex-1 overflow-y-auto">
         <Header 
