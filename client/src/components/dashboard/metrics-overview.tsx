@@ -12,7 +12,7 @@ export default function MetricsOverview() {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8">
         {[...Array(4)].map((_, i) => (
-          <Card key={i} className="bg-white border border-gray-200 shadow-sm animate-pulse">
+          <Card key={i} className="metrics-card animate-pulse">
             <CardContent className="p-6">
               <div className="h-20 bg-muted/30 rounded" />
             </CardContent>
@@ -70,7 +70,7 @@ export default function MetricsOverview() {
       {metricsData.map((metric) => (
         <Card 
           key={metric.title} 
-          className="bg-white border border-gray-200 shadow-sm hover:shadow-md transition-shadow" 
+          className="metrics-card" 
           data-testid={metric.testId}
         >
           <CardContent className="p-6">

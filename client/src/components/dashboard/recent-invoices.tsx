@@ -75,7 +75,7 @@ export default function RecentInvoices() {
   const recentInvoices = (invoices as any[]).slice(0, 5);
 
   return (
-    <Card className="bg-white border border-gray-200 shadow-sm">
+    <Card className="card-glass">
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle className="text-xl font-bold" data-testid="text-recent-invoices-title">Recent Invoices</CardTitle>

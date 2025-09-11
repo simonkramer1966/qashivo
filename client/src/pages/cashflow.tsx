@@ -53,7 +53,7 @@ export default function Cashflow() {
         <div className="p-8 space-y-8">
           {/* Key Metrics Row */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            <Card className="bg-white border border-gray-200 shadow-sm hover:shadow-md transition-shadow" data-testid="card-net-cashflow">
+            <Card className="metrics-card" data-testid="card-net-cashflow">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium text-gray-600">Net Cashflow</CardTitle>
                 <div className="p-2 bg-[#17B6C3]/10 rounded-lg">
@@ -70,7 +70,7 @@ export default function Cashflow() {
               </CardContent>
             </Card>
 
-            <Card className="bg-white border border-gray-200 shadow-sm hover:shadow-md transition-shadow" data-testid="card-money-in">
+            <Card className="metrics-card" data-testid="card-money-in">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium text-gray-600">Money In</CardTitle>
                 <div className="p-2 bg-green-500/10 rounded-lg">
@@ -87,7 +87,7 @@ export default function Cashflow() {
               </CardContent>
             </Card>
 
-            <Card className="bg-white border border-gray-200 shadow-sm hover:shadow-md transition-shadow" data-testid="card-money-out">
+            <Card className="metrics-card" data-testid="card-money-out">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium text-gray-600">Money Out</CardTitle>
                 <div className="p-2 bg-red-500/10 rounded-lg">
@@ -104,7 +104,7 @@ export default function Cashflow() {
               </CardContent>
             </Card>
 
-            <Card className="bg-white border border-gray-200 shadow-sm hover:shadow-md transition-shadow" data-testid="card-cash-runway">
+            <Card className="metrics-card" data-testid="card-cash-runway">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium text-gray-600">Cash Runway</CardTitle>
                 <div className="p-2 bg-[#17B6C3]/10 rounded-lg">
@@ -126,7 +126,7 @@ export default function Cashflow() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Cashflow Chart */}
             <div className="lg:col-span-2">
-              <Card className="bg-white border border-gray-200 shadow-sm" data-testid="card-cashflow-chart">
+              <Card className="card-glass" data-testid="card-cashflow-chart">
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <div>
@@ -152,7 +152,7 @@ export default function Cashflow() {
 
             {/* Quick Insights */}
             <div className="space-y-6">
-              <Card className="bg-white border border-gray-200 shadow-sm" data-testid="card-quick-insights">
+              <Card className="card-glass" data-testid="card-quick-insights">
                 <CardHeader>
                   <CardTitle className="text-lg font-bold">Quick Insights</CardTitle>
                 </CardHeader>
@@ -189,7 +189,7 @@ export default function Cashflow() {
                 </CardContent>
               </Card>
 
-              <Card className="bg-white border border-gray-200 shadow-sm" data-testid="card-cash-position">
+              <Card className="card-glass" data-testid="card-cash-position">
                 <CardHeader>
                   <CardTitle className="text-lg font-bold">Cash Position</CardTitle>
                 </CardHeader>
@@ -215,7 +215,7 @@ export default function Cashflow() {
 
           {/* Forecast & Planning */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <Card className="bg-white border border-gray-200 shadow-sm" data-testid="card-30day-forecast">
+            <Card className="card-glass" data-testid="card-30day-forecast">
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
@@ -251,7 +251,7 @@ export default function Cashflow() {
               </CardContent>
             </Card>
 
-            <Card className="bg-white border border-gray-200 shadow-sm" data-testid="card-payment-schedule">
+            <Card className="card-glass" data-testid="card-payment-schedule">
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>

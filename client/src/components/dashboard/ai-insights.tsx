@@ -53,7 +53,7 @@ export default function AIInsights() {
   ];
 
   return (
-    <Card className="bg-white border border-gray-200 shadow-sm">
+    <Card className="card-glass">
       <CardHeader>
         <CardTitle className="text-xl font-bold flex items-center" data-testid="text-ai-insights-title">
           <div className="p-2 bg-[#17B6C3]/10 rounded-lg mr-3">
