@@ -234,7 +234,7 @@ export default function NewSidebar() {
   return (
     <>
     <aside className={cn(
-      "bg-gray-50 border-r border-gray-200 flex flex-col h-full transition-all duration-300",
+      "glass-card-strong border-0 border-r border-white/30 flex flex-col h-full transition-all duration-300 rounded-none",
       isCollapsed ? "w-16" : "w-64"
     )}>
       {/* Header */}
@@ -279,7 +279,7 @@ export default function NewSidebar() {
               <DropdownMenuTrigger asChild>
                 <Button
                   variant="outline"
-                  className="w-full justify-between px-4 py-3 bg-white hover:bg-gray-50 border-gray-200"
+                  className="w-full justify-between px-4 py-3 glass-card-light hover:glass-card-strong border-white/30 transition-all duration-200"
                   disabled={switchTenantMutation.isPending}
                   data-testid="button-organization-dropdown"
                 >
@@ -289,7 +289,7 @@ export default function NewSidebar() {
                   <ChevronDown className="h-4 w-4 text-gray-400" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-56 bg-white border-gray-200" align="start" side="bottom">
+              <DropdownMenuContent className="w-56 glass-card-strong border-white/30" align="start" side="bottom">
                 {/* Change Organisation - Submenu */}
                 <DropdownMenuSub>
                   <DropdownMenuSubTrigger className="pl-7 pr-3 py-3 text-[#17B6C3]" data-testid="menu-item-change-organization">
@@ -459,8 +459,8 @@ export default function NewSidebar() {
                     "w-full flex items-center rounded-lg text-sm font-medium transition-all duration-200 text-left",
                     isCollapsed ? "justify-center px-2 py-3" : "space-x-3 px-4 py-3",
                     isActive
-                      ? "bg-[#17B6C3] text-white shadow-sm"
-                      : "text-gray-600 hover:bg-white hover:text-gray-900 hover:shadow-sm",
+                      ? "bg-[#17B6C3] text-white shadow-lg"
+                      : "text-slate-600 hover:glass-card-light hover:text-slate-900 hover:shadow-md",
                     (item as any).ownerOnly && !isCollapsed && "border-t border-gray-300 mt-2 pt-2"
                   )}
                   data-testid={`nav-${item.name.toLowerCase().replace(/\s+/g, '-')}`}
@@ -485,7 +485,7 @@ export default function NewSidebar() {
       </nav>
 
       {/* Footer - CFO Charlie */}
-      <div className={cn("border-t border-gray-200 bg-gray-50/50", isCollapsed ? "p-2" : "p-4")}>
+      <div className={cn("border-t border-white/30 glass-card-light", isCollapsed ? "p-2" : "p-4")}>
         <button
           onClick={() => handleNavigation("/ai-cfo")}
           className={cn(

@@ -180,7 +180,7 @@ export function CommunicationPreviewDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto" data-testid="dialog-communication-preview">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto glass-card-strong border-white/30" data-testid="dialog-communication-preview">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2" data-testid="text-dialog-title">
             <TypeIcon className="h-5 w-5" />
@@ -212,7 +212,7 @@ export function CommunicationPreviewDialog({
                 onValueChange={handleTemplateChange}
                 disabled={previewMutation.isPending}
               >
-                <SelectTrigger data-testid="select-template">
+                <SelectTrigger className="input-glass" data-testid="select-template">
                   <SelectValue placeholder="Select a template" />
                 </SelectTrigger>
                 <SelectContent>
@@ -242,7 +242,7 @@ export function CommunicationPreviewDialog({
           {/* Preview Area */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Recipient Information */}
-            <Card>
+            <Card className="glass-card-light">
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-sm">
                   <User className="h-4 w-4" />
@@ -276,7 +276,7 @@ export function CommunicationPreviewDialog({
             </Card>
 
             {/* Preview Content */}
-            <Card>
+            <Card className="glass-card-light">
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-sm">
                   <TypeIcon className="h-4 w-4" />
@@ -331,6 +331,7 @@ export function CommunicationPreviewDialog({
                   onChange={(e) => setEditedSubject(e.target.value)}
                   placeholder="Enter email subject"
                   disabled={previewMutation.isPending}
+                  className="input-glass"
                   data-testid="input-edit-subject"
                 />
               </div>
@@ -345,7 +346,7 @@ export function CommunicationPreviewDialog({
                 placeholder={`Enter your ${typeLabel.toLowerCase()} message`}
                 rows={8}
                 disabled={previewMutation.isPending}
-                className="resize-vertical"
+                className="textarea-glass resize-vertical"
                 data-testid="textarea-edit-content"
               />
             </div>

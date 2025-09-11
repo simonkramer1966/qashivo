@@ -498,7 +498,7 @@ I can see you currently have ${(dashboardData as any)?.totalOutstanding ? `$${(d
                     onChange={(e) => setInputMessage(e.target.value)}
                     placeholder="Ask about your AR performance, collection strategies, or cashflow optimization..."
                     onKeyDown={(e) => e.key === 'Enter' && !isTyping && inputMessage.trim() && sendMessage()}
-                    className="flex-1"
+                    className="flex-1 input-glass"
                     data-testid="input-ai-cfo-message"
                       />
                       <Button 

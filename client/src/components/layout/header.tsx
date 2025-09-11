@@ -149,7 +149,7 @@ export default function Header({ title, subtitle, action, noBorder = true, title
   };
 
   return (
-    <header className="bg-white px-6 py-6">
+    <header className="glass-card px-6 py-6 border-0 rounded-none shadow-glass">
       <div className="flex items-center justify-between">
         <div>
           <h2 className={`${titleSize} font-semibold text-foreground`} data-testid="text-page-title">
