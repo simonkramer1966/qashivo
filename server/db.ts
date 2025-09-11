@@ -11,5 +11,22 @@ if (!process.env.DATABASE_URL) {
   );
 }
 
-export const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+export const pool = new Pool({ 
+  connectionString: process.env.DATABASE_URL,
+  max: parseInt(process.env.DB_POOL_MAX || '10'), // Maximum connections, configurable via env
+  idleTimeoutMillis: 30000, // Close idle connections after 30 seconds
+  connectionTimeoutMillis: 10000, // Timeout when connecting to database
+  allowExitOnIdle: true, // Allow pool to close when all connections are idle
+  maxUses: 7500 // Maximum number of times a connection can be used before being closed
+});
+
+// Add error handling for pool
+pool.on('error', (err) => {
+  console.error('Database pool error:', err);
+});
+
+pool.on('connect', () => {
+  console.log('New database connection established');
+});
+
 export const db = drizzle({ client: pool, schema });
