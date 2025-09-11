@@ -12,7 +12,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Search, Mail, Phone, Building, User, Users, ChevronUp, ChevronDown, Star, MoreHorizontal } from "lucide-react";
+import { Plus, Search, Mail, Phone, Building, User, Users, ChevronUp, ChevronDown, Star, MoreHorizontal, Eye, MessageSquare, Calendar, AlertCircle, CheckCircle, Pause } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel } from "@/components/ui/dropdown-menu";
 
 export default function Customers() {
   const { toast } = useToast();
@@ -374,14 +375,75 @@ export default function Customers() {
                           </td>
                           <td className="py-4">
                             <div className="flex justify-end">
-                              <Button 
-                                variant="ghost" 
-                                size="sm" 
-                                className="h-8 w-8 p-0 hover:bg-gray-100"
-                                data-testid={`button-menu-${contact.id}`}
-                              >
-                                <MoreHorizontal className="h-4 w-4 text-[#17B6C3]" />
-                              </Button>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm" 
+                                    className="h-8 w-8 p-0 hover:bg-[#17B6C3]/10"
+                                    data-testid={`button-menu-${contact.id}`}
+                                  >
+                                    <MoreHorizontal className="h-4 w-4 text-[#17B6C3]" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="bg-white border-gray-200 w-52">
+                                  <DropdownMenuItem 
+                                    data-testid={`menu-view-customer-${contact.id}`}
+                                  >
+                                    <Eye className="mr-2 h-4 w-4" />
+                                    View Customer Profile
+                                  </DropdownMenuItem>
+                                  
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuLabel className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                                    Communication
+                                  </DropdownMenuLabel>
+                                  <DropdownMenuItem 
+                                    disabled={!contact.email}
+                                    data-testid={`menu-send-email-${contact.id}`}
+                                  >
+                                    <Mail className="mr-2 h-4 w-4" />
+                                    Send Email
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem 
+                                    disabled={!contact.phone}
+                                    data-testid={`menu-send-sms-${contact.id}`}
+                                  >
+                                    <MessageSquare className="mr-2 h-4 w-4" />
+                                    Send SMS
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem 
+                                    disabled={!contact.phone}
+                                    data-testid={`menu-call-customer-${contact.id}`}
+                                  >
+                                    <Phone className="mr-2 h-4 w-4" />
+                                    Call Customer
+                                  </DropdownMenuItem>
+                                  
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuLabel className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                                    Account Management
+                                  </DropdownMenuLabel>
+                                  <DropdownMenuItem 
+                                    data-testid={`menu-payment-plan-${contact.id}`}
+                                  >
+                                    <Calendar className="mr-2 h-4 w-4" />
+                                    Create Payment Plan
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem 
+                                    data-testid={`menu-view-history-${contact.id}`}
+                                  >
+                                    <Eye className="mr-2 h-4 w-4" />
+                                    View Communication History
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem 
+                                    data-testid={`menu-hold-${contact.id}`}
+                                  >
+                                    <Pause className="mr-2 h-4 w-4" />
+                                    {contact.isActive ? 'Deactivate Customer' : 'Activate Customer'}
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
                             </div>
                           </td>
                         </tr>

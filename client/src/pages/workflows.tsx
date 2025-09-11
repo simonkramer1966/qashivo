@@ -672,7 +672,7 @@ export default function Workflows() {
 
 
   return (
-    <div className="flex h-screen" style={{ backgroundColor: '#ffffff' }}>
+    <div className="flex h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-teal-50">
       <NewSidebar />
       <main className="flex-1 overflow-y-auto">
         <Header 
@@ -680,7 +680,7 @@ export default function Workflows() {
           subtitle="Multi-channel debt recovery and customer communication strategies"
         />
         
-        <div className="p-8" style={{ backgroundColor: '#ffffff' }}>
+        <div className="p-8">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
             <TabsList className="grid w-full grid-cols-6 bg-white border border-gray-200">
               <TabsTrigger value="dashboard" className="data-[state=active]:bg-[#17B6C3] data-[state=active]:text-white">
