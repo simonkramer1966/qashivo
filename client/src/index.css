@@ -3,10 +3,15 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Kill replit overlay if present */
-#replit-dev-tools, .replit-devtools-banner, [id*="replit"], [class*="replit-dev"] { 
-  display: none !important; 
-  visibility: hidden !important; 
+/* Render reset to guarantee visibility */
+html, body, #root { 
+  position: relative !important; 
+  visibility: visible !important; 
+  opacity: 1 !important; 
+  pointer-events: auto !important; 
+  z-index: 0 !important; 
+  background: #fff; 
+  color: #111; 
 }
 
 @layer base {
@@ -30,6 +35,14 @@
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
     --ring: 222.2 84% 4.9%;
+    --sidebar: 0 0% 100%;
+    --sidebar-foreground: 222.2 84% 4.9%;
+    --sidebar-primary: 221.2 83.2% 53.3%;
+    --sidebar-primary-foreground: 210 40% 98%;
+    --sidebar-accent: 210 40% 96%;
+    --sidebar-accent-foreground: 222.2 84% 4.9%;
+    --sidebar-border: 214.3 31.8% 91.4%;
+    --sidebar-ring: 221.2 83.2% 53.3%;
     --radius: 0.5rem;
   }
  
