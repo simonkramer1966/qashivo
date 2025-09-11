@@ -141,7 +141,7 @@ export default function Profile() {
 
   if (isLoading) {
     return (
-      <div className="flex h-screen">
+      <div className="flex h-screen page-gradient">
         <NewSidebar />
         <main className="flex-1 overflow-y-auto">
           <Header title="Profile" subtitle="Manage your account settings and subscription" />
@@ -155,7 +155,7 @@ export default function Profile() {
 
   if (error) {
     return (
-      <div className="flex h-screen">
+      <div className="flex h-screen page-gradient">
         <NewSidebar />
         <main className="flex-1 overflow-y-auto">
           <Header title="Profile" subtitle="Manage your account settings and subscription" />
@@ -189,9 +189,9 @@ export default function Profile() {
   };
 
   return (
-    <div className="flex h-screen">
+    <div className="flex h-screen page-gradient">
       <NewSidebar />
-      <main className="flex-1 overflow-y-auto bg-gradient-to-br from-slate-50 via-blue-50 to-teal-50">
+      <main className="flex-1 overflow-y-auto">
         <Header title="Profile" subtitle="Manage your account settings and subscription details" />
         
         <div className="p-8">

@@ -384,7 +384,7 @@ export default function WorkflowBuilder() {
   }
 
   return (
-    <div className="flex h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-teal-50">
+    <div className="flex h-screen page-gradient">
       <NewSidebar />
       <main className="flex-1 flex flex-col">
         <Header 

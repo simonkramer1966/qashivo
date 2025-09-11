@@ -145,7 +145,7 @@ export default function Subscribe() {
 
   if (authLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-teal-50 flex items-center justify-center">
+      <div className="min-h-screen page-gradient flex items-center justify-center">
         <div className="text-center">
           <div className="w-8 h-8 border-4 border-[#17B6C3] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-gray-600">Loading...</p>
@@ -156,7 +156,7 @@ export default function Subscribe() {
 
   if (subscriptionStatus === 'active') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-teal-50 p-8">
+      <div className="min-h-screen page-gradient p-8">
         <div className="max-w-4xl mx-auto">
           <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg text-center">
             <CardContent className="pt-8 pb-8">
@@ -185,7 +185,7 @@ export default function Subscribe() {
 
   if (!clientSecret) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-teal-50 flex items-center justify-center">
+      <div className="min-h-screen page-gradient flex items-center justify-center">
         <div className="text-center">
           <div className="w-8 h-8 border-4 border-[#17B6C3] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-gray-600">Initializing subscription...</p>
@@ -196,7 +196,7 @@ export default function Subscribe() {
 
   // Main subscription page
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-teal-50 p-8">
+    <div className="min-h-screen page-gradient p-8">
       <div className="max-w-6xl mx-auto">
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold text-gray-900 mb-4">
