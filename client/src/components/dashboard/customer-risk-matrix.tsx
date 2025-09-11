@@ -168,7 +168,7 @@ const RiskScatterTooltip = ({ active, payload }: RiskScatterTooltipProps) => {
   if (!active || !payload || !payload.length) return null;
 
   const customer = payload[0].payload;
-  const riskConfig = RISK_LEVEL_CONFIG[customer.riskLevel];
+  const riskConfig = RISK_LEVEL_CONFIG[customer.riskLevel?.toLowerCase() as keyof typeof RISK_LEVEL_CONFIG] || RISK_LEVEL_CONFIG.medium;
 
   return (
     <div className="glass-card p-4 shadow-lg min-w-[320px]">
@@ -187,7 +187,7 @@ const RiskScatterTooltip = ({ active, payload }: RiskScatterTooltipProps) => {
           <div>
             <span className="text-slate-600">Outstanding:</span>
             <span className="font-medium text-[#17B6C3] ml-2">
-              ${customer.outstandingBalance.toLocaleString()}
+              ${(customer.totalOutstanding || 0).toLocaleString()}
             </span>
           </div>
           <div>
@@ -269,7 +269,7 @@ const DistributionTooltip = ({ active, payload, label }: DistributionTooltipProp
   if (!active || !payload || !payload.length) return null;
 
   const data = payload[0].payload;
-  const riskConfig = RISK_LEVEL_CONFIG[data.riskLevel as keyof typeof RISK_LEVEL_CONFIG];
+  const riskConfig = RISK_LEVEL_CONFIG[data.riskLevel?.toLowerCase() as keyof typeof RISK_LEVEL_CONFIG] || RISK_LEVEL_CONFIG.medium;
 
   return (
     <div className="glass-card p-4 shadow-lg min-w-[280px]">
@@ -463,10 +463,10 @@ export default function CustomerRiskMatrix() {
   // Prepare scatter chart data with colors
   const scatterData = filteredCustomers.map(customer => ({
     ...customer,
-    x: customer.outstandingBalance,
+    x: customer.totalOutstanding || 0,
     y: customer.riskScore,
-    z: customer.overdueInvoices,
-    fill: RISK_LEVEL_CONFIG[customer.riskLevel].color
+    z: customer.overdueCount || 0,
+    fill: RISK_LEVEL_CONFIG[customer.riskLevel?.toLowerCase() as keyof typeof RISK_LEVEL_CONFIG]?.color || '#94a3b8'
   }));
 
   // Prepare distribution chart data - convert object to array format
@@ -776,7 +776,7 @@ export default function CustomerRiskMatrix() {
               <div className="glass-card p-6" data-testid="chart-risk-bar">
                 <h3 className="text-lg font-semibold text-slate-900 mb-4">Outstanding by Risk Level</h3>
                 <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={riskDistribution}>
+                  <BarChart data={pieData}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                     <XAxis 
                       dataKey="riskLevel"
@@ -799,7 +799,7 @@ export default function CustomerRiskMatrix() {
                       dataKey="totalBalance" 
                       radius={[4, 4, 0, 0]}
                     >
-                      {riskDistribution.map((entry, index) => (
+                      {pieData.map((entry, index) => (
                         <Cell 
                           key={`cell-${index}`} 
                           fill={RISK_LEVEL_CONFIG[entry.riskLevel as keyof typeof RISK_LEVEL_CONFIG]?.color || "#94a3b8"} 
@@ -869,7 +869,7 @@ export default function CustomerRiskMatrix() {
               </thead>
               <tbody>
                 {highRiskCustomers.map((customer, index) => {
-                  const riskConfig = RISK_LEVEL_CONFIG[customer.riskLevel];
+                  const riskConfig = RISK_LEVEL_CONFIG[customer.riskLevel?.toLowerCase() as keyof typeof RISK_LEVEL_CONFIG] || RISK_LEVEL_CONFIG.medium;
                   return (
                     <tr key={customer.customerId} className="border-b border-slate-100 hover:bg-slate-50" data-testid={`row-customer-${index}`}>
                       <td className="py-3 px-4">
@@ -885,7 +885,7 @@ export default function CustomerRiskMatrix() {
                         </Badge>
                       </td>
                       <td className="py-3 px-4 text-right font-medium text-slate-900">
-                        ${customer.outstandingBalance.toLocaleString()}
+                        ${(customer.totalOutstanding || 0).toLocaleString()}
                       </td>
                       <td className="py-3 px-4 text-right">
                         <div className="flex items-center justify-end">
@@ -899,8 +899,8 @@ export default function CustomerRiskMatrix() {
                         </div>
                       </td>
                       <td className="py-3 px-4 text-right">
-                        <span className={`font-medium ${customer.overdueInvoices > 0 ? 'text-red-600' : 'text-slate-900'}`}>
-                          {customer.overdueInvoices}
+                        <span className={`font-medium ${(customer.overdueCount || 0) > 0 ? 'text-red-600' : 'text-slate-900'}`}>
+                          {customer.overdueCount || 0}
                         </span>
                       </td>
                       <td className="py-3 px-4">
