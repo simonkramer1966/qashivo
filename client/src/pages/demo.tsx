@@ -123,6 +123,9 @@ export default function Demo() {
               <Link href="/contact" className="text-gray-700 hover:text-[#17B6C3] font-medium transition-colors duration-200" data-testid="link-nav-contact">
                 Contact
               </Link>
+              <Link href="/investors" className="text-gray-700 hover:text-[#17B6C3] font-medium transition-colors duration-200" data-testid="link-nav-investors">
+                Investors
+              </Link>
             </div>
 
             {/* CTA Section */}
