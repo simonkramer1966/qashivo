@@ -77,11 +77,11 @@
   }
   
   .card-glass {
-    @apply bg-white/80 backdrop-blur-sm border border-white/50 shadow-lg rounded-lg;
+    @apply bg-white/80 backdrop-blur-sm border-white/50 shadow-lg rounded-lg;
   }
   
   .metrics-card {
-    @apply bg-white/70 backdrop-blur-md border-0 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 rounded-lg;
+    @apply bg-white/80 backdrop-blur-sm border-white/50 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 rounded-lg;
   }
   
   .page-gradient {
