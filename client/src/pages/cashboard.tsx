@@ -452,7 +452,7 @@ export default function Cashboard() {
                           {healthStatus.status} Cash Position
                         </h3>
                         <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400">
-                          {projectedRunway} days runway remaining {!cashflowData?.summary && '(estimated)'}
+                          Current financial health overview
                         </p>
                       </div>
                     </div>
@@ -464,19 +464,6 @@ export default function Cashboard() {
                         Current Position {!cashflowData?.forecast?.[0]?.runningBalance && '(estimated)'}
                       </div>
                     </div>
-                  </div>
-                  
-                  {/* Runway Progress Bar */}
-                  <div className="mt-4">
-                    <div className="flex justify-between text-sm text-slate-600 dark:text-slate-400 mb-2">
-                      <span>Cash Runway</span>
-                      <span>{projectedRunway} / 90 days</span>
-                    </div>
-                    <Progress 
-                      value={Math.min((projectedRunway / 90) * 100, 100)} 
-                      className="h-2"
-                      data-testid="progress-runway"
-                    />
                   </div>
                 </CardContent>
               </Card>
