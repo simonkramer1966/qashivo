@@ -1534,6 +1534,276 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Communication Preview Endpoints
+  const previewRequestSchema = z.object({
+    invoiceId: z.string().optional(),
+    contactId: z.string().optional(),
+    templateId: z.string().optional()
+  }).refine(
+    (data) => data.invoiceId || data.contactId,
+    { message: "Either invoiceId or contactId must be provided" }
+  );
+
+  // Helper function to process template variables
+  const processTemplateVariables = (content: string, variables: Record<string, string>): string => {
+    return content
+      .replace(/{{contact_name}}/g, variables.contact_name || 'Unknown Contact')
+      .replace(/{{invoice_number}}/g, variables.invoice_number || '')
+      .replace(/{{days_overdue}}/g, variables.days_overdue || '0')
+      .replace(/{{amount}}/g, variables.amount || '0.00')
+      .replace(/{{due_date}}/g, variables.due_date || '')
+      .replace(/{{your_name}}/g, variables.your_name || 'Collections Team')
+      .replace(/{{total_balance}}/g, variables.total_balance || '0.00')
+      .replace(/{{total_amount_overdue}}/g, variables.total_amount_overdue || '0.00')
+      .replace(/{{company_name}}/g, variables.company_name || '')
+      .replace(/{{phone}}/g, variables.phone || '')
+      .replace(/{{email}}/g, variables.email || '');
+  };
+
+  // Helper function to get context variables from invoice or contact
+  const getContextVariables = async (invoiceId?: string, contactId?: string, tenantId?: string) => {
+    const variables: Record<string, string> = {};
+    
+    if (invoiceId && tenantId) {
+      const invoice = await storage.getInvoice(invoiceId, tenantId);
+      if (invoice) {
+        const contact = await storage.getContact(invoice.contactId, tenantId);
+        variables.invoice_number = invoice.invoiceNumber;
+        variables.amount = invoice.amount.toString();
+        variables.total_balance = invoice.amount.toString();
+        
+        if (invoice.dueDate) {
+          const dueDate = new Date(invoice.dueDate);
+          const today = new Date();
+          const daysOverdue = Math.max(0, Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24)));
+          variables.days_overdue = daysOverdue.toString();
+          variables.due_date = formatDate(dueDate);
+          variables.total_amount_overdue = daysOverdue > 0 ? invoice.amount.toString() : '0.00';
+        }
+        
+        if (contact) {
+          variables.contact_name = contact.name || 'Unknown Contact';
+          variables.company_name = contact.companyName || '';
+          variables.phone = contact.phone || '';
+          variables.email = contact.email || '';
+        }
+      }
+    } else if (contactId && tenantId) {
+      const contact = await storage.getContact(contactId, tenantId);
+      if (contact) {
+        variables.contact_name = contact.name || 'Unknown Contact';
+        variables.company_name = contact.companyName || '';
+        variables.phone = contact.phone || '';
+        variables.email = contact.email || '';
+      }
+    }
+    
+    variables.your_name = 'Collections Team'; // Could be made dynamic based on email sender config
+    return variables;
+  };
+
+  // Preview Email Endpoint
+  app.post("/api/communications/preview-email", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const requestData = previewRequestSchema.parse(req.body);
+      const { invoiceId, contactId, templateId } = requestData;
+
+      // Get context variables
+      const variables = await getContextVariables(invoiceId, contactId, user.tenantId);
+
+      // Get template or use defaults
+      let template = null;
+      let subject = "Payment Reminder";
+      let content = "Dear {{contact_name}},\n\nWe wanted to remind you about your outstanding invoice {{invoice_number}} in the amount of {{amount}}.\n\nPlease contact us if you have any questions.\n\nBest regards,\n{{your_name}}";
+
+      if (templateId) {
+        const templates = await storage.getCommunicationTemplates(user.tenantId, { type: 'email' });
+        template = templates.find(t => t.id === templateId);
+        if (template) {
+          subject = template.subject || subject;
+          content = template.content || content;
+        }
+      } else {
+        // Get default email template
+        const templates = await storage.getCommunicationTemplates(user.tenantId, { type: 'email' });
+        if (templates.length > 0) {
+          template = templates[0];
+          subject = template.subject || subject;
+          content = template.content || content;
+        }
+      }
+
+      // Process template variables
+      const processedSubject = processTemplateVariables(subject, variables);
+      const processedContent = processTemplateVariables(content, variables);
+
+      // Determine recipient
+      let recipient = '';
+      if (invoiceId) {
+        const invoice = await storage.getInvoice(invoiceId, user.tenantId);
+        if (invoice) {
+          const contact = await storage.getContact(invoice.contactId, user.tenantId);
+          recipient = contact?.email || '';
+        }
+      } else if (contactId) {
+        const contact = await storage.getContact(contactId, user.tenantId);
+        recipient = contact?.email || '';
+      }
+
+      res.json({
+        subject: processedSubject,
+        content: processedContent,
+        recipient,
+        templateUsed: template?.id || null,
+        variables
+      });
+
+    } catch (error) {
+      console.error("Error generating email preview:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid request data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to generate email preview" });
+    }
+  });
+
+  // Preview SMS Endpoint
+  app.post("/api/communications/preview-sms", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const requestData = previewRequestSchema.parse(req.body);
+      const { invoiceId, contactId, templateId } = requestData;
+
+      // Get context variables
+      const variables = await getContextVariables(invoiceId, contactId, user.tenantId);
+
+      // Get template or use defaults
+      let template = null;
+      let content = "Hi {{contact_name}}, your invoice {{invoice_number}} for {{amount}} is overdue by {{days_overdue}} days. Please contact us to arrange payment. Thanks, {{your_name}}";
+
+      if (templateId) {
+        const templates = await storage.getCommunicationTemplates(user.tenantId, { type: 'sms' });
+        template = templates.find(t => t.id === templateId);
+        if (template) {
+          content = template.content || content;
+        }
+      } else {
+        // Get default SMS template
+        const templates = await storage.getCommunicationTemplates(user.tenantId, { type: 'sms' });
+        if (templates.length > 0) {
+          template = templates[0];
+          content = template.content || content;
+        }
+      }
+
+      // Process template variables
+      const processedContent = processTemplateVariables(content, variables);
+
+      // Determine recipient
+      let recipient = '';
+      if (invoiceId) {
+        const invoice = await storage.getInvoice(invoiceId, user.tenantId);
+        if (invoice) {
+          const contact = await storage.getContact(invoice.contactId, user.tenantId);
+          recipient = contact?.phone || '';
+        }
+      } else if (contactId) {
+        const contact = await storage.getContact(contactId, user.tenantId);
+        recipient = contact?.phone || '';
+      }
+
+      res.json({
+        subject: null, // SMS doesn't have subjects
+        content: processedContent,
+        recipient,
+        templateUsed: template?.id || null,
+        variables
+      });
+
+    } catch (error) {
+      console.error("Error generating SMS preview:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid request data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to generate SMS preview" });
+    }
+  });
+
+  // Preview Voice Endpoint
+  app.post("/api/communications/preview-voice", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const requestData = previewRequestSchema.parse(req.body);
+      const { invoiceId, contactId, templateId } = requestData;
+
+      // Get context variables
+      const variables = await getContextVariables(invoiceId, contactId, user.tenantId);
+
+      // Get template or use defaults
+      let template = null;
+      let content = "Hello {{contact_name}}, this is {{your_name}} from our collections department. I'm calling regarding your overdue invoice {{invoice_number}} in the amount of {{amount}}. This invoice is now {{days_overdue}} days past due. Please contact us at your earliest convenience to discuss payment arrangements. Thank you.";
+
+      if (templateId) {
+        const templates = await storage.getCommunicationTemplates(user.tenantId, { type: 'voice' });
+        template = templates.find(t => t.id === templateId);
+        if (template) {
+          content = template.content || content;
+        }
+      } else {
+        // Get default voice template
+        const templates = await storage.getCommunicationTemplates(user.tenantId, { type: 'voice' });
+        if (templates.length > 0) {
+          template = templates[0];
+          content = template.content || content;
+        }
+      }
+
+      // Process template variables
+      const processedContent = processTemplateVariables(content, variables);
+
+      // Determine recipient
+      let recipient = '';
+      if (invoiceId) {
+        const invoice = await storage.getInvoice(invoiceId, user.tenantId);
+        if (invoice) {
+          const contact = await storage.getContact(invoice.contactId, user.tenantId);
+          recipient = contact?.phone || '';
+        }
+      } else if (contactId) {
+        const contact = await storage.getContact(contactId, user.tenantId);
+        recipient = contact?.phone || '';
+      }
+
+      res.json({
+        subject: null, // Voice calls don't have subjects
+        content: processedContent,
+        recipient,
+        templateUsed: template?.id || null,
+        variables
+      });
+
+    } catch (error) {
+      console.error("Error generating voice preview:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid request data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to generate voice preview" });
+    }
+  });
+
   // Enhanced template management
   app.get("/api/collections/templates/by-category/:category", isAuthenticated, async (req: any, res) => {
     try {
