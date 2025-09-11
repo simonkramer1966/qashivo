@@ -97,14 +97,14 @@ export default function AiCapabilities() {
             {/* Logo Section */}
             <div className="flex items-center space-x-3">
               <div className="w-12 h-12 bg-[#17B6C3]/10 backdrop-blur-sm rounded-xl flex items-center justify-center p-2">
-                <img src={nexusLogo} alt="Nexus AR" className="w-full h-full object-contain" />
+                <img src={nexusLogo} alt="Qashivo" className="w-full h-full object-contain" />
               </div>
               <div className="flex flex-col">
                 <h1 className="text-2xl font-bold text-gray-900" data-testid="text-brand-name">
-                  Nexus AR
+                  Qashivo
                 </h1>
                 <p className="text-xs text-[#17B6C3] font-medium tracking-wide uppercase">
-                  AI-Driven Collections
+                  Cashflow Simplified
                 </p>
               </div>
             </div>
@@ -321,7 +321,7 @@ export default function AiCapabilities() {
       <footer className="py-12 bg-gray-900">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center text-gray-400">
-            <p>&copy; 2025 Nexus AR Limited. All Rights Reserved.</p>
+            <p>&copy; 2025 Qashivo Limited. All Rights Reserved.</p>
           </div>
         </div>
       </footer>

@@ -47,7 +47,7 @@ const SubscribeForm = () => {
       });
     } else {
       toast({
-        title: "Welcome to Nexus AR Pro!",
+        title: "Welcome to Qashivo Pro!",
         description: "Your subscription is now active. Redirecting to dashboard...",
       });
     }
@@ -59,7 +59,7 @@ const SubscribeForm = () => {
       <CardHeader className="text-center">
         <CardTitle className="text-xl font-bold text-gray-900">Complete Your Subscription</CardTitle>
         <CardDescription>
-          Enter your payment details to activate your Nexus AR Pro subscription
+          Enter your payment details to activate your Qashivo Pro subscription
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -90,7 +90,7 @@ export default function Subscribe() {
     if (!authLoading && !isAuthenticated) {
       toast({
         title: "Authentication Required",
-        description: "Please log in to subscribe to Nexus AR Pro.",
+        description: "Please log in to subscribe to Qashivo Pro.",
         variant: "destructive",
       });
       setTimeout(() => {
@@ -111,7 +111,7 @@ export default function Subscribe() {
             if (data.status === 'active') {
               toast({
                 title: "Already Subscribed",
-                description: "You already have an active Nexus AR Pro subscription.",
+                description: "You already have an active Qashivo Pro subscription.",
               });
             }
           }
@@ -167,7 +167,7 @@ export default function Subscribe() {
                 You're Already Subscribed!
               </h1>
               <p className="text-gray-600 mb-6">
-                Your Nexus AR Pro subscription is active. Access all premium features from your dashboard.
+                Your Qashivo Pro subscription is active. Access all premium features from your dashboard.
               </p>
               <Button 
                 onClick={() => window.location.href = "/dashboard"}
@@ -203,7 +203,7 @@ export default function Subscribe() {
             Supercharge Your Debt Recovery
           </h1>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-            Join thousands of businesses using Nexus AR Pro to accelerate collections, 
+            Join thousands of businesses using Qashivo Pro to accelerate collections, 
             reduce bad debt, and improve cash flow with AI-powered automation.
           </p>
         </div>
@@ -217,7 +217,7 @@ export default function Subscribe() {
                 <div className="p-3 bg-[#17B6C3]/10 rounded-lg w-16 h-16 mx-auto mb-4 flex items-center justify-center">
                   <Zap className="h-8 w-8 text-[#17B6C3]" />
                 </div>
-                <CardTitle className="text-2xl font-bold text-gray-900">Nexus AR Pro</CardTitle>
+                <CardTitle className="text-2xl font-bold text-gray-900">Qashivo Pro</CardTitle>
                 <CardDescription className="text-lg">
                   Complete debt recovery automation platform
                 </CardDescription>

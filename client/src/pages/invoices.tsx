@@ -495,7 +495,7 @@ export default function Invoices() {
               {/* Invoice Header */}
               <div className="flex justify-between items-start border-b border-gray-200 pb-6">
                 <div>
-                  <h1 className="text-2xl font-bold text-[#17B6C3] mb-2">Nexus AR</h1>
+                  <h1 className="text-2xl font-bold text-[#17B6C3] mb-2">Qashivo</h1>
                   <p className="text-gray-600 text-sm">Professional Accounts Receivable</p>
                   <p className="text-gray-600 text-sm">London, UK</p>
                   <p className="text-gray-600 text-sm">+44 20 1234 5678</p>

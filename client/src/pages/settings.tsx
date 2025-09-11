@@ -82,7 +82,7 @@ function TestTabContent() {
     localStorage.getItem('nexus-test-due-date') || "7/15/2025"
   );
   const [organisationName, setOrganisationName] = useState<string>(() => 
-    localStorage.getItem('nexus-test-organisation-name') || "Nexus AR"
+    localStorage.getItem('nexus-test-organisation-name') || "Qashivo"
   );
   const [demoMessage, setDemoMessage] = useState<string>(() => 
     localStorage.getItem('nexus-test-demo-message') || "This is a professional collection call regarding outstanding invoices."
@@ -519,7 +519,7 @@ function TestTabContent() {
               <Input
                 id="organisation-name"
                 type="text"
-                placeholder="Nexus AR"
+                placeholder="Qashivo"
                 value={organisationName}
                 onChange={(e) => setOrganisationName(e.target.value)}
                 className="bg-white/70 border-gray-200/30"
@@ -688,7 +688,7 @@ export default function Settings() {
   // Initialize form values when tenant data loads
   useEffect(() => {
     if (tenant) {
-      setCompanyName(tenant.settings?.companyName || tenant.name || "Nexus AR");
+      setCompanyName(tenant.settings?.companyName || tenant.name || "Qashivo");
       setTagline(tenant.settings?.tagline || "Debt Recovery Suite");
       setOrganizationName(tenant.name || "");
       setOrganizationCurrency(tenant.settings?.currency || DEFAULT_CURRENCY);
@@ -1483,7 +1483,7 @@ export default function Settings() {
                     Branding & Appearance
                   </CardTitle>
                   <CardDescription className="text-base ml-11">
-                    Customize the appearance of your Nexus AR instance
+                    Customize the appearance of your Qashivo instance
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-8">

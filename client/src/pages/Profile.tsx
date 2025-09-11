@@ -253,7 +253,7 @@ export default function Profile() {
                 </div>
                 <div>
                   <CardTitle className="text-xl font-bold">Subscription Details</CardTitle>
-                  <CardDescription>Manage your Nexus AR subscription</CardDescription>
+                  <CardDescription>Manage your Qashivo subscription</CardDescription>
                 </div>
               </div>
             </CardHeader>
@@ -357,7 +357,7 @@ export default function Profile() {
                   <CreditCard className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                   <h4 className="text-lg font-semibold text-gray-900 mb-2">No Active Subscription</h4>
                   <p className="text-gray-600 mb-6 max-w-md mx-auto">
-                    Subscribe to Nexus AR Professional to access advanced features like automated workflows, AI-powered suggestions, and comprehensive analytics.
+                    Subscribe to Qashivo Professional to access advanced features like automated workflows, AI-powered suggestions, and comprehensive analytics.
                   </p>
                   <Button
                     onClick={createSubscription}

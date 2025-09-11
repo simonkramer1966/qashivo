@@ -27,14 +27,14 @@ export default function Landing() {
             {/* Logo Section */}
             <div className="flex items-center space-x-3">
               <div className="w-12 h-12 bg-[#17B6C3]/10 backdrop-blur-sm rounded-xl flex items-center justify-center p-2">
-                <img src={nexusLogo} alt="Nexus AR" className="w-full h-full object-contain" />
+                <img src={nexusLogo} alt="Qashivo" className="w-full h-full object-contain" />
               </div>
               <div className="flex flex-col">
                 <h1 className="text-2xl font-bold text-gray-900" data-testid="text-brand-name">
-                  Nexus AR
+                  Qashivo
                 </h1>
                 <p className="text-xs text-[#17B6C3] font-medium tracking-wide uppercase">
-                  SME Credit Control Platform
+                  Cashflow Simplified
                 </p>
               </div>
             </div>
@@ -120,7 +120,7 @@ export default function Landing() {
         <div className="relative z-10 text-center text-white max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-center items-center mb-8">
             <div className="w-24 h-24 bg-white/10 backdrop-blur-sm rounded-2xl flex items-center justify-center p-4">
-              <img src={nexusLogo} alt="Nexus AR" className="w-full h-full object-contain" />
+              <img src={nexusLogo} alt="Qashivo" className="w-full h-full object-contain" />
             </div>
           </div>
           <h1 className="text-5xl md:text-7xl font-bold mb-6">
@@ -297,7 +297,7 @@ export default function Landing() {
             Start Getting Paid Faster Today
           </h2>
           <p className="text-xl text-white/90 mb-12">
-            Over 2,000 businesses already using Nexus AR to get paid 2 weeks faster. 
+            Over 2,000 businesses already using Qashivo to get paid 2 weeks faster. 
             Setup takes 5 minutes. No credit card required.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -327,7 +327,7 @@ export default function Landing() {
       <footer className="py-12 bg-gray-900">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center text-gray-400">
-            <p>&copy; 2025 Nexus AR Limited. All Rights Reserved.</p>
+            <p>&copy; 2025 Qashivo Limited. All Rights Reserved.</p>
           </div>
         </div>
       </footer>
