@@ -173,7 +173,7 @@ export default function AiCapabilities() {
             </h1>
             <p className="text-xl text-white/90 max-w-4xl mx-auto leading-relaxed" data-testid="text-ai-hero-description">
               Experience the power of advanced machine learning, natural language processing, 
-              and predictive analytics working together to revolutionize your debt recovery process.
+              and predictive analytics working together to revolutionize your credit control process.
             </p>
           </div>
 
