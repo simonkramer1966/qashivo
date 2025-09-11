@@ -5,6 +5,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import NewSidebar from "@/components/layout/new-sidebar";
 import Header from "@/components/layout/header";
 import MetricsOverview from "@/components/dashboard/metrics-overview";
+import ActionPriorityMatrix from "@/components/dashboard/action-priority-matrix";
 import RecentInvoices from "@/components/dashboard/recent-invoices";
 import AIInsights from "@/components/dashboard/ai-insights";
 import WorkflowTemplates from "@/components/dashboard/workflow-templates";
@@ -60,6 +61,10 @@ export default function Dashboard() {
         <div className="p-8 space-y-8">
           <Suspense fallback={<div className="h-32 animate-pulse bg-gray-100 rounded-lg" />}>
             <MetricsOverview />
+          </Suspense>
+
+          <Suspense fallback={<div className="h-96 animate-pulse bg-gray-100 rounded-lg" />}>
+            <ActionPriorityMatrix />
           </Suspense>
           
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
