@@ -53,8 +53,8 @@ export class XeroProvider implements UniversalProvider {
 
       const tokens = {
         accessToken: tokenData.accessToken,
-        refreshToken: '', // Will be handled by AuthManager
-        expiresAt: new Date(), // Will be handled by AuthManager
+        refreshToken: tokenData.refreshToken || '',
+        expiresAt: tokenData.expiresAt || new Date(),
         tenantId: tokenData.tenantId || '',
       };
 
@@ -170,8 +170,8 @@ export class XeroProvider implements UniversalProvider {
 
       const tokens = {
         accessToken: tokenData.accessToken,
-        refreshToken: '',
-        expiresAt: new Date(),
+        refreshToken: tokenData.refreshToken || '',
+        expiresAt: tokenData.expiresAt || new Date(),
         tenantId: tokenData.tenantId || tenantId,
       };
 

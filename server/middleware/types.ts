@@ -67,6 +67,8 @@ export interface SyncResult {
 // Token accessor function for providers
 export type TokenAccessor = (providerName: string, tenantId?: string) => Promise<{
   accessToken: string;
+  refreshToken?: string;
+  expiresAt?: Date;
   tenantId?: string;
 } | null>;
 

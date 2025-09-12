@@ -53,12 +53,16 @@ export class APIMiddleware {
         if (!refreshResult.success || !refreshResult.tokens) return null;
         return {
           accessToken: refreshResult.tokens.accessToken,
+          refreshToken: refreshResult.tokens.refreshToken,
+          expiresAt: refreshResult.tokens.expiresAt,
           tenantId: refreshResult.tokens.tenantId
         };
       }
       
       return {
         accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
+        expiresAt: tokens.expiresAt,
         tenantId: tokens.tenantId
       };
     });
