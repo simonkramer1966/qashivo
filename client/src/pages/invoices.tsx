@@ -6,6 +6,13 @@ import { useAuth } from "@/hooks/useAuth";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { apiRequest } from "@/lib/queryClient";
 import { useLocation } from "wouter";
+import { 
+  getAllOverdueCategories, 
+  filterInvoicesByOverdueCategory, 
+  getOverdueCategoryFromDueDate,
+  type OverdueCategory,
+  type OverdueCategoryInfo 
+} from "../../../shared/utils/overdueUtils";
 import NewSidebar from "@/components/layout/new-sidebar";
 import Header from "@/components/layout/header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -34,6 +41,7 @@ export default function Invoices() {
   };
   
   const [statusFilter, setStatusFilter] = useState(getInitialFilter());
+  const [overdueFilter, setOverdueFilter] = useState<OverdueCategory | 'all'>('all');
   const [invClientSort, setInvClientSort] = useState<string>("inv-asc");
   const [dueDateAgeSort, setDueDateAgeSort] = useState<string>("due-date-asc");
   const [nextActionSort, setNextActionSort] = useState<string>("action-date-asc");
@@ -185,7 +193,12 @@ export default function Invoices() {
       (statusFilter === "on-hold" && invoice.status === "on-hold") ||
       (statusFilter === "escalated" && invoice.collectionStage === "escalated");
 
-    return matchesSearch && matchesStatus;
+    // Overdue category filtering
+    const matchesOverdueCategory = overdueFilter === "all" || 
+      (invoice.overdueCategory && invoice.overdueCategory === overdueFilter) ||
+      (!invoice.overdueCategory && getOverdueCategoryFromDueDate(invoice.dueDate).category === overdueFilter);
+
+    return matchesSearch && matchesStatus && matchesOverdueCategory;
   });
 
   const sortedInvoices = [...filteredInvoices].sort((a: any, b: any) => {
@@ -202,7 +215,7 @@ export default function Invoices() {
   // Reset page to 1 when search or filters change
   useEffect(() => {
     setInvoicesCurrentPage(1);
-  }, [search, statusFilter]);
+  }, [search, statusFilter, overdueFilter]);
 
   useEffect(() => {
     setInvoicesCurrentPage(1);
@@ -222,6 +235,18 @@ export default function Invoices() {
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
+  };
+
+  // Helper function for overdue category badges
+  const getOverdueCategoryBadge = (invoice: any) => {
+    // Use overdue category info from the backend, or calculate if not available
+    const categoryInfo = invoice.overdueCategoryInfo || getOverdueCategoryFromDueDate(invoice.dueDate);
+    
+    return (
+      <Badge className={`${categoryInfo.bgColor} ${categoryInfo.color} hover:${categoryInfo.bgColor}`}>
+        {categoryInfo.label}
+      </Badge>
+    );
   };
 
   const openContactHistory = (invoice: any) => {
@@ -271,6 +296,20 @@ export default function Invoices() {
                   <SelectItem value="paid">Paid</SelectItem>
                   <SelectItem value="on-hold">On Hold</SelectItem>
                   <SelectItem value="escalated">Debt Recovery</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={overdueFilter} onValueChange={(value) => setOverdueFilter(value as OverdueCategory | 'all')}>
+                <SelectTrigger className="w-[180px] bg-white/70 border-gray-200/30" data-testid="select-overdue-filter">
+                  <AlertCircle className="mr-2 h-4 w-4" />
+                  <SelectValue placeholder="All Categories" />
+                </SelectTrigger>
+                <SelectContent className="bg-white border-gray-200">
+                  <SelectItem value="all">All Categories</SelectItem>
+                  {getAllOverdueCategories().map((category) => (
+                    <SelectItem key={category.category} value={category.category}>
+                      {category.label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
               <Select value={invoicesItemsPerPage.toString()} onValueChange={(value) => setInvoicesItemsPerPage(Number(value))}>
@@ -346,6 +385,7 @@ export default function Invoices() {
                         <th className="text-left py-3 text-sm font-medium text-muted-foreground">Amount</th>
                         <th className="text-left py-3 text-sm font-medium text-muted-foreground">Due Date</th>
                         <th className="text-left py-3 text-sm font-medium text-muted-foreground">Status</th>
+                        <th className="text-left py-3 text-sm font-medium text-muted-foreground">Category</th>
                         <th className="text-right py-3 text-sm font-medium text-muted-foreground">Actions</th>
                       </tr>
                     </thead>
@@ -386,6 +426,9 @@ export default function Invoices() {
                           </td>
                           <td className="py-4">
                             {getStatusBadge(invoice.status)}
+                          </td>
+                          <td className="py-4" data-testid={`cell-overdue-category-${invoice.id}`}>
+                            {getOverdueCategoryBadge(invoice)}
                           </td>
                           <td className="py-4">
                             <div className="flex justify-end">

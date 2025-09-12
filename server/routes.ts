@@ -682,8 +682,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const contactId = req.query.contactId as string;
       const limit = req.query.limit ? parseInt(req.query.limit) : undefined;
       
-      let invoices = await storage.getInvoices(user.tenantId, limit);
-      console.log(`📊 Invoices Endpoint Debug: Fetched ${invoices.length} invoices for tenant ${user.tenantId}`);
+      let invoices = await storage.getInvoicesWithOverdueCategory(user.tenantId, limit);
+      console.log(`📊 Invoices Endpoint Debug: Fetched ${invoices.length} invoices with overdue categories for tenant ${user.tenantId}`);
       
       // Filter by contact ID if provided
       if (contactId) {
@@ -709,6 +709,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching overdue invoices:", error);
       res.status(500).json({ message: "Failed to fetch overdue invoices" });
+    }
+  });
+
+  app.get("/api/invoices/overdue-categories", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const overdueCategorySummary = await storage.getOverdueCategorySummary(user.tenantId);
+      res.json(overdueCategorySummary);
+    } catch (error) {
+      console.error("Error fetching overdue category summary:", error);
+      res.status(500).json({ message: "Failed to fetch overdue category summary" });
     }
   });
 

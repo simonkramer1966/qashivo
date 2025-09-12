@@ -77,6 +77,7 @@ import {
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, sql, count, ne, isNotNull, gte, lte } from "drizzle-orm";
+import { getOverdueCategoryFromDueDate, getOverdueCategorySummary, type OverdueCategory, type OverdueCategoryInfo } from "../shared/utils/overdueUtils";
 
 // Interface for storage operations
 export interface IStorage {
@@ -127,6 +128,8 @@ export interface IStorage {
     collectionsWithinTerms: number;
     dso: number;
   }>;
+  getOverdueCategorySummary(tenantId: string): Promise<Record<OverdueCategory, { count: number; totalAmount: number }>>;
+  getInvoicesWithOverdueCategory(tenantId: string, limit?: number): Promise<(Invoice & { contact: Contact; overdueCategory: OverdueCategory; overdueCategoryInfo: OverdueCategoryInfo })[]>;
   getDebtRecoveryMetrics(tenantId: string): Promise<{
     escalatedCount: number;
     escalatedValue: number;
@@ -520,6 +523,59 @@ export class DatabaseStorage implements IStorage {
         updatedAt: new Date(),
       }
     }));
+  }
+
+  async getOverdueCategorySummary(tenantId: string): Promise<Record<OverdueCategory, { count: number; totalAmount: number }>> {
+    // Get all invoices for the tenant
+    const invoicesData = await db
+      .select({
+        dueDate: invoices.dueDate,
+        amount: invoices.amount,
+        status: invoices.status
+      })
+      .from(invoices)
+      .where(eq(invoices.tenantId, tenantId));
+
+    // Use the utility function to calculate overdue category summary
+    return getOverdueCategorySummary(invoicesData);
+  }
+
+  async getInvoicesWithOverdueCategory(tenantId: string, limit = 10000): Promise<(Invoice & { contact: Contact; overdueCategory: OverdueCategory; overdueCategoryInfo: OverdueCategoryInfo })[]> {
+    const results = await db
+      .select()
+      .from(invoices)
+      .leftJoin(contacts, eq(invoices.contactId, contacts.id))
+      .where(eq(invoices.tenantId, tenantId))
+      .orderBy(desc(invoices.createdAt))
+      .limit(limit);
+    
+    return results.map((row) => {
+      const invoice = row.invoices;
+      const overdueCategoryInfo = getOverdueCategoryFromDueDate(invoice.dueDate);
+      
+      return {
+        ...invoice,
+        contact: row.contacts || {
+          id: '',
+          tenantId: '',
+          xeroContactId: null,
+          name: 'Unknown Contact',
+          email: null,
+          phone: null,
+          companyName: null,
+          address: null,
+          isActive: true,
+          paymentTerms: 30,
+          creditLimit: null,
+          preferredContactMethod: 'email',
+          notes: null,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+        overdueCategory: overdueCategoryInfo.category,
+        overdueCategoryInfo: overdueCategoryInfo
+      };
+    });
   }
 
   async getInvoiceMetrics(tenantId: string): Promise<{
