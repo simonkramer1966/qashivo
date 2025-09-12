@@ -34,7 +34,7 @@ export enum DeliveryStatus {
 }
 
 export interface EmailAttachment {
-  content: Buffer;
+  content: Uint8Array;
   filename: string;
   type: string;
   disposition?: 'attachment' | 'inline';

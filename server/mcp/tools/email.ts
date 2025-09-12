@@ -1,7 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { sendEmailWithAttachment } from '../../services/sendgrid.js';
 import { generateInvoicePDF } from '../../services/invoicePDF.js';
-import { formatDate } from '../../shared/utils/dateFormatter.js';
+import { formatDate } from '../../../shared/utils/dateFormatter.js';
 
 export const registerEmailTools = (server: McpServer) => {
   server.tool(

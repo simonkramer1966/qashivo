@@ -37,7 +37,7 @@ export class SendGridEmailService extends EmailService {
       this.log('info', `SendGrid configured successfully with sender: ${this.config.defaultFrom.name} <${this.config.defaultFrom.email}>`);
     } else {
       this.log('warn', 'SendGrid API key not configured, emails will be skipped in development mode');
-      this.isConfigured = this.config.environment === 'development'; // Allow development mode
+      this.isConfigured = false; // Disable real API calls when no key is configured
     }
   }
 
@@ -106,13 +106,16 @@ export class SendGridEmailService extends EmailService {
       
       results.push(...batchResults);
       
-      for (const result of batchResults) {
+      for (let j = 0; j < batchResults.length; j++) {
+        const result = batchResults[j];
+        const recipient = batch[j];
+        
         if (result.success) {
           successfulSends++;
         } else {
           failedSends++;
           errors.push({
-            recipient: result.error || 'unknown',
+            recipient: recipient.to.email,
             error: result.error || 'Unknown error',
             retryable: this.isRetryableError(result.error)
           });
@@ -247,11 +250,15 @@ export class SendGridEmailService extends EmailService {
 
       // Parse attachments if present
       if (rawEmailData.attachments) {
-        parsed.attachments = Object.keys(rawEmailData.attachments).map(filename => ({
-          filename,
-          content: Buffer.from(rawEmailData.attachments[filename], 'base64'),
-          type: 'application/octet-stream', // SendGrid doesn't provide MIME type
-        }));
+        parsed.attachments = Object.keys(rawEmailData.attachments).map(filename => {
+          const base64Data = rawEmailData.attachments[filename];
+          const bytes = new Uint8Array(Buffer.from(base64Data, 'base64'));
+          return {
+            filename,
+            content: bytes,
+            type: 'application/octet-stream', // SendGrid doesn't provide MIME type
+          };
+        });
       }
 
       this.log('info', 'Inbound email parsed successfully', {
@@ -364,6 +371,24 @@ export class SendGridEmailService extends EmailService {
           delivered: 0,
           failed: 0,
           averageResponseTime: 500
+        },
+        [EmailProvider.SES]: {
+          sent: 0,
+          delivered: 0,
+          failed: 0,
+          averageResponseTime: 0
+        },
+        [EmailProvider.POSTMARK]: {
+          sent: 0,
+          delivered: 0,
+          failed: 0,
+          averageResponseTime: 0
+        },
+        [EmailProvider.MAILGUN]: {
+          sent: 0,
+          delivered: 0,
+          failed: 0,
+          averageResponseTime: 0
         }
       }
     };
@@ -374,10 +399,10 @@ export class SendGridEmailService extends EmailService {
     return { isValid };
   }
 
-  async getDeliveryStatus(messageId: string): Promise<{ status: string; events: EmailWebhookEvent[] }> {
+  async getDeliveryStatus(messageId: string): Promise<{ status: DeliveryStatus; events: EmailWebhookEvent[] }> {
     // Would query SendGrid's activity API in a real implementation
     return {
-      status: 'delivered',
+      status: DeliveryStatus.DELIVERED,
       events: []
     };
   }
@@ -418,13 +443,15 @@ export class SendGridEmailService extends EmailService {
 
     // Handle attachments
     if (message.attachments && message.attachments.length > 0) {
-      sendGridMessage.attachments = message.attachments.map(att => ({
-        content: att.content.toString('base64'),
-        filename: att.filename,
-        type: att.type,
-        disposition: att.disposition || 'attachment',
-        contentId: att.contentId
-      }));
+      sendGridMessage.attachments = message.attachments.map(att => {
+        return {
+          content: Buffer.from(att.content).toString('base64'),
+          filename: att.filename,
+          type: att.type,
+          disposition: att.disposition || 'attachment',
+          contentId: att.contentId
+        };
+      });
     }
 
     // Add custom headers

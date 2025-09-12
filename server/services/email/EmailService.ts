@@ -10,7 +10,8 @@ import {
   EmailProviderStatus,
   EmailMetrics,
   EmailServiceConfig,
-  EmailProvider 
+  EmailProvider,
+  DeliveryStatus 
 } from "../../../shared/types/email";
 
 /**
@@ -42,7 +43,7 @@ export abstract class EmailService {
   
   // Provider-specific features
   abstract validateEmailAddress(email: string): Promise<{ isValid: boolean; suggestion?: string; risk?: string }>;
-  abstract getDeliveryStatus(messageId: string): Promise<{ status: string; events: EmailWebhookEvent[] }>;
+  abstract getDeliveryStatus(messageId: string): Promise<{ status: DeliveryStatus; events: EmailWebhookEvent[] }>;
   
   // Configuration and utility methods
   getProvider(): EmailProvider {
@@ -119,7 +120,7 @@ export abstract class EmailService {
       success: true,
       messageId,
       providerMessageId,
-      status: 'sent' as const,
+      status: DeliveryStatus.SENT,
       message: 'Email sent successfully',
       timestamp: new Date(),
       provider: this.config.provider,
@@ -131,7 +132,7 @@ export abstract class EmailService {
     return {
       success: false,
       messageId,
-      status: 'failed' as const,
+      status: DeliveryStatus.FAILED,
       error,
       timestamp: new Date(),
       provider: this.config.provider
