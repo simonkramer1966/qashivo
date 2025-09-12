@@ -33,6 +33,36 @@ export class APIMiddleware {
    * Register a new provider
    */
   registerProvider(provider: UniversalProvider): void {
+    // Inject token accessor into provider
+    provider.setTokenAccessor(async (providerName: string, tenantId?: string) => {
+      const tokens = this.authManager.getCachedTokens(providerName, tenantId);
+      if (!tokens) return null;
+      
+      // Refresh if expired
+      if (this.authManager.areTokensExpired(tokens)) {
+        const registeredProvider = this.getProvider(providerName);
+        if (!registeredProvider || !tokens.refreshToken) return null;
+        
+        const refreshResult = await this.authManager.refreshAccessToken(
+          providerName,
+          tokens.refreshToken,
+          registeredProvider.config,
+          tenantId
+        );
+        
+        if (!refreshResult.success || !refreshResult.tokens) return null;
+        return {
+          accessToken: refreshResult.tokens.accessToken,
+          tenantId: refreshResult.tokens.tenantId
+        };
+      }
+      
+      return {
+        accessToken: tokens.accessToken,
+        tenantId: tokens.tenantId
+      };
+    });
+
     this.providerRegistry.register(provider);
     console.log(`✅ Provider registered: ${provider.name} (${provider.type})`);
   }

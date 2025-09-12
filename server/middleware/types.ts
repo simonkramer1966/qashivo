@@ -64,16 +64,20 @@ export interface SyncResult {
   skipped?: number;
 }
 
+// Token accessor function for providers
+export type TokenAccessor = (providerName: string, tenantId?: string) => Promise<{
+  accessToken: string;
+  tenantId?: string;
+} | null>;
+
 // Universal Provider Interface - All providers implement this
 export interface UniversalProvider {
   readonly name: string;
   readonly type: ProviderType;
   readonly config: ProviderConfig;
   
-  // Core authentication methods
-  authenticate(): Promise<AuthResult>;
-  refreshAuth(refreshToken: string): Promise<AuthResult>;
-  isAuthenticated(): Promise<boolean>;
+  // Token accessor injected during registration
+  setTokenAccessor(accessor: TokenAccessor): void;
   
   // Core API methods
   makeRequest<T = any>(endpoint: string, options?: RequestOptions): Promise<APIResponse<T>>;

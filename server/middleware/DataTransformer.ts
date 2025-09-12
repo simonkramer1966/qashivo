@@ -183,6 +183,7 @@ export class DataTransformer {
         company: 'Name',
         isActive: 'IsActive',
         providerContactId: 'ContactID',
+        outstandingBalance: (data: any) => parseFloat(data.Balances?.AccountsReceivable?.Outstanding) || 0,
       },
       transformations: {
         outstandingBalance: (value: any) => parseFloat(value) || 0,
@@ -201,8 +202,8 @@ export class DataTransformer {
         amount: 'Total',
         amountPaid: 'AmountPaid',
         status: (data: any) => this.mapXeroStatusToStandard(data.Status),
-        issueDate: 'DateString',
-        dueDate: 'DueDateString',
+        issueDate: (data: any) => data.Date || data.DateString,
+        dueDate: (data: any) => data.DueDate || data.DueDateString,
         currency: 'CurrencyCode',
         description: (data: any) => `Invoice from Xero - ${data.InvoiceNumber}`,
         providerInvoiceId: 'InvoiceID',
