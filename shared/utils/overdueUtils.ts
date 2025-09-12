@@ -68,21 +68,21 @@ export function getOverdueCategoryFromDueDate(dueDate: string | Date, currentDat
 export function getOverdueCategoryInfo(category: OverdueCategory, daysOverdue: number): OverdueCategoryInfo {
   const categoryMap: Record<OverdueCategory, Omit<OverdueCategoryInfo, 'category' | 'daysOverdue'>> = {
     soon: {
-      label: 'Due Soon',
+      label: 'Soon',
       priority: 6,
       color: 'text-yellow-700 dark:text-yellow-400',
       bgColor: 'bg-yellow-100 dark:bg-yellow-900/20',
       description: 'Due within next 7 days - proactive outreach recommended'
     },
     current: {
-      label: 'Due Today',
+      label: 'Current',
       priority: 5,
       color: 'text-green-700 dark:text-green-400',
       bgColor: 'bg-green-100 dark:bg-green-900/20',
       description: 'Due today - immediate attention needed'
     },
     recent: {
-      label: 'Recently Due',
+      label: 'Recent',
       priority: 4,
       color: 'text-blue-700 dark:text-blue-400',
       bgColor: 'bg-blue-100 dark:bg-blue-900/20',
@@ -96,14 +96,14 @@ export function getOverdueCategoryInfo(category: OverdueCategory, daysOverdue: n
       description: 'Standard collection actions required'
     },
     serious: {
-      label: 'Seriously Due',
+      label: 'Serious',
       priority: 2,
       color: 'text-red-700 dark:text-red-400',
       bgColor: 'bg-red-100 dark:bg-red-900/20',
       description: 'Intensive collection efforts needed'
     },
     escalation: {
-      label: 'Escalation Required',
+      label: 'Escalation',
       priority: 1,
       color: 'text-purple-700 dark:text-purple-400',
       bgColor: 'bg-purple-100 dark:bg-purple-900/20',
