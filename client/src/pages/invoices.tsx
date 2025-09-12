@@ -385,7 +385,6 @@ export default function Invoices() {
                         <th className="text-left py-3 text-sm font-medium text-muted-foreground">Amount</th>
                         <th className="text-left py-3 text-sm font-medium text-muted-foreground">Due Date</th>
                         <th className="text-left py-3 text-sm font-medium text-muted-foreground">Status</th>
-                        <th className="text-left py-3 text-sm font-medium text-muted-foreground">Category</th>
                         <th className="text-right py-3 text-sm font-medium text-muted-foreground">Actions</th>
                       </tr>
                     </thead>
@@ -423,9 +422,6 @@ export default function Invoices() {
                                 </div>
                               ) : null;
                             })()}
-                          </td>
-                          <td className="py-4">
-                            {getStatusBadge(invoice.status)}
                           </td>
                           <td className="py-4" data-testid={`cell-overdue-category-${invoice.id}`}>
                             {getOverdueCategoryBadge(invoice)}
