@@ -39,6 +39,38 @@ app.use((req, res, next) => {
 (async () => {
   const server = await registerRoutes(app);
 
+  // Initialize API Middleware for provider integrations
+  if (process.env.NODE_ENV !== 'test') {
+    try {
+      console.log("🔌 Initializing API middleware system...");
+      const { apiMiddleware } = await import("./middleware");
+      const { XeroProvider } = await import("./middleware/providers/XeroProvider");
+      
+      // Configure and register Xero provider
+      if (process.env.XERO_CLIENT_ID && process.env.XERO_CLIENT_SECRET) {
+        const xeroProvider = new XeroProvider({
+          name: 'xero',
+          type: 'accounting',
+          clientId: process.env.XERO_CLIENT_ID,
+          clientSecret: process.env.XERO_CLIENT_SECRET,
+          baseUrl: process.env.BASE_URL || 'http://localhost:5000',
+          scopes: ['accounting.transactions', 'accounting.contacts'],
+          redirectUri: `${process.env.BASE_URL || 'http://localhost:5000'}/api/auth/xero/callback`,
+          environment: process.env.NODE_ENV === 'production' ? 'production' : 'sandbox'
+        });
+        
+        await apiMiddleware.registerProvider(xeroProvider);
+        console.log("✅ Xero provider registered successfully");
+      } else {
+        console.log("⚠️  Xero provider not configured (missing XERO_CLIENT_ID or XERO_CLIENT_SECRET)");
+      }
+      
+      console.log("✅ API middleware system initialized");
+    } catch (error) {
+      console.error("❌ Failed to initialize API middleware:", error);
+    }
+  }
+
   // Initialize collections scheduler in production/development
   if (process.env.NODE_ENV !== 'test') {
     try {

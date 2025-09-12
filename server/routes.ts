@@ -6894,6 +6894,218 @@ ${tenant.name}
 
   // ==================== END ANALYTICS ENDPOINTS ====================
 
+  // ==================== PROVIDER MIDDLEWARE ROUTES ====================
+
+  // Import API middleware
+  const { apiMiddleware } = await import("./middleware");
+
+  // List available providers
+  app.get('/api/providers', isAuthenticated, async (req: any, res) => {
+    try {
+      const providers = apiMiddleware.getProviders().map(provider => ({
+        name: provider.name,
+        type: provider.type,
+        isConnected: false, // Will be updated with actual connection status
+        config: {
+          name: provider.config.name,
+          type: provider.config.type,
+          environment: provider.config.environment
+        }
+      }));
+
+      res.json({ 
+        success: true, 
+        providers,
+        total: providers.length
+      });
+    } catch (error) {
+      console.error("Error listing providers:", error);
+      res.status(500).json({ 
+        success: false, 
+        message: "Failed to list providers" 
+      });
+    }
+  });
+
+  // Provider health check
+  app.get('/api/providers/health', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const providers = apiMiddleware.getProviders();
+      const healthResults = await Promise.all(
+        providers.map(async (provider) => {
+          try {
+            const isHealthy = await provider.healthCheck();
+            return {
+              name: provider.name,
+              type: provider.type,
+              healthy: isHealthy,
+              lastChecked: new Date().toISOString()
+            };
+          } catch (error) {
+            return {
+              name: provider.name,
+              type: provider.type,
+              healthy: false,
+              error: error instanceof Error ? error.message : 'Health check failed',
+              lastChecked: new Date().toISOString()
+            };
+          }
+        })
+      );
+
+      res.json({
+        success: true,
+        results: healthResults,
+        summary: {
+          total: healthResults.length,
+          healthy: healthResults.filter(r => r.healthy).length,
+          unhealthy: healthResults.filter(r => !r.healthy).length
+        }
+      });
+    } catch (error) {
+      console.error("Error checking provider health:", error);
+      res.status(500).json({ 
+        success: false, 
+        message: "Failed to check provider health" 
+      });
+    }
+  });
+
+  // Initiate provider connection (OAuth flow)
+  app.get('/api/providers/connect/:provider', isAuthenticated, async (req: any, res) => {
+    try {
+      const { provider: providerName } = req.params;
+      const user = await storage.getUser(req.user.claims.sub);
+      
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      // For now, redirect to existing Xero auth flow
+      if (providerName === 'xero') {
+        return res.redirect('/api/auth/xero');
+      }
+
+      // For other providers, return not implemented
+      res.status(501).json({
+        success: false,
+        message: `Provider '${providerName}' connection not implemented yet`
+      });
+
+    } catch (error) {
+      console.error(`Error initiating ${req.params.provider} connection:`, error);
+      res.status(500).json({ 
+        success: false, 
+        message: "Failed to initiate provider connection" 
+      });
+    }
+  });
+
+  // Provider data sync endpoint
+  app.post('/api/providers/sync/:provider', isAuthenticated, async (req: any, res) => {
+    try {
+      const { provider: providerName } = req.params;
+      const user = await storage.getUser(req.user.claims.sub);
+      
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const provider = apiMiddleware.getProvider(providerName);
+      if (!provider) {
+        return res.status(404).json({
+          success: false,
+          message: `Provider '${providerName}' not found`
+        });
+      }
+
+      // Check if provider supports sync
+      if (typeof (provider as any).syncToDatabase !== 'function') {
+        return res.status(501).json({
+          success: false,
+          message: `Provider '${providerName}' does not support data synchronization`
+        });
+      }
+
+      console.log(`🔄 Starting data sync for provider: ${providerName}, tenant: ${user.tenantId}`);
+      
+      const syncResult = await (provider as any).syncToDatabase(user.tenantId);
+      
+      console.log(`✅ Sync completed for ${providerName}:`, syncResult);
+
+      res.json({
+        success: true,
+        provider: providerName,
+        result: syncResult,
+        timestamp: new Date().toISOString()
+      });
+
+    } catch (error) {
+      console.error(`Error syncing ${req.params.provider}:`, error);
+      res.status(500).json({ 
+        success: false, 
+        message: "Failed to sync provider data",
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Provider-specific API request endpoint
+  app.post('/api/providers/:provider/request', isAuthenticated, async (req: any, res) => {
+    try {
+      const { provider: providerName } = req.params;
+      const { endpoint, options } = req.body;
+      
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const provider = apiMiddleware.getProvider(providerName);
+      if (!provider) {
+        return res.status(404).json({
+          success: false,
+          message: `Provider '${providerName}' not found`
+        });
+      }
+
+      // Add tenant ID to request options if not present
+      const requestOptions = {
+        ...options,
+        params: {
+          ...options?.params,
+          tenantId: user.tenantId
+        }
+      };
+
+      const result = await provider.makeRequest(endpoint, requestOptions);
+      
+      res.json({
+        success: result.success,
+        data: result.data,
+        error: result.error,
+        statusCode: result.statusCode,
+        provider: providerName,
+        endpoint
+      });
+
+    } catch (error) {
+      console.error(`Error making ${req.params.provider} API request:`, error);
+      res.status(500).json({ 
+        success: false, 
+        message: "Failed to make provider API request",
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // ==================== END PROVIDER MIDDLEWARE ROUTES ====================
+
   const httpServer = createServer(app);
   return httpServer;
 }
