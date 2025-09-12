@@ -1,5 +1,5 @@
 // Universal provider types for API middleware
-export type ProviderType = 'accounting' | 'communication' | 'payment' | 'ai';
+export type ProviderType = 'accounting' | 'communication' | 'payment' | 'ai' | 'email' | 'sms' | 'voice';
 
 export interface ProviderConfig {
   name: string;
@@ -140,10 +140,69 @@ export interface StandardPayment {
   metadata?: Record<string, any>;
 }
 
+export interface StandardEmail {
+  id: string;
+  to: string;
+  from: string;
+  subject: string;
+  body?: string;
+  htmlBody?: string;
+  status: 'pending' | 'sent' | 'delivered' | 'failed' | 'bounced';
+  sentAt?: Date;
+  deliveredAt?: Date;
+  templateId?: string;
+  templateData?: Record<string, any>;
+  provider: string;
+  providerMessageId: string;
+  metadata?: Record<string, any>;
+}
+
+export interface StandardSMS {
+  id: string;
+  to: string;
+  from: string;
+  body: string;
+  status: 'pending' | 'sent' | 'delivered' | 'failed' | 'undelivered';
+  sentAt?: Date;
+  deliveredAt?: Date;
+  provider: string;
+  providerMessageId: string;
+  metadata?: Record<string, any>;
+}
+
+export interface StandardVoiceCall {
+  id: string;
+  to: string;
+  from: string;
+  status: 'queued' | 'ringing' | 'in-progress' | 'completed' | 'failed' | 'busy' | 'no-answer';
+  duration?: number;
+  startTime?: Date;
+  endTime?: Date;
+  recordingUrl?: string;
+  transcription?: string;
+  provider: string;
+  providerCallId: string;
+  metadata?: Record<string, any>;
+}
+
+export interface StandardAIResponse {
+  id: string;
+  prompt: string;
+  response: string;
+  model?: string;
+  tokensUsed?: number;
+  requestTime: Date;
+  responseTime?: Date;
+  status: 'pending' | 'completed' | 'failed';
+  provider: string;
+  providerRequestId: string;
+  metadata?: Record<string, any>;
+}
+
 // Data transformation mappings
 export interface DataMapping {
   provider: string;
-  dataType: 'contact' | 'invoice' | 'payment';
+  dataType: 'contact' | 'invoice' | 'payment' | 'email' | 'sms' | 'voice_call' | 'ai_response';
   fieldMappings: Record<string, string | ((data: any) => any)>;
   transformations?: Record<string, (value: any) => any>;
 }

@@ -44,7 +44,13 @@ app.use((req, res, next) => {
     try {
       console.log("🔌 Initializing API middleware system...");
       const { apiMiddleware } = await import("./middleware");
+      
+      // Import all provider classes
       const { XeroProvider } = await import("./middleware/providers/XeroProvider");
+      const { SendGridProvider } = await import("./middleware/providers/SendGridProvider");
+      const { TwilioProvider } = await import("./middleware/providers/TwilioProvider");
+      const { RetellProvider } = await import("./middleware/providers/RetellProvider");
+      const { OpenAIProvider } = await import("./middleware/providers/OpenAIProvider");
       
       // Configure and register Xero provider
       if (process.env.XERO_CLIENT_ID && process.env.XERO_CLIENT_SECRET) {
@@ -63,6 +69,71 @@ app.use((req, res, next) => {
         console.log("✅ Xero provider registered successfully");
       } else {
         console.log("⚠️  Xero provider not configured (missing XERO_CLIENT_ID or XERO_CLIENT_SECRET)");
+      }
+
+      // Configure and register SendGrid provider
+      if (process.env.SENDGRID_API_KEY) {
+        const sendGridProvider = new SendGridProvider({
+          name: 'sendgrid',
+          type: 'email',
+          apiKey: process.env.SENDGRID_API_KEY,
+          baseUrl: 'https://api.sendgrid.com/v3',
+          environment: process.env.NODE_ENV === 'production' ? 'production' : 'sandbox'
+        });
+        
+        await apiMiddleware.registerProvider(sendGridProvider);
+        console.log("✅ SendGrid provider registered successfully");
+      } else {
+        console.log("⚠️  SendGrid provider not configured (missing SENDGRID_API_KEY)");
+      }
+
+      // Configure and register Twilio provider
+      if (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN) {
+        const twilioProvider = new TwilioProvider({
+          name: 'twilio',
+          type: 'sms',
+          clientId: process.env.TWILIO_ACCOUNT_SID,
+          clientSecret: process.env.TWILIO_AUTH_TOKEN,
+          baseUrl: 'https://api.twilio.com',
+          environment: process.env.NODE_ENV === 'production' ? 'production' : 'sandbox'
+        });
+        
+        await apiMiddleware.registerProvider(twilioProvider);
+        console.log("✅ Twilio provider registered successfully");
+      } else {
+        console.log("⚠️  Twilio provider not configured (missing TWILIO_ACCOUNT_SID or TWILIO_AUTH_TOKEN)");
+      }
+
+      // Configure and register Retell provider
+      if (process.env.RETELL_API_KEY) {
+        const retellProvider = new RetellProvider({
+          name: 'retell',
+          type: 'voice',
+          apiKey: process.env.RETELL_API_KEY,
+          baseUrl: 'https://api.retellai.com',
+          environment: process.env.NODE_ENV === 'production' ? 'production' : 'sandbox'
+        });
+        
+        await apiMiddleware.registerProvider(retellProvider);
+        console.log("✅ Retell provider registered successfully");
+      } else {
+        console.log("⚠️  Retell provider not configured (missing RETELL_API_KEY)");
+      }
+
+      // Configure and register OpenAI provider
+      if (process.env.OPENAI_API_KEY) {
+        const openAIProvider = new OpenAIProvider({
+          name: 'openai',
+          type: 'ai',
+          apiKey: process.env.OPENAI_API_KEY,
+          baseUrl: 'https://api.openai.com/v1',
+          environment: process.env.NODE_ENV === 'production' ? 'production' : 'sandbox'
+        });
+        
+        await apiMiddleware.registerProvider(openAIProvider);
+        console.log("✅ OpenAI provider registered successfully");
+      } else {
+        console.log("⚠️  OpenAI provider not configured (missing OPENAI_API_KEY)");
       }
       
       console.log("✅ API middleware system initialized");
