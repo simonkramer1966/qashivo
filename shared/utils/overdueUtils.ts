@@ -4,11 +4,12 @@
  */
 
 export type OverdueCategory = 
-  | 'current'              // ≤ 0 days overdue (not yet due or paid on time)
-  | 'recently_due'         // 1-7 days overdue (recent follow-up needed)
+  | 'soon'                 // Due within next 7 days (-7 to -1 days overdue)
+  | 'current'              // Due today (0 days overdue)
+  | 'recent'               // Recently overdue (1-7 days overdue)
   | 'overdue'              // 8-30 days overdue (standard collection actions)
-  | 'seriously_due'        // 31-60 days overdue (intensive collection efforts)
-  | 'escalation_required'; // 60+ days overdue (legal/external collection)
+  | 'serious'              // 31-60 days overdue (intensive collection efforts)
+  | 'escalation';          // 60+ days overdue (legal/external collection)
 
 export interface OverdueCategoryInfo {
   category: OverdueCategory;
@@ -41,11 +42,15 @@ export function calculateDaysOverdue(dueDate: string | Date, currentDate?: Date)
  * Categorize invoice based on days overdue
  */
 export function categorizeOverdueStatus(daysOverdue: number): OverdueCategory {
-  if (daysOverdue <= 0) return 'current';
-  if (daysOverdue <= 7) return 'recently_due';
-  if (daysOverdue <= 30) return 'overdue';
-  if (daysOverdue <= 60) return 'seriously_due';
-  return 'escalation_required';
+  if (daysOverdue >= -7 && daysOverdue < 0) return 'soon';
+  if (daysOverdue === 0) return 'current';
+  if (daysOverdue >= 1 && daysOverdue <= 7) return 'recent';
+  if (daysOverdue >= 8 && daysOverdue <= 30) return 'overdue';  // Add lower bound >= 8
+  if (daysOverdue >= 31 && daysOverdue <= 60) return 'serious';  // Add lower bound >= 31
+  if (daysOverdue > 60) return 'escalation';  // For daysOverdue > 60
+  
+  // Handle cases where daysOverdue < -7 (invoices due more than 7 days away)
+  return 'current';  // Default for invoices due far in the future
 }
 
 /**
@@ -62,19 +67,26 @@ export function getOverdueCategoryFromDueDate(dueDate: string | Date, currentDat
  */
 export function getOverdueCategoryInfo(category: OverdueCategory, daysOverdue: number): OverdueCategoryInfo {
   const categoryMap: Record<OverdueCategory, Omit<OverdueCategoryInfo, 'category' | 'daysOverdue'>> = {
+    soon: {
+      label: 'Due Soon',
+      priority: 6,
+      color: 'text-yellow-700 dark:text-yellow-400',
+      bgColor: 'bg-yellow-100 dark:bg-yellow-900/20',
+      description: 'Due within next 7 days - proactive outreach recommended'
+    },
     current: {
-      label: 'Current',
+      label: 'Due Today',
       priority: 5,
       color: 'text-green-700 dark:text-green-400',
       bgColor: 'bg-green-100 dark:bg-green-900/20',
-      description: 'Not yet due or paid on time'
+      description: 'Due today - immediate attention needed'
     },
-    recently_due: {
+    recent: {
       label: 'Recently Due',
       priority: 4,
       color: 'text-blue-700 dark:text-blue-400',
       bgColor: 'bg-blue-100 dark:bg-blue-900/20',
-      description: 'Just overdue - gentle reminder needed'
+      description: 'Recently overdue - gentle reminder needed'
     },
     overdue: {
       label: 'Overdue',
@@ -83,14 +95,14 @@ export function getOverdueCategoryInfo(category: OverdueCategory, daysOverdue: n
       bgColor: 'bg-orange-100 dark:bg-orange-900/20',
       description: 'Standard collection actions required'
     },
-    seriously_due: {
+    serious: {
       label: 'Seriously Due',
       priority: 2,
       color: 'text-red-700 dark:text-red-400',
       bgColor: 'bg-red-100 dark:bg-red-900/20',
       description: 'Intensive collection efforts needed'
     },
-    escalation_required: {
+    escalation: {
       label: 'Escalation Required',
       priority: 1,
       color: 'text-purple-700 dark:text-purple-400',
@@ -110,7 +122,7 @@ export function getOverdueCategoryInfo(category: OverdueCategory, daysOverdue: n
  * Get all overdue categories for filtering options
  */
 export function getAllOverdueCategories(): OverdueCategoryInfo[] {
-  const categories: OverdueCategory[] = ['current', 'recently_due', 'overdue', 'seriously_due', 'escalation_required'];
+  const categories: OverdueCategory[] = ['soon', 'current', 'recent', 'overdue', 'serious', 'escalation'];
   return categories.map(category => getOverdueCategoryInfo(category, 0));
 }
 
@@ -162,11 +174,12 @@ export function getOverdueCategorySummary<T extends { dueDate: string | Date, am
   currentDate?: Date
 ): Record<OverdueCategory, { count: number; totalAmount: number }> {
   const summary: Record<OverdueCategory, { count: number; totalAmount: number }> = {
+    soon: { count: 0, totalAmount: 0 },
     current: { count: 0, totalAmount: 0 },
-    recently_due: { count: 0, totalAmount: 0 },
+    recent: { count: 0, totalAmount: 0 },
     overdue: { count: 0, totalAmount: 0 },
-    seriously_due: { count: 0, totalAmount: 0 },
-    escalation_required: { count: 0, totalAmount: 0 }
+    serious: { count: 0, totalAmount: 0 },
+    escalation: { count: 0, totalAmount: 0 }
   };
 
   invoices.forEach(invoice => {
