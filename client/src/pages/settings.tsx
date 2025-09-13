@@ -32,6 +32,7 @@ import {
   Phone,
   CheckCircle
 } from "lucide-react";
+import { SiXero, SiSage, SiQuickbooks } from "react-icons/si";
 import { CURRENCIES, DEFAULT_CURRENCY } from "@shared/currencies";
 
 // Test Tab Component
@@ -1139,7 +1140,7 @@ export default function Settings() {
                         <div className="flex items-center justify-between p-6 bg-slate-50/80 rounded-xl border border-slate-200/50 hover:border-[#17B6C3]/50 transition-colors">
                           <div className="flex items-center space-x-4">
                             <div className="p-3 bg-blue-100 rounded-lg">
-                              <BarChart3 className="h-6 w-6 text-blue-600" />
+                              <SiXero className="h-6 w-6 text-blue-600" />
                             </div>
                             <div>
                               <p className="font-semibold text-slate-900">Xero</p>
@@ -1162,7 +1163,7 @@ export default function Settings() {
                         <div className="flex items-center justify-between p-6 bg-slate-50/80 rounded-xl border border-slate-200/50 hover:border-[#17B6C3]/50 transition-colors">
                           <div className="flex items-center space-x-4">
                             <div className="p-3 bg-green-100 rounded-lg">
-                              <Building2 className="h-6 w-6 text-green-600" />
+                              <SiSage className="h-6 w-6 text-green-600" />
                             </div>
                             <div>
                               <p className="font-semibold text-slate-900">Sage Business Cloud</p>
@@ -1185,7 +1186,7 @@ export default function Settings() {
                         <div className="flex items-center justify-between p-6 bg-slate-50/80 rounded-xl border border-slate-200/50 hover:border-[#17B6C3]/50 transition-colors">
                           <div className="flex items-center space-x-4">
                             <div className="p-3 bg-orange-100 rounded-lg">
-                              <Database className="h-6 w-6 text-orange-600" />
+                              <SiQuickbooks className="h-6 w-6 text-orange-600" />
                             </div>
                             <div>
                               <p className="font-semibold text-slate-900">QuickBooks Online</p>
@@ -1217,9 +1218,9 @@ export default function Settings() {
                             accountingStatus.connectedProvider.name === 'sage' ? 'bg-green-100' :
                             'bg-orange-100'
                           }`}>
-                            {accountingStatus.connectedProvider.name === 'xero' && <BarChart3 className="h-6 w-6 text-blue-600" />}
-                            {accountingStatus.connectedProvider.name === 'sage' && <Building2 className="h-6 w-6 text-green-600" />}
-                            {accountingStatus.connectedProvider.name === 'quickbooks' && <Database className="h-6 w-6 text-orange-600" />}
+                            {accountingStatus.connectedProvider.name === 'xero' && <SiXero className="h-6 w-6 text-blue-600" />}
+                            {accountingStatus.connectedProvider.name === 'sage' && <SiSage className="h-6 w-6 text-green-600" />}
+                            {accountingStatus.connectedProvider.name === 'quickbooks' && <SiQuickbooks className="h-6 w-6 text-orange-600" />}
                           </div>
                           <div>
                             <p className="font-semibold text-slate-900">
