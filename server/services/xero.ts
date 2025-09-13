@@ -59,6 +59,112 @@ interface XeroPayment {
   };
 }
 
+interface XeroBill {
+  InvoiceID: string;
+  InvoiceNumber: string;
+  Type: 'ACCPAY';
+  Contact: { ContactID: string; Name: string };
+  DateString: string;
+  DueDateString: string;
+  Status: 'DRAFT' | 'SUBMITTED' | 'AUTHORISED' | 'PAID' | 'VOIDED';
+  SubTotal: number;
+  TotalTax: number;
+  Total: number;
+  AmountDue: number;
+  AmountPaid: number;
+  CurrencyCode: string;
+  LineItems?: Array<{
+    LineItemID: string;
+    Description: string;
+    Quantity: number;
+    UnitAmount: number;
+    LineAmount: number;
+    AccountCode: string;
+  }>;
+}
+
+interface XeroBillPayment {
+  PaymentID: string;
+  InvoiceID?: string;
+  BankTransactionID?: string;
+  AccountID: string;
+  Date: string;
+  Amount: number;
+  PaymentType: 'ACCPAYPAYMENT' | 'APCREDITPAYMENT';
+  Status: 'AUTHORISED' | 'DELETED';
+  Reference?: string;
+  IsReconciled: boolean;
+  CurrencyRate?: number;
+  PaymentMethod?: string;
+  Account?: {
+    AccountID: string;
+    Name: string;
+    Code: string;
+  };
+}
+
+interface XeroBankAccount {
+  AccountID: string;
+  Code: string;
+  Name: string;
+  Type: 'BANK';
+  BankAccountType: 'BANK' | 'CREDITCARD' | 'PAYPAL' | 'NONE';
+  BankAccountNumber?: string;
+  CurrencyCode: string;
+  Class: 'ASSET' | 'LIABILITY' | 'EQUITY' | 'REVENUE' | 'EXPENSE';
+  EnablePaymentsToAccount: boolean;
+  ShowInExpenseClaims: boolean;
+  Status: 'ACTIVE' | 'ARCHIVED';
+  Description?: string;
+  BankName?: string;
+  TaxType?: string;
+}
+
+interface XeroBankTransaction {
+  BankTransactionID: string;
+  BankAccountID: string;
+  Type: 'RECEIVE' | 'SPEND' | 'RECEIVE-OVERPAYMENT' | 'RECEIVE-PREPAYMENT' | 'SPEND-OVERPAYMENT' | 'SPEND-PREPAYMENT';
+  Status: 'AUTHORISED' | 'DELETED';
+  Contact?: { ContactID: string; Name: string };
+  DateString: string;
+  Reference?: string;
+  CurrencyCode: string;
+  CurrencyRate?: number;
+  SubTotal: number;
+  TotalTax: number;
+  Total: number;
+  IsReconciled: boolean;
+  LineItems?: Array<{
+    LineItemID: string;
+    Description: string;
+    Quantity: number;
+    UnitAmount: number;
+    LineAmount: number;
+    AccountCode: string;
+    TaxType?: string;
+  }>;
+}
+
+interface XeroBudget {
+  BudgetID: string;
+  Type: 'OVERALL';
+  Description: string;
+  UpdatedDateUTC: string;
+  BudgetLines?: Array<{
+    AccountID: string;
+    AccountCode: string;
+    AccountName: string;
+    Amount: number;
+  }>;
+}
+
+interface XeroExchangeRate {
+  CurrencyCode: string;
+  Rate: number;
+  DateUpdated?: string;
+  BaseCurrency: string;
+}
+
 class XeroService {
   private config: XeroConfig;
 
@@ -71,7 +177,7 @@ class XeroService {
       clientId: process.env.XERO_CLIENT_ID || "default_client_id",
       clientSecret: process.env.XERO_CLIENT_SECRET || "default_secret",
       redirectUri: `${protocol}://${domain}/api/xero/callback`,
-      scopes: "accounting.transactions.read accounting.contacts.read",
+      scopes: "accounting.transactions.read accounting.contacts.read accounting.settings.read accounting.reports.read accounting.accounts.read accounting.attachments.read offline_access",
     };
 
     // Log configuration status (without secrets)
@@ -83,7 +189,8 @@ class XeroService {
     endpoint: string,
     method: 'GET' | 'POST' | 'PUT' = 'GET',
     data?: any,
-    tenantIdForDbUpdate?: string  // Optional tenant ID for database token updates
+    tenantIdForDbUpdate?: string,  // Optional tenant ID for database token updates
+    additionalHeaders?: Record<string, string>  // Optional additional headers (e.g., If-Modified-Since)
   ): Promise<any> {
     if (this.config.clientId === "default_client_id") {
       console.log(`Xero API not configured, mocking request to ${endpoint}`);
@@ -103,6 +210,7 @@ class XeroService {
           'Xero-tenant-id': tokens.tenantId,
           'Content-Type': 'application/json',
           'Accept': 'application/json',
+          ...additionalHeaders,
         },
         body: data ? JSON.stringify(data) : undefined,
       });
@@ -416,11 +524,10 @@ class XeroService {
       
       let endpoint = `Invoices?where=${whereClause}`;
       
-      if (modifiedSince) {
-        endpoint += `&ModifiedAfter=${modifiedSince.toISOString()}`;
-      }
+      // Use If-Modified-Since header instead of ModifiedAfter parameter
+      const headers = modifiedSince ? { 'If-Modified-Since': modifiedSince.toUTCString() } : undefined;
       
-      const response = await this.makeAuthenticatedRequest(tokens, endpoint);
+      const response = await this.makeAuthenticatedRequest(tokens, endpoint, 'GET', undefined, undefined, headers);
       return response.Invoices || [];
     } catch (error) {
       console.error('Failed to fetch Xero invoices:', error);
@@ -569,6 +676,309 @@ class XeroService {
     } catch (error) {
       console.error('Failed to fetch Xero invoice payments:', error);
       return [];
+    }
+  }
+
+  // ===== BILLS SUPPORT (ACCPAY INVOICES) =====
+  async getBills(tokens: XeroTokens, filters?: {
+    modifiedSince?: Date;
+    outstandingOnly?: boolean;
+    status?: string;
+    page?: number;
+    limit?: number;
+  }, tenantIdForDbUpdate?: string): Promise<XeroBill[]> {
+    try {
+      let whereClause = 'Type%3D%3D%22ACCPAY%22'; // Type=="ACCPAY"
+      
+      if (filters?.outstandingOnly) {
+        whereClause += '%20AND%20AmountDue%3E0'; // AmountDue>0
+      }
+      
+      if (filters?.status && filters.status !== 'all') {
+        switch (filters.status) {
+          case 'unpaid':
+            whereClause += '%20AND%20Status%3D%3D%22AUTHORISED%22%20AND%20AmountDue%3E0';
+            break;
+          case 'paid':
+            whereClause += '%20AND%20Status%3D%3D%22PAID%22';
+            break;
+          case 'void':
+            whereClause += '%20AND%20Status%3D%3D%22VOIDED%22';
+            break;
+        }
+      }
+      
+      let endpoint = `Invoices?where=${whereClause}`;
+      
+      if (filters?.page && filters.page > 1) {
+        endpoint += `&page=${filters.page}`;
+      }
+      
+      // Use If-Modified-Since header instead of ModifiedAfter parameter
+      const headers = filters?.modifiedSince ? { 'If-Modified-Since': filters.modifiedSince.toUTCString() } : undefined;
+      
+      console.log(`Fetching Xero bills with endpoint: ${endpoint}`);
+      const response = await this.makeAuthenticatedRequest(tokens, endpoint, 'GET', undefined, tenantIdForDbUpdate, headers);
+      const bills = response.Invoices || [];
+      
+      return bills;
+    } catch (error) {
+      console.error('Failed to fetch Xero bills:', error);
+      if (error instanceof Error && error.message.includes('not configured')) {
+        throw error;
+      }
+      return [];
+    }
+  }
+
+  async getBill(tokens: XeroTokens, billId: string, tenantIdForDbUpdate?: string): Promise<XeroBill | null> {
+    try {
+      const response = await this.makeAuthenticatedRequest(tokens, `Invoices/${billId}`, 'GET', undefined, tenantIdForDbUpdate);
+      const bill = response.Invoices?.[0];
+      return bill && bill.Type === 'ACCPAY' ? bill : null;
+    } catch (error) {
+      console.error('Failed to fetch Xero bill:', error);
+      return null;
+    }
+  }
+
+  // ===== BILL PAYMENTS SUPPORT =====
+  async getBillPayments(tokens: XeroTokens, filters?: {
+    billId?: string;
+    modifiedSince?: Date;
+    dateFrom?: Date;
+    dateTo?: Date;
+  }, tenantIdForDbUpdate?: string): Promise<XeroBillPayment[]> {
+    try {
+      let endpoint = 'Payments';
+      const whereClauses: string[] = [];
+      
+      // Filter for bill payments (ACCPAY)
+      whereClauses.push('PaymentType%3D%3D%22ACCPAYPAYMENT%22'); // PaymentType=="ACCPAYPAYMENT"
+      
+      if (filters?.billId) {
+        whereClauses.push(`Invoice.InvoiceID%3Dguid"${filters.billId}"`); // Invoice.InvoiceID=guid"billId"
+      }
+      
+      if (whereClauses.length > 0) {
+        endpoint += `?where=${whereClauses.join('%20AND%20')}`;
+      }
+      
+      // Use If-Modified-Since header instead of ModifiedAfter parameter for bill payments
+      const headers = filters?.modifiedSince ? { 'If-Modified-Since': filters.modifiedSince.toUTCString() } : undefined;
+      
+      console.log(`Fetching Xero bill payments with endpoint: ${endpoint}`);
+      const response = await this.makeAuthenticatedRequest(tokens, endpoint, 'GET', undefined, tenantIdForDbUpdate, headers);
+      let payments = response.Payments || [];
+      
+      // Additional client-side filtering for date range if specified
+      if (filters?.dateFrom || filters?.dateTo) {
+        payments = payments.filter((payment: XeroBillPayment) => {
+          const paymentDate = new Date(payment.Date);
+          if (filters.dateFrom && paymentDate < filters.dateFrom) return false;
+          if (filters.dateTo && paymentDate > filters.dateTo) return false;
+          return true;
+        });
+      }
+      
+      return payments;
+    } catch (error) {
+      console.error('Failed to fetch Xero bill payments:', error);
+      return [];
+    }
+  }
+
+  // ===== BANK ACCOUNTS SUPPORT =====
+  async getBankAccounts(tokens: XeroTokens, filters?: {
+    activeOnly?: boolean;
+    modifiedSince?: Date;
+  }, tenantIdForDbUpdate?: string): Promise<XeroBankAccount[]> {
+    try {
+      let endpoint = 'Accounts';
+      const whereClauses: string[] = [];
+      
+      // Filter for bank accounts only
+      whereClauses.push('Type%3D%3D%22BANK%22'); // Type=="BANK"
+      
+      if (filters?.activeOnly !== false) {
+        whereClauses.push('Status%3D%3D%22ACTIVE%22'); // Status=="ACTIVE"
+      }
+      
+      if (whereClauses.length > 0) {
+        endpoint += `?where=${whereClauses.join('%20AND%20')}`;
+      }
+      
+      // Use If-Modified-Since header instead of ModifiedAfter parameter for bank accounts
+      const headers = filters?.modifiedSince ? { 'If-Modified-Since': filters.modifiedSince.toUTCString() } : undefined;
+      
+      console.log(`Fetching Xero bank accounts with endpoint: ${endpoint}`);
+      const response = await this.makeAuthenticatedRequest(tokens, endpoint, 'GET', undefined, tenantIdForDbUpdate, headers);
+      return response.Accounts || [];
+    } catch (error) {
+      console.error('Failed to fetch Xero bank accounts:', error);
+      return [];
+    }
+  }
+
+  async getBankAccount(tokens: XeroTokens, accountId: string, tenantIdForDbUpdate?: string): Promise<XeroBankAccount | null> {
+    try {
+      const response = await this.makeAuthenticatedRequest(tokens, `Accounts/${accountId}`, 'GET', undefined, tenantIdForDbUpdate);
+      const account = response.Accounts?.[0];
+      return account && account.Type === 'BANK' ? account : null;
+    } catch (error) {
+      console.error('Failed to fetch Xero bank account:', error);
+      return null;
+    }
+  }
+
+  // ===== BANK TRANSACTIONS SUPPORT =====
+  async getBankTransactions(tokens: XeroTokens, filters?: {
+    bankAccountId?: string;
+    dateFrom?: Date;
+    dateTo?: Date;
+    modifiedSince?: Date;
+    reconciled?: boolean;
+    transactionType?: 'RECEIVE' | 'SPEND';
+    page?: number;
+    limit?: number;
+  }, tenantIdForDbUpdate?: string): Promise<XeroBankTransaction[]> {
+    try {
+      let endpoint = 'BankTransactions';
+      const whereClauses: string[] = [];
+      
+      if (filters?.bankAccountId) {
+        whereClauses.push(`BankAccount.AccountID%3Dguid"${filters.bankAccountId}"`);
+      }
+      
+      if (filters?.transactionType) {
+        whereClauses.push(`Type%3D%3D%22${filters.transactionType}%22`);
+      }
+      
+      if (filters?.reconciled !== undefined) {
+        whereClauses.push(`IsReconciled%3D%3D${filters.reconciled}`);
+      }
+      
+      // Date filtering using proper Xero DateTime format
+      if (filters?.dateFrom) {
+        const d = filters.dateFrom;
+        whereClauses.push(`Date%3E%3DDateTime(${d.getFullYear()},${d.getMonth()+1},${d.getDate()})`);
+      }
+      
+      if (filters?.dateTo) {
+        const d = filters.dateTo;
+        whereClauses.push(`Date%3C%3DDateTime(${d.getFullYear()},${d.getMonth()+1},${d.getDate()})`);
+      }
+      
+      if (whereClauses.length > 0) {
+        endpoint += `?where=${whereClauses.join('%20AND%20')}`;
+      }
+      
+      if (filters?.page && filters.page > 1) {
+        const separator = endpoint.includes('?') ? '&' : '?';
+        endpoint += `${separator}page=${filters.page}`;
+      }
+      
+      // Use If-Modified-Since header instead of ModifiedAfter parameter for bank transactions
+      const headers = filters?.modifiedSince ? { 'If-Modified-Since': filters.modifiedSince.toUTCString() } : undefined;
+      
+      console.log(`Fetching Xero bank transactions with endpoint: ${endpoint}`);
+      const response = await this.makeAuthenticatedRequest(tokens, endpoint, 'GET', undefined, tenantIdForDbUpdate, headers);
+      const transactions = response.BankTransactions || [];
+      
+      return transactions;
+    } catch (error) {
+      console.error('Failed to fetch Xero bank transactions:', error);
+      return [];
+    }
+  }
+
+  async getBankTransaction(tokens: XeroTokens, transactionId: string, tenantIdForDbUpdate?: string): Promise<XeroBankTransaction | null> {
+    try {
+      const response = await this.makeAuthenticatedRequest(tokens, `BankTransactions/${transactionId}`, 'GET', undefined, tenantIdForDbUpdate);
+      return response.BankTransactions?.[0] || null;
+    } catch (error) {
+      console.error('Failed to fetch Xero bank transaction:', error);
+      return null;
+    }
+  }
+
+  // ===== BUDGETS SUPPORT =====
+  async getBudgets(tokens: XeroTokens, filters?: {
+    modifiedSince?: Date;
+  }, tenantIdForDbUpdate?: string): Promise<XeroBudget[]> {
+    try {
+      let endpoint = 'Budgets';
+      
+      // Use If-Modified-Since header instead of ModifiedAfter parameter for budgets
+      const headers = filters?.modifiedSince ? { 'If-Modified-Since': filters.modifiedSince.toUTCString() } : undefined;
+      
+      console.log(`Fetching Xero budgets with endpoint: ${endpoint}`);
+      const response = await this.makeAuthenticatedRequest(tokens, endpoint, 'GET', undefined, tenantIdForDbUpdate, headers);
+      return response.Budgets || [];
+    } catch (error) {
+      console.error('Failed to fetch Xero budgets:', error);
+      // Budgets endpoint might not be available in all Xero plans
+      if (error instanceof Error && (error.message.includes('404') || error.message.includes('not found'))) {
+        console.warn('Budgets endpoint not available, this is normal for some Xero plans');
+        return [];
+      }
+      return [];
+    }
+  }
+
+  async getBudget(tokens: XeroTokens, budgetId: string, tenantIdForDbUpdate?: string): Promise<XeroBudget | null> {
+    try {
+      const response = await this.makeAuthenticatedRequest(tokens, `Budgets/${budgetId}`, 'GET', undefined, tenantIdForDbUpdate);
+      return response.Budgets?.[0] || null;
+    } catch (error) {
+      console.error('Failed to fetch Xero budget:', error);
+      return null;
+    }
+  }
+
+  // ===== EXCHANGE RATES SUPPORT =====
+  async getExchangeRates(tokens: XeroTokens, filters?: {
+    currencyCode?: string;
+    modifiedSince?: Date;
+  }, tenantIdForDbUpdate?: string): Promise<XeroExchangeRate[]> {
+    try {
+      let endpoint = 'Currencies';
+      
+      // Use If-Modified-Since header instead of ModifiedAfter parameter for exchange rates
+      const headers = filters?.modifiedSince ? { 'If-Modified-Since': filters.modifiedSince.toUTCString() } : undefined;
+      
+      console.log(`Fetching Xero currencies/exchange rates with endpoint: ${endpoint}`);
+      const response = await this.makeAuthenticatedRequest(tokens, endpoint, 'GET', undefined, tenantIdForDbUpdate, headers);
+      let currencies = response.Currencies || [];
+      
+      // Transform to exchange rate format
+      const exchangeRates: XeroExchangeRate[] = currencies.map((currency: any) => ({
+        CurrencyCode: currency.Code,
+        Rate: currency.Rate || 1.0,
+        DateUpdated: currency.UpdatedDateUTC,
+        BaseCurrency: 'USD', // Xero typically uses USD as base
+      }));
+      
+      // Filter by currency code if specified
+      if (filters?.currencyCode) {
+        return exchangeRates.filter(rate => rate.CurrencyCode === filters.currencyCode);
+      }
+      
+      return exchangeRates;
+    } catch (error) {
+      console.error('Failed to fetch Xero exchange rates:', error);
+      return [];
+    }
+  }
+
+  async getCurrentExchangeRate(tokens: XeroTokens, fromCurrency: string, toCurrency: string, tenantIdForDbUpdate?: string): Promise<XeroExchangeRate | null> {
+    try {
+      // For current rates, just get all currencies and find the specific one
+      const allRates = await this.getExchangeRates(tokens, { currencyCode: fromCurrency }, tenantIdForDbUpdate);
+      return allRates.find(rate => rate.CurrencyCode === fromCurrency && rate.BaseCurrency === toCurrency) || null;
+    } catch (error) {
+      console.error('Failed to fetch current Xero exchange rate:', error);
+      return null;
     }
   }
 

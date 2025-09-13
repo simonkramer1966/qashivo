@@ -75,11 +75,78 @@ export class XeroProvider implements UniversalProvider {
             result = await xeroService.getPayments(tokens);
           }
           break;
+          
+        // ===== NEW ENDPOINTS FOR COMPREHENSIVE CASHFLOW FORECASTING =====
+        case 'bills':
+          result = await xeroService.getBills(tokens, options?.params?.filters, tokenData.tenantId);
+          break;
+        case 'bill':
+          if (options?.params?.billId) {
+            result = await xeroService.getBill(tokens, options.params.billId, tokenData.tenantId);
+          } else {
+            return { success: false, error: 'Bill ID required for single bill retrieval' };
+          }
+          break;
+        case 'bill-payments':
+        case 'billpayments':
+          result = await xeroService.getBillPayments(tokens, options?.params?.filters, tokenData.tenantId);
+          break;
+        case 'bank-accounts':
+        case 'bankaccounts':
+          result = await xeroService.getBankAccounts(tokens, options?.params?.filters, tokenData.tenantId);
+          break;
+        case 'bank-account':
+        case 'bankaccount':
+          if (options?.params?.accountId) {
+            result = await xeroService.getBankAccount(tokens, options.params.accountId, tokenData.tenantId);
+          } else {
+            return { success: false, error: 'Account ID required for single bank account retrieval' };
+          }
+          break;
+        case 'bank-transactions':
+        case 'banktransactions':
+          result = await xeroService.getBankTransactions(tokens, options?.params?.filters, tokenData.tenantId);
+          break;
+        case 'bank-transaction':
+        case 'banktransaction':
+          if (options?.params?.transactionId) {
+            result = await xeroService.getBankTransaction(tokens, options.params.transactionId, tokenData.tenantId);
+          } else {
+            return { success: false, error: 'Transaction ID required for single bank transaction retrieval' };
+          }
+          break;
+        case 'budgets':
+          result = await xeroService.getBudgets(tokens, options?.params?.filters, tokenData.tenantId);
+          break;
+        case 'budget':
+          if (options?.params?.budgetId) {
+            result = await xeroService.getBudget(tokens, options.params.budgetId, tokenData.tenantId);
+          } else {
+            return { success: false, error: 'Budget ID required for single budget retrieval' };
+          }
+          break;
+        case 'exchange-rates':
+        case 'exchangerates':
+          result = await xeroService.getExchangeRates(tokens, options?.params?.filters, tokenData.tenantId);
+          break;
+        case 'exchange-rate':
+        case 'exchangerate':
+          if (options?.params?.fromCurrency && options?.params?.toCurrency) {
+            result = await xeroService.getCurrentExchangeRate(
+              tokens, 
+              options.params.fromCurrency, 
+              options.params.toCurrency, 
+              tokenData.tenantId
+            );
+          } else {
+            return { success: false, error: 'From and to currency codes required for exchange rate retrieval' };
+          }
+          break;
         default:
           // For other endpoints, we could extend this or use direct API calls
           return { 
             success: false, 
-            error: `Endpoint '${endpoint}' not implemented for Xero provider` 
+            error: `Endpoint '${endpoint}' not implemented for Xero provider. Supported endpoints: contacts, invoices, payments, bills, bill-payments, bank-accounts, bank-transactions, budgets, exchange-rates` 
           };
       }
 
