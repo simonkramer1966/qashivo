@@ -1,6 +1,7 @@
 import { eq, and, lte, gte } from "drizzle-orm";
 import { db } from "../db";
 import { invoices, contacts, collectionSchedules, customerScheduleAssignments, tenants } from "@shared/schema";
+import { CollectionLearningService, type OptimizedAction } from "./collectionLearningService";
 
 export interface CollectionAction {
   invoiceId: string;
@@ -143,6 +144,33 @@ export async function checkCollectionActions(tenantId: string): Promise<Collecti
     }
 
     console.log(`Generated ${actions.length} collection actions for tenant ${tenantId}`);
+    
+    // Optimize actions using AI learning
+    if (actions.length > 0) {
+      try {
+        const learningService = new CollectionLearningService();
+        const optimizedActions = await learningService.optimizeActions(actions);
+        
+        console.log(`🤖 AI Learning: Optimized ${optimizedActions.length} actions for tenant ${tenantId}`);
+        
+        // Log optimization summary
+        const optimizedCount = optimizedActions.filter(a => 
+          (a as OptimizedAction).aiRecommendation || (a as OptimizedAction).confidence
+        ).length;
+        
+        if (optimizedCount > 0) {
+          console.log(`📈 AI Applied: ${optimizedCount}/${optimizedActions.length} actions optimized based on learning`);
+        }
+        
+        return optimizedActions as CollectionAction[];
+        
+      } catch (error: any) {
+        console.error('Error applying AI learning to actions:', error);
+        console.log(`⚠️  Falling back to standard actions due to AI learning error`);
+        return actions; // Fallback to original actions if learning fails
+      }
+    }
+    
     return actions;
 
   } catch (error: any) {
@@ -308,7 +336,29 @@ export async function nudgeInvoiceToNextAction(invoiceId: string, tenantId: stri
     };
 
     console.log(`Generated nudge action for invoice ${invoice.invoiceNumber}: ${nextStep.action} (${nextStep.actionType})`);
-    return nudgeAction;
+    
+    // Optimize nudge action using AI learning
+    try {
+      const learningService = new CollectionLearningService();
+      const optimizedActions = await learningService.optimizeActions([nudgeAction]);
+      
+      if (optimizedActions.length > 0) {
+        const optimizedAction = optimizedActions[0] as OptimizedAction;
+        
+        if (optimizedAction.aiRecommendation || optimizedAction.confidence) {
+          console.log(`🤖 AI Learning: Optimized nudge action - ${optimizedAction.aiRecommendation || 'Applied learned preferences'}`);
+        }
+        
+        return optimizedAction as CollectionAction;
+      }
+      
+      return nudgeAction;
+      
+    } catch (error: any) {
+      console.error('Error applying AI learning to nudge action:', error);
+      console.log(`⚠️  Using standard nudge action due to AI learning error`);
+      return nudgeAction; // Fallback to original action
+    }
 
   } catch (error: any) {
     console.error('Error nudging invoice to next action:', error);

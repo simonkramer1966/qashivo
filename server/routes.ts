@@ -3195,6 +3195,139 @@ Payment required immediately to avoid collection action. Contact us NOW.`
     }
   });
 
+  // AI Learning and Optimization Routes
+  app.get("/api/collections/ai-learning/insights", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { CollectionLearningService } = await import("./services/collectionLearningService");
+      const learningService = new CollectionLearningService();
+      
+      const insights = await learningService.getLearningInsights(user.tenantId);
+      res.json(insights);
+    } catch (error) {
+      console.error("Error fetching AI learning insights:", error);
+      res.status(500).json({ message: "Failed to fetch AI learning insights" });
+    }
+  });
+
+  app.post("/api/collections/ai-learning/record-outcome", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const outcomeSchema = z.object({
+        actionId: z.string(),
+        wasDelivered: z.boolean(),
+        wasOpened: z.boolean().optional(),
+        wasClicked: z.boolean().optional(),
+        wasReplied: z.boolean().optional(),
+        replyTime: z.number().optional(),
+        replySentiment: z.enum(['positive', 'neutral', 'negative']).optional(),
+        ledToPayment: z.boolean(),
+        paymentAmount: z.number().optional(),
+        paymentDelay: z.number().optional(),
+        partialPayment: z.boolean().optional(),
+      });
+
+      const outcome = outcomeSchema.parse(req.body);
+
+      const { CollectionLearningService } = await import("./services/collectionLearningService");
+      const learningService = new CollectionLearningService();
+      
+      // Record the effectiveness data
+      await learningService.recordActionEffectiveness(outcome);
+      
+      // Update customer learning profile
+      await learningService.updateCustomerProfile(outcome);
+
+      res.status(201).json({ 
+        message: "Action outcome recorded successfully",
+        aiLearning: true 
+      });
+    } catch (error) {
+      console.error("Error recording action outcome:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid outcome data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to record action outcome" });
+    }
+  });
+
+  app.get("/api/collections/ai-learning/customer-profile/:contactId", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { contactId } = req.params;
+
+      const { CollectionLearningService } = await import("./services/collectionLearningService");
+      const learningService = new CollectionLearningService();
+      
+      const profile = await learningService.getOrCreateCustomerProfile(contactId, user.tenantId);
+      res.json(profile);
+    } catch (error) {
+      console.error("Error fetching customer learning profile:", error);
+      res.status(500).json({ message: "Failed to fetch customer learning profile" });
+    }
+  });
+
+  app.post("/api/collections/ai-learning/optimize-actions", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const actionsSchema = z.array(z.object({
+        invoiceId: z.string(),
+        contactId: z.string(),
+        invoiceNumber: z.string(),
+        contactName: z.string(),
+        daysOverdue: z.number(),
+        amount: z.string(),
+        action: z.string(),
+        actionType: z.enum(['email', 'sms', 'voice', 'manual']),
+        scheduleName: z.string(),
+        templateId: z.string().optional(),
+        priority: z.enum(['low', 'normal', 'high', 'urgent']),
+        actionDetails: z.object({
+          template: z.string().optional(),
+          subject: z.string().optional(),
+          message: z.string().optional(),
+          escalationLevel: z.string().optional(),
+        }),
+      }));
+
+      const actions = actionsSchema.parse(req.body.actions || req.body);
+
+      const { CollectionLearningService } = await import("./services/collectionLearningService");
+      const learningService = new CollectionLearningService();
+      
+      const optimizedActions = await learningService.optimizeActions(actions);
+      
+      res.json({
+        originalCount: actions.length,
+        optimizedCount: optimizedActions.length,
+        actions: optimizedActions,
+        aiOptimized: true
+      });
+    } catch (error) {
+      console.error("Error optimizing actions with AI:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid actions data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to optimize actions" });
+    }
+  });
+
   // Retell AI Voice Calling Routes
   app.get("/api/retell/configuration", isAuthenticated, async (req: any, res) => {
     try {

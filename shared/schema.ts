@@ -1076,6 +1076,136 @@ export const templatePerformanceRelations = relations(templatePerformance, ({ on
   }),
 }));
 
+// AI Learning Tables for Credit Control Optimization
+// Customer learning profiles - tracks what we learn about each customer's preferences
+export const customerLearningProfiles = pgTable("customer_learning_profiles", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  contactId: varchar("contact_id").notNull().references(() => contacts.id),
+  
+  // Channel effectiveness scores (0-1, start at 0.5 neutral)
+  emailEffectiveness: decimal("email_effectiveness", { precision: 3, scale: 2 }).default("0.5"),
+  smsEffectiveness: decimal("sms_effectiveness", { precision: 3, scale: 2 }).default("0.5"),
+  voiceEffectiveness: decimal("voice_effectiveness", { precision: 3, scale: 2 }).default("0.5"),
+  
+  // Response patterns
+  totalInteractions: integer("total_interactions").default(0),
+  successfulActions: integer("successful_actions").default(0),
+  averageResponseTime: integer("average_response_time"), // Hours to response
+  preferredChannel: varchar("preferred_channel"), // email, sms, voice
+  preferredContactTime: varchar("preferred_contact_time"), // morning, afternoon, evening
+  
+  // Payment behavior patterns
+  averagePaymentDelay: integer("average_payment_delay"), // Days after due date
+  paymentReliability: decimal("payment_reliability", { precision: 3, scale: 2 }).default("0.5"),
+  
+  // AI learning confidence (0-1, how confident we are in our recommendations)
+  learningConfidence: decimal("learning_confidence", { precision: 3, scale: 2 }).default("0.1"),
+  
+  // Metadata
+  lastUpdated: timestamp("last_updated").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  unique("customer_learning_profiles_tenant_contact").on(table.tenantId, table.contactId)
+]);
+
+// Action effectiveness tracking - measures success of each collection action
+export const actionEffectiveness = pgTable("action_effectiveness", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  actionId: varchar("action_id").notNull().references(() => actions.id),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  contactId: varchar("contact_id").notNull().references(() => contacts.id),
+  
+  // Delivery and engagement tracking
+  wasDelivered: boolean("was_delivered").default(false),
+  wasOpened: boolean("was_opened").default(false), // Email opens, SMS reads
+  wasClicked: boolean("was_clicked").default(false), // Link clicks
+  wasReplied: boolean("was_replied").default(false),
+  replyTime: integer("reply_time"), // Hours to reply after action
+  replySentiment: varchar("reply_sentiment"), // positive, neutral, negative
+  
+  // Payment outcome tracking
+  ledToPayment: boolean("led_to_payment").default(false),
+  paymentAmount: decimal("payment_amount", { precision: 10, scale: 2 }),
+  paymentDelay: integer("payment_delay"), // Days after action until payment
+  partialPayment: boolean("partial_payment").default(false),
+  
+  // Effectiveness scoring (0-1)
+  effectivenessScore: decimal("effectiveness_score", { precision: 3, scale: 2 }),
+  
+  // A/B testing support
+  testVariant: varchar("test_variant"), // A, B, control
+  testId: varchar("test_id"), // Groups actions into tests
+  
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// A/B testing framework for collection strategies
+export const collectionABTests = pgTable("collection_ab_tests", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  
+  testName: varchar("test_name").notNull(),
+  testType: varchar("test_type").notNull(), // channel, timing, template, sequence
+  description: text("description"),
+  
+  // Test configuration
+  variantA: jsonb("variant_a"), // {channel: "email", template: "gentle", timing: 7}
+  variantB: jsonb("variant_b"), // {channel: "sms", template: "gentle", timing: 7}
+  targetSegment: jsonb("target_segment"), // Customer criteria for test
+  
+  // Test status and results
+  isActive: boolean("is_active").default(true),
+  startDate: timestamp("start_date").defaultNow(),
+  endDate: timestamp("end_date"),
+  
+  variantACount: integer("variant_a_count").default(0),
+  variantBCount: integer("variant_b_count").default(0),
+  variantASuccessRate: decimal("variant_a_success_rate", { precision: 5, scale: 2 }),
+  variantBSuccessRate: decimal("variant_b_success_rate", { precision: 5, scale: 2 }),
+  
+  winner: varchar("winner"), // A, B, inconclusive
+  confidenceLevel: decimal("confidence_level", { precision: 3, scale: 2 }),
+  significanceReached: boolean("significance_reached").default(false),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// AI learning relations
+export const customerLearningProfilesRelations = relations(customerLearningProfiles, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [customerLearningProfiles.tenantId],
+    references: [tenants.id],
+  }),
+  contact: one(contacts, {
+    fields: [customerLearningProfiles.contactId],
+    references: [contacts.id],
+  }),
+}));
+
+export const actionEffectivenessRelations = relations(actionEffectiveness, ({ one }) => ({
+  action: one(actions, {
+    fields: [actionEffectiveness.actionId],
+    references: [actions.id],
+  }),
+  tenant: one(tenants, {
+    fields: [actionEffectiveness.tenantId],
+    references: [tenants.id],
+  }),
+  contact: one(contacts, {
+    fields: [actionEffectiveness.contactId],
+    references: [contacts.id],
+  }),
+}));
+
+export const collectionABTestsRelations = relations(collectionABTests, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [collectionABTests.tenantId],
+    references: [tenants.id],
+  }),
+}));
+
 // Insert schemas
 export const insertTenantSchema = createInsertSchema(tenants).omit({
   id: true,
@@ -1223,6 +1353,24 @@ export const insertTemplatePerformanceSchema = createInsertSchema(templatePerfor
   createdAt: true,
 });
 
+// AI Learning insert schemas
+export const insertCustomerLearningProfileSchema = createInsertSchema(customerLearningProfiles).omit({
+  id: true,
+  createdAt: true,
+  lastUpdated: true,
+});
+
+export const insertActionEffectivenessSchema = createInsertSchema(actionEffectiveness).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertCollectionABTestSchema = createInsertSchema(collectionABTests).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
@@ -1276,6 +1424,14 @@ export type InsertCustomerScheduleAssignment = z.infer<typeof insertCustomerSche
 export type CustomerScheduleAssignment = typeof customerScheduleAssignments.$inferSelect;
 export type InsertTemplatePerformance = z.infer<typeof insertTemplatePerformanceSchema>;
 export type TemplatePerformance = typeof templatePerformance.$inferSelect;
+
+// AI Learning types
+export type InsertCustomerLearningProfile = z.infer<typeof insertCustomerLearningProfileSchema>;
+export type CustomerLearningProfile = typeof customerLearningProfiles.$inferSelect;
+export type InsertActionEffectiveness = z.infer<typeof insertActionEffectivenessSchema>;
+export type ActionEffectiveness = typeof actionEffectiveness.$inferSelect;
+export type InsertCollectionABTest = z.infer<typeof insertCollectionABTestSchema>;
+export type CollectionABTest = typeof collectionABTests.$inferSelect;
 
 // Node Configuration Types
 export interface TriggerNodeConfig {
