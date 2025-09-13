@@ -1,4 +1,5 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
   BarChart,
   Bar,
@@ -13,6 +14,9 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Skeleton } from "@/components/ui/skeleton";
 import { 
   Activity, 
   ArrowUp, 
@@ -20,7 +24,10 @@ import {
   DollarSign,
   TrendingUp,
   TrendingDown,
-  Download
+  Download,
+  RefreshCw,
+  AlertTriangle,
+  Target
 } from "lucide-react";
 
 interface WaterfallComponent {
@@ -29,28 +36,68 @@ interface WaterfallComponent {
   amount: number;
   type: 'start' | 'positive' | 'negative' | 'total';
   description?: string;
+  confidence?: number;
+  scenario?: 'base' | 'optimistic' | 'pessimistic' | 'custom';
+  weekNumber?: number;
+  projectedAmount?: number;
+  varianceFromBase?: number;
   subcategories?: Array<{
     name: string;
     amount: number;
     description?: string;
+    confidence?: number;
   }>;
 }
 
-interface WaterfallChartProps {
+interface WaterfallData {
   components: WaterfallComponent[];
+  scenarios: Record<string, WaterfallComponent[]>;
+  summary: {
+    totalInflow: number;
+    totalOutflow: number;
+    netCashFlow: number;
+    forecastAccuracy: number;
+  };
+}
+
+interface WaterfallChartProps {
+  components?: WaterfallComponent[];
   title?: string;
   subtitle?: string;
   onExport?: () => void;
   className?: string;
+  scenario?: 'base' | 'optimistic' | 'pessimistic' | 'custom';
+  forecastWeeks?: number;
 }
 
 export default function WaterfallChart({
-  components,
+  components: externalComponents,
   title = "Cash Flow Waterfall Analysis",
   subtitle = "Visual breakdown of cash flow components and their impact",
   onExport,
-  className = ""
+  className = "",
+  scenario = 'base',
+  forecastWeeks = 13
 }: WaterfallChartProps) {
+  const [activeScenario, setActiveScenario] = useState<string>(scenario);
+  
+  // Fetch comprehensive waterfall data
+  const { data: waterfallData, isLoading, error, refetch, isRefetching } = useQuery<WaterfallData>({
+    queryKey: ["/api/cashflow/waterfall", activeScenario, forecastWeeks],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      params.append('scenario', activeScenario);
+      params.append('weeks', forecastWeeks.toString());
+      
+      const response = await fetch(`/api/cashflow/waterfall?${params}`);
+      if (!response.ok) throw new Error('Failed to fetch waterfall data');
+      return response.json();
+    },
+    refetchInterval: 5 * 60 * 1000, // Refetch every 5 minutes
+  });
+  
+  // Use API data if available, otherwise fall back to external data
+  const components = waterfallData?.scenarios?.[activeScenario] || waterfallData?.components || externalComponents || [];
 
   const chartData = useMemo(() => {
     let cumulativeValue = 0;
@@ -210,6 +257,54 @@ export default function WaterfallChart({
   const totalStartValue = components.find(c => c.type === 'start')?.amount || 0;
   const totalEndValue = chartData[chartData.length - 1]?.cumulativeEnd || 0;
   const netChange = totalEndValue - totalStartValue;
+  
+  if (isLoading) {
+    return (
+      <Card className={`glass-card ${className}`}>
+        <CardHeader className="pb-4">
+          <CardTitle className="flex items-center gap-2">
+            <Activity className="h-5 w-5 animate-pulse" />
+            {title}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {[1,2,3].map(i => (
+                <Skeleton key={i} className="h-20 w-full" />
+              ))}
+            </div>
+            <Skeleton className="h-96 w-full" />
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+  
+  if (error) {
+    return (
+      <Card className={`glass-card ${className}`}>
+        <CardHeader className="pb-4">
+          <CardTitle className="flex items-center gap-2 text-red-600">
+            <AlertTriangle className="h-5 w-5" />
+            {title} - Error
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Alert variant="destructive">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription>
+              Failed to load waterfall analysis data. Please try again.
+            </AlertDescription>
+          </Alert>
+          <Button onClick={() => refetch()} className="mt-4" variant="outline">
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Retry
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className={`glass-card ${className}`}>
@@ -221,10 +316,33 @@ export default function WaterfallChart({
               {title}
             </CardTitle>
             <p className="text-sm text-muted-foreground mt-1">
-              {subtitle}
+              {subtitle} - {forecastWeeks} week forecast
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            <Select value={activeScenario} onValueChange={setActiveScenario}>
+              <SelectTrigger className="w-32" data-testid="select-scenario">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="base">Base Case</SelectItem>
+                <SelectItem value="optimistic">Optimistic</SelectItem>
+                <SelectItem value="pessimistic">Pessimistic</SelectItem>
+                <SelectItem value="custom">Custom</SelectItem>
+              </SelectContent>
+            </Select>
+            <Badge className="bg-blue-100 text-blue-800">
+              {activeScenario.charAt(0).toUpperCase() + activeScenario.slice(1)}
+            </Badge>
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => refetch()}
+              disabled={isRefetching}
+              data-testid="button-refresh-waterfall"
+            >
+              <RefreshCw className={`h-4 w-4 ${isRefetching ? 'animate-spin' : ''}`} />
+            </Button>
             {onExport && (
               <Button 
                 variant="outline" 
@@ -239,8 +357,8 @@ export default function WaterfallChart({
         </div>
       </CardHeader>
       <CardContent>
-        {/* Summary Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        {/* Enhanced Summary Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
           <div className="text-center p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
             <div className="flex items-center justify-center gap-2 mb-2">
               <DollarSign className="h-4 w-4 text-gray-600" />
@@ -274,6 +392,15 @@ export default function WaterfallChart({
               totalEndValue >= 0 ? 'text-blue-600' : 'text-red-600'
             }`} data-testid="stat-ending-cash">
               {formatCurrency(totalEndValue)}
+            </p>
+          </div>
+          <div className="text-center p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+            <div className="flex items-center justify-center gap-2 mb-2">
+              <Target className="h-4 w-4 text-purple-600" />
+              <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Accuracy</span>
+            </div>
+            <p className="text-lg font-semibold text-purple-600" data-testid="stat-forecast-accuracy">
+              {waterfallData?.summary?.forecastAccuracy ? `${waterfallData.summary.forecastAccuracy.toFixed(1)}%` : 'N/A'}
             </p>
           </div>
         </div>
@@ -343,6 +470,16 @@ export default function WaterfallChart({
                     <p className="text-sm font-medium">{component.label}</p>
                     {component.description && (
                       <p className="text-xs text-muted-foreground">{component.description}</p>
+                    )}
+                    {component.confidence && component.confidence < 80 && (
+                      <Badge variant="outline" className="text-xs mt-1 border-yellow-300 text-yellow-700">
+                        {component.confidence}% confidence
+                      </Badge>
+                    )}
+                    {component.varianceFromBase && Math.abs(component.varianceFromBase) > 1000 && (
+                      <p className="text-xs text-gray-600 dark:text-gray-400">
+                        Variance: {component.varianceFromBase >= 0 ? '+' : ''}{formatCurrency(component.varianceFromBase)}
+                      </p>
                     )}
                   </div>
                 </div>

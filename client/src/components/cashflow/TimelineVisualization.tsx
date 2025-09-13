@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback } from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
   LineChart,
   Line,
@@ -10,7 +11,8 @@ import {
   Area,
   AreaChart,
   Brush,
-  ReferenceArea
+  ReferenceArea,
+  ComposedChart
 } from "recharts";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,6 +21,8 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Skeleton } from "@/components/ui/skeleton";
 import { 
   BarChart3, 
   ZoomIn, 
@@ -28,7 +32,10 @@ import {
   AlertTriangle,
   TrendingUp,
   Calendar,
-  DollarSign
+  DollarSign,
+  RefreshCw,
+  Activity,
+  Layers
 } from "lucide-react";
 
 interface TimelineEvent {
@@ -38,6 +45,9 @@ interface TimelineEvent {
   amount?: number;
   description: string;
   severity?: 'low' | 'medium' | 'high' | 'critical';
+  probability?: number;
+  confidence?: number;
+  scenario?: 'base' | 'optimistic' | 'pessimistic' | 'custom';
 }
 
 interface TimelineDataPoint {
@@ -48,23 +58,53 @@ interface TimelineDataPoint {
   runway: number;
   projectedMin: number;
   projectedMax: number;
+  confidence: number;
+  scenario: 'base' | 'optimistic' | 'pessimistic' | 'custom';
+  weekNumber: number;
+  burnRate?: number;
+  inflowRate?: number;
+  riskAdjustment?: number;
   events: TimelineEvent[];
+}
+
+interface TimelineData {
+  dataPoints: TimelineDataPoint[];
+  events: TimelineEvent[];
+  scenarios: Record<string, TimelineDataPoint[]>;
+  summary: {
+    totalForecastWeeks: number;
+    averageConfidence: number;
+    riskLevel: 'low' | 'medium' | 'high' | 'critical';
+    cashRunway: number;
+    burnRate: number;
+  };
+  insights: Array<{
+    type: 'trend' | 'risk' | 'opportunity' | 'milestone';
+    title: string;
+    description: string;
+    impact: number;
+    timeframe: string;
+  }>;
 }
 
 interface TimelineVisualizationProps {
-  data: TimelineDataPoint[];
-  events: TimelineEvent[];
+  data?: TimelineDataPoint[];
+  events?: TimelineEvent[];
   onEventClick?: (event: TimelineEvent) => void;
   onDateRangeSelect?: (startDate: string, endDate: string) => void;
   className?: string;
+  scenario?: 'base' | 'optimistic' | 'pessimistic' | 'custom';
+  forecastWeeks?: number;
 }
 
 export default function TimelineVisualization({
-  data,
-  events,
+  data: externalData,
+  events: externalEvents,
   onEventClick,
   onDateRangeSelect,
-  className = ""
+  className = "",
+  scenario = 'base',
+  forecastWeeks = 13
 }: TimelineVisualizationProps) {
   const [viewMode, setViewMode] = useState<'flow' | 'cumulative' | 'runway' | 'projection'>('flow');
   const [timeRange, setTimeRange] = useState<'3m' | '6m' | '1y' | '2y' | 'all'>('1y');
@@ -73,6 +113,27 @@ export default function TimelineVisualization({
   const [zoomDomain, setZoomDomain] = useState<[number, number] | null>(null);
   const [selectedDateRange, setSelectedDateRange] = useState<[string, string] | null>(null);
   const [confidence, setConfidence] = useState([80]);
+  const [activeScenario, setActiveScenario] = useState<string>(scenario);
+  
+  // Fetch comprehensive timeline forecast data
+  const { data: timelineData, isLoading, error, refetch, isRefetching } = useQuery<TimelineData>({
+    queryKey: ["/api/cashflow/timeline", activeScenario, forecastWeeks, confidence[0]],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      params.append('scenario', activeScenario);
+      params.append('weeks', forecastWeeks.toString());
+      params.append('confidence', confidence[0].toString());
+      
+      const response = await fetch(`/api/cashflow/timeline?${params}`);
+      if (!response.ok) throw new Error('Failed to fetch timeline data');
+      return response.json();
+    },
+    refetchInterval: 5 * 60 * 1000, // Refetch every 5 minutes
+  });
+  
+  // Use API data if available, otherwise fall back to external data
+  const data = timelineData?.scenarios?.[activeScenario] || timelineData?.dataPoints || externalData || [];
+  const events = timelineData?.events || externalEvents || [];
 
   const filteredData = useMemo(() => {
     const now = new Date();
@@ -343,6 +404,54 @@ export default function TimelineVisualization({
     );
   };
 
+  if (isLoading) {
+    return (
+      <Card className={`glass-card ${className}`}>
+        <CardHeader className="pb-4">
+          <CardTitle className="flex items-center gap-2">
+            <BarChart3 className="h-5 w-5 animate-pulse" />
+            Interactive Timeline Analysis
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+              {[1,2,3,4].map(i => (
+                <Skeleton key={i} className="h-16 w-full" />
+              ))}
+            </div>
+            <Skeleton className="h-96 w-full" />
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+  
+  if (error) {
+    return (
+      <Card className={`glass-card ${className}`}>
+        <CardHeader className="pb-4">
+          <CardTitle className="flex items-center gap-2 text-red-600">
+            <AlertTriangle className="h-5 w-5" />
+            Interactive Timeline Analysis - Error
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Alert variant="destructive">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription>
+              Failed to load timeline data. Please try again.
+            </AlertDescription>
+          </Alert>
+          <Button onClick={() => refetch()} className="mt-4" variant="outline">
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Retry
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
+  
   return (
     <Card className={`glass-card ${className}`}>
       <CardHeader className="pb-4">
@@ -353,12 +462,23 @@ export default function TimelineVisualization({
               Interactive Timeline Analysis
             </CardTitle>
             <p className="text-sm text-muted-foreground mt-1">
-              Deep-dive into cash flow trends with event correlation and projections
+              {forecastWeeks}-week forecast timeline with scenario modeling and event correlation
             </p>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
+            <Select value={activeScenario} onValueChange={setActiveScenario}>
+              <SelectTrigger className="w-32" data-testid="select-scenario">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="base">Base Case</SelectItem>
+                <SelectItem value="optimistic">Optimistic</SelectItem>
+                <SelectItem value="pessimistic">Pessimistic</SelectItem>
+                <SelectItem value="custom">Custom</SelectItem>
+              </SelectContent>
+            </Select>
             <Select value={viewMode} onValueChange={(value: any) => setViewMode(value)}>
-              <SelectTrigger className="w-40" data-testid="select-view-mode">
+              <SelectTrigger className="w-32" data-testid="select-view-mode">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -368,23 +488,75 @@ export default function TimelineVisualization({
                 <SelectItem value="projection">Projections</SelectItem>
               </SelectContent>
             </Select>
-            <Select value={timeRange} onValueChange={(value: any) => setTimeRange(value)}>
-              <SelectTrigger className="w-32" data-testid="select-time-range">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="3m">3 Months</SelectItem>
-                <SelectItem value="6m">6 Months</SelectItem>
-                <SelectItem value="1y">1 Year</SelectItem>
-                <SelectItem value="2y">2 Years</SelectItem>
-                <SelectItem value="all">All Time</SelectItem>
-              </SelectContent>
-            </Select>
+            <Badge className="bg-blue-100 text-blue-800">
+              {activeScenario.charAt(0).toUpperCase() + activeScenario.slice(1)}
+            </Badge>
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => refetch()}
+              disabled={isRefetching}
+              data-testid="button-refresh-timeline"
+            >
+              <RefreshCw className={`h-4 w-4 ${isRefetching ? 'animate-spin' : ''}`} />
+            </Button>
           </div>
         </div>
       </CardHeader>
       <CardContent>
-        {/* Controls */}
+        {/* Summary Stats */}
+        {timelineData?.summary && (
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <div className="text-center p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+              <div className="flex items-center justify-center gap-2 mb-2">
+                <Activity className="h-4 w-4 text-blue-600" />
+                <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Cash Runway</span>
+              </div>
+              <p className="text-lg font-semibold text-blue-600" data-testid="stat-cash-runway">
+                {timelineData.summary.cashRunway.toFixed(1)} weeks
+              </p>
+            </div>
+            <div className="text-center p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+              <div className="flex items-center justify-center gap-2 mb-2">
+                <Target className="h-4 w-4 text-green-600" />
+                <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Confidence</span>
+              </div>
+              <p className="text-lg font-semibold text-green-600" data-testid="stat-avg-confidence">
+                {timelineData.summary.averageConfidence.toFixed(1)}%
+              </p>
+            </div>
+            <div className="text-center p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+              <div className="flex items-center justify-center gap-2 mb-2">
+                <TrendingUp className="h-4 w-4 text-purple-600" />
+                <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Burn Rate</span>
+              </div>
+              <p className="text-lg font-semibold text-purple-600" data-testid="stat-burn-rate">
+                {formatCurrency(timelineData.summary.burnRate)}/week
+              </p>
+            </div>
+            <div className="text-center p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+              <div className="flex items-center justify-center gap-2 mb-2">
+                <AlertTriangle className={`h-4 w-4 ${
+                  timelineData.summary.riskLevel === 'critical' ? 'text-red-600' :
+                  timelineData.summary.riskLevel === 'high' ? 'text-orange-600' :
+                  timelineData.summary.riskLevel === 'medium' ? 'text-yellow-600' :
+                  'text-green-600'
+                }`} />
+                <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Risk Level</span>
+              </div>
+              <p className={`text-lg font-semibold ${
+                timelineData.summary.riskLevel === 'critical' ? 'text-red-600' :
+                timelineData.summary.riskLevel === 'high' ? 'text-orange-600' :
+                timelineData.summary.riskLevel === 'medium' ? 'text-yellow-600' :
+                'text-green-600'
+              }`} data-testid="stat-risk-level">
+                {timelineData.summary.riskLevel.charAt(0).toUpperCase() + timelineData.summary.riskLevel.slice(1)}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Enhanced Controls */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
@@ -404,22 +576,36 @@ export default function TimelineVisualization({
               />
             </div>
           </div>
-          {viewMode === 'projection' && (
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-muted-foreground">Confidence:</span>
-              <div className="w-20">
-                <Slider
-                  value={confidence}
-                  onValueChange={setConfidence}
-                  max={100}
-                  min={50}
-                  step={5}
-                  className="cursor-pointer"
-                />
+          <div className="flex items-center gap-4">
+            {viewMode === 'projection' && (
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground">Confidence:</span>
+                <div className="w-20">
+                  <Slider
+                    value={confidence}
+                    onValueChange={setConfidence}
+                    max={100}
+                    min={50}
+                    step={5}
+                    className="cursor-pointer"
+                  />
+                </div>
+                <span className="text-xs font-medium">{confidence[0]}%</span>
               </div>
-              <span className="text-xs font-medium">{confidence[0]}%</span>
-            </div>
-          )}
+            )}
+            <Select value={timeRange} onValueChange={(value: any) => setTimeRange(value)}>
+              <SelectTrigger className="w-24" data-testid="select-time-range">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="3m">3M</SelectItem>
+                <SelectItem value="6m">6M</SelectItem>
+                <SelectItem value="1y">1Y</SelectItem>
+                <SelectItem value="2y">2Y</SelectItem>
+                <SelectItem value="all">All</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
         {/* Chart */}
@@ -428,6 +614,42 @@ export default function TimelineVisualization({
             {renderChart()}
           </ChartContainer>
         </div>
+
+        {/* Key Insights */}
+        {timelineData?.insights && timelineData.insights.length > 0 && (
+          <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200">
+            <h4 className="text-sm font-medium text-blue-800 dark:text-blue-200 mb-3 flex items-center gap-2">
+              <Layers className="h-4 w-4" />
+              Key Insights & Trends
+            </h4>
+            <div className="grid gap-2">
+              {timelineData.insights.slice(0, 3).map((insight, index) => (
+                <div key={index} className="flex items-center justify-between p-2 bg-white dark:bg-gray-800 rounded">
+                  <div className="flex items-center gap-3">
+                    <Badge variant="outline" className={`text-xs ${
+                      insight.type === 'risk' ? 'border-red-300 text-red-700' :
+                      insight.type === 'opportunity' ? 'border-green-300 text-green-700' :
+                      insight.type === 'trend' ? 'border-blue-300 text-blue-700' :
+                      'border-purple-300 text-purple-700'
+                    }`}>
+                      {insight.type}
+                    </Badge>
+                    <div>
+                      <p className="text-sm font-medium">{insight.title}</p>
+                      <p className="text-xs text-muted-foreground">{insight.description}</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-xs font-medium">{insight.timeframe}</span>
+                    <p className="text-xs text-muted-foreground">
+                      Impact: {formatCurrency(insight.impact)}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Event Timeline */}
         {showEvents && (
@@ -450,6 +672,11 @@ export default function TimelineVisualization({
                       {event.amount && (
                         <Badge variant="outline" className="text-xs">
                           {formatCurrency(event.amount)}
+                        </Badge>
+                      )}
+                      {event.probability && event.probability < 0.8 && (
+                        <Badge variant="outline" className="text-xs border-yellow-300 text-yellow-700">
+                          {(event.probability * 100).toFixed(0)}% likely
                         </Badge>
                       )}
                     </div>

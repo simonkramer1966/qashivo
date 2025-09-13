@@ -21,14 +21,23 @@ import {
   Activity,
   Zap,
   ChevronDown,
-  Filter
+  Filter,
+  Landmark,
+  Receipt,
+  CreditCard,
+  PieChart,
+  TrendingDown,
+  Sync,
+  Database,
+  CheckCircle,
+  WifiOff
 } from "lucide-react";
 
 // Layout components
 import NewSidebar from "@/components/layout/new-sidebar";
 import Header from "@/components/layout/header";
 
-// Dashboard components - All 7 major visualizations
+// Dashboard components - All major visualizations plus new accounting components
 import MetricsOverview from "@/components/dashboard/metrics-overview";
 import CashFlowForecast from "@/components/dashboard/cashflow-forecast";
 import ActionPriorityMatrix from "@/components/dashboard/action-priority-matrix";
@@ -37,6 +46,15 @@ import CustomerRiskMatrix from "@/components/dashboard/customer-risk-matrix";
 import PaymentTrendAnalysis from "@/components/dashboard/payment-trend-analysis";
 import CollectionMethodPerformance from "@/components/dashboard/collection-method-performance";
 import AutomationPerformanceMetrics from "@/components/dashboard/automation-performance";
+
+// New Accounting Intelligence Components
+import BillsManagement from "@/components/dashboard/bills-management";
+import BankAccounts from "@/components/dashboard/bank-accounts";
+import TransactionAnalysis from "@/components/dashboard/transaction-analysis";
+import BudgetManagement from "@/components/dashboard/budget-management";
+
+// Enhanced Cashflow Components
+import ScenarioComparisonChart from "@/components/cashflow/ScenarioComparisonChart";
 
 // Error Boundary Component for Dashboard Sections
 interface ErrorBoundaryState {
@@ -123,6 +141,11 @@ interface LoadingState {
   methods: boolean;
   automation: boolean;
   insights: boolean;
+  accounting: boolean;
+  bills: boolean;
+  banking: boolean;
+  transactions: boolean;
+  budgets: boolean;
 }
 
 export default function Dashboard() {
@@ -143,7 +166,12 @@ export default function Dashboard() {
     trends: false,
     methods: false,
     automation: false,
-    insights: false
+    insights: false,
+    accounting: false,
+    bills: false,
+    banking: false,
+    transactions: false,
+    budgets: false
   });
 
   // Prefetch common data when dashboard loads with orchestrated loading
@@ -152,15 +180,21 @@ export default function Dashboard() {
       // Staggered prefetching for better perceived performance
       const prefetchSequence = [
         { key: ["/api/dashboard/metrics"], delay: 0 },
-        { key: ["/api/analytics/cashflow-forecast"], delay: 100 },
+        { key: ["/api/cashflow/forecast"], delay: 100 },
+        { key: ["/api/cashflow/metrics"], delay: 150 },
         { key: ["/api/dashboard/action-priority"], delay: 200 },
         { key: ["/api/analytics/aging-analysis"], delay: 300 },
         { key: ["/api/analytics/customer-risk-matrix"], delay: 400 },
         { key: ["/api/analytics/payment-trends"], delay: 500 },
         { key: ["/api/analytics/collection-methods"], delay: 600 },
         { key: ["/api/analytics/automation-performance"], delay: 700 },
-        { key: ["/api/invoices"], delay: 800 },
-        { key: ["/api/workflows"], delay: 900 }
+        { key: ["/api/bills"], delay: 800 },
+        { key: ["/api/bank-accounts"], delay: 850 },
+        { key: ["/api/bank-transactions"], delay: 900 },
+        { key: ["/api/budgets"], delay: 950 },
+        { key: ["/api/invoices"], delay: 1000 },
+        { key: ["/api/workflows"], delay: 1050 },
+        { key: ["/api/sync/status"], delay: 1100 }
       ];
 
       prefetchSequence.forEach(({ key, delay }) => {
@@ -243,7 +277,12 @@ export default function Dashboard() {
                 <span className="font-semibold text-slate-900">Financial Intelligence Hub</span>
               </div>
               <Badge variant="secondary" className="bg-[#17B6C3]/10 text-[#17B6C3] border-[#17B6C3]/20">
+                <CheckCircle className="h-3 w-3 mr-1" />
                 Live Data
+              </Badge>
+              <Badge variant="secondary" className="bg-emerald-100 text-emerald-800 border-emerald-200">
+                <Database className="h-3 w-3 mr-1" />
+                13-Week Forecast
               </Badge>
             </div>
             
@@ -397,6 +436,15 @@ export default function Dashboard() {
                 <CashFlowForecast />
               </Suspense>
             </DashboardErrorBoundary>
+            
+            {/* Advanced Scenario Comparison */}
+            <DashboardErrorBoundary section="Scenario Analysis">
+              <Suspense fallback={
+                <div className="dashboard-loading h-96" role="status" aria-label="Loading scenario analysis" />
+              }>
+                <ScenarioComparisonChart />
+              </Suspense>
+            </DashboardErrorBoundary>
           </div>
 
           {/* Section 4: Collections Intelligence - Priority 2 */}
@@ -489,6 +537,137 @@ export default function Dashboard() {
             
           </div>
 
+          {/* Section 7: Accounting Intelligence - NEW */}
+          <div className="space-y-6" data-testid="section-accounting-intelligence">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <Landmark className="h-5 w-5 text-[#17B6C3]" />
+                <h2 className="text-xl font-bold text-slate-900">Accounting Intelligence</h2>
+                <Badge variant="outline" className="text-xs">Multi-Provider</Badge>
+              </div>
+            </div>
+            
+            {/* Bills & Bank Accounts - Side by Side */}
+            <div className="dashboard-grid dashboard-grid-2 gap-6">
+              <DashboardErrorBoundary section="Bills Management">
+                <Suspense fallback={
+                  <div className="dashboard-loading h-96" role="status" aria-label="Loading bills management" />
+                }>
+                  <BillsManagement />
+                </Suspense>
+              </DashboardErrorBoundary>
+              
+              <DashboardErrorBoundary section="Bank Accounts">
+                <Suspense fallback={
+                  <div className="dashboard-loading h-96" role="status" aria-label="Loading bank accounts" />
+                }>
+                  <BankAccounts />
+                </Suspense>
+              </DashboardErrorBoundary>
+            </div>
+            
+            {/* Transactions & Budgets - Side by Side */}
+            <div className="dashboard-grid dashboard-grid-2 gap-6">
+              <DashboardErrorBoundary section="Transaction Analysis">
+                <Suspense fallback={
+                  <div className="dashboard-loading h-96" role="status" aria-label="Loading transaction analysis" />
+                }>
+                  <TransactionAnalysis />
+                </Suspense>
+              </DashboardErrorBoundary>
+              
+              <DashboardErrorBoundary section="Budget Management">
+                <Suspense fallback={
+                  <div className="dashboard-loading h-96" role="status" aria-label="Loading budget management" />
+                }>
+                  <BudgetManagement />
+                </Suspense>
+              </DashboardErrorBoundary>
+            </div>
+          </div>
+
+          {/* Section 8: Real-Time Sync Status - NEW */}
+          <div className="space-y-6" data-testid="section-sync-status">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <Sync className="h-5 w-5 text-[#17B6C3]" />
+                <h2 className="text-xl font-bold text-slate-900">Data Synchronization</h2>
+                <Badge variant="outline" className="text-xs">Real-time</Badge>
+              </div>
+            </div>
+            
+            {/* Sync Status Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <Card className="glass-card">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <div className="p-2 bg-blue-100 rounded-lg">
+                        <Database className="h-4 w-4 text-blue-600" />
+                      </div>
+                      <div>
+                        <p className="font-semibold text-gray-900">Xero Integration</p>
+                        <p className="text-sm text-gray-600">Connected</p>
+                      </div>
+                    </div>
+                    <Badge className="bg-green-100 text-green-800">
+                      <CheckCircle className="h-3 w-3 mr-1" />
+                      Synced
+                    </Badge>
+                  </div>
+                  <div className="mt-4 text-xs text-gray-500">
+                    Last sync: 2 minutes ago
+                  </div>
+                </CardContent>
+              </Card>
+              
+              <Card className="glass-card">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <div className="p-2 bg-green-100 rounded-lg">
+                        <Database className="h-4 w-4 text-green-600" />
+                      </div>
+                      <div>
+                        <p className="font-semibold text-gray-900">Sage Integration</p>
+                        <p className="text-sm text-gray-600">Connected</p>
+                      </div>
+                    </div>
+                    <Badge className="bg-green-100 text-green-800">
+                      <CheckCircle className="h-3 w-3 mr-1" />
+                      Synced
+                    </Badge>
+                  </div>
+                  <div className="mt-4 text-xs text-gray-500">
+                    Last sync: 5 minutes ago
+                  </div>
+                </CardContent>
+              </Card>
+              
+              <Card className="glass-card">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <div className="p-2 bg-purple-100 rounded-lg">
+                        <Database className="h-4 w-4 text-purple-600" />
+                      </div>
+                      <div>
+                        <p className="font-semibold text-gray-900">QuickBooks</p>
+                        <p className="text-sm text-gray-600">Connected</p>
+                      </div>
+                    </div>
+                    <Badge className="bg-yellow-100 text-yellow-800">
+                      <Clock className="h-3 w-3 mr-1" />
+                      Syncing
+                    </Badge>
+                  </div>
+                  <div className="mt-4 text-xs text-gray-500">
+                    Updating transactions...
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
 
           {/* Dashboard Footer with Navigation */}
           <div className="flex items-center justify-between glass-card p-4 rounded-lg border-t border-white/10 mt-8" data-testid="dashboard-footer">

@@ -1,9 +1,12 @@
 import { useState, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Skeleton } from "@/components/ui/skeleton";
 import { 
   Grid3X3, 
   Calendar,
@@ -12,7 +15,9 @@ import {
   TrendingDown,
   Download,
   Filter,
-  RotateCcw
+  RotateCcw,
+  RefreshCw,
+  Activity
 } from "lucide-react";
 
 interface HeatmapCell {
@@ -26,25 +31,67 @@ interface HeatmapCell {
     impact: number;
   }>;
   trend: 'up' | 'down' | 'stable';
+  confidence: number; // 0-100 confidence level
+  scenario: 'base' | 'optimistic' | 'pessimistic' | 'custom';
+  cashflowImpact: number;
+  riskMitigation?: string;
+}
+
+interface ForecastRiskData {
+  riskMatrix: HeatmapCell[];
+  scenarios: Array<{
+    name: string;
+    riskLevel: number;
+    mitigation: string;
+  }>;
+  insights: Array<{
+    category: string;
+    severity: 'low' | 'medium' | 'high' | 'critical';
+    recommendation: string;
+    impact: number;
+  }>;
 }
 
 interface HeatmapVisualizationProps {
-  data: HeatmapCell[];
+  data?: HeatmapCell[];
   onCellClick?: (cell: HeatmapCell) => void;
   onExport?: () => void;
   className?: string;
+  scenario?: 'base' | 'optimistic' | 'pessimistic' | 'custom';
+  forecastWeeks?: number;
 }
 
 export default function HeatmapVisualization({
-  data,
+  data: externalData,
   onCellClick,
   onExport,
-  className = ""
+  className = "",
+  scenario = 'base',
+  forecastWeeks = 13
 }: HeatmapVisualizationProps) {
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [severityThreshold, setSeverityThreshold] = useState([25]);
   const [timeRange, setTimeRange] = useState<'3m' | '6m' | '1y' | 'all'>('6m');
   const [sortBy, setSortBy] = useState<'severity' | 'trend' | 'alphabetical'>('severity');
+  const [activeScenario, setActiveScenario] = useState<string>(scenario);
+  
+  // Fetch comprehensive forecast risk data
+  const { data: forecastRiskData, isLoading, error, refetch, isRefetching } = useQuery<ForecastRiskData>({
+    queryKey: ["/api/cashflow/risk-analysis", activeScenario, forecastWeeks],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      params.append('scenario', activeScenario);
+      params.append('weeks', forecastWeeks.toString());
+      
+      const response = await fetch(`/api/cashflow/risk-analysis?${params}`);
+      if (!response.ok) throw new Error('Failed to fetch risk analysis data');
+      return response.json();
+    },
+    refetchInterval: 5 * 60 * 1000, // Refetch every 5 minutes
+  });
+  
+  // Use API data if available, otherwise fall back to external data
+  const data = forecastRiskData?.riskMatrix || externalData || [];
 
   // Extract unique categories and time periods
   const categories = useMemo(() => {
@@ -96,8 +143,8 @@ export default function HeatmapVisualization({
     return filtered;
   }, [data, selectedCategory, severityThreshold, timeRange]);
 
-  const getSeverityColor = (value: number, severity: string) => {
-    const alpha = Math.max(0.3, value / 100); // Minimum 30% opacity
+  const getSeverityColor = (value: number, severity: string, confidence?: number) => {
+    const alpha = Math.max(0.3, (value / 100) * ((confidence || 100) / 100)); // Factor in confidence
     
     switch (severity) {
       case 'critical':
@@ -111,6 +158,15 @@ export default function HeatmapVisualization({
       default:
         return `rgba(107, 114, 128, ${alpha})`; // Gray
     }
+  };
+  
+  const formatCurrency = (amount: number, currency: string = 'USD') => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: currency,
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(amount);
   };
 
   const getSeverityTextColor = (value: number) => {
@@ -191,6 +247,54 @@ export default function HeatmapVisualization({
     return filteredData.find(cell => cell.y === category && cell.x === period);
   };
 
+  if (isLoading) {
+    return (
+      <Card className={`glass-card ${className}`}>
+        <CardHeader className="pb-4">
+          <CardTitle className="flex items-center gap-2">
+            <Grid3X3 className="h-5 w-5 animate-pulse" />
+            Risk Factor Heatmap
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+              {[1,2,3,4].map(i => (
+                <Skeleton key={i} className="h-12 w-full" />
+              ))}
+            </div>
+            <Skeleton className="h-96 w-full" />
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+  
+  if (error) {
+    return (
+      <Card className={`glass-card ${className}`}>
+        <CardHeader className="pb-4">
+          <CardTitle className="flex items-center gap-2 text-red-600">
+            <AlertTriangle className="h-5 w-5" />
+            Risk Factor Heatmap - Error
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Alert variant="destructive">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription>
+              Failed to load risk analysis data. Please try again.
+            </AlertDescription>
+          </Alert>
+          <Button onClick={() => refetch()} className="mt-4" variant="outline">
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Retry
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
+  
   return (
     <Card className={`glass-card ${className}`}>
       <CardHeader className="pb-4">
@@ -201,10 +305,13 @@ export default function HeatmapVisualization({
               Risk Factor Heatmap
             </CardTitle>
             <p className="text-sm text-muted-foreground mt-1">
-              Visualize risk factors across time periods with severity mapping
+              Visualize risk factors across {forecastWeeks}-week forecast periods with scenario analysis
             </p>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
+            <Badge className="bg-blue-100 text-blue-800">
+              {activeScenario.charAt(0).toUpperCase() + activeScenario.slice(1)} Scenario
+            </Badge>
             <Button 
               variant="outline" 
               size="sm"
@@ -212,6 +319,15 @@ export default function HeatmapVisualization({
               data-testid="button-reset-filters"
             >
               <RotateCcw className="h-4 w-4" />
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => refetch()}
+              disabled={isRefetching}
+              data-testid="button-refresh-heatmap"
+            >
+              <RefreshCw className={`h-4 w-4 ${isRefetching ? 'animate-spin' : ''}`} />
             </Button>
             {onExport && (
               <Button 
@@ -227,8 +343,24 @@ export default function HeatmapVisualization({
         </div>
       </CardHeader>
       <CardContent>
-        {/* Controls */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 mb-6">
+        {/* Enhanced Controls */}
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 mb-6">
+          <div>
+            <label className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-2 block">
+              Scenario Model
+            </label>
+            <Select value={activeScenario} onValueChange={setActiveScenario}>
+              <SelectTrigger data-testid="select-scenario">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="base">Base Case</SelectItem>
+                <SelectItem value="optimistic">Optimistic</SelectItem>
+                <SelectItem value="pessimistic">Pessimistic</SelectItem>
+                <SelectItem value="custom">Custom</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
           <div>
             <label className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-2 block">
               Category Filter
@@ -363,7 +495,7 @@ export default function HeatmapVisualization({
                       className="w-20 h-12 flex-shrink-0 m-1 rounded cursor-pointer transition-all hover:scale-105 hover:shadow-lg border border-gray-200 dark:border-gray-600"
                       style={{
                         backgroundColor: cellData 
-                          ? getSeverityColor(cellData.value, cellData.severity)
+                          ? getSeverityColor(cellData.value, cellData.severity, cellData.confidence)
                           : 'rgba(107, 114, 128, 0.1)'
                       }}
                       onClick={() => cellData && onCellClick?.(cellData)}
@@ -382,6 +514,14 @@ export default function HeatmapVisualization({
                               {getTrendIcon(cellData.trend)}
                             </div>
                           </div>
+                          {cellData.confidence && cellData.confidence < 70 && (
+                            <div className="w-1 h-1 rounded-full bg-yellow-500" title={`${cellData.confidence}% confidence`} />
+                          )}
+                          {cellData.cashflowImpact && Math.abs(cellData.cashflowImpact) > 1000 && (
+                            <div className="text-xs font-medium" style={{ color: getSeverityTextColor(cellData.value) }}>
+                              {formatCurrency(cellData.cashflowImpact)}
+                            </div>
+                          )}
                           {cellData.events.length > 0 && (
                             <div 
                               className="w-1 h-1 rounded-full mt-1"
@@ -398,8 +538,8 @@ export default function HeatmapVisualization({
           </div>
         </div>
 
-        {/* Statistics */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-6 pt-4 border-t">
+        {/* Enhanced Statistics */}
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mt-6 pt-4 border-t">
           <div className="text-center">
             <div className="flex items-center justify-center gap-1 mb-1">
               <AlertTriangle className="h-4 w-4 text-red-600" />
