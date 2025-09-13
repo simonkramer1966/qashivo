@@ -9,6 +9,8 @@ export class DataTransformer {
 
   constructor() {
     this.initializeDefaultMappings();
+    this.addQuickBooksMappings();
+    this.addSageMappings();
   }
 
   /**
@@ -252,10 +254,47 @@ export class DataTransformer {
   }
 
   /**
-   * Add QuickBooks mappings (placeholder for future implementation)
+   * Map QuickBooks status to standard status
+   */
+  private mapQuickBooksStatusToStandard(emailStatus: string, balance: number): string {
+    // QuickBooks doesn't have a direct status field, we derive it from balance and email status
+    const balanceValue = parseFloat(balance?.toString() || '0');
+    
+    if (balanceValue === 0) {
+      return 'paid';
+    }
+    
+    // Check if overdue (would need due date comparison in real implementation)
+    // For now, use email status as indicator
+    if (emailStatus === 'NotSet') {
+      return 'pending';
+    }
+    
+    return 'pending';
+  }
+
+  /**
+   * Map Sage status to standard status
+   */
+  private mapSageStatusToStandard(sageStatus: string): string {
+    const statusMap: Record<string, string> = {
+      'PAID': 'paid',
+      'PAID_IN_FULL': 'paid',
+      'PART_PAID': 'pending',
+      'UNPAID': 'pending',
+      'OVERDUE': 'overdue',
+      'VOID': 'cancelled',
+      'CANCELLED': 'cancelled',
+    };
+    
+    return statusMap[sageStatus?.toUpperCase()] || 'pending';
+  }
+
+  /**
+   * Add QuickBooks mappings
    */
   addQuickBooksMappings(): void {
-    // QuickBooks Contact Mapping
+    // QuickBooks Customer Mapping
     this.registerMapping({
       provider: 'quickbooks',
       dataType: 'contact',
@@ -267,20 +306,125 @@ export class DataTransformer {
         company: 'CompanyName',
         isActive: 'Active',
         providerContactId: 'Id',
+        outstandingBalance: (data: any) => parseFloat(data.Balance) || 0,
       },
       transformations: {
         outstandingBalance: (value: any) => parseFloat(value) || 0,
         isActive: (value: any) => Boolean(value),
       }
     });
-    
-    // Additional QuickBooks mappings would go here
+
+    // QuickBooks Invoice Mapping
+    this.registerMapping({
+      provider: 'quickbooks',
+      dataType: 'invoice',
+      fieldMappings: {
+        id: 'Id',
+        number: 'DocNumber',
+        contactId: 'CustomerRef.value',
+        amount: 'TotalAmt',
+        amountPaid: (data: any) => parseFloat(data.TotalAmt) - parseFloat(data.Balance || 0),
+        status: (data: any) => this.mapQuickBooksStatusToStandard(data.EmailStatus, data.Balance),
+        issueDate: 'TxnDate',
+        dueDate: 'DueDate',
+        currency: 'CurrencyRef.value',
+        description: (data: any) => `Invoice ${data.DocNumber} from QuickBooks`,
+        providerInvoiceId: 'Id',
+      },
+      transformations: {
+        amount: (value: any) => parseFloat(value) || 0,
+        amountPaid: (value: any) => parseFloat(value) || 0,
+        issueDate: (value: any) => new Date(value),
+        dueDate: (value: any) => new Date(value),
+      }
+    });
+
+    // QuickBooks Payment Mapping
+    this.registerMapping({
+      provider: 'quickbooks',
+      dataType: 'payment',
+      fieldMappings: {
+        id: 'Id',
+        invoiceId: (data: any) => data.Line?.[0]?.LinkedTxn?.[0]?.TxnId,
+        amount: 'TotalAmt',
+        date: 'TxnDate',
+        method: (data: any) => data.PaymentMethodRef?.name || 'Unknown',
+        reference: 'PaymentRefNum',
+        providerPaymentId: 'Id',
+      },
+      transformations: {
+        amount: (value: any) => parseFloat(value) || 0,
+        date: (value: any) => new Date(value),
+      }
+    });
   }
 
   /**
-   * Add Sage mappings (placeholder for future implementation)
+   * Add Sage mappings
    */
   addSageMappings(): void {
-    // Sage mappings would be implemented here
+    // Sage Contact Mapping
+    this.registerMapping({
+      provider: 'sage',
+      dataType: 'contact',
+      fieldMappings: {
+        id: 'id',
+        name: 'name',
+        email: 'main_contact_person.email',
+        phone: 'main_contact_person.telephone',
+        company: 'name',
+        isActive: (data: any) => !data.deleted_at,
+        providerContactId: 'id',
+        outstandingBalance: (data: any) => parseFloat(data.balance) || 0,
+      },
+      transformations: {
+        outstandingBalance: (value: any) => parseFloat(value) || 0,
+        isActive: (value: any) => Boolean(value),
+      }
+    });
+
+    // Sage Invoice Mapping
+    this.registerMapping({
+      provider: 'sage',
+      dataType: 'invoice',
+      fieldMappings: {
+        id: 'id',
+        number: 'invoice_number',
+        contactId: 'contact.id',
+        amount: 'total_amount',
+        amountPaid: 'paid_amount',
+        status: (data: any) => this.mapSageStatusToStandard(data.status),
+        issueDate: 'date',
+        dueDate: 'due_date',
+        currency: 'currency.iso_code',
+        description: (data: any) => `Invoice ${data.invoice_number} from Sage`,
+        providerInvoiceId: 'id',
+      },
+      transformations: {
+        amount: (value: any) => parseFloat(value) || 0,
+        amountPaid: (value: any) => parseFloat(value) || 0,
+        issueDate: (value: any) => new Date(value),
+        dueDate: (value: any) => new Date(value),
+      }
+    });
+
+    // Sage Payment Mapping (Bank Receipts)
+    this.registerMapping({
+      provider: 'sage',
+      dataType: 'payment',
+      fieldMappings: {
+        id: 'id',
+        invoiceId: (data: any) => data.allocated_artefacts?.[0]?.artefact?.id,
+        amount: 'total_amount',
+        date: 'date',
+        method: (data: any) => data.bank_account?.name || 'Bank Transfer',
+        reference: 'reference',
+        providerPaymentId: 'id',
+      },
+      transformations: {
+        amount: (value: any) => parseFloat(value) || 0,
+        date: (value: any) => new Date(value),
+      }
+    });
   }
 }

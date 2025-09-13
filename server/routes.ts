@@ -6899,6 +6899,63 @@ ${tenant.name}
   // Import API middleware
   const { apiMiddleware } = await import("./middleware");
 
+  // Unified accounting status endpoint
+  app.get('/api/accounting/status', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const tenant = await storage.getTenant(user.tenantId);
+      
+      // Check which accounting provider is connected by checking token existence
+      let connectedProvider = null;
+      const accountingProviders = apiMiddleware.getProvidersByType('accounting');
+      
+      for (const provider of accountingProviders) {
+        const isConnected = await apiMiddleware.isProviderConnected(provider.name, user.tenantId);
+        if (isConnected) {
+          let organizationName = 'Connected Organization';
+          
+          // Get organization name from tenant if available
+          if (provider.name === 'xero' && (tenant as any)?.xeroTenantName) {
+            organizationName = (tenant as any).xeroTenantName;
+          } else if (provider.name === 'sage' && (tenant as any)?.sageTenantName) {
+            organizationName = (tenant as any).sageTenantName;
+          } else if (provider.name === 'quickbooks' && (tenant as any)?.quickbooksTenantName) {
+            organizationName = (tenant as any).quickbooksTenantName;
+          }
+          
+          connectedProvider = {
+            name: provider.name,
+            displayName: provider.config.name || provider.name,
+            type: provider.type,
+            organizationName,
+            isConnected: true
+          };
+          break;
+        }
+      }
+
+      res.json({
+        success: true,
+        connectedProvider,
+        availableProviders: accountingProviders.map(p => ({
+          name: p.name,
+          displayName: p.config.name || p.name,
+          type: p.type
+        }))
+      });
+    } catch (error) {
+      console.error("Error getting accounting status:", error);
+      res.status(500).json({ 
+        success: false, 
+        message: "Failed to get accounting status" 
+      });
+    }
+  });
+
   // List available providers
   app.get('/api/providers', isAuthenticated, async (req: any, res) => {
     try {
@@ -6986,22 +7043,61 @@ ${tenant.name}
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
 
-      // For now, redirect to existing Xero auth flow
-      if (providerName === 'xero') {
-        return res.redirect('/api/auth/xero');
+      // Use APIMiddleware to initiate connection
+      const result = await apiMiddleware.connectProvider(providerName, user.tenantId);
+      
+      if (result.success && result.authUrl) {
+        // Return auth URL for frontend to redirect to
+        res.json({
+          success: true,
+          authUrl: result.authUrl
+        });
+      } else {
+        res.status(400).json({
+          success: false,
+          message: result.error || `Failed to initiate ${providerName} connection`
+        });
       }
-
-      // For other providers, return not implemented
-      res.status(501).json({
-        success: false,
-        message: `Provider '${providerName}' connection not implemented yet`
-      });
 
     } catch (error) {
       console.error(`Error initiating ${req.params.provider} connection:`, error);
       res.status(500).json({ 
         success: false, 
         message: "Failed to initiate provider connection" 
+      });
+    }
+  });
+
+  // Provider disconnect endpoint
+  app.post('/api/providers/disconnect/:provider', isAuthenticated, async (req: any, res) => {
+    try {
+      const { provider: providerName } = req.params;
+      const user = await storage.getUser(req.user.claims.sub);
+      
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      // Use APIMiddleware to disconnect provider
+      const result = await apiMiddleware.disconnectProvider(providerName, user.tenantId);
+      
+      if (result.success) {
+        res.json({
+          success: true,
+          message: `${providerName} disconnected successfully`
+        });
+      } else {
+        res.status(400).json({
+          success: false,
+          message: result.error || `Failed to disconnect ${providerName}`
+        });
+      }
+
+    } catch (error) {
+      console.error(`Error disconnecting ${req.params.provider}:`, error);
+      res.status(500).json({ 
+        success: false, 
+        message: "Failed to disconnect provider" 
       });
     }
   });

@@ -676,13 +676,33 @@ export default function Settings() {
     enabled: !!user,
   });
 
-  // Fetch Xero sync settings
+  // Fetch accounting status
+  const { data: accountingStatus, isLoading: accountingStatusLoading } = useQuery<{
+    success: boolean;
+    connectedProvider?: {
+      name: string;
+      displayName: string;
+      type: string;
+      organizationName: string;
+      isConnected: boolean;
+    };
+    availableProviders: Array<{
+      name: string;
+      displayName: string;
+      type: string;
+    }>;
+  }>({
+    queryKey: ['/api/accounting/status'],
+    enabled: !!user && !!isAuthenticated,
+  });
+
+  // Fetch Xero sync settings (only if connected to any provider)
   const { data: syncSettings } = useQuery<{
     autoSync: boolean;
     lastSyncAt?: string;
   }>({
     queryKey: ['/api/xero/sync/settings'],
-    enabled: !!user && !!tenant?.xeroAccessToken,
+    enabled: !!user && !!accountingStatus?.connectedProvider,
   });
 
   // Initialize form values when tenant data loads
@@ -801,16 +821,22 @@ export default function Settings() {
     return <div className="min-h-screen bg-background" />;
   }
 
-  const handleXeroConnect = async () => {
+  // Generic handler for any provider connection
+  const handleProviderConnect = async (providerName: string, displayName: string) => {
     setIsConnecting(true);
     try {
-      const response = await fetch('/api/xero/auth-url');
-      const { authUrl } = await response.json();
-      window.location.href = authUrl;
+      const response = await fetch(`/api/providers/connect/${providerName}`);
+      const data = await response.json();
+      
+      if (response.ok && data.authUrl) {
+        window.location.href = data.authUrl;
+      } else {
+        throw new Error(data.message || `Failed to initiate ${displayName} connection`);
+      }
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to initiate Xero connection.",
+        description: `Failed to initiate ${displayName} connection.`,
         variant: "destructive",
       });
     } finally {
@@ -818,10 +844,11 @@ export default function Settings() {
     }
   };
 
-  const handleXeroDisconnect = async () => {
+  // Generic handler for any provider disconnect
+  const handleProviderDisconnect = async (providerName: string, displayName: string) => {
     setIsDisconnecting(true);
     try {
-      const response = await fetch('/api/xero/disconnect', {
+      const response = await fetch(`/api/providers/disconnect/${providerName}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -829,24 +856,26 @@ export default function Settings() {
       });
       
       if (!response.ok) {
-        throw new Error('Failed to disconnect from Xero');
+        const errorData = await response.json();
+        throw new Error(errorData.message || `Failed to disconnect from ${displayName}`);
       }
       
       const result = await response.json();
       
-      // Invalidate tenant data to refresh the connection status
+      // Invalidate relevant queries to refresh the connection status
       queryClient.invalidateQueries({ queryKey: ['/api/tenant'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/accounting/status'] });
       queryClient.invalidateQueries({ queryKey: ['/api/xero/sync/settings'] });
       
       toast({
         title: "Disconnected",
-        description: result.message,
+        description: result.message || `Successfully disconnected from ${displayName}`,
         variant: "default",
       });
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to disconnect from Xero. Please try again.",
+        description: `Failed to disconnect from ${displayName}. Please try again.`,
         variant: "destructive",
       });
     } finally {
@@ -1076,7 +1105,7 @@ export default function Settings() {
             </TabsContent>
 
             <TabsContent value="integrations" className="space-y-8">
-              {/* Xero Integration */}
+              {/* Accounting Integration */}
               <Card className="card-glass">
                 <CardHeader>
                   <CardTitle className="text-xl font-bold flex items-center justify-between">
@@ -1084,56 +1113,160 @@ export default function Settings() {
                       <div className="p-2 bg-[#17B6C3]/10 rounded-lg mr-3">
                         <BarChart3 className="h-5 w-5 text-[#17B6C3]" />
                       </div>
-                      Xero Integration
+                      Accounting Integration
                     </div>
                     <Badge 
-                      className={tenant?.xeroAccessToken 
+                      className={accountingStatus?.connectedProvider 
                         ? "bg-green-100 text-green-800 border-green-200" 
                         : "bg-red-100 text-red-800 border-red-200"
                       } 
-                      data-testid="badge-xero-status"
+                      data-testid="badge-accounting-status"
                     >
-                      {tenant?.xeroAccessToken ? "Connected" : "Not Connected"}
+                      {accountingStatus?.connectedProvider ? "Connected" : "Not Connected"}
                     </Badge>
                   </CardTitle>
                   <CardDescription className="text-base ml-11">
-                    Connect to Xero to automatically sync invoices and contacts
+                    Connect to your accounting software to automatically sync invoices and contacts
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="flex items-center justify-between p-6 bg-slate-50/80 rounded-xl border border-slate-200/50">
-                    <div>
-                      <p className="font-semibold text-slate-900">Xero Accounting</p>
-                      <p className="text-sm text-slate-600">
-                        Sync invoices, contacts, and payment data
-                      </p>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Button 
-                        onClick={handleXeroConnect}
-                        disabled={isConnecting}
-                        className="bg-[#17B6C3] hover:bg-[#1396A1] text-white"
-                        data-testid="button-connect-xero"
-                      >
-                        {isConnecting ? "Connecting..." : tenant?.xeroAccessToken ? "Reconnect" : "Connect"}
-                      </Button>
-                      {tenant?.xeroAccessToken && (
-                        <Button 
-                          onClick={handleXeroDisconnect}
-                          disabled={isDisconnecting}
-                          variant="outline"
-                          className="border-red-300 text-red-600 hover:bg-red-50"
-                          data-testid="button-disconnect-xero"
-                        >
-                          {isDisconnecting ? "Disconnecting..." : "Disconnect"}
-                        </Button>
-                      )}
-                    </div>
-                  </div>
+                  {/* Provider Selection - Show if no provider connected */}
+                  {!accountingStatus?.connectedProvider && (
+                    <div className="space-y-4">
+                      <h4 className="text-lg font-semibold text-slate-900 mb-4">Choose Your Accounting Software</h4>
+                      <div className="grid gap-4">
+                        {/* Xero Option */}
+                        <div className="flex items-center justify-between p-6 bg-slate-50/80 rounded-xl border border-slate-200/50 hover:border-[#17B6C3]/50 transition-colors">
+                          <div className="flex items-center space-x-4">
+                            <div className="p-3 bg-blue-100 rounded-lg">
+                              <BarChart3 className="h-6 w-6 text-blue-600" />
+                            </div>
+                            <div>
+                              <p className="font-semibold text-slate-900">Xero</p>
+                              <p className="text-sm text-slate-600">
+                                Cloud-based accounting software
+                              </p>
+                            </div>
+                          </div>
+                          <Button 
+                            onClick={() => handleProviderConnect('xero', 'Xero')}
+                            disabled={isConnecting}
+                            className="bg-[#17B6C3] hover:bg-[#1396A1] text-white"
+                            data-testid="button-connect-xero"
+                          >
+                            {isConnecting ? "Connecting..." : "Connect"}
+                          </Button>
+                        </div>
 
-                  {/* Sync Settings - Only show if Xero is connected */}
-                  {tenant?.xeroAccessToken && (
-                    <div className="mt-6 space-y-6">
+                        {/* Sage Option */}
+                        <div className="flex items-center justify-between p-6 bg-slate-50/80 rounded-xl border border-slate-200/50 hover:border-[#17B6C3]/50 transition-colors">
+                          <div className="flex items-center space-x-4">
+                            <div className="p-3 bg-green-100 rounded-lg">
+                              <Building2 className="h-6 w-6 text-green-600" />
+                            </div>
+                            <div>
+                              <p className="font-semibold text-slate-900">Sage Business Cloud</p>
+                              <p className="text-sm text-slate-600">
+                                UK-focused accounting software
+                              </p>
+                            </div>
+                          </div>
+                          <Button 
+                            onClick={() => handleProviderConnect('sage', 'Sage Business Cloud')}
+                            disabled={isConnecting}
+                            className="bg-[#17B6C3] hover:bg-[#1396A1] text-white"
+                            data-testid="button-connect-sage"
+                          >
+                            {isConnecting ? "Connecting..." : "Connect"}
+                          </Button>
+                        </div>
+
+                        {/* QuickBooks Option */}
+                        <div className="flex items-center justify-between p-6 bg-slate-50/80 rounded-xl border border-slate-200/50 hover:border-[#17B6C3]/50 transition-colors">
+                          <div className="flex items-center space-x-4">
+                            <div className="p-3 bg-orange-100 rounded-lg">
+                              <Database className="h-6 w-6 text-orange-600" />
+                            </div>
+                            <div>
+                              <p className="font-semibold text-slate-900">QuickBooks Online</p>
+                              <p className="text-sm text-slate-600">
+                                Popular global accounting platform
+                              </p>
+                            </div>
+                          </div>
+                          <Button 
+                            onClick={() => handleProviderConnect('quickbooks', 'QuickBooks Online')}
+                            disabled={isConnecting}
+                            className="bg-[#17B6C3] hover:bg-[#1396A1] text-white"
+                            data-testid="button-connect-quickbooks"
+                          >
+                            {isConnecting ? "Connecting..." : "Connect"}
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Connected Provider Display - Show if provider connected */}
+                  {accountingStatus?.connectedProvider && (
+                    <div className="space-y-6">
+                      <div className="flex items-center justify-between p-6 bg-slate-50/80 rounded-xl border border-slate-200/50">
+                        <div className="flex items-center space-x-4">
+                          <div className={`p-3 rounded-lg ${
+                            accountingStatus.connectedProvider.name === 'xero' ? 'bg-blue-100' :
+                            accountingStatus.connectedProvider.name === 'sage' ? 'bg-green-100' :
+                            'bg-orange-100'
+                          }`}>
+                            {accountingStatus.connectedProvider.name === 'xero' && <BarChart3 className="h-6 w-6 text-blue-600" />}
+                            {accountingStatus.connectedProvider.name === 'sage' && <Building2 className="h-6 w-6 text-green-600" />}
+                            {accountingStatus.connectedProvider.name === 'quickbooks' && <Database className="h-6 w-6 text-orange-600" />}
+                          </div>
+                          <div>
+                            <p className="font-semibold text-slate-900">
+                              Connected to {accountingStatus.connectedProvider.displayName}
+                            </p>
+                            <p className="text-sm text-slate-600">
+                              Syncing invoices, contacts, and payment data
+                            </p>
+                            <p className="text-sm text-slate-700 font-medium mt-1">
+                              Organization: {accountingStatus.connectedProvider.organizationName}
+                            </p>
+                            {syncSettings?.lastSyncAt && (
+                              <p className="text-xs text-slate-500 mt-1">
+                                Last sync: {new Date(syncSettings.lastSyncAt).toLocaleString()}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Button 
+                            onClick={() => handleProviderConnect(
+                              accountingStatus?.connectedProvider?.name || '', 
+                              accountingStatus?.connectedProvider?.displayName || ''
+                            )}
+                            disabled={isConnecting}
+                            variant="outline"
+                            className="border-[#17B6C3] text-[#17B6C3] hover:bg-[#17B6C3]/10"
+                            data-testid="button-reconnect-provider"
+                          >
+                            {isConnecting ? "Connecting..." : "Reconnect"}
+                          </Button>
+                          <Button 
+                            onClick={() => handleProviderDisconnect(
+                              accountingStatus?.connectedProvider?.name || '', 
+                              accountingStatus?.connectedProvider?.displayName || ''
+                            )}
+                            disabled={isDisconnecting}
+                            variant="outline"
+                            className="border-red-300 text-red-600 hover:bg-red-50"
+                            data-testid="button-disconnect-provider"
+                          >
+                            {isDisconnecting ? "Disconnecting..." : "Disconnect"}
+                          </Button>
+                        </div>
+                      </div>
+
+                      {/* Sync Settings */}
                       <Separator />
                       <div>
                         <h4 className="text-lg font-semibold text-slate-900 mb-4">Sync Settings</h4>
@@ -1142,7 +1275,7 @@ export default function Settings() {
                             <div className="space-y-0.5">
                               <Label htmlFor="auto-sync" className="text-base">Auto Sync</Label>
                               <p className="text-sm text-slate-600">
-                                Automatically sync invoices from Xero at regular intervals
+                                Automatically sync invoices at regular intervals
                               </p>
                             </div>
                             <Switch
@@ -1152,7 +1285,6 @@ export default function Settings() {
                               data-testid="switch-auto-sync"
                             />
                           </div>
-
 
                           {syncSettings?.lastSyncAt && (
                             <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">

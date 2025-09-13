@@ -181,6 +181,34 @@ export class APIMiddleware {
   }
 
   /**
+   * Disconnect a provider
+   */
+  async disconnectProvider(providerName: string, tenantId?: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      const provider = this.getProvider(providerName);
+      if (!provider) {
+        return { success: false, error: `Provider ${providerName} not found` };
+      }
+
+      // Clear cached tokens
+      await this.authManager.clearTokens(providerName, tenantId);
+      
+      // Call provider's disconnect method if it exists
+      if (typeof (provider as any).disconnect === 'function') {
+        await (provider as any).disconnect();
+      }
+
+      return { success: true };
+    } catch (error) {
+      console.error(`Failed to disconnect ${providerName}:`, error);
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Disconnect failed' 
+      };
+    }
+  }
+
+  /**
    * Sync data from a provider
    */
   async syncData(

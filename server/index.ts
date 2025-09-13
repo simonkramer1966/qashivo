@@ -47,6 +47,8 @@ app.use((req, res, next) => {
       
       // Import all provider classes
       const { XeroProvider } = await import("./middleware/providers/XeroProvider");
+      const { SageProvider } = await import("./middleware/providers/SageProvider");
+      const { QuickBooksProvider } = await import("./middleware/providers/QuickBooksProvider");
       const { SendGridProvider } = await import("./middleware/providers/SendGridProvider");
       const { TwilioProvider } = await import("./middleware/providers/TwilioProvider");
       const { RetellProvider } = await import("./middleware/providers/RetellProvider");
@@ -69,6 +71,44 @@ app.use((req, res, next) => {
         console.log("✅ Xero provider registered successfully");
       } else {
         console.log("⚠️  Xero provider not configured (missing XERO_CLIENT_ID or XERO_CLIENT_SECRET)");
+      }
+
+      // Configure and register Sage provider
+      if (process.env.SAGE_CLIENT_ID && process.env.SAGE_CLIENT_SECRET) {
+        const sageProvider = new SageProvider({
+          name: 'sage',
+          type: 'accounting',
+          clientId: process.env.SAGE_CLIENT_ID,
+          clientSecret: process.env.SAGE_CLIENT_SECRET,
+          baseUrl: 'https://api.accounting.sage.com/v3.1',
+          scopes: ['full_access'],
+          redirectUri: `${process.env.BASE_URL || 'http://localhost:5000'}/api/auth/sage/callback`,
+          environment: process.env.NODE_ENV === 'production' ? 'production' : 'sandbox'
+        });
+        
+        await apiMiddleware.registerProvider(sageProvider);
+        console.log("✅ Sage provider registered successfully");
+      } else {
+        console.log("⚠️  Sage provider not configured (missing SAGE_CLIENT_ID or SAGE_CLIENT_SECRET)");
+      }
+
+      // Configure and register QuickBooks provider
+      if (process.env.QB_CLIENT_ID && process.env.QB_CLIENT_SECRET) {
+        const quickBooksProvider = new QuickBooksProvider({
+          name: 'quickbooks',
+          type: 'accounting',
+          clientId: process.env.QB_CLIENT_ID,
+          clientSecret: process.env.QB_CLIENT_SECRET,
+          baseUrl: process.env.NODE_ENV === 'production' ? 'https://quickbooks.api.intuit.com' : 'https://sandbox-quickbooks.api.intuit.com',
+          scopes: ['com.intuit.quickbooks.accounting'],
+          redirectUri: `${process.env.BASE_URL || 'http://localhost:5000'}/api/auth/quickbooks/callback`,
+          environment: process.env.NODE_ENV === 'production' ? 'production' : 'sandbox'
+        });
+        
+        await apiMiddleware.registerProvider(quickBooksProvider);
+        console.log("✅ QuickBooks provider registered successfully");
+      } else {
+        console.log("⚠️  QuickBooks provider not configured (missing QB_CLIENT_ID or QB_CLIENT_SECRET)");
       }
 
       // Configure and register SendGrid provider
