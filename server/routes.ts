@@ -1,4 +1,5 @@
 import type { Express } from "express";
+import express from "express";
 import { createServer, type Server } from "http";
 import crypto from "crypto";
 import { storage } from "./storage";
@@ -34,6 +35,8 @@ import { generateMockData } from "./mock-data";
 import { retellService } from "./retell-service";
 import { createRetellClient } from "./mcp/client";
 import Stripe from "stripe";
+import { registerSyncRoutes } from "./routes/syncRoutes";
+import { webhookHandler } from "./services/webhookHandler";
 
 // Initialize Stripe
 if (!process.env.STRIPE_SECRET_KEY) {
@@ -7201,6 +7204,122 @@ ${tenant.name}
   });
 
   // ==================== END PROVIDER MIDDLEWARE ROUTES ====================
+
+  // ==================== SYNC ROUTES ====================
+  registerSyncRoutes(app);
+  // ==================== END SYNC ROUTES ====================
+
+  // ==================== WEBHOOK ROUTES ====================
+  // Critical: These routes MUST use raw body middleware for proper HMAC verification
+  
+  /**
+   * Xero Webhook Endpoint
+   * POST /api/webhooks/xero
+   */
+  app.post('/api/webhooks/xero', 
+    express.raw({ type: 'application/json', verify: (req: any, res, buf) => {
+      req.rawBody = buf; // Store raw body for signature verification
+    }}), 
+    async (req: any, res) => {
+      try {
+        const signature = req.headers['x-xero-signature'];
+        if (!signature) {
+          console.error('❌ Missing X-Xero-Signature header');
+          return res.status(401).json({ error: 'Missing signature header' });
+        }
+
+        console.log('🔗 Received Xero webhook');
+
+        // Process webhook with security verification
+        const result = await webhookHandler.processWebhook('xero', req.body, signature, req);
+        
+        if (result.success) {
+          console.log('✅ Xero webhook processed successfully');
+          res.status(200).json({ message: 'Webhook processed successfully' });
+        } else {
+          console.error('❌ Xero webhook processing failed:', result.error);
+          res.status(400).json({ error: result.error });
+        }
+
+      } catch (error) {
+        console.error('❌ Xero webhook error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+      }
+    }
+  );
+
+  /**
+   * Sage Webhook Endpoint  
+   * POST /api/webhooks/sage
+   */
+  app.post('/api/webhooks/sage',
+    express.raw({ type: 'application/json', verify: (req: any, res, buf) => {
+      req.rawBody = buf; // Store raw body for signature verification
+    }}),
+    async (req: any, res) => {
+      try {
+        const signature = req.headers['x-sage-signature'] || req.headers['x-hub-signature-256'];
+        if (!signature) {
+          console.error('❌ Missing Sage signature header');
+          return res.status(401).json({ error: 'Missing signature header' });
+        }
+
+        console.log('🔗 Received Sage webhook');
+
+        // Process webhook with security verification
+        const result = await webhookHandler.processWebhook('sage', req.body, signature, req);
+        
+        if (result.success) {
+          console.log('✅ Sage webhook processed successfully');
+          res.status(200).json({ message: 'Webhook processed successfully' });
+        } else {
+          console.error('❌ Sage webhook processing failed:', result.error);
+          res.status(400).json({ error: result.error });
+        }
+
+      } catch (error) {
+        console.error('❌ Sage webhook error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+      }
+    }
+  );
+
+  /**
+   * QuickBooks Webhook Endpoint
+   * POST /api/webhooks/quickbooks
+   */
+  app.post('/api/webhooks/quickbooks',
+    express.raw({ type: 'application/json', verify: (req: any, res, buf) => {
+      req.rawBody = buf; // Store raw body for signature verification
+    }}),
+    async (req: any, res) => {
+      try {
+        const signature = req.headers['intuit-signature'];
+        if (!signature) {
+          console.error('❌ Missing Intuit-Signature header');
+          return res.status(401).json({ error: 'Missing signature header' });
+        }
+
+        console.log('🔗 Received QuickBooks webhook');
+
+        // Process webhook with security verification  
+        const result = await webhookHandler.processWebhook('quickbooks', req.body, signature, req);
+        
+        if (result.success) {
+          console.log('✅ QuickBooks webhook processed successfully');
+          res.status(200).json({ message: 'Webhook processed successfully' });
+        } else {
+          console.error('❌ QuickBooks webhook processing failed:', result.error);
+          res.status(400).json({ error: result.error });
+        }
+
+      } catch (error) {
+        console.error('❌ QuickBooks webhook error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+      }
+    }
+  );
+  // ==================== END WEBHOOK ROUTES ====================
 
   const httpServer = createServer(app);
   return httpServer;
