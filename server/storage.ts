@@ -24,6 +24,13 @@ import {
   templatePerformance,
   invoiceHealthScores,
   healthAnalyticsSnapshots,
+  bills,
+  billPayments,
+  bankAccounts,
+  bankTransactions,
+  budgets,
+  budgetLines,
+  exchangeRates,
   type User,
   type UpsertUser,
   type Tenant,
@@ -74,6 +81,20 @@ import {
   type InsertInvoiceHealthScore,
   type HealthAnalyticsSnapshot,
   type InsertHealthAnalyticsSnapshot,
+  type Bill,
+  type InsertBill,
+  type BillPayment,
+  type InsertBillPayment,
+  type BankAccount,
+  type InsertBankAccount,
+  type BankTransaction,
+  type InsertBankTransaction,
+  type Budget,
+  type InsertBudget,
+  type BudgetLine,
+  type InsertBudgetLine,
+  type ExchangeRate,
+  type InsertExchangeRate,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, sql, count, ne, isNotNull, gte, lte } from "drizzle-orm";
@@ -226,6 +247,47 @@ export interface IStorage {
   // Cleanup operations
   clearAllContacts(tenantId: string): Promise<void>;
   clearAllInvoices(tenantId: string): Promise<void>;
+  
+  // Accounting Data operations - Bills (ACCPAY)
+  getBills(tenantId: string, limit?: number): Promise<(Bill & { vendor: Contact })[]>;
+  getBill(id: string, tenantId: string): Promise<(Bill & { vendor: Contact }) | undefined>;
+  createBill(bill: InsertBill): Promise<Bill>;
+  updateBill(id: string, tenantId: string, updates: Partial<InsertBill>): Promise<Bill>;
+  deleteBill(id: string, tenantId: string): Promise<void>;
+  getBillsByVendor(vendorId: string, tenantId: string): Promise<Bill[]>;
+  
+  // Bank Account operations
+  getBankAccounts(tenantId: string): Promise<BankAccount[]>;
+  getBankAccount(id: string, tenantId: string): Promise<BankAccount | undefined>;
+  createBankAccount(account: InsertBankAccount): Promise<BankAccount>;
+  updateBankAccount(id: string, tenantId: string, updates: Partial<InsertBankAccount>): Promise<BankAccount>;
+  deleteBankAccount(id: string, tenantId: string): Promise<void>;
+  
+  // Bank Transaction operations
+  getBankTransactions(tenantId: string, filters?: { bankAccountId?: string; startDate?: string; endDate?: string; limit?: number }): Promise<(BankTransaction & { bankAccount: BankAccount; contact?: Contact; invoice?: Invoice; bill?: Bill })[]>;
+  getBankTransaction(id: string, tenantId: string): Promise<(BankTransaction & { bankAccount: BankAccount; contact?: Contact; invoice?: Invoice; bill?: Bill }) | undefined>;
+  createBankTransaction(transaction: InsertBankTransaction): Promise<BankTransaction>;
+  updateBankTransaction(id: string, tenantId: string, updates: Partial<InsertBankTransaction>): Promise<BankTransaction>;
+  deleteBankTransaction(id: string, tenantId: string): Promise<void>;
+  
+  // Budget operations
+  getBudgets(tenantId: string, filters?: { year?: number; status?: string }): Promise<(Budget & { budgetLines: BudgetLine[]; createdByUser?: User; approvedByUser?: User })[]>;
+  getBudget(id: string, tenantId: string): Promise<(Budget & { budgetLines: BudgetLine[]; createdByUser?: User; approvedByUser?: User }) | undefined>;
+  createBudget(budget: InsertBudget): Promise<Budget>;
+  updateBudget(id: string, tenantId: string, updates: Partial<InsertBudget>): Promise<Budget>;
+  deleteBudget(id: string, tenantId: string): Promise<void>;
+  
+  // Budget Line operations
+  getBudgetLines(budgetId: string): Promise<BudgetLine[]>;
+  createBudgetLine(budgetLine: InsertBudgetLine): Promise<BudgetLine>;
+  updateBudgetLine(id: string, updates: Partial<InsertBudgetLine>): Promise<BudgetLine>;
+  deleteBudgetLine(id: string): Promise<void>;
+  
+  // Exchange Rate operations
+  getExchangeRates(baseCurrency?: string, targetCurrency?: string, date?: string): Promise<ExchangeRate[]>;
+  getLatestExchangeRates(baseCurrency: string): Promise<ExchangeRate[]>;
+  createExchangeRate(exchangeRate: InsertExchangeRate): Promise<ExchangeRate>;
+  updateExchangeRate(id: string, updates: Partial<InsertExchangeRate>): Promise<ExchangeRate>;
   
   // Health scoring operations
   getInvoicesByContact(contactId: string, tenantId: string): Promise<Invoice[]>;
@@ -1948,6 +2010,332 @@ export class DatabaseStorage implements IStorage {
       .returning();
     
     return result[0];
+  }
+
+  // Bills (ACCPAY) operations
+  async getBills(tenantId: string, limit = 1000): Promise<(Bill & { vendor: Contact })[]> {
+    const query = db
+      .select({
+        ...bills,
+        vendor: contacts,
+      })
+      .from(bills)
+      .leftJoin(contacts, eq(bills.vendorId, contacts.id))
+      .where(eq(bills.tenantId, tenantId))
+      .orderBy(desc(bills.issueDate))
+      .limit(limit);
+
+    return await query;
+  }
+
+  async getBill(id: string, tenantId: string): Promise<(Bill & { vendor: Contact }) | undefined> {
+    const [result] = await db
+      .select({
+        ...bills,
+        vendor: contacts,
+      })
+      .from(bills)
+      .leftJoin(contacts, eq(bills.vendorId, contacts.id))
+      .where(and(eq(bills.id, id), eq(bills.tenantId, tenantId)));
+
+    return result;
+  }
+
+  async createBill(billData: InsertBill): Promise<Bill> {
+    const [bill] = await db.insert(bills).values(billData).returning();
+    return bill;
+  }
+
+  async updateBill(id: string, tenantId: string, updates: Partial<InsertBill>): Promise<Bill> {
+    const [bill] = await db
+      .update(bills)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(and(eq(bills.id, id), eq(bills.tenantId, tenantId)))
+      .returning();
+    return bill;
+  }
+
+  async deleteBill(id: string, tenantId: string): Promise<void> {
+    await db
+      .delete(bills)
+      .where(and(eq(bills.id, id), eq(bills.tenantId, tenantId)));
+  }
+
+  async getBillsByVendor(vendorId: string, tenantId: string): Promise<Bill[]> {
+    return await db
+      .select()
+      .from(bills)
+      .where(and(eq(bills.vendorId, vendorId), eq(bills.tenantId, tenantId)))
+      .orderBy(desc(bills.issueDate));
+  }
+
+  // Bank Account operations
+  async getBankAccounts(tenantId: string): Promise<BankAccount[]> {
+    return await db
+      .select()
+      .from(bankAccounts)
+      .where(eq(bankAccounts.tenantId, tenantId))
+      .orderBy(bankAccounts.accountName);
+  }
+
+  async getBankAccount(id: string, tenantId: string): Promise<BankAccount | undefined> {
+    const [account] = await db
+      .select()
+      .from(bankAccounts)
+      .where(and(eq(bankAccounts.id, id), eq(bankAccounts.tenantId, tenantId)));
+    return account;
+  }
+
+  async createBankAccount(accountData: InsertBankAccount): Promise<BankAccount> {
+    const [account] = await db.insert(bankAccounts).values(accountData).returning();
+    return account;
+  }
+
+  async updateBankAccount(id: string, tenantId: string, updates: Partial<InsertBankAccount>): Promise<BankAccount> {
+    const [account] = await db
+      .update(bankAccounts)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(and(eq(bankAccounts.id, id), eq(bankAccounts.tenantId, tenantId)))
+      .returning();
+    return account;
+  }
+
+  async deleteBankAccount(id: string, tenantId: string): Promise<void> {
+    await db
+      .delete(bankAccounts)
+      .where(and(eq(bankAccounts.id, id), eq(bankAccounts.tenantId, tenantId)));
+  }
+
+  // Bank Transaction operations
+  async getBankTransactions(
+    tenantId: string, 
+    filters?: { bankAccountId?: string; startDate?: string; endDate?: string; limit?: number }
+  ): Promise<(BankTransaction & { bankAccount: BankAccount; contact?: Contact; invoice?: Invoice; bill?: Bill })[]> {
+    let query = db
+      .select({
+        ...bankTransactions,
+        bankAccount: bankAccounts,
+        contact: contacts,
+        invoice: invoices,
+        bill: bills,
+      })
+      .from(bankTransactions)
+      .leftJoin(bankAccounts, eq(bankTransactions.bankAccountId, bankAccounts.id))
+      .leftJoin(contacts, eq(bankTransactions.contactId, contacts.id))
+      .leftJoin(invoices, eq(bankTransactions.invoiceId, invoices.id))
+      .leftJoin(bills, eq(bankTransactions.billId, bills.id))
+      .where(eq(bankTransactions.tenantId, tenantId))
+      .orderBy(desc(bankTransactions.transactionDate));
+
+    if (filters?.bankAccountId) {
+      query = query.where(and(eq(bankTransactions.tenantId, tenantId), eq(bankTransactions.bankAccountId, filters.bankAccountId)));
+    }
+
+    if (filters?.startDate) {
+      query = query.where(and(eq(bankTransactions.tenantId, tenantId), gte(bankTransactions.transactionDate, new Date(filters.startDate))));
+    }
+
+    if (filters?.endDate) {
+      query = query.where(and(eq(bankTransactions.tenantId, tenantId), lte(bankTransactions.transactionDate, new Date(filters.endDate))));
+    }
+
+    if (filters?.limit) {
+      query = query.limit(filters.limit);
+    } else {
+      query = query.limit(1000);
+    }
+
+    return await query;
+  }
+
+  async getBankTransaction(id: string, tenantId: string): Promise<(BankTransaction & { bankAccount: BankAccount; contact?: Contact; invoice?: Invoice; bill?: Bill }) | undefined> {
+    const [result] = await db
+      .select({
+        ...bankTransactions,
+        bankAccount: bankAccounts,
+        contact: contacts,
+        invoice: invoices,
+        bill: bills,
+      })
+      .from(bankTransactions)
+      .leftJoin(bankAccounts, eq(bankTransactions.bankAccountId, bankAccounts.id))
+      .leftJoin(contacts, eq(bankTransactions.contactId, contacts.id))
+      .leftJoin(invoices, eq(bankTransactions.invoiceId, invoices.id))
+      .leftJoin(bills, eq(bankTransactions.billId, bills.id))
+      .where(and(eq(bankTransactions.id, id), eq(bankTransactions.tenantId, tenantId)));
+
+    return result;
+  }
+
+  async createBankTransaction(transactionData: InsertBankTransaction): Promise<BankTransaction> {
+    const [transaction] = await db.insert(bankTransactions).values(transactionData).returning();
+    return transaction;
+  }
+
+  async updateBankTransaction(id: string, tenantId: string, updates: Partial<InsertBankTransaction>): Promise<BankTransaction> {
+    const [transaction] = await db
+      .update(bankTransactions)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(and(eq(bankTransactions.id, id), eq(bankTransactions.tenantId, tenantId)))
+      .returning();
+    return transaction;
+  }
+
+  async deleteBankTransaction(id: string, tenantId: string): Promise<void> {
+    await db
+      .delete(bankTransactions)
+      .where(and(eq(bankTransactions.id, id), eq(bankTransactions.tenantId, tenantId)));
+  }
+
+  // Budget operations
+  async getBudgets(tenantId: string, filters?: { year?: number; status?: string }): Promise<(Budget & { budgetLines: BudgetLine[]; createdByUser?: User; approvedByUser?: User })[]> {
+    let query = db
+      .select({
+        ...budgets,
+        createdByUser: users,
+        approvedByUser: users,
+      })
+      .from(budgets)
+      .leftJoin(users, eq(budgets.createdBy, users.id))
+      .where(eq(budgets.tenantId, tenantId))
+      .orderBy(desc(budgets.year), desc(budgets.createdAt));
+
+    if (filters?.year) {
+      query = query.where(and(eq(budgets.tenantId, tenantId), eq(budgets.year, filters.year)));
+    }
+
+    if (filters?.status) {
+      query = query.where(and(eq(budgets.tenantId, tenantId), eq(budgets.status, filters.status)));
+    }
+
+    const budgetResults = await query;
+    
+    // Get budget lines for each budget
+    const budgetsWithLines = await Promise.all(
+      budgetResults.map(async (budget) => {
+        const budgetLines = await this.getBudgetLines(budget.id);
+        return { ...budget, budgetLines };
+      })
+    );
+
+    return budgetsWithLines;
+  }
+
+  async getBudget(id: string, tenantId: string): Promise<(Budget & { budgetLines: BudgetLine[]; createdByUser?: User; approvedByUser?: User }) | undefined> {
+    const [budget] = await db
+      .select({
+        ...budgets,
+        createdByUser: users,
+        approvedByUser: users,
+      })
+      .from(budgets)
+      .leftJoin(users, eq(budgets.createdBy, users.id))
+      .where(and(eq(budgets.id, id), eq(budgets.tenantId, tenantId)));
+
+    if (!budget) return undefined;
+
+    const budgetLines = await this.getBudgetLines(id);
+    return { ...budget, budgetLines };
+  }
+
+  async createBudget(budgetData: InsertBudget): Promise<Budget> {
+    const [budget] = await db.insert(budgets).values(budgetData).returning();
+    return budget;
+  }
+
+  async updateBudget(id: string, tenantId: string, updates: Partial<InsertBudget>): Promise<Budget> {
+    const [budget] = await db
+      .update(budgets)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(and(eq(budgets.id, id), eq(budgets.tenantId, tenantId)))
+      .returning();
+    return budget;
+  }
+
+  async deleteBudget(id: string, tenantId: string): Promise<void> {
+    // Delete budget lines first
+    await db
+      .delete(budgetLines)
+      .where(eq(budgetLines.budgetId, id));
+    
+    // Delete budget
+    await db
+      .delete(budgets)
+      .where(and(eq(budgets.id, id), eq(budgets.tenantId, tenantId)));
+  }
+
+  // Budget Line operations
+  async getBudgetLines(budgetId: string): Promise<BudgetLine[]> {
+    return await db
+      .select()
+      .from(budgetLines)
+      .where(eq(budgetLines.budgetId, budgetId))
+      .orderBy(budgetLines.category, budgetLines.subcategory);
+  }
+
+  async createBudgetLine(budgetLineData: InsertBudgetLine): Promise<BudgetLine> {
+    const [budgetLine] = await db.insert(budgetLines).values(budgetLineData).returning();
+    return budgetLine;
+  }
+
+  async updateBudgetLine(id: string, updates: Partial<InsertBudgetLine>): Promise<BudgetLine> {
+    const [budgetLine] = await db
+      .update(budgetLines)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(budgetLines.id, id))
+      .returning();
+    return budgetLine;
+  }
+
+  async deleteBudgetLine(id: string): Promise<void> {
+    await db
+      .delete(budgetLines)
+      .where(eq(budgetLines.id, id));
+  }
+
+  // Exchange Rate operations
+  async getExchangeRates(baseCurrency?: string, targetCurrency?: string, date?: string): Promise<ExchangeRate[]> {
+    let query = db.select().from(exchangeRates);
+
+    const conditions = [];
+    if (baseCurrency) {
+      conditions.push(eq(exchangeRates.baseCurrency, baseCurrency));
+    }
+    if (targetCurrency) {
+      conditions.push(eq(exchangeRates.targetCurrency, targetCurrency));
+    }
+    if (date) {
+      conditions.push(eq(exchangeRates.rateDate, new Date(date)));
+    }
+
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions));
+    }
+
+    return await query.orderBy(desc(exchangeRates.rateDate), exchangeRates.baseCurrency, exchangeRates.targetCurrency);
+  }
+
+  async getLatestExchangeRates(baseCurrency: string): Promise<ExchangeRate[]> {
+    return await db
+      .select()
+      .from(exchangeRates)
+      .where(eq(exchangeRates.baseCurrency, baseCurrency))
+      .orderBy(desc(exchangeRates.rateDate), exchangeRates.targetCurrency)
+      .limit(50);
+  }
+
+  async createExchangeRate(exchangeRateData: InsertExchangeRate): Promise<ExchangeRate> {
+    const [exchangeRate] = await db.insert(exchangeRates).values(exchangeRateData).returning();
+    return exchangeRate;
+  }
+
+  async updateExchangeRate(id: string, updates: Partial<InsertExchangeRate>): Promise<ExchangeRate> {
+    const [exchangeRate] = await db
+      .update(exchangeRates)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(exchangeRates.id, id))
+      .returning();
+    return exchangeRate;
   }
 }
 
