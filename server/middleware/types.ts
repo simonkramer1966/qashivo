@@ -199,10 +199,140 @@ export interface StandardAIResponse {
   metadata?: Record<string, any>;
 }
 
+export interface StandardVendor {
+  id: string;
+  name: string;
+  email?: string;
+  phone?: string;
+  company?: string;
+  address?: string;
+  taxNumber?: string;
+  accountNumber?: string;
+  paymentTerms?: number;
+  creditLimit?: number;
+  isActive: boolean;
+  provider: string;
+  providerVendorId: string;
+  metadata?: Record<string, any>;
+}
+
+export interface StandardBill {
+  id: string;
+  number: string;
+  vendorId: string;
+  amount: number;
+  amountPaid: number;
+  taxAmount?: number;
+  status: 'pending' | 'paid' | 'overdue' | 'cancelled';
+  issueDate: Date;
+  dueDate: Date;
+  paidDate?: Date;
+  currency: string;
+  description?: string;
+  reference?: string;
+  provider: string;
+  providerBillId: string;
+  metadata?: Record<string, any>;
+}
+
+export interface StandardBillPayment {
+  id: string;
+  billId: string;
+  bankAccountId?: string;
+  amount: number;
+  paymentDate: Date;
+  paymentMethod: string;
+  reference?: string;
+  currency: string;
+  exchangeRate?: number;
+  provider: string;
+  providerPaymentId: string;
+  metadata?: Record<string, any>;
+}
+
+export interface StandardBankAccount {
+  id: string;
+  name: string;
+  accountNumber?: string;
+  accountType: string;
+  currency: string;
+  currentBalance: number;
+  isActive: boolean;
+  bankName?: string;
+  description?: string;
+  provider: string;
+  providerAccountId: string;
+  metadata?: Record<string, any>;
+}
+
+export interface StandardBankTransaction {
+  id: string;
+  bankAccountId: string;
+  transactionDate: Date;
+  amount: number;
+  type: 'debit' | 'credit';
+  description?: string;
+  reference?: string;
+  category?: string;
+  contactId?: string;
+  invoiceId?: string;
+  billId?: string;
+  isReconciled: boolean;
+  reconciledAt?: Date;
+  provider: string;
+  providerTransactionId: string;
+  metadata?: Record<string, any>;
+}
+
+export interface StandardBudget {
+  id: string;
+  name: string;
+  description?: string;
+  budgetType: string;
+  startDate: Date;
+  endDate: Date;
+  currency: string;
+  status: string;
+  totalBudgetAmount: number;
+  totalActualAmount: number;
+  isActive: boolean;
+  provider: string;
+  providerBudgetId: string;
+  metadata?: Record<string, any>;
+}
+
+export interface StandardBudgetLine {
+  id: string;
+  budgetId: string;
+  category: string;
+  subcategory?: string;
+  description?: string;
+  budgetedAmount: number;
+  actualAmount: number;
+  variance: number;
+  variancePercentage: number;
+  period?: string;
+  isActive: boolean;
+  provider: string;
+  providerBudgetLineId: string;
+  metadata?: Record<string, any>;
+}
+
+export interface StandardExchangeRate {
+  id: string;
+  fromCurrency: string;
+  toCurrency: string;
+  rate: number;
+  rateDate: Date;
+  provider: string;
+  providerRateId?: string;
+  metadata?: Record<string, any>;
+}
+
 // Data transformation mappings
 export interface DataMapping {
   provider: string;
-  dataType: 'contact' | 'invoice' | 'payment' | 'email' | 'sms' | 'voice_call' | 'ai_response';
+  dataType: 'contact' | 'invoice' | 'payment' | 'vendor' | 'bill' | 'bill_payment' | 'bank_account' | 'bank_transaction' | 'budget' | 'budget_line' | 'exchange_rate' | 'email' | 'sms' | 'voice_call' | 'ai_response';
   fieldMappings: Record<string, string | ((data: any) => any)>;
   transformations?: Record<string, (value: any) => any>;
 }
