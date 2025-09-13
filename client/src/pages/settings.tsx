@@ -829,15 +829,24 @@ export default function Settings() {
       const response = await fetch(`/api/providers/connect/${providerName}`);
       const data = await response.json();
       
-      if (response.ok && data.authUrl) {
+      if (response.ok && data.success && data.authUrl) {
         window.location.href = data.authUrl;
       } else {
-        throw new Error(data.message || `Failed to initiate ${displayName} connection`);
+        const errorMessage = data.message || `Failed to initiate ${displayName} connection`;
+        const isConfigError = errorMessage.toLowerCase().includes('not configured') || response.status === 400;
+        
+        toast({
+          title: isConfigError ? "Configuration Required" : "Connection Error",
+          description: isConfigError 
+            ? `${displayName} API credentials need to be configured. Please contact support to enable this integration.`
+            : errorMessage,
+          variant: "destructive",
+        });
       }
     } catch (error) {
       toast({
-        title: "Error",
-        description: `Failed to initiate ${displayName} connection.`,
+        title: "Connection Error",
+        description: `Failed to connect to ${displayName}. Please try again.`,
         variant: "destructive",
       });
     } finally {
@@ -1152,7 +1161,7 @@ export default function Settings() {
                           <Button 
                             onClick={() => handleProviderConnect('xero', 'Xero')}
                             disabled={isConnecting}
-                            className="bg-[#17B6C3] hover:bg-[#1396A1] text-white"
+                            className="bg-[#17B6C3] hover:bg-[#1396A1] text-white min-w-[100px]"
                             data-testid="button-connect-xero"
                           >
                             {isConnecting ? "Connecting..." : "Connect"}
@@ -1175,7 +1184,7 @@ export default function Settings() {
                           <Button 
                             onClick={() => handleProviderConnect('sage', 'Sage Business Cloud')}
                             disabled={isConnecting}
-                            className="bg-[#17B6C3] hover:bg-[#1396A1] text-white"
+                            className="bg-[#17B6C3] hover:bg-[#1396A1] text-white min-w-[100px]"
                             data-testid="button-connect-sage"
                           >
                             {isConnecting ? "Connecting..." : "Connect"}
@@ -1198,7 +1207,7 @@ export default function Settings() {
                           <Button 
                             onClick={() => handleProviderConnect('quickbooks', 'QuickBooks Online')}
                             disabled={isConnecting}
-                            className="bg-[#17B6C3] hover:bg-[#1396A1] text-white"
+                            className="bg-[#17B6C3] hover:bg-[#1396A1] text-white min-w-[100px]"
                             data-testid="button-connect-quickbooks"
                           >
                             {isConnecting ? "Connecting..." : "Connect"}
