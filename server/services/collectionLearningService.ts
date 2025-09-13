@@ -1,4 +1,4 @@
-import { db } from '@shared/storage';
+import { db } from '../db';
 import { eq, and, desc, sql, count, avg } from 'drizzle-orm';
 import {
   customerLearningProfiles,
