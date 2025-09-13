@@ -10,6 +10,7 @@ import {
   integer,
   decimal,
   boolean,
+  unique,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -59,20 +60,25 @@ export const tenants = pgTable("tenants", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// Contacts table
+// Contacts table (supports both customers and vendors)
 export const contacts = pgTable("contacts", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
   xeroContactId: varchar("xero_contact_id"),
+  sageContactId: varchar("sage_contact_id"),
+  quickBooksContactId: varchar("quick_books_contact_id"),
   name: varchar("name").notNull(),
   email: varchar("email"),
   phone: varchar("phone"),
   companyName: varchar("company_name"),
   address: text("address"),
+  role: varchar("role").notNull().default("customer"), // customer, vendor, both
   isActive: boolean("is_active").default(true),
   paymentTerms: integer("payment_terms").default(30), // days
   creditLimit: decimal("credit_limit", { precision: 10, scale: 2 }),
   preferredContactMethod: varchar("preferred_contact_method").default("email"), // email, phone, sms
+  taxNumber: varchar("tax_number"), // For vendors
+  accountNumber: varchar("account_number"), // Vendor account number
   notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -125,6 +131,207 @@ export const cachedXeroInvoices = pgTable("cached_xero_invoices", {
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
+
+// Bills table (accounts payable)
+export const bills = pgTable("bills", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  vendorId: varchar("vendor_id").notNull().references(() => contacts.id),
+  xeroInvoiceId: varchar("xero_invoice_id"),
+  sageInvoiceId: varchar("sage_invoice_id"),
+  quickBooksInvoiceId: varchar("quick_books_invoice_id"),
+  billNumber: varchar("bill_number").notNull(),
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  amountPaid: decimal("amount_paid", { precision: 10, scale: 2 }).default("0"),
+  taxAmount: decimal("tax_amount", { precision: 10, scale: 2 }).default("0"),
+  status: varchar("status").notNull().default("pending"), // pending, paid, overdue, cancelled
+  issueDate: timestamp("issue_date").notNull(),
+  dueDate: timestamp("due_date").notNull(),
+  paidDate: timestamp("paid_date"),
+  description: text("description"),
+  currency: varchar("currency").default("USD"),
+  reference: varchar("reference"), // Vendor's reference number
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Bill payments table (payments to vendors)
+export const billPayments = pgTable("bill_payments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  billId: varchar("bill_id").notNull().references(() => bills.id),
+  bankAccountId: varchar("bank_account_id").references(() => bankAccounts.id),
+  xeroPaymentId: varchar("xero_payment_id"),
+  sagePaymentId: varchar("sage_payment_id"),
+  quickBooksPaymentId: varchar("quick_books_payment_id"),
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  paymentDate: timestamp("payment_date").notNull(),
+  paymentMethod: varchar("payment_method").notNull(), // bank_transfer, credit_card, check, cash
+  reference: varchar("reference"), // Payment reference number
+  currency: varchar("currency").default("USD"),
+  exchangeRate: decimal("exchange_rate", { precision: 10, scale: 6 }).default("1"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Bank accounts table
+export const bankAccounts = pgTable("bank_accounts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  xeroAccountId: varchar("xero_account_id"),
+  sageAccountId: varchar("sage_account_id"),
+  quickBooksAccountId: varchar("quick_books_account_id"),
+  name: varchar("name").notNull(),
+  accountNumber: varchar("account_number"),
+  accountType: varchar("account_type").notNull(), // checking, savings, credit_card, cash
+  currency: varchar("currency").default("USD"),
+  currentBalance: decimal("current_balance", { precision: 12, scale: 2 }).default("0"),
+  isActive: boolean("is_active").default(true),
+  bankName: varchar("bank_name"),
+  description: text("description"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Bank transactions table
+export const bankTransactions = pgTable("bank_transactions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  bankAccountId: varchar("bank_account_id").notNull().references(() => bankAccounts.id),
+  xeroTransactionId: varchar("xero_transaction_id"),
+  sageTransactionId: varchar("sage_transaction_id"),
+  quickBooksTransactionId: varchar("quick_books_transaction_id"),
+  transactionDate: timestamp("transaction_date").notNull(),
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  type: varchar("type").notNull(), // debit, credit
+  description: text("description"),
+  reference: varchar("reference"),
+  category: varchar("category"), // expense, income, transfer, etc.
+  contactId: varchar("contact_id").references(() => contacts.id),
+  invoiceId: varchar("invoice_id").references(() => invoices.id),
+  billId: varchar("bill_id").references(() => bills.id),
+  isReconciled: boolean("is_reconciled").default(false),
+  reconciledAt: timestamp("reconciled_at"),
+  metadata: jsonb("metadata"), // Additional provider-specific data
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Budgets table (budget headers)
+export const budgets = pgTable("budgets", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  name: varchar("name").notNull(),
+  description: text("description"),
+  budgetType: varchar("budget_type").notNull(), // annual, monthly, quarterly, project
+  startDate: timestamp("start_date").notNull(),
+  endDate: timestamp("end_date").notNull(),
+  currency: varchar("currency").default("USD"),
+  status: varchar("status").notNull().default("draft"), // draft, active, completed, cancelled
+  totalBudgetAmount: decimal("total_budget_amount", { precision: 12, scale: 2 }).default("0"),
+  totalActualAmount: decimal("total_actual_amount", { precision: 12, scale: 2 }).default("0"),
+  isActive: boolean("is_active").default(true),
+  createdBy: varchar("created_by").references(() => users.id),
+  approvedBy: varchar("approved_by").references(() => users.id),
+  approvedAt: timestamp("approved_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Budget lines table (individual budget line items)
+export const budgetLines = pgTable("budget_lines", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  budgetId: varchar("budget_id").notNull().references(() => budgets.id, { onDelete: "cascade" }),
+  category: varchar("category").notNull(), // income, expense, asset, liability
+  subcategory: varchar("subcategory"), // salaries, rent, marketing, etc.
+  description: text("description"),
+  budgetedAmount: decimal("budgeted_amount", { precision: 10, scale: 2 }).notNull(),
+  actualAmount: decimal("actual_amount", { precision: 10, scale: 2 }).default("0"),
+  variance: decimal("variance", { precision: 10, scale: 2 }).default("0"),
+  variancePercentage: decimal("variance_percentage", { precision: 5, scale: 2 }).default("0"),
+  period: varchar("period"), // monthly, quarterly, yearly breakdown
+  isActive: boolean("is_active").default(true),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Exchange rates table for multi-currency support
+// NOTE: Exchange rates are intentionally system-wide (no tenantId) as currency exchange rates
+// are global financial data that should be consistent across all tenants. This reduces 
+// data redundancy and ensures all tenants get the same accurate rates from external providers.
+export const exchangeRates = pgTable("exchange_rates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  fromCurrency: varchar("from_currency").notNull(),
+  toCurrency: varchar("to_currency").notNull(),
+  rate: decimal("rate", { precision: 10, scale: 6 }).notNull(),
+  rateDate: timestamp("rate_date").notNull(),
+  provider: varchar("provider").notNull().default("system"), // system, xe, fixer, etc.
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Sync state table for tracking provider sync cursors
+export const syncState = pgTable("sync_state", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  provider: varchar("provider").notNull(), // xero, sage, quickbooks
+  resource: varchar("resource").notNull(), // invoices, contacts, bills, transactions, etc.
+  lastSyncAt: timestamp("last_sync_at"),
+  lastSuccessfulSyncAt: timestamp("last_successful_sync_at"),
+  syncCursor: varchar("sync_cursor"), // Provider-specific cursor for incremental sync
+  syncStatus: varchar("sync_status").notNull().default("idle"), // idle, running, success, error
+  errorMessage: text("error_message"),
+  recordsProcessed: integer("records_processed").default(0),
+  recordsCreated: integer("records_created").default(0),
+  recordsUpdated: integer("records_updated").default(0),
+  recordsFailed: integer("records_failed").default(0),
+  metadata: jsonb("metadata"), // Provider-specific sync metadata
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  unique("sync_state_tenant_provider_resource").on(table.tenantId, table.provider, table.resource)
+]);
+
+// Provider connections table for OAuth and API management
+export const providerConnections = pgTable("provider_connections", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  provider: varchar("provider").notNull(), // xero, sage, quickbooks, stripe, etc.
+  connectionName: varchar("connection_name"), // User-friendly name
+  isActive: boolean("is_active").default(true),
+  isConnected: boolean("is_connected").default(false),
+  
+  // OAuth/API credentials
+  // TODO: SECURITY - These tokens should be encrypted at rest using a proper encryption service
+  // Consider using AWS KMS, Azure Key Vault, or similar for secure token storage
+  accessToken: text("access_token"), // Encrypted
+  refreshToken: text("refresh_token"), // Encrypted
+  tokenExpiresAt: timestamp("token_expires_at"),
+  providerId: varchar("provider_id"), // Provider-specific ID (e.g., Xero tenant ID)
+  
+  // Capabilities and scopes
+  scopes: jsonb("scopes"), // Array of authorized scopes
+  capabilities: jsonb("capabilities"), // What this connection can do
+  
+  // Connection metadata
+  lastConnectedAt: timestamp("last_connected_at"),
+  lastSyncAt: timestamp("last_sync_at"),
+  syncFrequency: varchar("sync_frequency").default("hourly"), // hourly, daily, manual
+  autoSyncEnabled: boolean("auto_sync_enabled").default(true),
+  
+  // Error tracking
+  lastError: text("last_error"),
+  errorCount: integer("error_count").default(0),
+  lastErrorAt: timestamp("last_error_at"),
+  
+  connectionSettings: jsonb("connection_settings"), // Provider-specific settings
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  unique("provider_connections_tenant_provider").on(table.tenantId, table.provider)
+]);
 
 // Actions table for tracking collection activities
 export const actions = pgTable("actions", {
@@ -441,6 +648,13 @@ export const tenantsRelations = relations(tenants, ({ many }) => ({
   contacts: many(contacts),
   invoices: many(invoices),
   cachedXeroInvoices: many(cachedXeroInvoices),
+  bills: many(bills),
+  billPayments: many(billPayments),
+  bankAccounts: many(bankAccounts),
+  bankTransactions: many(bankTransactions),
+  budgets: many(budgets),
+  syncState: many(syncState),
+  providerConnections: many(providerConnections),
   actions: many(actions),
   workflows: many(workflows),
   communicationTemplates: many(communicationTemplates),
@@ -460,6 +674,8 @@ export const contactsRelations = relations(contacts, ({ one, many }) => ({
     references: [tenants.id],
   }),
   invoices: many(invoices),
+  bills: many(bills), // When contact is a vendor
+  bankTransactions: many(bankTransactions),
   actions: many(actions),
   voiceCalls: many(voiceCalls),
 }));
@@ -473,8 +689,107 @@ export const invoicesRelations = relations(invoices, ({ one, many }) => ({
     fields: [invoices.contactId],
     references: [contacts.id],
   }),
+  bankTransactions: many(bankTransactions),
   actions: many(actions),
   voiceCalls: many(voiceCalls),
+}));
+
+// New table relations
+export const billsRelations = relations(bills, ({ one, many }) => ({
+  tenant: one(tenants, {
+    fields: [bills.tenantId],
+    references: [tenants.id],
+  }),
+  vendor: one(contacts, {
+    fields: [bills.vendorId],
+    references: [contacts.id],
+  }),
+  payments: many(billPayments),
+  bankTransactions: many(bankTransactions),
+}));
+
+export const billPaymentsRelations = relations(billPayments, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [billPayments.tenantId],
+    references: [tenants.id],
+  }),
+  bill: one(bills, {
+    fields: [billPayments.billId],
+    references: [bills.id],
+  }),
+  bankAccount: one(bankAccounts, {
+    fields: [billPayments.bankAccountId],
+    references: [bankAccounts.id],
+  }),
+}));
+
+export const bankAccountsRelations = relations(bankAccounts, ({ one, many }) => ({
+  tenant: one(tenants, {
+    fields: [bankAccounts.tenantId],
+    references: [tenants.id],
+  }),
+  transactions: many(bankTransactions),
+  billPayments: many(billPayments),
+}));
+
+export const bankTransactionsRelations = relations(bankTransactions, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [bankTransactions.tenantId],
+    references: [tenants.id],
+  }),
+  bankAccount: one(bankAccounts, {
+    fields: [bankTransactions.bankAccountId],
+    references: [bankAccounts.id],
+  }),
+  contact: one(contacts, {
+    fields: [bankTransactions.contactId],
+    references: [contacts.id],
+  }),
+  invoice: one(invoices, {
+    fields: [bankTransactions.invoiceId],
+    references: [invoices.id],
+  }),
+  bill: one(bills, {
+    fields: [bankTransactions.billId],
+    references: [bills.id],
+  }),
+}));
+
+export const budgetsRelations = relations(budgets, ({ one, many }) => ({
+  tenant: one(tenants, {
+    fields: [budgets.tenantId],
+    references: [tenants.id],
+  }),
+  createdByUser: one(users, {
+    fields: [budgets.createdBy],
+    references: [users.id],
+  }),
+  approvedByUser: one(users, {
+    fields: [budgets.approvedBy],
+    references: [users.id],
+  }),
+  budgetLines: many(budgetLines),
+}));
+
+export const budgetLinesRelations = relations(budgetLines, ({ one }) => ({
+  budget: one(budgets, {
+    fields: [budgetLines.budgetId],
+    references: [budgets.id],
+  }),
+}));
+
+export const syncStateRelations = relations(syncState, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [syncState.tenantId],
+    references: [tenants.id],
+  }),
+}));
+
+export const providerConnectionsRelations = relations(providerConnections, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [providerConnections.tenantId],
+    references: [tenants.id],
+  }),
 }));
 
 export const actionsRelations = relations(actions, ({ one }) => ({
@@ -1237,6 +1552,81 @@ export const healthAnalyticsSnapshotsRelations = relations(healthAnalyticsSnapsh
   }),
 }));
 
+// Zod schemas for new accounting tables
+export const insertBillSchema = createInsertSchema(bills).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertBillPaymentSchema = createInsertSchema(billPayments).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertBankAccountSchema = createInsertSchema(bankAccounts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertBankTransactionSchema = createInsertSchema(bankTransactions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertBudgetSchema = createInsertSchema(budgets).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertBudgetLineSchema = createInsertSchema(budgetLines).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertExchangeRateSchema = createInsertSchema(exchangeRates).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertSyncStateSchema = createInsertSchema(syncState).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertProviderConnectionSchema = createInsertSchema(providerConnections).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// TypeScript types for new accounting tables
+export type Bill = typeof bills.$inferSelect;
+export type InsertBill = z.infer<typeof insertBillSchema>;
+export type BillPayment = typeof billPayments.$inferSelect;
+export type InsertBillPayment = z.infer<typeof insertBillPaymentSchema>;
+export type BankAccount = typeof bankAccounts.$inferSelect;
+export type InsertBankAccount = z.infer<typeof insertBankAccountSchema>;
+export type BankTransaction = typeof bankTransactions.$inferSelect;
+export type InsertBankTransaction = z.infer<typeof insertBankTransactionSchema>;
+export type Budget = typeof budgets.$inferSelect;
+export type InsertBudget = z.infer<typeof insertBudgetSchema>;
+export type BudgetLine = typeof budgetLines.$inferSelect;
+export type InsertBudgetLine = z.infer<typeof insertBudgetLineSchema>;
+export type ExchangeRate = typeof exchangeRates.$inferSelect;
+export type InsertExchangeRate = z.infer<typeof insertExchangeRateSchema>;
+export type SyncState = typeof syncState.$inferSelect;
+export type InsertSyncState = z.infer<typeof insertSyncStateSchema>;
+export type ProviderConnection = typeof providerConnections.$inferSelect;
+export type InsertProviderConnection = z.infer<typeof insertProviderConnectionSchema>;
+
 // Zod schemas for health scoring
 export const insertInvoiceHealthScoreSchema = createInsertSchema(invoiceHealthScores).omit({
   id: true,
@@ -1268,4 +1658,134 @@ export interface VoiceWorkflowStateWithConfig extends Omit<VoiceWorkflowState, '
 // Enhanced WorkflowConnection type for decision branches
 export interface WorkflowConnectionWithType extends Omit<WorkflowConnection, 'connectionType'> {
   connectionType: 'yes' | 'no' | 'what_if' | 'default';
+}
+
+// Standard transformation types for provider integration
+export interface StandardVendor {
+  id: string;
+  name: string;
+  email?: string;
+  phone?: string;
+  companyName?: string;
+  address?: string;
+  taxNumber?: string;
+  accountNumber?: string;
+  paymentTerms?: number;
+  isActive: boolean;
+  providerContactId: string; // Original provider ID
+  provider: string; // xero, sage, quickbooks
+  metadata?: Record<string, any>; // Provider-specific additional data
+}
+
+export interface StandardBill {
+  id: string;
+  billNumber: string;
+  vendorId: string;
+  amount: number;
+  amountPaid: number;
+  taxAmount: number;
+  status: string; // pending, paid, overdue, cancelled
+  issueDate: Date;
+  dueDate: Date;
+  paidDate?: Date;
+  description?: string;
+  currency: string;
+  reference?: string;
+  providerBillId: string; // Original provider ID
+  provider: string; // xero, sage, quickbooks
+  metadata?: Record<string, any>; // Provider-specific additional data
+}
+
+export interface StandardBillPayment {
+  id: string;
+  billId: string;
+  amount: number;
+  paymentDate: Date;
+  paymentMethod: string; // bank_transfer, credit_card, check, cash
+  reference?: string;
+  currency: string;
+  exchangeRate: number;
+  providerPaymentId: string; // Original provider ID
+  provider: string; // xero, sage, quickbooks
+  metadata?: Record<string, any>; // Provider-specific additional data
+}
+
+export interface StandardBankAccount {
+  id: string;
+  name: string;
+  accountNumber?: string;
+  accountType: string; // checking, savings, credit_card, cash
+  currency: string;
+  currentBalance: number;
+  isActive: boolean;
+  bankName?: string;
+  description?: string;
+  providerAccountId: string; // Original provider ID
+  provider: string; // xero, sage, quickbooks
+  metadata?: Record<string, any>; // Provider-specific additional data
+}
+
+export interface StandardBankTransaction {
+  id: string;
+  bankAccountId: string;
+  transactionDate: Date;
+  amount: number;
+  type: string; // debit, credit
+  description?: string;
+  reference?: string;
+  category?: string;
+  contactId?: string;
+  invoiceId?: string;
+  billId?: string;
+  isReconciled: boolean;
+  reconciledAt?: Date;
+  providerTransactionId: string; // Original provider ID
+  provider: string; // xero, sage, quickbooks
+  metadata?: Record<string, any>; // Provider-specific additional data
+}
+
+export interface StandardBudget {
+  id: string;
+  name: string;
+  description?: string;
+  budgetType: string; // annual, monthly, quarterly, project
+  startDate: Date;
+  endDate: Date;
+  currency: string;
+  status: string; // draft, active, completed, cancelled
+  totalBudgetAmount: number;
+  totalActualAmount: number;
+  isActive: boolean;
+  providerBudgetId?: string; // Original provider ID (if supported)
+  provider?: string; // xero, sage, quickbooks
+  metadata?: Record<string, any>; // Provider-specific additional data
+}
+
+export interface StandardBudgetLine {
+  id: string;
+  budgetId: string;
+  category: string; // income, expense, asset, liability
+  subcategory?: string; // salaries, rent, marketing, etc.
+  description?: string;
+  budgetedAmount: number;
+  actualAmount: number;
+  variance: number;
+  variancePercentage: number;
+  period?: string; // monthly, quarterly, yearly breakdown
+  isActive: boolean;
+  notes?: string;
+  providerBudgetLineId?: string; // Original provider ID (if supported)
+  provider?: string; // xero, sage, quickbooks
+  metadata?: Record<string, any>; // Provider-specific additional data
+}
+
+export interface StandardExchangeRate {
+  id: string;
+  fromCurrency: string;
+  toCurrency: string;
+  rate: number;
+  rateDate: Date;
+  provider: string; // system, xe, fixer, etc.
+  isActive: boolean;
+  metadata?: Record<string, any>; // Provider-specific additional data
 }
