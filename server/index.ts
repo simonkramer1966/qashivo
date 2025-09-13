@@ -63,7 +63,7 @@ app.use((req, res, next) => {
           clientSecret: process.env.XERO_CLIENT_SECRET,
           baseUrl: process.env.BASE_URL || 'http://localhost:5000',
           scopes: ['accounting.transactions', 'accounting.contacts'],
-          redirectUri: `${process.env.BASE_URL || 'http://localhost:5000'}/api/auth/xero/callback`,
+          redirectUri: `${process.env.BASE_URL || 'http://localhost:5000'}/api/xero/callback`,
           environment: process.env.NODE_ENV === 'production' ? 'production' : 'sandbox'
         });
         
