@@ -26,6 +26,7 @@ const ScenarioComparisonChart = lazy(() => import("@/components/cashflow/Scenari
 const TimelineVisualization = lazy(() => import("@/components/cashflow/TimelineVisualization"));
 const WaterfallChart = lazy(() => import("@/components/cashflow/WaterfallChart"));
 const HeatmapVisualization = lazy(() => import("@/components/cashflow/HeatmapVisualization"));
+const AILearningInsightsDashboard = lazy(() => import("@/components/collections/AILearningInsightsDashboard"));
 import { 
   TrendingUp, 
   TrendingDown, 
@@ -1801,6 +1802,18 @@ export default function Cashflow() {
                     </CardContent>
                   </Card>
                 </div>
+              </div>
+
+              {/* AI Learning Insights Dashboard */}
+              <div className="mt-8">
+                <Suspense fallback={
+                  <div className="flex items-center justify-center p-12">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#17B6C3]"></div>
+                    <span className="ml-3 text-sm text-gray-600">Loading AI Learning Insights...</span>
+                  </div>
+                }>
+                  <AILearningInsightsDashboard />
+                </Suspense>
               </div>
             </TabsContent>
 
