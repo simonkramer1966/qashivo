@@ -31,7 +31,12 @@ export class SageProvider implements UniversalProvider {
     contacts: '/contacts',
     sales_invoices: '/sales_invoices',
     purchase_invoices: '/purchase_invoices',
+    bills: '/purchase_invoices', // Bills map to purchase invoices in Sage
     payments: '/bank_receipts',
+    bill_payments: '/bank_payments',
+    bank_accounts: '/bank_accounts',
+    bank_transactions: '/bank_transactions',
+    budgets: '/budgets', // Note: Limited Sage support
     ledger_accounts: '/ledger_accounts',
     exchange_rates: '/exchange_rates'
   };
@@ -79,8 +84,30 @@ export class SageProvider implements UniversalProvider {
         case 'invoices':
           result = await this.getInvoices(tokenData.accessToken, options?.params?.filters);
           break;
+        case 'bills':
+          result = await this.getBills(tokenData.accessToken, options?.params?.filters);
+          break;
         case 'payments':
           result = await this.getPayments(tokenData.accessToken, options?.params?.filters);
+          break;
+        case 'bill-payments':
+        case 'billpayments':
+          result = await this.getBillPayments(tokenData.accessToken, options?.params?.filters);
+          break;
+        case 'bank-accounts':
+        case 'bankaccounts':
+          result = await this.getBankAccounts(tokenData.accessToken, options?.params?.filters);
+          break;
+        case 'bank-transactions':
+        case 'banktransactions':
+          result = await this.getBankTransactions(tokenData.accessToken, options?.params?.filters);
+          break;
+        case 'budgets':
+          result = await this.getBudgets(tokenData.accessToken, options?.params?.filters);
+          break;
+        case 'exchange-rates':
+        case 'exchangerates':
+          result = await this.getExchangeRates(tokenData.accessToken, options?.params?.filters);
           break;
         case 'ledger_accounts':
           result = await this.getLedgerAccounts(tokenData.accessToken, options?.params?.filters);
@@ -88,7 +115,7 @@ export class SageProvider implements UniversalProvider {
         default:
           return { 
             success: false, 
-            error: `Endpoint '${endpoint}' not implemented for Sage provider` 
+            error: `Endpoint '${endpoint}' not implemented for Sage provider. Supported endpoints: contacts, invoices, bills, payments, bill-payments, bank-accounts, bank-transactions, budgets, exchange-rates, ledger_accounts` 
           };
       }
 
@@ -190,6 +217,169 @@ export class SageProvider implements UniversalProvider {
 
     const response = await this.makeApiCall(fullUrl, accessToken);
     return response.$items || [];
+  }
+
+  /**
+   * Get bills (purchase invoices) from Sage API
+   */
+  private async getBills(accessToken: string, filters?: any): Promise<any> {
+    const url = `${this.baseUrl}${this.endpoints.bills}`;
+    const queryParams = new URLSearchParams();
+    
+    // Add filtering support
+    if (filters?.from_date) {
+      queryParams.append('from_date', filters.from_date);
+    }
+    if (filters?.to_date) {
+      queryParams.append('to_date', filters.to_date);
+    }
+    if (filters?.contact_id) {
+      queryParams.append('contact_id', filters.contact_id);
+    }
+    if (filters?.since) {
+      queryParams.append('updated_or_created_since', filters.since);
+    }
+
+    const fullUrl = queryParams.toString() ? `${url}?${queryParams}` : url;
+
+    const response = await this.makeApiCall(fullUrl, accessToken);
+    return response.$items || [];
+  }
+
+  /**
+   * Get bill payments from Sage API
+   */
+  private async getBillPayments(accessToken: string, filters?: any): Promise<any> {
+    const url = `${this.baseUrl}${this.endpoints.bill_payments}`;
+    const queryParams = new URLSearchParams();
+    
+    // Add filtering support
+    if (filters?.from_date) {
+      queryParams.append('from_date', filters.from_date);
+    }
+    if (filters?.to_date) {
+      queryParams.append('to_date', filters.to_date);
+    }
+    if (filters?.since) {
+      queryParams.append('updated_or_created_since', filters.since);
+    }
+
+    const fullUrl = queryParams.toString() ? `${url}?${queryParams}` : url;
+
+    const response = await this.makeApiCall(fullUrl, accessToken);
+    return response.$items || [];
+  }
+
+  /**
+   * Get bank accounts from Sage API
+   */
+  private async getBankAccounts(accessToken: string, filters?: any): Promise<any> {
+    const url = `${this.baseUrl}${this.endpoints.bank_accounts}`;
+    const queryParams = new URLSearchParams();
+    
+    // Add filtering support
+    if (filters?.since) {
+      queryParams.append('updated_or_created_since', filters.since);
+    }
+    if (filters?.active !== undefined) {
+      queryParams.append('active', filters.active.toString());
+    }
+
+    const fullUrl = queryParams.toString() ? `${url}?${queryParams}` : url;
+
+    const response = await this.makeApiCall(fullUrl, accessToken);
+    return response.$items || [];
+  }
+
+  /**
+   * Get bank transactions from Sage API
+   */
+  private async getBankTransactions(accessToken: string, filters?: any): Promise<any> {
+    const url = `${this.baseUrl}${this.endpoints.bank_transactions}`;
+    const queryParams = new URLSearchParams();
+    
+    // Add filtering support
+    if (filters?.from_date) {
+      queryParams.append('from_date', filters.from_date);
+    }
+    if (filters?.to_date) {
+      queryParams.append('to_date', filters.to_date);
+    }
+    if (filters?.bank_account_id) {
+      queryParams.append('bank_account_id', filters.bank_account_id);
+    }
+    if (filters?.since) {
+      queryParams.append('updated_or_created_since', filters.since);
+    }
+
+    const fullUrl = queryParams.toString() ? `${url}?${queryParams}` : url;
+
+    const response = await this.makeApiCall(fullUrl, accessToken);
+    return response.$items || [];
+  }
+
+  /**
+   * Get budgets from Sage API
+   * Note: Sage has limited budget support
+   */
+  private async getBudgets(accessToken: string, filters?: any): Promise<any> {
+    try {
+      const url = `${this.baseUrl}${this.endpoints.budgets}`;
+      const queryParams = new URLSearchParams();
+      
+      // Add filtering support
+      if (filters?.since) {
+        queryParams.append('updated_or_created_since', filters.since);
+      }
+
+      const fullUrl = queryParams.toString() ? `${url}?${queryParams}` : url;
+
+      const response = await this.makeApiCall(fullUrl, accessToken);
+      return response.$items || [];
+    } catch (error) {
+      // Graceful degradation
+      return {
+        budgets: [],
+        error: 'Sage budget retrieval may not be available',
+        note: 'Budget functionality varies by Sage subscription level and configuration.'
+      };
+    }
+  }
+
+  /**
+   * Get exchange rates from Sage API (now properly implemented)
+   */
+  private async getExchangeRates(accessToken: string, filters?: any): Promise<any> {
+    try {
+      const url = `${this.baseUrl}${this.endpoints.exchange_rates}`;
+      const queryParams = new URLSearchParams();
+      
+      // Add filtering support
+      if (filters?.base_currency) {
+        queryParams.append('base_currency', filters.base_currency);
+      }
+      if (filters?.foreign_currency) {
+        queryParams.append('foreign_currency', filters.foreign_currency);
+      }
+      if (filters?.from_date) {
+        queryParams.append('from_date', filters.from_date);
+      }
+      if (filters?.to_date) {
+        queryParams.append('to_date', filters.to_date);
+      }
+
+      const fullUrl = queryParams.toString() ? `${url}?${queryParams}` : url;
+
+      const response = await this.makeApiCall(fullUrl, accessToken);
+      return response.$items || [];
+    } catch (error) {
+      // Graceful degradation
+      return {
+        exchange_rates: [],
+        error: 'Sage exchange rate retrieval may not be available',
+        note: 'Exchange rate access depends on Sage multi-currency setup and permissions.'
+      };
+    }
   }
 
   /**

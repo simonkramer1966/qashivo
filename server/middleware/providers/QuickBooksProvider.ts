@@ -37,6 +37,11 @@ export class QuickBooksProvider implements UniversalProvider {
     items: '/item',
     estimates: '/estimate',
     bills: '/bill',
+    bill_payments: '/billpayment',
+    bank_accounts: '/account', // Bank accounts are special Account types
+    bank_transactions: '/banktransfer', // Limited support via BankTransfer
+    budgets: '/budget', // Note: Limited QB support
+    exchange_rates: '/exchangerate', // Note: Limited QB support
     company_info: '/companyinfo'
   };
 
@@ -94,6 +99,9 @@ export class QuickBooksProvider implements UniversalProvider {
         case 'customers':
           result = await this.getCustomers(tokenData.accessToken, realmId, options?.params?.filters);
           break;
+        case 'vendors':
+          result = await this.getVendors(tokenData.accessToken, realmId, options?.params?.filters);
+          break;
         case 'invoices':
           result = await this.getInvoices(tokenData.accessToken, realmId, options?.params?.filters);
           break;
@@ -103,13 +111,41 @@ export class QuickBooksProvider implements UniversalProvider {
         case 'accounts':
           result = await this.getAccounts(tokenData.accessToken, realmId, options?.params?.filters);
           break;
+        case 'items':
+          result = await this.getItems(tokenData.accessToken, realmId, options?.params?.filters);
+          break;
+        case 'estimates':
+          result = await this.getEstimates(tokenData.accessToken, realmId, options?.params?.filters);
+          break;
+        case 'bills':
+          result = await this.getBills(tokenData.accessToken, realmId, options?.params?.filters);
+          break;
+        case 'bill-payments':
+        case 'billpayments':
+          result = await this.getBillPayments(tokenData.accessToken, realmId, options?.params?.filters);
+          break;
+        case 'bank-accounts':
+        case 'bankaccounts':
+          result = await this.getBankAccounts(tokenData.accessToken, realmId, options?.params?.filters);
+          break;
+        case 'bank-transactions':
+        case 'banktransactions':
+          result = await this.getBankTransactions(tokenData.accessToken, realmId, options?.params?.filters);
+          break;
+        case 'budgets':
+          result = await this.getBudgets(tokenData.accessToken, realmId, options?.params?.filters);
+          break;
+        case 'exchange-rates':
+        case 'exchangerates':
+          result = await this.getExchangeRates(tokenData.accessToken, realmId, options?.params?.filters);
+          break;
         case 'company_info':
           result = await this.getCompanyInfo(tokenData.accessToken, realmId);
           break;
         default:
           return { 
             success: false, 
-            error: `Endpoint '${endpoint}' not implemented for QuickBooks provider` 
+            error: `Endpoint '${endpoint}' not implemented for QuickBooks provider. Supported endpoints: contacts/customers, vendors, invoices, payments, accounts, items, estimates, bills, bill-payments, bank-accounts, bank-transactions, budgets, exchange-rates, company_info` 
           };
       }
 
@@ -228,6 +264,253 @@ export class QuickBooksProvider implements UniversalProvider {
     const query = "SELECT * FROM CompanyInfo";
     const response = await this.makeApiCall(realmId, query, accessToken);
     return response.QueryResponse?.CompanyInfo?.[0] || null;
+  }
+
+  /**
+   * Get vendors from QuickBooks API
+   */
+  private async getVendors(accessToken: string, realmId: string, filters?: any): Promise<any> {
+    let query = "SELECT * FROM Vendor";
+    
+    // Add filtering support
+    if (filters?.active !== undefined) {
+      query += ` WHERE Active = ${filters.active}`;
+    }
+    if (filters?.since) {
+      const whereClause = query.includes('WHERE') ? ' AND ' : ' WHERE ';
+      query += `${whereClause} MetaData.LastUpdatedTime >= '${filters.since}'`;
+    }
+
+    const response = await this.makeApiCall(realmId, query, accessToken);
+    return response.QueryResponse?.Vendor || [];
+  }
+
+  /**
+   * Get items from QuickBooks API
+   */
+  private async getItems(accessToken: string, realmId: string, filters?: any): Promise<any> {
+    let query = "SELECT * FROM Item";
+    
+    // Add filtering support
+    if (filters?.item_type) {
+      query += ` WHERE Type = '${filters.item_type}'`;
+    }
+    if (filters?.active !== undefined) {
+      const whereClause = query.includes('WHERE') ? ' AND ' : ' WHERE ';
+      query += `${whereClause} Active = ${filters.active}`;
+    }
+    if (filters?.since) {
+      const whereClause = query.includes('WHERE') ? ' AND ' : ' WHERE ';
+      query += `${whereClause} MetaData.LastUpdatedTime >= '${filters.since}'`;
+    }
+
+    const response = await this.makeApiCall(realmId, query, accessToken);
+    return response.QueryResponse?.Item || [];
+  }
+
+  /**
+   * Get estimates from QuickBooks API
+   */
+  private async getEstimates(accessToken: string, realmId: string, filters?: any): Promise<any> {
+    let query = "SELECT * FROM Estimate";
+    
+    // Add filtering support
+    const conditions: string[] = [];
+    
+    if (filters?.customer_id) {
+      conditions.push(`CustomerRef = '${filters.customer_id}'`);
+    }
+    if (filters?.from_date) {
+      conditions.push(`TxnDate >= '${filters.from_date}'`);
+    }
+    if (filters?.to_date) {
+      conditions.push(`TxnDate <= '${filters.to_date}'`);
+    }
+    if (filters?.since) {
+      conditions.push(`MetaData.LastUpdatedTime >= '${filters.since}'`);
+    }
+    
+    if (conditions.length > 0) {
+      query += ` WHERE ${conditions.join(' AND ')}`;
+    }
+
+    const response = await this.makeApiCall(realmId, query, accessToken);
+    return response.QueryResponse?.Estimate || [];
+  }
+
+  /**
+   * Get bills from QuickBooks API
+   */
+  private async getBills(accessToken: string, realmId: string, filters?: any): Promise<any> {
+    let query = "SELECT * FROM Bill";
+    
+    // Add filtering support
+    const conditions: string[] = [];
+    
+    if (filters?.vendor_id) {
+      conditions.push(`VendorRef = '${filters.vendor_id}'`);
+    }
+    if (filters?.from_date) {
+      conditions.push(`TxnDate >= '${filters.from_date}'`);
+    }
+    if (filters?.to_date) {
+      conditions.push(`TxnDate <= '${filters.to_date}'`);
+    }
+    if (filters?.since) {
+      conditions.push(`MetaData.LastUpdatedTime >= '${filters.since}'`);
+    }
+    
+    if (conditions.length > 0) {
+      query += ` WHERE ${conditions.join(' AND ')}`;
+    }
+
+    const response = await this.makeApiCall(realmId, query, accessToken);
+    return response.QueryResponse?.Bill || [];
+  }
+
+  /**
+   * Get bill payments from QuickBooks API
+   */
+  private async getBillPayments(accessToken: string, realmId: string, filters?: any): Promise<any> {
+    let query = "SELECT * FROM BillPayment";
+    
+    // Add filtering support
+    const conditions: string[] = [];
+    
+    if (filters?.vendor_id) {
+      conditions.push(`VendorRef = '${filters.vendor_id}'`);
+    }
+    if (filters?.from_date) {
+      conditions.push(`TxnDate >= '${filters.from_date}'`);
+    }
+    if (filters?.to_date) {
+      conditions.push(`TxnDate <= '${filters.to_date}'`);
+    }
+    if (filters?.since) {
+      conditions.push(`MetaData.LastUpdatedTime >= '${filters.since}'`);
+    }
+    
+    if (conditions.length > 0) {
+      query += ` WHERE ${conditions.join(' AND ')}`;
+    }
+
+    const response = await this.makeApiCall(realmId, query, accessToken);
+    return response.QueryResponse?.BillPayment || [];
+  }
+
+  /**
+   * Get bank accounts from QuickBooks API (subset of accounts)
+   */
+  private async getBankAccounts(accessToken: string, realmId: string, filters?: any): Promise<any> {
+    let query = "SELECT * FROM Account WHERE AccountType IN ('Bank', 'Other Current Asset', 'Credit Card')";
+    
+    // Add additional filtering support
+    if (filters?.active !== undefined) {
+      query += ` AND Active = ${filters.active}`;
+    }
+    if (filters?.since) {
+      query += ` AND MetaData.LastUpdatedTime >= '${filters.since}'`;
+    }
+
+    const response = await this.makeApiCall(realmId, query, accessToken);
+    return response.QueryResponse?.Account || [];
+  }
+
+  /**
+   * Get bank transactions from QuickBooks API
+   * Note: QuickBooks has limited support for bank transactions via BankTransfer
+   */
+  private async getBankTransactions(accessToken: string, realmId: string, filters?: any): Promise<any> {
+    try {
+      // QuickBooks doesn't have a direct "BankTransaction" entity like Xero
+      // We can get some bank-related data via BankTransfer, but it's limited
+      let query = "SELECT * FROM Transfer";
+      
+      // Add filtering support
+      const conditions: string[] = [];
+      
+      if (filters?.from_account_id) {
+        conditions.push(`FromAccountRef = '${filters.from_account_id}'`);
+      }
+      if (filters?.to_account_id) {
+        conditions.push(`ToAccountRef = '${filters.to_account_id}'`);
+      }
+      if (filters?.from_date) {
+        conditions.push(`TxnDate >= '${filters.from_date}'`);
+      }
+      if (filters?.to_date) {
+        conditions.push(`TxnDate <= '${filters.to_date}'`);
+      }
+      if (filters?.since) {
+        conditions.push(`MetaData.LastUpdatedTime >= '${filters.since}'`);
+      }
+      
+      if (conditions.length > 0) {
+        query += ` WHERE ${conditions.join(' AND ')}`;
+      }
+
+      const response = await this.makeApiCall(realmId, query, accessToken);
+      const transfers = response.QueryResponse?.Transfer || [];
+
+      // Return with a note about limited functionality
+      return {
+        transfers: transfers,
+        note: 'QuickBooks has limited bank transaction support. Only internal transfers are available via this endpoint.'
+      };
+    } catch (error) {
+      // Graceful degradation
+      return {
+        transfers: [],
+        error: 'QuickBooks bank transaction retrieval not fully supported',
+        note: 'Consider using QuickBooks native bank feeds or manual transaction entry.'
+      };
+    }
+  }
+
+  /**
+   * Get budgets from QuickBooks API
+   * Note: QuickBooks has limited budget support in the API
+   */
+  private async getBudgets(accessToken: string, realmId: string, filters?: any): Promise<any> {
+    try {
+      // QuickBooks budget API is very limited and not commonly available
+      // Most budget functionality is UI-only
+      return {
+        budgets: [],
+        note: 'QuickBooks budget data is not available via public API',
+        error: 'Budget endpoint not supported by QuickBooks Online API'
+      };
+    } catch (error) {
+      // Graceful degradation
+      return {
+        budgets: [],
+        error: 'QuickBooks budget retrieval not supported',
+        note: 'Budget data must be accessed through QuickBooks UI or reports.'
+      };
+    }
+  }
+
+  /**
+   * Get exchange rates from QuickBooks API
+   * Note: QuickBooks has limited exchange rate support
+   */
+  private async getExchangeRates(accessToken: string, realmId: string, filters?: any): Promise<any> {
+    try {
+      // QuickBooks doesn't provide historical exchange rates via API
+      // Exchange rates are handled automatically for multi-currency transactions
+      return {
+        exchange_rates: [],
+        note: 'QuickBooks exchange rates are handled automatically for multi-currency transactions',
+        error: 'Historical exchange rate data not available via QuickBooks API'
+      };
+    } catch (error) {
+      // Graceful degradation
+      return {
+        exchange_rates: [],
+        error: 'QuickBooks exchange rate retrieval not supported',
+        note: 'Exchange rates are managed automatically in QuickBooks multi-currency companies.'
+      };
+    }
   }
 
   /**
