@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import {
   Dialog,
   DialogContent,
@@ -37,11 +37,58 @@ export default function KeyboardShortcutsModal({
   title = "Keyboard Shortcuts"
 }: KeyboardShortcutsModalProps) {
   const [searchQuery, setSearchQuery] = useState("");
-  const [filteredGroups, setFilteredGroups] = useState<any[]>([]);
 
-  const { getShortcutGroups, formatShortcut } = useKeyboardShortcuts({
-    shortcuts: []
-  });
+  // Memoized format shortcut function to avoid re-creation
+  const formatShortcut = useCallback((shortcut: KeyboardShortcut): string => {
+    const parts: string[] = [];
+    
+    if (shortcut.ctrl || shortcut.meta) {
+      parts.push(navigator.platform.includes('Mac') ? '⌘' : 'Ctrl');
+    }
+    if (shortcut.shift) parts.push('Shift');
+    if (shortcut.alt) parts.push('Alt');
+    
+    let key = shortcut.key;
+    // Format special keys
+    switch (key.toLowerCase()) {
+      case ' ':
+        key = 'Space';
+        break;
+      case 'arrowup':
+        key = '↑';
+        break;
+      case 'arrowdown':
+        key = '↓';
+        break;
+      case 'arrowleft':
+        key = '←';
+        break;
+      case 'arrowright':
+        key = '→';
+        break;
+      case 'escape':
+        key = 'Esc';
+        break;
+      case 'enter':
+        key = 'Enter';
+        break;
+      case 'backspace':
+        key = 'Backspace';
+        break;
+      case 'delete':
+        key = 'Delete';
+        break;
+      case 'tab':
+        key = 'Tab';
+        break;
+      default:
+        key = key.toUpperCase();
+    }
+    
+    parts.push(key);
+    
+    return parts.join(' + ');
+  }, []);
 
   // Close modal on Escape key
   useEffect(() => {
@@ -55,51 +102,34 @@ export default function KeyboardShortcutsModal({
     return () => document.removeEventListener('keydown', handleEscape);
   }, [isOpen, onClose]);
 
-  // Filter shortcuts based on search query
-  useEffect(() => {
-    const groups = getShortcutGroups();
+  // Memoized filtered groups to prevent unnecessary re-calculations
+  const filteredGroups = useMemo(() => {
+    let filteredShortcuts = shortcuts;
     
-    if (!searchQuery.trim()) {
-      // Group the passed shortcuts
-      const groupedShortcuts: { [key: string]: KeyboardShortcut[] } = {};
-      shortcuts.forEach(shortcut => {
-        if (!groupedShortcuts[shortcut.category]) {
-          groupedShortcuts[shortcut.category] = [];
-        }
-        groupedShortcuts[shortcut.category].push(shortcut);
-      });
-
-      const result = Object.entries(groupedShortcuts).map(([category, shortcuts]) => ({
-        category,
-        shortcuts: shortcuts.sort((a, b) => a.description.localeCompare(b.description))
-      }));
-
-      setFilteredGroups(result);
-    } else {
+    // Filter by search query if exists
+    if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
-      const filtered = shortcuts.filter(shortcut => 
+      filteredShortcuts = shortcuts.filter(shortcut => 
         shortcut.description.toLowerCase().includes(query) ||
         shortcut.category.toLowerCase().includes(query) ||
         formatShortcut(shortcut).toLowerCase().includes(query)
       );
-
-      // Group filtered shortcuts
-      const groupedFiltered: { [key: string]: KeyboardShortcut[] } = {};
-      filtered.forEach(shortcut => {
-        if (!groupedFiltered[shortcut.category]) {
-          groupedFiltered[shortcut.category] = [];
-        }
-        groupedFiltered[shortcut.category].push(shortcut);
-      });
-
-      const result = Object.entries(groupedFiltered).map(([category, shortcuts]) => ({
-        category,
-        shortcuts: shortcuts.sort((a, b) => a.description.localeCompare(b.description))
-      }));
-
-      setFilteredGroups(result);
     }
-  }, [shortcuts, searchQuery, formatShortcut, getShortcutGroups]);
+
+    // Group the shortcuts by category
+    const groupedShortcuts: { [key: string]: KeyboardShortcut[] } = {};
+    filteredShortcuts.forEach(shortcut => {
+      if (!groupedShortcuts[shortcut.category]) {
+        groupedShortcuts[shortcut.category] = [];
+      }
+      groupedShortcuts[shortcut.category].push(shortcut);
+    });
+
+    return Object.entries(groupedShortcuts).map(([category, shortcuts]) => ({
+      category,
+      shortcuts: shortcuts.sort((a, b) => a.description.localeCompare(b.description))
+    }));
+  }, [shortcuts, searchQuery, formatShortcut]);
 
   const getCategoryIcon = (category: string) => {
     switch (category.toLowerCase()) {
