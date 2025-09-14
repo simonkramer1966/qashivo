@@ -40,8 +40,8 @@ export default function Invoices() {
     return filter === 'escalated' ? 'escalated' : filter === 'overdue' ? 'overdue' : 'overdue';
   };
   
-  const [statusFilter, setStatusFilter] = useState(getInitialFilter());
-  const [overdueFilter, setOverdueFilter] = useState<OverdueCategory | 'all'>('all');
+  const [statusFilter, setStatusFilter] = useState('pending');
+  const [overdueFilter, setOverdueFilter] = useState<OverdueCategory | 'all' | 'paid'>('all');
   const [invClientSort, setInvClientSort] = useState<string>("inv-asc");
   const [dueDateAgeSort, setDueDateAgeSort] = useState<string>("due-date-asc");
   const [nextActionSort, setNextActionSort] = useState<string>("action-date-asc");
@@ -190,13 +190,15 @@ export default function Invoices() {
       (statusFilter === "pending" && invoice.status === "pending") ||
       (statusFilter === "overdue" && invoice.status === "overdue") ||
       (statusFilter === "paid" && invoice.status === "paid") ||
-      (statusFilter === "on-hold" && invoice.status === "on-hold") ||
-      (statusFilter === "escalated" && invoice.collectionStage === "escalated");
+      (statusFilter === "cancelled" && invoice.status === "cancelled");
 
     // Overdue category filtering
     const matchesOverdueCategory = overdueFilter === "all" || 
-      (invoice.overdueCategory && invoice.overdueCategory === overdueFilter) ||
-      (!invoice.overdueCategory && getOverdueCategoryFromDueDate(invoice.dueDate).category === overdueFilter);
+      (overdueFilter === "paid" && invoice.status === "paid") ||
+      (overdueFilter !== "paid" && (
+        (invoice.overdueCategory && invoice.overdueCategory === overdueFilter) ||
+        (!invoice.overdueCategory && getOverdueCategoryFromDueDate(invoice.dueDate).category === overdueFilter)
+      ));
 
     return matchesSearch && matchesStatus && matchesOverdueCategory;
   });
@@ -230,8 +232,8 @@ export default function Invoices() {
         return <Badge className="bg-red-100 text-red-800 hover:bg-red-100">Overdue</Badge>;
       case 'pending':
         return <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">Pending</Badge>;
-      case 'on-hold':
-        return <Badge className="bg-gray-100 text-gray-800 hover:bg-gray-100">On Hold</Badge>;
+      case 'cancelled':
+        return <Badge className="bg-gray-100 text-gray-800 hover:bg-gray-100">Cancelled</Badge>;
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
@@ -292,10 +294,9 @@ export default function Invoices() {
                 <SelectContent className="bg-white border-gray-200">
                   <SelectItem value="all">All Status</SelectItem>
                   <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="overdue">Overdue</SelectItem>
                   <SelectItem value="paid">Paid</SelectItem>
-                  <SelectItem value="on-hold">On Hold</SelectItem>
-                  <SelectItem value="escalated">Debt Recovery</SelectItem>
+                  <SelectItem value="overdue">Overdue</SelectItem>
+                  <SelectItem value="cancelled">Cancelled</SelectItem>
                 </SelectContent>
               </Select>
               <Select value={overdueFilter} onValueChange={(value) => setOverdueFilter(value as OverdueCategory | 'all')}>
@@ -305,6 +306,7 @@ export default function Invoices() {
                 </SelectTrigger>
                 <SelectContent className="bg-white border-gray-200">
                   <SelectItem value="all">All Categories</SelectItem>
+                  <SelectItem value="paid">Paid</SelectItem>
                   {getAllOverdueCategories().map((category) => (
                     <SelectItem key={category.category} value={category.category}>
                       {category.label}
