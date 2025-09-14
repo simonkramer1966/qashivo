@@ -251,20 +251,20 @@ export default function Invoices() {
   };
 
   // Helper function to format expected payment date
-  const formatExpectedPayment = (predictedDate: string, confidence: number) => {
+  const formatExpectedPayment = (predictedDate: string, confidence: number, dueDate: string) => {
     if (!predictedDate) return <span className="text-gray-400 text-xs">No prediction</span>;
     
-    const date = new Date(predictedDate);
-    const today = new Date();
-    const diffDays = Math.ceil((date.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    const paymentDate = new Date(predictedDate);
+    const invoiceDueDate = new Date(dueDate);
+    const diffDays = Math.ceil((paymentDate.getTime() - invoiceDueDate.getTime()) / (1000 * 60 * 60 * 24));
     
     let daysText = "";
     if (diffDays > 0) {
-      daysText = `+${diffDays} days`;
+      daysText = `+${diffDays} days late`;
     } else if (diffDays < 0) {
-      daysText = `${Math.abs(diffDays)} days ago`;
+      daysText = `${Math.abs(diffDays)} days early`;
     } else {
-      daysText = "Today";
+      daysText = "On time";
     }
     
     const confidenceLevel = confidence >= 0.8 ? "High" : confidence >= 0.6 ? "Med" : "Low";
@@ -737,7 +737,8 @@ export default function Invoices() {
                               }
                               return formatExpectedPayment(
                                 prediction.predictedPaymentDate, 
-                                prediction.paymentConfidenceScore
+                                prediction.paymentConfidenceScore,
+                                invoice.dueDate
                               );
                             })()}
                           </td>
