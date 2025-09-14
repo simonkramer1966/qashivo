@@ -30,10 +30,17 @@ import {
   Zap,
   TestTube,
   Phone,
-  CheckCircle
+  CheckCircle,
+  Users,
+  UserPlus
 } from "lucide-react";
 import { SiXero, SiSage, SiQuickbooks } from "react-icons/si";
 import { CURRENCIES, DEFAULT_CURRENCY } from "@shared/currencies";
+import { usePermissions } from "@/hooks/usePermissions";
+import ProtectedComponent from "@/components/rbac/ProtectedComponent";
+import PermissionMatrix from "@/components/rbac/PermissionMatrix";
+import UserInviteModal from "@/components/rbac/UserInviteModal";
+import UserManagementTabContent from "@/components/rbac/UserManagementTabContent";
 
 // Test Tab Component
 function TestTabContent() {
@@ -981,11 +988,14 @@ export default function Settings() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <TabsList className="grid w-full grid-cols-6 bg-slate-50/80">
+                <TabsList className="grid w-full grid-cols-7 bg-slate-50/80">
                   <TabsTrigger value="general" className="data-[state=active]:bg-[#17B6C3] data-[state=active]:text-white" data-testid="tab-general">General</TabsTrigger>
                   <TabsTrigger value="integrations" className="data-[state=active]:bg-[#17B6C3] data-[state=active]:text-white" data-testid="tab-integrations">Integrations</TabsTrigger>
                   <TabsTrigger value="notifications" className="data-[state=active]:bg-[#17B6C3] data-[state=active]:text-white" data-testid="tab-notifications">Notifications</TabsTrigger>
                   <TabsTrigger value="security" className="data-[state=active]:bg-[#17B6C3] data-[state=active]:text-white" data-testid="tab-security">Security</TabsTrigger>
+                  <ProtectedComponent permission="admin:users" hideOnDeny>
+                    <TabsTrigger value="users" className="data-[state=active]:bg-[#17B6C3] data-[state=active]:text-white" data-testid="tab-users">User Management</TabsTrigger>
+                  </ProtectedComponent>
                   <TabsTrigger value="branding" className="data-[state=active]:bg-[#17B6C3] data-[state=active]:text-white" data-testid="tab-branding">Branding</TabsTrigger>
                   <TabsTrigger value="test" className="data-[state=active]:bg-[#17B6C3] data-[state=active]:text-white" data-testid="tab-test">Test</TabsTrigger>
                 </TabsList>
@@ -1695,6 +1705,13 @@ export default function Settings() {
                 </CardContent>
               </Card>
             </TabsContent>
+
+            {/* User Management Tab */}
+            <ProtectedComponent permission="admin:users">
+              <TabsContent value="users" className="space-y-8">
+                <UserManagementTabContent />
+              </TabsContent>
+            </ProtectedComponent>
 
             <TabsContent value="test" className="space-y-8">
               <TestTabContent />

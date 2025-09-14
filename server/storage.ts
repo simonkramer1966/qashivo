@@ -99,6 +99,7 @@ import {
 import { db } from "./db";
 import { eq, and, desc, sql, count, ne, isNotNull, gte, lte } from "drizzle-orm";
 import { getOverdueCategoryFromDueDate, getOverdueCategorySummary, type OverdueCategory, type OverdueCategoryInfo } from "../shared/utils/overdueUtils";
+import crypto from "crypto";
 
 // Interface for storage operations
 export interface IStorage {
@@ -299,6 +300,17 @@ export interface IStorage {
   updateInvoiceHealthScore(id: string, tenantId: string, updates: Partial<InsertInvoiceHealthScore>): Promise<InvoiceHealthScore>;
   getHealthAnalyticsSnapshot(tenantId: string, snapshotType?: string): Promise<HealthAnalyticsSnapshot | undefined>;
   createHealthAnalyticsSnapshot(snapshot: InsertHealthAnalyticsSnapshot): Promise<HealthAnalyticsSnapshot>;
+  
+  // RBAC operations
+  getUsersInTenant(tenantId: string): Promise<User[]>;
+  assignUserRole(userId: string, role: string, assignedBy: string): Promise<User>;
+  getUserWithRoleInfo(userId: string, tenantId: string): Promise<User | undefined>;
+  canUserManageRole(actorRole: string, targetRole: string): boolean;
+  getAssignableRoles(userRole: string): string[];
+  createUserInvitation(invitation: { email: string; role: string; tenantId: string; invitedBy: string }): Promise<{ id: string; inviteToken: string }>;
+  acceptUserInvitation(inviteToken: string, userData: { firstName?: string; lastName?: string }): Promise<User>;
+  revokeUserInvitation(invitationId: string): Promise<void>;
+  getPendingInvitations(tenantId: string): Promise<{ id: string; email: string; role: string; invitedBy: string; createdAt: Date }[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -2498,6 +2510,239 @@ export class DatabaseStorage implements IStorage {
       .where(eq(exchangeRates.id, id))
       .returning();
     return exchangeRate;
+  }
+
+  // RBAC operations
+  async getUsersInTenant(tenantId: string): Promise<User[]> {
+    return await db
+      .select()
+      .from(users)
+      .where(eq(users.tenantId, tenantId))
+      .orderBy(users.createdAt);
+  }
+
+  async assignUserRole(userId: string, role: string, assignedBy: string): Promise<User> {
+    // Validate role is valid
+    const validRoles = ['owner', 'admin', 'accountant', 'manager', 'user', 'viewer'];
+    if (!validRoles.includes(role)) {
+      throw new Error(`Invalid role: ${role}. Valid roles are: ${validRoles.join(', ')}`);
+    }
+
+    const [user] = await db
+      .update(users)
+      .set({
+        role,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId))
+      .returning();
+
+    if (!user) {
+      throw new Error(`User ${userId} not found`);
+    }
+
+    // Log the role change
+    console.log(`🔐 RBAC: User ${userId} role changed to ${role} by ${assignedBy}`);
+    
+    return user;
+  }
+
+  async getUserWithRoleInfo(userId: string, tenantId: string): Promise<User | undefined> {
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(and(eq(users.id, userId), eq(users.tenantId, tenantId)));
+    
+    return user;
+  }
+
+  canUserManageRole(actorRole: string, targetRole: string): boolean {
+    const roleHierarchy = ['viewer', 'user', 'accountant', 'manager', 'admin', 'owner'];
+    const actorLevel = roleHierarchy.indexOf(actorRole);
+    const targetLevel = roleHierarchy.indexOf(targetRole);
+    
+    if (actorLevel === -1 || targetLevel === -1) {
+      return false;
+    }
+
+    // Users can manage roles lower than their own
+    // Owners can manage any role except other owners
+    if (actorRole === 'owner') {
+      return targetRole !== 'owner';
+    }
+    
+    return actorLevel > targetLevel;
+  }
+
+  getAssignableRoles(userRole: string): string[] {
+    const roleHierarchy = ['viewer', 'user', 'accountant', 'manager', 'admin', 'owner'];
+    const userLevel = roleHierarchy.indexOf(userRole);
+    
+    if (userLevel === -1) return [];
+    
+    // Users can assign roles up to their level (exclusive)
+    // Owners can assign any role except owner
+    if (userRole === 'owner') {
+      return roleHierarchy.slice(0, -1); // All except owner
+    }
+    
+    return roleHierarchy.slice(0, userLevel);
+  }
+
+  // User invitation system (simplified implementation)
+  async createUserInvitation(invitation: { 
+    email: string; 
+    role: string; 
+    tenantId: string; 
+    invitedBy: string; 
+  }): Promise<{ id: string; inviteToken: string }> {
+    // For now, we'll create a simple invitation system using a simple approach
+    // In a full implementation, you'd want a dedicated invitations table
+    
+    const inviteToken = crypto.randomUUID();
+    const invitationId = crypto.randomUUID();
+    
+    // Store invitation in tenant settings (temporary approach)
+    const tenant = await this.getTenant(invitation.tenantId);
+    if (!tenant) {
+      throw new Error('Tenant not found');
+    }
+
+    const existingSettings = tenant.settings as any || {};
+    const invitations = existingSettings.invitations || [];
+    
+    const newInvitation = {
+      id: invitationId,
+      email: invitation.email,
+      role: invitation.role,
+      invitedBy: invitation.invitedBy,
+      inviteToken,
+      createdAt: new Date(),
+      status: 'pending'
+    };
+
+    invitations.push(newInvitation);
+    
+    await this.updateTenant(invitation.tenantId, {
+      settings: {
+        ...existingSettings,
+        invitations
+      }
+    });
+
+    console.log(`📧 RBAC: Invitation created for ${invitation.email} as ${invitation.role} by ${invitation.invitedBy}`);
+    
+    return { id: invitationId, inviteToken };
+  }
+
+  async acceptUserInvitation(inviteToken: string, userData: { 
+    firstName?: string; 
+    lastName?: string; 
+  }): Promise<User> {
+    // Find invitation across all tenants
+    const allTenants = await this.getAllTenants();
+    let foundInvitation: any = null;
+    let tenantId: string = '';
+
+    for (const tenant of allTenants) {
+      const settings = tenant.settings as any || {};
+      const invitations = settings.invitations || [];
+      
+      const invitation = invitations.find((inv: any) => inv.inviteToken === inviteToken && inv.status === 'pending');
+      if (invitation) {
+        foundInvitation = invitation;
+        tenantId = tenant.id;
+        break;
+      }
+    }
+
+    if (!foundInvitation) {
+      throw new Error('Invalid or expired invitation token');
+    }
+
+    // Create user with invitation details
+    const newUser = await this.upsertUser({
+      id: crypto.randomUUID(),
+      email: foundInvitation.email,
+      firstName: userData.firstName || '',
+      lastName: userData.lastName || '',
+      tenantId,
+      role: foundInvitation.role,
+    });
+
+    // Mark invitation as accepted
+    const tenant = await this.getTenant(tenantId);
+    const settings = tenant!.settings as any || {};
+    const invitations = settings.invitations || [];
+    
+    const updatedInvitations = invitations.map((inv: any) => 
+      inv.id === foundInvitation.id ? { ...inv, status: 'accepted', acceptedAt: new Date() } : inv
+    );
+
+    await this.updateTenant(tenantId, {
+      settings: {
+        ...settings,
+        invitations: updatedInvitations
+      }
+    });
+
+    console.log(`✅ RBAC: Invitation accepted by ${foundInvitation.email} as ${foundInvitation.role}`);
+    
+    return newUser;
+  }
+
+  async revokeUserInvitation(invitationId: string): Promise<void> {
+    // Find and revoke invitation across all tenants
+    const allTenants = await this.getAllTenants();
+    
+    for (const tenant of allTenants) {
+      const settings = tenant.settings as any || {};
+      const invitations = settings.invitations || [];
+      
+      const invitationIndex = invitations.findIndex((inv: any) => inv.id === invitationId);
+      if (invitationIndex !== -1) {
+        invitations[invitationIndex].status = 'revoked';
+        invitations[invitationIndex].revokedAt = new Date();
+        
+        await this.updateTenant(tenant.id, {
+          settings: {
+            ...settings,
+            invitations
+          }
+        });
+
+        console.log(`🔐 RBAC: Invitation ${invitationId} revoked`);
+        return;
+      }
+    }
+
+    throw new Error('Invitation not found');
+  }
+
+  async getPendingInvitations(tenantId: string): Promise<{
+    id: string;
+    email: string;
+    role: string;
+    invitedBy: string;
+    createdAt: Date;
+  }[]> {
+    const tenant = await this.getTenant(tenantId);
+    if (!tenant) {
+      return [];
+    }
+
+    const settings = tenant.settings as any || {};
+    const invitations = settings.invitations || [];
+    
+    return invitations
+      .filter((inv: any) => inv.status === 'pending')
+      .map((inv: any) => ({
+        id: inv.id,
+        email: inv.email,
+        role: inv.role,
+        invitedBy: inv.invitedBy,
+        createdAt: new Date(inv.createdAt),
+      }));
   }
 }
 

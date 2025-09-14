@@ -8838,6 +8838,327 @@ ${tenant.name}
 
   // ==================== END COMPREHENSIVE ACCOUNTING DATA API ====================
 
+  // ==================== RBAC MANAGEMENT API ====================
+
+  // Import RBAC middleware and permission service
+  const { withPermission, withRole, withMinimumRole, canManageUser, withRBACContext } = await import("./middleware/rbac");
+  const { PermissionService } = await import("./services/permissionService");
+
+  // Get all users in tenant with their roles and permissions
+  app.get("/api/rbac/users", ...withPermission('admin:users'), async (req: any, res) => {
+    try {
+      const { tenantId } = req.rbac;
+      
+      const users = await storage.getUsersInTenant(tenantId);
+      const usersWithPermissions = await Promise.all(
+        users.map(async (user) => {
+          const permissions = await PermissionService.getUserPermissions(user.id, tenantId);
+          return {
+            ...user,
+            permissions: permissions.map(p => PermissionService.getPermissionInfo(p))
+          };
+        })
+      );
+
+      res.json(usersWithPermissions);
+    } catch (error) {
+      console.error("Error fetching tenant users:", error);
+      res.status(500).json({ message: "Failed to fetch users" });
+    }
+  });
+
+  // Assign or change user role  
+  app.put("/api/rbac/users/:userId/role", ...withPermission('admin:users'), canManageUser(), async (req: any, res) => {
+    try {
+      const { userId } = req.params;
+      const { role } = req.body;
+      const { userId: actorId, userRole: actorRole } = req.rbac;
+
+      if (!role) {
+        return res.status(400).json({ message: "Role is required" });
+      }
+
+      // Validate that the actor can assign this role
+      const assignableRoles = storage.getAssignableRoles(actorRole);
+      if (!assignableRoles.includes(role)) {
+        return res.status(403).json({ 
+          message: "Cannot assign this role",
+          assignableRoles
+        });
+      }
+
+      // Assign the role
+      const updatedUser = await storage.assignUserRole(userId, role, actorId);
+      
+      // Log the role change
+      await PermissionService.logPermissionChange(
+        actorId, 
+        userId, 
+        req.rbac.tenantId, 
+        'role_change',
+        `Role changed from ${req.targetUser.role} to ${role}`
+      );
+
+      res.json({
+        user: updatedUser,
+        message: `User role updated to ${role}`
+      });
+    } catch (error) {
+      console.error("Error updating user role:", error);
+      res.status(500).json({ message: "Failed to update user role" });
+    }
+  });
+
+  // Get all available permissions organized by category
+  app.get("/api/rbac/permissions", ...withPermission('admin:users'), async (req: any, res) => {
+    try {
+      const permissionsByCategory = PermissionService.getPermissionsByCategory();
+      res.json(permissionsByCategory);
+    } catch (error) {
+      console.error("Error fetching permissions:", error);
+      res.status(500).json({ message: "Failed to fetch permissions" });
+    }
+  });
+
+  // Get permissions for a specific role
+  app.get("/api/rbac/roles/:role/permissions", ...withPermission('admin:users'), async (req: any, res) => {
+    try {
+      const { role } = req.params;
+      
+      if (!PermissionService.isValidRole(role)) {
+        return res.status(400).json({ message: "Invalid role" });
+      }
+
+      const permissions = PermissionService.getRolePermissions(role);
+      const permissionDetails = permissions.map(p => PermissionService.getPermissionInfo(p));
+      
+      res.json({
+        role,
+        permissions: permissionDetails,
+        permissionCount: permissions.length
+      });
+    } catch (error) {
+      console.error("Error fetching role permissions:", error);
+      res.status(500).json({ message: "Failed to fetch role permissions" });
+    }
+  });
+
+  // Get all available roles with their details
+  app.get("/api/rbac/roles", ...withPermission('admin:users'), async (req: any, res) => {
+    try {
+      const roles = PermissionService.getAvailableRoles();
+      res.json(roles);
+    } catch (error) {
+      console.error("Error fetching roles:", error);
+      res.status(500).json({ message: "Failed to fetch roles" });
+    }
+  });
+
+  // Create user invitation
+  app.post("/api/rbac/invitations", ...withPermission('admin:users'), async (req: any, res) => {
+    try {
+      const { email, role } = req.body;
+      const { userId: invitedBy, tenantId, userRole: inviterRole } = req.rbac;
+
+      if (!email || !role) {
+        return res.status(400).json({ message: "Email and role are required" });
+      }
+
+      // Validate that the inviter can assign this role
+      const assignableRoles = storage.getAssignableRoles(inviterRole);
+      if (!assignableRoles.includes(role)) {
+        return res.status(403).json({ 
+          message: "Cannot invite users to this role",
+          assignableRoles
+        });
+      }
+
+      // Check if user already exists in this tenant
+      const existingUsers = await storage.getUsersInTenant(tenantId);
+      const existingUser = existingUsers.find(u => u.email === email);
+      if (existingUser) {
+        return res.status(400).json({ message: "User already exists in this tenant" });
+      }
+
+      // Create invitation
+      const invitation = await storage.createUserInvitation({
+        email,
+        role,
+        tenantId,
+        invitedBy
+      });
+
+      res.status(201).json({
+        success: true,
+        invitationId: invitation.id,
+        message: `Invitation sent to ${email} for role ${role}`,
+        // Don't return the token for security
+      });
+    } catch (error) {
+      console.error("Error creating user invitation:", error);
+      res.status(500).json({ message: "Failed to create invitation" });
+    }
+  });
+
+  // Get pending invitations for tenant
+  app.get("/api/rbac/invitations", ...withPermission('admin:users'), async (req: any, res) => {
+    try {
+      const { tenantId } = req.rbac;
+      const invitations = await storage.getPendingInvitations(tenantId);
+      res.json(invitations);
+    } catch (error) {
+      console.error("Error fetching invitations:", error);
+      res.status(500).json({ message: "Failed to fetch invitations" });
+    }
+  });
+
+  // Revoke user invitation
+  app.delete("/api/rbac/invitations/:invitationId", ...withPermission('admin:users'), async (req: any, res) => {
+    try {
+      const { invitationId } = req.params;
+      await storage.revokeUserInvitation(invitationId);
+      
+      res.json({
+        success: true,
+        message: "Invitation revoked successfully"
+      });
+    } catch (error) {
+      console.error("Error revoking invitation:", error);
+      res.status(500).json({ message: "Failed to revoke invitation" });
+    }
+  });
+
+  // Accept user invitation (public endpoint - no auth required)
+  app.post("/api/rbac/invitations/accept", async (req, res) => {
+    try {
+      const { inviteToken, firstName, lastName } = req.body;
+      
+      if (!inviteToken) {
+        return res.status(400).json({ message: "Invite token is required" });
+      }
+
+      const user = await storage.acceptUserInvitation(inviteToken, {
+        firstName,
+        lastName
+      });
+
+      res.json({
+        success: true,
+        user: {
+          id: user.id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          role: user.role
+        },
+        message: "Invitation accepted successfully"
+      });
+    } catch (error) {
+      console.error("Error accepting invitation:", error);
+      if (error instanceof Error && error.message.includes('Invalid or expired')) {
+        return res.status(400).json({ message: error.message });
+      }
+      res.status(500).json({ message: "Failed to accept invitation" });
+    }
+  });
+
+  // Check user permissions (utility endpoint)
+  app.post("/api/rbac/check-permission", isAuthenticated, withRBACContext, async (req: any, res) => {
+    try {
+      const { permission } = req.body;
+      const { userId, tenantId } = req.rbac;
+      
+      if (!permission) {
+        return res.status(400).json({ message: "Permission is required" });
+      }
+
+      const hasPermission = await PermissionService.hasPermission(userId, tenantId, permission);
+      
+      res.json({
+        hasPermission,
+        permission,
+        userId,
+        tenantId
+      });
+    } catch (error) {
+      console.error("Error checking permission:", error);
+      res.status(500).json({ message: "Failed to check permission" });
+    }
+  });
+
+  // Get current user's permissions
+  app.get("/api/rbac/my-permissions", isAuthenticated, withRBACContext, async (req: any, res) => {
+    try {
+      const { userId, tenantId, userRole, permissions } = req.rbac;
+      
+      res.json({
+        userId,
+        tenantId,
+        role: userRole,
+        permissions: permissions.map(p => PermissionService.getPermissionInfo(p)),
+        permissionCount: permissions.length
+      });
+    } catch (error) {
+      console.error("Error fetching user permissions:", error);
+      res.status(500).json({ message: "Failed to fetch user permissions" });
+    }
+  });
+
+  // Remove user from tenant (only owners can do this)
+  app.delete("/api/rbac/users/:userId", ...withRole('owner'), canManageUser(), async (req: any, res) => {
+    try {
+      const { userId } = req.params;
+      const { userId: actorId, tenantId } = req.rbac;
+      
+      // Cannot remove yourself
+      if (userId === actorId) {
+        return res.status(400).json({ message: "Cannot remove yourself from the tenant" });
+      }
+
+      // Set user's tenantId to null to remove them from the tenant
+      await storage.updateUser(userId, { tenantId: null });
+      
+      // Log the removal
+      await PermissionService.logPermissionChange(
+        actorId,
+        userId,
+        tenantId,
+        'role_change',
+        'User removed from tenant'
+      );
+
+      res.json({
+        success: true,
+        message: "User removed from tenant successfully"
+      });
+    } catch (error) {
+      console.error("Error removing user:", error);
+      res.status(500).json({ message: "Failed to remove user" });
+    }
+  });
+
+  // Get role hierarchy information
+  app.get("/api/rbac/role-hierarchy", ...withPermission('admin:users'), async (req: any, res) => {
+    try {
+      const { userRole } = req.rbac;
+      
+      const availableRoles = PermissionService.getAvailableRoles();
+      const assignableRoles = storage.getAssignableRoles(userRole);
+      
+      res.json({
+        availableRoles,
+        assignableRoles,
+        userRole,
+        hierarchy: ['viewer', 'user', 'accountant', 'manager', 'admin', 'owner']
+      });
+    } catch (error) {
+      console.error("Error fetching role hierarchy:", error);
+      res.status(500).json({ message: "Failed to fetch role hierarchy" });
+    }
+  });
+
+  // ==================== END RBAC MANAGEMENT API ====================
+
   const httpServer = createServer(app);
   return httpServer;
 }
