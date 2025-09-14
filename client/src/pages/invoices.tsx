@@ -109,57 +109,35 @@ export default function Invoices() {
     enabled: isAuthenticated,
   });
 
-  // Extract visible invoice IDs for optimized predictions API
-  const visibleInvoiceIds = useMemo(() => {
-    if (!invoices.length) return [];
-    
-    // Get filtered and paginated invoices (same logic as below but early calculation)
-    const filtered = (invoices as any[]).filter((invoice: any) => {
-      const matchesSearch = search === "" || 
-        invoice.invoiceNumber?.toLowerCase().includes(search.toLowerCase()) ||
-        invoice.contact?.name?.toLowerCase().includes(search.toLowerCase()) ||
-        invoice.contact?.email?.toLowerCase().includes(search.toLowerCase()) ||
-        invoice.contact?.companyName?.toLowerCase().includes(search.toLowerCase());
-
-      const matchesStatus = statusFilter === "all" || 
-        (statusFilter === "pending" && invoice.status === "pending") ||
-        (statusFilter === "overdue" && invoice.status === "overdue") ||
-        (statusFilter === "paid" && invoice.status === "paid") ||
-        (statusFilter === "cancelled" && invoice.status === "cancelled");
-
-      const matchesOverdueCategory = overdueFilter === "all" || 
-        (overdueFilter === "paid" && invoice.status === "paid") ||
-        (overdueFilter !== "paid" && (
-          (invoice.overdueCategory && invoice.overdueCategory === overdueFilter) ||
-          (!invoice.overdueCategory && getOverdueCategoryFromDueDate(invoice.dueDate).category === overdueFilter)
-        ));
-
-      return matchesSearch && matchesStatus && matchesOverdueCategory;
-    });
-
-    // Apply pagination to get only visible invoices
-    const startIndex = (invoicesCurrentPage - 1) * invoicesItemsPerPage;
-    const endIndex = startIndex + invoicesItemsPerPage;
-    const paginated = filtered.slice(startIndex, endIndex);
-    
-    return paginated.map(invoice => invoice.id);
-  }, [invoices, search, statusFilter, overdueFilter, invoicesCurrentPage, invoicesItemsPerPage]);
-
-  // Fetch payment predictions for visible invoices only (optimized)
-  const { data: paymentPredictions = {}, isLoading: predictionsLoading } = useQuery({
-    queryKey: ["/api/ml/payment-predictions/filtered", visibleInvoiceIds],
+  // Fetch ALL payment predictions once with static caching (optimized strategy)
+  const { data: allPaymentPredictions = {}, isLoading: predictionsLoading } = useQuery({
+    queryKey: ["/api/ml/payment-predictions/bulk"],
     queryFn: async () => {
-      if (visibleInvoiceIds.length === 0) return {};
-      const idsParam = visibleInvoiceIds.join(',');
-      const response = await fetch(`/api/ml/payment-predictions/filtered?invoiceIds=${idsParam}`);
+      const response = await fetch('/api/ml/payment-predictions/bulk/invoices');
       if (!response.ok) throw new Error('Failed to fetch predictions');
       return response.json();
     },
-    enabled: isAuthenticated && visibleInvoiceIds.length > 0,
-    staleTime: 3 * 60 * 1000, // 3 minutes - predictions don't change frequently
-    cacheTime: 10 * 60 * 1000, // 10 minutes - keep in cache longer
+    enabled: isAuthenticated,
+    staleTime: 5 * 60 * 1000, // 5 minutes - predictions don't change frequently
+    cacheTime: 15 * 60 * 1000, // 15 minutes - keep in cache longer
     refetchOnWindowFocus: false, // Don't refetch when window regains focus
+    refetchInterval: 10 * 60 * 1000, // Optional: refetch every 10 minutes in background
   });
+
+  // Filter predictions on frontend (instant filtering, no API calls)
+  const paymentPredictions = useMemo(() => {
+    if (!invoices.length || !allPaymentPredictions) return {};
+    
+    // Only return predictions for invoices that exist in current invoice data
+    const filteredPredictions: { [key: string]: any } = {};
+    (invoices as any[]).forEach((invoice: any) => {
+      if (allPaymentPredictions[invoice.id]) {
+        filteredPredictions[invoice.id] = allPaymentPredictions[invoice.id];
+      }
+    });
+    
+    return filteredPredictions;
+  }, [invoices, allPaymentPredictions]);
 
   // Fetch collection schedules for assignment
   const { data: collectionSchedules = [] } = useQuery({
