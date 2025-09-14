@@ -652,7 +652,7 @@ export default function Invoices() {
                         >
                           <div className="flex items-center">
                             <Target className="mr-1 h-4 w-4 text-[#17B6C3]" />
-                            Payment Probability
+                            Probability
                           </div>
                         </th>
                         <th 
