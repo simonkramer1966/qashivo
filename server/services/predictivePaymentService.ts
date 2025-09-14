@@ -95,39 +95,73 @@ export class PredictivePaymentService {
   }
 
   /**
-   * Calculate payment probability using logistic regression
+   * Calculate payment probability using reliability-first logistic regression
+   * Key insight: Payment history is far more predictive than timing
    */
   private async calculatePaymentProbability(features: any): Promise<number> {
-    // Logistic regression weights (trained on historical data)
+    const paymentHistory = features.paymentHistory || 0.5;
+    const customerReliability = features.customerReliability || 0.5;
+    const daysOverdue = features.daysOverdue || 0;
+    
+    // Step 1: Establish base probability from payment reliability
+    // This is the foundation - customers who always pay should score high
+    let baseReliabilityScore = 0;
+    
+    if (paymentHistory >= 0.95) {
+      // "Always pays" customers: 95-99% even if late
+      baseReliabilityScore = 2.5; // ~92% base probability
+    } else if (paymentHistory >= 0.85) {
+      // "Usually pays" customers: 80-95%
+      baseReliabilityScore = 1.5; // ~82% base probability  
+    } else if (paymentHistory >= 0.70) {
+      // "Often pays" customers: 60-80%
+      baseReliabilityScore = 0.5; // ~62% base probability
+    } else if (paymentHistory >= 0.50) {
+      // "Sometimes pays" customers: 40-60%
+      baseReliabilityScore = -0.2; // ~45% base probability
+    } else {
+      // "Rarely pays" customers: <40%
+      baseReliabilityScore = -1.0; // ~27% base probability
+    }
+    
+    // Step 2: Apply tiered timing penalties based on reliability
+    let timingPenalty = 0;
+    
+    if (paymentHistory >= 0.90) {
+      // Reliable customers: minimal penalty for being late
+      timingPenalty = daysOverdue * -0.005; // Very light penalty
+    } else if (paymentHistory >= 0.70) {
+      // Decent customers: moderate penalty
+      timingPenalty = daysOverdue * -0.015; // Medium penalty
+    } else {
+      // Unreliable customers: heavy penalty for being late
+      timingPenalty = daysOverdue * -0.03; // Heavy penalty
+    }
+    
+    // Step 3: Apply secondary factors (much smaller impact)
     const weights = {
-      daysOverdue: -0.02,
-      invoiceAmount: -0.000001,
-      customerReliability: 0.6,
-      paymentHistory: 0.4,
-      communicationResponse: 0.3,
+      customerReliability: 0.4,
+      communicationResponse: 0.2,
       seasonalFactor: 0.1,
-      riskScore: -0.5,
-      previousPaymentDelay: -0.01,
-      industryBenchmark: 0.2,
+      invoiceAmount: -0.0000005, // Reduced impact
+      riskScore: -0.3,
+      industryBenchmark: 0.1,
     };
 
-    // Calculate weighted sum
-    let logit = 0.1; // Base intercept
+    let logit = baseReliabilityScore + timingPenalty;
     
-    logit += (features.daysOverdue || 0) * weights.daysOverdue;
-    logit += (features.invoiceAmount || 0) * weights.invoiceAmount;
-    logit += (features.customerReliability || 0.5) * weights.customerReliability;
-    logit += (features.paymentHistory || 0.5) * weights.paymentHistory;
+    // Add secondary factors
+    logit += (customerReliability) * weights.customerReliability;
     logit += (features.communicationResponse || 0.5) * weights.communicationResponse;
     logit += (features.seasonalFactor || 1.0) * weights.seasonalFactor;
+    logit += (features.invoiceAmount || 0) * weights.invoiceAmount;
     logit += (features.riskScore || 0.5) * weights.riskScore;
-    logit += (features.previousPaymentDelay || 0) * weights.previousPaymentDelay;
-    logit += (features.industryBenchmark || 0.5) * weights.industryBenchmark;
+    logit += (features.industryBenchmark || 0.75) * weights.industryBenchmark;
 
     // Apply logistic function
     const probability = 1 / (1 + Math.exp(-logit));
     
-    // Ensure probability is between 0 and 1
+    // Ensure probability is between 1% and 99%
     return Math.max(0.01, Math.min(0.99, probability));
   }
 
