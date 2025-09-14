@@ -661,7 +661,7 @@ export default function Invoices() {
                         >
                           <div className="flex items-center">
                             <Calendar className="mr-1 h-4 w-4 text-[#17B6C3]" />
-                            Expected Payment
+                            Exp. Pymt
                           </div>
                         </th>
                         <th 
