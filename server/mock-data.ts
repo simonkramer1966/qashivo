@@ -430,17 +430,18 @@ function generateCommunicationActions(
       tenantId,
       contactId,
       invoiceId,
-      channel,
+      type: channel, // Map channel to type field
       subject: `Payment Reminder ${i + 1}`,
-      message: `Reminder for invoice payment - ${i === 0 ? 'gentle' : i === 1 ? 'standard' : 'urgent'} follow-up`,
-      status: isEffective ? 'sent' : 'sent',
-      scheduledDate: actionDate,
-      sentDate: actionDate,
-      outcome: isEffective && actionDate === paidDate ? 'paid' : 'no_response',
-      templateId: null,
-      stage: i === 0 ? 'initial' : i < 3 ? 'follow_up' : 'escalation',
-      priority: i < 2 ? 'normal' : 'high',
-      costEstimate: COMMUNICATION_CHANNELS.find(c => c.name === channel)?.cost || 0
+      content: `Reminder for invoice payment - ${i === 0 ? 'gentle' : i === 1 ? 'standard' : 'urgent'} follow-up`,
+      status: isEffective ? 'completed' : 'completed',
+      scheduledFor: actionDate,
+      completedAt: actionDate,
+      metadata: {
+        outcome: isEffective && actionDate === paidDate ? 'paid' : 'no_response',
+        stage: i === 0 ? 'initial' : i < 3 ? 'follow_up' : 'escalation',
+        priority: i < 2 ? 'normal' : 'high',
+        costEstimate: COMMUNICATION_CHANNELS.find(c => c.name === channel)?.cost || 0
+      }
     });
   }
   
@@ -472,9 +473,10 @@ export async function generateComprehensiveDataset(
   console.log(`📊 Configuration: ${years} years, ${clientCount} clients, ${invoicesPerMonthRange[0]}-${invoicesPerMonthRange[1]} invoices/month`);
   
   // Safe data deletion in proper FK order
-  console.log('🧹 Clearing existing data (actions → invoices → contacts)...');
+  console.log('🧹 Clearing existing data (actions → health scores → invoices → contacts)...');
   try {
     await storage.clearAllActions(tenantId);
+    await storage.clearAllInvoiceHealthScores(tenantId);
     await storage.clearAllInvoices(tenantId);
     await storage.clearAllContacts(tenantId);
     console.log('✅ All existing data cleared successfully');
@@ -505,7 +507,7 @@ export async function generateComprehensiveDataset(
       paymentTerms: industry.paymentTerms,
       preferredContactMethod: getRandomElement(behavior.preferredChannels) as any,
       isActive: true,
-      creditLimit: getRandomInRange(500000, 2000000), // £5K - £20K credit limits
+      creditLimit: getRandomInRange(500000, 2000000).toString(), // £5K - £20K credit limits
       notes: `${segment.replace('_', ' ')} - ${industry.name} industry`
     };
     

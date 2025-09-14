@@ -246,6 +246,7 @@ export interface IStorage {
   
   // Cleanup operations
   clearAllActions(tenantId: string): Promise<void>;
+  clearAllInvoiceHealthScores(tenantId: string): Promise<void>;
   clearAllContacts(tenantId: string): Promise<void>;
   clearAllInvoices(tenantId: string): Promise<void>;
   
@@ -473,6 +474,12 @@ export class DatabaseStorage implements IStorage {
       .update(contacts)
       .set({ isActive: false, updatedAt: new Date() })
       .where(eq(contacts.tenantId, tenantId));
+  }
+
+  async clearAllInvoiceHealthScores(tenantId: string): Promise<void> {
+    await db
+      .delete(invoiceHealthScores)
+      .where(eq(invoiceHealthScores.tenantId, tenantId));
   }
 
   async clearAllInvoices(tenantId: string): Promise<void> {
@@ -795,6 +802,13 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createAction(actionData: InsertAction): Promise<Action> {
+    // Temporary debug log to see what data is being passed
+    console.log('🐛 DEBUG: Creating action with data:', JSON.stringify(actionData, null, 2));
+    
+    if (!actionData.type) {
+      throw new Error('Action type is required but missing from actionData');
+    }
+    
     const [action] = await db.insert(actions).values(actionData).returning();
     return action;
   }
