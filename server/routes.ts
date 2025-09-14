@@ -3495,6 +3495,70 @@ Payment required immediately to avoid collection action. Contact us NOW.`
     }
   });
 
+  // Get payment predictions for all invoices (for invoice list integration)
+  app.get("/api/ml/payment-predictions/bulk/invoices", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { PredictivePaymentService } = await import("./services/predictivePaymentService");
+      const predictionService = new PredictivePaymentService();
+      
+      // Get all predictions for the tenant
+      const predictions = await predictionService.getPaymentPredictions(user.tenantId);
+      
+      // Convert to map for easy lookup by invoice ID
+      const predictionMap: { [invoiceId: string]: any } = {};
+      predictions.forEach(prediction => {
+        predictionMap[prediction.invoiceId] = {
+          paymentProbability: parseFloat(prediction.paymentProbability || '0'),
+          predictedPaymentDate: prediction.predictedPaymentDate,
+          paymentConfidenceScore: parseFloat(prediction.paymentConfidenceScore || '0'),
+          defaultRisk: parseFloat(prediction.defaultRisk || '0'),
+          escalationRisk: parseFloat(prediction.escalationRisk || '0'),
+          modelVersion: prediction.modelVersion
+        };
+      });
+      
+      res.json(predictionMap);
+    } catch (error) {
+      console.error("Error fetching bulk payment predictions:", error);
+      res.status(500).json({ message: "Failed to fetch payment predictions" });
+    }
+  });
+
+  // Generate bulk payment predictions for all outstanding invoices
+  app.post("/api/ml/payment-predictions/generate-bulk", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { PredictivePaymentService } = await import("./services/predictivePaymentService");
+      const predictionService = new PredictivePaymentService();
+      
+      console.log(`🔮 Generating bulk predictions for tenant: ${user.tenantId}`);
+      const predictionsCreated = await predictionService.generateBulkPredictions(user.tenantId);
+      
+      console.log(`✅ Generated ${predictionsCreated} predictions successfully`);
+      res.json({ 
+        success: true, 
+        predictionsCreated,
+        message: `Successfully generated ${predictionsCreated} payment predictions`
+      });
+    } catch (error) {
+      console.error("Error generating bulk predictions:", error);
+      res.status(500).json({ 
+        success: false,
+        message: "Failed to generate bulk predictions",
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
   // Dynamic Risk Scoring
   app.post("/api/ml/risk-scoring/calculate", isAuthenticated, async (req: any, res) => {
     try {

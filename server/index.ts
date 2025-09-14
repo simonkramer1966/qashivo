@@ -199,6 +199,37 @@ app.use((req, res, next) => {
     }
   }
 
+  // Initialize payment predictions on startup
+  if (process.env.NODE_ENV !== 'test') {
+    try {
+      console.log("🔮 Initializing payment predictions system...");
+      
+      const { PredictivePaymentService } = await import("./services/predictivePaymentService");
+      const { db } = await import("./db");
+      const { tenants } = await import("@shared/schema");
+      
+      // Get all tenants to generate predictions for
+      const allTenants = await db.select({ id: tenants.id }).from(tenants);
+      
+      const predictionService = new PredictivePaymentService();
+      let totalPredictionsGenerated = 0;
+      
+      for (const tenant of allTenants) {
+        try {
+          const predictionsForTenant = await predictionService.generateBulkPredictions(tenant.id);
+          totalPredictionsGenerated += predictionsForTenant;
+          console.log(`📊 Generated ${predictionsForTenant} predictions for tenant ${tenant.id}`);
+        } catch (error) {
+          console.error(`❌ Failed to generate predictions for tenant ${tenant.id}:`, error);
+        }
+      }
+      
+      console.log(`✅ Payment predictions initialized: ${totalPredictionsGenerated} total predictions generated`);
+    } catch (error) {
+      console.error("❌ Failed to initialize payment predictions:", error);
+    }
+  }
+
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
