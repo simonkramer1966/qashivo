@@ -465,6 +465,83 @@ export const aiAgentConfigs = pgTable("ai_agent_configs", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// RBAC System Tables
+
+// Permissions table - defines all available permissions in the system
+export const permissions = pgTable("permissions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull().unique(), // "view_invoices", "edit_customers", "manage_users"
+  category: varchar("category").notNull(), // "invoices", "customers", "admin", "reports"
+  description: text("description").notNull(),
+  resourceType: varchar("resource_type"), // "invoice", "customer", "user", "report"
+  action: varchar("action").notNull(), // "view", "create", "edit", "delete", "manage"
+  isSystemPermission: boolean("is_system_permission").default(false), // System vs tenant-specific
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Role permissions table - maps default permissions to roles
+export const rolePermissions = pgTable("role_permissions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  role: varchar("role").notNull(), // "owner", "admin", "accountant", "viewer", "user"
+  permissionId: varchar("permission_id").notNull().references(() => permissions.id, { onDelete: "cascade" }),
+  isDefault: boolean("is_default").default(true), // Whether this is a default permission for the role
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  unique("role_permission_unique").on(table.role, table.permissionId)
+]);
+
+// User permissions table - custom permissions per user within a tenant
+export const userPermissions = pgTable("user_permissions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
+  permissionId: varchar("permission_id").notNull().references(() => permissions.id, { onDelete: "cascade" }),
+  granted: boolean("granted").notNull().default(true), // true = granted, false = explicitly revoked
+  grantedBy: varchar("granted_by").references(() => users.id), // Who assigned this permission
+  reason: text("reason"), // Optional reason for granting/revoking
+  expiresAt: timestamp("expires_at"), // Optional expiration for temporary permissions
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  unique("user_permission_unique").on(table.userId, table.tenantId, table.permissionId)
+]);
+
+// User invitations table - track pending user invitations
+export const userInvitations = pgTable("user_invitations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
+  email: varchar("email").notNull(),
+  role: varchar("role").notNull().default("user"), // Pre-assigned role
+  invitedBy: varchar("invited_by").notNull().references(() => users.id, { onDelete: "cascade" }),
+  invitationToken: varchar("invitation_token").notNull().unique(),
+  status: varchar("status").notNull().default("pending"), // pending, accepted, expired, revoked
+  message: text("message"), // Optional personal message
+  expiresAt: timestamp("expires_at").notNull(),
+  acceptedAt: timestamp("accepted_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  unique("invitation_tenant_email").on(table.tenantId, table.email)
+]);
+
+// Permission audit log - track permission changes
+export const permissionAuditLog = pgTable("permission_audit_log", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  userId: varchar("user_id").references(() => users.id), // The user whose permissions changed
+  changedBy: varchar("changed_by").notNull().references(() => users.id), // Who made the change
+  action: varchar("action").notNull(), // "role_assigned", "role_removed", "permission_granted", "permission_revoked"
+  entityType: varchar("entity_type").notNull(), // "role", "permission"
+  entityId: varchar("entity_id"), // Role name or permission ID
+  oldValue: varchar("old_value"), // Previous role/permission state
+  newValue: varchar("new_value"), // New role/permission state
+  reason: text("reason"), // Optional reason for change
+  ipAddress: varchar("ip_address"),
+  userAgent: text("user_agent"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Channel performance analytics
 export const channelAnalytics = pgTable("channel_analytics", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -2279,6 +2356,51 @@ export const insertMlModelPerformanceSchema = createInsertSchema(mlModelPerforma
   id: true,
   createdAt: true,
 });
+
+// RBAC Insert Schemas
+export const insertPermissionSchema = createInsertSchema(permissions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertRolePermissionSchema = createInsertSchema(rolePermissions).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertUserPermissionSchema = createInsertSchema(userPermissions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertUserInvitationSchema = createInsertSchema(userInvitations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertPermissionAuditLogSchema = createInsertSchema(permissionAuditLog).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Type exports for RBAC tables
+export type Permission = typeof permissions.$inferSelect;
+export type InsertPermission = z.infer<typeof insertPermissionSchema>;
+
+export type RolePermission = typeof rolePermissions.$inferSelect;
+export type InsertRolePermission = z.infer<typeof insertRolePermissionSchema>;
+
+export type UserPermission = typeof userPermissions.$inferSelect;
+export type InsertUserPermission = z.infer<typeof insertUserPermissionSchema>;
+
+export type UserInvitation = typeof userInvitations.$inferSelect;
+export type InsertUserInvitation = z.infer<typeof insertUserInvitationSchema>;
+
+export type PermissionAuditLog = typeof permissionAuditLog.$inferSelect;
+export type InsertPermissionAuditLog = z.infer<typeof insertPermissionAuditLogSchema>;
 
 // Type exports for new ML tables
 export type PaymentPrediction = typeof paymentPredictions.$inferSelect;
