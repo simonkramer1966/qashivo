@@ -1945,3 +1945,356 @@ export interface StandardExchangeRate {
   isActive: boolean;
   metadata?: Record<string, any>; // Provider-specific additional data
 }
+
+// === ADVANCED ML TABLES FOR WEEK 2 ===
+
+// Payment prediction models - ML predictions for payment probability and timing
+export const paymentPredictions = pgTable("payment_predictions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  invoiceId: varchar("invoice_id").notNull().references(() => invoices.id),
+  contactId: varchar("contact_id").notNull().references(() => contacts.id),
+  
+  // Prediction metrics
+  paymentProbability: decimal("payment_probability", { precision: 5, scale: 4 }), // 0-1
+  predictedPaymentDate: timestamp("predicted_payment_date"),
+  paymentConfidenceScore: decimal("payment_confidence_score", { precision: 5, scale: 4 }), // 0-1
+  
+  // Risk assessment
+  defaultRisk: decimal("default_risk", { precision: 5, scale: 4 }), // 0-1
+  escalationRisk: decimal("escalation_risk", { precision: 5, scale: 4 }), // 0-1
+  
+  // Model metadata
+  modelVersion: varchar("model_version").notNull(),
+  predictionDate: timestamp("prediction_date").defaultNow(),
+  features: jsonb("features"), // Input features used for prediction
+  
+  // Validation tracking
+  actualPaymentDate: timestamp("actual_payment_date"),
+  actualOutcome: varchar("actual_outcome"), // paid, defaulted, escalated
+  predictionAccuracy: decimal("prediction_accuracy", { precision: 5, scale: 4 }), // 0-1
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("payment_predictions_tenant_idx").on(table.tenantId),
+  index("payment_predictions_invoice_idx").on(table.invoiceId),
+  index("payment_predictions_contact_idx").on(table.contactId),
+  index("payment_predictions_date_idx").on(table.predictionDate),
+]);
+
+// Dynamic risk scores - Real-time risk assessment for customers
+export const riskScores = pgTable("risk_scores", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  contactId: varchar("contact_id").notNull().references(() => contacts.id),
+  
+  // Risk metrics
+  overallRiskScore: decimal("overall_risk_score", { precision: 5, scale: 4 }), // 0-1
+  paymentRisk: decimal("payment_risk", { precision: 5, scale: 4 }), // 0-1
+  creditRisk: decimal("credit_risk", { precision: 5, scale: 4 }), // 0-1
+  communicationRisk: decimal("communication_risk", { precision: 5, scale: 4 }), // 0-1
+  
+  // Risk factors
+  riskFactors: jsonb("risk_factors"), // Array of contributing factors
+  riskTrend: varchar("risk_trend"), // increasing, stable, decreasing
+  
+  // Historical context
+  previousRiskScore: decimal("previous_risk_score", { precision: 5, scale: 4 }),
+  riskChangePercent: decimal("risk_change_percent", { precision: 6, scale: 3 }),
+  
+  // Model metadata
+  modelVersion: varchar("model_version").notNull(),
+  lastCalculated: timestamp("last_calculated").defaultNow(),
+  nextReassessment: timestamp("next_reassessment"),
+  
+  // Action recommendations
+  recommendedActions: jsonb("recommended_actions"), // Array of suggested actions
+  urgencyLevel: varchar("urgency_level"), // low, medium, high, critical
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  unique("risk_scores_tenant_contact").on(table.tenantId, table.contactId),
+  index("risk_scores_tenant_idx").on(table.tenantId),
+  index("risk_scores_overall_risk_idx").on(table.overallRiskScore),
+  index("risk_scores_urgency_idx").on(table.urgencyLevel),
+]);
+
+// Customer segments - ML-based customer clustering and segmentation
+export const customerSegments = pgTable("customer_segments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  
+  // Segment definition
+  segmentName: varchar("segment_name").notNull(),
+  segmentType: varchar("segment_type").notNull(), // behavioral, demographic, payment_pattern, risk_based
+  description: text("description"),
+  
+  // Segment characteristics
+  segmentCriteria: jsonb("segment_criteria"), // Rules or ML cluster parameters
+  typicalBehavior: jsonb("typical_behavior"), // Common behaviors in segment
+  
+  // Performance metrics
+  averagePaymentTime: integer("average_payment_time"), // Days
+  paymentSuccessRate: decimal("payment_success_rate", { precision: 5, scale: 4 }),
+  preferredChannel: varchar("preferred_channel"),
+  responseRate: decimal("response_rate", { precision: 5, scale: 4 }),
+  
+  // Segment size and composition
+  memberCount: integer("member_count").default(0),
+  percentOfCustomers: decimal("percent_of_customers", { precision: 5, scale: 2 }),
+  
+  // ML clustering data
+  clusterCenter: jsonb("cluster_center"), // Centroid coordinates for ML clusters
+  clusterVariance: decimal("cluster_variance", { precision: 10, scale: 6 }),
+  
+  // Model metadata
+  modelVersion: varchar("model_version").notNull(),
+  lastRecalculated: timestamp("last_recalculated").defaultNow(),
+  isActive: boolean("is_active").default(true),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("customer_segments_tenant_idx").on(table.tenantId),
+  index("customer_segments_type_idx").on(table.segmentType),
+  index("customer_segments_active_idx").on(table.isActive),
+]);
+
+// Customer segment assignments - Which customers belong to which segments
+export const customerSegmentAssignments = pgTable("customer_segment_assignments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  contactId: varchar("contact_id").notNull().references(() => contacts.id),
+  segmentId: varchar("segment_id").notNull().references(() => customerSegments.id),
+  
+  // Assignment metadata
+  assignmentConfidence: decimal("assignment_confidence", { precision: 5, scale: 4 }), // 0-1
+  distanceFromCenter: decimal("distance_from_center", { precision: 10, scale: 6 }),
+  
+  // Assignment history
+  previousSegmentId: varchar("previous_segment_id"),
+  assignmentDate: timestamp("assignment_date").defaultNow(),
+  
+  // Model metadata
+  modelVersion: varchar("model_version").notNull(),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  unique("segment_assignments_tenant_contact").on(table.tenantId, table.contactId),
+  index("segment_assignments_tenant_idx").on(table.tenantId),
+  index("segment_assignments_contact_idx").on(table.contactId),
+  index("segment_assignments_segment_idx").on(table.segmentId),
+]);
+
+// Seasonal patterns - Time-based payment pattern recognition
+export const seasonalPatterns = pgTable("seasonal_patterns", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  contactId: varchar("contact_id"), // Null for global patterns, specific for customer patterns
+  
+  // Pattern identification
+  patternType: varchar("pattern_type").notNull(), // daily, weekly, monthly, quarterly, yearly
+  patternName: varchar("pattern_name").notNull(),
+  description: text("description"),
+  
+  // Temporal characteristics
+  timeComponent: varchar("time_component"), // monday, january, q1, holiday_season
+  cyclePeriod: integer("cycle_period"), // Length in days/weeks/months
+  
+  // Pattern strength and reliability
+  patternStrength: decimal("pattern_strength", { precision: 5, scale: 4 }), // 0-1
+  confidence: decimal("confidence", { precision: 5, scale: 4 }), // 0-1
+  reliability: decimal("reliability", { precision: 5, scale: 4 }), // 0-1
+  
+  // Statistical measures
+  averagePaymentDelay: integer("average_payment_delay"), // Days
+  paymentVariance: decimal("payment_variance", { precision: 10, scale: 6 }),
+  sampleSize: integer("sample_size"), // Number of observations
+  
+  // Pattern data
+  historicalData: jsonb("historical_data"), // Time series data points
+  trendDirection: varchar("trend_direction"), // increasing, decreasing, stable, cyclical
+  
+  // Prediction capabilities
+  nextPredictedPeak: timestamp("next_predicted_peak"),
+  nextPredictedTrough: timestamp("next_predicted_trough"),
+  seasonalMultiplier: decimal("seasonal_multiplier", { precision: 6, scale: 4 }), // Adjustment factor
+  
+  // Model metadata
+  modelVersion: varchar("model_version").notNull(),
+  lastUpdated: timestamp("last_updated").defaultNow(),
+  isActive: boolean("is_active").default(true),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("seasonal_patterns_tenant_idx").on(table.tenantId),
+  index("seasonal_patterns_contact_idx").on(table.contactId),
+  index("seasonal_patterns_type_idx").on(table.patternType),
+  index("seasonal_patterns_strength_idx").on(table.patternStrength),
+]);
+
+// ML model performance tracking
+export const mlModelPerformance = pgTable("ml_model_performance", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  
+  // Model identification
+  modelName: varchar("model_name").notNull(), // payment_prediction, risk_scoring, segmentation
+  modelVersion: varchar("model_version").notNull(),
+  modelType: varchar("model_type").notNull(), // classification, regression, clustering
+  
+  // Performance metrics
+  accuracy: decimal("accuracy", { precision: 5, scale: 4 }),
+  precision: decimal("precision", { precision: 5, scale: 4 }),
+  recall: decimal("recall", { precision: 5, scale: 4 }),
+  f1Score: decimal("f1_score", { precision: 5, scale: 4 }),
+  auc: decimal("auc", { precision: 5, scale: 4 }), // Area under curve
+  
+  // Business metrics
+  businessImpact: jsonb("business_impact"), // Revenue, efficiency gains, etc.
+  predictionCount: integer("prediction_count"),
+  correctPredictions: integer("correct_predictions"),
+  
+  // Model details
+  trainingDataSize: integer("training_data_size"),
+  testDataSize: integer("test_data_size"),
+  features: jsonb("features"), // Features used in model
+  hyperparameters: jsonb("hyperparameters"),
+  
+  // Deployment tracking
+  deploymentDate: timestamp("deployment_date").defaultNow(),
+  isActive: boolean("is_active").default(true),
+  
+  // Performance over time
+  evaluationPeriodStart: timestamp("evaluation_period_start"),
+  evaluationPeriodEnd: timestamp("evaluation_period_end"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("ml_performance_tenant_idx").on(table.tenantId),
+  index("ml_performance_model_idx").on(table.modelName, table.modelVersion),
+  index("ml_performance_active_idx").on(table.isActive),
+]);
+
+// Relations for new ML tables
+export const paymentPredictionsRelations = relations(paymentPredictions, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [paymentPredictions.tenantId],
+    references: [tenants.id],
+  }),
+  invoice: one(invoices, {
+    fields: [paymentPredictions.invoiceId],
+    references: [invoices.id],
+  }),
+  contact: one(contacts, {
+    fields: [paymentPredictions.contactId],
+    references: [contacts.id],
+  }),
+}));
+
+export const riskScoresRelations = relations(riskScores, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [riskScores.tenantId],
+    references: [tenants.id],
+  }),
+  contact: one(contacts, {
+    fields: [riskScores.contactId],
+    references: [contacts.id],
+  }),
+}));
+
+export const customerSegmentsRelations = relations(customerSegments, ({ one, many }) => ({
+  tenant: one(tenants, {
+    fields: [customerSegments.tenantId],
+    references: [tenants.id],
+  }),
+  assignments: many(customerSegmentAssignments),
+}));
+
+export const customerSegmentAssignmentsRelations = relations(customerSegmentAssignments, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [customerSegmentAssignments.tenantId],
+    references: [tenants.id],
+  }),
+  contact: one(contacts, {
+    fields: [customerSegmentAssignments.contactId],
+    references: [contacts.id],
+  }),
+  segment: one(customerSegments, {
+    fields: [customerSegmentAssignments.segmentId],
+    references: [customerSegments.id],
+  }),
+}));
+
+export const seasonalPatternsRelations = relations(seasonalPatterns, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [seasonalPatterns.tenantId],
+    references: [tenants.id],
+  }),
+  contact: one(contacts, {
+    fields: [seasonalPatterns.contactId],
+    references: [contacts.id],
+  }),
+}));
+
+export const mlModelPerformanceRelations = relations(mlModelPerformance, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [mlModelPerformance.tenantId],
+    references: [tenants.id],
+  }),
+}));
+
+// Insert schemas for new ML tables
+export const insertPaymentPredictionSchema = createInsertSchema(paymentPredictions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertRiskScoreSchema = createInsertSchema(riskScores).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertCustomerSegmentSchema = createInsertSchema(customerSegments).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertCustomerSegmentAssignmentSchema = createInsertSchema(customerSegmentAssignments).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertSeasonalPatternSchema = createInsertSchema(seasonalPatterns).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertMlModelPerformanceSchema = createInsertSchema(mlModelPerformance).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Type exports for new ML tables
+export type PaymentPrediction = typeof paymentPredictions.$inferSelect;
+export type InsertPaymentPrediction = z.infer<typeof insertPaymentPredictionSchema>;
+
+export type RiskScore = typeof riskScores.$inferSelect;
+export type InsertRiskScore = z.infer<typeof insertRiskScoreSchema>;
+
+export type CustomerSegment = typeof customerSegments.$inferSelect;
+export type InsertCustomerSegment = z.infer<typeof insertCustomerSegmentSchema>;
+
+export type CustomerSegmentAssignment = typeof customerSegmentAssignments.$inferSelect;
+export type InsertCustomerSegmentAssignment = z.infer<typeof insertCustomerSegmentAssignmentSchema>;
+
+export type SeasonalPattern = typeof seasonalPatterns.$inferSelect;
+export type InsertSeasonalPattern = z.infer<typeof insertSeasonalPatternSchema>;
+
+export type MlModelPerformance = typeof mlModelPerformance.$inferSelect;
+export type InsertMlModelPerformance = z.infer<typeof insertMlModelPerformanceSchema>;
