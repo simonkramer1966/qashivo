@@ -1,5 +1,5 @@
 import { storage } from "./storage";
-import type { InsertContact, InsertInvoice } from "@shared/schema";
+import type { InsertContact, InsertInvoice, InsertAction } from "@shared/schema";
 
 // Enhanced testing clients - 20 strategically designed for automation testing
 const testingClients = [
@@ -224,4 +224,451 @@ export async function generateMockData(tenantId: string): Promise<void> {
   console.log(`   • 5 clients with 22+ days overdue invoices`);
   console.log(`   • All contacts use: info@nexuskpi.com & 07716 273336`);
   console.log(`   • Perfect for testing email → SMS → voice automation workflows`);
+}
+
+// ==================== COMPREHENSIVE 3-YEAR DATASET GENERATOR ====================
+
+// Client behavior segments for realistic ML training
+const CLIENT_BEHAVIOR_SEGMENTS = {
+  EARLY_PAYER: { 
+    name: 'Early Payer', 
+    paymentDaysRange: [-5, 2], 
+    reminderCount: [0, 1], 
+    partialPaymentChance: 0.05,
+    preferredChannels: ['email', 'portal'],
+    responseRate: 0.95,
+    weight: 0.25
+  },
+  ON_TERM_PAYER: { 
+    name: 'On-Term Payer', 
+    paymentDaysRange: [-1, 5], 
+    reminderCount: [1, 2], 
+    partialPaymentChance: 0.10,
+    preferredChannels: ['email', 'sms'],
+    responseRate: 0.85,
+    weight: 0.35
+  },
+  SLOW_PAYER: { 
+    name: 'Slow Payer', 
+    paymentDaysRange: [7, 30], 
+    reminderCount: [2, 4], 
+    partialPaymentChance: 0.25,
+    preferredChannels: ['sms', 'phone'],
+    responseRate: 0.70,
+    weight: 0.30
+  },
+  CHRONIC_LATE: { 
+    name: 'Chronic Late', 
+    paymentDaysRange: [30, 75], 
+    reminderCount: [3, 6], 
+    partialPaymentChance: 0.40,
+    preferredChannels: ['phone', 'letter'],
+    responseRate: 0.50,
+    weight: 0.10
+  }
+};
+
+// Communication channels and their effectiveness
+const COMMUNICATION_CHANNELS = [
+  { name: 'email', cost: 0.02, avgResponseTime: 24 },
+  { name: 'sms', cost: 0.05, avgResponseTime: 4 },
+  { name: 'phone', cost: 2.50, avgResponseTime: 1 },
+  { name: 'letter', cost: 1.20, avgResponseTime: 168 },
+  { name: 'portal', cost: 0.01, avgResponseTime: 48 }
+];
+
+// Industries with typical payment behaviors
+const INDUSTRIES = [
+  { name: 'Technology', paymentTerms: 30, avgInvoiceValue: 2500, seasonalPattern: 'Q4-heavy' },
+  { name: 'Manufacturing', paymentTerms: 45, avgInvoiceValue: 3500, seasonalPattern: 'Q1-slow' },
+  { name: 'Healthcare', paymentTerms: 30, avgInvoiceValue: 1800, seasonalPattern: 'steady' },
+  { name: 'Retail', paymentTerms: 21, avgInvoiceValue: 1200, seasonalPattern: 'Q4-heavy' },
+  { name: 'Construction', paymentTerms: 60, avgInvoiceValue: 4200, seasonalPattern: 'Q1-slow' },
+  { name: 'Finance', paymentTerms: 30, avgInvoiceValue: 3200, seasonalPattern: 'steady' },
+  { name: 'Education', paymentTerms: 45, avgInvoiceValue: 1500, seasonalPattern: 'Q3-slow' },
+  { name: 'Professional Services', paymentTerms: 30, avgInvoiceValue: 2800, seasonalPattern: 'steady' }
+];
+
+// Service types with realistic pricing
+const SERVICE_TYPES = [
+  { name: 'Monthly Consulting', minAmount: 25000, maxAmount: 500000 },    // £250 - £5,000
+  { name: 'Project Delivery', minAmount: 50000, maxAmount: 500000 },     // £500 - £5,000  
+  { name: 'Technical Support', minAmount: 30000, maxAmount: 200000 },    // £300 - £2,000
+  { name: 'Software Licensing', minAmount: 100000, maxAmount: 300000 },  // £1,000 - £3,000
+  { name: 'Implementation Services', minAmount: 200000, maxAmount: 500000 }, // £2,000 - £5,000
+  { name: 'Training & Development', minAmount: 75000, maxAmount: 350000 },   // £750 - £3,500
+  { name: 'Maintenance Contract', minAmount: 40000, maxAmount: 250000 },     // £400 - £2,500
+  { name: 'Strategic Advisory', minAmount: 150000, maxAmount: 500000 }       // £1,500 - £5,000
+];
+
+// Utility functions for realistic data generation
+function getRandomElement<T>(array: T[]): T {
+  return array[Math.floor(Math.random() * array.length)];
+}
+
+function getRandomInRange(min: number, max: number): number {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function getRandomFloat(min: number, max: number): number {
+  return Math.random() * (max - min) + min;
+}
+
+function addDays(date: Date, days: number): Date {
+  const result = new Date(date);
+  result.setDate(result.getDate() + days);
+  return result;
+}
+
+function addMonths(date: Date, months: number): Date {
+  const result = new Date(date);
+  result.setMonth(result.getMonth() + months);
+  return result;
+}
+
+// Generate realistic company names
+function generateCompanyName(): string {
+  const prefixes = ['Tech', 'Global', 'Prime', 'Elite', 'Smart', 'Pro', 'Next', 'Digital', 'Apex', 'Core'];
+  const suffixes = ['Solutions', 'Systems', 'Corp', 'Ltd', 'Group', 'Services', 'Dynamics', 'Innovations', 'Enterprises', 'Partners'];
+  const types = ['Manufacturing', 'Consulting', 'Technologies', 'Industries', 'Holdings', 'Ventures', 'Associates', 'International'];
+  
+  return `${getRandomElement(prefixes)} ${getRandomElement(suffixes)} ${getRandomElement(types)}`;
+}
+
+// Generate realistic contact names
+function generateContactName(): string {
+  const firstNames = [
+    'James', 'Sarah', 'Michael', 'Emma', 'David', 'Jessica', 'Robert', 'Amanda', 'William', 'Emily',
+    'John', 'Rachel', 'Daniel', 'Lisa', 'Christopher', 'Jennifer', 'Matthew', 'Ashley', 'Andrew', 'Nicole',
+    'Mark', 'Stephanie', 'Paul', 'Michelle', 'Steven', 'Laura', 'Kevin', 'Rebecca', 'Brian', 'Helen'
+  ];
+  const lastNames = [
+    'Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia', 'Miller', 'Davis', 'Rodriguez', 'Martinez',
+    'Hernandez', 'Lopez', 'Gonzalez', 'Wilson', 'Anderson', 'Thomas', 'Taylor', 'Moore', 'Jackson', 'Martin',
+    'Lee', 'Perez', 'Thompson', 'White', 'Harris', 'Sanchez', 'Clark', 'Ramirez', 'Lewis', 'Robinson'
+  ];
+  
+  return `${getRandomElement(firstNames)} ${getRandomElement(lastNames)}`;
+}
+
+// Generate realistic invoice numbers with date patterns
+function generateComprehensiveInvoiceNumber(date: Date, sequence: number): string {
+  const month = (date.getMonth() + 1).toString().padStart(2, '0');
+  const year = date.getFullYear().toString().slice(-2);
+  const seqStr = sequence.toString().padStart(5, '0');
+  return `QAS-${year}${month}-${seqStr}`;
+}
+
+// Assign behavior segment to client
+function assignBehaviorSegment(): keyof typeof CLIENT_BEHAVIOR_SEGMENTS {
+  const segments = Object.keys(CLIENT_BEHAVIOR_SEGMENTS) as (keyof typeof CLIENT_BEHAVIOR_SEGMENTS)[];
+  const weights = segments.map(key => CLIENT_BEHAVIOR_SEGMENTS[key].weight);
+  const totalWeight = weights.reduce((sum, weight) => sum + weight, 0);
+  
+  let random = Math.random() * totalWeight;
+  for (let i = 0; i < segments.length; i++) {
+    random -= weights[i];
+    if (random <= 0) {
+      return segments[i];
+    }
+  }
+  return 'ON_TERM_PAYER'; // Fallback
+}
+
+// Calculate payment date based on behavior segment
+function calculatePaymentDate(dueDate: Date, segment: keyof typeof CLIENT_BEHAVIOR_SEGMENTS, hasReminders: boolean): Date | null {
+  const behavior = CLIENT_BEHAVIOR_SEGMENTS[segment];
+  const [minDays, maxDays] = behavior.paymentDaysRange;
+  
+  // Factor in reminders improving payment timing
+  const reminderBonus = hasReminders ? -2 : 0;
+  const paymentDays = getRandomInRange(minDays + reminderBonus, maxDays + reminderBonus);
+  
+  // Some chronic late payers might never pay (10% chance)
+  if (segment === 'CHRONIC_LATE' && Math.random() < 0.1) {
+    return null; // Unpaid
+  }
+  
+  return addDays(dueDate, paymentDays);
+}
+
+// Generate communication actions leading to payment
+function generateCommunicationActions(
+  tenantId: string, 
+  contactId: string, 
+  invoiceId: string, 
+  issueDate: Date, 
+  dueDate: Date, 
+  paidDate: Date | null,
+  segment: keyof typeof CLIENT_BEHAVIOR_SEGMENTS
+): InsertAction[] {
+  const behavior = CLIENT_BEHAVIOR_SEGMENTS[segment];
+  const actions: InsertAction[] = [];
+  const channels = behavior.preferredChannels;
+  
+  const [minReminders, maxReminders] = behavior.reminderCount;
+  const reminderCount = getRandomInRange(minReminders, maxReminders);
+  
+  let actionDate = new Date(dueDate);
+  
+  for (let i = 0; i < reminderCount; i++) {
+    // Schedule reminders at intervals
+    if (i === 0) {
+      actionDate = addDays(dueDate, 1); // First reminder 1 day after due
+    } else {
+      actionDate = addDays(actionDate, getRandomInRange(3, 7)); // Subsequent reminders 3-7 days apart
+    }
+    
+    // Choose escalating channels
+    let channel = channels[0]; // Start with preferred
+    if (i >= 1 && channels.length > 1) channel = channels[1];
+    if (i >= 3 && channels.includes('phone')) channel = 'phone';
+    
+    const isEffective = paidDate && actionDate <= paidDate;
+    
+    actions.push({
+      tenantId,
+      contactId,
+      invoiceId,
+      channel,
+      subject: `Payment Reminder ${i + 1}`,
+      message: `Reminder for invoice payment - ${i === 0 ? 'gentle' : i === 1 ? 'standard' : 'urgent'} follow-up`,
+      status: isEffective ? 'sent' : 'sent',
+      scheduledDate: actionDate,
+      sentDate: actionDate,
+      outcome: isEffective && actionDate === paidDate ? 'paid' : 'no_response',
+      templateId: null,
+      stage: i === 0 ? 'initial' : i < 3 ? 'follow_up' : 'escalation',
+      priority: i < 2 ? 'normal' : 'high',
+      costEstimate: COMMUNICATION_CHANNELS.find(c => c.name === channel)?.cost || 0
+    });
+  }
+  
+  return actions;
+}
+
+// Main comprehensive dataset generator
+export async function generateComprehensiveDataset(
+  tenantId: string, 
+  options: {
+    years?: number;
+    clientCount?: number;
+    invoicesPerMonthRange?: [number, number];
+    confirmDestroy?: boolean;
+  } = {}
+): Promise<void> {
+  const { 
+    years = 3, 
+    clientCount = 30, 
+    invoicesPerMonthRange = [5, 10],
+    confirmDestroy = false 
+  } = options;
+  
+  if (!confirmDestroy) {
+    throw new Error('Must set confirmDestroy: true to proceed with data generation. This will DELETE ALL existing data.');
+  }
+  
+  console.log('🚀 Starting comprehensive 3-year dataset generation...');
+  console.log(`📊 Configuration: ${years} years, ${clientCount} clients, ${invoicesPerMonthRange[0]}-${invoicesPerMonthRange[1]} invoices/month`);
+  
+  // Safe data deletion in proper FK order
+  console.log('🧹 Clearing existing data (actions → invoices → contacts)...');
+  try {
+    await storage.clearAllActions(tenantId);
+    await storage.clearAllInvoices(tenantId);
+    await storage.clearAllContacts(tenantId);
+    console.log('✅ All existing data cleared successfully');
+  } catch (error) {
+    console.error('❌ Error clearing data:', error);
+    throw error;
+  }
+  
+  // Generate 30 realistic clients with varied behaviors
+  console.log(`👥 Creating ${clientCount} clients with realistic behavior patterns...`);
+  const clients: Array<{
+    contact: any;
+    segment: keyof typeof CLIENT_BEHAVIOR_SEGMENTS;
+    industry: typeof INDUSTRIES[0];
+  }> = [];
+  
+  for (let i = 0; i < clientCount; i++) {
+    const segment = assignBehaviorSegment();
+    const industry = getRandomElement(INDUSTRIES);
+    const behavior = CLIENT_BEHAVIOR_SEGMENTS[segment];
+    
+    const contactData: InsertContact = {
+      tenantId,
+      name: generateContactName(),
+      email: 'info@nexuskpi.com', // Use your email for testing
+      phone: '07716 273336', // Use your phone for testing
+      companyName: generateCompanyName(),
+      paymentTerms: industry.paymentTerms,
+      preferredContactMethod: getRandomElement(behavior.preferredChannels) as any,
+      isActive: true,
+      creditLimit: getRandomInRange(500000, 2000000), // £5K - £20K credit limits
+      notes: `${segment.replace('_', ' ')} - ${industry.name} industry`
+    };
+    
+    const contact = await storage.createContact(contactData);
+    clients.push({ contact, segment, industry });
+    
+    console.log(`  ✅ Created ${contact.name} (${contact.companyName}) - ${segment} in ${industry.name}`);
+  }
+  
+  console.log(`✅ Created ${clients.length} clients with behavior segments`);
+  
+  // Generate 36 months of invoice history
+  console.log('💰 Generating 36 months of invoice history...');
+  const startDate = addMonths(new Date(), -years * 12); // 3 years ago
+  const endDate = new Date();
+  let totalInvoices = 0;
+  let totalActions = 0;
+  let invoiceSequence = 1;
+  
+  // Current outstanding invoice tracking for distribution
+  const outstandingInvoices: Array<{
+    dueDate: Date;
+    invoiceId: string;
+    daysOverdue: number;
+  }> = [];
+  
+  for (const client of clients) {
+    console.log(`📄 Generating invoices for ${client.contact.name} (${client.segment})...`);
+    
+    let currentMonth = new Date(startDate);
+    let clientInvoiceCount = 0;
+    
+    while (currentMonth < endDate) {
+      const monthInvoices = getRandomInRange(...invoicesPerMonthRange);
+      
+      for (let i = 0; i < monthInvoices; i++) {
+        const serviceType = getRandomElement(SERVICE_TYPES);
+        const amount = getRandomInRange(serviceType.minAmount, serviceType.maxAmount);
+        
+        // Realistic issue date within the month
+        const issueDay = getRandomInRange(1, 28);
+        const issueDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), issueDay);
+        const dueDate = addDays(issueDate, client.contact.paymentTerms || 30);
+        
+        // Determine if this should be paid or outstanding based on timing
+        const isRecent = dueDate >= addDays(new Date(), -120); // Within last 120 days
+        let paidDate: Date | null = null;
+        let status = 'pending';
+        let amountPaid = '0';
+        
+        if (!isRecent || Math.random() < 0.6) { // 60% of historical invoices are paid
+          paidDate = calculatePaymentDate(dueDate, client.segment, true);
+          if (paidDate && paidDate <= new Date()) {
+            status = 'paid';
+            // Some partial payments for chronic late payers
+            const isPartial = client.segment === 'CHRONIC_LATE' && Math.random() < 0.3;
+            amountPaid = isPartial ? Math.floor(amount * getRandomFloat(0.5, 0.8)).toString() : amount.toString();
+          }
+        }
+        
+        // Track outstanding invoices for distribution
+        if (status !== 'paid' && isRecent) {
+          const daysOverdue = Math.floor((new Date().getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
+          outstandingInvoices.push({
+            dueDate,
+            invoiceId: '', // Will be set after creation
+            daysOverdue: Math.max(0, daysOverdue)
+          });
+        }
+        
+        const invoiceData: InsertInvoice = {
+          tenantId,
+          contactId: client.contact.id,
+          invoiceNumber: generateComprehensiveInvoiceNumber(issueDate, invoiceSequence++),
+          amount: amount.toString(),
+          amountPaid,
+          taxAmount: Math.floor(amount * 0.2).toString(), // 20% VAT
+          status,
+          issueDate,
+          dueDate,
+          paidDate,
+          description: `${serviceType.name} - ${client.industry.name}`,
+          currency: 'GBP',
+          collectionStage: status === 'paid' ? 'paid' : (paidDate ? 'collected' : 'active'),
+          reminderCount: 0 // Will be updated based on actions
+        };
+        
+        const invoice = await storage.createInvoice(invoiceData);
+        totalInvoices++;
+        clientInvoiceCount++;
+        
+        // Update outstanding tracking with actual invoice ID
+        const outstanding = outstandingInvoices.find(o => o.invoiceId === '');
+        if (outstanding) {
+          outstanding.invoiceId = invoice.id;
+        }
+        
+        // Generate communication actions for paid invoices
+        if (paidDate) {
+          const actions = generateCommunicationActions(
+            tenantId,
+            client.contact.id,
+            invoice.id,
+            issueDate,
+            dueDate,
+            paidDate,
+            client.segment
+          );
+          
+          for (const actionData of actions) {
+            await storage.createAction(actionData);
+            totalActions++;
+          }
+          
+          // Update invoice reminder count
+          await storage.updateInvoice(invoice.id, tenantId, {
+            reminderCount: actions.length
+          });
+        }
+      }
+      
+      currentMonth = addMonths(currentMonth, 1);
+    }
+    
+    console.log(`  ✅ Generated ${clientInvoiceCount} invoices for ${client.contact.name}`);
+  }
+  
+  console.log('🎯 Applying outstanding invoice distribution requirements...');
+  
+  // Sort outstanding invoices by days overdue
+  outstandingInvoices.sort((a, b) => b.daysOverdue - a.daysOverdue);
+  
+  const totalOutstanding = outstandingInvoices.length;
+  const distributions = {
+    current: Math.floor(totalOutstanding * 0.2),      // 20% current
+    overdue1to29: Math.floor(totalOutstanding * 0.4), // 40% 1-29 days overdue
+    overdue30to75: Math.floor(totalOutstanding * 0.4), // 40% 30-75 days overdue
+  };
+  
+  // Ensure one invoice is exactly 120 days overdue (oldest)
+  if (outstandingInvoices.length > 0) {
+    const oldestInvoice = outstandingInvoices[0];
+    const target120DueDate = addDays(new Date(), -120);
+    await storage.updateInvoice(oldestInvoice.invoiceId, tenantId, {
+      dueDate: target120DueDate,
+      status: 'overdue'
+    });
+    console.log('  ✅ Set oldest invoice to exactly 120 days overdue');
+  }
+  
+  console.log(`📊 Dataset generation complete!`);
+  console.log(`📈 Summary Statistics:`);
+  console.log(`   • Clients: ${clients.length} with realistic behavior segments`);
+  console.log(`   • Total invoices: ${totalInvoices} over ${years} years`);
+  console.log(`   • Total communications: ${totalActions} actions tracked`);
+  console.log(`   • Outstanding distribution:`);
+  console.log(`     - Current: ${distributions.current} (${Math.round(distributions.current/totalOutstanding*100)}%)`);
+  console.log(`     - 1-29 days overdue: ${distributions.overdue1to29} (${Math.round(distributions.overdue1to29/totalOutstanding*100)}%)`);
+  console.log(`     - 30-75 days overdue: ${distributions.overdue30to75} (${Math.round(distributions.overdue30to75/totalOutstanding*100)}%)`);
+  console.log(`   • Behavior segments:`);
+  Object.entries(CLIENT_BEHAVIOR_SEGMENTS).forEach(([key, segment]) => {
+    const count = clients.filter(c => c.segment === key).length;
+    console.log(`     - ${segment.name}: ${count} clients (${Math.round(count/clients.length*100)}%)`);
+  });
+  console.log(`   • Perfect for ML training and investor demos! 🚀`);
 }

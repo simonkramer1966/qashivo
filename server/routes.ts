@@ -658,6 +658,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin endpoint for comprehensive 3-year dataset generation
+  app.post('/api/admin/seed/mock-dataset', isAuthenticated, isOwner, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { confirmDestroy = false, years = 3, clientCount = 30, invoicesPerMonthRange = [5, 10] } = req.body;
+
+      if (!confirmDestroy) {
+        return res.status(400).json({ 
+          message: "Must set confirmDestroy: true to proceed. This will DELETE ALL existing data.",
+          warning: "This action will permanently delete all contacts, invoices, and actions for your tenant.",
+          usage: "POST with body: { confirmDestroy: true, years: 3, clientCount: 30, invoicesPerMonthRange: [5, 10] }"
+        });
+      }
+
+      console.log(`🚀 Admin: ${user.email} initiating comprehensive dataset generation for tenant ${user.tenantId}`);
+
+      const { generateComprehensiveDataset } = await import("./mock-data");
+      
+      await generateComprehensiveDataset(user.tenantId, {
+        years,
+        clientCount,
+        invoicesPerMonthRange,
+        confirmDestroy: true
+      });
+
+      res.json({
+        success: true,
+        message: "Comprehensive 3-year dataset generated successfully! Perfect for ML training and investor demos.",
+        configuration: {
+          years,
+          clientCount,
+          invoicesPerMonthRange,
+          estimatedInvoices: `${clientCount * years * 12 * invoicesPerMonthRange[0]}-${clientCount * years * 12 * invoicesPerMonthRange[1]}`,
+          features: [
+            "4 client behavior segments for ML learning",
+            "36 months of historical invoice data", 
+            "Realistic communication tracking",
+            "Proper outstanding distribution (20% current, 40% <30 days, 40% 30-75 days)",
+            "Industry-specific payment patterns",
+            "Communication effectiveness data for AI training"
+          ]
+        }
+      });
+    } catch (error) {
+      console.error("Error generating comprehensive dataset:", error);
+      res.status(500).json({ 
+        message: "Failed to generate comprehensive dataset", 
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
   // Auth routes
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
     console.log('🔍 /api/auth/user endpoint hit, authenticated:', !!req.user);

@@ -245,6 +245,7 @@ export interface IStorage {
   deleteAiFact(id: string, tenantId: string): Promise<void>;
   
   // Cleanup operations
+  clearAllActions(tenantId: string): Promise<void>;
   clearAllContacts(tenantId: string): Promise<void>;
   clearAllInvoices(tenantId: string): Promise<void>;
   
@@ -461,6 +462,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Bulk delete methods for cleanup
+  async clearAllActions(tenantId: string): Promise<void> {
+    await db
+      .delete(actions)
+      .where(eq(actions.tenantId, tenantId));
+  }
+
   async clearAllContacts(tenantId: string): Promise<void> {
     await db
       .update(contacts)
