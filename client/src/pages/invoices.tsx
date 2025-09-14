@@ -64,10 +64,9 @@ export default function Invoices() {
     // Reset category to 'all' when status changes
     setOverdueFilter('all');
   };
-  const [invClientSort, setInvClientSort] = useState<string>("inv-asc");
-  const [dueDateAgeSort, setDueDateAgeSort] = useState<string>("due-date-asc");
-  const [nextActionSort, setNextActionSort] = useState<string>("action-date-asc");
-  const [activeSortColumn, setActiveSortColumn] = useState<string>("invClient");
+  // Table sorting state
+  const [sortColumn, setSortColumn] = useState<string | null>(null);
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [selectedInvoice, setSelectedInvoice] = useState<any>(null);
   const [showContactHistory, setShowContactHistory] = useState(false);
   const [showViewInvoiceDialog, setShowViewInvoiceDialog] = useState(false);
@@ -225,10 +224,84 @@ export default function Invoices() {
     return matchesSearch && matchesStatus && matchesOverdueCategory;
   });
 
+  // Handle column sort
+  const handleSort = (column: string) => {
+    if (sortColumn === column) {
+      // Toggle direction or reset if already desc
+      if (sortDirection === 'asc') {
+        setSortDirection('desc');
+      } else {
+        setSortColumn(null);
+        setSortDirection('asc');
+      }
+    } else {
+      setSortColumn(column);
+      setSortDirection('asc');
+    }
+  };
+
+  // Sorting logic for different data types
   const sortedInvoices = [...filteredInvoices].sort((a: any, b: any) => {
-    // Sorting logic for invoices
-    return 0; // Simplified for now
+    if (!sortColumn) return 0;
+    
+    let aValue: any, bValue: any;
+    
+    switch (sortColumn) {
+      case 'invoice':
+        aValue = new Date(a.issueDate || a.createdAt);
+        bValue = new Date(b.issueDate || b.createdAt);
+        break;
+      case 'company':
+        aValue = (a.contact?.companyName || '').toLowerCase();
+        bValue = (b.contact?.companyName || '').toLowerCase();
+        break;
+      case 'amount':
+        aValue = Number(a.amount || 0);
+        bValue = Number(b.amount || 0);
+        break;
+      case 'dueDate':
+        aValue = new Date(a.dueDate);
+        bValue = new Date(b.dueDate);
+        break;
+      case 'status':
+        // Custom status order for business logic
+        const statusOrder = { 'pending': 1, 'overdue': 2, 'paid': 3, 'cancelled': 4 };
+        aValue = statusOrder[a.status as keyof typeof statusOrder] || 5;
+        bValue = statusOrder[b.status as keyof typeof statusOrder] || 5;
+        break;
+      default:
+        return 0;
+    }
+    
+    // Handle different data types
+    if (aValue instanceof Date && bValue instanceof Date) {
+      return sortDirection === 'asc' 
+        ? aValue.getTime() - bValue.getTime()
+        : bValue.getTime() - aValue.getTime();
+    }
+    
+    if (typeof aValue === 'number' && typeof bValue === 'number') {
+      return sortDirection === 'asc' ? aValue - bValue : bValue - aValue;
+    }
+    
+    // String comparison
+    const aStr = String(aValue);
+    const bStr = String(bValue);
+    
+    return sortDirection === 'asc' 
+      ? aStr.localeCompare(bStr)
+      : bStr.localeCompare(aStr);
   });
+
+  // Helper function to render sort indicator
+  const getSortIcon = (column: string) => {
+    if (sortColumn !== column) {
+      return <ChevronUp className="ml-1 h-4 w-4 opacity-0 group-hover:opacity-50" />;
+    }
+    return sortDirection === 'asc' 
+      ? <ChevronUp className="ml-1 h-4 w-4 text-[#17B6C3]" />
+      : <ChevronDown className="ml-1 h-4 w-4 text-[#17B6C3]" />;
+  };
 
   // Calculate pagination for invoices
   const invoicesTotalPages = Math.ceil(sortedInvoices.length / invoicesItemsPerPage);
@@ -403,11 +476,56 @@ export default function Invoices() {
                   <table className="w-full">
                     <thead>
                       <tr className="border-b border-gray-200">
-                        <th className="text-left py-3 text-sm font-medium text-muted-foreground">Invoice</th>
-                        <th className="text-left py-3 text-sm font-medium text-muted-foreground">Contact</th>
-                        <th className="text-left py-3 text-sm font-medium text-muted-foreground">Amount</th>
-                        <th className="text-left py-3 text-sm font-medium text-muted-foreground">Due Date</th>
-                        <th className="text-left py-3 text-sm font-medium text-muted-foreground">Status</th>
+                        <th 
+                          className="text-left py-3 text-sm font-medium text-muted-foreground cursor-pointer select-none group hover:text-[#17B6C3] transition-colors"
+                          onClick={() => handleSort('invoice')}
+                          data-testid="header-invoice"
+                        >
+                          <div className="flex items-center">
+                            Invoice
+                            {getSortIcon('invoice')}
+                          </div>
+                        </th>
+                        <th 
+                          className="text-left py-3 text-sm font-medium text-muted-foreground cursor-pointer select-none group hover:text-[#17B6C3] transition-colors"
+                          onClick={() => handleSort('company')}
+                          data-testid="header-company"
+                        >
+                          <div className="flex items-center">
+                            Company Name
+                            {getSortIcon('company')}
+                          </div>
+                        </th>
+                        <th 
+                          className="text-left py-3 text-sm font-medium text-muted-foreground cursor-pointer select-none group hover:text-[#17B6C3] transition-colors"
+                          onClick={() => handleSort('amount')}
+                          data-testid="header-amount"
+                        >
+                          <div className="flex items-center">
+                            Amount
+                            {getSortIcon('amount')}
+                          </div>
+                        </th>
+                        <th 
+                          className="text-left py-3 text-sm font-medium text-muted-foreground cursor-pointer select-none group hover:text-[#17B6C3] transition-colors"
+                          onClick={() => handleSort('dueDate')}
+                          data-testid="header-due-date"
+                        >
+                          <div className="flex items-center">
+                            Due Date
+                            {getSortIcon('dueDate')}
+                          </div>
+                        </th>
+                        <th 
+                          className="text-left py-3 text-sm font-medium text-muted-foreground cursor-pointer select-none group hover:text-[#17B6C3] transition-colors"
+                          onClick={() => handleSort('status')}
+                          data-testid="header-status"
+                        >
+                          <div className="flex items-center">
+                            Status
+                            {getSortIcon('status')}
+                          </div>
+                        </th>
                         <th className="text-right py-3 text-sm font-medium text-muted-foreground">Actions</th>
                       </tr>
                     </thead>
