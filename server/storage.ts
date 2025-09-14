@@ -622,7 +622,7 @@ export class DatabaseStorage implements IStorage {
       .from(invoices)
       .leftJoin(contacts, eq(invoices.contactId, contacts.id))
       .where(eq(invoices.tenantId, tenantId))
-      .orderBy(desc(invoices.createdAt))
+      .orderBy(desc(invoices.dueDate))
       .limit(limit);
     
     return results.map((row) => {
