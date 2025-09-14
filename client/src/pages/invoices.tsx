@@ -264,10 +264,27 @@ export default function Invoices() {
         bValue = new Date(b.dueDate);
         break;
       case 'status':
-        // Custom status order for business logic
-        const statusOrder = { 'pending': 1, 'overdue': 2, 'paid': 3, 'cancelled': 4 };
-        aValue = statusOrder[a.status as keyof typeof statusOrder] || 5;
-        bValue = statusOrder[b.status as keyof typeof statusOrder] || 5;
+        // Sort by displayed category value (paid, soon, current, recent, overdue, serious, escalation)
+        const getCategoryValue = (invoice: any) => {
+          if (invoice.status === 'paid') return 'paid';
+          // Use existing category or calculate it
+          return invoice.overdueCategory || getOverdueCategoryFromDueDate(invoice.dueDate).category;
+        };
+        
+        // Custom category order for business logic
+        const categoryOrder = { 
+          'paid': 1, 
+          'soon': 2, 
+          'current': 3, 
+          'recent': 4, 
+          'overdue': 5, 
+          'serious': 6, 
+          'escalation': 7,
+          'cancelled': 8 
+        };
+        
+        aValue = categoryOrder[getCategoryValue(a) as keyof typeof categoryOrder] || 9;
+        bValue = categoryOrder[getCategoryValue(b) as keyof typeof categoryOrder] || 9;
         break;
       default:
         return 0;
