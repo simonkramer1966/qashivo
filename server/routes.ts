@@ -34,8 +34,11 @@ import {
   type BankTransaction,
   type Budget,
   type BudgetLine,
-  type ExchangeRate
+  type ExchangeRate,
+  invoices
 } from "@shared/schema";
+import { eq, and, desc, sql, count, avg, gte, lte, inArray } from 'drizzle-orm';
+import { db } from './db';
 import { z } from "zod";
 
 // Additional Zod validation schemas for query parameters and request bodies
@@ -3344,9 +3347,26 @@ Payment required immediately to avoid collection action. Contact us NOW.`
       const predictions = await predictionService.getPaymentPredictions(user.tenantId);
       const bulkCount = await predictionService.generateBulkPredictions(user.tenantId);
       
+      // Get invoices to calculate predicted revenue
+      const invoiceIds = predictions.map(p => p.invoiceId);
+      const invoicesQuery = await db
+        .select()
+        .from(invoices)
+        .where(and(
+          eq(invoices.tenantId, user.tenantId),
+          inArray(invoices.id, invoiceIds)
+        ));
+      
+      const invoiceMap = new Map(invoicesQuery.map(inv => [inv.id, inv]));
+      
       const analysis = {
         totalPredictions: predictions.length,
-        predictedRevenue: predictions.reduce((sum, p) => sum + parseFloat(p.predictedAmount || '0'), 0),
+        predictedRevenue: predictions.reduce((sum, p) => {
+          const invoice = invoiceMap.get(p.invoiceId);
+          const amount = invoice ? parseFloat(invoice.total || '0') : 0;
+          const probability = parseFloat(p.paymentProbability || '0');
+          return sum + (amount * probability);
+        }, 0),
         highProbabilityCount: predictions.filter(p => parseFloat(p.paymentProbability || '0') > 0.8).length,
         mediumProbabilityCount: predictions.filter(p => {
           const prob = parseFloat(p.paymentProbability || '0');
