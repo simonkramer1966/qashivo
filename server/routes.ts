@@ -3341,7 +3341,20 @@ Payment required immediately to avoid collection action. Contact us NOW.`
       const { PredictivePaymentService } = await import("./services/predictivePaymentService");
       const predictionService = new PredictivePaymentService();
       
-      const analysis = await predictionService.performPredictiveAnalysis(user.tenantId);
+      const predictions = await predictionService.getPaymentPredictions(user.tenantId);
+      const bulkCount = await predictionService.generateBulkPredictions(user.tenantId);
+      
+      const analysis = {
+        totalPredictions: predictions.length,
+        predictedRevenue: predictions.reduce((sum, p) => sum + parseFloat(p.predictedAmount || '0'), 0),
+        highProbabilityCount: predictions.filter(p => parseFloat(p.paymentProbability || '0') > 0.8).length,
+        mediumProbabilityCount: predictions.filter(p => {
+          const prob = parseFloat(p.paymentProbability || '0');
+          return prob >= 0.5 && prob <= 0.8;
+        }).length,
+        lowProbabilityCount: predictions.filter(p => parseFloat(p.paymentProbability || '0') < 0.5).length,
+        predictions: predictions.slice(0, 10) // Top 10 for performance
+      };
       res.json(analysis);
     } catch (error) {
       console.error("Error performing payment prediction analysis:", error);
@@ -3360,7 +3373,16 @@ Payment required immediately to avoid collection action. Contact us NOW.`
       const { PredictivePaymentService } = await import("./services/predictivePaymentService");
       const predictionService = new PredictivePaymentService();
       
-      const prediction = await predictionService.predictPaymentProbability(user.tenantId, contactId);
+      // Get all predictions for this contact
+      const allPredictions = await predictionService.getPaymentPredictions(user.tenantId);
+      const contactPredictions = allPredictions.filter(p => p.contactId === contactId);
+      
+      if (contactPredictions.length === 0) {
+        return res.status(404).json({ message: "No predictions found for this contact" });
+      }
+      
+      // Return the most recent prediction
+      const prediction = contactPredictions[0];
       res.json(prediction);
     } catch (error) {
       console.error("Error fetching payment prediction:", error);

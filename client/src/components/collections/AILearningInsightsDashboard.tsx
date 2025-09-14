@@ -4,6 +4,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Progress } from "@/components/ui/progress";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import MLPredictionsTab from "./MLPredictionsTab";
+import MLRiskScoringTab from "./MLRiskScoringTab";
+import MLSegmentsTab from "./MLSegmentsTab";
+import MLPatternsTab from "./MLPatternsTab";
 import { 
   Brain,
   TrendingUp,
@@ -21,7 +26,16 @@ import {
   Zap,
   Eye,
   BookOpen,
-  Activity
+  Activity,
+  Calculator,
+  Shield,
+  Layers,
+  Calendar,
+  TrendingDown,
+  Gauge,
+  PieChart,
+  LineChart,
+  Sparkles
 } from "lucide-react";
 
 interface LearningInsights {
@@ -51,6 +65,22 @@ export default function AILearningInsightsDashboard({ className }: AILearningIns
   const { data: insights, isLoading, error } = useQuery<LearningInsights>({
     queryKey: ['/api/collections/ai-learning/insights'],
     refetchInterval: 30000, // Refresh every 30 seconds
+  });
+
+  // Fetch ML service insights  
+  const { data: riskAnalytics } = useQuery({
+    queryKey: ['/api/ml/risk-scoring/analytics'],
+    refetchInterval: 60000, // Refresh every minute
+  });
+
+  const { data: customerSegments } = useQuery({
+    queryKey: ['/api/ml/customer-segmentation/segments'],
+    refetchInterval: 300000, // Refresh every 5 minutes
+  });
+
+  const { data: seasonalPatterns } = useQuery({
+    queryKey: ['/api/ml/seasonal-patterns/patterns'],
+    refetchInterval: 300000, // Refresh every 5 minutes
   });
 
   if (isLoading) {
@@ -122,15 +152,49 @@ export default function AILearningInsightsDashboard({ className }: AILearningIns
             <Brain className="h-6 w-6 text-[#17B6C3]" />
           </div>
           <div>
-            <h2 className="text-2xl font-bold text-gray-900">AI Learning Insights</h2>
-            <p className="text-gray-600">Adaptive credit control intelligence dashboard</p>
+            <h2 className="text-2xl font-bold text-gray-900">Advanced AI & ML Intelligence</h2>
+            <p className="text-gray-600">Comprehensive machine learning analytics for credit control</p>
           </div>
         </div>
-        <Badge className="bg-[#17B6C3]/10 text-[#17B6C3] border-[#17B6C3]/20">
-          <Activity className="h-3 w-3 mr-1" />
-          Live Learning
-        </Badge>
+        <div className="flex items-center space-x-3">
+          <Badge className="bg-[#17B6C3]/10 text-[#17B6C3] border-[#17B6C3]/20">
+            <Activity className="h-3 w-3 mr-1" />
+            Live Learning
+          </Badge>
+          <Badge className="bg-purple-100 text-purple-700 border-purple-200">
+            <Sparkles className="h-3 w-3 mr-1" />
+            ML Powered
+          </Badge>
+        </div>
       </div>
+
+      {/* Advanced ML Tabs */}
+      <Tabs defaultValue="overview" className="w-full">
+        <TabsList className="grid w-full grid-cols-5 bg-white/60 backdrop-blur-sm">
+          <TabsTrigger value="overview" className="flex items-center space-x-2">
+            <Brain className="h-4 w-4" />
+            <span>Overview</span>
+          </TabsTrigger>
+          <TabsTrigger value="predictions" className="flex items-center space-x-2">
+            <Calculator className="h-4 w-4" />
+            <span>Predictions</span>
+          </TabsTrigger>
+          <TabsTrigger value="risk-scoring" className="flex items-center space-x-2">
+            <Shield className="h-4 w-4" />
+            <span>Risk Scoring</span>
+          </TabsTrigger>
+          <TabsTrigger value="segments" className="flex items-center space-x-2">
+            <Layers className="h-4 w-4" />
+            <span>Segments</span>
+          </TabsTrigger>
+          <TabsTrigger value="patterns" className="flex items-center space-x-2">
+            <Calendar className="h-4 w-4" />
+            <span>Patterns</span>
+          </TabsTrigger>
+        </TabsList>
+
+        {/* Overview Tab */}
+        <TabsContent value="overview" className="space-y-6">
 
       {/* Key Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -417,6 +481,28 @@ export default function AILearningInsightsDashboard({ className }: AILearningIns
           </CardContent>
         </Card>
       </div>
+        </TabsContent>
+
+        {/* Predictions Tab */}
+        <TabsContent value="predictions">
+          <MLPredictionsTab insights={insights} />
+        </TabsContent>
+
+        {/* Risk Scoring Tab */}
+        <TabsContent value="risk-scoring">
+          <MLRiskScoringTab riskAnalytics={riskAnalytics} />
+        </TabsContent>
+
+        {/* Segments Tab */}
+        <TabsContent value="segments">
+          <MLSegmentsTab customerSegments={customerSegments} />
+        </TabsContent>
+
+        {/* Patterns Tab */}
+        <TabsContent value="patterns">
+          <MLPatternsTab seasonalPatterns={seasonalPatterns} />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
