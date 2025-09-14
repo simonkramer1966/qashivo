@@ -621,7 +621,12 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(invoices)
       .leftJoin(contacts, eq(invoices.contactId, contacts.id))
-      .where(eq(invoices.tenantId, tenantId))
+      .where(
+        and(
+          eq(invoices.tenantId, tenantId),
+          sql`${invoices.status} IN ('pending', 'overdue')`
+        )
+      )
       .orderBy(desc(invoices.dueDate))
       .limit(limit);
     
