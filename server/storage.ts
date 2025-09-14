@@ -97,7 +97,7 @@ import {
   type InsertExchangeRate,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, desc, sql, count, ne, isNotNull, gte, lte } from "drizzle-orm";
+import { eq, and, desc, sql, count, ne, isNotNull, gte, lte, or, ilike } from "drizzle-orm";
 import { getOverdueCategoryFromDueDate, getOverdueCategorySummary, type OverdueCategory, type OverdueCategoryInfo } from "../shared/utils/overdueUtils";
 import crypto from "crypto";
 
@@ -138,6 +138,14 @@ export interface IStorage {
   
   // Invoice operations
   getInvoices(tenantId: string, limit?: number): Promise<(Invoice & { contact: Contact })[]>;
+  getInvoicesFiltered(tenantId: string, filters: {
+    status?: string;
+    search?: string;
+    overdueCategory?: string;
+    contactId?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<{ invoices: (Invoice & { contact: Contact })[]; total: number }>;
   getInvoice(id: string, tenantId: string): Promise<(Invoice & { contact: Contact }) | undefined>;
   createInvoice(invoice: InsertInvoice): Promise<Invoice>;
   updateInvoice(id: string, tenantId: string, updates: Partial<InsertInvoice>): Promise<Invoice>;
@@ -535,6 +543,188 @@ export class DatabaseStorage implements IStorage {
         updatedAt: new Date(),
       }
     }));
+  }
+
+  // Optimized server-side filtering with pagination
+  async getInvoicesFiltered(tenantId: string, filters: {
+    status?: string;
+    search?: string;
+    overdueCategory?: string;
+    contactId?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<{ invoices: (Invoice & { contact: Contact })[]; total: number }> {
+    const { status, search, overdueCategory, contactId, page = 1, limit = 50 } = filters;
+    const offset = (page - 1) * limit;
+
+    console.log(`🔍 Server-side filtering: status=${status}, search="${search}", overdueCategory=${overdueCategory}, page=${page}, limit=${limit}`);
+
+    // Build WHERE conditions dynamically
+    const conditions = [eq(invoices.tenantId, tenantId)];
+
+    // Status filtering
+    if (status && status !== 'all') {
+      conditions.push(eq(invoices.status, status));
+    }
+
+    // Contact ID filtering
+    if (contactId) {
+      conditions.push(eq(invoices.contactId, contactId));
+    }
+
+    // Search across invoice number, contact name, email, and company name
+    if (search && search.trim()) {
+      const searchTerm = `%${search.trim()}%`;
+      conditions.push(
+        or(
+          ilike(invoices.invoiceNumber, searchTerm),
+          ilike(contacts.name, searchTerm),
+          ilike(contacts.email, searchTerm),
+          ilike(contacts.companyName, searchTerm)
+        )
+      );
+    }
+
+    // Overdue category filtering - handled differently based on category
+    if (overdueCategory && overdueCategory !== 'all') {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      if (overdueCategory === 'paid') {
+        conditions.push(eq(invoices.status, 'paid'));
+      } else {
+        // For non-paid categories, apply date-based filtering
+        conditions.push(ne(invoices.status, 'paid')); // Exclude paid invoices
+
+        switch (overdueCategory) {
+          case 'soon':
+            // Due in 1-7 days (future dates)
+            const soon7Days = new Date(today);
+            soon7Days.setDate(today.getDate() + 7);
+            conditions.push(
+              and(
+                gte(invoices.dueDate, today),
+                lte(invoices.dueDate, soon7Days)
+              )
+            );
+            break;
+
+          case 'current':
+            // Due in next 30 days (future dates)
+            const current30Days = new Date(today);
+            current30Days.setDate(today.getDate() + 30);
+            conditions.push(
+              and(
+                gte(invoices.dueDate, today),
+                lte(invoices.dueDate, current30Days)
+              )
+            );
+            break;
+
+          case 'recent':
+            // 1-30 days overdue
+            const recent30Days = new Date(today);
+            recent30Days.setDate(today.getDate() - 30);
+            conditions.push(
+              and(
+                lte(invoices.dueDate, today),
+                gte(invoices.dueDate, recent30Days)
+              )
+            );
+            break;
+
+          case 'overdue':
+            // 31-60 days overdue
+            const overdue60Days = new Date(today);
+            overdue60Days.setDate(today.getDate() - 60);
+            const overdue30Days = new Date(today);
+            overdue30Days.setDate(today.getDate() - 30);
+            conditions.push(
+              and(
+                lte(invoices.dueDate, overdue30Days),
+                gte(invoices.dueDate, overdue60Days)
+              )
+            );
+            break;
+
+          case 'serious':
+            // 61-90 days overdue
+            const serious90Days = new Date(today);
+            serious90Days.setDate(today.getDate() - 90);
+            const serious60Days = new Date(today);
+            serious60Days.setDate(today.getDate() - 60);
+            conditions.push(
+              and(
+                lte(invoices.dueDate, serious60Days),
+                gte(invoices.dueDate, serious90Days)
+              )
+            );
+            break;
+
+          case 'escalation':
+            // 90+ days overdue
+            const escalation90Days = new Date(today);
+            escalation90Days.setDate(today.getDate() - 90);
+            conditions.push(lte(invoices.dueDate, escalation90Days));
+            break;
+        }
+      }
+    }
+
+    // Build the WHERE clause
+    const whereClause = conditions.length > 1 ? and(...conditions) : conditions[0];
+
+    // Execute count query for total results
+    const [countResult] = await db
+      .select({ count: count() })
+      .from(invoices)
+      .leftJoin(contacts, eq(invoices.contactId, contacts.id))
+      .where(whereClause);
+
+    const total = countResult?.count || 0;
+
+    // Execute main query with pagination
+    const results = await db
+      .select()
+      .from(invoices)
+      .leftJoin(contacts, eq(invoices.contactId, contacts.id))
+      .where(whereClause)
+      .orderBy(desc(invoices.createdAt))
+      .limit(limit)
+      .offset(offset);
+
+    const mappedResults = results.map((row) => ({
+      ...row.invoices,
+      contact: row.contacts || {
+        id: '',
+        tenantId: '',
+        xeroContactId: null,
+        sageContactId: null,
+        quickBooksContactId: null,
+        name: 'Unknown Contact',
+        email: null,
+        phone: null,
+        companyName: null,
+        address: null,
+        role: 'customer',
+        isActive: true,
+        paymentTerms: 30,
+        creditLimit: null,
+        preferredContactMethod: 'email',
+        taxNumber: null,
+        accountNumber: null,
+        notes: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }
+    }));
+
+    console.log(`🎯 Server filtering results: ${mappedResults.length}/${total} invoices (filtered from ~8000)`);
+
+    return {
+      invoices: mappedResults,
+      total
+    };
   }
 
   async getInvoice(id: string, tenantId: string): Promise<(Invoice & { contact: Contact }) | undefined> {

@@ -70,6 +70,16 @@ const testVoiceSchema = z.object({
   organisationName: z.string().optional(),
   demoMessage: z.string().optional()
 });
+
+// Invoice filtering query schema for server-side filtering
+const invoicesQuerySchema = z.object({
+  status: z.enum(['pending', 'overdue', 'paid', 'cancelled', 'all']).optional().default('all'),
+  search: z.string().optional(),
+  overdue: z.enum(['paid', 'soon', 'current', 'recent', 'overdue', 'serious', 'escalation', 'all']).optional().default('all'),
+  contactId: z.string().optional(),
+  page: z.string().optional().default('1').transform(Number),
+  limit: z.string().optional().default('50').transform(Number)
+});
 import { generateCollectionSuggestions, generateEmailDraft, generateAiCfoResponse } from "./services/openai";
 import { sendReminderEmail, DEFAULT_FROM, DEFAULT_FROM_EMAIL } from "./services/sendgrid";
 import { sendPaymentReminderSMS } from "./services/twilio";
@@ -774,24 +784,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Invoice routes
+  // Invoice routes - Optimized with server-side filtering
   app.get("/api/invoices", isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.claims.sub);
-      console.log(`📊 Invoices Endpoint Debug: User ID: ${req.user.claims.sub}, TenantId: ${user?.tenantId}`);
       
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
 
-      const contactId = req.query.contactId as string;
-      const limit = req.query.limit ? parseInt(req.query.limit) : undefined;
+      // Validate and parse query parameters using Zod schema
+      const validatedQuery = invoicesQuerySchema.parse(req.query);
+      const { status, search, overdue, contactId, page, limit } = validatedQuery;
+
+      console.log(`📊 Optimized Invoices API - Tenant: ${user.tenantId}, Filters: status=${status}, search="${search}", overdue=${overdue}, page=${page}, limit=${limit}`);
       
-      // Get all invoices (including paid ones) for full filtering support
-      let invoices = await storage.getInvoices(user.tenantId, limit);
+      // Call optimized storage method with server-side filtering
+      const result = await storage.getInvoicesFiltered(user.tenantId, {
+        status,
+        search,
+        overdueCategory: overdue,
+        contactId,
+        page,
+        limit
+      });
       
       // Add overdue category info to each invoice based on status
-      invoices = invoices.map((invoice: any) => {
+      const invoicesWithCategories = result.invoices.map((invoice: any) => {
         if (invoice.status === 'paid') {
           // Paid invoices always have category "paid"
           return {
@@ -816,17 +835,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       });
       
-      console.log(`📊 Invoices Endpoint Debug: Fetched ${invoices.length} invoices (all statuses) for tenant ${user.tenantId}`);
+      console.log(`📊 Server-side filtered results: ${invoicesWithCategories.length}/${result.total} invoices (page ${page}, limit ${limit})`);
       
-      // Filter by contact ID if provided
-      if (contactId) {
-        invoices = invoices.filter(invoice => invoice.contactId === contactId);
-      }
-      
-      res.json(invoices);
+      // Return paginated results with metadata
+      res.json({
+        invoices: invoicesWithCategories,
+        pagination: {
+          page,
+          limit,
+          total: result.total,
+          totalPages: Math.ceil(result.total / limit)
+        }
+      });
     } catch (error) {
-      console.error("Error fetching invoices:", error);
-      res.status(500).json({ message: "Failed to fetch invoices" });
+      console.error("Error fetching filtered invoices:", error);
+      res.status(500).json({ message: "Failed to fetch invoices", error: error instanceof Error ? error.message : 'Unknown error' });
     }
   });
 

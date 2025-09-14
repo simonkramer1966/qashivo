@@ -104,10 +104,33 @@ export default function Invoices() {
     }
   }, [isAuthenticated, isLoading, toast]);
 
-  const { data: invoices = [], isLoading: invoicesLoading, error } = useQuery({
-    queryKey: ["/api/invoices"],
+  // Server-side filtered invoices with pagination
+  const { data: invoicesResponse, isLoading: invoicesLoading, error } = useQuery({
+    queryKey: ["/api/invoices", { status: statusFilter, search, overdue: overdueFilter, page: invoicesCurrentPage, limit: invoicesItemsPerPage }],
+    queryFn: async () => {
+      const params = new URLSearchParams({
+        status: statusFilter,
+        overdue: overdueFilter,
+        page: invoicesCurrentPage.toString(),
+        limit: invoicesItemsPerPage.toString()
+      });
+      
+      // Only add search parameter if it has a value
+      if (search && search.trim()) {
+        params.append('search', search.trim());
+      }
+      
+      const response = await fetch(`/api/invoices?${params.toString()}`);
+      if (!response.ok) throw new Error('Failed to fetch invoices');
+      return response.json();
+    },
     enabled: isAuthenticated,
+    keepPreviousData: true, // Keep showing old data while fetching new data
   });
+
+  // Extract invoices and pagination from the response
+  const invoices = invoicesResponse?.invoices || [];
+  const pagination = invoicesResponse?.pagination || { page: 1, limit: 50, total: 0, totalPages: 1 };
 
   // Fetch ALL payment predictions once with static caching (optimized strategy)
   const { data: allPaymentPredictions = {}, isLoading: predictionsLoading } = useQuery({
@@ -290,30 +313,8 @@ export default function Invoices() {
     return <div className="min-h-screen bg-background" />;
   }
 
-  // Invoice filtering and sorting logic
-  const filteredInvoices = (invoices as any[]).filter((invoice: any) => {
-    const matchesSearch = search === "" || 
-      invoice.invoiceNumber?.toLowerCase().includes(search.toLowerCase()) ||
-      invoice.contact?.name?.toLowerCase().includes(search.toLowerCase()) ||
-      invoice.contact?.email?.toLowerCase().includes(search.toLowerCase()) ||
-      invoice.contact?.companyName?.toLowerCase().includes(search.toLowerCase());
-
-    const matchesStatus = statusFilter === "all" || 
-      (statusFilter === "pending" && invoice.status === "pending") ||
-      (statusFilter === "overdue" && invoice.status === "overdue") ||
-      (statusFilter === "paid" && invoice.status === "paid") ||
-      (statusFilter === "cancelled" && invoice.status === "cancelled");
-
-    // Overdue category filtering
-    const matchesOverdueCategory = overdueFilter === "all" || 
-      (overdueFilter === "paid" && invoice.status === "paid") ||
-      (overdueFilter !== "paid" && (
-        (invoice.overdueCategory && invoice.overdueCategory === overdueFilter) ||
-        (!invoice.overdueCategory && getOverdueCategoryFromDueDate(invoice.dueDate).category === overdueFilter)
-      ));
-
-    return matchesSearch && matchesStatus && matchesOverdueCategory;
-  });
+  // Server-side filtering replaces client-side filtering
+  // Invoices are already filtered by the server based on statusFilter, search, and overdueFilter
 
   // Handle column sort
   const handleSort = (column: string) => {
@@ -331,8 +332,8 @@ export default function Invoices() {
     }
   };
 
-  // Sorting logic for different data types
-  const sortedInvoices = [...filteredInvoices].sort((a: any, b: any) => {
+  // Client-side sorting only (server already filters)
+  const sortedInvoices = [...invoices].sort((a: any, b: any) => {
     if (!sortColumn) return 0;
     
     let aValue: any, bValue: any;
@@ -411,11 +412,9 @@ export default function Invoices() {
       : <ChevronDown className="ml-1 h-4 w-4 text-[#17B6C3]" />;
   };
 
-  // Calculate pagination for invoices
-  const invoicesTotalPages = Math.ceil(sortedInvoices.length / invoicesItemsPerPage);
-  const invoicesStartIndex = (invoicesCurrentPage - 1) * invoicesItemsPerPage;
-  const invoicesEndIndex = invoicesStartIndex + invoicesItemsPerPage;
-  const paginatedInvoices = sortedInvoices.slice(invoicesStartIndex, invoicesEndIndex);
+  // Use server-side pagination (no client-side slicing needed)
+  const paginatedInvoices = sortedInvoices; // Server already handles pagination
+  const invoicesTotalPages = pagination.totalPages;
 
   // Reset page to 1 when search or filters change
   useEffect(() => {

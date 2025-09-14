@@ -82,7 +82,13 @@ export const contacts = pgTable("contacts", {
   notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
+}, (table) => [
+  // Performance indexes for search functionality
+  index("idx_contacts_name").on(table.name),
+  index("idx_contacts_email").on(table.email),
+  index("idx_contacts_company_name").on(table.companyName),
+  index("idx_contacts_tenant_id").on(table.tenantId),
+]);
 
 // Invoices table
 export const invoices = pgTable("invoices", {
@@ -107,7 +113,14 @@ export const invoices = pgTable("invoices", {
   reminderCount: integer("reminder_count").default(0),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
+}, (table) => [
+  // Performance indexes for server-side filtering optimization
+  index("idx_invoices_tenant_status").on(table.tenantId, table.status),
+  index("idx_invoices_due_date").on(table.dueDate),
+  index("idx_invoices_invoice_number").on(table.invoiceNumber),
+  index("idx_invoices_created_at").on(table.createdAt),
+  index("idx_invoices_contact_id").on(table.contactId),
+]);
 
 // Cached Xero invoices table for sync functionality
 export const cachedXeroInvoices = pgTable("cached_xero_invoices", {
