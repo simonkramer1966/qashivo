@@ -37,6 +37,7 @@ import {
   type ExchangeRate,
   invoices
 } from "@shared/schema";
+import { getOverdueCategoryFromDueDate } from "@shared/utils/overdueUtils";
 import { eq, and, desc, sql, count, avg, gte, lte, inArray } from 'drizzle-orm';
 import { db } from './db';
 import { z } from "zod";
@@ -786,8 +787,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const contactId = req.query.contactId as string;
       const limit = req.query.limit ? parseInt(req.query.limit) : undefined;
       
-      let invoices = await storage.getInvoicesWithOverdueCategory(user.tenantId, limit);
-      console.log(`📊 Invoices Endpoint Debug: Fetched ${invoices.length} invoices with overdue categories for tenant ${user.tenantId}`);
+      // Get all invoices (including paid ones) for full filtering support
+      let invoices = await storage.getInvoices(user.tenantId, limit);
+      
+      // Add overdue category info to each invoice
+      invoices = invoices.map((invoice: any) => ({
+        ...invoice,
+        overdueCategory: getOverdueCategoryFromDueDate(invoice.dueDate).category,
+        overdueCategoryInfo: getOverdueCategoryFromDueDate(invoice.dueDate)
+      }));
+      
+      console.log(`📊 Invoices Endpoint Debug: Fetched ${invoices.length} invoices (all statuses) for tenant ${user.tenantId}`);
       
       // Filter by contact ID if provided
       if (contactId) {
