@@ -590,7 +590,7 @@ export class DatabaseStorage implements IStorage {
       .where(
         and(
           eq(invoices.tenantId, tenantId),
-          sql`${invoices.dueDate} < NOW()`,
+          sql`DATE(${invoices.dueDate}) < CURRENT_DATE`,
           eq(invoices.status, "pending")
         )
       )
@@ -631,9 +631,11 @@ export class DatabaseStorage implements IStorage {
       return invoiceData; // Skip validation if missing required fields
     }
 
-    const now = new Date();
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Start of today
     const dueDate = new Date(invoiceData.dueDate);
-    const isPastDue = dueDate < now;
+    dueDate.setHours(0, 0, 0, 0); // Start of due date
+    const isPastDue = dueDate < today;
     
     // Auto-correct status based on due date
     if (invoiceData.status === 'pending' && isPastDue) {
@@ -738,7 +740,7 @@ export class DatabaseStorage implements IStorage {
       .where(
         and(
           eq(invoices.tenantId, tenantId),
-          sql`${invoices.dueDate} < NOW()`,
+          sql`DATE(${invoices.dueDate}) < CURRENT_DATE`,
           eq(invoices.status, "pending")
         )
       );

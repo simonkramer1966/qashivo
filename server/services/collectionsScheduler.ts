@@ -421,7 +421,7 @@ class CollectionsScheduler {
           and(
             eq(invoices.tenantId, tenantId),
             eq(invoices.status, 'pending'),
-            sql`${invoices.dueDate} < NOW()`
+            sql`DATE(${invoices.dueDate}) < CURRENT_DATE`
           )
         );
       
