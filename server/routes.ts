@@ -3467,6 +3467,72 @@ Payment required immediately to avoid collection action. Contact us NOW.`
     }
   });
 
+  // Get payment predictions for specific invoices (optimized for filtered views)
+  app.get("/api/ml/payment-predictions/filtered", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      // Validate and parse invoice IDs from query parameter
+      const { invoiceIds } = req.query;
+      if (!invoiceIds || typeof invoiceIds !== 'string') {
+        return res.status(400).json({ 
+          message: "invoiceIds query parameter is required and must be a comma-separated string" 
+        });
+      }
+
+      // Parse comma-separated invoice IDs
+      const requestedInvoiceIds = invoiceIds.split(',').map(id => id.trim()).filter(id => id.length > 0);
+      
+      if (requestedInvoiceIds.length === 0) {
+        return res.status(400).json({ 
+          message: "At least one valid invoice ID must be provided" 
+        });
+      }
+
+      // Limit to reasonable number of invoice IDs for performance
+      if (requestedInvoiceIds.length > 1000) {
+        return res.status(400).json({ 
+          message: "Maximum of 1000 invoice IDs allowed per request" 
+        });
+      }
+
+      const { PredictivePaymentService } = await import("./services/predictivePaymentService");
+      const predictionService = new PredictivePaymentService();
+      
+      // Get all predictions for the tenant (we need to fetch all to filter efficiently)
+      const allPredictions = await predictionService.getPaymentPredictions(user.tenantId);
+      
+      // Filter predictions to only include requested invoice IDs
+      const filteredPredictions = allPredictions.filter(prediction => 
+        requestedInvoiceIds.includes(prediction.invoiceId)
+      );
+      
+      // Convert to map for easy lookup by invoice ID (same format as bulk endpoint)
+      const predictionMap: { [invoiceId: string]: any } = {};
+      filteredPredictions.forEach(prediction => {
+        predictionMap[prediction.invoiceId] = {
+          paymentProbability: parseFloat(prediction.paymentProbability || '0'),
+          predictedPaymentDate: prediction.predictedPaymentDate,
+          paymentConfidenceScore: parseFloat(prediction.paymentConfidenceScore || '0'),
+          defaultRisk: parseFloat(prediction.defaultRisk || '0'),
+          escalationRisk: parseFloat(prediction.escalationRisk || '0'),
+          modelVersion: prediction.modelVersion
+        };
+      });
+      
+      // Log performance info for debugging
+      console.log(`🔮 Filtered predictions: ${filteredPredictions.length} of ${requestedInvoiceIds.length} requested IDs (${allPredictions.length} total)`);
+      
+      res.json(predictionMap);
+    } catch (error) {
+      console.error("Error fetching filtered payment predictions:", error);
+      res.status(500).json({ message: "Failed to fetch filtered payment predictions" });
+    }
+  });
+
   app.get("/api/ml/payment-predictions/:contactId", isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.claims.sub);
