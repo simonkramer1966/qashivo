@@ -108,8 +108,8 @@ export class PredictivePaymentService {
     let baseReliabilityScore = 0;
     
     if (paymentHistory >= 0.95) {
-      // "Always pays" customers: 95-99% even if late
-      baseReliabilityScore = 2.5; // ~92% base probability
+      // "Always pays" customers: 95-99% even if late (up to 60 days)
+      baseReliabilityScore = 3.2; // ~96% base probability
     } else if (paymentHistory >= 0.85) {
       // "Usually pays" customers: 80-95%
       baseReliabilityScore = 1.5; // ~82% base probability  
@@ -124,12 +124,20 @@ export class PredictivePaymentService {
       baseReliabilityScore = -1.0; // ~27% base probability
     }
     
-    // Step 2: Apply tiered timing penalties based on reliability
+    // Step 2: Apply tiered timing penalties based on reliability and lateness threshold
     let timingPenalty = 0;
     
-    if (paymentHistory >= 0.90) {
-      // Reliable customers: minimal penalty for being late
-      timingPenalty = daysOverdue * -0.005; // Very light penalty
+    if (paymentHistory >= 0.95) {
+      // Top-tier customers: minimal penalty up to 60 days, then heavier
+      if (daysOverdue <= 60) {
+        timingPenalty = daysOverdue * -0.003; // Ultra-light penalty (maintains 95%+)
+      } else {
+        // Beyond 60 days: escalated penalty even for reliable customers
+        timingPenalty = (60 * -0.003) + ((daysOverdue - 60) * -0.02);
+      }
+    } else if (paymentHistory >= 0.90) {
+      // Very reliable customers: light penalty
+      timingPenalty = daysOverdue * -0.008; // Light penalty
     } else if (paymentHistory >= 0.70) {
       // Decent customers: moderate penalty
       timingPenalty = daysOverdue * -0.015; // Medium penalty
