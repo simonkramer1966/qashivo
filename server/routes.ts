@@ -3328,6 +3328,226 @@ Payment required immediately to avoid collection action. Contact us NOW.`
     }
   });
 
+  // Advanced ML Services Routes (Week 2 Implementation)
+  
+  // Predictive Payment Modeling
+  app.post("/api/ml/payment-predictions/analyze", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { PredictivePaymentService } = await import("./services/predictivePaymentService");
+      const predictionService = new PredictivePaymentService();
+      
+      const analysis = await predictionService.performPredictiveAnalysis(user.tenantId);
+      res.json(analysis);
+    } catch (error) {
+      console.error("Error performing payment prediction analysis:", error);
+      res.status(500).json({ message: "Failed to perform predictive analysis" });
+    }
+  });
+
+  app.get("/api/ml/payment-predictions/:contactId", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { contactId } = req.params;
+      const { PredictivePaymentService } = await import("./services/predictivePaymentService");
+      const predictionService = new PredictivePaymentService();
+      
+      const prediction = await predictionService.predictPaymentProbability(user.tenantId, contactId);
+      res.json(prediction);
+    } catch (error) {
+      console.error("Error fetching payment prediction:", error);
+      res.status(500).json({ message: "Failed to fetch payment prediction" });
+    }
+  });
+
+  // Dynamic Risk Scoring
+  app.post("/api/ml/risk-scoring/calculate", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { contactId } = req.body;
+      if (!contactId) {
+        return res.status(400).json({ message: "Contact ID is required" });
+      }
+
+      const { DynamicRiskScoringService } = await import("./services/dynamicRiskScoringService");
+      const riskService = new DynamicRiskScoringService();
+      
+      const riskScore = await riskService.calculateCustomerRiskScore(user.tenantId, contactId);
+      res.json(riskScore);
+    } catch (error) {
+      console.error("Error calculating risk score:", error);
+      res.status(500).json({ message: "Failed to calculate risk score" });
+    }
+  });
+
+  app.get("/api/ml/risk-scoring/scores", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { limit = 100, urgency } = req.query;
+      const { DynamicRiskScoringService } = await import("./services/dynamicRiskScoringService");
+      const riskService = new DynamicRiskScoringService();
+      
+      const scores = await riskService.getRiskScores(user.tenantId, Number(limit), urgency as string);
+      res.json(scores);
+    } catch (error) {
+      console.error("Error fetching risk scores:", error);
+      res.status(500).json({ message: "Failed to fetch risk scores" });
+    }
+  });
+
+  app.get("/api/ml/risk-scoring/analytics", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { DynamicRiskScoringService } = await import("./services/dynamicRiskScoringService");
+      const riskService = new DynamicRiskScoringService();
+      
+      const analytics = await riskService.getRiskAnalytics(user.tenantId);
+      res.json(analytics);
+    } catch (error) {
+      console.error("Error fetching risk analytics:", error);
+      res.status(500).json({ message: "Failed to fetch risk analytics" });
+    }
+  });
+
+  // Customer Segmentation
+  app.post("/api/ml/customer-segmentation/analyze", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { CustomerSegmentationService } = await import("./services/customerSegmentationService");
+      const segmentationService = new CustomerSegmentationService();
+      
+      const analysis = await segmentationService.performSegmentationAnalysis(user.tenantId);
+      res.json(analysis);
+    } catch (error) {
+      console.error("Error performing customer segmentation:", error);
+      res.status(500).json({ message: "Failed to perform customer segmentation" });
+    }
+  });
+
+  app.get("/api/ml/customer-segmentation/segments", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { CustomerSegmentationService } = await import("./services/customerSegmentationService");
+      const segmentationService = new CustomerSegmentationService();
+      
+      const segments = await segmentationService.getCustomerSegments(user.tenantId);
+      res.json(segments);
+    } catch (error) {
+      console.error("Error fetching customer segments:", error);
+      res.status(500).json({ message: "Failed to fetch customer segments" });
+    }
+  });
+
+  app.get("/api/ml/customer-segmentation/assignments", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { CustomerSegmentationService } = await import("./services/customerSegmentationService");
+      const segmentationService = new CustomerSegmentationService();
+      
+      const assignments = await segmentationService.getCustomerSegmentAssignments(user.tenantId);
+      res.json(assignments);
+    } catch (error) {
+      console.error("Error fetching segment assignments:", error);
+      res.status(500).json({ message: "Failed to fetch segment assignments" });
+    }
+  });
+
+  // Seasonal Pattern Recognition
+  app.post("/api/ml/seasonal-patterns/analyze", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { SeasonalPatternService } = await import("./services/seasonalPatternService");
+      const seasonalService = new SeasonalPatternService();
+      
+      const analysis = await seasonalService.performSeasonalAnalysis(user.tenantId);
+      res.json(analysis);
+    } catch (error) {
+      console.error("Error performing seasonal pattern analysis:", error);
+      res.status(500).json({ message: "Failed to perform seasonal analysis" });
+    }
+  });
+
+  app.get("/api/ml/seasonal-patterns/patterns", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { type } = req.query;
+      const { SeasonalPatternService } = await import("./services/seasonalPatternService");
+      const seasonalService = new SeasonalPatternService();
+      
+      const patterns = type 
+        ? await seasonalService.getPatternsByType(user.tenantId, type as string)
+        : await seasonalService.getSeasonalPatterns(user.tenantId);
+      
+      res.json(patterns);
+    } catch (error) {
+      console.error("Error fetching seasonal patterns:", error);
+      res.status(500).json({ message: "Failed to fetch seasonal patterns" });
+    }
+  });
+
+  app.get("/api/ml/seasonal-patterns/multiplier", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { date } = req.query;
+      if (!date) {
+        return res.status(400).json({ message: "Date parameter is required" });
+      }
+
+      const { SeasonalPatternService } = await import("./services/seasonalPatternService");
+      const seasonalService = new SeasonalPatternService();
+      
+      const multiplier = await seasonalService.getSeasonalMultiplier(user.tenantId, new Date(date as string));
+      res.json({ multiplier, date });
+    } catch (error) {
+      console.error("Error calculating seasonal multiplier:", error);
+      res.status(500).json({ message: "Failed to calculate seasonal multiplier" });
+    }
+  });
+
   // Retell AI Voice Calling Routes
   app.get("/api/retell/configuration", isAuthenticated, async (req: any, res) => {
     try {
