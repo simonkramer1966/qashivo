@@ -647,6 +647,16 @@ export default function Invoices() {
                           </div>
                         </th>
                         <th 
+                          className="text-left py-3 text-sm font-medium text-muted-foreground cursor-pointer select-none group hover:text-[#17B6C3] transition-colors"
+                          onClick={() => handleSort('status')}
+                          data-testid="header-status"
+                        >
+                          <div className="flex items-center">
+                            Category
+                            {getSortIcon('status')}
+                          </div>
+                        </th>
+                        <th 
                           className="text-left py-3 text-sm font-medium text-muted-foreground"
                           data-testid="header-payment-probability"
                         >
@@ -662,16 +672,6 @@ export default function Invoices() {
                           <div className="flex items-center">
                             <Calendar className="mr-1 h-4 w-4 text-[#17B6C3]" />
                             Exp. Pymt
-                          </div>
-                        </th>
-                        <th 
-                          className="text-left py-3 text-sm font-medium text-muted-foreground cursor-pointer select-none group hover:text-[#17B6C3] transition-colors"
-                          onClick={() => handleSort('status')}
-                          data-testid="header-status"
-                        >
-                          <div className="flex items-center">
-                            Category
-                            {getSortIcon('status')}
                           </div>
                         </th>
                         <th className="text-right py-3 text-sm font-medium text-muted-foreground">Actions</th>
@@ -712,6 +712,9 @@ export default function Invoices() {
                               ) : null;
                             })()}
                           </td>
+                          <td className="py-4" data-testid={`cell-overdue-category-${invoice.id}`}>
+                            {getOverdueCategoryBadge(invoice)}
+                          </td>
                           <td className="py-4" data-testid={`cell-payment-probability-${invoice.id}`}>
                             {(() => {
                               const prediction = paymentPredictions[invoice.id];
@@ -737,9 +740,6 @@ export default function Invoices() {
                                 prediction.paymentConfidenceScore
                               );
                             })()}
-                          </td>
-                          <td className="py-4" data-testid={`cell-overdue-category-${invoice.id}`}>
-                            {getOverdueCategoryBadge(invoice)}
                           </td>
                           <td className="py-4">
                             <div className="flex justify-end">
