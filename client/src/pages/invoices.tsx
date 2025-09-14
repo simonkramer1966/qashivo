@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { formatDate } from "../../../shared/utils/dateFormatter";
@@ -109,10 +109,56 @@ export default function Invoices() {
     enabled: isAuthenticated,
   });
 
-  // Fetch payment predictions for all invoices
+  // Extract visible invoice IDs for optimized predictions API
+  const visibleInvoiceIds = useMemo(() => {
+    if (!invoices.length) return [];
+    
+    // Get filtered and paginated invoices (same logic as below but early calculation)
+    const filtered = (invoices as any[]).filter((invoice: any) => {
+      const matchesSearch = search === "" || 
+        invoice.invoiceNumber?.toLowerCase().includes(search.toLowerCase()) ||
+        invoice.contact?.name?.toLowerCase().includes(search.toLowerCase()) ||
+        invoice.contact?.email?.toLowerCase().includes(search.toLowerCase()) ||
+        invoice.contact?.companyName?.toLowerCase().includes(search.toLowerCase());
+
+      const matchesStatus = statusFilter === "all" || 
+        (statusFilter === "pending" && invoice.status === "pending") ||
+        (statusFilter === "overdue" && invoice.status === "overdue") ||
+        (statusFilter === "paid" && invoice.status === "paid") ||
+        (statusFilter === "cancelled" && invoice.status === "cancelled");
+
+      const matchesOverdueCategory = overdueFilter === "all" || 
+        (overdueFilter === "paid" && invoice.status === "paid") ||
+        (overdueFilter !== "paid" && (
+          (invoice.overdueCategory && invoice.overdueCategory === overdueFilter) ||
+          (!invoice.overdueCategory && getOverdueCategoryFromDueDate(invoice.dueDate).category === overdueFilter)
+        ));
+
+      return matchesSearch && matchesStatus && matchesOverdueCategory;
+    });
+
+    // Apply pagination to get only visible invoices
+    const startIndex = (invoicesCurrentPage - 1) * invoicesItemsPerPage;
+    const endIndex = startIndex + invoicesItemsPerPage;
+    const paginated = filtered.slice(startIndex, endIndex);
+    
+    return paginated.map(invoice => invoice.id);
+  }, [invoices, search, statusFilter, overdueFilter, invoicesCurrentPage, invoicesItemsPerPage]);
+
+  // Fetch payment predictions for visible invoices only (optimized)
   const { data: paymentPredictions = {}, isLoading: predictionsLoading } = useQuery({
-    queryKey: ["/api/ml/payment-predictions/bulk/invoices"],
-    enabled: isAuthenticated,
+    queryKey: ["/api/ml/payment-predictions/filtered", visibleInvoiceIds],
+    queryFn: async () => {
+      if (visibleInvoiceIds.length === 0) return {};
+      const idsParam = visibleInvoiceIds.join(',');
+      const response = await fetch(`/api/ml/payment-predictions/filtered?invoiceIds=${idsParam}`);
+      if (!response.ok) throw new Error('Failed to fetch predictions');
+      return response.json();
+    },
+    enabled: isAuthenticated && visibleInvoiceIds.length > 0,
+    staleTime: 3 * 60 * 1000, // 3 minutes - predictions don't change frequently
+    cacheTime: 10 * 60 * 1000, // 10 minutes - keep in cache longer
+    refetchOnWindowFocus: false, // Don't refetch when window regains focus
   });
 
   // Fetch collection schedules for assignment
