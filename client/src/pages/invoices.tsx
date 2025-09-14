@@ -522,7 +522,7 @@ export default function Invoices() {
                           data-testid="header-status"
                         >
                           <div className="flex items-center">
-                            Status
+                            Category
                             {getSortIcon('status')}
                           </div>
                         </th>
