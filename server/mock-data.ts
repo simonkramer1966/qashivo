@@ -552,15 +552,25 @@ export async function generateComprehensiveDataset(
         const issueDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), issueDay);
         const dueDate = addDays(issueDate, client.contact.paymentTerms || 30);
         
-        // Determine if this should be paid or outstanding based on timing
-        const isRecent = dueDate >= addDays(new Date(), -120); // Within last 120 days
+        // Determine payment status based on realistic business payment rates by invoice age
+        const now = new Date();
+        const daysOld = Math.floor((now.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
+        
+        // Realistic payment rates based on invoice age (how real businesses work)
+        let paymentRate = 0.4; // Default for recent invoices
+        if (daysOld > 120) paymentRate = 0.98;      // 98% of very old invoices are paid
+        else if (daysOld > 60) paymentRate = 0.95;  // 95% of old invoices are paid  
+        else if (daysOld > 30) paymentRate = 0.85;  // 85% of mature invoices are paid
+        else if (daysOld > 0) paymentRate = 0.65;   // 65% of overdue invoices are paid
+        
         let paidDate: Date | null = null;
         let status = 'pending';
         let amountPaid = '0';
         
-        if (!isRecent || Math.random() < 0.6) { // 60% of historical invoices are paid
+        // Apply realistic payment probability
+        if (Math.random() < paymentRate) {
           paidDate = calculatePaymentDate(dueDate, client.segment, true);
-          if (paidDate && paidDate <= new Date()) {
+          if (paidDate && paidDate <= now) {
             status = 'paid';
             // Some partial payments for chronic late payers
             const isPartial = client.segment === 'CHRONIC_LATE' && Math.random() < 0.3;
@@ -568,9 +578,10 @@ export async function generateComprehensiveDataset(
           }
         }
         
-        // Track outstanding invoices for distribution
+        // Track outstanding invoices for distribution (only recent unpaid invoices)
+        const isRecent = daysOld <= 120; // Within last 120 days
         if (status !== 'paid' && isRecent) {
-          const daysOverdue = Math.floor((new Date().getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
+          const daysOverdue = Math.floor((now.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
           outstandingInvoices.push({
             dueDate,
             invoiceId: '', // Will be set after creation
