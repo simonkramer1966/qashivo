@@ -42,6 +42,28 @@ export default function Invoices() {
   
   const [statusFilter, setStatusFilter] = useState('pending');
   const [overdueFilter, setOverdueFilter] = useState<OverdueCategory | 'all' | 'paid'>('all');
+  
+  // Smart filtering: Get available category options based on status
+  const getAvailableCategoryOptions = (status: string) => {
+    switch (status) {
+      case 'paid':
+        return [{ category: 'paid' as const, label: 'Paid' }];
+      case 'pending':
+        return getAllOverdueCategories().filter(cat => ['soon', 'current'].includes(cat.category));
+      case 'overdue':
+        return getAllOverdueCategories().filter(cat => ['recent', 'overdue', 'serious', 'escalation'].includes(cat.category));
+      case 'all':
+      default:
+        return [{ category: 'paid' as const, label: 'Paid' }, ...getAllOverdueCategories()];
+    }
+  };
+  
+  // Auto-reset category when status changes to prevent invalid combinations
+  const handleStatusChange = (newStatus: string) => {
+    setStatusFilter(newStatus);
+    // Reset category to 'all' when status changes
+    setOverdueFilter('all');
+  };
   const [invClientSort, setInvClientSort] = useState<string>("inv-asc");
   const [dueDateAgeSort, setDueDateAgeSort] = useState<string>("due-date-asc");
   const [nextActionSort, setNextActionSort] = useState<string>("action-date-asc");
@@ -286,7 +308,7 @@ export default function Invoices() {
                   />
                 </div>
               </div>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <Select value={statusFilter} onValueChange={handleStatusChange}>
                 <SelectTrigger className="w-[180px] bg-white/70 border-gray-200/30" data-testid="select-status-filter">
                   <Filter className="mr-2 h-4 w-4" />
                   <SelectValue placeholder="All Status" />
@@ -306,8 +328,7 @@ export default function Invoices() {
                 </SelectTrigger>
                 <SelectContent className="bg-white border-gray-200">
                   <SelectItem value="all">All Categories</SelectItem>
-                  <SelectItem value="paid">Paid</SelectItem>
-                  {getAllOverdueCategories().map((category) => (
+                  {getAvailableCategoryOptions(statusFilter).map((category) => (
                     <SelectItem key={category.category} value={category.category}>
                       {category.label}
                     </SelectItem>
