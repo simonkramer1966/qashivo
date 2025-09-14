@@ -562,14 +562,21 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createInvoice(invoiceData: InsertInvoice): Promise<Invoice> {
-    const [invoice] = await db.insert(invoices).values(invoiceData).returning();
+    // Validate status matches due date reality
+    const validatedData = this.validateInvoiceStatus(invoiceData);
+    const [invoice] = await db.insert(invoices).values(validatedData).returning();
     return invoice;
   }
 
   async updateInvoice(id: string, tenantId: string, updates: Partial<InsertInvoice>): Promise<Invoice> {
+    // If updating status-related fields, validate consistency
+    const validatedUpdates = updates.status || updates.dueDate 
+      ? this.validateInvoiceStatus({ ...updates } as InsertInvoice)
+      : updates;
+    
     const [invoice] = await db
       .update(invoices)
-      .set({ ...updates, updatedAt: new Date() })
+      .set({ ...validatedUpdates, updatedAt: new Date() })
       .where(and(eq(invoices.id, id), eq(invoices.tenantId, tenantId)))
       .returning();
     return invoice;
@@ -614,6 +621,32 @@ export class DatabaseStorage implements IStorage {
         updatedAt: new Date(),
       }
     }));
+  }
+
+  /**
+   * Validate invoice status matches due date reality
+   */
+  private validateInvoiceStatus(invoiceData: Partial<InsertInvoice>): Partial<InsertInvoice> {
+    if (!invoiceData.dueDate || !invoiceData.status) {
+      return invoiceData; // Skip validation if missing required fields
+    }
+
+    const now = new Date();
+    const dueDate = new Date(invoiceData.dueDate);
+    const isPastDue = dueDate < now;
+    
+    // Auto-correct status based on due date
+    if (invoiceData.status === 'pending' && isPastDue) {
+      console.log(`📊 Auto-correcting invoice status: pending → overdue (due: ${dueDate.toISOString().split('T')[0]})`);
+      return { ...invoiceData, status: 'overdue' };
+    }
+    
+    if (invoiceData.status === 'overdue' && !isPastDue) {
+      console.log(`📊 Auto-correcting invoice status: overdue → pending (due: ${dueDate.toISOString().split('T')[0]})`);
+      return { ...invoiceData, status: 'pending' };
+    }
+    
+    return invoiceData;
   }
 
   async getOverdueCategorySummary(tenantId: string): Promise<Record<OverdueCategory, { count: number; totalAmount: number }>> {

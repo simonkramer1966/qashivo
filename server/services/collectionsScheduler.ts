@@ -1,6 +1,6 @@
-import { eq, and, inArray, gte, lt } from "drizzle-orm";
+import { eq, and, inArray, gte, lt, sql } from "drizzle-orm";
 import { db } from "../db";
-import { tenants, actions, emailSenders, communicationTemplates, contacts } from "@shared/schema";
+import { tenants, actions, emailSenders, communicationTemplates, contacts, invoices } from "@shared/schema";
 import { checkCollectionActions, CollectionAction } from "./collectionsAutomation";
 import { sendEmail } from "./sendgrid";
 
@@ -107,6 +107,12 @@ class CollectionsScheduler {
       for (const tenant of enabledTenants) {
         try {
           console.log(`🏢 Processing tenant: ${tenant.name} (${tenant.id})`);
+
+          // Update invoice statuses first
+          const statusUpdates = await this.updateInvoiceStatuses(tenant.id);
+          if (statusUpdates > 0) {
+            console.log(`  📊 Updated ${statusUpdates} invoice statuses to 'overdue'`);
+          }
 
           // Check for pending collection actions
           const pendingActions = await checkCollectionActions(tenant.id);
@@ -396,6 +402,36 @@ class CollectionsScheduler {
     } catch (error: any) {
       console.error(`    ❌ Error recording action:`, error);
       throw error;
+    }
+  }
+
+  /**
+   * Update invoice statuses based on due dates
+   * Automatically transition pending → overdue when past due
+   */
+  private async updateInvoiceStatuses(tenantId: string): Promise<number> {
+    try {
+      const result = await db
+        .update(invoices)
+        .set({ 
+          status: 'overdue',
+          updatedAt: new Date()
+        })
+        .where(
+          and(
+            eq(invoices.tenantId, tenantId),
+            eq(invoices.status, 'pending'),
+            sql`${invoices.dueDate} < NOW()`
+          )
+        );
+      
+      // For PostgreSQL with Drizzle, the result is an array with rowCount
+      const updatedCount = Array.isArray(result) ? result.length : 0;
+      
+      return updatedCount;
+    } catch (error: any) {
+      console.error(`❌ Error updating invoice statuses for tenant ${tenantId}:`, error);
+      return 0;
     }
   }
 
