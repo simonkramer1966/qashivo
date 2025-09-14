@@ -790,12 +790,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get all invoices (including paid ones) for full filtering support
       let invoices = await storage.getInvoices(user.tenantId, limit);
       
-      // Add overdue category info to each invoice
-      invoices = invoices.map((invoice: any) => ({
-        ...invoice,
-        overdueCategory: getOverdueCategoryFromDueDate(invoice.dueDate).category,
-        overdueCategoryInfo: getOverdueCategoryFromDueDate(invoice.dueDate)
-      }));
+      // Add overdue category info to each invoice based on status
+      invoices = invoices.map((invoice: any) => {
+        if (invoice.status === 'paid') {
+          // Paid invoices always have category "paid"
+          return {
+            ...invoice,
+            overdueCategory: 'paid',
+            overdueCategoryInfo: {
+              category: 'paid',
+              label: 'Paid',
+              color: 'text-green-800',
+              bgColor: 'bg-green-100',
+              daysOverdue: null
+            }
+          };
+        } else {
+          // Pending/overdue invoices get calculated categories
+          const categoryInfo = getOverdueCategoryFromDueDate(invoice.dueDate);
+          return {
+            ...invoice,
+            overdueCategory: categoryInfo.category,
+            overdueCategoryInfo: categoryInfo
+          };
+        }
+      });
       
       console.log(`📊 Invoices Endpoint Debug: Fetched ${invoices.length} invoices (all statuses) for tenant ${user.tenantId}`);
       
