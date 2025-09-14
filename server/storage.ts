@@ -504,15 +504,20 @@ export class DatabaseStorage implements IStorage {
         id: '',
         tenantId: '',
         xeroContactId: null,
+        sageContactId: null,
+        quickBooksContactId: null,
         name: 'Unknown Contact',
         email: null,
         phone: null,
         companyName: null,
         address: null,
+        role: 'customer',
         isActive: true,
         paymentTerms: 30,
         creditLimit: null,
         preferredContactMethod: 'email',
+        taxNumber: null,
+        accountNumber: null,
         notes: null,
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -535,15 +540,20 @@ export class DatabaseStorage implements IStorage {
         id: '',
         tenantId: '',
         xeroContactId: null,
+        sageContactId: null,
+        quickBooksContactId: null,
         name: 'Unknown Contact',
         email: null,
         phone: null,
         companyName: null,
         address: null,
+        role: 'customer',
         isActive: true,
         paymentTerms: 30,
         creditLimit: null,
         preferredContactMethod: 'email',
+        taxNumber: null,
+        accountNumber: null,
         notes: null,
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -585,15 +595,20 @@ export class DatabaseStorage implements IStorage {
         id: '',
         tenantId: '',
         xeroContactId: null,
+        sageContactId: null,
+        quickBooksContactId: null,
         name: 'Unknown Contact',
         email: null,
         phone: null,
         companyName: null,
         address: null,
+        role: 'customer',
         isActive: true,
         paymentTerms: 30,
         creditLimit: null,
         preferredContactMethod: 'email',
+        taxNumber: null,
+        accountNumber: null,
         notes: null,
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -640,15 +655,20 @@ export class DatabaseStorage implements IStorage {
           id: '',
           tenantId: '',
           xeroContactId: null,
+          sageContactId: null,
+          quickBooksContactId: null,
           name: 'Unknown Contact',
           email: null,
           phone: null,
           companyName: null,
           address: null,
+          role: 'customer',
           isActive: true,
           paymentTerms: 30,
           creditLimit: null,
           preferredContactMethod: 'email',
+          taxNumber: null,
+          accountNumber: null,
           notes: null,
           createdAt: new Date(),
           updatedAt: new Date(),
@@ -2040,31 +2060,75 @@ export class DatabaseStorage implements IStorage {
 
   // Bills (ACCPAY) operations
   async getBills(tenantId: string, limit = 1000): Promise<(Bill & { vendor: Contact })[]> {
-    const query = db
-      .select({
-        ...bills,
-        vendor: contacts,
-      })
+    const results = await db
+      .select()
       .from(bills)
       .leftJoin(contacts, eq(bills.vendorId, contacts.id))
       .where(eq(bills.tenantId, tenantId))
       .orderBy(desc(bills.issueDate))
       .limit(limit);
 
-    return await query;
+    return results.map((row) => ({
+      ...row.bills,
+      vendor: row.contacts || {
+        id: '',
+        tenantId: '',
+        xeroContactId: null,
+        sageContactId: null,
+        quickBooksContactId: null,
+        name: 'Unknown Vendor',
+        email: null,
+        phone: null,
+        companyName: null,
+        address: null,
+        role: 'vendor',
+        isActive: true,
+        paymentTerms: 30,
+        creditLimit: null,
+        preferredContactMethod: 'email',
+        taxNumber: null,
+        accountNumber: null,
+        notes: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }
+    }));
   }
 
   async getBill(id: string, tenantId: string): Promise<(Bill & { vendor: Contact }) | undefined> {
     const [result] = await db
-      .select({
-        ...bills,
-        vendor: contacts,
-      })
+      .select()
       .from(bills)
       .leftJoin(contacts, eq(bills.vendorId, contacts.id))
       .where(and(eq(bills.id, id), eq(bills.tenantId, tenantId)));
 
-    return result;
+    if (!result) return undefined;
+
+    return {
+      ...result.bills,
+      vendor: result.contacts || {
+        id: '',
+        tenantId: '',
+        xeroContactId: null,
+        sageContactId: null,
+        quickBooksContactId: null,
+        name: 'Unknown Vendor',
+        email: null,
+        phone: null,
+        companyName: null,
+        address: null,
+        role: 'vendor',
+        isActive: true,
+        paymentTerms: 30,
+        creditLimit: null,
+        preferredContactMethod: 'email',
+        taxNumber: null,
+        accountNumber: null,
+        notes: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }
+    };
   }
 
   async createBill(billData: InsertBill): Promise<Bill> {
@@ -2101,7 +2165,7 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(bankAccounts)
       .where(eq(bankAccounts.tenantId, tenantId))
-      .orderBy(bankAccounts.accountName);
+      .orderBy(bankAccounts.accountNumber);
   }
 
   async getBankAccount(id: string, tenantId: string): Promise<BankAccount | undefined> {
@@ -2137,52 +2201,58 @@ export class DatabaseStorage implements IStorage {
     tenantId: string, 
     filters?: { bankAccountId?: string; startDate?: string; endDate?: string; limit?: number }
   ): Promise<(BankTransaction & { bankAccount: BankAccount; contact?: Contact; invoice?: Invoice; bill?: Bill })[]> {
-    let query = db
-      .select({
-        ...bankTransactions,
-        bankAccount: bankAccounts,
-        contact: contacts,
-        invoice: invoices,
-        bill: bills,
-      })
+    // Build conditions array
+    const conditions = [eq(bankTransactions.tenantId, tenantId)];
+    
+    if (filters?.bankAccountId) {
+      conditions.push(eq(bankTransactions.bankAccountId, filters.bankAccountId));
+    }
+    if (filters?.startDate) {
+      conditions.push(gte(bankTransactions.transactionDate, new Date(filters.startDate)));
+    }
+    if (filters?.endDate) {
+      conditions.push(lte(bankTransactions.transactionDate, new Date(filters.endDate)));
+    }
+
+    const results = await db
+      .select()
       .from(bankTransactions)
       .leftJoin(bankAccounts, eq(bankTransactions.bankAccountId, bankAccounts.id))
       .leftJoin(contacts, eq(bankTransactions.contactId, contacts.id))
       .leftJoin(invoices, eq(bankTransactions.invoiceId, invoices.id))
       .leftJoin(bills, eq(bankTransactions.billId, bills.id))
-      .where(eq(bankTransactions.tenantId, tenantId))
-      .orderBy(desc(bankTransactions.transactionDate));
+      .where(and(...conditions))
+      .orderBy(desc(bankTransactions.transactionDate))
+      .limit(filters?.limit || 1000);
 
-    if (filters?.bankAccountId) {
-      query = query.where(and(eq(bankTransactions.tenantId, tenantId), eq(bankTransactions.bankAccountId, filters.bankAccountId)));
-    }
-
-    if (filters?.startDate) {
-      query = query.where(and(eq(bankTransactions.tenantId, tenantId), gte(bankTransactions.transactionDate, new Date(filters.startDate))));
-    }
-
-    if (filters?.endDate) {
-      query = query.where(and(eq(bankTransactions.tenantId, tenantId), lte(bankTransactions.transactionDate, new Date(filters.endDate))));
-    }
-
-    if (filters?.limit) {
-      query = query.limit(filters.limit);
-    } else {
-      query = query.limit(1000);
-    }
-
-    return await query;
+    return results.map((row) => ({
+      ...row.bank_transactions,
+      bankAccount: row.bank_accounts || {
+        id: '',
+        tenantId: '',
+        xeroAccountId: null,
+        sageAccountId: null,
+        quickBooksAccountId: null,
+        name: 'Unknown Account',
+        accountNumber: null,
+        accountType: 'checking',
+        currency: 'USD',
+        currentBalance: '0',
+        isActive: true,
+        bankName: null,
+        description: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+      contact: row.contacts || undefined,
+      invoice: row.invoices || undefined,
+      bill: row.bills || undefined,
+    }));
   }
 
   async getBankTransaction(id: string, tenantId: string): Promise<(BankTransaction & { bankAccount: BankAccount; contact?: Contact; invoice?: Invoice; bill?: Bill }) | undefined> {
     const [result] = await db
-      .select({
-        ...bankTransactions,
-        bankAccount: bankAccounts,
-        contact: contacts,
-        invoice: invoices,
-        bill: bills,
-      })
+      .select()
       .from(bankTransactions)
       .leftJoin(bankAccounts, eq(bankTransactions.bankAccountId, bankAccounts.id))
       .leftJoin(contacts, eq(bankTransactions.contactId, contacts.id))
@@ -2190,7 +2260,31 @@ export class DatabaseStorage implements IStorage {
       .leftJoin(bills, eq(bankTransactions.billId, bills.id))
       .where(and(eq(bankTransactions.id, id), eq(bankTransactions.tenantId, tenantId)));
 
-    return result;
+    if (!result) return undefined;
+
+    return {
+      ...result.bank_transactions,
+      bankAccount: result.bank_accounts || {
+        id: '',
+        tenantId: '',
+        xeroAccountId: null,
+        sageAccountId: null,
+        quickBooksAccountId: null,
+        name: 'Unknown Account',
+        accountNumber: null,
+        accountType: 'checking',
+        currency: 'USD',
+        currentBalance: '0',
+        isActive: true,
+        bankName: null,
+        description: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+      contact: result.contacts || undefined,
+      invoice: result.invoices || undefined,
+      bill: result.bills || undefined,
+    };
   }
 
   async createBankTransaction(transactionData: InsertBankTransaction): Promise<BankTransaction> {
@@ -2215,32 +2309,33 @@ export class DatabaseStorage implements IStorage {
 
   // Budget operations
   async getBudgets(tenantId: string, filters?: { year?: number; status?: string }): Promise<(Budget & { budgetLines: BudgetLine[]; createdByUser?: User; approvedByUser?: User })[]> {
-    let query = db
-      .select({
-        ...budgets,
-        createdByUser: users,
-        approvedByUser: users,
-      })
+    // Build conditions array
+    const conditions = [eq(budgets.tenantId, tenantId)];
+    
+    if (filters?.status) {
+      conditions.push(eq(budgets.status, filters.status));
+    }
+    
+    // Note: No year filter since budgets table doesn't have a year column
+    // Budget period is defined by startDate and endDate
+
+    const budgetResults = await db
+      .select()
       .from(budgets)
       .leftJoin(users, eq(budgets.createdBy, users.id))
-      .where(eq(budgets.tenantId, tenantId))
-      .orderBy(desc(budgets.year), desc(budgets.createdAt));
-
-    if (filters?.year) {
-      query = query.where(and(eq(budgets.tenantId, tenantId), eq(budgets.year, filters.year)));
-    }
-
-    if (filters?.status) {
-      query = query.where(and(eq(budgets.tenantId, tenantId), eq(budgets.status, filters.status)));
-    }
-
-    const budgetResults = await query;
+      .where(and(...conditions))
+      .orderBy(desc(budgets.startDate), desc(budgets.createdAt));
     
-    // Get budget lines for each budget
+    // Get budget lines for each budget and map results
     const budgetsWithLines = await Promise.all(
-      budgetResults.map(async (budget) => {
-        const budgetLines = await this.getBudgetLines(budget.id);
-        return { ...budget, budgetLines };
+      budgetResults.map(async (row) => {
+        const budgetLines = await this.getBudgetLines(row.budgets.id);
+        return {
+          ...row.budgets,
+          budgetLines,
+          createdByUser: row.users || undefined,
+          approvedByUser: undefined, // Would need separate join for approvedBy
+        };
       })
     );
 
@@ -2248,20 +2343,21 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getBudget(id: string, tenantId: string): Promise<(Budget & { budgetLines: BudgetLine[]; createdByUser?: User; approvedByUser?: User }) | undefined> {
-    const [budget] = await db
-      .select({
-        ...budgets,
-        createdByUser: users,
-        approvedByUser: users,
-      })
+    const [result] = await db
+      .select()
       .from(budgets)
       .leftJoin(users, eq(budgets.createdBy, users.id))
       .where(and(eq(budgets.id, id), eq(budgets.tenantId, tenantId)));
 
-    if (!budget) return undefined;
+    if (!result) return undefined;
 
     const budgetLines = await this.getBudgetLines(id);
-    return { ...budget, budgetLines };
+    return {
+      ...result.budgets,
+      budgetLines,
+      createdByUser: result.users || undefined,
+      approvedByUser: undefined, // Would need separate join for approvedBy
+    };
   }
 
   async createBudget(budgetData: InsertBudget): Promise<Budget> {
@@ -2321,32 +2417,37 @@ export class DatabaseStorage implements IStorage {
 
   // Exchange Rate operations
   async getExchangeRates(baseCurrency?: string, targetCurrency?: string, date?: string): Promise<ExchangeRate[]> {
-    let query = db.select().from(exchangeRates);
-
     const conditions = [];
     if (baseCurrency) {
-      conditions.push(eq(exchangeRates.baseCurrency, baseCurrency));
+      conditions.push(eq(exchangeRates.fromCurrency, baseCurrency));
     }
     if (targetCurrency) {
-      conditions.push(eq(exchangeRates.targetCurrency, targetCurrency));
+      conditions.push(eq(exchangeRates.toCurrency, targetCurrency));
     }
     if (date) {
       conditions.push(eq(exchangeRates.rateDate, new Date(date)));
     }
 
     if (conditions.length > 0) {
-      query = query.where(and(...conditions));
+      return await db
+        .select()
+        .from(exchangeRates)
+        .where(and(...conditions))
+        .orderBy(desc(exchangeRates.rateDate), exchangeRates.fromCurrency, exchangeRates.toCurrency);
+    } else {
+      return await db
+        .select()
+        .from(exchangeRates)
+        .orderBy(desc(exchangeRates.rateDate), exchangeRates.fromCurrency, exchangeRates.toCurrency);
     }
-
-    return await query.orderBy(desc(exchangeRates.rateDate), exchangeRates.baseCurrency, exchangeRates.targetCurrency);
   }
 
   async getLatestExchangeRates(baseCurrency: string): Promise<ExchangeRate[]> {
     return await db
       .select()
       .from(exchangeRates)
-      .where(eq(exchangeRates.baseCurrency, baseCurrency))
-      .orderBy(desc(exchangeRates.rateDate), exchangeRates.targetCurrency)
+      .where(eq(exchangeRates.fromCurrency, baseCurrency))
+      .orderBy(desc(exchangeRates.rateDate), exchangeRates.toCurrency)
       .limit(50);
   }
 
