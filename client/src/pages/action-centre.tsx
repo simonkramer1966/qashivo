@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { formatDate } from "../../../shared/utils/dateFormatter";
@@ -17,7 +17,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Progress } from "@/components/ui/progress";
 import { 
   Target, 
   Calendar, 
@@ -49,11 +48,33 @@ import {
   ChevronUp,
   ArrowUpDown,
   ArrowUp,
-  ArrowDown
+  ArrowDown,
+  Square,
+  CheckSquare,
+  Keyboard,
+  Loader2,
+  User,
+  Calendar as CalendarIcon,
+  Clock as ClockIcon,
+  AlertCircle,
+  X,
+  Send,
+  Volume2,
+  Hash,
+  Edit,
+  Trash2,
+  MousePointer,
+  Command,
+  HelpCircle
 } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { CommunicationPreviewDialog } from "@/components/ui/communication-preview-dialog";
 
 // Enhanced ActionItem type with computed properties for the UI
@@ -138,6 +159,38 @@ export default function ActionCentre() {
   const [sortColumn, setSortColumn] = useState<string>('priority');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   
+  // Bulk selection state
+  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
+  const [lastSelectedIndex, setLastSelectedIndex] = useState<number | null>(null);
+  const [focusedRowIndex, setFocusedRowIndex] = useState<number | null>(null);
+  const [showKeyboardHelp, setShowKeyboardHelp] = useState(false);
+  
+  // Refs for keyboard navigation
+  const tableRef = useRef<HTMLTableElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  
+  // Bulk action dialogs state
+  const [bulkDialogs, setBulkDialogs] = useState({
+    complete: false,
+    assign: false,
+    snooze: false,
+    email: false,
+    sms: false,
+    priority: false
+  });
+  
+  const [bulkActionData, setBulkActionData] = useState({
+    outcome: '',
+    notes: '',
+    assignToUserId: '',
+    priority: 'medium' as 'low' | 'medium' | 'high' | 'urgent',
+    snoozeDate: '',
+    snoozeReason: '',
+    emailTemplate: '',
+    smsTemplate: '',
+    customMessage: ''
+  });
+  
   // Debounce search input
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -214,6 +267,292 @@ export default function ActionCentre() {
   // Extract data from response with proper typing
   const queueData: EnhancedActionItem[] = (queueResponse as QueueResponse)?.actionItems || [];
   const pagination = (queueResponse as QueueResponse)?.pagination || { page: 1, limit: 25, total: 0, totalPages: 1 };
+  
+  // Selection handlers
+  const handleSelectItem = useCallback((itemId: string, index: number, event?: React.MouseEvent) => {
+    if (event?.ctrlKey || event?.metaKey) {
+      // Ctrl+Click: Toggle individual item
+      setSelectedItems(prev => {
+        const newSelected = new Set(prev);
+        if (newSelected.has(itemId)) {
+          newSelected.delete(itemId);
+        } else {
+          newSelected.add(itemId);
+        }
+        return newSelected;
+      });
+      setLastSelectedIndex(index);
+    } else if (event?.shiftKey && lastSelectedIndex !== null) {
+      // Shift+Click: Select range
+      const start = Math.min(lastSelectedIndex, index);
+      const end = Math.max(lastSelectedIndex, index);
+      const itemsToSelect = queueData.slice(start, end + 1).map(item => item.id);
+      
+      setSelectedItems(prev => {
+        const newSelected = new Set(prev);
+        itemsToSelect.forEach(id => newSelected.add(id));
+        return newSelected;
+      });
+    } else {
+      // Regular click: Select only this item
+      setSelectedItems(new Set([itemId]));
+      setLastSelectedIndex(index);
+    }
+    
+    // Update focused row for keyboard navigation
+    setFocusedRowIndex(index);
+  }, [lastSelectedIndex, queueData]);
+  
+  const handleSelectAll = useCallback(() => {
+    if (selectedItems.size === queueData.length && queueData.length > 0) {
+      // Deselect all
+      setSelectedItems(new Set());
+    } else {
+      // Select all visible items
+      setSelectedItems(new Set(queueData.map(item => item.id)));
+    }
+  }, [selectedItems.size, queueData]);
+  
+  const clearSelection = useCallback(() => {
+    setSelectedItems(new Set());
+    setLastSelectedIndex(null);
+    setFocusedRowIndex(null);
+  }, []);
+  
+  // Keyboard navigation handlers
+  const navigateRow = useCallback((direction: 'up' | 'down') => {
+    const currentIndex = focusedRowIndex ?? -1;
+    let newIndex;
+    
+    if (direction === 'up') {
+      newIndex = Math.max(0, currentIndex - 1);
+    } else {
+      newIndex = Math.min(queueData.length - 1, currentIndex + 1);
+    }
+    
+    setFocusedRowIndex(newIndex);
+    
+    // Scroll to the focused row if needed
+    const rowElement = document.querySelector(`[data-row-index="${newIndex}"]`);
+    rowElement?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }, [focusedRowIndex, queueData.length]);
+  
+  const toggleCurrentRow = useCallback(() => {
+    if (focusedRowIndex !== null && focusedRowIndex < queueData.length) {
+      const item = queueData[focusedRowIndex];
+      handleSelectItem(item.id, focusedRowIndex);
+    }
+  }, [focusedRowIndex, queueData, handleSelectItem]);
+  
+  // Bulk action handlers
+  const handleBulkComplete = useCallback(() => {
+    if (selectedItems.size === 0) return;
+    setBulkDialogs(prev => ({ ...prev, complete: true }));
+  }, [selectedItems.size]);
+  
+  const handleBulkAssign = useCallback(() => {
+    if (selectedItems.size === 0) return;
+    setBulkDialogs(prev => ({ ...prev, assign: true }));
+  }, [selectedItems.size]);
+  
+  const handleBulkEmail = useCallback(() => {
+    if (selectedItems.size === 0) return;
+    setBulkDialogs(prev => ({ ...prev, email: true }));
+  }, [selectedItems.size]);
+  
+  const handleBulkSMS = useCallback(() => {
+    if (selectedItems.size === 0) return;
+    setBulkDialogs(prev => ({ ...prev, sms: true }));
+  }, [selectedItems.size]);
+  
+  const handleQuickPriority = useCallback((priority: 'low' | 'medium' | 'high' | 'urgent') => {
+    if (selectedItems.size === 0) return;
+    bulkAssignMutation.mutate({
+      actionItemIds: Array.from(selectedItems),
+      priority
+    });
+  }, [selectedItems, bulkAssignMutation]);
+  
+  
+  // Keyboard shortcuts configuration
+  const shortcuts = useMemo(() => [
+    {
+      key: 'ArrowUp',
+      action: () => navigateRow('up'),
+      description: 'Navigate up',
+      category: 'Navigation'
+    },
+    {
+      key: 'ArrowDown', 
+      action: () => navigateRow('down'),
+      description: 'Navigate down',
+      category: 'Navigation'
+    },
+    {
+      key: ' ',
+      action: () => toggleCurrentRow(),
+      description: 'Toggle selection',
+      category: 'Selection'
+    },
+    {
+      key: 'Enter',
+      action: () => toggleCurrentRow(),
+      description: 'Toggle selection',
+      category: 'Selection'
+    },
+    {
+      key: 'a',
+      ctrl: true,
+      action: () => handleSelectAll(),
+      description: 'Select all items',
+      category: 'Selection'
+    },
+    {
+      key: 'Escape',
+      action: () => clearSelection(),
+      description: 'Clear selection',
+      category: 'Selection'
+    },
+    {
+      key: 'Delete',
+      action: () => handleBulkComplete(),
+      description: 'Complete selected actions',
+      category: 'Actions'
+    },
+    {
+      key: 'e',
+      action: () => handleBulkEmail(),
+      description: 'Send bulk email',
+      category: 'Communication'
+    },
+    {
+      key: 's',
+      action: () => handleBulkSMS(),
+      description: 'Send bulk SMS',
+      category: 'Communication'
+    },
+    {
+      key: 'c',
+      action: () => handleBulkComplete(),
+      description: 'Complete actions',
+      category: 'Actions'
+    },
+    {
+      key: '1',
+      action: () => handleQuickPriority('low'),
+      description: 'Set priority to Low',
+      category: 'Priority'
+    },
+    {
+      key: '2',
+      action: () => handleQuickPriority('medium'),
+      description: 'Set priority to Medium',
+      category: 'Priority'
+    },
+    {
+      key: '3',
+      action: () => handleQuickPriority('high'),
+      description: 'Set priority to High',
+      category: 'Priority'
+    },
+    {
+      key: '4',
+      action: () => handleQuickPriority('urgent'),
+      description: 'Set priority to Urgent',
+      category: 'Priority'
+    },
+    {
+      key: '?',
+      action: () => setShowKeyboardHelp(true),
+      description: 'Show keyboard shortcuts',
+      category: 'Help'
+    }
+  ], [
+    navigateRow,
+    toggleCurrentRow,
+    handleSelectAll,
+    clearSelection,
+    handleBulkComplete,
+    handleBulkEmail,
+    handleBulkSMS,
+    handleQuickPriority,
+  ]);
+  
+  // Container-scoped keyboard shortcuts
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container || Object.values(bulkDialogs).some(isOpen => isOpen) || showKeyboardHelp) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Don't trigger shortcuts when typing in inputs, textareas, or contenteditable elements
+      const target = event.target as HTMLElement;
+      const tagName = target.tagName.toLowerCase();
+      const isEditable = target.isContentEditable;
+      const isInput = ['input', 'textarea', 'select'].includes(tagName);
+      
+      if (isInput || isEditable) {
+        return; // Completely disable shortcuts when in input fields
+      }
+
+      // Check if the target is within our container
+      if (!container.contains(target)) {
+        return;
+      }
+
+      for (const shortcut of shortcuts) {
+        if (shortcut.disabled) continue;
+        
+        const keyMatches = event.key.toLowerCase() === shortcut.key.toLowerCase();
+        const ctrlMatches = !!shortcut.ctrl === (event.ctrlKey || event.metaKey);
+        const shiftMatches = !!shortcut.shift === event.shiftKey;
+        const altMatches = !!shortcut.alt === event.altKey;
+
+        if (keyMatches && ctrlMatches && shiftMatches && altMatches) {
+          event.preventDefault();
+          event.stopPropagation();
+          
+          try {
+            shortcut.action();
+          } catch (error) {
+            console.error('Error executing keyboard shortcut:', error);
+          }
+          
+          return; // Only execute the first matching shortcut
+        }
+      }
+    };
+
+    container.addEventListener('keydown', handleKeyDown, { capture: true });
+    // Focus the container to make it receive keyboard events
+    container.setAttribute('tabindex', '-1');
+    
+    return () => {
+      container.removeEventListener('keydown', handleKeyDown, { capture: true });
+    };
+  }, [shortcuts, bulkDialogs, showKeyboardHelp]);
+  
+  // Clear focused row when data changes
+  useEffect(() => {
+    setFocusedRowIndex(null);
+  }, [queueData]);
+  
+  // Clear selections when changing queues or pages
+  useEffect(() => {
+    clearSelection();
+    setFocusedRowIndex(null);
+  }, [selectedQueue, currentPage, clearSelection]);
+  
+  // Show keyboard help on first visit (optional)
+  useEffect(() => {
+    const hasSeenHelp = localStorage.getItem('actionCentre.hasSeenKeyboardHelp');
+    if (!hasSeenHelp && queueData.length > 0) {
+      const timer = setTimeout(() => {
+        setShowKeyboardHelp(true);
+        localStorage.setItem('actionCentre.hasSeenKeyboardHelp', 'true');
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [queueData.length]);
 
   // Communication mutation with enhanced functionality
   const sendCommunicationMutation = useMutation({
@@ -314,6 +653,80 @@ export default function ActionCentre() {
     },
   });
 
+  // Bulk action mutations
+  const bulkCompleteMutation = useMutation({
+    mutationFn: async ({ actionItemIds, outcome }: { actionItemIds: string[]; outcome?: string }) => {
+      const response = await apiRequest('POST', '/api/action-items/bulk/complete', { actionItemIds, outcome });
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Bulk Action Completed",
+        description: `Successfully completed ${data.successful || 0} of ${data.total || 0} actions`,
+      });
+      setSelectedItems(new Set());
+
+      queryClient.invalidateQueries({ queryKey: ["/api/action-centre/queue"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/action-centre/metrics"] });
+    },
+    onError: () => {
+      toast({
+        title: "Bulk Action Failed",
+        description: "Failed to complete bulk actions",
+        variant: "destructive",
+      });
+
+    },
+  });
+
+  const bulkAssignMutation = useMutation({
+    mutationFn: async ({ actionItemIds, assignedToUserId, priority }: { actionItemIds: string[]; assignedToUserId?: string; priority?: string }) => {
+      const response = await apiRequest('POST', '/api/action-items/bulk/assign', { actionItemIds, assignedToUserId, priority });
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Bulk Assignment Completed",
+        description: `Successfully assigned ${data.successful || 0} of ${data.total || 0} actions`,
+      });
+      setSelectedItems(new Set());
+
+      queryClient.invalidateQueries({ queryKey: ["/api/action-centre/queue"] });
+    },
+    onError: () => {
+      toast({
+        title: "Bulk Assignment Failed",
+        description: "Failed to assign bulk actions",
+        variant: "destructive",
+      });
+
+    },
+  });
+
+  const bulkNudgeMutation = useMutation({
+    mutationFn: async ({ actionItemIds, templateId, customMessage }: { actionItemIds: string[]; templateId?: string; customMessage?: string }) => {
+      const response = await apiRequest('POST', '/api/action-items/bulk/nudge', { actionItemIds, templateId, customMessage });
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Bulk Nudge Created",
+        description: `Successfully created ${data.successful || 0} nudges`,
+      });
+      setSelectedItems(new Set());
+
+      queryClient.invalidateQueries({ queryKey: ["/api/action-centre/queue"] });
+    },
+    onError: () => {
+      toast({
+        title: "Bulk Nudge Failed",
+        description: "Failed to create bulk nudges",
+        variant: "destructive",
+      });
+
+    },
+  });
+
   // Handle authentication errors
   useEffect(() => {
     if (error && isUnauthorizedError(error as Error)) {
@@ -394,7 +807,7 @@ export default function ActionCentre() {
           subtitle="Prioritized actions for optimal collection results"
         />
         
-        <div className="h-[calc(100vh-80px)] flex">
+        <div ref={containerRef} className="h-[calc(100vh-80px)] flex" data-testid="container-action-centre">
           {/* Left Sidebar - Queue Navigation */}
           <div className="w-80 border-r border-white/50 bg-white/40 backdrop-blur-sm">
             <div className="p-6">
@@ -517,9 +930,23 @@ export default function ActionCentre() {
               ) : (
                 <>
                   <div className="flex-1 overflow-y-auto">
-                    <Table>
+                    <Table ref={tableRef}>
                       <TableHeader className="sticky top-0 bg-white/90 backdrop-blur-sm">
                         <TableRow>
+                          <TableHead className="w-[50px]">
+                            <Checkbox
+                              checked={queueData.length > 0 && selectedItems.size === queueData.length}
+                              onCheckedChange={handleSelectAll}
+                              aria-label="Select all items"
+                              data-testid="checkbox-select-all"
+                              className="mx-auto"
+                              ref={(el) => {
+                                if (el) {
+                                  el.indeterminate = selectedItems.size > 0 && selectedItems.size < queueData.length;
+                                }
+                              }}
+                            />
+                          </TableHead>
                           <TableHead className="w-[200px]">
                             <Button 
                               variant="ghost" 
@@ -594,32 +1021,63 @@ export default function ActionCentre() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {queueData.map((action: EnhancedActionItem) => (
-                          <TableRow 
-                            key={action.id}
-                            className={`cursor-pointer hover:bg-slate-50/50 ${
-                              selectedAction?.id === action.id 
-                                ? 'bg-[#17B6C3]/10 hover:bg-[#17B6C3]/15' 
-                                : ''
-                            }`}
-                            onClick={() => setSelectedAction(action)}
-                            data-testid={`row-action-${action.id}`}
-                          >
-                            <TableCell>
-                              <div className="flex items-center space-x-3">
-                                <Avatar className="h-8 w-8">
-                                  <AvatarFallback className="text-xs">
-                                    {action.contactName?.split(' ').map(n => n[0]).join('') || 'C'}
-                                  </AvatarFallback>
-                                </Avatar>
-                                <div>
-                                  <div className="font-medium text-slate-900">{action.contactName || 'Unknown Contact'}</div>
-                                  {action.companyName && (
-                                    <div className="text-sm text-slate-600">{action.companyName}</div>
-                                  )}
+                        {queueData.map((action: EnhancedActionItem, index: number) => {
+                          const isSelected = selectedItems.has(action.id);
+                          const isFocused = focusedRowIndex === index;
+                          
+                          return (
+                            <TableRow 
+                              key={action.id}
+                              className={`cursor-pointer transition-colors ${
+                                isSelected
+                                  ? 'bg-[#17B6C3]/20 hover:bg-[#17B6C3]/25'
+                                  : isFocused
+                                  ? 'bg-blue-50/50 hover:bg-blue-50/70'
+                                  : selectedAction?.id === action.id
+                                  ? 'bg-[#17B6C3]/10 hover:bg-[#17B6C3]/15'
+                                  : 'hover:bg-slate-50/50'
+                              } ${
+                                isFocused ? 'ring-2 ring-blue-300' : ''
+                              }`}
+                              onClick={(e) => {
+                                handleSelectItem(action.id, index, e);
+                                setSelectedAction(action);
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === ' ' || e.key === 'Enter') {
+                                  e.preventDefault();
+                                  handleSelectItem(action.id, index);
+                                }
+                              }}
+                              tabIndex={0}
+                              data-testid={`row-action-${action.id}`}
+                              data-row-index={index}
+                              aria-selected={isSelected}
+                            >
+                              <TableCell className="text-center">
+                                <Checkbox
+                                  checked={isSelected}
+                                  onCheckedChange={() => handleSelectItem(action.id, index)}
+                                  onClick={(e) => e.stopPropagation()}
+                                  aria-label={`Select action for ${action.contactName}`}
+                                  data-testid={`checkbox-select-${action.id}`}
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex items-center space-x-3">
+                                  <Avatar className="h-8 w-8">
+                                    <AvatarFallback className="text-xs">
+                                      {action.contactName?.split(' ').map(n => n[0]).join('') || 'C'}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                  <div>
+                                    <div className="font-medium text-slate-900">{action.contactName || 'Unknown Contact'}</div>
+                                    {action.companyName && (
+                                      <div className="text-sm text-slate-600">{action.companyName}</div>
+                                    )}
+                                  </div>
                                 </div>
-                              </div>
-                            </TableCell>
+                              </TableCell>
                             <TableCell>
                               <div className="text-sm font-mono">{action.invoiceNumber || 'N/A'}</div>
                             </TableCell>
@@ -662,17 +1120,17 @@ export default function ActionCentre() {
                                     onClick={(e) => e.stopPropagation()}
                                   >
                                     <MoreHorizontal className="h-4 w-4" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  <DropdownMenuLabel>Action</DropdownMenuLabel>
-                                  <DropdownMenuSeparator />
-                                  <DropdownMenuItem 
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      completeActionMutation.mutate({ 
-                                        actionId: action.id,
-                                        outcome: 'Completed manually'
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                    <DropdownMenuLabel>Action</DropdownMenuLabel>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem 
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        completeActionMutation.mutate({ 
+                                          actionId: action.id,
+                                          outcome: 'Completed manually'
                                       });
                                     }}
                                     data-testid={`menu-complete-${action.id}`}
@@ -683,14 +1141,13 @@ export default function ActionCentre() {
                                   <DropdownMenuItem 
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      // TODO: Implement snooze dialog
+                                      // TODO: Implement individual snooze dialog
                                     }}
                                     data-testid={`menu-snooze-${action.id}`}
                                   >
                                     <Clock className="h-4 w-4 mr-2" />
                                     Snooze
                                   </DropdownMenuItem>
-                                  <DropdownMenuSeparator />
                                   <DropdownMenuItem 
                                     onClick={(e) => {
                                       e.stopPropagation();
@@ -726,7 +1183,7 @@ export default function ActionCentre() {
                                       e.stopPropagation();
                                       setCommunicationDialog({
                                         isOpen: true,
-                                        type: 'voice', // Keep as 'voice' for templates but backend actions use 'call'
+                                        type: 'voice',
                                         context: action.invoiceId ? 'invoice' : 'customer',
                                         contextId: action.invoiceId || action.contactId,
                                       });
@@ -740,7 +1197,8 @@ export default function ActionCentre() {
                               </DropdownMenu>
                             </TableCell>
                           </TableRow>
-                        ))}
+                        );
+                        })}
                       </TableBody>
                     </Table>
                   </div>
@@ -783,6 +1241,145 @@ export default function ActionCentre() {
             </div>
           </div>
 
+          {/* Floating Bulk Action Bar */}
+          {selectedItems.size > 0 && (
+            <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50">
+              <Card className="bg-white/95 backdrop-blur-md border-0 shadow-2xl">
+                <CardContent className="p-4">
+                  <div className="flex items-center space-x-4">
+                    <div className="flex items-center space-x-2">
+                      <CheckSquare className="h-5 w-5 text-[#17B6C3]" />
+                      <span className="font-medium text-slate-900">
+                        {selectedItems.size} item{selectedItems.size !== 1 ? 's' : ''} selected
+                      </span>
+                    </div>
+                    
+                    <Separator orientation="vertical" className="h-6" />
+                    
+                    <div className="flex items-center space-x-2">
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              size="sm"
+                              onClick={handleBulkComplete}
+                              disabled={bulkCompleteMutation.isPending}
+                              data-testid="button-bulk-complete"
+                            >
+                              {bulkCompleteMutation.isPending ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <CheckCircle className="h-4 w-4" />
+                              )}
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Complete Actions (C)</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                      
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={handleBulkEmail}
+                              disabled={sendCommunicationMutation.isPending}
+                              data-testid="button-bulk-email"
+                            >
+                              <Mail className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Send Bulk Email (E)</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                      
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={handleBulkSMS}
+                              disabled={sendCommunicationMutation.isPending}
+                              data-testid="button-bulk-sms"
+                            >
+                              <MessageSquare className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Send Bulk SMS (S)</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                      
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={handleBulkAssign}
+                              data-testid="button-bulk-assign"
+                            >
+                              <User className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Assign Actions</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                      
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button size="sm" variant="outline" data-testid="button-bulk-priority">
+                            <Hash className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent>
+                          <DropdownMenuLabel>Set Priority</DropdownMenuLabel>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem onClick={() => handleQuickPriority('urgent')}>
+                            🔴 Urgent (4)
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleQuickPriority('high')}>
+                            🟠 High (3)
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleQuickPriority('medium')}>
+                            🟡 Medium (2)
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleQuickPriority('low')}>
+                            🟢 Low (1)
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                    
+                    <Separator orientation="vertical" className="h-6" />
+                    
+                    <div className="flex items-center space-x-2">
+                      
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={clearSelection}
+                        data-testid="button-clear-selection"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                  
+                </CardContent>
+              </Card>
+            </div>
+          )}
+          
           {/* Right Panel - Contact Context */}
           <div className="w-96 border-l border-white/50 bg-white/40 backdrop-blur-sm">
             {selectedAction ? (
@@ -1140,6 +1737,395 @@ export default function ActionCentre() {
           });
         }}
       />
+      
+      {/* Bulk Complete Dialog */}
+      <Dialog open={bulkDialogs.complete} onOpenChange={(open) => setBulkDialogs(prev => ({ ...prev, complete: open }))}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Complete {selectedItems.size} Actions</DialogTitle>
+            <DialogDescription>
+              Complete the selected actions and provide an outcome note.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="outcome">Outcome Note</Label>
+              <Textarea
+                id="outcome"
+                placeholder="Enter completion notes (optional)"
+                value={bulkActionData.outcome}
+                onChange={(e) => setBulkActionData(prev => ({ ...prev, outcome: e.target.value }))}
+                data-testid="textarea-bulk-outcome"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setBulkDialogs(prev => ({ ...prev, complete: false }))}
+              data-testid="button-cancel-bulk-complete"
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={() => {
+                bulkCompleteMutation.mutate({
+                  actionItemIds: Array.from(selectedItems),
+                  outcome: bulkActionData.outcome || 'Bulk completed'
+                });
+                setBulkDialogs(prev => ({ ...prev, complete: false }));
+                setBulkActionData(prev => ({ ...prev, outcome: '' }));
+              }}
+              disabled={bulkCompleteMutation.isPending}
+              data-testid="button-confirm-bulk-complete"
+            >
+              {bulkCompleteMutation.isPending ? (
+                <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Completing...</>
+              ) : (
+                <>Complete {selectedItems.size} Actions</>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Bulk Assign Dialog */}
+      <Dialog open={bulkDialogs.assign} onOpenChange={(open) => setBulkDialogs(prev => ({ ...prev, assign: open }))}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Assign {selectedItems.size} Actions</DialogTitle>
+            <DialogDescription>
+              Assign actions to a user and optionally change priority.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="assignTo">Assign To User ID</Label>
+              <Input
+                id="assignTo"
+                placeholder="Enter user ID"
+                value={bulkActionData.assignToUserId}
+                onChange={(e) => setBulkActionData(prev => ({ ...prev, assignToUserId: e.target.value }))}
+                data-testid="input-assign-user"
+              />
+            </div>
+            <div>
+              <Label htmlFor="priority">Priority</Label>
+              <Select 
+                value={bulkActionData.priority} 
+                onValueChange={(value: 'low' | 'medium' | 'high' | 'urgent') => 
+                  setBulkActionData(prev => ({ ...prev, priority: value }))
+                }
+              >
+                <SelectTrigger data-testid="select-bulk-priority">
+                  <SelectValue placeholder="Select priority" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="low">Low</SelectItem>
+                  <SelectItem value="medium">Medium</SelectItem>
+                  <SelectItem value="high">High</SelectItem>
+                  <SelectItem value="urgent">Urgent</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setBulkDialogs(prev => ({ ...prev, assign: false }))}
+              data-testid="button-cancel-bulk-assign"
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={() => {
+                bulkAssignMutation.mutate({
+                  actionItemIds: Array.from(selectedItems),
+                  assignedToUserId: bulkActionData.assignToUserId || undefined,
+                  priority: bulkActionData.priority
+                });
+                setBulkDialogs(prev => ({ ...prev, assign: false }));
+                setBulkActionData(prev => ({ ...prev, assignToUserId: '', priority: 'medium' }));
+              }}
+              disabled={bulkAssignMutation.isPending}
+              data-testid="button-confirm-bulk-assign"
+            >
+              {bulkAssignMutation.isPending ? (
+                <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Assigning...</>
+              ) : (
+                <>Assign {selectedItems.size} Actions</>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Bulk Email Dialog */}
+      <Dialog open={bulkDialogs.email} onOpenChange={(open) => setBulkDialogs(prev => ({ ...prev, email: open }))}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Send Bulk Email</DialogTitle>
+            <DialogDescription>
+              Send email to {selectedItems.size} selected contacts.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="emailTemplate">Email Template</Label>
+              <Input
+                id="emailTemplate"
+                placeholder="Template ID (optional)"
+                value={bulkActionData.emailTemplate}
+                onChange={(e) => setBulkActionData(prev => ({ ...prev, emailTemplate: e.target.value }))}
+                data-testid="input-email-template"
+              />
+            </div>
+            <div>
+              <Label htmlFor="customMessage">Custom Message</Label>
+              <Textarea
+                id="customMessage"
+                placeholder="Enter custom message (optional)"
+                value={bulkActionData.customMessage}
+                onChange={(e) => setBulkActionData(prev => ({ ...prev, customMessage: e.target.value }))}
+                data-testid="textarea-custom-message"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setBulkDialogs(prev => ({ ...prev, email: false }))}
+              data-testid="button-cancel-bulk-email"
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={() => {
+                bulkNudgeMutation.mutate({
+                  actionItemIds: Array.from(selectedItems),
+                  templateId: bulkActionData.emailTemplate || undefined,
+                  customMessage: bulkActionData.customMessage || undefined
+                });
+                setBulkDialogs(prev => ({ ...prev, email: false }));
+                setBulkActionData(prev => ({ ...prev, emailTemplate: '', customMessage: '' }));
+              }}
+              disabled={bulkNudgeMutation.isPending}
+              data-testid="button-confirm-bulk-email"
+            >
+              {bulkNudgeMutation.isPending ? (
+                <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Sending...</>
+              ) : (
+                <><Send className="h-4 w-4 mr-2" /> Send to {selectedItems.size} Contacts</>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Bulk SMS Dialog */}
+      <Dialog open={bulkDialogs.sms} onOpenChange={(open) => setBulkDialogs(prev => ({ ...prev, sms: open }))}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Send Bulk SMS</DialogTitle>
+            <DialogDescription>
+              Send SMS to {selectedItems.size} selected contacts.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="smsTemplate">SMS Template</Label>
+              <Input
+                id="smsTemplate"
+                placeholder="Template ID (optional)"
+                value={bulkActionData.smsTemplate}
+                onChange={(e) => setBulkActionData(prev => ({ ...prev, smsTemplate: e.target.value }))}
+                data-testid="input-sms-template"
+              />
+            </div>
+            <div>
+              <Label htmlFor="smsMessage">Custom Message</Label>
+              <Textarea
+                id="smsMessage"
+                placeholder="Enter SMS message (optional)"
+                value={bulkActionData.customMessage}
+                onChange={(e) => setBulkActionData(prev => ({ ...prev, customMessage: e.target.value }))}
+                maxLength={160}
+                data-testid="textarea-sms-message"
+              />
+              <div className="text-xs text-slate-500 mt-1">
+                {bulkActionData.customMessage.length}/160 characters
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setBulkDialogs(prev => ({ ...prev, sms: false }))}
+              data-testid="button-cancel-bulk-sms"
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={() => {
+                bulkNudgeMutation.mutate({
+                  actionItemIds: Array.from(selectedItems),
+                  templateId: bulkActionData.smsTemplate || undefined,
+                  customMessage: bulkActionData.customMessage || undefined
+                });
+                setBulkDialogs(prev => ({ ...prev, sms: false }));
+                setBulkActionData(prev => ({ ...prev, smsTemplate: '', customMessage: '' }));
+              }}
+              disabled={bulkNudgeMutation.isPending}
+              data-testid="button-confirm-bulk-sms"
+            >
+              {bulkNudgeMutation.isPending ? (
+                <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Sending...</>
+              ) : (
+                <><Send className="h-4 w-4 mr-2" /> Send to {selectedItems.size} Contacts</>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Keyboard Help Overlay */}
+      <Dialog open={showKeyboardHelp} onOpenChange={setShowKeyboardHelp}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center space-x-2">
+              <Keyboard className="h-5 w-5" />
+              <span>Keyboard Shortcuts</span>
+            </DialogTitle>
+            <DialogDescription>
+              Master these shortcuts for high-speed action processing
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Navigation */}
+            <div>
+              <h3 className="font-semibold text-slate-900 mb-3 flex items-center">
+                <MousePointer className="h-4 w-4 mr-2" />
+                Navigation
+              </h3>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span>Navigate up/down</span>
+                  <code className="bg-slate-100 px-2 py-1 rounded">↑ / ↓</code>
+                </div>
+                <div className="flex justify-between">
+                  <span>Select/deselect item</span>
+                  <code className="bg-slate-100 px-2 py-1 rounded">Space / Enter</code>
+                </div>
+                <div className="flex justify-between">
+                  <span>Clear selection</span>
+                  <code className="bg-slate-100 px-2 py-1 rounded">Esc</code>
+                </div>
+              </div>
+            </div>
+            
+            {/* Selection */}
+            <div>
+              <h3 className="font-semibold text-slate-900 mb-3 flex items-center">
+                <CheckSquare className="h-4 w-4 mr-2" />
+                Selection
+              </h3>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span>Select all items</span>
+                  <code className="bg-slate-100 px-2 py-1 rounded">Ctrl + A</code>
+                </div>
+                <div className="flex justify-between">
+                  <span>Multi-select</span>
+                  <code className="bg-slate-100 px-2 py-1 rounded">Ctrl + Click</code>
+                </div>
+                <div className="flex justify-between">
+                  <span>Range select</span>
+                  <code className="bg-slate-100 px-2 py-1 rounded">Shift + Click</code>
+                </div>
+              </div>
+            </div>
+            
+            {/* Actions */}
+            <div>
+              <h3 className="font-semibold text-slate-900 mb-3 flex items-center">
+                <Zap className="h-4 w-4 mr-2" />
+                Quick Actions
+              </h3>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span>Complete actions</span>
+                  <code className="bg-slate-100 px-2 py-1 rounded">C / Delete</code>
+                </div>
+                <div className="flex justify-between">
+                  <span>Send email</span>
+                  <code className="bg-slate-100 px-2 py-1 rounded">E</code>
+                </div>
+                <div className="flex justify-between">
+                  <span>Send SMS</span>
+                  <code className="bg-slate-100 px-2 py-1 rounded">S</code>
+                </div>
+                <div className="flex justify-between">
+                  <code className="bg-slate-100 px-2 py-1 rounded">Ctrl + Z</code>
+                </div>
+              </div>
+            </div>
+            
+            {/* Priority */}
+            <div>
+              <h3 className="font-semibold text-slate-900 mb-3 flex items-center">
+                <Hash className="h-4 w-4 mr-2" />
+                Priority Assignment
+              </h3>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span>Set Low priority</span>
+                  <code className="bg-slate-100 px-2 py-1 rounded">1</code>
+                </div>
+                <div className="flex justify-between">
+                  <span>Set Medium priority</span>
+                  <code className="bg-slate-100 px-2 py-1 rounded">2</code>
+                </div>
+                <div className="flex justify-between">
+                  <span>Set High priority</span>
+                  <code className="bg-slate-100 px-2 py-1 rounded">3</code>
+                </div>
+                <div className="flex justify-between">
+                  <span>Set Urgent priority</span>
+                  <code className="bg-slate-100 px-2 py-1 rounded">4</code>
+                </div>
+              </div>
+            </div>
+            
+            {/* Help */}
+            <div className="md:col-span-2">
+              <h3 className="font-semibold text-slate-900 mb-3 flex items-center">
+                <HelpCircle className="h-4 w-4 mr-2" />
+                Help & Tips
+              </h3>
+              <div className="space-y-2 text-sm text-slate-600">
+                <div className="flex justify-between">
+                  <span>Show this help</span>
+                  <code className="bg-slate-100 px-2 py-1 rounded">?</code>
+                </div>
+                <div className="bg-blue-50 p-3 rounded-lg mt-4">
+                  <p className="font-medium text-blue-900 mb-1">Pro Tips:</p>
+                  <ul className="text-blue-800 space-y-1">
+                    <li>• Use Ctrl+Click to multi-select specific items</li>
+                    <li>• Hold Shift and click to select a range of items</li>
+                    <li>• Number keys work immediately after selection for quick priority changes</li>
+                    <li>• All keyboard shortcuts work with selected items for bulk actions</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button onClick={() => setShowKeyboardHelp(false)} data-testid="button-close-help">
+              Got it
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
