@@ -106,18 +106,23 @@ export async function checkCollectionActions(tenantId: string): Promise<Collecti
       }
 
       // Parse schedule steps
-      let scheduleSteps: CollectionScheduleStep[] = [];
+      let scheduleSteps: any[] = [];
       try {
         scheduleSteps = Array.isArray(schedule.scheduleSteps) 
-          ? schedule.scheduleSteps as CollectionScheduleStep[]
+          ? schedule.scheduleSteps as any[]
           : [];
       } catch (error) {
         console.error(`Error parsing schedule steps for schedule ${schedule.id}:`, error);
         continue;
       }
 
-      // Find matching trigger point
-      const matchingStep = scheduleSteps.find(step => step.daysTrigger === daysOverdue);
+      // Find latest eligible trigger point (handle both delay and daysTrigger formats)
+      const steps = (Array.isArray(schedule.scheduleSteps) ? schedule.scheduleSteps : [])
+        .map(s => ({ ...s, trigger: Number(s.daysTrigger ?? s.delay) }))
+        .filter(s => Number.isFinite(s.trigger))
+        .sort((a, b) => a.trigger - b.trigger);
+      
+      const matchingStep = steps.filter(s => s.trigger <= daysOverdue).at(-1);
 
       if (matchingStep) {
         const action: CollectionAction = {
@@ -127,13 +132,13 @@ export async function checkCollectionActions(tenantId: string): Promise<Collecti
           contactName: contact.name || 'Unknown',
           daysOverdue,
           amount: invoice.amount,
-          action: matchingStep.action,
-          actionType: matchingStep.actionType,
+          action: matchingStep.action || `${matchingStep.type || 'email'} reminder`,
+          actionType: (matchingStep.actionType || matchingStep.type || 'email') as 'email' | 'sms' | 'voice' | 'manual',
           scheduleName: schedule.name,
-          templateId: matchingStep.template,
+          templateId: matchingStep.template || matchingStep.templateId,
           priority: matchingStep.priority || 'normal',
           actionDetails: {
-            template: matchingStep.template,
+            template: matchingStep.template || matchingStep.templateId,
             subject: matchingStep.subject,
             message: matchingStep.message,
             escalationLevel: matchingStep.escalationLevel,
