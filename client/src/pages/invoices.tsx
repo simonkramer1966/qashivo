@@ -89,6 +89,10 @@ export default function Invoices() {
   const [communicationType, setCommunicationType] = useState<'email' | 'sms' | 'voice'>('email');
   const [selectedInvoiceForComm, setSelectedInvoiceForComm] = useState<any>(null);
 
+  // Admin tools state
+  const [isBackfillRunning, setIsBackfillRunning] = useState(false);
+  const [backfillResult, setBackfillResult] = useState<string | null>(null);
+
   // Redirect to home if not authenticated
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {

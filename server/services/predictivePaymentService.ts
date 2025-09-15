@@ -557,6 +557,7 @@ export class PredictivePaymentService {
    */
   async generateBulkPredictions(tenantId: string): Promise<number> {
     // Get all outstanding invoices without recent predictions
+    // FIXED: Include both pending AND overdue invoices for predictions
     const outstandingInvoices = await db
       .select()
       .from(invoices)
@@ -569,7 +570,7 @@ export class PredictivePaymentService {
       )
       .where(and(
         eq(invoices.tenantId, tenantId),
-        eq(invoices.status, 'pending'),
+        sql`${invoices.status} IN ('pending', 'overdue')`, // Include both pending and overdue
         sql`${paymentPredictions.id} IS NULL`
       ));
 
@@ -585,5 +586,50 @@ export class PredictivePaymentService {
     }
 
     return predictionsCreated;
+  }
+
+  /**
+   * Backfill missing predictions for overdue invoices
+   * This is needed to fix the historical gap where overdue invoices were excluded
+   */
+  async backfillOverduePredictions(tenantId: string): Promise<{ created: number; errors: number }> {
+    console.log(`🔄 Starting backfill for overdue predictions - Tenant: ${tenantId}`);
+    
+    // Get all overdue invoices without any predictions
+    const overdueInvoicesWithoutPredictions = await db
+      .select()
+      .from(invoices)
+      .leftJoin(
+        paymentPredictions,
+        eq(paymentPredictions.invoiceId, invoices.id)
+      )
+      .where(and(
+        eq(invoices.tenantId, tenantId),
+        eq(invoices.status, 'overdue'),
+        sql`${paymentPredictions.id} IS NULL`
+      ));
+
+    let created = 0;
+    let errors = 0;
+
+    console.log(`📊 Found ${overdueInvoicesWithoutPredictions.length} overdue invoices without predictions`);
+
+    for (const invoice of overdueInvoicesWithoutPredictions) {
+      try {
+        await this.generatePaymentPrediction(tenantId, invoice.invoices.id);
+        created++;
+        
+        // Log progress every 50 predictions
+        if (created % 50 === 0) {
+          console.log(`  ✅ Generated ${created} predictions so far...`);
+        }
+      } catch (error) {
+        console.error(`❌ Error creating prediction for overdue invoice ${invoice.invoices.id}:`, error);
+        errors++;
+      }
+    }
+
+    console.log(`🏁 Backfill complete - Created: ${created}, Errors: ${errors}`);
+    return { created, errors };
   }
 }

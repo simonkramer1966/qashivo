@@ -3679,6 +3679,37 @@ Payment required immediately to avoid collection action. Contact us NOW.`
     }
   });
 
+  // Backfill missing payment predictions for overdue invoices
+  app.post("/api/ml/payment-predictions/backfill-overdue", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { PredictivePaymentService } = await import("./services/predictivePaymentService");
+      const predictionService = new PredictivePaymentService();
+      
+      console.log(`🔄 Starting overdue predictions backfill for tenant: ${user.tenantId}`);
+      const result = await predictionService.backfillOverduePredictions(user.tenantId);
+      
+      res.json({
+        success: true,
+        message: `Backfill completed successfully. Created ${result.created} predictions for overdue invoices.`,
+        created: result.created,
+        errors: result.errors,
+        tenantId: user.tenantId
+      });
+    } catch (error) {
+      console.error("Error during overdue predictions backfill:", error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to backfill overdue predictions",
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
   // Dynamic Risk Scoring
   app.post("/api/ml/risk-scoring/calculate", isAuthenticated, async (req: any, res) => {
     try {
