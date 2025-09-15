@@ -3616,9 +3616,18 @@ Payment required immediately to avoid collection action. Contact us NOW.`
       
       // Only return predictions for invoices that are in the current filtered set
       const invoiceIds = new Set(result.invoices.map((inv: any) => inv.id));
+      
+      // DEBUG: Log the actual data being processed
+      console.log(`🔍 DEBUG: Found ${result.invoices.length} filtered invoices`);
+      console.log(`🔍 DEBUG: Sample invoice IDs: ${Array.from(invoiceIds).slice(0, 3).join(', ')}`);
+      console.log(`🔍 DEBUG: Total predictions available: ${allPredictions.length}`);
+      console.log(`🔍 DEBUG: Sample prediction invoice IDs: ${allPredictions.slice(0, 3).map(p => p.invoiceId).join(', ')}`);
+      
       const filteredPredictions = allPredictions.filter(prediction => 
         invoiceIds.has(prediction.invoiceId)
       );
+      
+      console.log(`🔍 DEBUG: Filtered predictions count: ${filteredPredictions.length}`);
       
       // Convert to map for easy lookup by invoice ID
       const predictionMap: { [invoiceId: string]: any } = {};
