@@ -103,7 +103,7 @@ const actionItemQuerySchema = z.object({
   limit: z.string().optional().default('50').transform(Number),
   // New ML prioritization parameters
   useSmartPriority: z.string().optional().default('false').transform(str => str === 'true'),
-  queueType: z.enum(['today', 'overdue', 'high_risk', 'default']).optional().default('today'),
+  queueType: z.enum(['today', 'soon', 'recent', 'overdue', 'serious', 'escalation']).optional().default('today'),
   sortBy: z.enum(['priority', 'dueDate', 'amount', 'risk', 'smart']).optional().default('smart'),
 });
 

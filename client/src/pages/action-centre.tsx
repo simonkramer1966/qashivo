@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { formatDate } from "../../../shared/utils/dateFormatter";
+import { getOverdueCategoryInfo, type OverdueCategory } from "../../../shared/utils/overdueUtils";
 import { useAuth } from "@/hooks/useAuth";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { apiRequest } from "@/lib/queryClient";
@@ -782,11 +783,44 @@ export default function ActionCentre() {
 
   // Queue options for sidebar with proper metrics typing
   const queueMetrics = metrics as QueueMetrics | undefined;
+  // Define overdue category-based queue options with icons and colors
   const queueOptions = [
     { id: 'today', label: 'Today\'s Actions', icon: Calendar, count: queueMetrics?.todayActions || 0 },
-    { id: 'overdue', label: 'Overdue', icon: AlertTriangle, count: queueMetrics?.overdueActions || 0 },
-    { id: 'high_risk', label: 'High Risk', icon: TrendingUp, count: queueMetrics?.highRiskActions || 0 },
-    { id: 'default', label: 'All Actions', icon: Target, count: queueMetrics?.totalActions || 0 },
+    { 
+      id: 'soon', 
+      label: 'Soon', 
+      icon: Clock, 
+      count: 0, // Will be populated dynamically
+      category: getOverdueCategoryInfo('soon', 0)
+    },
+    { 
+      id: 'recent', 
+      label: 'Recent', 
+      icon: RefreshCw, 
+      count: 0, // Will be populated dynamically
+      category: getOverdueCategoryInfo('recent', 0)
+    },
+    { 
+      id: 'overdue', 
+      label: 'Overdue', 
+      icon: AlertTriangle, 
+      count: 0, // Will be populated dynamically
+      category: getOverdueCategoryInfo('overdue', 0)
+    },
+    { 
+      id: 'serious', 
+      label: 'Serious', 
+      icon: AlertCircle, 
+      count: 0, // Will be populated dynamically
+      category: getOverdueCategoryInfo('serious', 0)
+    },
+    { 
+      id: 'escalation', 
+      label: 'Escalation', 
+      icon: XCircle, 
+      count: 0, // Will be populated dynamically
+      category: getOverdueCategoryInfo('escalation', 0)
+    },
   ];
 
   // Get priority badge styling

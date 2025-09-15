@@ -18,6 +18,7 @@ import {
 import { PredictivePaymentService } from './predictivePaymentService';
 import { DynamicRiskScoringService } from './dynamicRiskScoringService';
 import { CollectionLearningService } from './collectionLearningService';
+import { categorizeOverdueStatus, calculateDaysOverdue, type OverdueCategory } from '../../shared/utils/overdueUtils';
 
 /**
  * Priority Score Interface
@@ -211,15 +212,32 @@ export class ActionPrioritizationService {
         .leftJoin(invoices, eq(actionItems.invoiceId, invoices.id))
         .where(and(...conditions));
 
+      // Step 1.5: Filter by overdue category if queue type is overdue-based
+      let filteredResults = rawResults;
+      if (filters.queueType && ['soon', 'recent', 'overdue', 'serious', 'escalation'].includes(filters.queueType)) {
+        filteredResults = rawResults.filter((result: any) => {
+          if (!result.invoice || !result.invoice.dueDate) {
+            return false; // Skip action items without associated invoices or due dates
+          }
+          
+          const daysOverdue = calculateDaysOverdue(result.invoice.dueDate);
+          const overdueCategory = categorizeOverdueStatus(daysOverdue);
+          
+          return overdueCategory === filters.queueType;
+        });
+        
+        console.log(`🎯 Overdue Filtering: ${filteredResults.length}/${rawResults.length} items match '${filters.queueType}' category`);
+      }
+
       // Step 2: Apply ML prioritization if requested
       if (filters.useSmartPriority) {
         // Performance optimization: pre-select candidate set instead of processing all items
-        const candidateSetSize = Math.min(500, rawResults.length); // Limit ML processing to reasonable set
+        const candidateSetSize = Math.min(500, filteredResults.length); // Limit ML processing to reasonable set
         const page = filters.page || 1;
         const limit = filters.limit || 50;
         
         // First, do basic sorting to get a reasonable candidate set
-        const basicSortedResults = rawResults.sort((a, b) => {
+        const basicSortedResults = filteredResults.sort((a, b) => {
           const priorityOrder = { urgent: 4, high: 3, medium: 2, low: 1 };
           const aPriority = priorityOrder[a.actionItem.priority as keyof typeof priorityOrder] || 2;
           const bPriority = priorityOrder[b.actionItem.priority as keyof typeof priorityOrder] || 2;
@@ -274,7 +292,7 @@ export class ActionPrioritizationService {
 
         return {
           actionItems: paginatedItems,
-          total: rawResults.length, // Use original total count for pagination
+          total: filteredResults.length, // Use filtered total count for pagination
           queueMetadata: {
             queueType: filters.queueType || 'today',
             mlDataCoverage,
@@ -282,14 +300,14 @@ export class ActionPrioritizationService {
             lastOptimized: new Date(),
             // Add performance metadata
             candidateSetSize: enhancedItems.length,
-            totalDatasetSize: rawResults.length,
-            optimizationApplied: candidateResults.length < rawResults.length,
+            totalDatasetSize: filteredResults.length,
+            optimizationApplied: candidateResults.length < filteredResults.length,
           },
         };
       }
 
       // Step 3: Default sorting (fallback)
-      const sortedResults = rawResults.sort((a, b) => {
+      const sortedResults = filteredResults.sort((a, b) => {
         // Sort by priority, then by dueAt
         const priorityOrder = { urgent: 4, high: 3, medium: 2, low: 1 };
         const aPriority = priorityOrder[a.actionItem.priority as keyof typeof priorityOrder] || 2;
