@@ -249,9 +249,9 @@ export default function Customers() {
     
     switch (trend) {
       case 'increasing':
-        return <TrendingUp className={`h-3 w-3 ${levelInfo.textColor}`} />;
+        return <TrendingUp className="h-3 w-3 text-red-600" />;
       case 'decreasing':
-        return <TrendingDown className="h-3 w-3 text-red-600" />;
+        return <TrendingDown className="h-3 w-3 text-green-600" />;
       case 'stable':
       default:
         return <Minus className="h-3 w-3 text-gray-400" />;
