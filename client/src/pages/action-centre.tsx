@@ -238,7 +238,7 @@ export default function ActionCentre() {
     overdueActions: (rawMetrics as any).overdueCount ?? 0,
     highRiskActions: (rawMetrics as any).highRiskCount ?? Math.ceil(((rawMetrics as any).overdueCount ?? 0) * 0.3),
     avgDaysOverdue: (rawMetrics as any).avgDaysOverdue ?? 0,
-    totalValue: (rawMetrics as any).totalValue ?? 0,
+    totalValue: (rawMetrics as any).totalValue ?? 0, // Now using real calculated total value
   } : null;
 
   // Fetch queue data with filters

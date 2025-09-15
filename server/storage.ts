@@ -106,7 +106,7 @@ import {
   type InsertPaymentPromise,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, desc, sql, count, ne, isNotNull, gte, lte, lt, or, ilike, inArray } from "drizzle-orm";
+import { eq, and, desc, sql, count, sum, ne, isNotNull, gte, lte, lt, or, ilike, inArray } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { getOverdueCategoryFromDueDate, getOverdueCategorySummary, type OverdueCategory, type OverdueCategoryInfo } from "../shared/utils/overdueUtils";
 import crypto from "crypto";
@@ -3219,16 +3219,29 @@ export class DatabaseStorage implements IStorage {
         lt(actionItems.updatedAt, startOfTomorrowUTC)
       ));
 
-    console.log(`📈 Metrics results: totalOpen=${openCount.count}, dueToday=${dueTodayCount.count}, overdue=${overdueCount.count}, completedToday=${completedTodayCount.count}`);
+    // Calculate total value from active action items with their associated invoices
+    const [totalValueResult] = await db
+      .select({ totalValue: sum(invoices.amount) })
+      .from(actionItems)
+      .innerJoin(invoices, eq(actionItems.invoiceId, invoices.id))
+      .where(and(
+        eq(actionItems.tenantId, tenantId), 
+        inArray(actionItems.status, activeStatuses)
+      ));
 
-    // Calculate high-risk exposure (placeholder calculation)
-    const highRiskExposure = 25000; // This would integrate with risk scoring service
+    const totalValue = Number(totalValueResult.totalValue) || 0;
+
+    console.log(`📈 Metrics results: totalOpen=${openCount.count}, dueToday=${dueTodayCount.count}, overdue=${overdueCount.count}, completedToday=${completedTodayCount.count}, totalValue=${totalValue}`);
+
+    // Calculate high-risk exposure (30% of total value as estimate)
+    const highRiskExposure = Math.floor(totalValue * 0.3);
 
     return {
       totalOpen: openCount.count || 0,
       dueTodayCount: dueTodayCount.count || 0,
       overdueCount: overdueCount.count || 0,
       completedToday: completedTodayCount.count || 0,
+      totalValue, // Real calculated total value
       highRiskExposure,
       avgCompletionTime: 2.5, // days - calculated from historical data
       successRate: 87.5, // percentage - calculated from completion rates
