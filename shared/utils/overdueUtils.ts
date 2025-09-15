@@ -11,6 +11,19 @@ export type OverdueCategory =
   | 'serious'              // 31-60 days overdue (intensive collection efforts)
   | 'escalation';          // 60+ days overdue (legal/external collection)
 
+/**
+ * Shared constants for overdue category day ranges
+ * This ensures consistency between client and server-side filtering
+ */
+export const CATEGORY_DAY_RANGES: Record<OverdueCategory, [number, number]> = {
+  soon: [-7, -1],         // Due within next 7 days
+  current: [0, 0],        // Due today
+  recent: [1, 7],         // Recently overdue (1-7 days)
+  overdue: [8, 30],       // Standard collection actions (8-30 days)
+  serious: [31, 60],      // Intensive collection efforts (31-60 days)
+  escalation: [61, Infinity] // Legal/external collection (60+ days)
+};
+
 export interface OverdueCategoryInfo {
   category: OverdueCategory;
   daysOverdue: number;
@@ -40,14 +53,15 @@ export function calculateDaysOverdue(dueDate: string | Date, currentDate?: Date)
 
 /**
  * Categorize invoice based on days overdue
+ * Uses shared constants to ensure consistency between client and server
  */
 export function categorizeOverdueStatus(daysOverdue: number): OverdueCategory {
-  if (daysOverdue >= -7 && daysOverdue < 0) return 'soon';
-  if (daysOverdue === 0) return 'current';
-  if (daysOverdue >= 1 && daysOverdue <= 7) return 'recent';
-  if (daysOverdue >= 8 && daysOverdue <= 30) return 'overdue';  // Add lower bound >= 8
-  if (daysOverdue >= 31 && daysOverdue <= 60) return 'serious';  // Add lower bound >= 31
-  if (daysOverdue > 60) return 'escalation';  // For daysOverdue > 60
+  // Find the category that matches the days overdue
+  for (const [category, [min, max]] of Object.entries(CATEGORY_DAY_RANGES) as [OverdueCategory, [number, number]][]) {
+    if (daysOverdue >= min && daysOverdue <= max) {
+      return category;
+    }
+  }
   
   // Handle cases where daysOverdue < -7 (invoices due more than 7 days away)
   return 'current';  // Default for invoices due far in the future
@@ -122,7 +136,7 @@ export function getOverdueCategoryInfo(category: OverdueCategory, daysOverdue: n
  * Get all overdue categories for filtering options
  */
 export function getAllOverdueCategories(): OverdueCategoryInfo[] {
-  const categories: OverdueCategory[] = ['soon', 'current', 'recent', 'overdue', 'serious', 'escalation'];
+  const categories = Object.keys(CATEGORY_DAY_RANGES) as OverdueCategory[];
   return categories.map(category => getOverdueCategoryInfo(category, 0));
 }
 
@@ -167,20 +181,29 @@ export function sortInvoicesByOverduePriority<T extends { dueDate: string | Date
 }
 
 /**
+ * Get overdue category day range for SQL filtering
+ * Returns [minDays, maxDays] tuple for the given category
+ */
+export function getOverdueCategoryRange(category: OverdueCategory): [number, number] {
+  const range = CATEGORY_DAY_RANGES[category];
+  if (!range) {
+    throw new Error(`Unknown overdue category: ${category}`);
+  }
+  return range;
+}
+
+/**
  * Get summary statistics for overdue categories
  */
 export function getOverdueCategorySummary<T extends { dueDate: string | Date, amount: string | number, status?: string }>(
   invoices: T[],
   currentDate?: Date
 ): Record<OverdueCategory, { count: number; totalAmount: number }> {
-  const summary: Record<OverdueCategory, { count: number; totalAmount: number }> = {
-    soon: { count: 0, totalAmount: 0 },
-    current: { count: 0, totalAmount: 0 },
-    recent: { count: 0, totalAmount: 0 },
-    overdue: { count: 0, totalAmount: 0 },
-    serious: { count: 0, totalAmount: 0 },
-    escalation: { count: 0, totalAmount: 0 }
-  };
+  // Initialize summary using shared constants
+  const summary = Object.keys(CATEGORY_DAY_RANGES).reduce((acc, category) => {
+    acc[category as OverdueCategory] = { count: 0, totalAmount: 0 };
+    return acc;
+  }, {} as Record<OverdueCategory, { count: number; totalAmount: number }>);
 
   invoices.forEach(invoice => {
     // For paid invoices, count them as current

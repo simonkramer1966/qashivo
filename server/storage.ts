@@ -108,7 +108,7 @@ import {
 import { db } from "./db";
 import { eq, and, desc, sql, count, sum, ne, isNotNull, gte, lte, lt, or, ilike, inArray } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
-import { getOverdueCategoryFromDueDate, getOverdueCategorySummary, categorizeOverdueStatus, calculateDaysOverdue, type OverdueCategory, type OverdueCategoryInfo } from "../shared/utils/overdueUtils";
+import { getOverdueCategoryFromDueDate, getOverdueCategorySummary, categorizeOverdueStatus, calculateDaysOverdue, getOverdueCategoryRange, type OverdueCategory, type OverdueCategoryInfo } from "../shared/utils/overdueUtils";
 import crypto from "crypto";
 
 // Interface for storage operations
@@ -612,16 +612,17 @@ export class DatabaseStorage implements IStorage {
     const { status, search, overdueCategory, contactId, page = 1, limit = 50 } = filters;
     const offset = (page - 1) * limit;
 
-    console.log(`🔍 Server-side filtering: status=${status}, search="${search}", overdueCategory=${overdueCategory}, page=${page}, limit=${limit}`);
+    console.log(`🔍 Server-side SQL filtering: status=${status}, search="${search}", overdueCategory=${overdueCategory}, page=${page}, limit=${limit}`);
 
     // Build WHERE conditions dynamically
     const conditions = [eq(invoices.tenantId, tenantId)];
 
+    // Current date for all calculations
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
     // Universal status filtering - date-based logic that works across all providers
     if (status && status !== 'all') {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-
       switch (status) {
         case 'pending':
           // Pending = not past due yet (exclude paid/cancelled, due date >= today)
@@ -630,7 +631,7 @@ export class DatabaseStorage implements IStorage {
               ne(invoices.status, 'paid'),
               ne(invoices.status, 'cancelled'),
               gte(invoices.dueDate, today)
-            )
+            )!
           );
           break;
         
@@ -641,7 +642,7 @@ export class DatabaseStorage implements IStorage {
               ne(invoices.status, 'paid'),
               ne(invoices.status, 'cancelled'),
               lt(invoices.dueDate, today)
-            )
+            )!
           );
           break;
         
@@ -658,13 +659,74 @@ export class DatabaseStorage implements IStorage {
       }
     }
 
+    // Overdue category filtering using SQL date math
+    if (overdueCategory && overdueCategory !== 'all') {
+      if (overdueCategory === 'paid') {
+        // For paid status, use database status
+        conditions.push(eq(invoices.status, 'paid'));
+      } else {
+        // For specific overdue categories, use SQL date ranges
+        // Exclude paid/cancelled invoices first
+        conditions.push(
+          and(
+            ne(invoices.status, 'paid'),
+            ne(invoices.status, 'cancelled')
+          )!
+        );
+
+        // Add date range condition based on category
+        const [minDays, maxDays] = getOverdueCategoryRange(overdueCategory as OverdueCategory);
+        
+        if (minDays !== null && maxDays !== null) {
+          const startDate = new Date(today);
+          const endDate = new Date(today);
+          
+          if (minDays === Infinity || maxDays === Infinity) {
+            // For escalation category (60+ days overdue)
+            startDate.setDate(today.getDate() - 61);
+            conditions.push(lte(invoices.dueDate, startDate));
+          } else {
+            // For specific day ranges
+            startDate.setDate(today.getDate() - maxDays);
+            endDate.setDate(today.getDate() - minDays);
+            
+            if (minDays < 0) {
+              // Future due dates (e.g., 'soon' category: -7 to -1 days)
+              conditions.push(
+                and(
+                  gte(invoices.dueDate, startDate),
+                  lte(invoices.dueDate, endDate)
+                )!
+              );
+            } else if (minDays === 0 && maxDays === 0) {
+              // Due today
+              conditions.push(
+                and(
+                  gte(invoices.dueDate, today),
+                  lt(invoices.dueDate, new Date(today.getTime() + 24 * 60 * 60 * 1000))
+                )!
+              );
+            } else {
+              // Past due dates (positive days overdue)
+              conditions.push(
+                and(
+                  gte(invoices.dueDate, startDate),
+                  lte(invoices.dueDate, endDate)
+                )!
+              );
+            }
+          }
+        }
+      }
+    }
+
     // Contact ID filtering
     if (contactId) {
       conditions.push(eq(invoices.contactId, contactId));
     }
 
     // Search across invoice number, contact name, email, and company name
-    if (search && search.trim()) {
+    if (search && search.trim() && search.trim() !== 'undefined') {
       const searchTerm = `%${search.trim()}%`;
       conditions.push(
         or(
@@ -672,38 +734,31 @@ export class DatabaseStorage implements IStorage {
           ilike(contacts.name, searchTerm),
           ilike(contacts.email, searchTerm),
           ilike(contacts.companyName, searchTerm)
-        )
+        )!
       );
-    }
-
-    // Note: Overdue category filtering handled AFTER database query
-    // to ensure consistency with client-side categorization logic
-    if (overdueCategory && overdueCategory !== 'all' && overdueCategory === 'paid') {
-      conditions.push(eq(invoices.status, 'paid'));
     }
 
     // Build the WHERE clause
     const whereClause = conditions.length > 1 ? and(...conditions) : conditions[0];
 
-    // For overdue category filtering (except 'paid'), we need to fetch more data 
-    // and apply client-side categorization logic
-    let queryLimit = limit;
-    let queryOffset = offset;
-    
-    // If filtering by overdue category (not 'paid' or 'all'), fetch larger batch for filtering
-    if (overdueCategory && overdueCategory !== 'all' && overdueCategory !== 'paid') {
-      queryLimit = Math.max(limit * 5, 500); // Fetch 5x more to account for filtering
-      queryOffset = 0; // Start from beginning when overdue filtering
-    }
-
-    // Execute main query with adjusted limit/offset
+    // Execute main query with pagination
     const results = await db
       .select()
       .from(invoices)
       .leftJoin(contacts, eq(invoices.contactId, contacts.id))
       .where(whereClause)
       .orderBy(desc(invoices.createdAt))
-      .limit(queryLimit);
+      .limit(limit)
+      .offset(offset);
+
+    // Execute count query with same WHERE conditions
+    const [countResult] = await db
+      .select({ count: count() })
+      .from(invoices)
+      .leftJoin(contacts, eq(invoices.contactId, contacts.id))
+      .where(whereClause);
+    
+    const total = countResult?.count || 0;
 
     // Map results and apply consistent contact fallback
     const mappedResults = results.map((row) => ({
@@ -732,65 +787,10 @@ export class DatabaseStorage implements IStorage {
       }
     }));
 
-    // Apply overdue category filtering using client-side logic
-    let filteredResults = mappedResults;
-    if (overdueCategory && overdueCategory !== 'all' && overdueCategory !== 'paid') {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      
-      filteredResults = mappedResults.filter(invoice => {
-        // Skip paid invoices for overdue categorization
-        if (invoice.status === 'paid') return false;
-        
-        // Calculate days overdue using the same logic as client-side
-        const daysOverdue = calculateDaysOverdue(invoice.dueDate, today);
-        const category = categorizeOverdueStatus(daysOverdue);
-        
-        return category === overdueCategory;
-      });
-      
-      console.log(`🎯 Overdue category '${overdueCategory}' filtering: ${filteredResults.length}/${mappedResults.length} invoices`);
-    }
-
-    // Apply pagination to filtered results
-    const paginatedResults = overdueCategory && overdueCategory !== 'all' && overdueCategory !== 'paid'
-      ? filteredResults.slice(offset, offset + limit)
-      : filteredResults;
-
-    // Calculate total count
-    let total: number;
-    if (overdueCategory && overdueCategory !== 'all' && overdueCategory !== 'paid') {
-      // For overdue category filtering, we need to count all matching records
-      const allResults = await db
-        .select()
-        .from(invoices)
-        .leftJoin(contacts, eq(invoices.contactId, contacts.id))
-        .where(whereClause);
-      
-      const allMapped = allResults.map((row) => ({ ...row.invoices, contact: row.contacts }));
-      const allFiltered = allMapped.filter(invoice => {
-        if (invoice.status === 'paid') return false;
-        const daysOverdue = calculateDaysOverdue(invoice.dueDate);
-        const category = categorizeOverdueStatus(daysOverdue);
-        return category === overdueCategory;
-      });
-      
-      total = allFiltered.length;
-    } else {
-      // For other filtering, use count query
-      const [countResult] = await db
-        .select({ count: count() })
-        .from(invoices)
-        .leftJoin(contacts, eq(invoices.contactId, contacts.id))
-        .where(whereClause);
-      
-      total = countResult?.count || 0;
-    }
-
-    console.log(`🎯 Server filtering results: ${paginatedResults.length}/${total} invoices (overdue category: ${overdueCategory})`);
+    console.log(`🎯 SQL filtering results: ${mappedResults.length}/${total} invoices (overdue category: ${overdueCategory})`);
 
     return {
-      invoices: paginatedResults,
+      invoices: mappedResults,
       total
     };
   }
