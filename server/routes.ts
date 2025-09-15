@@ -1671,7 +1671,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         overdueActions: basicMetrics.overdueCount,
         highRiskActions: Math.ceil(basicMetrics.overdueCount * 0.3), // Estimate 30% of overdue items are high risk
         avgDaysOverdue: basicMetrics.avgCompletionTime,
-        totalValue: basicMetrics.highRiskExposure,
+        totalValue: Math.floor(basicMetrics.highRiskExposure),
         prioritization: {
           cacheStatus: cacheStats,
           smartQueueAvailable: true,
