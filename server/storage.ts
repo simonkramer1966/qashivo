@@ -107,6 +107,7 @@ import {
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, sql, count, ne, isNotNull, gte, lte, lt, or, ilike } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import { getOverdueCategoryFromDueDate, getOverdueCategorySummary, type OverdueCategory, type OverdueCategoryInfo } from "../shared/utils/overdueUtils";
 import crypto from "crypto";
 
@@ -3039,14 +3040,17 @@ export class DatabaseStorage implements IStorage {
     
     const total = countResult[0]?.count || 0;
 
-    // Get paginated results with joins
+    // Get paginated results with joins - using proper aliases to avoid conflicts  
+    const assignedUser = alias(users, 'assignedUser');
+    const creatorUser = alias(users, 'creatorUser');
+    
     const results = await db
       .select()
       .from(actionItems)
       .leftJoin(contacts, eq(actionItems.contactId, contacts.id))
       .leftJoin(invoices, eq(actionItems.invoiceId, invoices.id))
-      .leftJoin(users, eq(actionItems.assignedToUserId, users.id))
-      .innerJoin(users.as('creator'), eq(actionItems.createdByUserId, users.id))
+      .leftJoin(assignedUser, eq(actionItems.assignedToUserId, assignedUser.id))  
+      .innerJoin(creatorUser, eq(actionItems.createdByUserId, creatorUser.id))
       .where(and(...conditions))
       .orderBy(desc(actionItems.dueAt), desc(actionItems.createdAt))
       .limit(limit)
@@ -3057,21 +3061,24 @@ export class DatabaseStorage implements IStorage {
         ...row.action_items,
         contact: row.contacts!,
         invoice: row.invoices || undefined,
-        assignedToUser: row.users || undefined,
-        createdByUser: row.creator!,
+        assignedToUser: row.assignedUser || undefined,
+        createdByUser: row.creatorUser!,
       })),
       total
     };
   }
 
   async getActionItem(id: string, tenantId: string): Promise<(ActionItem & { contact: Contact; invoice?: Invoice; assignedToUser?: User; createdByUser: User }) | undefined> {
+    const assignedUser = alias(users, 'assignedUser');
+    const creatorUser = alias(users, 'creatorUser');
+    
     const [result] = await db
       .select()
       .from(actionItems)
       .leftJoin(contacts, eq(actionItems.contactId, contacts.id))
       .leftJoin(invoices, eq(actionItems.invoiceId, invoices.id))
-      .leftJoin(users, eq(actionItems.assignedToUserId, users.id))
-      .innerJoin(users.as('creator'), eq(actionItems.createdByUserId, users.id))
+      .leftJoin(assignedUser, eq(actionItems.assignedToUserId, assignedUser.id))  
+      .innerJoin(creatorUser, eq(actionItems.createdByUserId, creatorUser.id))
       .where(and(eq(actionItems.id, id), eq(actionItems.tenantId, tenantId)));
 
     if (!result) return undefined;
@@ -3080,8 +3087,8 @@ export class DatabaseStorage implements IStorage {
       ...result.action_items,
       contact: result.contacts!,
       invoice: result.invoices || undefined,
-      assignedToUser: result.users || undefined,
-      createdByUser: result.creator!,
+      assignedToUser: result.assignedUser || undefined,
+      createdByUser: result.creatorUser!,
     };
   }
 

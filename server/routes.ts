@@ -99,7 +99,11 @@ const actionItemQuerySchema = z.object({
   type: z.enum(['nudge', 'call', 'email', 'sms', 'review', 'dispute', 'ptp_followup']).optional(),
   priority: z.enum(['low', 'medium', 'high', 'urgent']).optional(),
   page: z.string().optional().default('1').transform(Number),
-  limit: z.string().optional().default('50').transform(Number)
+  limit: z.string().optional().default('50').transform(Number),
+  // New ML prioritization parameters
+  useSmartPriority: z.string().optional().default('false').transform(str => str === 'true'),
+  queueType: z.enum(['today', 'overdue', 'high_risk', 'default']).optional().default('today'),
+  sortBy: z.enum(['priority', 'dueDate', 'amount', 'risk', 'smart']).optional().default('smart'),
 });
 
 const actionItemCompleteSchema = z.object({
@@ -133,6 +137,7 @@ const bulkNudgeSchema = z.object({
 import { generateCollectionSuggestions, generateEmailDraft, generateAiCfoResponse } from "./services/openai";
 import { sendReminderEmail, DEFAULT_FROM, DEFAULT_FROM_EMAIL } from "./services/sendgrid";
 import { sendPaymentReminderSMS } from "./services/twilio";
+import { ActionPrioritizationService } from "./services/actionPrioritizationService";
 import { formatDate } from "../shared/utils/dateFormatter";
 import { xeroService } from "./services/xero";
 import { XeroSyncService } from "./services/xeroSync";
@@ -151,6 +156,9 @@ if (!process.env.STRIPE_SECRET_KEY) {
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
   apiVersion: "2025-08-27.basil",
 });
+
+// Initialize Action Prioritization Service
+const actionPrioritizationService = new ActionPrioritizationService();
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
@@ -1522,7 +1530,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ==================== ACTION CENTRE API ====================
   
-  // Queue Management
+  // Smart Queue Management with ML Prioritization
   app.get("/api/action-centre/queue", isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.claims.sub);
@@ -1531,9 +1539,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const filters = actionItemQuerySchema.parse(req.query);
+      
+      // Use ML prioritization service for smart queue ordering
+      if (filters.useSmartPriority && filters.sortBy === 'smart') {
+        console.log(`🧠 Smart Queue: Using ML prioritization for tenant ${user.tenantId}, queue type: ${filters.queueType}`);
+        
+        const smartResult = await actionPrioritizationService.getPrioritizedActions(user.tenantId, filters);
+        
+        console.log(`🎯 Smart Queue Results: ${smartResult.actionItems.length} items, ML coverage: ${(smartResult.queueMetadata.mlDataCoverage * 100).toFixed(1)}%, confidence: ${(smartResult.queueMetadata.averageConfidence * 100).toFixed(1)}%`);
+        
+        res.json({
+          ...smartResult,
+          // Add metadata for debugging and UI display
+          smartPriorityEnabled: true,
+          queueInsights: {
+            mlCoverage: smartResult.queueMetadata.mlDataCoverage,
+            averageConfidence: smartResult.queueMetadata.averageConfidence,
+            queueType: filters.queueType,
+            optimizedAt: smartResult.queueMetadata.lastOptimized,
+          }
+        });
+        return;
+      }
+
+      // Fallback to standard queue logic for compatibility
+      console.log(`📋 Standard Queue: Using basic prioritization for tenant ${user.tenantId}`);
       const result = await storage.getActionItems(user.tenantId, filters);
       
-      res.json(result);
+      res.json({
+        ...result,
+        smartPriorityEnabled: false,
+        queueInsights: {
+          mlCoverage: 0,
+          averageConfidence: 0,
+          queueType: 'default',
+          optimizedAt: new Date(),
+        }
+      });
     } catch (error) {
       console.error("Error fetching action queue:", error);
       if (error instanceof z.ZodError) {
@@ -1550,11 +1592,151 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
 
-      const metrics = await storage.getActionCentreMetrics(user.tenantId);
-      res.json(metrics);
+      const [basicMetrics, cacheStats] = await Promise.all([
+        storage.getActionCentreMetrics(user.tenantId),
+        Promise.resolve(actionPrioritizationService.getCacheStats())
+      ]);
+
+      const enhancedMetrics = {
+        ...basicMetrics,
+        prioritization: {
+          cacheStatus: cacheStats,
+          smartQueueAvailable: true,
+          supportedQueueTypes: ['today', 'overdue', 'high_risk', 'default'],
+          mlServicesIntegrated: ['payment_predictions', 'risk_scoring', 'customer_learning'],
+        }
+      };
+
+      res.json(enhancedMetrics);
     } catch (error) {
       console.error("Error fetching action centre metrics:", error);
       res.status(500).json({ message: "Failed to fetch action centre metrics" });
+    }
+  });
+
+  // Priority Management Endpoints
+  app.post("/api/action-centre/priority/refresh", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      console.log(`🔄 Manual Priority Refresh: Refreshing priority scores for tenant ${user.tenantId}`);
+      const refreshResult = await actionPrioritizationService.bulkRefreshPriorityScores(user.tenantId);
+      
+      console.log(`✅ Priority Refresh Complete: processed=${refreshResult.processed}, cached=${refreshResult.cached}, errors=${refreshResult.errors}`);
+      
+      res.json({
+        message: "Priority scores refreshed successfully",
+        stats: refreshResult,
+        refreshedAt: new Date(),
+      });
+    } catch (error) {
+      console.error("Error refreshing priority scores:", error);
+      res.status(500).json({ message: "Failed to refresh priority scores" });
+    }
+  });
+
+  app.get("/api/action-centre/priority/cache-stats", isAuthenticated, async (req: any, res) => {
+    try {
+      const cacheStats = actionPrioritizationService.getCacheStats();
+      
+      res.json({
+        cacheStats,
+        explanation: {
+          totalEntries: "Number of cached priority calculations",
+          hitRate: "Cache hit rate (not currently tracked)",
+          averageAge: "Average age of cached entries in minutes",
+          memoryUsage: "Estimated memory usage",
+        },
+        recommendations: cacheStats.totalEntries > 1000 
+          ? ["Consider increasing cache cleanup frequency"]
+          : cacheStats.totalEntries < 10
+          ? ["Cache is building up - normal for new deployments"]
+          : ["Cache performance looks good"],
+      });
+    } catch (error) {
+      console.error("Error fetching cache stats:", error);
+      res.status(500).json({ message: "Failed to fetch cache statistics" });
+    }
+  });
+
+  app.get("/api/action-centre/queue-insights", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      // Get sample of each queue type to show differences
+      const queueComparisons = await Promise.allSettled([
+        actionPrioritizationService.getPrioritizedActions(user.tenantId, {
+          useSmartPriority: true,
+          queueType: 'today',
+          limit: 5,
+          status: 'open'
+        }),
+        actionPrioritizationService.getPrioritizedActions(user.tenantId, {
+          useSmartPriority: true,
+          queueType: 'overdue',
+          limit: 5,
+          status: 'open'
+        }),
+        actionPrioritizationService.getPrioritizedActions(user.tenantId, {
+          useSmartPriority: true,
+          queueType: 'high_risk',
+          limit: 5,
+          status: 'open'
+        })
+      ]);
+
+      const insights = {
+        queueAnalysis: {
+          today: queueComparisons[0].status === 'fulfilled' ? {
+            topItems: queueComparisons[0].value.actionItems.slice(0, 3).map(item => ({
+              id: item.id,
+              priorityScore: item.priorityScore?.priorityScore || 0,
+              reasoning: item.priorityScore?.reasoning || [],
+              confidence: item.priorityScore?.confidence || 0,
+            })),
+            mlCoverage: queueComparisons[0].value.queueMetadata.mlDataCoverage,
+            averageConfidence: queueComparisons[0].value.queueMetadata.averageConfidence,
+          } : { error: 'Failed to analyze today queue' },
+          
+          overdue: queueComparisons[1].status === 'fulfilled' ? {
+            topItems: queueComparisons[1].value.actionItems.slice(0, 3).map(item => ({
+              id: item.id,
+              priorityScore: item.priorityScore?.priorityScore || 0,
+              reasoning: item.priorityScore?.reasoning || [],
+              confidence: item.priorityScore?.confidence || 0,
+            })),
+            mlCoverage: queueComparisons[1].value.queueMetadata.mlDataCoverage,
+            averageConfidence: queueComparisons[1].value.queueMetadata.averageConfidence,
+          } : { error: 'Failed to analyze overdue queue' },
+          
+          highRisk: queueComparisons[2].status === 'fulfilled' ? {
+            topItems: queueComparisons[2].value.actionItems.slice(0, 3).map(item => ({
+              id: item.id,
+              priorityScore: item.priorityScore?.priorityScore || 0,
+              reasoning: item.priorityScore?.reasoning || [],
+              confidence: item.priorityScore?.confidence || 0,
+            })),
+            mlCoverage: queueComparisons[2].value.queueMetadata.mlDataCoverage,
+            averageConfidence: queueComparisons[2].value.queueMetadata.averageConfidence,
+          } : { error: 'Failed to analyze high-risk queue' },
+        },
+        systemStatus: {
+          mlServicesAvailable: true,
+          cacheHealth: actionPrioritizationService.getCacheStats(),
+          lastUpdated: new Date(),
+        }
+      };
+
+      res.json(insights);
+    } catch (error) {
+      console.error("Error fetching queue insights:", error);
+      res.status(500).json({ message: "Failed to fetch queue insights" });
     }
   });
 
