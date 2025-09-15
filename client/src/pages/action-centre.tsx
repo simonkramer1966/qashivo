@@ -240,6 +240,7 @@ export default function ActionCentre() {
     highRiskActions: (rawMetrics as any).highRiskCount ?? Math.ceil(((rawMetrics as any).overdueCount ?? 0) * 0.3),
     avgDaysOverdue: (rawMetrics as any).avgDaysOverdue ?? 0,
     totalValue: (rawMetrics as any).totalValue ?? 0, // Now using real calculated total value
+    queueCounts: (rawMetrics as any).queueCounts ?? {}, // Extract queue counts for category badges
   } : null;
 
   // Fetch queue data with filters
@@ -782,43 +783,50 @@ export default function ActionCentre() {
   }
 
   // Queue options for sidebar with proper metrics typing
-  const queueMetrics = metrics as QueueMetrics | undefined;
+  const queueMetrics = metrics as (QueueMetrics & { queueCounts?: Record<string, number> }) | undefined;
+  const queueCounts = queueMetrics?.queueCounts || {};
+  
   // Define overdue category-based queue options with icons and colors
   const queueOptions = [
-    { id: 'today', label: 'Today\'s Actions', icon: Calendar, count: queueMetrics?.todayActions || 0 },
+    { 
+      id: 'today', 
+      label: 'Today\'s Actions', 
+      icon: Calendar, 
+      count: (queueCounts.current || 0) + (queueCounts.soon || 0) // Today includes current and soon items
+    },
     { 
       id: 'soon', 
       label: 'Soon', 
       icon: Clock, 
-      count: 0, // Will be populated dynamically
+      count: queueCounts.soon || 0,
       category: getOverdueCategoryInfo('soon', 0)
     },
     { 
       id: 'recent', 
       label: 'Recent', 
       icon: RefreshCw, 
-      count: 0, // Will be populated dynamically
+      count: queueCounts.recent || 0,
       category: getOverdueCategoryInfo('recent', 0)
     },
     { 
       id: 'overdue', 
       label: 'Overdue', 
       icon: AlertTriangle, 
-      count: 0, // Will be populated dynamically
+      count: queueCounts.overdue || 0,
       category: getOverdueCategoryInfo('overdue', 0)
     },
     { 
       id: 'serious', 
       label: 'Serious', 
       icon: AlertCircle, 
-      count: 0, // Will be populated dynamically
+      count: queueCounts.serious || 0,
       category: getOverdueCategoryInfo('serious', 0)
     },
     { 
       id: 'escalation', 
       label: 'Escalation', 
       icon: XCircle, 
-      count: 0, // Will be populated dynamically
+      count: queueCounts.escalation || 0,
       category: getOverdueCategoryInfo('escalation', 0)
     },
   ];
