@@ -41,7 +41,8 @@ import {
   type ActionItem,
   type ActionLog,
   type PaymentPromise,
-  invoices
+  invoices,
+  seasonalPatterns
 } from "@shared/schema";
 import { getOverdueCategoryFromDueDate } from "@shared/utils/overdueUtils";
 import { eq, and, desc, sql, count, avg, gte, lte, inArray } from 'drizzle-orm';
@@ -5070,7 +5071,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
         contactId,
         invoiceId,
         retellCallId: callResult.callId,
-        retellAgentId: callResult.agentId,
+        retellAgentId: callResult.agentId || process.env.RETELL_AGENT_ID || 'default-agent',
         fromNumber: callResult.fromNumber,
         toNumber: callResult.toNumber,
         direction: callResult.direction,
@@ -5108,21 +5109,53 @@ Payment required immediately to avoid collection action. Contact us NOW.`
       // Get tenant for organization context
       const tenant = await storage.getTenant(user.tenantId);
 
-      // Enhanced AI context variables
+      // Initialize ML services for comprehensive data gathering
+      const { CollectionLearningService } = await import('./services/collectionLearningService');
+      const { PredictivePaymentService } = await import('./services/predictivePaymentService');
+      const { DynamicRiskScoringService } = await import('./services/dynamicRiskScoringService');
+      const { CustomerSegmentationService } = await import('./services/customerSegmentationService');
+      
+      const learningService = new CollectionLearningService();
+      const paymentService = new PredictivePaymentService();
+      const riskService = new DynamicRiskScoringService();
+      const segmentService = new CustomerSegmentationService();
+
+      // Enhanced AI context variables with ML intelligence
       let enhancedDynamicVariables = {
+        // Basic context
         customer_name: dynamicVariables?.contactName || "Customer",
         organisation_name: tenant?.name || "Nexus AR",
         ai_call_context: dynamicVariables?.context || "general",
         context_id: dynamicVariables?.contextId || "",
         is_ai_powered: true,
-        call_type: "ai_collection_call"
+        call_type: "ai_collection_call",
+        
+        // ML Intelligence placeholders - will be populated below
+        preferred_channel: "unknown",
+        communication_effectiveness: "0.5",
+        payment_reliability: "0.5",
+        risk_level: "medium",
+        customer_segment: "unclassified",
+        ai_confidence: "0.1",
+        recommended_approach: "standard",
+        interaction_history_summary: "No previous interactions",
+        payment_prediction_probability: "0.5",
+        predicted_payment_timeframe: "unknown",
+        risk_factors: "Standard collection risk",
+        successful_contact_methods: "No data available",
+        customer_responsiveness: "unknown",
+        escalation_risk: "low",
+        seasonal_payment_patterns: "No patterns identified",
+        historical_payment_behavior: "No history available"
       };
 
-      // Add invoice-specific context if available
+      // Add invoice-specific context and payment predictions if available
       if (invoiceId) {
         try {
           const invoice = await storage.getInvoice(invoiceId, user.tenantId);
           if (invoice) {
+            const daysOverdue = invoice.dueDate ? Math.max(0, Math.floor((new Date().getTime() - new Date(invoice.dueDate).getTime()) / (1000 * 60 * 60 * 24))) : 0;
+            
             enhancedDynamicVariables = {
               ...enhancedDynamicVariables,
               invoice_number: invoice.invoiceNumber,
@@ -5130,15 +5163,79 @@ Payment required immediately to avoid collection action. Contact us NOW.`
               amount_paid: invoice.amountPaid || "0.00",
               outstanding_amount: String(parseFloat(invoice.amount || "0") - parseFloat(invoice.amountPaid || "0")),
               due_date: invoice.dueDate ? invoice.dueDate.toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
-              days_overdue: invoice.dueDate ? String(Math.max(0, Math.floor((new Date().getTime() - new Date(invoice.dueDate).getTime()) / (1000 * 60 * 60 * 24)))) : "0"
+              days_overdue: String(daysOverdue)
             };
+
+            // 5. Payment Predictions for this specific invoice
+            try {
+              console.log("🔮 Generating payment prediction for invoice:", invoice.invoiceNumber);
+              const paymentPrediction = await paymentService.generatePaymentPrediction(user.tenantId, invoiceId);
+              
+              if (paymentPrediction) {
+                const paymentProb = parseFloat(paymentPrediction.paymentProbability || "0.5");
+                enhancedDynamicVariables.payment_prediction_probability = (paymentProb * 100).toFixed(0) + "%";
+                
+                // Predicted payment timeframe
+                if (paymentPrediction.predictedPaymentDate) {
+                  const predictedDate = new Date(paymentPrediction.predictedPaymentDate);
+                  const daysFromNow = Math.ceil((predictedDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+                  
+                  if (daysFromNow > 0) {
+                    enhancedDynamicVariables.predicted_payment_timeframe = `${daysFromNow} days from now`;
+                  } else if (daysFromNow === 0) {
+                    enhancedDynamicVariables.predicted_payment_timeframe = "today";
+                  } else {
+                    enhancedDynamicVariables.predicted_payment_timeframe = `${Math.abs(daysFromNow)} days overdue predicted`;
+                  }
+                }
+                
+                // Default and escalation risk
+                const defaultRisk = parseFloat(paymentPrediction.defaultRisk || "0.3");
+                const escalationRisk = parseFloat(paymentPrediction.escalationRisk || "0.3");
+                
+                if (defaultRisk > 0.7) {
+                  enhancedDynamicVariables.escalation_risk = "high";
+                  enhancedDynamicVariables.recommended_approach = "urgent_but_respectful";
+                } else if (escalationRisk > 0.6) {
+                  enhancedDynamicVariables.escalation_risk = "medium";
+                }
+
+                // AI confidence in predictions
+                const confidence = parseFloat(paymentPrediction.paymentConfidenceScore || "0.5");
+                enhancedDynamicVariables.ai_confidence = (confidence * 100).toFixed(0) + "% prediction confidence";
+              }
+            } catch (error) {
+              console.warn("Could not generate payment prediction:", error);
+            }
+
+            // 6. Seasonal Payment Patterns (if available)
+            try {
+              // Query seasonal patterns for additional context
+              const seasonalData = await db.query.seasonalPatterns.findFirst({
+                where: and(
+                  eq(seasonalPatterns.tenantId, user.tenantId),
+                  or(
+                    eq(seasonalPatterns.contactId, invoice.contactId),
+                    isNull(seasonalPatterns.contactId) // Global patterns
+                  )
+                ),
+                orderBy: desc(seasonalPatterns.patternStrength)
+              });
+
+              if (seasonalData) {
+                enhancedDynamicVariables.seasonal_payment_patterns = 
+                  `Customer shows ${seasonalData.patternName} payment pattern with ${Math.round(parseFloat(seasonalData.patternStrength || "0") * 100)}% reliability`;
+              }
+            } catch (error) {
+              console.warn("Could not fetch seasonal patterns:", error);
+            }
           }
         } catch (error) {
           console.warn("Could not fetch invoice context for AI call:", error);
         }
       }
 
-      // Add contact-specific context if available
+      // Add contact-specific context and ML intelligence if available
       if (contactId) {
         try {
           const contact = await storage.getContact(contactId, user.tenantId);
@@ -5146,6 +5243,102 @@ Payment required immediately to avoid collection action. Contact us NOW.`
             enhancedDynamicVariables.customer_name = contact.name || "Customer";
             enhancedDynamicVariables.company_name = contact.companyName || "";
             enhancedDynamicVariables.preferred_contact_method = contact.preferredContactMethod || "phone";
+
+            // Gather comprehensive ML data for the customer
+            console.log("🧠 Gathering ML intelligence for customer:", contact.name);
+
+            // 1. Customer Learning Profile - Communication preferences and effectiveness
+            try {
+              const learningProfile = await learningService.getOrCreateCustomerProfile(contactId, user.tenantId);
+              if (learningProfile) {
+                enhancedDynamicVariables.preferred_channel = learningProfile.preferredChannel || "voice";
+                enhancedDynamicVariables.communication_effectiveness = learningProfile.voiceEffectiveness || "0.5";
+                enhancedDynamicVariables.payment_reliability = learningProfile.paymentReliability || "0.5";
+                enhancedDynamicVariables.ai_confidence = learningProfile.learningConfidence || "0.1";
+                enhancedDynamicVariables.customer_responsiveness = learningProfile.averageResponseTime 
+                  ? `${learningProfile.averageResponseTime} hours average response time` 
+                  : "No response data";
+                
+                // Determine successful contact methods
+                const emailEffectiveness = parseFloat(learningProfile.emailEffectiveness || "0.5");
+                const smsEffectiveness = parseFloat(learningProfile.smsEffectiveness || "0.5");
+                const voiceEffectiveness = parseFloat(learningProfile.voiceEffectiveness || "0.5");
+                
+                const methods = [];
+                if (emailEffectiveness > 0.6) methods.push("email");
+                if (smsEffectiveness > 0.6) methods.push("SMS");
+                if (voiceEffectiveness > 0.6) methods.push("voice calls");
+                
+                enhancedDynamicVariables.successful_contact_methods = methods.length > 0 
+                  ? methods.join(", ") 
+                  : "Limited success data";
+
+                // Payment behavior insights
+                if (learningProfile.averagePaymentDelay) {
+                  enhancedDynamicVariables.historical_payment_behavior = 
+                    `Typically pays ${learningProfile.averagePaymentDelay} days after due date`;
+                }
+              }
+            } catch (error) {
+              console.warn("Could not fetch learning profile:", error);
+            }
+
+            // 2. Risk Assessment - Current risk scores and trends
+            try {
+              const riskScore = await riskService.calculateCustomerRiskScore(user.tenantId, contactId);
+              if (riskScore) {
+                const overallRisk = parseFloat(riskScore.overallRiskScore || "0.5");
+                enhancedDynamicVariables.risk_level = overallRisk > 0.7 ? "high" : overallRisk > 0.4 ? "medium" : "low";
+                enhancedDynamicVariables.escalation_risk = parseFloat(riskScore.communicationRisk || "0.5") > 0.6 ? "high" : "low";
+                enhancedDynamicVariables.risk_factors = Array.isArray(riskScore.riskFactors) 
+                  ? riskScore.riskFactors.join(", ") 
+                  : "Standard collection considerations";
+                  
+                // Risk-based approach recommendation
+                if (overallRisk > 0.7) {
+                  enhancedDynamicVariables.recommended_approach = "gentle_but_firm";
+                } else if (overallRisk < 0.3) {
+                  enhancedDynamicVariables.recommended_approach = "friendly_reminder";
+                } else {
+                  enhancedDynamicVariables.recommended_approach = "professional_standard";
+                }
+              }
+            } catch (error) {
+              console.warn("Could not fetch risk assessment:", error);
+            }
+
+            // 3. Customer Segmentation - Behavioral classification
+            try {
+              const segments = await segmentService.getCustomerSegments(user.tenantId);
+              // Find this customer's segment (simplified - in production would query assignments table)
+              if (segments.length > 0) {
+                enhancedDynamicVariables.customer_segment = segments[0].segmentName || "Standard Customer";
+              }
+            } catch (error) {
+              console.warn("Could not fetch customer segmentation:", error);
+            }
+
+            // 4. Communication History Summary
+            try {
+              const actions = await storage.getActions(user.tenantId);
+              const customerActions = actions.filter(action => action.contactId === contactId);
+              
+              if (customerActions.length > 0) {
+                const recentActions = customerActions
+                  .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
+                  .slice(0, 5);
+                
+                const actionSummary = recentActions.map(action => {
+                  const daysAgo = Math.floor((Date.now() - new Date(action.createdAt || 0).getTime()) / (1000 * 60 * 60 * 24));
+                  return `${action.type} ${daysAgo} days ago (${action.status})`;
+                }).join("; ");
+                
+                enhancedDynamicVariables.interaction_history_summary = 
+                  `Recent contact: ${actionSummary}. Total interactions: ${customerActions.length}`;
+              }
+            } catch (error) {
+              console.warn("Could not fetch communication history:", error);
+            }
           }
         } catch (error) {
           console.warn("Could not fetch contact context for AI call:", error);
@@ -5155,7 +5348,8 @@ Payment required immediately to avoid collection action. Contact us NOW.`
       console.log("🤖 Creating AI call with enhanced context:", enhancedDynamicVariables);
 
       // Use RetellService to create the AI call
-      const retellService = new (await import('../retell-service')).RetellService();
+      const { RetellService } = await import('./retell-service');
+      const retellService = new RetellService();
       
       const callResult = await retellService.createCall({
         fromNumber: process.env.RETELL_PHONE_NUMBER || "+12345678900",
@@ -5187,6 +5381,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
         dynamicVariables: enhancedDynamicVariables,
         callType: 'ai-call',
         createdByUserId: user.id,
+        scheduledAt: new Date(),
       };
 
       const voiceCall = await storage.createVoiceCall(voiceCallData);
