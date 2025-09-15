@@ -125,7 +125,7 @@ export default function Invoices() {
       return response.json();
     },
     enabled: isAuthenticated,
-    keepPreviousData: true, // Keep showing old data while fetching new data
+    placeholderData: (previousData) => previousData, // Keep showing old data while fetching new data
   });
 
   // Extract invoices and pagination from the response
@@ -142,7 +142,7 @@ export default function Invoices() {
     },
     enabled: isAuthenticated,
     staleTime: 5 * 60 * 1000, // 5 minutes - predictions don't change frequently
-    cacheTime: 15 * 60 * 1000, // 15 minutes - keep in cache longer
+    gcTime: 15 * 60 * 1000, // 15 minutes - keep in cache longer
     refetchOnWindowFocus: false, // Don't refetch when window regains focus
     refetchInterval: 10 * 60 * 1000, // Optional: refetch every 10 minutes in background
   });
