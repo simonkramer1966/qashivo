@@ -132,19 +132,18 @@ export default function Invoices() {
   const invoices = invoicesResponse?.invoices || [];
   const pagination = invoicesResponse?.pagination || { page: 1, limit: 50, total: 0, totalPages: 1 };
 
-  // Fetch ALL payment predictions once with static caching (optimized strategy)
+  // Fetch payment predictions with filter-aware caching
   const { data: allPaymentPredictions = {}, isLoading: predictionsLoading } = useQuery({
-    queryKey: ["/api/ml/payment-predictions/bulk"],
+    queryKey: ["/api/ml/payment-predictions/bulk", { status: statusFilter, search, overdue: overdueFilter, page: invoicesCurrentPage, limit: invoicesItemsPerPage }],
     queryFn: async () => {
       const response = await fetch('/api/ml/payment-predictions/bulk/invoices');
       if (!response.ok) throw new Error('Failed to fetch predictions');
       return response.json();
     },
     enabled: isAuthenticated,
-    staleTime: 5 * 60 * 1000, // 5 minutes - predictions don't change frequently
-    gcTime: 15 * 60 * 1000, // 15 minutes - keep in cache longer
+    staleTime: 2 * 60 * 1000, // 2 minutes - refresh more frequently when filters change
+    gcTime: 10 * 60 * 1000, // 10 minutes - shorter cache for dynamic content
     refetchOnWindowFocus: false, // Don't refetch when window regains focus
-    refetchInterval: 10 * 60 * 1000, // Optional: refetch every 10 minutes in background
   });
 
   // Filter predictions on frontend (instant filtering, no API calls)
