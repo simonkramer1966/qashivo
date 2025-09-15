@@ -1558,6 +1558,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/action-centre/contact/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { id } = req.params;
+      const contact = await storage.getContact(id, user.tenantId);
+      
+      if (!contact) {
+        return res.status(404).json({ message: "Contact not found" });
+      }
+
+      // Get related invoices for payment history
+      const invoices = await storage.getInvoices(user.tenantId, { contactId: id, limit: 10 });
+      
+      // Get recent action items for communication history  
+      const actionHistory = await storage.getActionItemsByContact(id, user.tenantId);
+      
+      // Get risk profile data (if available)
+      const riskScore = await storage.getRiskScore(id, user.tenantId);
+
+      // Assemble contact details response
+      const contactDetails = {
+        ...contact,
+        paymentHistory: invoices.invoices.map(invoice => ({
+          invoiceNumber: invoice.invoiceNumber,
+          amount: parseFloat(invoice.amount),
+          status: invoice.status,
+          dueDate: invoice.dueDate.toISOString(),
+          paidDate: invoice.paidDate?.toISOString(),
+        })),
+        communicationHistory: actionHistory.map(action => ({
+          type: action.type as 'email' | 'sms' | 'phone',
+          date: action.createdAt.toISOString(),
+          subject: action.notes || action.type,
+          status: action.status === 'completed' ? 'sent' : 'pending',
+        })),
+        riskProfile: {
+          score: riskScore?.score ? parseFloat(riskScore.score) : 0.5,
+          level: riskScore?.riskLevel as 'low' | 'medium' | 'high' | 'critical' || 'medium',
+          factors: riskScore?.factors ? (riskScore.factors as string[]) : ['No risk assessment available'],
+        },
+      };
+
+      res.json(contactDetails);
+    } catch (error) {
+      console.error("Error fetching contact details:", error);
+      res.status(500).json({ message: "Failed to fetch contact details" });
+    }
+  });
+
   // Action Item Management
   app.post("/api/action-items", isAuthenticated, async (req: any, res) => {
     try {
