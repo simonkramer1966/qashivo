@@ -234,12 +234,13 @@ export default function ActionCentre() {
   // Fetch queue data with filters
   const { data: queueResponse, isLoading: queueLoading, error } = useQuery({
     queryKey: ["/api/action-centre/queue", { 
-      queue: selectedQueue, 
+      queueType: selectedQueue, 
       search: debouncedSearch, 
       page: currentPage, 
       limit: itemsPerPage,
-      sortColumn,
-      sortDirection 
+      sortBy: sortColumn,
+      sortDirection,
+      useSmartPriority: true
     }],
     enabled: isAuthenticated,
     staleTime: 2 * 60 * 1000, // 2 minutes

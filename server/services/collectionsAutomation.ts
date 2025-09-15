@@ -1,4 +1,4 @@
-import { eq, and, lte, gte } from "drizzle-orm";
+import { eq, and, lte, gte, sql } from "drizzle-orm";
 import { db } from "../db";
 import { invoices, contacts, collectionSchedules, customerScheduleAssignments, tenants } from "@shared/schema";
 import { CollectionLearningService, type OptimizedAction } from "./collectionLearningService";
@@ -81,7 +81,8 @@ export async function checkCollectionActions(tenantId: string): Promise<Collecti
         and(
           eq(invoices.tenantId, tenantId),
           lte(invoices.dueDate, today), // Invoice is past due
-          gte(invoices.amount, invoices.amountPaid || 0) // Still has outstanding balance
+          gte(invoices.amount, invoices.amountPaid || 0), // Still has outstanding balance
+          sql`${invoices.status} NOT IN ('paid', 'cancelled', 'void')` // Exclude paid/cancelled/void invoices
         )
       );
 
