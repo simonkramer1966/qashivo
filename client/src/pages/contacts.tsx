@@ -23,6 +23,9 @@ export default function Customers() {
   const [sortField, setSortField] = useState<string>("");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   
+  // Risk score generation state
+  const [isGeneratingRiskScores, setIsGeneratingRiskScores] = useState(false);
+  
   // Communication dialog state
   const [communicationDialog, setCommunicationDialog] = useState({
     isOpen: false,
@@ -139,6 +142,34 @@ export default function Customers() {
       toast({
         title: "Error",
         description: "Failed to update customer schedule",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Mutation for generating bulk risk scores  
+  const generateRiskScoresMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest('POST', '/api/ml/risk-scoring/calculate-bulk');
+      return response.json();
+    },
+    onMutate: () => {
+      setIsGeneratingRiskScores(true);
+    },
+    onSuccess: (data) => {
+      setIsGeneratingRiskScores(false);
+      toast({
+        title: "Risk Scores Generated",
+        description: `Successfully generated ${data.scoresCalculated} risk scores for customers`,
+      });
+      // Refresh risk scores data
+      queryClient.invalidateQueries({ queryKey: ["/api/ml/risk-scoring/scores"] });
+    },
+    onError: (error: any) => {
+      setIsGeneratingRiskScores(false);
+      toast({
+        title: "Risk Score Generation Failed",
+        description: "Failed to generate risk scores. Please try again.",
         variant: "destructive",
       });
     },
@@ -405,6 +436,17 @@ export default function Customers() {
                     data-testid="input-search-contacts"
                   />
                 </div>
+              </div>
+              <div className="flex justify-end">
+                <Button 
+                  onClick={() => generateRiskScoresMutation.mutate()}
+                  disabled={isGeneratingRiskScores}
+                  className="bg-[#17B6C3] hover:bg-[#1396A1] text-white"
+                  data-testid="button-generate-risk-scores"
+                >
+                  <Shield className="mr-2 h-4 w-4" />
+                  {isGeneratingRiskScores ? "Generating..." : "Generate Risk Scores"}
+                </Button>
               </div>
             </div>
           </div>

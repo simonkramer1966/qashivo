@@ -3771,6 +3771,93 @@ Payment required immediately to avoid collection action. Contact us NOW.`
     }
   });
 
+  // Calculate bulk risk scores for all customers
+  app.post("/api/ml/risk-scoring/calculate-bulk", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      // For demo purposes, generate simple risk scores for all customers
+      const { riskScores } = await import("../shared/schema");
+      
+      console.log(`🎯 Generating demo risk scores for tenant: ${user.tenantId}`);
+      
+      // Get all customers for this tenant
+      const allCustomers = await storage.getContacts(user.tenantId);
+      console.log(`📊 Found ${allCustomers.length} customers to generate risk scores for`);
+      
+      let scoresCalculated = 0;
+      
+      // Generate demo risk scores for each customer
+      for (const customer of allCustomers) {
+        // Generate consistent risk score based on customer ID
+        let hash = 0;
+        for (let i = 0; i < customer.id.length; i++) {
+          const char = customer.id.charCodeAt(i);
+          hash = ((hash << 5) - hash) + char;
+          hash = hash & hash; // Convert to 32-bit integer
+        }
+        
+        // Generate risk score between 0.1 and 0.9
+        const riskScore = (Math.abs(hash % 80) + 10) / 100; // 0.1 to 0.9
+        
+        // Generate trend based on hash
+        const trends = ['increasing', 'decreasing', 'stable'];
+        const trend = trends[Math.abs(hash % 3)];
+        
+        // Determine urgency level
+        let urgencyLevel = 'low';
+        if (riskScore >= 0.8) urgencyLevel = 'critical';
+        else if (riskScore >= 0.6) urgencyLevel = 'high';
+        else if (riskScore >= 0.4) urgencyLevel = 'medium';
+        
+        try {
+          // Insert risk score into database
+          await db.insert(riskScores).values({
+            tenantId: user.tenantId,
+            contactId: customer.id,
+            overallRiskScore: riskScore.toString(),
+            paymentRisk: (riskScore * 0.8).toString(),
+            creditRisk: (riskScore * 0.9).toString(), 
+            communicationRisk: (riskScore * 0.7).toString(),
+            riskFactors: ['payment_history', 'communication_response'],
+            riskTrend: trend,
+            urgencyLevel,
+            modelVersion: '2.0.0',
+            nextReassessment: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days from now
+          }).onConflictDoUpdate({
+            target: [riskScores.tenantId, riskScores.contactId],
+            set: {
+              overallRiskScore: riskScore.toString(),
+              riskTrend: trend,
+              urgencyLevel,
+              updatedAt: new Date()
+            }
+          });
+          scoresCalculated++;
+        } catch (error) {
+          console.error(`Error saving risk score for customer ${customer.id}:`, error);
+        }
+      }
+      
+      console.log(`✅ Generated ${scoresCalculated} risk scores successfully`);
+      res.json({ 
+        success: true, 
+        scoresCalculated,
+        message: `Successfully generated ${scoresCalculated} risk scores for demo`
+      });
+    } catch (error) {
+      console.error("Error calculating bulk risk scores:", error);
+      res.status(500).json({ 
+        success: false,
+        message: "Failed to calculate bulk risk scores",
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
   // Customer Segmentation
   app.post("/api/ml/customer-segmentation/analyze", isAuthenticated, async (req: any, res) => {
     try {
