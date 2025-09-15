@@ -785,8 +785,8 @@ export default function ActionCentre() {
   const queueOptions = [
     { id: 'today', label: 'Today\'s Actions', icon: Calendar, count: queueMetrics?.todayActions || 0 },
     { id: 'overdue', label: 'Overdue', icon: AlertTriangle, count: queueMetrics?.overdueActions || 0 },
-    { id: 'high-risk', label: 'High Risk', icon: TrendingUp, count: queueMetrics?.highRiskActions || 0 },
-    { id: 'all', label: 'All Actions', icon: Target, count: queueMetrics?.totalActions || 0 },
+    { id: 'high_risk', label: 'High Risk', icon: TrendingUp, count: queueMetrics?.highRiskActions || 0 },
+    { id: 'default', label: 'All Actions', icon: Target, count: queueMetrics?.totalActions || 0 },
   ];
 
   // Get priority badge styling
@@ -984,21 +984,21 @@ export default function ActionCentre() {
                           <TableHead className="w-[200px]">
                             <Button 
                               variant="ghost" 
-                              onClick={() => handleSort('contactName')}
+                              onClick={() => handleSort('priority')}
                               className="h-auto p-0 font-semibold hover:bg-transparent"
                               data-testid="header-contact"
                             >
-                              Contact {renderSortIcon('contactName')}
+                              Contact {renderSortIcon('priority')}
                             </Button>
                           </TableHead>
                           <TableHead className="w-[140px]">
                             <Button 
                               variant="ghost" 
-                              onClick={() => handleSort('invoiceNumber')}
+                              onClick={() => handleSort('dueDate')}
                               className="h-auto p-0 font-semibold hover:bg-transparent"
                               data-testid="header-invoice"
                             >
-                              Invoice {renderSortIcon('invoiceNumber')}
+                              Invoice {renderSortIcon('dueDate')}
                             </Button>
                           </TableHead>
                           <TableHead className="w-[120px]">
@@ -1014,11 +1014,11 @@ export default function ActionCentre() {
                           <TableHead className="w-[100px]">
                             <Button 
                               variant="ghost" 
-                              onClick={() => handleSort('daysOverdue')}
+                              onClick={() => handleSort('amount')}
                               className="h-auto p-0 font-semibold hover:bg-transparent"
                               data-testid="header-overdue"
                             >
-                              Overdue {renderSortIcon('daysOverdue')}
+                              Overdue {renderSortIcon('amount')}
                             </Button>
                           </TableHead>
                           <TableHead className="w-[100px]">
@@ -1034,21 +1034,21 @@ export default function ActionCentre() {
                           <TableHead className="w-[100px]">
                             <Button 
                               variant="ghost" 
-                              onClick={() => handleSort('riskScore')}
+                              onClick={() => handleSort('risk')}
                               className="h-auto p-0 font-semibold hover:bg-transparent"
                               data-testid="header-risk"
                             >
-                              Risk {renderSortIcon('riskScore')}
+                              Risk {renderSortIcon('risk')}
                             </Button>
                           </TableHead>
                           <TableHead className="w-[120px]">
                             <Button 
                               variant="ghost" 
-                              onClick={() => handleSort('dueAt')}
+                              onClick={() => handleSort('smart')}
                               className="h-auto p-0 font-semibold hover:bg-transparent"
                               data-testid="header-next-action"
                             >
-                              Next Action {renderSortIcon('dueAt')}
+                              Next Action {renderSortIcon('smart')}
                             </Button>
                           </TableHead>
                           <TableHead className="w-[60px]">Actions</TableHead>
