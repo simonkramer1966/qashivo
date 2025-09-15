@@ -720,7 +720,7 @@ export default function Invoices() {
                             <div className="font-medium text-foreground" data-testid={`text-amount-${invoice.id}`}>
                               £{Number(invoice.amount).toLocaleString()}
                             </div>
-                            <div className="text-sm text-foreground" data-testid={`text-due-date-${invoice.id}`}>
+                            <div className="text-sm text-muted-foreground" data-testid={`text-due-date-${invoice.id}`}>
                               {formatDate(invoice.dueDate)}
                             </div>
                             {(() => {
