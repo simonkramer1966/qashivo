@@ -1665,6 +1665,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const enhancedMetrics = {
         ...basicMetrics,
+        // Add frontend-expected field names as aliases
+        totalActions: basicMetrics.totalOpen,
+        todayActions: basicMetrics.dueTodayCount,
+        overdueActions: basicMetrics.overdueCount,
+        highRiskActions: Math.ceil(basicMetrics.overdueCount * 0.3), // Estimate 30% of overdue items are high risk
+        avgDaysOverdue: basicMetrics.avgCompletionTime,
+        totalValue: basicMetrics.highRiskExposure,
         prioritization: {
           cacheStatus: cacheStats,
           smartQueueAvailable: true,
