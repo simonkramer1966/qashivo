@@ -97,7 +97,7 @@ import {
   type InsertExchangeRate,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, desc, sql, count, ne, isNotNull, gte, lte, or, ilike } from "drizzle-orm";
+import { eq, and, desc, sql, count, ne, isNotNull, gte, lte, lt, or, ilike } from "drizzle-orm";
 import { getOverdueCategoryFromDueDate, getOverdueCategorySummary, type OverdueCategory, type OverdueCategoryInfo } from "../shared/utils/overdueUtils";
 import crypto from "crypto";
 
@@ -562,9 +562,45 @@ export class DatabaseStorage implements IStorage {
     // Build WHERE conditions dynamically
     const conditions = [eq(invoices.tenantId, tenantId)];
 
-    // Status filtering
+    // Universal status filtering - date-based logic that works across all providers
     if (status && status !== 'all') {
-      conditions.push(eq(invoices.status, status));
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      switch (status) {
+        case 'pending':
+          // Pending = not past due yet (exclude paid/cancelled, due date >= today)
+          conditions.push(
+            and(
+              ne(invoices.status, 'paid'),
+              ne(invoices.status, 'cancelled'),
+              gte(invoices.dueDate, today)
+            )
+          );
+          break;
+        
+        case 'overdue':
+          // Overdue = past due date (exclude paid/cancelled, due date < today)
+          conditions.push(
+            and(
+              ne(invoices.status, 'paid'),
+              ne(invoices.status, 'cancelled'),
+              lt(invoices.dueDate, today)
+            )
+          );
+          break;
+        
+        case 'paid':
+        case 'cancelled':
+          // For paid/cancelled, filter by actual database status
+          conditions.push(eq(invoices.status, status));
+          break;
+        
+        default:
+          // For any other status, filter by database status
+          conditions.push(eq(invoices.status, status));
+          break;
+      }
     }
 
     // Contact ID filtering

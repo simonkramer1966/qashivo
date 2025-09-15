@@ -130,6 +130,15 @@ Preferred communication style: Simple, everyday language.
 - 🎯 **Performance Achievement**: Solved critical bottleneck affecting entire invoice management experience
 - 📊 **Scalability**: System now handles large datasets efficiently with proper pagination and indexes
 
+### September 15, 2025 - UNIVERSAL FILTERING FIX: Cross-Provider Compatibility 🌍
+- ✅ **Universal Date-Based Logic**: Implemented provider-agnostic filtering logic using due dates instead of database status
+- ✅ **Cross-Provider Consistency**: Fixed filtering to work identically across Xero, Sage, QuickBooks, and all future providers
+- ✅ **Logical Status Definitions**: "Pending" = not past due yet, "Overdue" = past due date (excludes paid/cancelled)
+- ✅ **React Query v5 Compatibility**: Fixed deprecated `keepPreviousData` and `cacheTime` options for proper frontend refresh
+- ✅ **Real-Time Accuracy**: Status calculations now based on current date vs due date for consistent results
+- 🎯 **Universal Solution**: Solves provider inconsistencies where Xero/QuickBooks lack native overdue detection
+- 🌍 **Global Compatibility**: Ensures identical filtering behavior regardless of source accounting system
+
 ## External Dependencies
 
 ### Third-Party Services
