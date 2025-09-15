@@ -27,6 +27,9 @@ import {
   insertBudgetSchema,
   insertBudgetLineSchema,
   insertExchangeRateSchema,
+  insertActionItemSchema,
+  insertActionLogSchema,
+  insertPaymentPromiseSchema,
   type Invoice,
   type Contact,
   type Bill,
@@ -35,6 +38,9 @@ import {
   type Budget,
   type BudgetLine,
   type ExchangeRate,
+  type ActionItem,
+  type ActionLog,
+  type PaymentPromise,
   invoices
 } from "@shared/schema";
 import { getOverdueCategoryFromDueDate } from "@shared/utils/overdueUtils";
@@ -84,6 +90,45 @@ const invoicesQuerySchema = z.object({
   contactId: z.string().optional(),
   page: z.string().optional().default('1').transform(Number),
   limit: z.string().optional().default('50').transform(Number)
+});
+
+// Action Centre validation schemas
+const actionItemQuerySchema = z.object({
+  status: z.enum(['open', 'in_progress', 'completed', 'snoozed', 'canceled']).optional(),
+  assignedToUserId: z.string().optional(),
+  type: z.enum(['nudge', 'call', 'email', 'sms', 'review', 'dispute', 'ptp_followup']).optional(),
+  priority: z.enum(['low', 'medium', 'high', 'urgent']).optional(),
+  page: z.string().optional().default('1').transform(Number),
+  limit: z.string().optional().default('50').transform(Number)
+});
+
+const actionItemCompleteSchema = z.object({
+  outcome: z.string().optional(),
+  notes: z.string().optional()
+});
+
+const actionItemSnoozeSchema = z.object({
+  newDueDate: z.string().transform((str) => new Date(str)),
+  reason: z.string().optional()
+});
+
+const communicationHistoryQuerySchema = z.object({
+  contactId: z.string().optional(),
+  invoiceId: z.string().optional(),
+  limit: z.string().optional().default('50').transform(Number)
+});
+
+const bulkActionSchema = z.object({
+  actionItemIds: z.array(z.string()).min(1, 'At least one action item is required'),
+  assignedToUserId: z.string().optional(),
+  outcome: z.string().optional(),
+  priority: z.enum(['low', 'medium', 'high', 'urgent']).optional()
+});
+
+const bulkNudgeSchema = z.object({
+  actionItemIds: z.array(z.string()).min(1, 'At least one action item is required'),
+  templateId: z.string().optional(),
+  customMessage: z.string().optional()
 });
 import { generateCollectionSuggestions, generateEmailDraft, generateAiCfoResponse } from "./services/openai";
 import { sendReminderEmail, DEFAULT_FROM, DEFAULT_FROM_EMAIL } from "./services/sendgrid";
@@ -1474,6 +1519,520 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to send test SMS" });
     }
   });
+
+  // ==================== ACTION CENTRE API ====================
+  
+  // Queue Management
+  app.get("/api/action-centre/queue", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const filters = actionItemQuerySchema.parse(req.query);
+      const result = await storage.getActionItems(user.tenantId, filters);
+      
+      res.json(result);
+    } catch (error) {
+      console.error("Error fetching action queue:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid query parameters", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to fetch action queue" });
+    }
+  });
+
+  app.get("/api/action-centre/metrics", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const metrics = await storage.getActionCentreMetrics(user.tenantId);
+      res.json(metrics);
+    } catch (error) {
+      console.error("Error fetching action centre metrics:", error);
+      res.status(500).json({ message: "Failed to fetch action centre metrics" });
+    }
+  });
+
+  // Action Item Management
+  app.post("/api/action-items", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const actionItemData = insertActionItemSchema.parse({
+        ...req.body,
+        tenantId: user.tenantId,
+        createdByUserId: user.id,
+      });
+
+      const actionItem = await storage.createActionItem(actionItemData);
+      
+      // Create initial log entry
+      await storage.createActionLog({
+        tenantId: user.tenantId,
+        actionItemId: actionItem.id,
+        action: 'created',
+        details: 'Action item created',
+        createdByUserId: user.id,
+      });
+
+      res.status(201).json(actionItem);
+    } catch (error) {
+      console.error("Error creating action item:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid action item data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create action item" });
+    }
+  });
+
+  app.get("/api/action-items/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { id } = req.params;
+      const actionItem = await storage.getActionItem(id, user.tenantId);
+      
+      if (!actionItem) {
+        return res.status(404).json({ message: "Action item not found" });
+      }
+
+      res.json(actionItem);
+    } catch (error) {
+      console.error("Error fetching action item:", error);
+      res.status(500).json({ message: "Failed to fetch action item" });
+    }
+  });
+
+  app.patch("/api/action-items/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { id } = req.params;
+      const updates = insertActionItemSchema.partial().parse(req.body);
+      
+      const actionItem = await storage.updateActionItem(id, user.tenantId, updates);
+      
+      // Log the update
+      await storage.createActionLog({
+        tenantId: user.tenantId,
+        actionItemId: id,
+        action: 'updated',
+        details: `Action item updated: ${Object.keys(updates).join(', ')}`,
+        createdByUserId: user.id,
+      });
+
+      res.json(actionItem);
+    } catch (error) {
+      console.error("Error updating action item:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid update data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to update action item" });
+    }
+  });
+
+  app.post("/api/action-items/:id/complete", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { id } = req.params;
+      const { outcome, notes } = actionItemCompleteSchema.parse(req.body);
+      
+      const actionItem = await storage.updateActionItem(id, user.tenantId, {
+        status: 'completed',
+        completedAt: new Date(),
+        outcome,
+        notes,
+      });
+      
+      // Log completion
+      await storage.createActionLog({
+        tenantId: user.tenantId,
+        actionItemId: id,
+        action: 'completed',
+        details: `Action completed${outcome ? ` with outcome: ${outcome}` : ''}${notes ? `. Notes: ${notes}` : ''}`,
+        createdByUserId: user.id,
+      });
+
+      res.json(actionItem);
+    } catch (error) {
+      console.error("Error completing action item:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid completion data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to complete action item" });
+    }
+  });
+
+  app.post("/api/action-items/:id/snooze", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { id } = req.params;
+      const { newDueDate, reason } = actionItemSnoozeSchema.parse(req.body);
+      
+      const actionItem = await storage.updateActionItem(id, user.tenantId, {
+        status: 'snoozed',
+        dueAt: newDueDate,
+        snoozeReason: reason,
+      });
+      
+      // Log the snooze
+      await storage.createActionLog({
+        tenantId: user.tenantId,
+        actionItemId: id,
+        action: 'snoozed',
+        details: `Action snoozed until ${newDueDate.toISOString()}${reason ? `. Reason: ${reason}` : ''}`,
+        createdByUserId: user.id,
+      });
+
+      res.json(actionItem);
+    } catch (error) {
+      console.error("Error snoozing action item:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid snooze data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to snooze action item" });
+    }
+  });
+
+  // Action Logging
+  app.get("/api/action-items/:id/logs", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { id } = req.params;
+      const logs = await storage.getActionLogs(id, user.tenantId);
+      
+      res.json(logs);
+    } catch (error) {
+      console.error("Error fetching action logs:", error);
+      res.status(500).json({ message: "Failed to fetch action logs" });
+    }
+  });
+
+  app.post("/api/action-items/:id/logs", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { id } = req.params;
+      const logData = insertActionLogSchema.parse({
+        ...req.body,
+        tenantId: user.tenantId,
+        actionItemId: id,
+        createdByUserId: user.id,
+      });
+
+      const log = await storage.createActionLog(logData);
+      res.status(201).json(log);
+    } catch (error) {
+      console.error("Error creating action log:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid log data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create action log" });
+    }
+  });
+
+  // Communication History
+  app.get("/api/communications/history", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { contactId, invoiceId, limit } = communicationHistoryQuerySchema.parse(req.query);
+      
+      // Get action items based on filters
+      const filters: any = {};
+      if (contactId) {
+        const actionItems = await storage.getActionItemsByContact(contactId, user.tenantId);
+        return res.json(actionItems);
+      }
+      
+      if (invoiceId) {
+        const actionItems = await storage.getActionItemsByInvoice(invoiceId, user.tenantId);
+        return res.json(actionItems);
+      }
+
+      // Get all recent communication actions if no specific filter
+      const result = await storage.getActionItems(user.tenantId, { 
+        limit: limit || 50,
+        type: 'email' // Filter for communication types
+      });
+      
+      res.json(result.actionItems);
+    } catch (error) {
+      console.error("Error fetching communication history:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid query parameters", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to fetch communication history" });
+    }
+  });
+
+  // Payment Promises
+  app.post("/api/payment-promises", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const promiseData = insertPaymentPromiseSchema.parse({
+        ...req.body,
+        tenantId: user.tenantId,
+        createdByUserId: user.id,
+      });
+
+      const promise = await storage.createPaymentPromise(promiseData);
+      
+      // Create related action item for follow-up
+      await storage.createActionItem({
+        tenantId: user.tenantId,
+        contactId: promiseData.contactId,
+        invoiceId: promiseData.invoiceId,
+        type: 'ptp_followup',
+        priority: 'medium',
+        status: 'open',
+        title: `Follow up on payment promise for ${promiseData.amount}`,
+        description: `Payment promise made for ${promiseData.amount} due ${promiseData.promisedDate}`,
+        dueAt: new Date(new Date(promiseData.promisedDate).getTime() + 24 * 60 * 60 * 1000), // Day after promise date
+        createdByUserId: user.id,
+      });
+
+      res.status(201).json(promise);
+    } catch (error) {
+      console.error("Error creating payment promise:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid payment promise data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create payment promise" });
+    }
+  });
+
+  app.patch("/api/payment-promises/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { id } = req.params;
+      const updates = insertPaymentPromiseSchema.partial().parse(req.body);
+      
+      const promise = await storage.updatePaymentPromise(id, user.tenantId, updates);
+      res.json(promise);
+    } catch (error) {
+      console.error("Error updating payment promise:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid update data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to update payment promise" });
+    }
+  });
+
+  // Bulk Operations
+  app.post("/api/action-items/bulk/complete", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { actionItemIds, outcome } = bulkActionSchema.parse(req.body);
+      
+      const results = await Promise.all(
+        actionItemIds.map(async (id) => {
+          try {
+            const actionItem = await storage.updateActionItem(id, user.tenantId, {
+              status: 'completed',
+              completedAt: new Date(),
+              outcome,
+            });
+            
+            // Log completion
+            await storage.createActionLog({
+              tenantId: user.tenantId,
+              actionItemId: id,
+              action: 'bulk_completed',
+              details: `Bulk completed${outcome ? ` with outcome: ${outcome}` : ''}`,
+              createdByUserId: user.id,
+            });
+            
+            return { id, success: true, actionItem };
+          } catch (error) {
+            console.error(`Error completing action item ${id}:`, error);
+            return { id, success: false, error: error.message };
+          }
+        })
+      );
+
+      const successCount = results.filter(r => r.success).length;
+      const failCount = results.length - successCount;
+
+      res.json({
+        total: results.length,
+        successful: successCount,
+        failed: failCount,
+        results
+      });
+    } catch (error) {
+      console.error("Error bulk completing action items:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid bulk action data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to bulk complete action items" });
+    }
+  });
+
+  app.post("/api/action-items/bulk/assign", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { actionItemIds, assignedToUserId, priority } = bulkActionSchema.parse(req.body);
+      
+      const results = await Promise.all(
+        actionItemIds.map(async (id) => {
+          try {
+            const updates: any = {};
+            if (assignedToUserId) updates.assignedToUserId = assignedToUserId;
+            if (priority) updates.priority = priority;
+            
+            const actionItem = await storage.updateActionItem(id, user.tenantId, updates);
+            
+            // Log assignment
+            await storage.createActionLog({
+              tenantId: user.tenantId,
+              actionItemId: id,
+              action: 'bulk_assigned',
+              details: `Bulk assigned${assignedToUserId ? ` to user ${assignedToUserId}` : ''}${priority ? ` with priority ${priority}` : ''}`,
+              createdByUserId: user.id,
+            });
+            
+            return { id, success: true, actionItem };
+          } catch (error) {
+            console.error(`Error assigning action item ${id}:`, error);
+            return { id, success: false, error: error.message };
+          }
+        })
+      );
+
+      const successCount = results.filter(r => r.success).length;
+      const failCount = results.length - successCount;
+
+      res.json({
+        total: results.length,
+        successful: successCount,
+        failed: failCount,
+        results
+      });
+    } catch (error) {
+      console.error("Error bulk assigning action items:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid bulk action data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to bulk assign action items" });
+    }
+  });
+
+  app.post("/api/action-items/bulk/nudge", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { actionItemIds, templateId, customMessage } = bulkNudgeSchema.parse(req.body);
+      
+      const results = await Promise.all(
+        actionItemIds.map(async (id) => {
+          try {
+            const actionItem = await storage.getActionItem(id, user.tenantId);
+            if (!actionItem) {
+              return { id, success: false, error: 'Action item not found' };
+            }
+
+            // Create nudge action item
+            const nudgeActionItem = await storage.createActionItem({
+              tenantId: user.tenantId,
+              contactId: actionItem.contactId,
+              invoiceId: actionItem.invoiceId,
+              type: 'nudge',
+              priority: 'medium',
+              status: 'open',
+              title: `Nudge: ${actionItem.title}`,
+              description: customMessage || `Follow-up nudge for: ${actionItem.description}`,
+              dueAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // Due tomorrow
+              createdByUserId: user.id,
+            });
+            
+            // Log nudge creation
+            await storage.createActionLog({
+              tenantId: user.tenantId,
+              actionItemId: id,
+              action: 'bulk_nudged',
+              details: `Bulk nudge created${customMessage ? ` with message: ${customMessage}` : ''}`,
+              createdByUserId: user.id,
+            });
+            
+            return { id, success: true, nudgeActionItem };
+          } catch (error) {
+            console.error(`Error nudging action item ${id}:`, error);
+            return { id, success: false, error: error.message };
+          }
+        })
+      );
+
+      const successCount = results.filter(r => r.success).length;
+      const failCount = results.length - successCount;
+
+      res.json({
+        total: results.length,
+        successful: successCount,
+        failed: failCount,
+        results
+      });
+    } catch (error) {
+      console.error("Error bulk nudging action items:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid bulk nudge data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to bulk nudge action items" });
+    }
+  });
+
+  // ==================== END ACTION CENTRE API ====================
 
   app.post("/api/test/voice", isAuthenticated, async (req: any, res) => {
     try {
