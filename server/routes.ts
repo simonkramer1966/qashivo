@@ -808,6 +808,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         page,
         limit
       });
+
+      // Get total system count (all invoices regardless of filters)
+      const systemTotal = await storage.getInvoicesCount(user.tenantId);
       
       // Add overdue category info to each invoice based on status
       const invoicesWithCategories = result.invoices.map((invoice: any) => {
@@ -835,15 +838,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       });
       
-      console.log(`📊 Server-side filtered results: ${invoicesWithCategories.length}/${result.total} invoices (page ${page}, limit ${limit})`);
+      console.log(`📊 Server-side filtered results: ${invoicesWithCategories.length}/${result.total} invoices (filtered from ${systemTotal} total)`);
       
-      // Return paginated results with metadata
+      // Return paginated results with enhanced metadata
       res.json({
         invoices: invoicesWithCategories,
         pagination: {
           page,
           limit,
-          total: result.total,
+          total: result.total,        // Filtered total
+          systemTotal: systemTotal,   // Total invoices in system
           totalPages: Math.ceil(result.total / limit)
         }
       });

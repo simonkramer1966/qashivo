@@ -130,7 +130,7 @@ export default function Invoices() {
 
   // Extract invoices and pagination from the response
   const invoices = invoicesResponse?.invoices || [];
-  const pagination = invoicesResponse?.pagination || { page: 1, limit: 50, total: 0, totalPages: 1 };
+  const pagination = invoicesResponse?.pagination || { page: 1, limit: 50, total: 0, totalPages: 1, systemTotal: 0 };
 
   // Fetch payment predictions with filter-aware caching
   const { data: allPaymentPredictions = {}, isLoading: predictionsLoading } = useQuery({
@@ -550,8 +550,8 @@ export default function Invoices() {
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
                 
-                <span className="text-sm text-slate-600 min-w-[60px] text-center" data-testid="text-invoices-page-info">
-                  {invoicesCurrentPage} of {invoicesTotalPages || 1}
+                <span className="text-sm text-slate-600 min-w-[80px] text-center" data-testid="text-invoices-page-info">
+                  Page {invoicesCurrentPage} of {invoicesTotalPages || 1}
                 </span>
                 
                 <Button 
@@ -575,7 +575,7 @@ export default function Invoices() {
                 <div className="p-2 bg-[#17B6C3]/10 rounded-lg mr-3">
                   <FileText className="h-5 w-5 text-[#17B6C3]" />
                 </div>
-                All Invoices ({sortedInvoices.length})
+                All Invoices ({invoices.length} / {(pagination.total || 0).toLocaleString()} / {(pagination.systemTotal || 0).toLocaleString()})
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-0">

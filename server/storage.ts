@@ -545,6 +545,15 @@ export class DatabaseStorage implements IStorage {
     }));
   }
 
+  async getInvoicesCount(tenantId: string): Promise<number> {
+    const result = await db
+      .select({ count: count() })
+      .from(invoices)
+      .where(eq(invoices.tenantId, tenantId));
+    
+    return result[0]?.count || 0;
+  }
+
   // Optimized server-side filtering with pagination
   async getInvoicesFiltered(tenantId: string, filters: {
     status?: string;
