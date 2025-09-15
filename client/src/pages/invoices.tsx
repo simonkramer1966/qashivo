@@ -711,11 +711,20 @@ export default function Invoices() {
                 </div>
               ) : (
                 <div className="overflow-x-auto">
-                  <table className="w-full">
+                  <table className="w-full table-fixed">
+                    <colgroup>
+                      <col className="w-[300px]" />
+                      <col className="w-[500px]" />
+                      <col className="w-1/5" />
+                      <col className="w-1/5" />
+                      <col className="w-1/5" />
+                      <col className="w-1/5" />
+                      <col className="w-auto" />
+                    </colgroup>
                     <thead>
                       <tr className="border-b border-gray-200">
                         <th 
-                          className="text-left py-3 text-sm font-medium text-muted-foreground cursor-pointer select-none group hover:text-[#17B6C3] transition-colors w-[300px]"
+                          className="text-left py-3 text-sm font-medium text-muted-foreground cursor-pointer select-none group hover:text-[#17B6C3] transition-colors"
                           onClick={() => handleSort('invoice')}
                           data-testid="header-invoice"
                         >
@@ -725,7 +734,7 @@ export default function Invoices() {
                           </div>
                         </th>
                         <th 
-                          className="text-left py-3 text-sm font-medium text-muted-foreground cursor-pointer select-none group hover:text-[#17B6C3] transition-colors w-[500px]"
+                          className="text-left py-3 text-sm font-medium text-muted-foreground cursor-pointer select-none group hover:text-[#17B6C3] transition-colors"
                           onClick={() => handleSort('company')}
                           data-testid="header-company"
                         >
