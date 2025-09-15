@@ -108,7 +108,7 @@ import {
 import { db } from "./db";
 import { eq, and, desc, sql, count, sum, ne, isNotNull, gte, lte, lt, or, ilike, inArray } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
-import { getOverdueCategoryFromDueDate, getOverdueCategorySummary, type OverdueCategory, type OverdueCategoryInfo } from "../shared/utils/overdueUtils";
+import { getOverdueCategoryFromDueDate, getOverdueCategorySummary, categorizeOverdueStatus, calculateDaysOverdue, type OverdueCategory, type OverdueCategoryInfo } from "../shared/utils/overdueUtils";
 import crypto from "crypto";
 
 // Interface for storage operations
@@ -335,6 +335,13 @@ export interface IStorage {
     highRiskExposure: number;
     avgCompletionTime: number;
     successRate: number;
+    // Category-specific counts for invoice overdue categories
+    soonCount: number;
+    currentCount: number;
+    recentCount: number;
+    overdueInvoicesCount: number;
+    seriousCount: number;
+    escalationCount: number;
   }>;
 
   // Action Log operations
@@ -3166,6 +3173,13 @@ export class DatabaseStorage implements IStorage {
     highRiskExposure: number;
     avgCompletionTime: number;
     successRate: number;
+    // Category-specific counts for invoice overdue categories
+    soonCount: number;
+    currentCount: number;
+    recentCount: number;
+    overdueInvoicesCount: number;
+    seriousCount: number;
+    escalationCount: number;
   }> {
     // Use UTC date boundaries to avoid timezone issues
     const now = new Date();
@@ -3178,35 +3192,66 @@ export class DatabaseStorage implements IStorage {
     console.log(`📊 Computing Action Centre metrics for tenant ${tenantId}`);
     console.log(`📅 UTC Date boundaries: ${startOfTodayUTC.toISOString()} to ${startOfTomorrowUTC.toISOString()}`);
 
-    // Total open actions (all active statuses)
-    const [openCount] = await db
-      .select({ count: count() })
+    // Get unique invoices that have associated action items with active statuses
+    const uniqueInvoicesWithActions = await db
+      .selectDistinct({
+        invoiceId: invoices.id,
+        dueDate: invoices.dueDate,
+        amount: invoices.amount,
+        status: invoices.status,
+      })
       .from(actionItems)
+      .innerJoin(invoices, eq(actionItems.invoiceId, invoices.id))
       .where(and(
         eq(actionItems.tenantId, tenantId), 
         inArray(actionItems.status, activeStatuses)
       ));
 
-    // Due today count - items due between start of today and start of tomorrow (UTC)
-    const [dueTodayCount] = await db
-      .select({ count: count() })
-      .from(actionItems)
-      .where(and(
-        eq(actionItems.tenantId, tenantId), 
-        inArray(actionItems.status, activeStatuses),
-        gte(actionItems.dueAt, startOfTodayUTC),
-        lt(actionItems.dueAt, startOfTomorrowUTC)
-      ));
+    console.log(`📋 Found ${uniqueInvoicesWithActions.length} unique invoices with active action items`);
 
-    // Overdue count - items due before start of today (UTC)
-    const [overdueCount] = await db
-      .select({ count: count() })
-      .from(actionItems)
-      .where(and(
-        eq(actionItems.tenantId, tenantId), 
-        inArray(actionItems.status, activeStatuses),
-        lt(actionItems.dueAt, startOfTodayUTC)
-      ));
+    // Initialize category counters
+    let soonCount = 0;
+    let currentCount = 0;
+    let recentCount = 0;
+    let overdueInvoicesCount = 0;
+    let seriousCount = 0;
+    let escalationCount = 0;
+    let totalValue = 0;
+
+    // Categorize each invoice by its overdue status
+    uniqueInvoicesWithActions.forEach(invoice => {
+      const daysOverdue = calculateDaysOverdue(invoice.dueDate, now);
+      const category = categorizeOverdueStatus(daysOverdue);
+      const amount = typeof invoice.amount === 'string' ? parseFloat(invoice.amount) : invoice.amount;
+      
+      totalValue += amount;
+
+      switch (category) {
+        case 'soon':
+          soonCount++;
+          break;
+        case 'current':
+          currentCount++;
+          break;
+        case 'recent':
+          recentCount++;
+          break;
+        case 'overdue':
+          overdueInvoicesCount++;
+          break;
+        case 'serious':
+          seriousCount++;
+          break;
+        case 'escalation':
+          escalationCount++;
+          break;
+      }
+    });
+
+    // Calculate legacy metrics for backwards compatibility
+    const totalOpen = uniqueInvoicesWithActions.length;
+    const dueTodayCount = currentCount; // "Current" category represents due today
+    const overdueCount = recentCount + overdueInvoicesCount + seriousCount + escalationCount; // All overdue categories
 
     // Completed today count - items completed today (based on updatedAt)
     const [completedTodayCount] = await db
@@ -3219,32 +3264,27 @@ export class DatabaseStorage implements IStorage {
         lt(actionItems.updatedAt, startOfTomorrowUTC)
       ));
 
-    // Calculate total value from active action items with their associated invoices
-    const [totalValueResult] = await db
-      .select({ totalValue: sum(invoices.amount) })
-      .from(actionItems)
-      .innerJoin(invoices, eq(actionItems.invoiceId, invoices.id))
-      .where(and(
-        eq(actionItems.tenantId, tenantId), 
-        inArray(actionItems.status, activeStatuses)
-      ));
-
-    const totalValue = Number(totalValueResult.totalValue) || 0;
-
-    console.log(`📈 Metrics results: totalOpen=${openCount.count}, dueToday=${dueTodayCount.count}, overdue=${overdueCount.count}, completedToday=${completedTodayCount.count}, totalValue=${totalValue}`);
+    console.log(`📈 Category counts: soon=${soonCount}, current=${currentCount}, recent=${recentCount}, overdue=${overdueInvoicesCount}, serious=${seriousCount}, escalation=${escalationCount}`);
+    console.log(`📈 Legacy metrics: totalOpen=${totalOpen}, dueToday=${dueTodayCount}, overdue=${overdueCount}, completedToday=${completedTodayCount.count}, totalValue=${totalValue}`);
 
     // Calculate high-risk exposure (30% of total value as estimate)
     const highRiskExposure = Math.floor(totalValue * 0.3);
 
     return {
-      totalOpen: openCount.count || 0,
-      dueTodayCount: dueTodayCount.count || 0,
-      overdueCount: overdueCount.count || 0,
+      totalOpen,
+      dueTodayCount,
+      overdueCount,
       completedToday: completedTodayCount.count || 0,
-      totalValue, // Real calculated total value
       highRiskExposure,
       avgCompletionTime: 2.5, // days - calculated from historical data
       successRate: 87.5, // percentage - calculated from completion rates
+      // Category-specific counts for invoice overdue categories
+      soonCount,
+      currentCount,
+      recentCount,
+      overdueInvoicesCount,
+      seriousCount,
+      escalationCount,
     };
   }
 
