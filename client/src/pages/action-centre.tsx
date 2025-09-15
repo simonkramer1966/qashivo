@@ -85,7 +85,7 @@ type ContactDetails = Contact & {
     paidDate?: string;
   }>;
   communicationHistory: Array<{
-    type: 'email' | 'sms' | 'phone';
+    type: 'email' | 'sms' | 'call' | 'voice' | 'phone'; // Include all possible types from backend
     date: string;
     subject?: string;
     status: 'sent' | 'delivered' | 'opened' | 'failed';
@@ -96,6 +96,22 @@ type ContactDetails = Contact & {
     factors: string[];
   };
 };
+
+// Define the communication history response type
+interface CommunicationHistoryItem {
+  id?: string;
+  type: 'email' | 'sms' | 'call' | 'voice' | 'phone'; // Include all possible types from backend
+  date: string;
+  createdAt?: string;
+  subject?: string;
+  content?: string;
+  templateName?: string;
+  status: 'sent' | 'delivered' | 'opened' | 'failed' | 'completed' | 'pending';
+  recipient?: string;
+  outcome?: string;
+}
+
+type CommunicationHistoryResponse = CommunicationHistoryItem[];
 
 interface QueueResponse {
   actionItems: EnhancedActionItem[];
@@ -135,8 +151,9 @@ export default function ActionCentre() {
   // Communication dialog state
   const [communicationDialog, setCommunicationDialog] = useState({
     isOpen: false,
-    type: 'email' as 'email' | 'sms' | 'phone',
-    actionId: '',
+    type: 'email' as 'email' | 'sms' | 'voice',
+    context: 'customer' as 'customer' | 'invoice',
+    contextId: '',
   });
 
   // Redirect to home if not authenticated
@@ -182,24 +199,70 @@ export default function ActionCentre() {
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
+  // Fetch communication history for selected contact
+  const { data: communicationHistoryResponse, isLoading: historyLoading } = useQuery({
+    queryKey: ["/api/communications/history", { contactId: selectedAction?.contactId }],
+    enabled: isAuthenticated && !!selectedAction?.contactId,
+    staleTime: 2 * 60 * 1000, // 2 minutes
+  });
+
+  // Safely extract communication history with proper typing
+  const communicationHistory: CommunicationHistoryItem[] = Array.isArray(communicationHistoryResponse) 
+    ? communicationHistoryResponse as CommunicationHistoryResponse 
+    : [];
+
   // Extract data from response with proper typing
   const queueData: EnhancedActionItem[] = (queueResponse as QueueResponse)?.actionItems || [];
   const pagination = (queueResponse as QueueResponse)?.pagination || { page: 1, limit: 25, total: 0, totalPages: 1 };
 
-  // Communication mutation
+  // Communication mutation with enhanced functionality
   const sendCommunicationMutation = useMutation({
-    mutationFn: async ({ type, content, recipient, subject, actionId }: {
-      type: 'email' | 'sms' | 'phone';
+    mutationFn: async ({ type, content, recipient, subject, templateId, contextId, context }: {
+      type: 'email' | 'sms' | 'voice';
       content: string;
       recipient: string;
       subject?: string;
-      actionId: string;
+      templateId?: string;
+      contextId: string;
+      context: 'customer' | 'invoice';
     }) => {
-      const endpoint = `/api/communications/send-${type}`;
-      const payload: any = { content, recipient, actionId };
+      // Use the proper API endpoint based on type and context
+      let endpoint: string;
+      let payload: any;
       
-      if (type === 'email' && subject) {
-        payload.subject = subject;
+      if (type === 'voice') {
+        // Voice communications use the Retell API endpoint
+        endpoint = '/api/retell/call';
+        payload = {
+          message: content,
+          templateId
+        };
+        
+        // Add context-specific data for voice calls
+        if (context === 'invoice') {
+          payload.invoiceId = contextId;
+        } else {
+          payload.contactId = contextId;
+        }
+      } else {
+        // Email and SMS use the standard communications endpoints
+        endpoint = `/api/communications/send-${type}`;
+        payload = { 
+          content, 
+          recipient,
+          templateId
+        };
+        
+        // Add context-specific data
+        if (context === 'invoice') {
+          payload.invoiceId = contextId;
+        } else {
+          payload.contactId = contextId;
+        }
+        
+        if (type === 'email' && subject) {
+          payload.subject = subject;
+        }
       }
       
       const response = await apiRequest('POST', endpoint, payload);
@@ -207,15 +270,19 @@ export default function ActionCentre() {
     },
     onSuccess: (data, variables) => {
       const typeLabel = variables.type === 'email' ? 'Email' : 
-                       variables.type === 'sms' ? 'SMS' : 'Phone call';
+                       variables.type === 'sms' ? 'SMS' : 
+                       variables.type === 'voice' ? 'Voice call' : 'Communication';
       toast({
         title: "Communication Sent",
         description: `${typeLabel} sent successfully`,
       });
-      // Refresh queue data
+      // Refresh all relevant data
       queryClient.invalidateQueries({ queryKey: ["/api/action-centre/queue"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/communications/history"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/action-centre/contact"] });
     },
     onError: (error: any) => {
+      console.error('Communication send error:', error);
       toast({
         title: "Communication Failed",
         description: "Failed to send communication. Please try again.",
@@ -630,7 +697,8 @@ export default function ActionCentre() {
                                       setCommunicationDialog({
                                         isOpen: true,
                                         type: 'email',
-                                        actionId: action.id,
+                                        context: action.invoiceId ? 'invoice' : 'customer',
+                                        contextId: action.invoiceId || action.contactId,
                                       });
                                     }}
                                     data-testid={`menu-email-${action.id}`}
@@ -644,13 +712,29 @@ export default function ActionCentre() {
                                       setCommunicationDialog({
                                         isOpen: true,
                                         type: 'sms',
-                                        actionId: action.id,
+                                        context: action.invoiceId ? 'invoice' : 'customer',
+                                        contextId: action.invoiceId || action.contactId,
                                       });
                                     }}
                                     data-testid={`menu-sms-${action.id}`}
                                   >
                                     <MessageSquare className="h-4 w-4 mr-2" />
                                     Send SMS
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem 
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setCommunicationDialog({
+                                        isOpen: true,
+                                        type: 'voice', // Keep as 'voice' for templates but backend actions use 'call'
+                                        context: action.invoiceId ? 'invoice' : 'customer',
+                                        contextId: action.invoiceId || action.contactId,
+                                      });
+                                    }}
+                                    data-testid={`menu-call-${action.id}`}
+                                  >
+                                    <Phone className="h-4 w-4 mr-2" />
+                                    Make Call
                                   </DropdownMenuItem>
                                 </DropdownMenuContent>
                               </DropdownMenu>
@@ -721,48 +805,78 @@ export default function ActionCentre() {
                   
                   {/* Quick Actions */}
                   <div className="grid grid-cols-3 gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setCommunicationDialog({
-                        isOpen: true,
-                        type: 'email',
-                        actionId: selectedAction.id,
-                      })}
-                      className="flex flex-col items-center p-3 h-auto"
-                      data-testid="button-send-email"
-                    >
-                      <Mail className="h-4 w-4 mb-1" />
-                      <span className="text-xs">Email</span>
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setCommunicationDialog({
-                        isOpen: true,
-                        type: 'sms',
-                        actionId: selectedAction.id,
-                      })}
-                      className="flex flex-col items-center p-3 h-auto"
-                      data-testid="button-send-sms"
-                    >
-                      <MessageSquare className="h-4 w-4 mb-1" />
-                      <span className="text-xs">SMS</span>
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setCommunicationDialog({
-                        isOpen: true,
-                        type: 'phone',
-                        actionId: selectedAction.id,
-                      })}
-                      className="flex flex-col items-center p-3 h-auto"
-                      data-testid="button-make-call"
-                    >
-                      <Phone className="h-4 w-4 mb-1" />
-                      <span className="text-xs">Call</span>
-                    </Button>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setCommunicationDialog({
+                              isOpen: true,
+                              type: 'email',
+                              context: selectedAction.invoiceId ? 'invoice' : 'customer',
+                              contextId: selectedAction.invoiceId || selectedAction.contactId,
+                            })}
+                            className="flex flex-col items-center p-3 h-auto hover:bg-blue-50 hover:border-blue-200"
+                            data-testid="button-send-email"
+                          >
+                            <Mail className="h-4 w-4 mb-1" />
+                            <span className="text-xs">Email</span>
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Send email using templates</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setCommunicationDialog({
+                              isOpen: true,
+                              type: 'sms',
+                              context: selectedAction.invoiceId ? 'invoice' : 'customer',
+                              contextId: selectedAction.invoiceId || selectedAction.contactId,
+                            })}
+                            className="flex flex-col items-center p-3 h-auto hover:bg-green-50 hover:border-green-200"
+                            data-testid="button-send-sms"
+                          >
+                            <MessageSquare className="h-4 w-4 mb-1" />
+                            <span className="text-xs">SMS</span>
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Send SMS reminder</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setCommunicationDialog({
+                              isOpen: true,
+                              type: 'voice',
+                              context: selectedAction.invoiceId ? 'invoice' : 'customer',
+                              contextId: selectedAction.invoiceId || selectedAction.contactId,
+                            })}
+                            className="flex flex-col items-center p-3 h-auto hover:bg-purple-50 hover:border-purple-200"
+                            data-testid="button-make-call"
+                          >
+                            <Phone className="h-4 w-4 mb-1" />
+                            <span className="text-xs">Call</span>
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Make voice call with AI agent</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   </div>
                 </div>
 
@@ -844,36 +958,98 @@ export default function ActionCentre() {
                     
                     <TabsContent value="history" className="p-6">
                       <div className="space-y-4">
-                        {(contactDetails as ContactDetails)?.communicationHistory?.map((comm: any, index: number) => (
-                          <div key={index} className="flex items-start space-x-3 p-3 bg-white/50 rounded-lg">
-                            <div className="p-1 bg-slate-100 rounded">
-                              {comm.type === 'email' && <Mail className="h-3 w-3" />}
-                              {comm.type === 'sms' && <MessageSquare className="h-3 w-3" />}
-                              {comm.type === 'phone' && <Phone className="h-3 w-3" />}
-                            </div>
-                            <div className="flex-1">
-                              <div className="flex items-center justify-between mb-1">
-                                <span className="text-xs font-medium capitalize">{comm.type}</span>
-                                <span className="text-xs text-slate-500">{formatDate(comm.date)}</span>
-                              </div>
-                              {comm.subject && (
-                                <p className="text-sm text-slate-700 mb-1">{comm.subject}</p>
-                              )}
-                              <Badge 
-                                variant="secondary" 
-                                className={`text-xs ${
-                                  comm.status === 'sent' ? 'bg-blue-100 text-blue-800' :
-                                  comm.status === 'delivered' ? 'bg-green-100 text-green-800' :
-                                  comm.status === 'opened' ? 'bg-purple-100 text-purple-800' :
-                                  'bg-red-100 text-red-800'
-                                }`}
-                              >
-                                {comm.status}
-                              </Badge>
-                            </div>
+                        {/* Communication History Header */}
+                        <div className="flex items-center justify-between">
+                          <h4 className="text-sm font-medium text-slate-700">Communication Timeline</h4>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={() => {
+                              queryClient.invalidateQueries({ queryKey: ["/api/communications/history"] });
+                            }}
+                            data-testid="button-refresh-history"
+                          >
+                            <RefreshCw className="h-4 w-4" />
+                          </Button>
+                        </div>
+                        
+                        {/* Enhanced Communication History */}
+                        {historyLoading ? (
+                          <div className="text-center py-8">
+                            <RefreshCw className="h-6 w-6 animate-spin text-[#17B6C3] mx-auto mb-2" />
+                            <p className="text-sm text-slate-600">Loading communication history...</p>
                           </div>
-                        )) || (
-                          <p className="text-sm text-slate-600 text-center py-4">No communication history</p>
+                        ) : (communicationHistory && communicationHistory.length > 0) ? (
+                          <ScrollArea className="h-[300px] pr-4">
+                            <div className="space-y-3">
+                              {communicationHistory.map((comm: CommunicationHistoryItem, index: number) => (
+                                <div key={index} className="flex items-start space-x-3 p-4 bg-white/70 rounded-lg border border-white/50 hover:bg-white/90 transition-colors">
+                                  <div className={`p-2 rounded-full ${
+                                    comm.type === 'email' ? 'bg-blue-100 text-blue-600' :
+                                    comm.type === 'sms' ? 'bg-green-100 text-green-600' :
+                                    (comm.type === 'voice' || comm.type === 'phone' || comm.type === 'call') ? 'bg-purple-100 text-purple-600' :
+                                    'bg-gray-100 text-gray-600'
+                                  }`}>
+                                    {comm.type === 'email' && <Mail className="h-4 w-4" />}
+                                    {comm.type === 'sms' && <MessageSquare className="h-4 w-4" />}
+                                    {(comm.type === 'voice' || comm.type === 'phone' || comm.type === 'call') && <Phone className="h-4 w-4" />}
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center justify-between mb-2">
+                                      <div className="flex items-center space-x-2">
+                                        <span className="text-sm font-medium capitalize">{comm.type}</span>
+                                        {comm.templateName && (
+                                          <Badge variant="outline" className="text-xs">
+                                            {comm.templateName}
+                                          </Badge>
+                                        )}
+                                      </div>
+                                      <span className="text-xs text-slate-500">
+                                        {formatDate(comm.createdAt || comm.date)}
+                                      </span>
+                                    </div>
+                                    {comm.subject && (
+                                      <p className="text-sm text-slate-700 mb-2 truncate" title={comm.subject}>
+                                        {comm.subject}
+                                      </p>
+                                    )}
+                                    {comm.content && (
+                                      <p className="text-xs text-slate-600 mb-2 line-clamp-2">
+                                        {comm.content}
+                                      </p>
+                                    )}
+                                    <div className="flex items-center justify-between">
+                                      <Badge 
+                                        variant="secondary" 
+                                        className={`text-xs ${
+                                          comm.status === 'completed' || comm.status === 'sent' ? 'bg-green-100 text-green-700 border-green-200' :
+                                          comm.status === 'delivered' ? 'bg-blue-100 text-blue-700 border-blue-200' :
+                                          comm.status === 'opened' ? 'bg-purple-100 text-purple-700 border-purple-200' :
+                                          comm.status === 'failed' ? 'bg-red-100 text-red-700 border-red-200' :
+                                          'bg-yellow-100 text-yellow-700 border-yellow-200'
+                                        }`}
+                                      >
+                                        {comm.status || 'Unknown'}
+                                      </Badge>
+                                      {comm.outcome && (
+                                        <span className="text-xs text-slate-500">
+                                          {comm.outcome}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </ScrollArea>
+                        ) : (
+                          <div className="text-center py-8">
+                            <MessageSquare className="h-12 w-12 text-slate-300 mx-auto mb-4" />
+                            <p className="text-sm text-slate-600">No communication history</p>
+                            <p className="text-xs text-slate-500 mt-1">
+                              Send your first message using the buttons above
+                            </p>
+                          </div>
                         )}
                       </div>
                     </TabsContent>
@@ -940,22 +1116,28 @@ export default function ActionCentre() {
         </div>
       </main>
 
-      {/* Communication Preview Dialog */}
+      {/* Enhanced Communication Preview Dialog */}
       <CommunicationPreviewDialog
         isOpen={communicationDialog.isOpen}
-        onClose={() => setCommunicationDialog({ ...communicationDialog, isOpen: false })}
-        type={communicationDialog.type === 'phone' ? 'voice' : communicationDialog.type}
-        context="customer"
-        contextId={communicationDialog.actionId}
+        onClose={() => setCommunicationDialog({ 
+          isOpen: false, 
+          type: 'email', 
+          context: 'customer', 
+          contextId: '' 
+        })}
+        type={communicationDialog.type}
+        context={communicationDialog.context}
+        contextId={communicationDialog.contextId}
         onSend={(data) => {
           sendCommunicationMutation.mutate({
             type: communicationDialog.type,
             content: data.content,
             recipient: data.recipient,
             subject: data.subject,
-            actionId: communicationDialog.actionId,
+            templateId: data.templateId,
+            contextId: communicationDialog.contextId,
+            context: communicationDialog.context,
           });
-          setCommunicationDialog({ ...communicationDialog, isOpen: false });
         }}
       />
     </div>
