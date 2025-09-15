@@ -111,6 +111,8 @@ export const invoices = pgTable("invoices", {
   workflowId: varchar("workflow_id"),
   lastReminderSent: timestamp("last_reminder_sent"),
   reminderCount: integer("reminder_count").default(0),
+  nextAction: varchar("next_action"), // email, sms, call, visit
+  nextActionDate: timestamp("next_action_date"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => [
@@ -120,6 +122,7 @@ export const invoices = pgTable("invoices", {
   index("idx_invoices_invoice_number").on(table.invoiceNumber),
   index("idx_invoices_created_at").on(table.createdAt),
   index("idx_invoices_contact_id").on(table.contactId),
+  index("idx_invoices_next_action_date").on(table.tenantId, table.nextActionDate),
 ]);
 
 // Cached Xero invoices table for sync functionality
