@@ -721,7 +721,7 @@ export default function Invoices() {
                             <div className="font-medium text-foreground" data-testid={`text-invoice-number-${invoice.id}`}>
                               {invoice.invoiceNumber}
                             </div>
-                            <div className="text-sm text-muted-foreground" data-testid={`text-issue-date-${invoice.id}`}>
+                            <div className="text-xs text-muted-foreground" data-testid={`text-issue-date-${invoice.id}`}>
                               {formatDate(invoice.issueDate)}
                             </div>
                           </td>
@@ -729,7 +729,7 @@ export default function Invoices() {
                             <div className="font-medium text-foreground" data-testid={`text-company-name-${invoice.id}`}>
                               {invoice.contact?.companyName || 'Unknown Company'}
                             </div>
-                            <div className="text-sm text-muted-foreground" data-testid={`text-contact-name-${invoice.id}`}>
+                            <div className="text-xs text-muted-foreground" data-testid={`text-contact-name-${invoice.id}`}>
                               {invoice.contact?.name || 'No contact name'}
                             </div>
                           </td>
@@ -737,7 +737,7 @@ export default function Invoices() {
                             <div className="font-medium text-foreground" data-testid={`text-amount-${invoice.id}`}>
                               £{Number(invoice.amount).toLocaleString()}
                             </div>
-                            <div className="text-sm text-muted-foreground" data-testid={`text-due-date-${invoice.id}`}>
+                            <div className="text-xs text-muted-foreground" data-testid={`text-due-date-${invoice.id}`}>
                               {formatDate(invoice.dueDate)}
                             </div>
                             {(() => {
@@ -751,7 +751,7 @@ export default function Invoices() {
                           </td>
                           <td className="py-4" data-testid={`cell-category-prob-${invoice.id}`}>
                             <div>{getOverdueCategoryBadge(invoice)}</div>
-                            <div className="text-sm text-muted-foreground mt-1">
+                            <div className="text-xs text-muted-foreground mt-1">
                               {(() => {
                                 const prediction = paymentPredictions[invoice.id];
                                 

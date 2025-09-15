@@ -1,0 +1,45 @@
+Based on my analysis, adding the "Next Action" column is definitely justified for collections workflows, even though it will make the table denser. Here's my assessment and recommendations:
+
+✅ Recommended Approach: Compact Next Action Column
+Why it works:
+
+Collection teams need at-a-glance actionability across many invoices
+The functionality is core to the business workflow
+We can make it work with smart design choices
+🎯 Optimal Design Solution
+Compact 2-line cell format:
+
+[📧 Email] ⚡  <- Line 1: Action chip + nudge button
+Tue 24 Sep      <- Line 2: Due date
+Column layout optimizations:
+
+Keep essential columns visible: Invoice, Company, Amount, Due Date, Next Action, Actions
+Responsive hiding: Hide "Exp. Pymt" on medium screens, stack "Category + Prob%" in one cell
+Compact formatting: Reduce padding, use abbreviations, right-align amounts
+🔧 Technical Implementation
+Backend needs:
+
+POST /api/collections/nudge endpoint to trigger next action
+Update invoice model to include nextAction and nextActionDate fields
+Resolve collection schedule → execute action → update audit trail
+Frontend features:
+
+Lightning bolt (⚡) nudge button with confirmation dialog
+Optimistic loading states
+Bulk nudge capability for selected invoices
+Keyboard shortcuts ("n" key when row focused)
+🎨 Alternative Options (if too busy)
+"Collections Queue" Tab: Separate view showing only invoices with pending actions
+Actions Dropdown Integration: Move nudge into existing Actions menu
+Row Expansion: Click to reveal next action details without new column
+📱 Responsive Strategy
+Large screens: All 9 columns visible
+Medium screens: Hide less critical columns, keep Next Action
+Small screens: Switch to card layout with prominent nudge buttons
+🤔 My Recommendation
+I think the compact column approach is best because:
+
+✅ Keeps essential workflow functionality front and center
+✅ Maintains table scanning efficiency for collection teams
+✅ Can be made responsive for different screen sizes
+✅ Aligns with how collection professionals actually work
