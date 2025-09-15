@@ -863,7 +863,7 @@ export default function ActionCentre() {
                 <Card className="bg-white/70 backdrop-blur-md border-0 shadow-lg p-4">
                   <div className="text-center">
                     <div className="text-2xl font-bold text-slate-900" data-testid="text-total-value">
-                      {metricsLoading ? '-' : formatCurrency(queueMetrics?.totalValue || 0)}
+                      {metricsLoading ? '-' : (queueMetrics?.totalValue || 0).toLocaleString()}
                     </div>
                     <div className="text-xs text-slate-600">Total Value</div>
                   </div>
