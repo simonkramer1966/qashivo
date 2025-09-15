@@ -258,6 +258,71 @@ export default function Customers() {
     }
   };
 
+  // Generate recommendations based on risk score and factors
+  const getRecommendations = (riskScore: any) => {
+    const score = parseFloat(riskScore.overallRiskScore || '0');
+    const paymentRisk = parseFloat(riskScore.paymentRisk || '0');
+    const creditRisk = parseFloat(riskScore.creditRisk || '0');
+    const communicationRisk = parseFloat(riskScore.communicationRisk || '0');
+    const trend = riskScore.riskTrend || 'stable';
+    const urgency = riskScore.urgencyLevel || 'low';
+    
+    const recommendations = [];
+    
+    // Risk level based recommendations
+    if (score >= 0.8) {
+      // Critical Risk
+      recommendations.push("🚨 Immediate phone call required");
+      recommendations.push("🛑 Hold all credit and shipments");
+      recommendations.push("📈 Escalate to senior management");
+      recommendations.push("⚖️ Prepare legal documentation");
+    } else if (score >= 0.6) {
+      // High Risk
+      recommendations.push("📞 Direct contact within 24 hours");
+      recommendations.push("📋 Review and tighten credit terms");
+      recommendations.push("📅 Offer structured payment plan");
+      recommendations.push("🔍 Increase monitoring frequency");
+    } else if (score >= 0.4) {
+      // Medium Risk
+      recommendations.push("✉️ Send reminder email");
+      recommendations.push("📞 Schedule follow-up call");
+      recommendations.push("📝 Review payment terms");
+      recommendations.push("👀 Monitor account closely");
+    } else {
+      // Low Risk
+      recommendations.push("✅ Continue standard follow-up");
+      recommendations.push("📋 Maintain current credit terms");
+      recommendations.push("📊 Regular monitoring sufficient");
+      recommendations.push("🎯 Focus on relationship building");
+    }
+    
+    // Factor-specific recommendations
+    if (paymentRisk > 0.7) {
+      recommendations.push("💰 Focus on payment terms discussion");
+      recommendations.push("📆 Set clear payment deadlines");
+    }
+    
+    if (creditRisk > 0.7) {
+      recommendations.push("🏦 Implement immediate credit review");
+      recommendations.push("🔒 Require payment guarantees");
+    }
+    
+    if (communicationRisk > 0.7) {
+      recommendations.push("📢 Try alternative communication channels");
+      recommendations.push("👥 Involve account manager");
+    }
+    
+    // Trend-based recommendations
+    if (trend === 'increasing') {
+      recommendations.push("⚡ Take urgent action - risk is rising");
+    } else if (trend === 'decreasing') {
+      recommendations.push("📈 Continue current approach - risk improving");
+    }
+    
+    // Return top 4 most relevant recommendations
+    return recommendations.slice(0, 4);
+  };
+
   // Generate tooltip content for risk score
   const getRiskScoreTooltipContent = (riskScore: any) => {
     const score = parseFloat(riskScore.overallRiskScore || '0');
@@ -271,8 +336,10 @@ export default function Customers() {
                       trend === 'decreasing' ? 'Risk is decreasing' : 
                       'Risk is stable';
     
+    const recommendations = getRecommendations(riskScore);
+    
     return (
-      <div className="space-y-2 text-sm">
+      <div className="space-y-3 text-sm max-w-xs">
         <div className="font-semibold">Risk Score Breakdown</div>
         <div className="space-y-1">
           <div>Overall Risk: {(score * 100).toFixed(0)}%</div>
@@ -284,7 +351,21 @@ export default function Customers() {
           <div>Trend: {trendText}</div>
           <div>Urgency: {urgency.charAt(0).toUpperCase() + urgency.slice(1)}</div>
         </div>
-        <div className="text-xs text-muted-foreground">
+        
+        {/* Recommendations Section */}
+        <div className="border-t pt-2">
+          <div className="font-semibold mb-2">📋 Recommended Actions</div>
+          <div className="space-y-1 text-xs">
+            {recommendations.map((rec, index) => (
+              <div key={index} className="flex items-start space-x-1">
+                <span className="flex-shrink-0">•</span>
+                <span>{rec}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+        
+        <div className="text-xs text-muted-foreground border-t pt-2">
           Based on payment history and communication patterns
         </div>
       </div>
