@@ -2436,3 +2436,155 @@ export type InsertSeasonalPattern = z.infer<typeof insertSeasonalPatternSchema>;
 
 export type MlModelPerformance = typeof mlModelPerformance.$inferSelect;
 export type InsertMlModelPerformance = z.infer<typeof insertMlModelPerformanceSchema>;
+
+// Action Centre Tables
+
+// Action items table for managing collections and customer communication tasks
+export const actionItems = pgTable("action_items", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  contactId: varchar("contact_id").notNull().references(() => contacts.id),
+  invoiceId: varchar("invoice_id").references(() => invoices.id), // nullable - some actions may not be invoice-specific
+  type: varchar("type").notNull(), // 'nudge', 'call', 'email', 'sms', 'review', 'dispute', 'ptp_followup'
+  status: varchar("status").notNull().default("open"), // 'open', 'in_progress', 'completed', 'snoozed', 'canceled'
+  priority: varchar("priority").notNull().default("medium"), // 'low', 'medium', 'high', 'urgent'
+  dueAt: timestamp("due_at").notNull(),
+  assignedToUserId: varchar("assigned_to_user_id").references(() => users.id), // nullable - unassigned actions
+  createdByUserId: varchar("created_by_user_id").notNull().references(() => users.id),
+  notes: text("notes"), // nullable - additional context or instructions
+  outcome: text("outcome"), // nullable - result/outcome after completion
+  lastCommunicationId: varchar("last_communication_id"), // nullable - reference to last communication sent
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  // Performance indexes for action queue management
+  index("idx_action_items_tenant_status_due").on(table.tenantId, table.status, table.dueAt),
+  index("idx_action_items_tenant_assigned").on(table.tenantId, table.assignedToUserId),
+  index("idx_action_items_tenant_invoice").on(table.tenantId, table.invoiceId),
+  index("idx_action_items_contact_id").on(table.contactId),
+  index("idx_action_items_type").on(table.type),
+]);
+
+// Action logs table for tracking events and activities related to action items
+export const actionLogs = pgTable("action_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  actionItemId: varchar("action_item_id").notNull().references(() => actionItems.id, { onDelete: "cascade" }),
+  eventType: varchar("event_type").notNull(), // 'created', 'assigned', 'sent_email', 'sent_sms', 'called', 'completed', 'snoozed', 'escalated', 'note'
+  details: jsonb("details"), // Additional event-specific data (e.g., email subject, call duration, etc.)
+  createdByUserId: varchar("created_by_user_id").notNull().references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  // Performance index for action history lookup
+  index("idx_action_logs_tenant_action").on(table.tenantId, table.actionItemId),
+  index("idx_action_logs_event_type").on(table.eventType),
+  index("idx_action_logs_created_at").on(table.createdAt),
+]);
+
+// Payment promises table for tracking customer payment commitments
+export const paymentPromises = pgTable("payment_promises", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  invoiceId: varchar("invoice_id").notNull().references(() => invoices.id),
+  contactId: varchar("contact_id").notNull().references(() => contacts.id),
+  promisedAmount: decimal("promised_amount", { precision: 10, scale: 2 }).notNull(),
+  promisedDate: timestamp("promised_date").notNull(),
+  status: varchar("status").notNull().default("open"), // 'open', 'kept', 'broken', 'rescheduled'
+  notes: text("notes"), // Additional context about the promise
+  createdByUserId: varchar("created_by_user_id").notNull().references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  // Performance indexes for payment promise tracking
+  index("idx_payment_promises_tenant_status").on(table.tenantId, table.status),
+  index("idx_payment_promises_tenant_invoice").on(table.tenantId, table.invoiceId),
+  index("idx_payment_promises_promised_date").on(table.promisedDate),
+  index("idx_payment_promises_contact_id").on(table.contactId),
+]);
+
+// Relations for Action Centre tables
+export const actionItemsRelations = relations(actionItems, ({ one, many }) => ({
+  tenant: one(tenants, {
+    fields: [actionItems.tenantId],
+    references: [tenants.id],
+  }),
+  contact: one(contacts, {
+    fields: [actionItems.contactId],
+    references: [contacts.id],
+  }),
+  invoice: one(invoices, {
+    fields: [actionItems.invoiceId],
+    references: [invoices.id],
+  }),
+  assignedToUser: one(users, {
+    fields: [actionItems.assignedToUserId],
+    references: [users.id],
+  }),
+  createdByUser: one(users, {
+    fields: [actionItems.createdByUserId],
+    references: [users.id],
+  }),
+  logs: many(actionLogs),
+}));
+
+export const actionLogsRelations = relations(actionLogs, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [actionLogs.tenantId],
+    references: [tenants.id],
+  }),
+  actionItem: one(actionItems, {
+    fields: [actionLogs.actionItemId],
+    references: [actionItems.id],
+  }),
+  createdByUser: one(users, {
+    fields: [actionLogs.createdByUserId],
+    references: [users.id],
+  }),
+}));
+
+export const paymentPromisesRelations = relations(paymentPromises, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [paymentPromises.tenantId],
+    references: [tenants.id],
+  }),
+  invoice: one(invoices, {
+    fields: [paymentPromises.invoiceId],
+    references: [invoices.id],
+  }),
+  contact: one(contacts, {
+    fields: [paymentPromises.contactId],
+    references: [contacts.id],
+  }),
+  createdByUser: one(users, {
+    fields: [paymentPromises.createdByUserId],
+    references: [users.id],
+  }),
+}));
+
+// Insert schemas for Action Centre tables
+export const insertActionItemSchema = createInsertSchema(actionItems).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertActionLogSchema = createInsertSchema(actionLogs).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertPaymentPromiseSchema = createInsertSchema(paymentPromises).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Type exports for Action Centre tables
+export type ActionItem = typeof actionItems.$inferSelect;
+export type InsertActionItem = z.infer<typeof insertActionItemSchema>;
+
+export type ActionLog = typeof actionLogs.$inferSelect;
+export type InsertActionLog = z.infer<typeof insertActionLogSchema>;
+
+export type PaymentPromise = typeof paymentPromises.$inferSelect;
+export type InsertPaymentPromise = z.infer<typeof insertPaymentPromiseSchema>;
