@@ -1813,8 +1813,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.createActionLog({
         tenantId: user.tenantId,
         actionItemId: actionItem.id,
-        action: 'created',
-        details: 'Action item created',
+        eventType: 'created',
+        details: { message: 'Action item created' },
         createdByUserId: user.id,
       });
 
@@ -1865,8 +1865,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.createActionLog({
         tenantId: user.tenantId,
         actionItemId: id,
-        action: 'updated',
-        details: `Action item updated: ${Object.keys(updates).join(', ')}`,
+        eventType: 'updated',
+        details: { message: `Action item updated: ${Object.keys(updates).join(', ')}`, updates },
         createdByUserId: user.id,
       });
 
@@ -1901,8 +1901,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.createActionLog({
         tenantId: user.tenantId,
         actionItemId: id,
-        action: 'completed',
-        details: `Action completed${outcome ? ` with outcome: ${outcome}` : ''}${notes ? `. Notes: ${notes}` : ''}`,
+        eventType: 'completed',
+        details: { message: `Action completed${outcome ? ` with outcome: ${outcome}` : ''}${notes ? `. Notes: ${notes}` : ''}`, outcome, notes },
         createdByUserId: user.id,
       });
 
@@ -1936,8 +1936,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.createActionLog({
         tenantId: user.tenantId,
         actionItemId: id,
-        action: 'snoozed',
-        details: `Action snoozed until ${newDueDate.toISOString()}${reason ? `. Reason: ${reason}` : ''}`,
+        eventType: 'snoozed',
+        details: { message: `Action snoozed until ${newDueDate.toISOString()}${reason ? `. Reason: ${reason}` : ''}`, newDueDate: newDueDate.toISOString(), reason },
         createdByUserId: user.id,
       });
 
@@ -2117,8 +2117,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             await storage.createActionLog({
               tenantId: user.tenantId,
               actionItemId: id,
-              action: 'bulk_completed',
-              details: `Bulk completed${outcome ? ` with outcome: ${outcome}` : ''}`,
+              eventType: 'bulk_completed',
+              details: { message: `Bulk completed${outcome ? ` with outcome: ${outcome}` : ''}`, outcome },
               createdByUserId: user.id,
             });
             
@@ -2170,8 +2170,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             await storage.createActionLog({
               tenantId: user.tenantId,
               actionItemId: id,
-              action: 'bulk_assigned',
-              details: `Bulk assigned${assignedToUserId ? ` to user ${assignedToUserId}` : ''}${priority ? ` with priority ${priority}` : ''}`,
+              eventType: 'bulk_assigned',
+              details: { message: `Bulk assigned to user ${assignedToUserId}`, assignedToUserId, priority },
               createdByUserId: user.id,
             });
             
@@ -2236,8 +2236,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             await storage.createActionLog({
               tenantId: user.tenantId,
               actionItemId: id,
-              action: 'bulk_nudged',
-              details: `Bulk nudge created${customMessage ? ` with message: ${customMessage}` : ''}`,
+              eventType: 'bulk_nudged',
+              details: { message: `Bulk nudge created${customMessage ? ` with message: ${customMessage}` : ''}`, customMessage, templateId: templateId },
               createdByUserId: user.id,
             });
             

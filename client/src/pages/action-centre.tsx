@@ -268,6 +268,179 @@ export default function ActionCentre() {
   const queueData: EnhancedActionItem[] = (queueResponse as QueueResponse)?.actionItems || [];
   const pagination = (queueResponse as QueueResponse)?.pagination || { page: 1, limit: 25, total: 0, totalPages: 1 };
   
+  // Communication mutation with enhanced functionality
+  const sendCommunicationMutation = useMutation({
+    mutationFn: async ({ type, content, recipient, subject, templateId, contextId, context }: {
+      type: 'email' | 'sms' | 'voice';
+      content: string;
+      recipient: string;
+      subject?: string;
+      templateId?: string;
+      contextId: string;
+      context: 'customer' | 'invoice';
+    }) => {
+      // Use the proper API endpoint based on type and context
+      let endpoint: string;
+      let payload: any;
+      
+      if (type === 'voice') {
+        // Voice communications use the Retell API endpoint
+        endpoint = '/api/retell/call';
+        payload = {
+          message: content,
+          templateId
+        };
+        
+        // Add context-specific data for voice calls
+        if (context === 'invoice') {
+          payload.invoiceId = contextId;
+        } else {
+          payload.contactId = contextId;
+        }
+      } else {
+        // Email and SMS use the standard communications endpoints
+        endpoint = `/api/communications/send-${type}`;
+        payload = { 
+          content, 
+          recipient,
+          templateId
+        };
+        
+        // Add context-specific data
+        if (context === 'invoice') {
+          payload.invoiceId = contextId;
+        } else {
+          payload.contactId = contextId;
+        }
+        
+        if (type === 'email' && subject) {
+          payload.subject = subject;
+        }
+      }
+      
+      const response = await apiRequest('POST', endpoint, payload);
+      return response.json();
+    },
+    onSuccess: (data, variables) => {
+      const typeLabel = variables.type === 'email' ? 'Email' : 
+                       variables.type === 'sms' ? 'SMS' : 
+                       variables.type === 'voice' ? 'Voice call' : 'Communication';
+      toast({
+        title: "Communication Sent",
+        description: `${typeLabel} sent successfully`,
+      });
+      // Refresh all relevant data
+      queryClient.invalidateQueries({ queryKey: ["/api/action-centre/queue"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/communications/history"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/action-centre/contact"] });
+    },
+    onError: (error: any) => {
+      console.error('Communication send error:', error);
+      toast({
+        title: "Communication Failed",
+        description: "Failed to send communication. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Action completion mutation
+  const completeActionMutation = useMutation({
+    mutationFn: async ({ actionId, outcome, notes }: { actionId: string; outcome?: string; notes?: string }) => {
+      const response = await apiRequest('POST', `/api/action-items/${actionId}/complete`, { outcome, notes });
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Action Updated",
+        description: "Action status updated successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/action-centre/queue"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/action-centre/metrics"] });
+    },
+    onError: () => {
+      toast({
+        title: "Update Failed",
+        description: "Failed to update action status",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Bulk action mutations
+  const bulkCompleteMutation = useMutation({
+    mutationFn: async ({ actionItemIds, outcome }: { actionItemIds: string[]; outcome?: string }) => {
+      const response = await apiRequest('POST', '/api/action-items/bulk/complete', { actionItemIds, outcome });
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Bulk Action Completed",
+        description: `Successfully completed ${data.successful || 0} of ${data.total || 0} actions`,
+      });
+      setSelectedItems(new Set());
+
+      queryClient.invalidateQueries({ queryKey: ["/api/action-centre/queue"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/action-centre/metrics"] });
+    },
+    onError: () => {
+      toast({
+        title: "Bulk Action Failed",
+        description: "Failed to complete bulk actions",
+        variant: "destructive",
+      });
+
+    },
+  });
+
+  const bulkAssignMutation = useMutation({
+    mutationFn: async ({ actionItemIds, assignedToUserId, priority }: { actionItemIds: string[]; assignedToUserId?: string; priority?: string }) => {
+      const response = await apiRequest('POST', '/api/action-items/bulk/assign', { actionItemIds, assignedToUserId, priority });
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Bulk Assignment Completed",
+        description: `Successfully assigned ${data.successful || 0} of ${data.total || 0} actions`,
+      });
+      setSelectedItems(new Set());
+
+      queryClient.invalidateQueries({ queryKey: ["/api/action-centre/queue"] });
+    },
+    onError: () => {
+      toast({
+        title: "Bulk Assignment Failed",
+        description: "Failed to assign bulk actions",
+        variant: "destructive",
+      });
+
+    },
+  });
+
+  const bulkNudgeMutation = useMutation({
+    mutationFn: async ({ actionItemIds, templateId, customMessage }: { actionItemIds: string[]; templateId?: string; customMessage?: string }) => {
+      const response = await apiRequest('POST', '/api/action-items/bulk/nudge', { actionItemIds, templateId, customMessage });
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Bulk Nudge Created",
+        description: `Successfully created ${data.successful || 0} nudges`,
+      });
+      setSelectedItems(new Set());
+
+      queryClient.invalidateQueries({ queryKey: ["/api/action-centre/queue"] });
+    },
+    onError: () => {
+      toast({
+        title: "Bulk Nudge Failed",
+        description: "Failed to create bulk nudges",
+        variant: "destructive",
+      });
+
+    },
+  });
+  
   // Selection handlers
   const handleSelectItem = useCallback((itemId: string, index: number, event?: React.MouseEvent) => {
     if (event?.ctrlKey || event?.metaKey) {
@@ -553,179 +726,6 @@ export default function ActionCentre() {
       return () => clearTimeout(timer);
     }
   }, [queueData.length]);
-
-  // Communication mutation with enhanced functionality
-  const sendCommunicationMutation = useMutation({
-    mutationFn: async ({ type, content, recipient, subject, templateId, contextId, context }: {
-      type: 'email' | 'sms' | 'voice';
-      content: string;
-      recipient: string;
-      subject?: string;
-      templateId?: string;
-      contextId: string;
-      context: 'customer' | 'invoice';
-    }) => {
-      // Use the proper API endpoint based on type and context
-      let endpoint: string;
-      let payload: any;
-      
-      if (type === 'voice') {
-        // Voice communications use the Retell API endpoint
-        endpoint = '/api/retell/call';
-        payload = {
-          message: content,
-          templateId
-        };
-        
-        // Add context-specific data for voice calls
-        if (context === 'invoice') {
-          payload.invoiceId = contextId;
-        } else {
-          payload.contactId = contextId;
-        }
-      } else {
-        // Email and SMS use the standard communications endpoints
-        endpoint = `/api/communications/send-${type}`;
-        payload = { 
-          content, 
-          recipient,
-          templateId
-        };
-        
-        // Add context-specific data
-        if (context === 'invoice') {
-          payload.invoiceId = contextId;
-        } else {
-          payload.contactId = contextId;
-        }
-        
-        if (type === 'email' && subject) {
-          payload.subject = subject;
-        }
-      }
-      
-      const response = await apiRequest('POST', endpoint, payload);
-      return response.json();
-    },
-    onSuccess: (data, variables) => {
-      const typeLabel = variables.type === 'email' ? 'Email' : 
-                       variables.type === 'sms' ? 'SMS' : 
-                       variables.type === 'voice' ? 'Voice call' : 'Communication';
-      toast({
-        title: "Communication Sent",
-        description: `${typeLabel} sent successfully`,
-      });
-      // Refresh all relevant data
-      queryClient.invalidateQueries({ queryKey: ["/api/action-centre/queue"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/communications/history"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/action-centre/contact"] });
-    },
-    onError: (error: any) => {
-      console.error('Communication send error:', error);
-      toast({
-        title: "Communication Failed",
-        description: "Failed to send communication. Please try again.",
-        variant: "destructive",
-      });
-    },
-  });
-
-  // Action completion mutation
-  const completeActionMutation = useMutation({
-    mutationFn: async ({ actionId, outcome, notes }: { actionId: string; outcome?: string; notes?: string }) => {
-      const response = await apiRequest('POST', `/api/action-items/${actionId}/complete`, { outcome, notes });
-      return response.json();
-    },
-    onSuccess: () => {
-      toast({
-        title: "Action Updated",
-        description: "Action status updated successfully",
-      });
-      queryClient.invalidateQueries({ queryKey: ["/api/action-centre/queue"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/action-centre/metrics"] });
-    },
-    onError: () => {
-      toast({
-        title: "Update Failed",
-        description: "Failed to update action status",
-        variant: "destructive",
-      });
-    },
-  });
-
-  // Bulk action mutations
-  const bulkCompleteMutation = useMutation({
-    mutationFn: async ({ actionItemIds, outcome }: { actionItemIds: string[]; outcome?: string }) => {
-      const response = await apiRequest('POST', '/api/action-items/bulk/complete', { actionItemIds, outcome });
-      return response.json();
-    },
-    onSuccess: (data) => {
-      toast({
-        title: "Bulk Action Completed",
-        description: `Successfully completed ${data.successful || 0} of ${data.total || 0} actions`,
-      });
-      setSelectedItems(new Set());
-
-      queryClient.invalidateQueries({ queryKey: ["/api/action-centre/queue"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/action-centre/metrics"] });
-    },
-    onError: () => {
-      toast({
-        title: "Bulk Action Failed",
-        description: "Failed to complete bulk actions",
-        variant: "destructive",
-      });
-
-    },
-  });
-
-  const bulkAssignMutation = useMutation({
-    mutationFn: async ({ actionItemIds, assignedToUserId, priority }: { actionItemIds: string[]; assignedToUserId?: string; priority?: string }) => {
-      const response = await apiRequest('POST', '/api/action-items/bulk/assign', { actionItemIds, assignedToUserId, priority });
-      return response.json();
-    },
-    onSuccess: (data) => {
-      toast({
-        title: "Bulk Assignment Completed",
-        description: `Successfully assigned ${data.successful || 0} of ${data.total || 0} actions`,
-      });
-      setSelectedItems(new Set());
-
-      queryClient.invalidateQueries({ queryKey: ["/api/action-centre/queue"] });
-    },
-    onError: () => {
-      toast({
-        title: "Bulk Assignment Failed",
-        description: "Failed to assign bulk actions",
-        variant: "destructive",
-      });
-
-    },
-  });
-
-  const bulkNudgeMutation = useMutation({
-    mutationFn: async ({ actionItemIds, templateId, customMessage }: { actionItemIds: string[]; templateId?: string; customMessage?: string }) => {
-      const response = await apiRequest('POST', '/api/action-items/bulk/nudge', { actionItemIds, templateId, customMessage });
-      return response.json();
-    },
-    onSuccess: (data) => {
-      toast({
-        title: "Bulk Nudge Created",
-        description: `Successfully created ${data.successful || 0} nudges`,
-      });
-      setSelectedItems(new Set());
-
-      queryClient.invalidateQueries({ queryKey: ["/api/action-centre/queue"] });
-    },
-    onError: () => {
-      toast({
-        title: "Bulk Nudge Failed",
-        description: "Failed to create bulk nudges",
-        variant: "destructive",
-      });
-
-    },
-  });
 
   // Handle authentication errors
   useEffect(() => {
