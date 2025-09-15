@@ -23,7 +23,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel } from "@/components/ui/dropdown-menu";
-import { Mail, Phone, Eye, Plus, Search, Filter, FileText, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, X, MessageSquare, Calendar, CheckCircle, AlertCircle, Clock, Users, User, Building, Star, Target, ArrowRight, MoreHorizontal, Pause } from "lucide-react";
+import { Mail, Phone, Eye, Plus, Search, Filter, FileText, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, X, MessageSquare, Calendar, CheckCircle, AlertCircle, Clock, Users, User, Building, Star, Target, ArrowRight, MoreHorizontal, Pause, Zap, Home } from "lucide-react";
 import { CommunicationPreviewDialog } from "@/components/ui/communication-preview-dialog";
 
 export default function Invoices() {
@@ -218,6 +218,28 @@ export default function Invoices() {
     },
   });
 
+  // Nudge mutation
+  const nudgeMutation = useMutation({
+    mutationFn: async (invoiceId: string) => {
+      const response = await apiRequest("POST", "/api/collections/nudge", { invoiceId });
+      return response.json();
+    },
+    onSuccess: (data, invoiceId) => {
+      toast({
+        title: "Nudge Sent",
+        description: "Next action has been triggered successfully.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Failed to send nudge. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
   // Helper functions to open communication dialog
   const openCommunicationDialog = (invoice: any, type: 'email' | 'sms' | 'voice') => {
     setSelectedInvoiceForComm(invoice);
@@ -284,6 +306,35 @@ export default function Invoices() {
         </div>
       </div>
     );
+  };
+
+  // Helper function to get action icon and text based on nextAction
+  const getActionIcon = (action: string | null) => {
+    switch (action?.toLowerCase()) {
+      case 'email':
+        return { icon: <Mail className="h-3 w-3" />, text: 'Email' };
+      case 'sms':
+        return { icon: <MessageSquare className="h-3 w-3" />, text: 'SMS' };
+      case 'call':
+      case 'phone':
+        return { icon: <Phone className="h-3 w-3" />, text: 'Call' };
+      case 'visit':
+        return { icon: <Home className="h-3 w-3" />, text: 'Visit' };
+      default:
+        return { icon: <Clock className="h-3 w-3" />, text: 'No action' };
+    }
+  };
+
+  // Helper function to format readable date for next action
+  const formatNextActionDate = (dateString: string | null) => {
+    if (!dateString) return null;
+    
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-GB', { 
+      weekday: 'short', 
+      day: 'numeric', 
+      month: 'short' 
+    });
   };
 
   // Handle communication send from preview dialog
@@ -684,7 +735,7 @@ export default function Invoices() {
                           </div>
                         </th>
                         <th 
-                          className="text-left py-3 text-sm font-medium text-muted-foreground cursor-pointer select-none group hover:text-[#17B6C3] transition-colors"
+                          className="text-left py-3 text-sm font-medium text-muted-foreground cursor-pointer select-none group hover:text-[#17B6C3] transition-colors w-1/5"
                           onClick={() => handleSort('amountDueDate')}
                           data-testid="header-amount-due-date"
                         >
@@ -694,7 +745,7 @@ export default function Invoices() {
                           </div>
                         </th>
                         <th 
-                          className="text-left py-3 text-sm font-medium text-muted-foreground cursor-pointer select-none group hover:text-[#17B6C3] transition-colors"
+                          className="text-left py-3 text-sm font-medium text-muted-foreground cursor-pointer select-none group hover:text-[#17B6C3] transition-colors w-1/5"
                           onClick={() => handleSort('categoryProb')}
                           data-testid="header-category-prob"
                         >
@@ -704,7 +755,15 @@ export default function Invoices() {
                           </div>
                         </th>
                         <th 
-                          className="text-left py-3 text-sm font-medium text-muted-foreground"
+                          className="text-left py-3 text-sm font-medium text-muted-foreground w-1/5"
+                          data-testid="header-next-action"
+                        >
+                          <div className="flex items-center">
+                            Next Action
+                          </div>
+                        </th>
+                        <th 
+                          className="text-left py-3 text-sm font-medium text-muted-foreground w-1/5"
                           data-testid="header-expected-payment"
                         >
                           <div className="flex items-center">
@@ -777,6 +836,34 @@ export default function Invoices() {
                                 
                                 return formatPaymentProbability(prediction.paymentProbability);
                               })()}
+                            </div>
+                          </td>
+                          <td className="py-4" data-testid={`cell-next-action-${invoice.id}`}>
+                            <div className="flex items-center gap-2">
+                              {(() => {
+                                const action = getActionIcon(invoice.nextAction);
+                                return (
+                                  <div className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium text-[#17B6C3] bg-[#17B6C3]/10">
+                                    {action.icon}
+                                    {action.text}
+                                  </div>
+                                );
+                              })()}
+                              {invoice.nextAction && (
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => nudgeMutation.mutate(invoice.id)}
+                                  disabled={nudgeMutation.isPending}
+                                  className="h-6 w-6 p-0 hover:bg-[#17B6C3]/10 text-[#17B6C3]"
+                                  data-testid={`button-nudge-${invoice.id}`}
+                                >
+                                  <Zap className="h-3 w-3" />
+                                </Button>
+                              )}
+                            </div>
+                            <div className="text-xs text-muted-foreground mt-1" data-testid={`text-next-action-date-${invoice.id}`}>
+                              {formatNextActionDate(invoice.nextActionDate) || formatNextActionDate(invoice.dueDate) || 'No date set'}
                             </div>
                           </td>
                           <td className="py-4" data-testid={`cell-expected-payment-${invoice.id}`}>
