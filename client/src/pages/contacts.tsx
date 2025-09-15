@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Search, Mail, Phone, Building, User, Users, ChevronUp, ChevronDown, Star, MoreHorizontal, Eye, MessageSquare, Calendar, AlertCircle, CheckCircle, Pause, TrendingUp, TrendingDown, Minus, Shield } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel } from "@/components/ui/dropdown-menu";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { CommunicationPreviewDialog } from "@/components/ui/communication-preview-dialog";
 
 export default function Customers() {
@@ -257,18 +258,62 @@ export default function Customers() {
     }
   };
 
+  // Generate tooltip content for risk score
+  const getRiskScoreTooltipContent = (riskScore: any) => {
+    const score = parseFloat(riskScore.overallRiskScore || '0');
+    const paymentRisk = parseFloat(riskScore.paymentRisk || '0');
+    const creditRisk = parseFloat(riskScore.creditRisk || '0');
+    const communicationRisk = parseFloat(riskScore.communicationRisk || '0');
+    const trend = riskScore.riskTrend || 'stable';
+    const urgency = riskScore.urgencyLevel || 'low';
+    
+    const trendText = trend === 'increasing' ? 'Risk is increasing' :
+                      trend === 'decreasing' ? 'Risk is decreasing' : 
+                      'Risk is stable';
+    
+    return (
+      <div className="space-y-2 text-sm">
+        <div className="font-semibold">Risk Score Breakdown</div>
+        <div className="space-y-1">
+          <div>Overall Risk: {(score * 100).toFixed(0)}%</div>
+          <div>Payment Risk: {(paymentRisk * 100).toFixed(0)}%</div>
+          <div>Credit Risk: {(creditRisk * 100).toFixed(0)}%</div>
+          <div>Communication Risk: {(communicationRisk * 100).toFixed(0)}%</div>
+        </div>
+        <div className="border-t pt-2">
+          <div>Trend: {trendText}</div>
+          <div>Urgency: {urgency.charAt(0).toUpperCase() + urgency.slice(1)}</div>
+        </div>
+        <div className="text-xs text-muted-foreground">
+          Based on payment history and communication patterns
+        </div>
+      </div>
+    );
+  };
+
   // Render risk score badge with trend
   const renderRiskScoreBadge = (contactId: string) => {
     const riskScore = getCustomerRiskScore(contactId);
     
     if (!riskScore) {
       return (
-        <div className="flex items-center space-x-2">
-          <Badge className="bg-gray-50 text-gray-500 border-gray-200">
-            No Score
-          </Badge>
-          <Minus className="h-3 w-3 text-gray-400" />
-        </div>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="flex items-center space-x-2 cursor-help">
+                <Badge className="bg-gray-50 text-gray-500 border-gray-200">
+                  No Score
+                </Badge>
+                <Minus className="h-3 w-3 text-gray-400" />
+              </div>
+            </TooltipTrigger>
+            <TooltipContent>
+              <div className="text-sm">
+                No risk score available. Click "Generate Risk Scores" to analyze this customer.
+              </div>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       );
     }
 
@@ -277,12 +322,21 @@ export default function Customers() {
     const trend = riskScore.riskTrend || 'stable';
 
     return (
-      <div className="flex items-center space-x-2" data-testid={`risk-score-${contactId}`}>
-        <Badge className={levelInfo.color}>
-          {(score * 100).toFixed(0)}% {levelInfo.level}
-        </Badge>
-        {getRiskTrendArrow(trend, score)}
-      </div>
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div className="flex items-center space-x-2 cursor-help" data-testid={`risk-score-${contactId}`}>
+              <Badge className={levelInfo.color}>
+                {(score * 100).toFixed(0)}% {levelInfo.level}
+              </Badge>
+              {getRiskTrendArrow(trend, score)}
+            </div>
+          </TooltipTrigger>
+          <TooltipContent>
+            {getRiskScoreTooltipContent(riskScore)}
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
     );
   };
 
