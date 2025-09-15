@@ -1390,11 +1390,14 @@ export default function ActionCentre() {
                   <div className="flex items-center space-x-3 mb-4">
                     <Avatar className="h-12 w-12">
                       <AvatarFallback>
-                        {selectedAction.contactName.split(' ').map(n => n[0]).join('')}
+                        {selectedAction.contactName 
+                          ? selectedAction.contactName.split(' ').map(n => n[0]).join('').toUpperCase()
+                          : '??'
+                        }
                       </AvatarFallback>
                     </Avatar>
                     <div>
-                      <h3 className="font-semibold text-slate-900">{selectedAction.contactName}</h3>
+                      <h3 className="font-semibold text-slate-900">{selectedAction.contactName || 'Unknown Contact'}</h3>
                       {selectedAction.companyName && (
                         <p className="text-sm text-slate-600">{selectedAction.companyName}</p>
                       )}

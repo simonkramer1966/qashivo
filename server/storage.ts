@@ -3057,13 +3057,43 @@ export class DatabaseStorage implements IStorage {
       .offset(offset);
 
     return {
-      actionItems: results.map(row => ({
-        ...row.action_items,
-        contact: row.contacts!,
-        invoice: row.invoices || undefined,
-        assignedToUser: row.assignedUser || undefined,
-        createdByUser: row.creatorUser!,
-      })),
+      actionItems: results.map(row => {
+        const actionItem = row.action_items;
+        const contact = row.contacts!;
+        const invoice = row.invoices;
+        const assignedUser = row.assignedUser;
+        const createdUser = row.creatorUser!;
+        
+        // Calculate days overdue if invoice exists
+        const daysOverdue = invoice && invoice.dueDate 
+          ? Math.max(0, Math.floor((new Date().getTime() - new Date(invoice.dueDate).getTime()) / (1000 * 60 * 60 * 24)))
+          : 0;
+        
+        return {
+          ...actionItem,
+          // Flattened contact data
+          contactName: contact.name || 'Unknown Contact',
+          companyName: contact.companyName || undefined,
+          contactEmail: contact.email || undefined,
+          contactPhone: contact.phone || undefined,
+          preferredContactMethod: contact.preferredContactMethod || 'email',
+          
+          // Flattened invoice data
+          invoiceNumber: invoice?.invoiceNumber || undefined,
+          amount: invoice ? parseFloat(invoice.amount || '0') : undefined,
+          amountPaid: invoice ? parseFloat(invoice.amountPaid || '0') : undefined,
+          outstanding: invoice ? parseFloat(invoice.amount || '0') - parseFloat(invoice.amountPaid || '0') : undefined,
+          daysOverdue,
+          
+          // User assignments
+          assignedToUser: assignedUser || undefined,
+          createdByUser: createdUser,
+          
+          // Original nested data for compatibility 
+          contact,
+          invoice,
+        };
+      }),
       total
     };
   }
