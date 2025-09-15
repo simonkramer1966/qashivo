@@ -498,7 +498,7 @@ export class PredictivePaymentService {
    */
   async getPaymentPredictions(
     tenantId: string,
-    limit: number = 100
+    limit: number = 1000  // Increased limit to cover all predictions
   ): Promise<PaymentPrediction[]> {
     return await db
       .select()
