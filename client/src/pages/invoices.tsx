@@ -715,7 +715,7 @@ export default function Invoices() {
                     <thead>
                       <tr className="border-b border-gray-200">
                         <th 
-                          className="text-left py-3 text-sm font-medium text-muted-foreground cursor-pointer select-none group hover:text-[#17B6C3] transition-colors w-36"
+                          className="text-left py-3 text-sm font-medium text-muted-foreground cursor-pointer select-none group hover:text-[#17B6C3] transition-colors w-[300px]"
                           onClick={() => handleSort('invoice')}
                           data-testid="header-invoice"
                         >
@@ -725,7 +725,7 @@ export default function Invoices() {
                           </div>
                         </th>
                         <th 
-                          className="text-left py-3 text-sm font-medium text-muted-foreground cursor-pointer select-none group hover:text-[#17B6C3] transition-colors w-52"
+                          className="text-left py-3 text-sm font-medium text-muted-foreground cursor-pointer select-none group hover:text-[#17B6C3] transition-colors w-[500px]"
                           onClick={() => handleSort('company')}
                           data-testid="header-company"
                         >
