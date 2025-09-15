@@ -154,8 +154,8 @@ export default function Invoices() {
       return response.json();
     },
     enabled: isAuthenticated,
-    staleTime: 30 * 1000, // 30 seconds - refresh quickly when filters change
-    gcTime: 5 * 60 * 1000, // 5 minutes - shorter cache for dynamic content
+    staleTime: 0, // Always refetch when cache key changes
+    gcTime: 1 * 60 * 1000, // 1 minute - shorter cache for dynamic content
     refetchOnWindowFocus: false, // Don't refetch when window regains focus
   });
 
@@ -419,7 +419,11 @@ export default function Invoices() {
   // Reset page to 1 when search or filters change
   useEffect(() => {
     setInvoicesCurrentPage(1);
-  }, [search, statusFilter, overdueFilter]);
+    // Force refresh of payment predictions when filters change
+    queryClient.invalidateQueries({ 
+      queryKey: ["/api/ml/payment-predictions/bulk"] 
+    });
+  }, [search, statusFilter, overdueFilter, queryClient]);
 
   useEffect(() => {
     setInvoicesCurrentPage(1);
