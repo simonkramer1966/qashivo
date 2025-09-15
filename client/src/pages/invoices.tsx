@@ -713,8 +713,8 @@ export default function Invoices() {
                 <div className="overflow-x-auto">
                   <table className="w-full table-fixed">
                     <colgroup>
-                      <col className="w-[300px]" />
-                      <col className="w-[500px]" />
+                      <col className="w-[150px]" />
+                      <col className="w-[175px]" />
                       <col className="w-1/5" />
                       <col className="w-1/5" />
                       <col className="w-1/5" />
