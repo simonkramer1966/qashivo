@@ -225,11 +225,21 @@ export default function ActionCentre() {
   }, [isAuthenticated, isLoading, toast]);
 
   // Fetch queue metrics
-  const { data: metrics, isLoading: metricsLoading } = useQuery({
+  const { data: rawMetrics, isLoading: metricsLoading } = useQuery({
     queryKey: ["/api/action-centre/metrics"],
     enabled: isAuthenticated,
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
+
+  // Map API response to UI-friendly field names
+  const metrics = rawMetrics ? {
+    totalActions: (rawMetrics as any).totalOpen ?? 0,
+    todayActions: (rawMetrics as any).totalOpen ?? 0, // Use totalOpen for "today's work"
+    overdueActions: (rawMetrics as any).overdueCount ?? 0,
+    highRiskActions: (rawMetrics as any).highRiskCount ?? Math.ceil(((rawMetrics as any).overdueCount ?? 0) * 0.3),
+    avgDaysOverdue: (rawMetrics as any).avgDaysOverdue ?? 0,
+    totalValue: (rawMetrics as any).totalValue ?? 0,
+  } : null;
 
   // Fetch queue data with filters
   const { data: queueResponse, isLoading: queueLoading, error } = useQuery({
