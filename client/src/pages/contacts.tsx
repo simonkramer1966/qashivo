@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Search, Mail, Phone, Building, User, Users, ChevronUp, ChevronDown, Star, MoreHorizontal, Eye, MessageSquare, Calendar, AlertCircle, CheckCircle, Pause } from "lucide-react";
+import { Plus, Search, Mail, Phone, Building, User, Users, ChevronUp, ChevronDown, Star, MoreHorizontal, Eye, MessageSquare, Calendar, AlertCircle, CheckCircle, Pause, TrendingUp, TrendingDown, Minus, Shield } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel } from "@/components/ui/dropdown-menu";
 import { CommunicationPreviewDialog } from "@/components/ui/communication-preview-dialog";
 
@@ -53,6 +53,12 @@ export default function Customers() {
   // Fetch available collection schedules
   const { data: schedules = [] } = useQuery({
     queryKey: ["/api/collections/schedules"],
+    enabled: isAuthenticated,
+  });
+
+  // Fetch risk scores for all customers
+  const { data: riskScores = [], isLoading: riskScoresLoading } = useQuery({
+    queryKey: ["/api/ml/risk-scoring/scores"],
     enabled: isAuthenticated,
   });
 
@@ -186,6 +192,69 @@ export default function Customers() {
     return Math.abs(hash % 5) + 1;
   };
 
+  // Get risk score for a specific customer
+  const getCustomerRiskScore = (contactId: string) => {
+    const riskScore = (riskScores as any[]).find((score: any) => score.contactId === contactId);
+    return riskScore;
+  };
+
+  // Get risk level and color based on score
+  const getRiskLevelInfo = (score: number) => {
+    if (score >= 0.8) {
+      return { level: 'Critical', color: 'bg-red-100 text-red-800 border-red-200', textColor: 'text-red-600' };
+    } else if (score >= 0.6) {
+      return { level: 'High', color: 'bg-orange-100 text-orange-800 border-orange-200', textColor: 'text-orange-600' };
+    } else if (score >= 0.4) {
+      return { level: 'Medium', color: 'bg-yellow-100 text-yellow-800 border-yellow-200', textColor: 'text-yellow-600' };
+    } else {
+      return { level: 'Low', color: 'bg-green-100 text-green-800 border-green-200', textColor: 'text-green-600' };
+    }
+  };
+
+  // Get trend arrow component
+  const getRiskTrendArrow = (trend: string, riskLevel: number) => {
+    const levelInfo = getRiskLevelInfo(riskLevel);
+    
+    switch (trend) {
+      case 'increasing':
+        return <TrendingUp className={`h-3 w-3 ${levelInfo.textColor}`} />;
+      case 'decreasing':
+        return <TrendingDown className="h-3 w-3 text-green-600" />;
+      case 'stable':
+      default:
+        return <Minus className="h-3 w-3 text-gray-400" />;
+    }
+  };
+
+  // Render risk score badge with trend
+  const renderRiskScoreBadge = (contactId: string) => {
+    const riskScore = getCustomerRiskScore(contactId);
+    
+    if (!riskScore) {
+      return (
+        <div className="flex items-center space-x-2">
+          <Badge className="bg-gray-50 text-gray-500 border-gray-200">
+            No Score
+          </Badge>
+          <Minus className="h-3 w-3 text-gray-400" />
+        </div>
+      );
+    }
+
+    const score = parseFloat(riskScore.overallRiskScore || '0');
+    const levelInfo = getRiskLevelInfo(score);
+    const trend = riskScore.riskTrend || 'stable';
+
+    return (
+      <div className="flex items-center space-x-2" data-testid={`risk-score-${contactId}`}>
+        <Badge className={levelInfo.color}>
+          {(score * 100).toFixed(0)}% {levelInfo.level}
+        </Badge>
+        {getRiskTrendArrow(trend, score)}
+      </div>
+    );
+  };
+
   // Render star rating
   const renderStarRating = (rating: number) => {
     return (
@@ -284,6 +353,12 @@ export default function Customers() {
       case "rating":
         aValue = getCustomerRating(a.id);
         bValue = getCustomerRating(b.id);
+        break;
+      case "risk":
+        const aRisk = getCustomerRiskScore(a.id);
+        const bRisk = getCustomerRiskScore(b.id);
+        aValue = aRisk ? parseFloat(aRisk.overallRiskScore || '0') : 0;
+        bValue = bRisk ? parseFloat(bRisk.overallRiskScore || '0') : 0;
         break;
       case "schedule":
         const aScheduleId = getAssignedSchedule(a.id);
@@ -389,6 +464,15 @@ export default function Customers() {
                         </th>
                         <th className="text-left py-3 text-sm font-medium text-muted-foreground">
                           <button 
+                            onClick={() => handleSort("risk")}
+                            className="flex items-center space-x-1 hover:text-slate-900"
+                          >
+                            <span>Risk Score</span>
+                            {getSortIcon("risk")}
+                          </button>
+                        </th>
+                        <th className="text-left py-3 text-sm font-medium text-muted-foreground">
+                          <button 
                             onClick={() => handleSort("schedule")}
                             className="flex items-center space-x-1 hover:text-slate-900"
                           >
@@ -429,6 +513,9 @@ export default function Customers() {
                             <div className="text-sm text-muted-foreground" data-testid={`text-email-${contact.id}`}>
                               {contact.email || '-'}
                             </div>
+                          </td>
+                          <td className="py-4" data-testid={`cell-risk-score-${contact.id}`}>
+                            {renderRiskScoreBadge(contact.id)}
                           </td>
                           <td className="py-4" data-testid={`cell-schedule-${contact.id}`}>
                             <Select
