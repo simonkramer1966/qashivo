@@ -125,7 +125,7 @@ export default function Invoices() {
       return response.json();
     },
     enabled: isAuthenticated,
-    placeholderData: (previousData) => previousData, // Keep showing old data while fetching new data
+    // Remove placeholderData to prevent stale invoice/prediction data mismatch
   });
 
   // Extract invoices and pagination from the response
@@ -699,7 +699,9 @@ export default function Invoices() {
                           <td className="py-4" data-testid={`cell-payment-probability-${invoice.id}`}>
                             {(() => {
                               const prediction = paymentPredictions[invoice.id];
-                              if (!prediction) {
+                              
+                              // Show loading state when either query is loading
+                              if (predictionsLoading || invoicesLoading) {
                                 return (
                                   <div className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium text-gray-500 bg-gray-100">
                                     <Target className="h-3 w-3" />
@@ -707,15 +709,34 @@ export default function Invoices() {
                                   </div>
                                 );
                               }
+                              
+                              // If predictions are loaded but no entry exists, show "No prediction"
+                              if (!prediction) {
+                                return (
+                                  <div className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium text-gray-400 bg-gray-50">
+                                    <Target className="h-3 w-3" />
+                                    No prediction
+                                  </div>
+                                );
+                              }
+                              
                               return formatPaymentProbability(prediction.paymentProbability);
                             })()}
                           </td>
                           <td className="py-4" data-testid={`cell-expected-payment-${invoice.id}`}>
                             {(() => {
                               const prediction = paymentPredictions[invoice.id];
-                              if (!prediction) {
+                              
+                              // Show loading state when either query is loading
+                              if (predictionsLoading || invoicesLoading) {
                                 return <span className="text-gray-400 text-xs">Calculating...</span>;
                               }
+                              
+                              // If predictions are loaded but no entry exists, show "No prediction"
+                              if (!prediction) {
+                                return <span className="text-gray-400 text-xs">No prediction</span>;
+                              }
+                              
                               return formatExpectedPayment(
                                 prediction.predictedPaymentDate, 
                                 prediction.paymentConfidenceScore,
