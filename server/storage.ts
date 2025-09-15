@@ -106,7 +106,7 @@ import {
   type InsertPaymentPromise,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, desc, sql, count, ne, isNotNull, gte, lte, lt, or, ilike } from "drizzle-orm";
+import { eq, and, desc, sql, count, ne, isNotNull, gte, lte, lt, or, ilike, inArray } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { getOverdueCategoryFromDueDate, getOverdueCategorySummary, type OverdueCategory, type OverdueCategoryInfo } from "../shared/utils/overdueUtils";
 import crypto from "crypto";
@@ -3167,47 +3167,59 @@ export class DatabaseStorage implements IStorage {
     avgCompletionTime: number;
     successRate: number;
   }> {
-    const today = new Date();
-    const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-    const endOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
+    // Use UTC date boundaries to avoid timezone issues
+    const now = new Date();
+    const startOfTodayUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+    const startOfTomorrowUTC = new Date(startOfTodayUTC.getTime() + 24 * 60 * 60 * 1000);
 
-    // Total open actions
+    // Define active statuses that should be counted as "open"
+    const activeStatuses = ['open', 'in_progress', 'snoozed', 'pending'];
+
+    console.log(`📊 Computing Action Centre metrics for tenant ${tenantId}`);
+    console.log(`📅 UTC Date boundaries: ${startOfTodayUTC.toISOString()} to ${startOfTomorrowUTC.toISOString()}`);
+
+    // Total open actions (all active statuses)
     const [openCount] = await db
       .select({ count: count() })
       .from(actionItems)
-      .where(and(eq(actionItems.tenantId, tenantId), eq(actionItems.status, 'open')));
+      .where(and(
+        eq(actionItems.tenantId, tenantId), 
+        inArray(actionItems.status, activeStatuses)
+      ));
 
-    // Due today count
+    // Due today count - items due between start of today and start of tomorrow (UTC)
     const [dueTodayCount] = await db
       .select({ count: count() })
       .from(actionItems)
       .where(and(
         eq(actionItems.tenantId, tenantId), 
-        eq(actionItems.status, 'open'),
-        gte(actionItems.dueAt, startOfToday),
-        lte(actionItems.dueAt, endOfToday)
+        inArray(actionItems.status, activeStatuses),
+        gte(actionItems.dueAt, startOfTodayUTC),
+        lt(actionItems.dueAt, startOfTomorrowUTC)
       ));
 
-    // Overdue count
+    // Overdue count - items due before start of today (UTC)
     const [overdueCount] = await db
       .select({ count: count() })
       .from(actionItems)
       .where(and(
         eq(actionItems.tenantId, tenantId), 
-        eq(actionItems.status, 'open'),
-        lt(actionItems.dueAt, startOfToday)
+        inArray(actionItems.status, activeStatuses),
+        lt(actionItems.dueAt, startOfTodayUTC)
       ));
 
-    // Completed today count
+    // Completed today count - items completed today (based on updatedAt)
     const [completedTodayCount] = await db
       .select({ count: count() })
       .from(actionItems)
       .where(and(
         eq(actionItems.tenantId, tenantId), 
         eq(actionItems.status, 'completed'),
-        gte(actionItems.updatedAt, startOfToday),
-        lte(actionItems.updatedAt, endOfToday)
+        gte(actionItems.updatedAt, startOfTodayUTC),
+        lt(actionItems.updatedAt, startOfTomorrowUTC)
       ));
+
+    console.log(`📈 Metrics results: totalOpen=${openCount.count}, dueToday=${dueTodayCount.count}, overdue=${overdueCount.count}, completedToday=${completedTodayCount.count}`);
 
     // Calculate high-risk exposure (placeholder calculation)
     const highRiskExposure = 25000; // This would integrate with risk scoring service

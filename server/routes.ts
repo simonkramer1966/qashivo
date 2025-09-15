@@ -1530,6 +1530,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ==================== ACTION CENTRE API ====================
+
+  // Debug endpoint to create test action items with proper due dates
+  app.post("/api/action-centre/create-test-items", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      console.log(`🔧 Creating test action items for tenant ${user.tenantId}`);
+
+      // Create test action items with different due dates and statuses
+      const now = new Date();
+      const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+      const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000);
+      const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000);
+
+      const testItems = [
+        {
+          tenantId: user.tenantId,
+          contactId: "test-contact-1",
+          type: "email_reminder",
+          priority: "high",
+          status: "open",
+          dueAt: yesterday, // Overdue item
+          createdByUserId: user.id,
+        },
+        {
+          tenantId: user.tenantId,
+          contactId: "test-contact-2",
+          type: "payment_follow_up",
+          priority: "medium",
+          status: "in_progress",
+          dueAt: today, // Due today item
+          createdByUserId: user.id,
+        },
+        {
+          tenantId: user.tenantId,
+          contactId: "test-contact-3",
+          type: "sms_reminder",
+          priority: "low",
+          status: "snoozed",
+          dueAt: tomorrow, // Future item
+          createdByUserId: user.id,
+        },
+      ];
+
+      const createdItems = [];
+      for (const item of testItems) {
+        const actionItem = await storage.createActionItem(item);
+        createdItems.push(actionItem);
+      }
+
+      console.log(`✅ Created ${createdItems.length} test action items`);
+
+      res.json({
+        success: true,
+        message: `Created ${createdItems.length} test action items`,
+        items: createdItems,
+      });
+    } catch (error) {
+      console.error("Error creating test action items:", error);
+      res.status(500).json({ message: "Failed to create test action items" });
+    }
+  });
   
   // Smart Queue Management with ML Prioritization
   app.get("/api/action-centre/queue", isAuthenticated, async (req: any, res) => {
