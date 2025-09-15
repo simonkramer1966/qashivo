@@ -3592,15 +3592,33 @@ Payment required immediately to avoid collection action. Contact us NOW.`
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
 
+      // Get current filter parameters to return only relevant predictions
+      const { status = 'pending', overdue = 'all', search, page = '1', limit = '50' } = req.query;
+      
+      // Get all predictions for the tenant first
       const { PredictivePaymentService } = await import("./services/predictivePaymentService");
       const predictionService = new PredictivePaymentService();
+      const allPredictions = await predictionService.getPaymentPredictions(user.tenantId);
       
-      // Get all predictions for the tenant
-      const predictions = await predictionService.getPaymentPredictions(user.tenantId);
+      // Use the same filtering logic as the main invoices endpoint
+      const result = await storage.getInvoicesFiltered(user.tenantId, {
+        status: status as string,
+        search: search as string,
+        overdueCategory: overdue as any,
+        contactId: undefined,
+        page: parseInt(page as string),
+        limit: parseInt(limit as string)
+      });
+      
+      // Only return predictions for invoices that are in the current filtered set
+      const invoiceIds = new Set(result.invoices.map((inv: any) => inv.id));
+      const filteredPredictions = allPredictions.filter(prediction => 
+        invoiceIds.has(prediction.invoiceId)
+      );
       
       // Convert to map for easy lookup by invoice ID
       const predictionMap: { [invoiceId: string]: any } = {};
-      predictions.forEach(prediction => {
+      filteredPredictions.forEach(prediction => {
         predictionMap[prediction.invoiceId] = {
           paymentProbability: parseFloat(prediction.paymentProbability || '0'),
           predictedPaymentDate: prediction.predictedPaymentDate,
@@ -3609,6 +3627,15 @@ Payment required immediately to avoid collection action. Contact us NOW.`
           escalationRisk: parseFloat(prediction.escalationRisk || '0'),
           modelVersion: prediction.modelVersion
         };
+      });
+      
+      console.log(`🎯 Payment predictions filtered: ${Object.keys(predictionMap).length}/${allPredictions.length} predictions (matching current invoice filter)`);
+      
+      // Add cache-busting headers to prevent 304 responses when filters change
+      res.set({
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
       });
       
       res.json(predictionMap);

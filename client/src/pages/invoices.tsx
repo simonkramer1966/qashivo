@@ -136,13 +136,26 @@ export default function Invoices() {
   const { data: allPaymentPredictions = {}, isLoading: predictionsLoading } = useQuery({
     queryKey: ["/api/ml/payment-predictions/bulk", { status: statusFilter, search, overdue: overdueFilter, page: invoicesCurrentPage, limit: invoicesItemsPerPage }],
     queryFn: async () => {
-      const response = await fetch('/api/ml/payment-predictions/bulk/invoices');
+      // Pass the same filter parameters to the predictions endpoint
+      const params = new URLSearchParams({
+        status: statusFilter,
+        overdue: overdueFilter,
+        page: invoicesCurrentPage.toString(),
+        limit: invoicesItemsPerPage.toString()
+      });
+      
+      // Only add search parameter if it has a value
+      if (search && search.trim()) {
+        params.append('search', search.trim());
+      }
+      
+      const response = await fetch(`/api/ml/payment-predictions/bulk/invoices?${params.toString()}`);
       if (!response.ok) throw new Error('Failed to fetch predictions');
       return response.json();
     },
     enabled: isAuthenticated,
-    staleTime: 2 * 60 * 1000, // 2 minutes - refresh more frequently when filters change
-    gcTime: 10 * 60 * 1000, // 10 minutes - shorter cache for dynamic content
+    staleTime: 30 * 1000, // 30 seconds - refresh quickly when filters change
+    gcTime: 5 * 60 * 1000, // 5 minutes - shorter cache for dynamic content
     refetchOnWindowFocus: false, // Don't refetch when window regains focus
   });
 
