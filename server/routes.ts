@@ -71,6 +71,11 @@ const testVoiceSchema = z.object({
   demoMessage: z.string().optional()
 });
 
+// Nudge endpoint request schema
+const nudgeInvoiceSchema = z.object({
+  invoiceId: z.string().min(1, "Invoice ID is required")
+});
+
 // Invoice filtering query schema for server-side filtering
 const invoicesQuerySchema = z.object({
   status: z.enum(['pending', 'overdue', 'paid', 'cancelled', 'all']).optional().default('all'),
@@ -2633,7 +2638,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
     }
   });
 
-  // Nudge invoice to next action
+  // Nudge invoice to next action (legacy endpoint with invoiceId as path parameter)
   app.post("/api/collections/nudge/:invoiceId", isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.claims.sub);
@@ -2664,6 +2669,205 @@ Payment required immediately to avoid collection action. Contact us NOW.`
       res.status(500).json({ 
         success: false, 
         message: (error as Error).message || "Failed to nudge invoice" 
+      });
+    }
+  });
+
+  // New nudge endpoint with invoiceId in request body and action execution
+  app.post("/api/collections/nudge", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      // Validate request body using Zod schema
+      const validatedData = nudgeInvoiceSchema.parse(req.body);
+      const { invoiceId } = validatedData;
+
+      // Get the invoice and validate it belongs to the tenant
+      const invoice = await storage.getInvoice(invoiceId, user.tenantId);
+      if (!invoice) {
+        return res.status(404).json({ message: "Invoice not found" });
+      }
+
+      // Import collections automation service to determine next action
+      const { nudgeInvoiceToNextAction } = await import("./services/collectionsAutomation");
+      const nudgeAction = await nudgeInvoiceToNextAction(invoiceId, user.tenantId);
+      
+      if (!nudgeAction) {
+        return res.status(404).json({ message: "Unable to determine next action for this invoice" });
+      }
+
+      console.log(`📧 Executing nudge action for invoice ${nudgeAction.invoiceNumber}: ${nudgeAction.action} (${nudgeAction.actionType})`);
+
+      let actionExecuted = false;
+      let actionDetails = '';
+      let nextActionDate = new Date();
+
+      // Execute the action based on actionType
+      if (nudgeAction.actionType === 'email') {
+        // Execute email action
+        if (!invoice.contact.email) {
+          return res.status(400).json({ message: "Contact email not available for email action" });
+        }
+
+        // Get email template and sender
+        const templates = await storage.getCommunicationTemplates(user.tenantId, { type: 'email' });
+        const defaultSender = await storage.getDefaultEmailSender(user.tenantId);
+        
+        if (!defaultSender?.email) {
+          return res.status(500).json({ message: "No email sender configured in Collection Workflow" });
+        }
+
+        // Use template if specified, otherwise create basic message
+        let emailContent = nudgeAction.actionDetails?.message || 'Payment reminder regarding outstanding invoice.';
+        let emailSubject = nudgeAction.actionDetails?.subject || `Payment Reminder - Invoice ${invoice.invoiceNumber}`;
+
+        if (nudgeAction.templateId) {
+          const template = templates.find(t => t.id === nudgeAction.templateId);
+          if (template) {
+            emailContent = template.content || emailContent;
+            emailSubject = template.subject || emailSubject;
+          }
+        }
+
+        // Process template variables
+        const dueDate = new Date(invoice.dueDate);
+        const today = new Date();
+        const daysOverdue = Math.max(0, Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24)));
+        
+        const templateVars = {
+          first_name: invoice.contact.name?.split(' ')[0] || 'Valued Customer',
+          invoice_number: invoice.invoiceNumber,
+          amount: Number(invoice.amount).toLocaleString(),
+          due_date: formatDate(invoice.dueDate),
+          days_overdue: daysOverdue.toString(),
+          company_name: invoice.contact.companyName || '',
+          your_name: defaultSender.fromName || defaultSender.name || 'Collections Team'
+        };
+
+        // Replace template variables
+        Object.entries(templateVars).forEach(([key, value]) => {
+          const placeholder = new RegExp(`\\{\\{${key}\\}\\}`, 'g');
+          emailContent = emailContent.replace(placeholder, value);
+          emailSubject = emailSubject.replace(placeholder, value);
+        });
+
+        // Send email using SendGrid
+        const { sendEmail } = await import("./services/sendgrid");
+        const formattedSender = `${defaultSender.fromName || defaultSender.name} <${defaultSender.email}>`;
+        
+        const emailSent = await sendEmail({
+          to: invoice.contact.email,
+          from: formattedSender,
+          subject: emailSubject,
+          html: emailContent.replace(/\n/g, '<br>')
+        });
+
+        if (emailSent) {
+          actionExecuted = true;
+          actionDetails = `Email sent to ${invoice.contact.email}`;
+          nextActionDate = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000); // +3 days for email
+        }
+
+      } else if (nudgeAction.actionType === 'sms') {
+        // Execute SMS action
+        if (!invoice.contact.phone) {
+          return res.status(400).json({ message: "Contact phone not available for SMS action" });
+        }
+
+        const dueDate = new Date(invoice.dueDate);
+        const today = new Date();
+        const daysOverdue = Math.max(0, Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24)));
+
+        // Send SMS using Twilio
+        const { sendPaymentReminderSMS } = await import("./services/twilio");
+        const smsResult = await sendPaymentReminderSMS({
+          phone: invoice.contact.phone,
+          name: invoice.contact.name || 'Customer',
+          invoiceNumber: invoice.invoiceNumber,
+          amount: Number(invoice.amount),
+          daysPastDue: daysOverdue
+        });
+
+        if (smsResult.success) {
+          actionExecuted = true;
+          actionDetails = `SMS sent to ${invoice.contact.phone}`;
+          nextActionDate = new Date(Date.now() + 1 * 24 * 60 * 60 * 1000); // +1 day for SMS
+        }
+
+      } else {
+        // For call/manual actions, just log and schedule
+        actionExecuted = true;
+        actionDetails = `${nudgeAction.actionType} action scheduled`;
+        nextActionDate = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000); // +2 days for call/manual
+      }
+
+      if (!actionExecuted && (nudgeAction.actionType === 'email' || nudgeAction.actionType === 'sms')) {
+        return res.status(500).json({ message: `Failed to send ${nudgeAction.actionType}` });
+      }
+
+      // Update invoice with next action details
+      await storage.updateInvoice(invoiceId, user.tenantId, {
+        nextAction: nudgeAction.action,
+        nextActionDate: nextActionDate,
+        lastReminderSent: new Date(),
+        reminderCount: (invoice.reminderCount || 0) + 1,
+        collectionStage: nudgeAction.actionDetails?.escalationLevel || invoice.collectionStage
+      });
+
+      // Create audit trail entry
+      await storage.createAction({
+        tenantId: user.tenantId,
+        invoiceId,
+        contactId: invoice.contactId,
+        userId: user.id,
+        type: nudgeAction.actionType,
+        status: actionExecuted ? 'completed' : 'scheduled',
+        subject: nudgeAction.actionDetails?.subject || `${nudgeAction.action} - Invoice ${invoice.invoiceNumber}`,
+        content: actionDetails,
+        scheduledFor: nextActionDate,
+        completedAt: actionExecuted ? new Date() : undefined,
+        metadata: {
+          nudgeAction: nudgeAction.action,
+          priority: nudgeAction.priority,
+          scheduleName: nudgeAction.scheduleName,
+          templateId: nudgeAction.templateId
+        }
+      });
+
+      console.log(`✅ Nudge completed for invoice ${nudgeAction.invoiceNumber}: ${nudgeAction.action} - ${actionDetails}`);
+
+      res.json({
+        success: true,
+        action: nudgeAction.actionType,
+        scheduledFor: nextActionDate.toISOString(),
+        message: `${actionDetails || `${nudgeAction.action} scheduled`}`,
+        actionDetails: {
+          invoiceNumber: invoice.invoiceNumber,
+          contactName: invoice.contact.name,
+          action: nudgeAction.action,
+          actionType: nudgeAction.actionType,
+          priority: nudgeAction.priority,
+          scheduleName: nudgeAction.scheduleName
+        }
+      });
+
+    } catch (error) {
+      console.error("Error executing nudge action:", error);
+      
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ 
+          success: false,
+          message: "Invalid request data", 
+          errors: error.errors 
+        });
+      }
+      
+      res.status(500).json({
+        success: false,
+        message: (error as Error).message || "Failed to execute nudge action"
       });
     }
   });
