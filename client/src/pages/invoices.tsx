@@ -320,19 +320,38 @@ export default function Invoices() {
   // Server-side filtering replaces client-side filtering
   // Invoices are already filtered by the server based on statusFilter, search, and overdueFilter
 
-  // Handle column sort
+  // Handle column sort with dual-function for amount/due date
   const handleSort = (column: string) => {
-    if (sortColumn === column) {
-      // Toggle direction or reset if already desc
-      if (sortDirection === 'asc') {
+    if (column === 'amountDueDate') {
+      // Dual-function sorting: Amount ASC → Due Date ASC → Due Date DESC → Amount DESC → No sort
+      if (sortColumn === 'amount' && sortDirection === 'asc') {
+        setSortColumn('dueDate');
+        setSortDirection('asc');
+      } else if (sortColumn === 'dueDate' && sortDirection === 'asc') {
+        setSortColumn('dueDate');
+        setSortDirection('desc');
+      } else if (sortColumn === 'dueDate' && sortDirection === 'desc') {
+        setSortColumn('amount');
         setSortDirection('desc');
       } else {
-        setSortColumn(null);
+        // Start with amount ascending or reset
+        setSortColumn('amount');
         setSortDirection('asc');
       }
     } else {
-      setSortColumn(column);
-      setSortDirection('asc');
+      // Regular single-column sorting
+      if (sortColumn === column) {
+        // Toggle direction or reset if already desc
+        if (sortDirection === 'asc') {
+          setSortDirection('desc');
+        } else {
+          setSortColumn(null);
+          setSortDirection('asc');
+        }
+      } else {
+        setSortColumn(column);
+        setSortDirection('asc');
+      }
     }
   };
 
@@ -406,14 +425,42 @@ export default function Invoices() {
       : bStr.localeCompare(aStr);
   });
 
-  // Helper function to render sort indicator
+  // Helper function to render sort indicator with dual-function support
   const getSortIcon = (column: string) => {
-    if (sortColumn !== column) {
-      return <ChevronUp className="ml-1 h-4 w-4 opacity-0 group-hover:opacity-50" />;
+    if (column === 'amountDueDate') {
+      // Special handling for dual-function sort
+      if (sortColumn === 'amount') {
+        return (
+          <div className="ml-1 flex flex-col items-center">
+            {sortDirection === 'asc' 
+              ? <ChevronUp className="h-3 w-3 text-[#17B6C3]" />
+              : <ChevronDown className="h-3 w-3 text-[#17B6C3]" />
+            }
+            <span className="text-[10px] text-[#17B6C3] leading-none">£</span>
+          </div>
+        );
+      } else if (sortColumn === 'dueDate') {
+        return (
+          <div className="ml-1 flex flex-col items-center">
+            {sortDirection === 'asc' 
+              ? <ChevronUp className="h-3 w-3 text-[#17B6C3]" />
+              : <ChevronDown className="h-3 w-3 text-[#17B6C3]" />
+            }
+            <span className="text-[10px] text-[#17B6C3] leading-none">📅</span>
+          </div>
+        );
+      } else {
+        return <ChevronUp className="ml-1 h-4 w-4 opacity-0 group-hover:opacity-50" />;
+      }
+    } else {
+      // Regular single-column sort icon
+      if (sortColumn !== column) {
+        return <ChevronUp className="ml-1 h-4 w-4 opacity-0 group-hover:opacity-50" />;
+      }
+      return sortDirection === 'asc' 
+        ? <ChevronUp className="ml-1 h-4 w-4 text-[#17B6C3]" />
+        : <ChevronDown className="ml-1 h-4 w-4 text-[#17B6C3]" />;
     }
-    return sortDirection === 'asc' 
-      ? <ChevronUp className="ml-1 h-4 w-4 text-[#17B6C3]" />
-      : <ChevronDown className="ml-1 h-4 w-4 text-[#17B6C3]" />;
   };
 
   // Use server-side pagination (no client-side slicing needed)
@@ -613,22 +660,12 @@ export default function Invoices() {
                         </th>
                         <th 
                           className="text-left py-3 text-sm font-medium text-muted-foreground cursor-pointer select-none group hover:text-[#17B6C3] transition-colors"
-                          onClick={() => handleSort('amount')}
-                          data-testid="header-amount"
+                          onClick={() => handleSort('amountDueDate')}
+                          data-testid="header-amount-due-date"
                         >
                           <div className="flex items-center">
-                            Amount
-                            {getSortIcon('amount')}
-                          </div>
-                        </th>
-                        <th 
-                          className="text-left py-3 text-sm font-medium text-muted-foreground cursor-pointer select-none group hover:text-[#17B6C3] transition-colors"
-                          onClick={() => handleSort('dueDate')}
-                          data-testid="header-due-date"
-                        >
-                          <div className="flex items-center">
-                            Due Date
-                            {getSortIcon('dueDate')}
+                            Amount / Due Date
+                            {getSortIcon('amountDueDate')}
                           </div>
                         </th>
                         <th 
@@ -679,10 +716,10 @@ export default function Invoices() {
                               {invoice.contact?.name || 'No contact name'}
                             </div>
                           </td>
-                          <td className="py-4 font-medium text-foreground" data-testid={`text-amount-${invoice.id}`}>
-                            £{Number(invoice.amount).toLocaleString()}
-                          </td>
-                          <td className="py-4">
+                          <td className="py-4" data-testid={`cell-amount-due-date-${invoice.id}`}>
+                            <div className="font-medium text-foreground" data-testid={`text-amount-${invoice.id}`}>
+                              £{Number(invoice.amount).toLocaleString()}
+                            </div>
                             <div className="text-sm text-foreground" data-testid={`text-due-date-${invoice.id}`}>
                               {formatDate(invoice.dueDate)}
                             </div>
