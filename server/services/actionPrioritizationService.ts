@@ -185,6 +185,10 @@ export class ActionPrioritizationService {
       const conditions = [eq(actionItems.tenantId, tenantId)];
       if (filters.status) {
         conditions.push(eq(actionItems.status, filters.status));
+      } else {
+        // Default to active statuses only (same as metrics calculation)
+        const activeStatuses = ['open', 'in_progress', 'snoozed', 'pending'];
+        conditions.push(inArray(actionItems.status, activeStatuses));
       }
       if (filters.assignedToUserId) {
         conditions.push(eq(actionItems.assignedToUserId, filters.assignedToUserId));
