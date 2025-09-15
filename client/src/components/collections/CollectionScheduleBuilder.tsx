@@ -172,6 +172,32 @@ export default function CollectionScheduleBuilder({ className }: CollectionSched
     },
   });
 
+  // Assign all customers to default schedule mutation
+  const assignAllToDefaultMutation = useMutation({
+    mutationFn: () => apiRequest("POST", "/api/collections/assign-all-to-default"),
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/collections/schedules'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/collections/customer-assignments'] });
+      toast({
+        title: "Success",
+        description: `Assigned ${data.successfulAssignments} customers to default schedule`,
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to assign customers to default schedule",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleAssignAllToDefault = () => {
+    if (window.confirm("Are you sure you want to assign ALL customers to the default schedule? This will override their current schedule assignments.")) {
+      assignAllToDefaultMutation.mutate();
+    }
+  };
+
   const openEditDialog = (schedule: CollectionSchedule) => {
     setEditingSchedule(schedule);
     form.reset({
@@ -403,6 +429,18 @@ export default function CollectionScheduleBuilder({ className }: CollectionSched
                   >
                     <Trash2 className="h-4 w-4 text-red-500" />
                   </Button>
+                  {schedule.isDefault && (
+                    <Button
+                      size="sm"
+                      onClick={handleAssignAllToDefault}
+                      disabled={assignAllToDefaultMutation.isPending}
+                      className="bg-[#17B6C3] hover:bg-[#1396A1] text-white"
+                      data-testid="button-assign-all-to-default"
+                    >
+                      <Users className="h-4 w-4 mr-1" />
+                      {assignAllToDefaultMutation.isPending ? "Assigning..." : "Assign All Customers"}
+                    </Button>
+                  )}
                 </div>
                 
                 <div className="flex items-center gap-1 text-xs text-gray-500">
