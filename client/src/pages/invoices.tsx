@@ -320,7 +320,7 @@ export default function Invoices() {
   // Server-side filtering replaces client-side filtering
   // Invoices are already filtered by the server based on statusFilter, search, and overdueFilter
 
-  // Handle column sort with dual-function for amount/due date
+  // Handle column sort with dual-function for amount/due date and category/prob
   const handleSort = (column: string) => {
     if (column === 'amountDueDate') {
       // Dual-function sorting: Amount ASC → Due Date ASC → Due Date DESC → Amount DESC → No sort
@@ -336,6 +336,16 @@ export default function Invoices() {
       } else {
         // Start with amount ascending or reset
         setSortColumn('amount');
+        setSortDirection('asc');
+      }
+    } else if (column === 'categoryProb') {
+      // Dual-function sorting: Category ASC → Category DESC → No sort (Prob % not sortable)
+      if (sortColumn === 'status' && sortDirection === 'asc') {
+        setSortColumn('status');
+        setSortDirection('desc');
+      } else {
+        // Start with category ascending or reset
+        setSortColumn('status');
         setSortDirection('asc');
       }
     } else {
@@ -447,6 +457,21 @@ export default function Invoices() {
               : <ChevronDown className="h-3 w-3 text-[#17B6C3]" />
             }
             <span className="text-[10px] text-[#17B6C3] leading-none">📅</span>
+          </div>
+        );
+      } else {
+        return <ChevronUp className="ml-1 h-4 w-4 opacity-0 group-hover:opacity-50" />;
+      }
+    } else if (column === 'categoryProb') {
+      // Special handling for category/prob dual-function sort (category only)
+      if (sortColumn === 'status') {
+        return (
+          <div className="ml-1 flex flex-col items-center">
+            {sortDirection === 'asc' 
+              ? <ChevronUp className="h-3 w-3 text-[#17B6C3]" />
+              : <ChevronDown className="h-3 w-3 text-[#17B6C3]" />
+            }
+            <span className="text-[10px] text-[#17B6C3] leading-none">🏷️</span>
           </div>
         );
       } else {
@@ -670,20 +695,12 @@ export default function Invoices() {
                         </th>
                         <th 
                           className="text-left py-3 text-sm font-medium text-muted-foreground cursor-pointer select-none group hover:text-[#17B6C3] transition-colors"
-                          onClick={() => handleSort('status')}
-                          data-testid="header-status"
+                          onClick={() => handleSort('categoryProb')}
+                          data-testid="header-category-prob"
                         >
                           <div className="flex items-center">
-                            Category
-                            {getSortIcon('status')}
-                          </div>
-                        </th>
-                        <th 
-                          className="text-left py-3 text-sm font-medium text-muted-foreground"
-                          data-testid="header-payment-probability"
-                        >
-                          <div className="flex items-center">
-                            Prob %
+                            Category / Prob %
+                            {getSortIcon('categoryProb')}
                           </div>
                         </th>
                         <th 
@@ -732,35 +749,35 @@ export default function Invoices() {
                               ) : null;
                             })()}
                           </td>
-                          <td className="py-4" data-testid={`cell-overdue-category-${invoice.id}`}>
-                            {getOverdueCategoryBadge(invoice)}
-                          </td>
-                          <td className="py-4" data-testid={`cell-payment-probability-${invoice.id}`}>
-                            {(() => {
-                              const prediction = paymentPredictions[invoice.id];
-                              
-                              // Show loading state when either query is loading
-                              if (predictionsLoading || invoicesLoading) {
-                                return (
-                                  <div className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium text-gray-500 bg-gray-100">
-                                    <Target className="h-3 w-3" />
-                                    Calculating...
-                                  </div>
-                                );
-                              }
-                              
-                              // If predictions are loaded but no entry exists, show "No prediction"
-                              if (!prediction) {
-                                return (
-                                  <div className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium text-gray-400 bg-gray-50">
-                                    <Target className="h-3 w-3" />
-                                    No prediction
-                                  </div>
-                                );
-                              }
-                              
-                              return formatPaymentProbability(prediction.paymentProbability);
-                            })()}
+                          <td className="py-4" data-testid={`cell-category-prob-${invoice.id}`}>
+                            <div>{getOverdueCategoryBadge(invoice)}</div>
+                            <div className="text-sm text-muted-foreground mt-1">
+                              {(() => {
+                                const prediction = paymentPredictions[invoice.id];
+                                
+                                // Show loading state when either query is loading
+                                if (predictionsLoading || invoicesLoading) {
+                                  return (
+                                    <div className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium text-gray-500 bg-gray-100">
+                                      <Target className="h-3 w-3" />
+                                      Calculating...
+                                    </div>
+                                  );
+                                }
+                                
+                                // If predictions are loaded but no entry exists, show "No prediction"
+                                if (!prediction) {
+                                  return (
+                                    <div className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium text-gray-400 bg-gray-50">
+                                      <Target className="h-3 w-3" />
+                                      No prediction
+                                    </div>
+                                  );
+                                }
+                                
+                                return formatPaymentProbability(prediction.paymentProbability);
+                              })()}
+                            </div>
                           </td>
                           <td className="py-4" data-testid={`cell-expected-payment-${invoice.id}`}>
                             {(() => {
