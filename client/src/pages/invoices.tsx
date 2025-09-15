@@ -159,20 +159,8 @@ export default function Invoices() {
     refetchOnWindowFocus: false, // Don't refetch when window regains focus
   });
 
-  // Filter predictions on frontend (instant filtering, no API calls)
-  const paymentPredictions = useMemo(() => {
-    if (!invoices.length || !allPaymentPredictions) return {};
-    
-    // Only return predictions for invoices that exist in current invoice data
-    const filteredPredictions: { [key: string]: any } = {};
-    (invoices as any[]).forEach((invoice: any) => {
-      if (allPaymentPredictions[invoice.id]) {
-        filteredPredictions[invoice.id] = allPaymentPredictions[invoice.id];
-      }
-    });
-    
-    return filteredPredictions;
-  }, [invoices, allPaymentPredictions]);
+  // Use predictions directly from backend (server-side filtering already applied)
+  const paymentPredictions = allPaymentPredictions || {};
 
   // Fetch collection schedules for assignment
   const { data: collectionSchedules = [] } = useQuery({
