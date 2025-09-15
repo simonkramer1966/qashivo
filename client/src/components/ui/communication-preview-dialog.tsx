@@ -24,13 +24,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Loader2, Mail, MessageSquare, Phone, User, Building } from "lucide-react";
+import { Loader2, Mail, MessageSquare, Phone, User, Building, Brain } from "lucide-react";
 
 // Component props interface
 export interface CommunicationPreviewDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  type: 'email' | 'sms' | 'voice';
+  type: 'email' | 'sms' | 'voice' | 'ai-call';
   context: 'customer' | 'invoice';
   contextId: string; // contactId or invoiceId
   onSend: (content: { subject?: string; content: string; recipient: string; templateId?: string }) => void;
@@ -77,7 +77,9 @@ export function CommunicationPreviewDialog({
   // Generate preview mutation
   const previewMutation = useMutation({
     mutationFn: async (templateId?: string) => {
-      const endpoint = `/api/communications/preview-${type}`;
+      const endpoint = type === 'ai-call' 
+        ? `/api/communications/preview-voice` 
+        : `/api/communications/preview-${type}`;
       const payload: any = {
         templateId: templateId || undefined,
       };
@@ -169,7 +171,9 @@ export function CommunicationPreviewDialog({
       case 'sms':
         return { icon: MessageSquare, label: 'SMS', recipientLabel: 'Phone Number' };
       case 'voice':
-        return { icon: Phone, label: 'Voice Call', recipientLabel: 'Phone Number' };
+        return { icon: Phone, label: 'Voice Message', recipientLabel: 'Phone Number' };
+      case 'ai-call':
+        return { icon: Brain, label: 'AI Call', recipientLabel: 'Phone Number' };
       default:
         return { icon: Mail, label: 'Communication', recipientLabel: 'Recipient' };
     }

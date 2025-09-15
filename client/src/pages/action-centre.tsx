@@ -204,7 +204,7 @@ export default function ActionCentre() {
   // Communication dialog state
   const [communicationDialog, setCommunicationDialog] = useState({
     isOpen: false,
-    type: 'email' as 'email' | 'sms' | 'voice',
+    type: 'email' as 'email' | 'sms' | 'voice' | 'ai-call',
     context: 'customer' as 'customer' | 'invoice',
     contextId: '',
   });
@@ -272,7 +272,7 @@ export default function ActionCentre() {
   // Communication mutation with enhanced functionality
   const sendCommunicationMutation = useMutation({
     mutationFn: async ({ type, content, recipient, subject, templateId, contextId, context }: {
-      type: 'email' | 'sms' | 'voice';
+      type: 'email' | 'sms' | 'voice' | 'ai-call';
       content: string;
       recipient: string;
       subject?: string;
@@ -293,6 +293,28 @@ export default function ActionCentre() {
         };
         
         // Add context-specific data for voice calls
+        if (context === 'invoice') {
+          payload.invoiceId = contextId;
+        } else {
+          payload.contactId = contextId;
+        }
+      } else if (type === 'ai-call') {
+        // AI calls use the enhanced Retell API endpoint with AI-specific parameters
+        endpoint = '/api/retell/ai-call';
+        payload = {
+          message: content,
+          templateId,
+          recipient,
+          isAICall: true,
+          // Add customer/invoice context for AI
+          dynamicVariables: {
+            contactName: recipient || 'Customer',
+            context: context,
+            contextId: contextId
+          }
+        };
+        
+        // Add context-specific data for AI calls
         if (context === 'invoice') {
           payload.invoiceId = contextId;
         } else {
@@ -325,7 +347,8 @@ export default function ActionCentre() {
     onSuccess: (data, variables) => {
       const typeLabel = variables.type === 'email' ? 'Email' : 
                        variables.type === 'sms' ? 'SMS' : 
-                       variables.type === 'voice' ? 'Voice call' : 'Communication';
+                       variables.type === 'voice' ? 'Voice Message' :
+                       variables.type === 'ai-call' ? 'AI Call' : 'Communication';
       toast({
         title: "Communication Sent",
         description: `${typeLabel} sent successfully`,
@@ -1405,7 +1428,7 @@ export default function ActionCentre() {
                   </div>
                   
                   {/* Quick Actions */}
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className="grid grid-cols-4 gap-2">
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
@@ -1470,11 +1493,40 @@ export default function ActionCentre() {
                             data-testid="button-make-call"
                           >
                             <Phone className="h-4 w-4 mb-1" />
-                            <span className="text-xs">Call</span>
+                            <span className="text-xs">VM</span>
                           </Button>
                         </TooltipTrigger>
                         <TooltipContent>
-                          <p>Make voice call with AI agent</p>
+                          <p>Leave voice message</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setCommunicationDialog({
+                              isOpen: true,
+                              type: 'ai-call',
+                              context: selectedAction.invoiceId ? 'invoice' : 'customer',
+                              contextId: selectedAction.invoiceId || selectedAction.contactId,
+                            })}
+                            className="flex flex-col items-center p-3 h-auto hover:bg-amber-50 hover:border-amber-200"
+                            data-testid="button-ai-call"
+                          >
+                            <div className="relative">
+                              <Phone className="h-4 w-4 mb-1" />
+                              <div className="absolute -top-1 -right-1 w-2 h-2 bg-amber-400 rounded-full flex items-center justify-center">
+                                <span className="text-[6px] text-amber-900 font-bold">AI</span>
+                              </div>
+                            </div>
+                            <span className="text-xs">AI Call</span>
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>AI-powered call with intelligent agent</p>
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>

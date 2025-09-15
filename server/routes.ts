@@ -5091,6 +5091,136 @@ Payment required immediately to avoid collection action. Contact us NOW.`
     }
   });
 
+  // AI-Enhanced Retell Call endpoint
+  app.post("/api/retell/ai-call", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { message, templateId, recipient, isAICall, dynamicVariables, invoiceId, contactId } = req.body;
+
+      if (!message || !recipient) {
+        return res.status(400).json({ message: "Message and recipient are required" });
+      }
+
+      // Get tenant for organization context
+      const tenant = await storage.getTenant(user.tenantId);
+
+      // Enhanced AI context variables
+      let enhancedDynamicVariables = {
+        customer_name: dynamicVariables?.contactName || "Customer",
+        organisation_name: tenant?.name || "Nexus AR",
+        ai_call_context: dynamicVariables?.context || "general",
+        context_id: dynamicVariables?.contextId || "",
+        is_ai_powered: true,
+        call_type: "ai_collection_call"
+      };
+
+      // Add invoice-specific context if available
+      if (invoiceId) {
+        try {
+          const invoice = await storage.getInvoice(invoiceId, user.tenantId);
+          if (invoice) {
+            enhancedDynamicVariables = {
+              ...enhancedDynamicVariables,
+              invoice_number: invoice.invoiceNumber,
+              invoice_amount: invoice.amount,
+              amount_paid: invoice.amountPaid || "0.00",
+              outstanding_amount: String(parseFloat(invoice.amount || "0") - parseFloat(invoice.amountPaid || "0")),
+              due_date: invoice.dueDate ? invoice.dueDate.toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+              days_overdue: invoice.dueDate ? String(Math.max(0, Math.floor((new Date().getTime() - new Date(invoice.dueDate).getTime()) / (1000 * 60 * 60 * 24)))) : "0"
+            };
+          }
+        } catch (error) {
+          console.warn("Could not fetch invoice context for AI call:", error);
+        }
+      }
+
+      // Add contact-specific context if available
+      if (contactId) {
+        try {
+          const contact = await storage.getContact(contactId, user.tenantId);
+          if (contact) {
+            enhancedDynamicVariables.customer_name = contact.name || "Customer";
+            enhancedDynamicVariables.company_name = contact.companyName || "";
+            enhancedDynamicVariables.preferred_contact_method = contact.preferredContactMethod || "phone";
+          }
+        } catch (error) {
+          console.warn("Could not fetch contact context for AI call:", error);
+        }
+      }
+
+      console.log("🤖 Creating AI call with enhanced context:", enhancedDynamicVariables);
+
+      // Use RetellService to create the AI call
+      const retellService = new (await import('../retell-service')).RetellService();
+      
+      const callResult = await retellService.createCall({
+        fromNumber: process.env.RETELL_PHONE_NUMBER || "+12345678900",
+        toNumber: recipient,
+        agentId: process.env.RETELL_AGENT_ID,
+        dynamicVariables: enhancedDynamicVariables,
+        metadata: {
+          type: "ai-call",
+          tenantId: user.tenantId,
+          userId: user.id,
+          templateId: templateId || null,
+          aiEnhanced: true
+        }
+      });
+
+      // Store the voice call record
+      const voiceCallData = {
+        tenantId: user.tenantId,
+        contactId: contactId || null,
+        invoiceId: invoiceId || null,
+        retellCallId: callResult.callId,
+        fromNumber: callResult.fromNumber,
+        toNumber: callResult.toNumber,
+        agentId: callResult.agentId,
+        status: callResult.status,
+        direction: callResult.direction,
+        message: message,
+        templateId: templateId || null,
+        dynamicVariables: enhancedDynamicVariables,
+        callType: 'ai-call',
+        createdByUserId: user.id,
+      };
+
+      const voiceCall = await storage.createVoiceCall(voiceCallData);
+
+      // Log the AI call action
+      await storage.createAction({
+        tenantId: user.tenantId,
+        userId: user.id,
+        type: 'voice',
+        status: 'completed',
+        subject: 'AI Call - Intelligent Collection Call',
+        content: `AI-powered call initiated to ${recipient} with enhanced context variables`,
+        completedAt: new Date(),
+        metadata: { 
+          retellCallId: callResult.callId, 
+          dynamicVariables: enhancedDynamicVariables,
+          aiEnhanced: true,
+          callType: 'ai-call'
+        },
+      });
+
+      res.status(201).json({
+        voiceCall,
+        retellCallId: callResult.callId,
+        message: `AI call initiated to ${recipient}`,
+        dynamicVariables: enhancedDynamicVariables,
+        aiEnhanced: true
+      });
+    } catch (error: any) {
+      console.error("Error creating AI call:", error);
+      res.status(500).json({ message: error.message || "Failed to create AI call" });
+    }
+  });
+
   app.get("/api/retell/calls", isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.claims.sub);
