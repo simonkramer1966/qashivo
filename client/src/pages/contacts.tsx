@@ -354,9 +354,26 @@ export default function Customers() {
 
   const filteredContacts = (contacts as any[]).filter((contact: any) => {
     const searchLower = search.toLowerCase();
-    return contact.name?.toLowerCase().includes(searchLower) ||
-           contact.email?.toLowerCase().includes(searchLower) ||
-           contact.companyName?.toLowerCase().includes(searchLower);
+    
+    // Standard search fields
+    const standardMatch = contact.name?.toLowerCase().includes(searchLower) ||
+                         contact.email?.toLowerCase().includes(searchLower) ||
+                         contact.companyName?.toLowerCase().includes(searchLower);
+    
+    // Risk score text search
+    const riskScore = getCustomerRiskScore(contact.id);
+    let riskMatch = false;
+    
+    if (riskScore) {
+      const score = parseFloat(riskScore.overallRiskScore || '0');
+      const levelInfo = getRiskLevelInfo(score);
+      riskMatch = levelInfo.level.toLowerCase().includes(searchLower);
+    } else {
+      // Allow searching for "no score" when no risk data exists
+      riskMatch = searchLower.includes('no') || searchLower.includes('score');
+    }
+    
+    return standardMatch || riskMatch;
   });
 
   const sortedContacts = [...filteredContacts].sort((a: any, b: any) => {
