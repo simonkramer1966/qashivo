@@ -646,8 +646,7 @@ export default function Invoices() {
                           data-testid="header-payment-probability"
                         >
                           <div className="flex items-center">
-                            <Target className="mr-1 h-4 w-4 text-[#17B6C3]" />
-                            Probability
+                            Prob %
                           </div>
                         </th>
                         <th 
@@ -655,7 +654,6 @@ export default function Invoices() {
                           data-testid="header-expected-payment"
                         >
                           <div className="flex items-center">
-                            <Calendar className="mr-1 h-4 w-4 text-[#17B6C3]" />
                             Exp. Pymt
                           </div>
                         </th>
