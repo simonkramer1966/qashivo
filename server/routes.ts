@@ -1844,8 +1844,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get recent action items for communication history  
       const actionHistory = await storage.getActionItemsByContact(id, user.tenantId);
       
-      // Get risk profile data (if available)
-      const riskScore = await storage.getRiskScore(id, user.tenantId);
+      // Get risk profile data (default for now - can be enhanced with ML later)
+      const riskScore = null; // TODO: Implement proper risk scoring
 
       // Assemble contact details response
       const contactDetails = {
@@ -1859,7 +1859,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         })),
         communicationHistory: actionHistory.map(action => ({
           type: action.type as 'email' | 'sms' | 'phone',
-          date: action.createdAt.toISOString(),
+          date: action.createdAt?.toISOString() || new Date().toISOString(),
           subject: action.notes || action.type,
           status: action.status === 'completed' ? 'sent' : 'pending',
         })),
