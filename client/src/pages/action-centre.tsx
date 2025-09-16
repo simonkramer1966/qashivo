@@ -260,11 +260,16 @@ export default function ActionCentre() {
     customMessage: ''
   });
   
-  // Debounce search input
+  // Debounce search input with error handling
   useEffect(() => {
     const timer = setTimeout(() => {
-      setDebouncedSearch(search);
-      setCurrentPage(1); // Reset to first page when search changes
+      try {
+        setDebouncedSearch(search);
+        setCurrentPage(1); // Reset to first page when search changes
+      } catch (error) {
+        console.error('Error updating search state:', error);
+        // Continue gracefully without preventing search functionality
+      }
     }, 300);
     
     return () => clearTimeout(timer);
@@ -1233,16 +1238,28 @@ export default function ActionCentre() {
   
   // Clear selections and reset state when changing queues or pages - with state transition safety
   useEffect(() => {
-    // Clear all selections and focused state to prevent stale references
-    clearSelection();
-    setFocusedRowIndex(null);
-    
-    // Reset selected action to prevent displaying stale data from previous queue
-    setSelectedAction(null);
-    
-    // Clear any error states that might have been triggered by the previous queue
-    queryClient.removeQueries({ queryKey: ['/api/action-centre/queue'], exact: false });
-    queryClient.removeQueries({ queryKey: ['/api/invoices'], exact: false });
+    try {
+      // Clear all selections and focused state to prevent stale references
+      clearSelection();
+      setFocusedRowIndex(null);
+      
+      // Reset selected action to prevent displaying stale data from previous queue
+      setSelectedAction(null);
+      
+      // Cancel any in-progress queries to prevent race conditions
+      // This is safer than removing queries as it doesn't disrupt active operations
+      queryClient.cancelQueries({ queryKey: ['/api/action-centre/queue'], exact: false });
+      queryClient.cancelQueries({ queryKey: ['/api/invoices'], exact: false });
+      
+      // Invalidate queries to trigger fresh fetches with new parameters
+      // This ensures data consistency when switching between queues
+      queryClient.invalidateQueries({ queryKey: ['/api/action-centre/queue'], exact: false });
+      queryClient.invalidateQueries({ queryKey: ['/api/invoices'], exact: false });
+      
+    } catch (error) {
+      console.error('Error during queue state transition:', error);
+      // Continue gracefully - don't prevent the component from functioning
+    }
     
   }, [selectedQueue, currentPage, clearSelection, queryClient]);
   
@@ -1402,7 +1419,7 @@ export default function ActionCentre() {
                 <Card className="bg-white/70 backdrop-blur-md border-0 shadow-lg p-4">
                   <div className="text-center">
                     <div className="text-2xl font-bold text-[#17B6C3]" data-testid="text-total-actions">
-                      {metricsLoading ? '-' : queueMetrics?.totalActions || 0}
+                      {metricsLoading ? '-' : metrics?.totalActions || 0}
                     </div>
                     <div className="text-xs text-slate-600">Total Actions</div>
                   </div>
@@ -1410,7 +1427,7 @@ export default function ActionCentre() {
                 <Card className="bg-white/70 backdrop-blur-md border-0 shadow-lg p-4">
                   <div className="text-center">
                     <div className="text-2xl font-bold text-slate-900" data-testid="text-total-value">
-                      {metricsLoading ? '-' : (queueMetrics?.totalValue || 0).toLocaleString()}
+                      {metricsLoading ? '-' : (metrics?.totalValue || 0).toLocaleString()}
                     </div>
                     <div className="text-xs text-slate-600">Total Value</div>
                   </div>
