@@ -227,7 +227,7 @@ export default function ActionCentre() {
     const originalError = window.onerror;
     window.onerror = (message, source, lineno, colno, error) => {
       // Suppress ResizeObserver loop errors - these are benign browser performance protections
-      if (message?.includes?.('ResizeObserver loop completed')) {
+      if (typeof message === 'string' && message.includes('ResizeObserver loop completed')) {
         return true; // Suppress this error
       }
       return originalError ? originalError(message, source, lineno, colno, error) : false;
@@ -1935,7 +1935,7 @@ export default function ActionCentre() {
                   </div>
                   {/* Pagination */}
                   {pagination.totalPages > 1 && (
-                    <div className="border-t border-white/50 bg-white/40 backdrop-blur-sm p-4">
+                    <div className="border-t border-white/50 bg-white/40 backdrop-blur-sm p-4 mb-[10px]">
                       <div className="flex items-center justify-between">
                         <div className="text-sm text-slate-600">
                           Showing {((pagination.page - 1) * pagination.limit) + 1} to{' '}
