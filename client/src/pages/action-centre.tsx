@@ -10,6 +10,7 @@ import type { ActionItem, Contact, Invoice } from "@shared/schema";
 import NewSidebar from "@/components/layout/new-sidebar";
 import Header from "@/components/layout/header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -87,6 +88,33 @@ type EnhancedActionItem = ActionItem & {
   daysOverdue?: number;
   riskScore?: number;
   preferredMethod?: 'email' | 'phone' | 'sms';
+  invoiceId?: string; // Optional for compatibility
+};
+
+// Enhanced Invoice type for display in category queues
+type EnhancedInvoiceItem = Invoice & {
+  contactName: string;
+  companyName?: string;
+  daysOverdue?: number;
+  riskScore?: number;
+  preferredMethod?: 'email' | 'phone' | 'sms';
+  // Action item fields for compatibility
+  type?: string;
+  priority?: string;
+  dueAt?: string;
+  invoiceId?: string; // Alias for id to maintain compatibility
+};
+
+// Unified data type for the table
+type QueueDisplayItem = EnhancedActionItem | EnhancedInvoiceItem;
+
+// Type guard functions
+const isInvoiceItem = (item: QueueDisplayItem): item is EnhancedInvoiceItem => {
+  return 'invoiceNumber' in item && 'amount' in item && 'dueDate' in item;
+};
+
+const isActionItem = (item: QueueDisplayItem): item is EnhancedActionItem => {
+  return 'type' in item && 'priority' in item && !('invoiceNumber' in item);
 };
 
 interface QueueMetrics {
@@ -145,6 +173,37 @@ interface QueueResponse {
   };
 }
 
+interface InvoiceResponse {
+  invoices: Invoice[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
+// Helper function to determine if a queue uses invoice data
+const isInvoiceQueue = (queueId: string): boolean => {
+  const invoiceQueueIds = ['soon', 'recent', 'overdue', 'serious', 'escalation'];
+  return invoiceQueueIds.includes(queueId);
+};
+
+// Helper function to determine next recommended action based on overdue days
+const getRecommendedAction = (daysOverdue: number): { type: string; priority: string } => {
+  if (daysOverdue <= 0) {
+    return { type: 'Courtesy Reminder', priority: 'low' };
+  } else if (daysOverdue <= 7) {
+    return { type: 'Payment Reminder', priority: 'medium' };
+  } else if (daysOverdue <= 30) {
+    return { type: 'Collection Call', priority: 'high' };
+  } else if (daysOverdue <= 60) {
+    return { type: 'Formal Notice', priority: 'urgent' };
+  } else {
+    return { type: 'Legal Action', priority: 'urgent' };
+  }
+};
+
 export default function ActionCentre() {
   const { toast } = useToast();
   const { isAuthenticated, isLoading } = useAuth();
@@ -152,7 +211,7 @@ export default function ActionCentre() {
   
   // State management
   const [selectedQueue, setSelectedQueue] = useState('today');
-  const [selectedAction, setSelectedAction] = useState<EnhancedActionItem | null>(null);
+  const [selectedAction, setSelectedAction] = useState<QueueDisplayItem | null>(null);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -243,8 +302,11 @@ export default function ActionCentre() {
     queueCounts: (rawMetrics as any).queueCounts ?? {}, // Extract queue counts for category badges
   } : null;
 
-  // Fetch queue data with filters
-  const { data: queueResponse, isLoading: queueLoading, error } = useQuery({
+  // Fetch queue data with filters - use action items for 'today', invoices for category queues
+  const useInvoiceData = isInvoiceQueue(selectedQueue);
+  
+  // Action items query (for 'today' queue)
+  const { data: queueResponse, isLoading: actionLoading, error: actionError } = useQuery({
     queryKey: ["/api/action-centre/queue", { 
       queueType: selectedQueue, 
       search: debouncedSearch, 
@@ -254,21 +316,39 @@ export default function ActionCentre() {
       sortDirection,
       useSmartPriority: true
     }],
-    enabled: isAuthenticated,
+    enabled: isAuthenticated && !useInvoiceData,
+    staleTime: 2 * 60 * 1000, // 2 minutes
+  });
+  
+  // Invoice data query (for category queues)
+  const { data: invoiceResponse, isLoading: invoiceLoading, error: invoiceError } = useQuery({
+    queryKey: ["/api/invoices", {
+      status: 'all',
+      overdue: selectedQueue, // Use queue name as overdue category
+      search: debouncedSearch,
+      page: currentPage,
+      limit: itemsPerPage,
+      sortBy: sortColumn,
+      sortDirection
+    }],
+    enabled: isAuthenticated && useInvoiceData,
     staleTime: 2 * 60 * 1000, // 2 minutes
   });
 
+  // Get contact ID from selected action - handle both action items and invoices
+  const selectedContactId = selectedAction?.contactId || null;
+    
   // Fetch contact details for selected action
   const { data: contactDetails, isLoading: contactLoading } = useQuery({
-    queryKey: ["/api/action-centre/contact", selectedAction?.contactId],
-    enabled: isAuthenticated && !!selectedAction?.contactId,
+    queryKey: ["/api/action-centre/contact", selectedContactId],
+    enabled: isAuthenticated && !!selectedContactId,
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
   // Fetch communication history for selected contact
   const { data: communicationHistoryResponse, isLoading: historyLoading } = useQuery({
-    queryKey: ["/api/communications/history", { contactId: selectedAction?.contactId }],
-    enabled: isAuthenticated && !!selectedAction?.contactId,
+    queryKey: ["/api/communications/history", { contactId: selectedContactId }],
+    enabled: isAuthenticated && !!selectedContactId,
     staleTime: 2 * 60 * 1000, // 2 minutes
   });
 
@@ -277,9 +357,38 @@ export default function ActionCentre() {
     ? communicationHistoryResponse as CommunicationHistoryResponse 
     : [];
 
-  // Extract data from response with proper typing
-  const queueData: EnhancedActionItem[] = (queueResponse as QueueResponse)?.actionItems || [];
-  const pagination = (queueResponse as QueueResponse)?.pagination || { page: 1, limit: 25, total: 0, totalPages: 1 };
+  // Combine loading and error states
+  const queueLoading = useInvoiceData ? invoiceLoading : actionLoading;
+  const error = useInvoiceData ? invoiceError : actionError;
+  
+  // Transform invoice data to display format
+  const transformInvoiceToDisplayItem = (invoice: Invoice): EnhancedInvoiceItem => {
+    const daysOverdue = (invoice as any).daysOverdue || 0;
+    const recommendedAction = getRecommendedAction(daysOverdue);
+    
+    return {
+      ...invoice,
+      contactName: (invoice as any).contactName || 'Unknown Contact',
+      companyName: (invoice as any).companyName,
+      daysOverdue,
+      riskScore: Math.min(0.1 + (daysOverdue * 0.02), 0.95), // Calculate risk based on overdue days
+      preferredMethod: 'email' as const,
+      // Action item compatibility fields
+      type: recommendedAction.type,
+      priority: recommendedAction.priority,
+      dueAt: new Date().toISOString(), // Use current time for "due by" for next action
+      invoiceId: invoice.id // Add invoiceId as alias for id
+    };
+  };
+  
+  // Extract and transform data from appropriate response
+  const queueData: QueueDisplayItem[] = useInvoiceData 
+    ? ((invoiceResponse as InvoiceResponse)?.invoices || []).map(transformInvoiceToDisplayItem)
+    : (queueResponse as QueueResponse)?.actionItems || [];
+    
+  const pagination = useInvoiceData 
+    ? (invoiceResponse as InvoiceResponse)?.pagination || { page: 1, limit: 25, total: 0, totalPages: 1 }
+    : (queueResponse as QueueResponse)?.pagination || { page: 1, limit: 25, total: 0, totalPages: 1 };
   
   // Communication mutation with enhanced functionality
   const sendCommunicationMutation = useMutation({
@@ -403,11 +512,21 @@ export default function ActionCentre() {
     },
   });
 
-  // Bulk action mutations
+  // Bulk action mutations - handle both action items and invoices
   const bulkCompleteMutation = useMutation({
     mutationFn: async ({ actionItemIds, outcome }: { actionItemIds: string[]; outcome?: string }) => {
-      const response = await apiRequest('POST', '/api/action-items/bulk/complete', { actionItemIds, outcome });
-      return response.json();
+      // For invoice queues, we need to create action items first, then complete them
+      if (useInvoiceData) {
+        const response = await apiRequest('POST', '/api/action-items/bulk/create-and-complete', {
+          invoiceIds: actionItemIds,
+          outcome,
+          actionType: 'payment-followup'
+        });
+        return response.json();
+      } else {
+        const response = await apiRequest('POST', '/api/action-items/bulk/complete', { actionItemIds, outcome });
+        return response.json();
+      }
     },
     onSuccess: (data) => {
       toast({
@@ -431,8 +550,19 @@ export default function ActionCentre() {
 
   const bulkAssignMutation = useMutation({
     mutationFn: async ({ actionItemIds, assignedToUserId, priority }: { actionItemIds: string[]; assignedToUserId?: string; priority?: string }) => {
-      const response = await apiRequest('POST', '/api/action-items/bulk/assign', { actionItemIds, assignedToUserId, priority });
-      return response.json();
+      // For invoice queues, create action items first, then assign them
+      if (useInvoiceData) {
+        const response = await apiRequest('POST', '/api/action-items/bulk/create-and-assign', {
+          invoiceIds: actionItemIds,
+          assignedToUserId,
+          priority,
+          actionType: 'payment-followup'
+        });
+        return response.json();
+      } else {
+        const response = await apiRequest('POST', '/api/action-items/bulk/assign', { actionItemIds, assignedToUserId, priority });
+        return response.json();
+      }
     },
     onSuccess: (data) => {
       toast({
@@ -455,8 +585,18 @@ export default function ActionCentre() {
 
   const bulkNudgeMutation = useMutation({
     mutationFn: async ({ actionItemIds, templateId, customMessage }: { actionItemIds: string[]; templateId?: string; customMessage?: string }) => {
-      const response = await apiRequest('POST', '/api/action-items/bulk/nudge', { actionItemIds, templateId, customMessage });
-      return response.json();
+      // For invoice queues, use invoice IDs directly for communication
+      if (useInvoiceData) {
+        const response = await apiRequest('POST', '/api/communications/bulk/invoice-nudge', {
+          invoiceIds: actionItemIds,
+          templateId,
+          customMessage
+        });
+        return response.json();
+      } else {
+        const response = await apiRequest('POST', '/api/action-items/bulk/nudge', { actionItemIds, templateId, customMessage });
+        return response.json();
+      }
     },
     onSuccess: (data) => {
       toast({
@@ -583,8 +723,20 @@ export default function ActionCentre() {
   }, [selectedItems, bulkAssignMutation]);
   
   
+  // Keyboard shortcuts type definition
+  interface KeyboardShortcut {
+    key: string;
+    action: () => void;
+    description: string;
+    category: string;
+    ctrl?: boolean;
+    shift?: boolean;
+    alt?: boolean;
+    disabled?: boolean;
+  }
+
   // Keyboard shortcuts configuration
-  const shortcuts = useMemo(() => [
+  const shortcuts: KeyboardShortcut[] = useMemo(() => [
     {
       key: 'ArrowUp',
       action: () => navigateRow('up'),
@@ -1018,7 +1170,11 @@ export default function ActionCentre() {
                               className="mx-auto"
                               ref={(el) => {
                                 if (el) {
-                                  el.indeterminate = selectedItems.size > 0 && selectedItems.size < queueData.length;
+                                  // Cast to HTMLInputElement to access indeterminate property
+                                  const checkbox = el.querySelector('input') as HTMLInputElement;
+                                  if (checkbox) {
+                                    checkbox.indeterminate = selectedItems.size > 0 && selectedItems.size < queueData.length;
+                                  }
                                 }
                               }}
                             />
@@ -1090,14 +1246,14 @@ export default function ActionCentre() {
                               className="h-auto p-0 font-semibold hover:bg-transparent"
                               data-testid="header-next-action"
                             >
-                              Next Action {renderSortIcon('smart')}
+                              {useInvoiceData ? 'Recommended Action' : 'Next Action'} {renderSortIcon('smart')}
                             </Button>
                           </TableHead>
                           <TableHead className="w-[60px]">Actions</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {queueData.map((action: EnhancedActionItem, index: number) => {
+                        {queueData.map((action: QueueDisplayItem, index: number) => {
                           const isSelected = selectedItems.has(action.id);
                           const isFocused = focusedRowIndex === index;
                           
@@ -1155,10 +1311,17 @@ export default function ActionCentre() {
                                 </div>
                               </TableCell>
                             <TableCell>
-                              <div className="text-sm font-mono">{action.invoiceNumber || 'N/A'}</div>
+                              <div className="text-sm font-mono">
+                                {'invoiceNumber' in action ? action.invoiceNumber : action.invoiceNumber || 'N/A'}
+                              </div>
                             </TableCell>
                             <TableCell>
-                              <div className="font-medium">{action.amount ? formatCurrency(action.amount) : 'N/A'}</div>
+                              <div className="font-medium">
+                                {'totalAmount' in action 
+                                  ? formatCurrency(Number(action.totalAmount) || 0) 
+                                  : (action.amount ? formatCurrency(Number(action.amount) || 0) : 'N/A')
+                                }
+                              </div>
                             </TableCell>
                             <TableCell>
                               <div className="text-sm">
@@ -1166,8 +1329,8 @@ export default function ActionCentre() {
                               </div>
                             </TableCell>
                             <TableCell>
-                              <Badge className={getPriorityBadge(action.priority)}>
-                                {action.priority}
+                              <Badge className={getPriorityBadge(action.priority || 'medium')}>
+                                {action.priority || 'medium'}
                               </Badge>
                             </TableCell>
                             <TableCell>
@@ -1181,8 +1344,13 @@ export default function ActionCentre() {
                             </TableCell>
                             <TableCell>
                               <div className="text-sm">
-                                <div className="font-medium">{action.type}</div>
-                                <div className="text-slate-500">{formatDate(action.dueAt)}</div>
+                                <div className="font-medium">{action.type || 'Payment Reminder'}</div>
+                                <div className="text-slate-500">
+                                  {useInvoiceData && 'dueDate' in action 
+                                    ? formatDate(action.dueDate) 
+                                    : (action.dueAt ? formatDate(action.dueAt) : 'Today')
+                                  }
+                                </div>
                               </div>
                             </TableCell>
                             <TableCell>
@@ -1230,8 +1398,8 @@ export default function ActionCentre() {
                                       setCommunicationDialog({
                                         isOpen: true,
                                         type: 'email',
-                                        context: action.invoiceId ? 'invoice' : 'customer',
-                                        contextId: action.invoiceId || action.contactId,
+                                        context: (isInvoiceItem(action) ? 'invoice' : 'customer'),
+                                        contextId: (isInvoiceItem(action) ? action.id : action.contactId),
                                       });
                                     }}
                                     data-testid={`menu-email-${action.id}`}
@@ -1245,8 +1413,8 @@ export default function ActionCentre() {
                                       setCommunicationDialog({
                                         isOpen: true,
                                         type: 'sms',
-                                        context: action.invoiceId ? 'invoice' : 'customer',
-                                        contextId: action.invoiceId || action.contactId,
+                                        context: (isInvoiceItem(action) ? 'invoice' : 'customer'),
+                                        contextId: (isInvoiceItem(action) ? action.id : action.contactId),
                                       });
                                     }}
                                     data-testid={`menu-sms-${action.id}`}
@@ -1260,8 +1428,8 @@ export default function ActionCentre() {
                                       setCommunicationDialog({
                                         isOpen: true,
                                         type: 'voice',
-                                        context: action.invoiceId ? 'invoice' : 'customer',
-                                        contextId: action.invoiceId || action.contactId,
+                                        context: (isInvoiceItem(action) ? 'invoice' : 'customer'),
+                                        contextId: (isInvoiceItem(action) ? action.id : action.contactId),
                                       });
                                     }}
                                     data-testid={`menu-call-${action.id}`}
