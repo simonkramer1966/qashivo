@@ -5383,7 +5383,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
         organisation_name: tenant?.name || "Nexus AR",
         ai_call_context: dynamicVariables?.context || "general",
         context_id: dynamicVariables?.contextId || "",
-        is_ai_powered: true,
+        is_ai_powered: "true",
         call_type: "ai_collection_call",
         
         // ML Intelligence placeholders - will be populated below
