@@ -361,15 +361,39 @@ export default function ActionCentre() {
   const queueLoading = useInvoiceData ? invoiceLoading : actionLoading;
   const error = useInvoiceData ? invoiceError : actionError;
   
-  // Transform invoice data to display format
-  const transformInvoiceToDisplayItem = (invoice: Invoice): EnhancedInvoiceItem => {
-    const daysOverdue = (invoice as any).daysOverdue || 0;
+  // Transform invoice data to display format - with safe property access
+  const transformInvoiceToDisplayItem = useCallback((invoice: Invoice): EnhancedInvoiceItem => {
+    // Safely handle null/undefined invoice
+    if (!invoice || typeof invoice !== 'object') {
+      console.warn('Invalid invoice object provided to transformInvoiceToDisplayItem:', invoice);
+      return {
+        id: 'unknown',
+        contactId: '',
+        invoiceNumber: 'N/A',
+        amount: 0,
+        dueDate: new Date().toISOString(),
+        contactName: 'Unknown Contact',
+        daysOverdue: 0,
+        riskScore: 0.1,
+        preferredMethod: 'email' as const,
+        type: 'Courtesy Reminder',
+        priority: 'low',
+        dueAt: new Date().toISOString(),
+        invoiceId: 'unknown'
+      } as EnhancedInvoiceItem;
+    }
+
+    // Safely extract daysOverdue from invoice object
+    const invoiceAny = invoice as any;
+    const daysOverdue = typeof invoiceAny.daysOverdue === 'number' ? invoiceAny.daysOverdue : 0;
+    
+    // Get recommended action based on overdue days
     const recommendedAction = getRecommendedAction(daysOverdue);
     
     return {
       ...invoice,
-      contactName: (invoice as any).contactName || 'Unknown Contact',
-      companyName: (invoice as any).companyName,
+      contactName: typeof invoiceAny.contactName === 'string' ? invoiceAny.contactName : 'Unknown Contact',
+      companyName: typeof invoiceAny.companyName === 'string' ? invoiceAny.companyName : undefined,
       daysOverdue,
       riskScore: Math.min(0.1 + (daysOverdue * 0.02), 0.95), // Calculate risk based on overdue days
       preferredMethod: 'email' as const,
@@ -377,18 +401,52 @@ export default function ActionCentre() {
       type: recommendedAction.type,
       priority: recommendedAction.priority,
       dueAt: new Date().toISOString(), // Use current time for "due by" for next action
-      invoiceId: invoice.id // Add invoiceId as alias for id
+      invoiceId: invoice.id || 'unknown' // Safely access ID with fallback
     };
-  };
+  }, []);
   
-  // Extract and transform data from appropriate response
-  const queueData: QueueDisplayItem[] = useInvoiceData 
-    ? ((invoiceResponse as InvoiceResponse)?.invoices || []).map(transformInvoiceToDisplayItem)
-    : (queueResponse as QueueResponse)?.actionItems || [];
+  // Extract and transform data from appropriate response - with safe null checks
+  const queueData: QueueDisplayItem[] = useMemo(() => {
+    if (useInvoiceData) {
+      // Safely handle invoice response
+      if (!invoiceResponse || typeof invoiceResponse !== 'object') {
+        return [];
+      }
+      const response = invoiceResponse as InvoiceResponse;
+      if (!response.invoices || !Array.isArray(response.invoices)) {
+        return [];
+      }
+      return response.invoices.map(transformInvoiceToDisplayItem);
+    } else {
+      // Safely handle action items response
+      if (!queueResponse || typeof queueResponse !== 'object') {
+        return [];
+      }
+      const response = queueResponse as QueueResponse;
+      if (!response.actionItems || !Array.isArray(response.actionItems)) {
+        return [];
+      }
+      return response.actionItems;
+    }
+  }, [useInvoiceData, invoiceResponse, queueResponse]);
     
-  const pagination = useInvoiceData 
-    ? (invoiceResponse as InvoiceResponse)?.pagination || { page: 1, limit: 25, total: 0, totalPages: 1 }
-    : (queueResponse as QueueResponse)?.pagination || { page: 1, limit: 25, total: 0, totalPages: 1 };
+  const pagination = useMemo(() => {
+    const defaultPagination = { page: 1, limit: 25, total: 0, totalPages: 1 };
+    
+    if (useInvoiceData) {
+      if (!invoiceResponse || typeof invoiceResponse !== 'object') {
+        return defaultPagination;
+      }
+      const response = invoiceResponse as InvoiceResponse;
+      return response.pagination || defaultPagination;
+    } else {
+      if (!queueResponse || typeof queueResponse !== 'object') {
+        return defaultPagination;
+      }
+      const response = queueResponse as QueueResponse;
+      return response.pagination || defaultPagination;
+    }
+  }, [useInvoiceData, invoiceResponse, queueResponse]);
   
   // Communication mutation with enhanced functionality
   const sendCommunicationMutation = useMutation({
@@ -1299,7 +1357,10 @@ export default function ActionCentre() {
                                 <div className="flex items-center space-x-3">
                                   <Avatar className="h-8 w-8">
                                     <AvatarFallback className="text-xs">
-                                      {action.contactName?.split(' ').map(n => n[0]).join('') || 'C'}
+                                      {(() => {
+                                        if (!action.contactName || typeof action.contactName !== 'string') return 'C';
+                                        return action.contactName.split(' ').map(n => n[0] || '').filter(c => c).join('') || 'C';
+                                      })()}
                                     </AvatarFallback>
                                   </Avatar>
                                   <div>
@@ -1633,10 +1694,10 @@ export default function ActionCentre() {
                   <div className="flex items-center space-x-3 mb-4">
                     <Avatar className="h-12 w-12">
                       <AvatarFallback>
-                        {selectedAction.contactName 
-                          ? selectedAction.contactName.split(' ').map(n => n[0]).join('').toUpperCase()
-                          : '??'
-                        }
+                        {(() => {
+                          if (!selectedAction.contactName || typeof selectedAction.contactName !== 'string') return '??';
+                          return selectedAction.contactName.split(' ').map(n => n[0] || '').filter(c => c).join('').toUpperCase() || '??';
+                        })()}
                       </AvatarFallback>
                     </Avatar>
                     <div>
@@ -1786,9 +1847,12 @@ export default function ActionCentre() {
                                     className="mb-2"
                                   />
                                   <ul className="text-xs text-slate-600 space-y-1">
-                                    {(contactDetails as ContactDetails).riskProfile.factors.map((factor: string, index: number) => (
-                                      <li key={index}>• {factor}</li>
-                                    ))}
+                                    {Array.isArray((contactDetails as ContactDetails)?.riskProfile?.factors) 
+                                      ? (contactDetails as ContactDetails).riskProfile.factors.map((factor: string, index: number) => (
+                                          <li key={index}>• {typeof factor === 'string' ? factor : 'N/A'}</li>
+                                        ))
+                                      : <li>• No risk factors available</li>
+                                    }
                                   </ul>
                                 </>
                               )}
