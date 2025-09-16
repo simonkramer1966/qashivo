@@ -369,11 +369,33 @@ export default function ActionCentre() {
   // Get contact ID from selected action - handle both action items and invoices with safety checks
   const selectedContactId = useMemo(() => {
     if (!selectedAction || typeof selectedAction !== 'object') {
+      console.debug('No selectedAction or invalid type:', selectedAction);
       return null;
     }
     
-    // Safely extract contactId with fallbacks
-    return selectedAction.contactId || null;
+    console.debug('Selected action data:', {
+      id: selectedAction.id,
+      contactId: selectedAction.contactId,
+      invoiceId: selectedAction.invoiceId,
+      name: selectedAction.name,
+      companyName: selectedAction.companyName,
+      fullAction: selectedAction
+    });
+    
+    // For all items, use contactId directly (this should be the contact ID)
+    if (selectedAction.contactId) {
+      console.debug('Using contactId:', selectedAction.contactId);
+      return selectedAction.contactId;
+    }
+    
+    // If no contactId, check if this is an invoice item with id that represents contactId
+    if (selectedAction.id && selectedAction.invoiceId) {
+      console.debug('This appears to be an invoice item, using selectedAction.id as potential contactId:', selectedAction.id);
+      return selectedAction.id;
+    }
+    
+    console.debug('No contactId found in selectedAction');
+    return null;
   }, [selectedAction]);
     
   // Fetch contact details for selected action
