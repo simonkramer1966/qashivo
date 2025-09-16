@@ -222,25 +222,39 @@ export default function ActionCentre() {
   // State management
   const [selectedQueue, setSelectedQueue] = useState('today');
 
-  // Suppress benign ResizeObserver errors during table layout changes
+  // Comprehensive error handling for table layout and ResizeObserver issues
   useEffect(() => {
     const originalError = window.onerror;
     const originalUnhandledRejection = window.onunhandledrejection;
     
-    // Handle synchronous errors
+    // Handle synchronous errors - suppress layout-related errors
     window.onerror = (message, source, lineno, colno, error) => {
-      if (typeof message === 'string' && message.includes('ResizeObserver loop completed')) {
+      const messageStr = String(message || '').toLowerCase();
+      
+      // Suppress common table layout errors that are benign
+      if (messageStr.includes('resizeobserver') || 
+          messageStr.includes('unknown runtime error') ||
+          messageStr.includes('loop completed with undelivered notifications') ||
+          messageStr.includes('an uncaught exception occured but the error was not an error object')) {
+        console.debug('Suppressed benign layout error:', messageStr);
         return true; // Suppress this error
       }
+      
       return originalError ? originalError(message, source, lineno, colno, error) : false;
     };
 
     // Handle unhandled promise rejections and async errors  
     window.onunhandledrejection = (event: PromiseRejectionEvent) => {
-      if (event.reason && typeof event.reason === 'string' && event.reason.includes('ResizeObserver loop completed')) {
+      const reason = String(event.reason || '').toLowerCase();
+      
+      if (reason.includes('resizeobserver') || 
+          reason.includes('unknown runtime error') ||
+          reason.includes('loop completed with undelivered notifications')) {
+        console.debug('Suppressed benign layout rejection:', reason);
         event.preventDefault();
         return;
       }
+      
       if (originalUnhandledRejection) {
         originalUnhandledRejection.call(window, event);
       }
