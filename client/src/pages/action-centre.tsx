@@ -6,6 +6,7 @@ import { getOverdueCategoryInfo, type OverdueCategory } from "../../../shared/ut
 import { useAuth } from "@/hooks/useAuth";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { apiRequest } from "@/lib/queryClient";
+import { Component, ErrorInfo, ReactNode } from 'react';
 import type { ActionItem, Contact, Invoice } from "@shared/schema";
 import NewSidebar from "@/components/layout/new-sidebar";
 import Header from "@/components/layout/header";
