@@ -344,8 +344,15 @@ export default function ActionCentre() {
     staleTime: 2 * 60 * 1000, // 2 minutes
   });
 
-  // Get contact ID from selected action - handle both action items and invoices
-  const selectedContactId = selectedAction?.contactId || null;
+  // Get contact ID from selected action - handle both action items and invoices with safety checks
+  const selectedContactId = useMemo(() => {
+    if (!selectedAction || typeof selectedAction !== 'object') {
+      return null;
+    }
+    
+    // Safely extract contactId with fallbacks
+    return selectedAction.contactId || null;
+  }, [selectedAction]);
     
   // Fetch contact details for selected action
   const { data: contactDetails, isLoading: contactLoading } = useQuery({
@@ -370,170 +377,352 @@ export default function ActionCentre() {
   const queueLoading = useInvoiceData ? invoiceLoading : actionLoading;
   const error = useInvoiceData ? invoiceError : actionError;
   
-  // Transform invoice data to display format - with safe property access
+  // Transform invoice data to display format - with safe property access and robust error handling
   const transformInvoiceToDisplayItem = useCallback((invoice: Invoice): EnhancedInvoiceItem => {
     try {
-      // Safely handle null/undefined invoice
-      if (!invoice || typeof invoice !== 'object') {
+      // Safely handle null/undefined invoice with comprehensive validation
+      if (!invoice || typeof invoice !== 'object' || !invoice.id) {
         console.warn('Invalid invoice object provided to transformInvoiceToDisplayItem:', invoice);
-        // Create a minimal valid invoice object, then cast through unknown to avoid type errors
-        const fallbackInvoice = {
-          id: 'unknown',
-          tenantId: 'unknown',
-          contactId: '',
-          xeroInvoiceId: null,
-          invoiceNumber: 'N/A',
-          amount: '0',
-          amountPaid: '0',
-          taxAmount: '0',
-          status: 'pending',
-          collectionStage: 'initial',
-          isOnHold: false,
-          issueDate: new Date(),
-          dueDate: new Date(),
-          paidDate: null,
-          description: null,
-          currency: 'USD',
-          workflowId: null,
-          lastReminderSent: null,
-          reminderCount: 0,
-          nextAction: null,
-          nextActionDate: null,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-          // Enhanced properties
-          contactName: 'Unknown Contact',
-          daysOverdue: 0,
-          riskScore: 0.1,
-          preferredMethod: 'email' as const,
-          type: 'Courtesy Reminder',
-          priority: 'low',
-          dueAt: new Date().toISOString(),
-          invoiceId: 'unknown'
-        } as unknown as EnhancedInvoiceItem;
-        return fallbackInvoice;
+        return createFallbackInvoice('unknown', 'Invalid invoice data');
       }
 
-      // Safely extract daysOverdue from invoice object
+      // Safely extract all required properties with proper validation
       const invoiceAny = invoice as any;
-      const daysOverdue = typeof invoiceAny.daysOverdue === 'number' ? invoiceAny.daysOverdue : 0;
       
-      // Get recommended action based on overdue days
-      const recommendedAction = getRecommendedAction(daysOverdue);
+      // Validate and extract days overdue with multiple fallback strategies
+      const daysOverdue = (() => {
+        if (typeof invoiceAny.daysOverdue === 'number' && !isNaN(invoiceAny.daysOverdue)) {
+          return Math.max(0, invoiceAny.daysOverdue); // Ensure non-negative
+        }
+        
+        // Calculate from dueDate if available
+        if (invoice.dueDate) {
+          try {
+            const due = new Date(invoice.dueDate);
+            const today = new Date();
+            if (!isNaN(due.getTime())) {
+              const diffTime = today.getTime() - due.getTime();
+              const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+              return Math.max(0, diffDays);
+            }
+          } catch (error) {
+            console.warn('Error calculating days overdue from dueDate:', error);
+          }
+        }
+        
+        return 0; // Safe fallback
+      })();
       
-      return {
+      // Get recommended action based on overdue days with error handling
+      let recommendedAction;
+      try {
+        recommendedAction = getRecommendedAction(daysOverdue);
+      } catch (error) {
+        console.warn('Error getting recommended action, using fallback:', error);
+        recommendedAction = { type: 'Payment Reminder', priority: 'medium' };
+      }
+      
+      // Safely extract contact and company names with multiple fallback strategies
+      const contactName = (() => {
+        if (typeof invoiceAny.contactName === 'string' && invoiceAny.contactName.trim()) {
+          return invoiceAny.contactName.trim();
+        }
+        if (typeof invoiceAny.contact?.name === 'string' && invoiceAny.contact.name.trim()) {
+          return invoiceAny.contact.name.trim();
+        }
+        return 'Unknown Contact';
+      })();
+      
+      const companyName = (() => {
+        if (typeof invoiceAny.companyName === 'string' && invoiceAny.companyName.trim()) {
+          return invoiceAny.companyName.trim();
+        }
+        if (typeof invoiceAny.contact?.companyName === 'string' && invoiceAny.contact.companyName.trim()) {
+          return invoiceAny.contact.companyName.trim();
+        }
+        return undefined;
+      })();
+      
+      // Safely calculate risk score with bounds checking
+      const riskScore = Math.min(Math.max(0.1 + (daysOverdue * 0.02), 0.1), 0.95);
+      
+      // Create the enhanced invoice item with all safe property access
+      const enhancedInvoice: EnhancedInvoiceItem = {
+        // Spread original invoice properties first
         ...invoice,
-        contactName: typeof invoiceAny.contactName === 'string' ? invoiceAny.contactName : 'Unknown Contact',
-        companyName: typeof invoiceAny.companyName === 'string' ? invoiceAny.companyName : undefined,
+        
+        // Override with enhanced properties, ensuring all have safe values
+        contactName,
+        companyName,
         daysOverdue,
-        riskScore: Math.min(0.1 + (daysOverdue * 0.02), 0.95), // Calculate risk based on overdue days
+        riskScore,
         preferredMethod: 'email' as const,
-        // Action item compatibility fields
+        
+        // Action item compatibility fields with safe assignment
         type: recommendedAction.type,
         priority: recommendedAction.priority,
-        dueAt: new Date().toISOString(), // Use current time for "due by" for next action
-        invoiceId: invoice.id || 'unknown' // Safely access ID with fallback
-      } as unknown as EnhancedInvoiceItem;
-    } catch (error) {
-      console.error('Error in transformInvoiceToDisplayItem:', error, 'invoice:', invoice);
-      // Return a safe fallback invoice on error
-      const fallbackInvoice = {
-        id: invoice?.id || 'error-fallback',
-        tenantId: 'unknown',
-        contactId: '',
-        xeroInvoiceId: null,
-        invoiceNumber: 'ERROR',
-        amount: '0',
-        amountPaid: '0',
-        taxAmount: '0',
-        status: 'pending',
-        collectionStage: 'initial',
-        isOnHold: false,
-        issueDate: new Date(),
-        dueDate: new Date(),
-        paidDate: null,
-        description: null,
-        currency: 'USD',
-        workflowId: null,
-        lastReminderSent: null,
-        reminderCount: 0,
-        nextAction: null,
-        nextActionDate: null,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        // Enhanced properties
-        contactName: 'Error Contact',
-        daysOverdue: 0,
-        riskScore: 0.1,
-        preferredMethod: 'email' as const,
-        type: 'Payment Reminder',
-        priority: 'medium',
         dueAt: new Date().toISOString(),
-        invoiceId: invoice?.id || 'error-fallback'
-      } as unknown as EnhancedInvoiceItem;
-      return fallbackInvoice;
+        invoiceId: invoice.id // This is now guaranteed to exist from the validation above
+      };
+      
+      return enhancedInvoice;
+      
+    } catch (error) {
+      console.error('Critical error in transformInvoiceToDisplayItem:', error, 'invoice:', invoice);
+      // Return a comprehensive fallback with the original ID if possible
+      return createFallbackInvoice(invoice?.id || 'error-fallback', 'Transformation error');
     }
   }, []);
   
-  // Extract and transform data from appropriate response - with safe null checks
+  // Helper function to create consistent fallback invoices
+  const createFallbackInvoice = useCallback((id: string, reason: string): EnhancedInvoiceItem => {
+    return {
+      id,
+      tenantId: 'unknown',
+      contactId: '',
+      xeroInvoiceId: null,
+      invoiceNumber: 'N/A',
+      amount: '0',
+      amountPaid: '0',
+      taxAmount: '0',
+      status: 'pending',
+      collectionStage: 'initial',
+      isOnHold: false,
+      issueDate: new Date(),
+      dueDate: new Date(),
+      paidDate: null,
+      description: null,
+      currency: 'USD',
+      workflowId: null,
+      lastReminderSent: null,
+      reminderCount: 0,
+      nextAction: null,
+      nextActionDate: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      // Enhanced properties with safe defaults
+      contactName: `Unknown Contact (${reason})`,
+      companyName: undefined,
+      daysOverdue: 0,
+      riskScore: 0.1,
+      preferredMethod: 'email' as const,
+      type: 'Payment Reminder',
+      priority: 'medium',
+      dueAt: new Date().toISOString(),
+      invoiceId: id
+    } as unknown as EnhancedInvoiceItem;
+  }, []);
+  
+  // Extract and transform data from appropriate response - with comprehensive error handling and loading state safety
   const queueData: QueueDisplayItem[] = useMemo(() => {
     try {
+      // Early return with empty array during loading states to prevent transformation of undefined data
+      if (queueLoading) {
+        return [];
+      }
+      
       if (useInvoiceData) {
-        // Safely handle invoice response
-        if (!invoiceResponse || typeof invoiceResponse !== 'object') {
-          return [];
-        }
-        const response = invoiceResponse as InvoiceResponse;
-        if (!response.invoices || !Array.isArray(response.invoices)) {
+        // Comprehensive validation for invoice response with detailed logging
+        if (!invoiceResponse) {
+          console.debug('Invoice response is null/undefined, returning empty array');
           return [];
         }
         
-        // Transform each invoice safely
+        if (typeof invoiceResponse !== 'object') {
+          console.warn('Invoice response is not an object:', typeof invoiceResponse, invoiceResponse);
+          return [];
+        }
+        
+        const response = invoiceResponse as InvoiceResponse;
+        
+        // Validate invoices array with detailed checks
+        if (!response.invoices) {
+          console.debug('Response.invoices is null/undefined');
+          return [];
+        }
+        
+        if (!Array.isArray(response.invoices)) {
+          console.warn('Response.invoices is not an array:', typeof response.invoices, response.invoices);
+          return [];
+        }
+        
+        if (response.invoices.length === 0) {
+          console.debug('Response.invoices is empty array');
+          return [];
+        }
+        
+        // Transform each invoice with enhanced error recovery and progress tracking
         const transformedInvoices: QueueDisplayItem[] = [];
+        let transformErrors = 0;
+        
         for (let i = 0; i < response.invoices.length; i++) {
           try {
-            const transformedInvoice = transformInvoiceToDisplayItem(response.invoices[i]);
-            transformedInvoices.push(transformedInvoice);
+            const invoice = response.invoices[i];
+            
+            // Pre-validate invoice before transformation
+            if (!invoice) {
+              console.warn(`Invoice at index ${i} is null/undefined, skipping`);
+              transformErrors++;
+              continue;
+            }
+            
+            if (typeof invoice !== 'object') {
+              console.warn(`Invoice at index ${i} is not an object:`, typeof invoice, invoice);
+              transformErrors++;
+              continue;
+            }
+            
+            if (!invoice.id) {
+              console.warn(`Invoice at index ${i} has no ID, skipping:`, invoice);
+              transformErrors++;
+              continue;
+            }
+            
+            // Transform the validated invoice
+            const transformedInvoice = transformInvoiceToDisplayItem(invoice);
+            
+            // Validate the transformation result
+            if (transformedInvoice && transformedInvoice.id) {
+              transformedInvoices.push(transformedInvoice);
+            } else {
+              console.warn(`Transformation failed for invoice at index ${i}, result invalid:`, transformedInvoice);
+              transformErrors++;
+            }
+            
           } catch (error) {
-            console.error(`Error transforming invoice at index ${i}:`, error, response.invoices[i]);
-            // Skip this invoice and continue with the next one
+            console.error(`Critical error transforming invoice at index ${i}:`, error, response.invoices[i]);
+            transformErrors++;
+            
+            // Continue processing remaining invoices instead of stopping
+            continue;
           }
         }
+        
+        // Log transformation summary for debugging
+        console.debug(`Invoice transformation completed: ${transformedInvoices.length} successful, ${transformErrors} errors out of ${response.invoices.length} total`);
+        
         return transformedInvoices;
+        
       } else {
-        // Safely handle action items response
-        if (!queueResponse || typeof queueResponse !== 'object') {
+        // Enhanced validation for action items response
+        if (!queueResponse) {
+          console.debug('Queue response is null/undefined, returning empty array');
           return [];
         }
+        
+        if (typeof queueResponse !== 'object') {
+          console.warn('Queue response is not an object:', typeof queueResponse, queueResponse);
+          return [];
+        }
+        
         const response = queueResponse as QueueResponse;
-        if (!response.actionItems || !Array.isArray(response.actionItems)) {
+        
+        // Validate action items array
+        if (!response.actionItems) {
+          console.debug('Response.actionItems is null/undefined');
           return [];
         }
-        return response.actionItems;
+        
+        if (!Array.isArray(response.actionItems)) {
+          console.warn('Response.actionItems is not an array:', typeof response.actionItems, response.actionItems);
+          return [];
+        }
+        
+        // Additional validation for action items integrity
+        const validActionItems = response.actionItems.filter((item, index) => {
+          if (!item || typeof item !== 'object') {
+            console.warn(`Action item at index ${index} is invalid:`, item);
+            return false;
+          }
+          if (!item.id) {
+            console.warn(`Action item at index ${index} has no ID:`, item);
+            return false;
+          }
+          return true;
+        });
+        
+        console.debug(`Action items validation: ${validActionItems.length} valid out of ${response.actionItems.length} total`);
+        
+        return validActionItems;
       }
+      
     } catch (error) {
-      console.error('Error in queueData useMemo:', error);
+      console.error('Critical error in queueData useMemo:', error, {
+        useInvoiceData,
+        hasInvoiceResponse: !!invoiceResponse,
+        hasQueueResponse: !!queueResponse,
+        queueLoading
+      });
+      
+      // Return empty array to maintain UI stability
       return [];
     }
-  }, [useInvoiceData, invoiceResponse, queueResponse, transformInvoiceToDisplayItem]);
+  }, [useInvoiceData, invoiceResponse, queueResponse, transformInvoiceToDisplayItem, queueLoading, createFallbackInvoice]);
     
   const pagination = useMemo(() => {
     const defaultPagination = { page: 1, limit: 25, total: 0, totalPages: 1 };
     
-    if (useInvoiceData) {
-      if (!invoiceResponse || typeof invoiceResponse !== 'object') {
+    try {
+      // Return default pagination during loading to prevent errors
+      if (queueLoading) {
         return defaultPagination;
       }
-      const response = invoiceResponse as InvoiceResponse;
-      return response.pagination || defaultPagination;
-    } else {
-      if (!queueResponse || typeof queueResponse !== 'object') {
-        return defaultPagination;
+      
+      if (useInvoiceData) {
+        if (!invoiceResponse || typeof invoiceResponse !== 'object') {
+          console.debug('Invoice response invalid for pagination, using default');
+          return defaultPagination;
+        }
+        
+        const response = invoiceResponse as InvoiceResponse;
+        
+        // Validate pagination object structure
+        if (!response.pagination || typeof response.pagination !== 'object') {
+          console.debug('Invoice response pagination invalid, using default');
+          return defaultPagination;
+        }
+        
+        // Validate pagination properties
+        const pagination = response.pagination;
+        const safePagination = {
+          page: typeof pagination.page === 'number' && pagination.page > 0 ? pagination.page : 1,
+          limit: typeof pagination.limit === 'number' && pagination.limit > 0 ? pagination.limit : 25,
+          total: typeof pagination.total === 'number' && pagination.total >= 0 ? pagination.total : 0,
+          totalPages: typeof pagination.totalPages === 'number' && pagination.totalPages > 0 ? pagination.totalPages : 1
+        };
+        
+        return safePagination;
+        
+      } else {
+        if (!queueResponse || typeof queueResponse !== 'object') {
+          console.debug('Queue response invalid for pagination, using default');
+          return defaultPagination;
+        }
+        
+        const response = queueResponse as QueueResponse;
+        
+        // Validate pagination object structure
+        if (!response.pagination || typeof response.pagination !== 'object') {
+          console.debug('Queue response pagination invalid, using default');
+          return defaultPagination;
+        }
+        
+        // Validate pagination properties
+        const pagination = response.pagination;
+        const safePagination = {
+          page: typeof pagination.page === 'number' && pagination.page > 0 ? pagination.page : 1,
+          limit: typeof pagination.limit === 'number' && pagination.limit > 0 ? pagination.limit : 25,
+          total: typeof pagination.total === 'number' && pagination.total >= 0 ? pagination.total : 0,
+          totalPages: typeof pagination.totalPages === 'number' && pagination.totalPages > 0 ? pagination.totalPages : 1
+        };
+        
+        return safePagination;
       }
-      const response = queueResponse as QueueResponse;
-      return response.pagination || defaultPagination;
+    } catch (error) {
+      console.error('Error in pagination useMemo:', error);
+      return defaultPagination;
     }
-  }, [useInvoiceData, invoiceResponse, queueResponse]);
+  }, [useInvoiceData, invoiceResponse, queueResponse, queueLoading]);
   
   // Communication mutation with enhanced functionality
   const sendCommunicationMutation = useMutation({
@@ -1042,11 +1231,20 @@ export default function ActionCentre() {
     setFocusedRowIndex(null);
   }, [queueData]);
   
-  // Clear selections when changing queues or pages
+  // Clear selections and reset state when changing queues or pages - with state transition safety
   useEffect(() => {
+    // Clear all selections and focused state to prevent stale references
     clearSelection();
     setFocusedRowIndex(null);
-  }, [selectedQueue, currentPage, clearSelection]);
+    
+    // Reset selected action to prevent displaying stale data from previous queue
+    setSelectedAction(null);
+    
+    // Clear any error states that might have been triggered by the previous queue
+    queryClient.removeQueries({ queryKey: ['/api/action-centre/queue'], exact: false });
+    queryClient.removeQueries({ queryKey: ['/api/invoices'], exact: false });
+    
+  }, [selectedQueue, currentPage, clearSelection, queryClient]);
   
   // Show keyboard help on first visit (optional)
   useEffect(() => {
@@ -1425,34 +1623,101 @@ export default function ActionCentre() {
                                   <Avatar className="h-8 w-8">
                                     <AvatarFallback className="text-xs">
                                       {(() => {
-                                        // Use company name for avatar initials when available, fallback to contact name
-                                        const primaryName = action.companyName || action.contactName;
-                                        if (!primaryName || typeof primaryName !== 'string') return 'C';
-                                        return primaryName.split(' ').map(n => n[0] || '').filter(c => c).join('') || 'C';
+                                        try {
+                                          // Use company name for avatar initials when available, fallback to contact name
+                                          const primaryName = action.companyName || action.contactName;
+                                          if (!primaryName || typeof primaryName !== 'string' || primaryName.trim().length === 0) {
+                                            return 'C';
+                                          }
+                                          
+                                          const initials = primaryName
+                                            .trim()
+                                            .split(' ')
+                                            .map(n => (n && n.length > 0) ? n[0].toUpperCase() : '')
+                                            .filter(c => c && c.length > 0)
+                                            .join('')
+                                            .substring(0, 2); // Limit to 2 characters max
+                                            
+                                          return initials || 'C';
+                                        } catch (error) {
+                                          console.warn('Error generating avatar initials:', error);
+                                          return 'C';
+                                        }
                                       })()}
                                     </AvatarFallback>
                                   </Avatar>
                                   <div>
-                                    <div className="font-medium text-slate-900">{action.companyName || 'Unknown Company'}</div>
-                                    <div className="text-sm text-slate-600">{action.contactName || 'Unknown Contact'}</div>
+                                    <div className="font-medium text-slate-900">
+                                      {(action.companyName && typeof action.companyName === 'string' && action.companyName.trim()) || 'Unknown Company'}
+                                    </div>
+                                    <div className="text-sm text-slate-600">
+                                      {(action.contactName && typeof action.contactName === 'string' && action.contactName.trim()) || 'Unknown Contact'}
+                                    </div>
                                   </div>
                                 </div>
                               </TableCell>
                             <TableCell>
                               <div className="text-sm font-mono">
-                                {'invoiceNumber' in action ? action.invoiceNumber : action.invoiceNumber || 'N/A'}
+                                {(() => {
+                                  try {
+                                    // Safe invoice number extraction with multiple fallback strategies
+                                    if ('invoiceNumber' in action && action.invoiceNumber && typeof action.invoiceNumber === 'string') {
+                                      return action.invoiceNumber.trim() || 'N/A';
+                                    }
+                                    
+                                    // Fallback for action items that might have invoice number in different property
+                                    const actionAny = action as any;
+                                    if (actionAny.invoiceNumber && typeof actionAny.invoiceNumber === 'string') {
+                                      return actionAny.invoiceNumber.trim() || 'N/A';
+                                    }
+                                    
+                                    return 'N/A';
+                                  } catch (error) {
+                                    console.warn('Error displaying invoice number:', error);
+                                    return 'N/A';
+                                  }
+                                })()}
                               </div>
                             </TableCell>
                             <TableCell>
                               <div className="space-y-1">
                                 <div className="font-medium">
-                                  {'totalAmount' in action 
-                                    ? formatCurrency(Number(action.totalAmount) || 0) 
-                                    : (action.amount ? formatCurrency(Number(action.amount) || 0) : 'N/A')
-                                  }
+                                  {(() => {
+                                    try {
+                                      // Safe amount extraction and formatting with multiple fallback strategies
+                                      let amount = 0;
+                                      
+                                      if ('totalAmount' in action && action.totalAmount) {
+                                        const totalAmount = Number(action.totalAmount);
+                                        if (!isNaN(totalAmount) && isFinite(totalAmount)) {
+                                          amount = totalAmount;
+                                        }
+                                      } else if (action.amount) {
+                                        const actionAmount = Number(action.amount);
+                                        if (!isNaN(actionAmount) && isFinite(actionAmount)) {
+                                          amount = actionAmount;
+                                        }
+                                      }
+                                      
+                                      return amount > 0 ? formatCurrency(amount) : 'N/A';
+                                    } catch (error) {
+                                      console.warn('Error formatting amount:', error);
+                                      return 'N/A';
+                                    }
+                                  })()}
                                 </div>
                                 <div className="text-sm text-slate-600">
-                                  {action.daysOverdue !== undefined && action.daysOverdue > 0 ? `${action.daysOverdue} days overdue` : 'Current'}
+                                  {(() => {
+                                    try {
+                                      if (typeof action.daysOverdue === 'number' && !isNaN(action.daysOverdue) && action.daysOverdue > 0) {
+                                        return `${action.daysOverdue} days overdue`;
+                                      }
+                                      return 'Current';
+                                    } catch (error) {
+                                      console.warn('Error displaying days overdue:', error);
+                                      return 'Current';
+                                    }
+                                  })()}
                                 </div>
                               </div>
                             </TableCell>
