@@ -428,6 +428,17 @@ export default function ActionCentre() {
   // Fetch contact details for selected action
   const { data: contactDetails, isLoading: contactLoading } = useQuery({
     queryKey: ["/api/action-centre/contact", selectedContactId],
+    queryFn: async () => {
+      if (!selectedContactId) {
+        throw new Error('No contact ID provided');
+      }
+      console.debug('Fetching contact details for ID:', selectedContactId);
+      const response = await fetch(`/api/action-centre/contact/${selectedContactId}`);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch contact details: ${response.statusText}`);
+      }
+      return response.json();
+    },
     enabled: isAuthenticated && !!selectedContactId,
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
