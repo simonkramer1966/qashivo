@@ -1621,8 +1621,8 @@ export default function ActionCentre() {
                 </div>
               ) : (
                 <>
-                  <div className="flex-1 overflow-y-auto">
-                    <Table ref={tableRef}>
+                  <div className="flex-1 overflow-y-auto" style={{ contain: 'layout style size' }}>
+                    <Table ref={tableRef} style={{ tableLayout: 'fixed', width: '100%' }}>
                       <TableHeader className="sticky top-0 bg-white/90 backdrop-blur-sm">
                         <TableRow>
                           <TableHead className="w-[50px]">
