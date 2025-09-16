@@ -225,16 +225,30 @@ export default function ActionCentre() {
   // Suppress benign ResizeObserver errors during table layout changes
   useEffect(() => {
     const originalError = window.onerror;
+    const originalUnhandledRejection = window.onunhandledrejection;
+    
+    // Handle synchronous errors
     window.onerror = (message, source, lineno, colno, error) => {
-      // Suppress ResizeObserver loop errors - these are benign browser performance protections
       if (typeof message === 'string' && message.includes('ResizeObserver loop completed')) {
         return true; // Suppress this error
       }
       return originalError ? originalError(message, source, lineno, colno, error) : false;
     };
 
+    // Handle unhandled promise rejections and async errors  
+    window.onunhandledrejection = (event: PromiseRejectionEvent) => {
+      if (event.reason && typeof event.reason === 'string' && event.reason.includes('ResizeObserver loop completed')) {
+        event.preventDefault();
+        return;
+      }
+      if (originalUnhandledRejection) {
+        originalUnhandledRejection.call(window, event);
+      }
+    };
+
     return () => {
       window.onerror = originalError;
+      window.onunhandledrejection = originalUnhandledRejection;
     };
   }, []);
   const [selectedAction, setSelectedAction] = useState<QueueDisplayItem | null>(null);
@@ -377,7 +391,6 @@ export default function ActionCentre() {
       id: selectedAction.id,
       contactId: selectedAction.contactId,
       invoiceId: selectedAction.invoiceId,
-      name: selectedAction.name,
       companyName: selectedAction.companyName,
       fullAction: selectedAction
     });
