@@ -1658,8 +1658,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
 
-      const [basicMetrics, cacheStats] = await Promise.all([
+      const [basicMetrics, invoiceCounts, cacheStats] = await Promise.all([
         storage.getActionCentreMetrics(user.tenantId),
+        storage.getInvoiceCountsByOverdueCategory(user.tenantId),
         Promise.resolve(actionPrioritizationService.getCacheStats())
       ]);
 
@@ -1672,14 +1673,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         highRiskActions: Math.ceil(basicMetrics.overdueCount * 0.3), // Estimate 30% of overdue items are high risk
         avgDaysOverdue: basicMetrics.avgCompletionTime,
         totalValue: Math.floor(basicMetrics.highRiskExposure),
-        // Queue category counts for frontend badges
+        // Queue category counts for frontend badges - NOW USING ALL INVOICE COUNTS instead of action item counts
         queueCounts: {
-          soon: basicMetrics.soonCount,
-          current: basicMetrics.currentCount, 
-          recent: basicMetrics.recentCount,
-          overdue: basicMetrics.overdueInvoicesCount,
-          serious: basicMetrics.seriousCount,
-          escalation: basicMetrics.escalationCount
+          soon: invoiceCounts.soon,
+          current: invoiceCounts.current, 
+          recent: invoiceCounts.recent,
+          overdue: invoiceCounts.overdue,
+          serious: invoiceCounts.serious,
+          escalation: invoiceCounts.escalation
         },
         prioritization: {
           cacheStatus: cacheStats,

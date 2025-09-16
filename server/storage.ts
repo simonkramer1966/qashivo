@@ -344,6 +344,9 @@ export interface IStorage {
     escalationCount: number;
   }>;
 
+  // Invoice count by overdue category - counts ALL invoices, not just those with action items
+  getInvoiceCountsByOverdueCategory(tenantId: string): Promise<Record<OverdueCategory, number>>;
+
   // Action Log operations
   getActionLogs(actionItemId: string, tenantId: string): Promise<(ActionLog & { createdByUser: User })[]>;
   createActionLog(actionLog: InsertActionLog): Promise<ActionLog>;
@@ -3263,6 +3266,46 @@ export class DatabaseStorage implements IStorage {
       seriousCount,
       escalationCount,
     };
+  }
+
+  async getInvoiceCountsByOverdueCategory(tenantId: string): Promise<Record<OverdueCategory, number>> {
+    console.log(`📊 Computing invoice counts by overdue category for tenant ${tenantId}`);
+    
+    // Get ALL pending/overdue invoices (excluding paid invoices)
+    const allInvoices = await db
+      .select({
+        dueDate: invoices.dueDate,
+        status: invoices.status,
+      })
+      .from(invoices)
+      .where(and(
+        eq(invoices.tenantId, tenantId),
+        sql`${invoices.status} IN ('pending', 'overdue')`
+      ));
+
+    console.log(`📋 Found ${allInvoices.length} pending/overdue invoices for categorization`);
+
+    // Initialize category counters
+    const categoryCounts: Record<OverdueCategory, number> = {
+      soon: 0,
+      current: 0,
+      recent: 0,
+      overdue: 0,
+      serious: 0,
+      escalation: 0,
+    };
+
+    const now = new Date();
+
+    // Categorize each invoice by its overdue status
+    allInvoices.forEach(invoice => {
+      const overdueCategoryInfo = getOverdueCategoryFromDueDate(invoice.dueDate, now);
+      categoryCounts[overdueCategoryInfo.category]++;
+    });
+
+    console.log(`📈 Invoice category counts: soon=${categoryCounts.soon}, current=${categoryCounts.current}, recent=${categoryCounts.recent}, overdue=${categoryCounts.overdue}, serious=${categoryCounts.serious}, escalation=${categoryCounts.escalation}`);
+
+    return categoryCounts;
   }
 
   // Action Log operations
