@@ -1358,16 +1358,16 @@ export default function ActionCentre() {
                                   <Avatar className="h-8 w-8">
                                     <AvatarFallback className="text-xs">
                                       {(() => {
-                                        if (!action.contactName || typeof action.contactName !== 'string') return 'C';
-                                        return action.contactName.split(' ').map(n => n[0] || '').filter(c => c).join('') || 'C';
+                                        // Use company name for avatar initials when available, fallback to contact name
+                                        const primaryName = action.companyName || action.contactName;
+                                        if (!primaryName || typeof primaryName !== 'string') return 'C';
+                                        return primaryName.split(' ').map(n => n[0] || '').filter(c => c).join('') || 'C';
                                       })()}
                                     </AvatarFallback>
                                   </Avatar>
                                   <div>
-                                    <div className="font-medium text-slate-900">{action.contactName || 'Unknown Contact'}</div>
-                                    {action.companyName && (
-                                      <div className="text-sm text-slate-600">{action.companyName}</div>
-                                    )}
+                                    <div className="font-medium text-slate-900">{action.companyName || 'Unknown Company'}</div>
+                                    <div className="text-sm text-slate-600">{action.contactName || 'Unknown Contact'}</div>
                                   </div>
                                 </div>
                               </TableCell>
@@ -1695,16 +1695,16 @@ export default function ActionCentre() {
                     <Avatar className="h-12 w-12">
                       <AvatarFallback>
                         {(() => {
-                          if (!selectedAction.contactName || typeof selectedAction.contactName !== 'string') return '??';
-                          return selectedAction.contactName.split(' ').map(n => n[0] || '').filter(c => c).join('').toUpperCase() || '??';
+                          // Use company name for avatar initials when available, fallback to contact name
+                          const primaryName = selectedAction.companyName || selectedAction.contactName;
+                          if (!primaryName || typeof primaryName !== 'string') return '??';
+                          return primaryName.split(' ').map(n => n[0] || '').filter(c => c).join('').toUpperCase() || '??';
                         })()}
                       </AvatarFallback>
                     </Avatar>
                     <div>
-                      <h3 className="font-semibold text-slate-900">{selectedAction.contactName || 'Unknown Contact'}</h3>
-                      {selectedAction.companyName && (
-                        <p className="text-sm text-slate-600">{selectedAction.companyName}</p>
-                      )}
+                      <h3 className="font-semibold text-slate-900">{selectedAction.companyName || 'Unknown Company'}</h3>
+                      <p className="text-sm text-slate-600">{selectedAction.contactName || 'Unknown Contact'}</p>
                     </div>
                   </div>
                   
