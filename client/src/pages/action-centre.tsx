@@ -221,6 +221,28 @@ export default function ActionCentre() {
   
   // State management
   const [selectedQueue, setSelectedQueue] = useState('today');
+
+  // Temporary debugging: catch non-Error throws
+  useEffect(() => {
+    const originalError = window.onerror;
+    window.onerror = (message, source, lineno, colno, error) => {
+      console.error('🔥 WINDOW ERROR CAUGHT:', {
+        message,
+        error,
+        errorType: typeof error,
+        errorValue: error,
+        source: source?.split('/').pop(),
+        lineno,
+        selectedQueue,
+        timestamp: new Date().toISOString()
+      });
+      return originalError ? originalError(message, source, lineno, colno, error) : false;
+    };
+
+    return () => {
+      window.onerror = originalError;
+    };
+  }, [selectedQueue]);
   const [selectedAction, setSelectedAction] = useState<QueueDisplayItem | null>(null);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
