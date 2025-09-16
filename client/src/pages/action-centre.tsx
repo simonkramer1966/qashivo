@@ -80,6 +80,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { CommunicationPreviewDialog } from "@/components/ui/communication-preview-dialog";
+import { AiCallDialog } from "@/components/ui/ai-call-dialog";
 
 // Enhanced ActionItem type with computed properties for the UI
 type EnhancedActionItem = ActionItem & {
@@ -357,9 +358,16 @@ export default function ActionCentre() {
   // Communication dialog state
   const [communicationDialog, setCommunicationDialog] = useState({
     isOpen: false,
-    type: 'email' as 'email' | 'sms' | 'voice' | 'ai-call',
+    type: 'email' as 'email' | 'sms' | 'voice',
     context: 'customer' as 'customer' | 'invoice',
     contextId: '',
+  });
+
+  // AI Call dialog state
+  const [aiCallDialog, setAiCallDialog] = useState({
+    isOpen: false,
+    contactId: '',
+    invoiceId: '',
   });
 
   // Redirect to home if not authenticated
@@ -881,7 +889,7 @@ export default function ActionCentre() {
   // Communication mutation with enhanced functionality
   const sendCommunicationMutation = useMutation({
     mutationFn: async ({ type, content, recipient, subject, templateId, contextId, context }: {
-      type: 'email' | 'sms' | 'voice' | 'ai-call';
+      type: 'email' | 'sms' | 'voice';
       content: string;
       recipient: string;
       subject?: string;
@@ -902,28 +910,6 @@ export default function ActionCentre() {
         };
         
         // Add context-specific data for voice calls
-        if (context === 'invoice') {
-          payload.invoiceId = contextId;
-        } else {
-          payload.contactId = contextId;
-        }
-      } else if (type === 'ai-call') {
-        // AI calls use the enhanced Retell API endpoint with AI-specific parameters
-        endpoint = '/api/retell/ai-call';
-        payload = {
-          message: content,
-          templateId,
-          recipient,
-          isAICall: true,
-          // Add customer/invoice context for AI
-          dynamicVariables: {
-            contactName: recipient || 'Customer',
-            context: context,
-            contextId: contextId
-          }
-        };
-        
-        // Add context-specific data for AI calls
         if (context === 'invoice') {
           payload.invoiceId = contextId;
         } else {
@@ -956,8 +942,7 @@ export default function ActionCentre() {
     onSuccess: (data, variables) => {
       const typeLabel = variables.type === 'email' ? 'Email' : 
                        variables.type === 'sms' ? 'SMS' : 
-                       variables.type === 'voice' ? 'Voice Message' :
-                       variables.type === 'ai-call' ? 'AI Call' : 'Communication';
+                       variables.type === 'voice' ? 'Voice Message' : 'Communication';
       toast({
         title: "Communication Sent",
         description: `${typeLabel} sent successfully`,
@@ -2308,12 +2293,43 @@ export default function ActionCentre() {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => setCommunicationDialog({
-                              isOpen: true,
-                              type: 'ai-call',
-                              context: selectedAction.invoiceId ? 'invoice' : 'customer',
-                              contextId: selectedAction.invoiceId || selectedAction.contactId,
-                            })}
+                            onClick={async () => {
+                              // Validate contactId exists before opening dialog
+                              const contactId = selectedAction.contactId;
+                              if (contactId) {
+                                try {
+                                  const response = await fetch(`/api/contacts/${contactId}`);
+                                  if (response.ok) {
+                                    // Contact exists, proceed normally
+                                    setAiCallDialog({
+                                      isOpen: true,
+                                      contactId,
+                                      invoiceId: selectedAction.invoiceId || '',
+                                    });
+                                  } else {
+                                    // Contact doesn't exist, show error
+                                    toast({
+                                      title: "Contact Not Found",
+                                      description: "The contact for this action no longer exists. Please refresh the data.",
+                                      variant: "destructive",
+                                    });
+                                  }
+                                } catch (error) {
+                                  console.error('Error validating contact:', error);
+                                  toast({
+                                    title: "Error",
+                                    description: "Failed to validate contact information.",
+                                    variant: "destructive",
+                                  });
+                                }
+                              } else {
+                                toast({
+                                  title: "No Contact Information",
+                                  description: "This action doesn't have associated contact information.",
+                                  variant: "destructive",
+                                });
+                              }
+                            }}
                             className="flex flex-col items-center p-3 h-auto hover:bg-amber-50 hover:border-amber-200"
                             data-testid="button-ai-call"
                           >
@@ -2742,6 +2758,27 @@ export default function ActionCentre() {
             contextId: communicationDialog.contextId,
             context: communicationDialog.context,
           });
+        }}
+      />
+
+      {/* AI Call Dialog */}
+      <AiCallDialog
+        isOpen={aiCallDialog.isOpen}
+        onClose={() => setAiCallDialog({ isOpen: false, contactId: '', invoiceId: '' })}
+        contactId={aiCallDialog.contactId}
+        invoiceId={aiCallDialog.invoiceId}
+        onCallInitiated={(result) => {
+          toast({
+            title: "AI Call Initiated",
+            description: "AI-powered call has been started successfully",
+            variant: "default",
+          });
+          // Refresh all relevant data
+          queryClient.invalidateQueries({ queryKey: ["/api/action-centre/queue"] });
+          queryClient.invalidateQueries({ queryKey: ["/api/communications/history"] });
+          queryClient.invalidateQueries({ queryKey: ["/api/action-centre/contact"] });
+          // Close the dialog
+          setAiCallDialog({ isOpen: false, contactId: '', invoiceId: '' });
         }}
       />
       

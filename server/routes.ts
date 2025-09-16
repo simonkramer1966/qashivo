@@ -1042,6 +1042,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get individual contact by ID
+  app.get("/api/contacts/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { id } = req.params;
+      const contacts = await storage.getContacts(user.tenantId);
+      const contact = contacts.find(c => c.id === id);
+      
+      if (!contact) {
+        return res.status(404).json({ message: "Contact not found" });
+      }
+
+      res.json(contact);
+    } catch (error) {
+      console.error("Error fetching contact:", error);
+      res.status(500).json({ message: "Failed to fetch contact" });
+    }
+  });
+
   // New endpoint for contacts with significantly overdue invoices (>30 days)
   app.get("/api/contacts/overdue", isAuthenticated, async (req: any, res) => {
     try {
