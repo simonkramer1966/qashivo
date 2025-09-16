@@ -68,7 +68,8 @@ import {
   Trash2,
   MousePointer,
   Command,
-  HelpCircle
+  HelpCircle,
+  Brain
 } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -136,15 +137,48 @@ type ContactDetails = Contact & {
     paidDate?: string;
   }>;
   communicationHistory: Array<{
+    id?: string;
     type: 'email' | 'sms' | 'call' | 'voice' | 'phone'; // Include all possible types from backend
     date: string;
     subject?: string;
-    status: 'sent' | 'delivered' | 'opened' | 'failed';
+    status: string; // Extended to support all status types
+    priority?: string;
+    outcome?: string | null;
+    events?: Array<{
+      eventType: string;
+      details: any;
+      createdAt: string;
+      createdBy: string;
+    }>;
+    effectivenessIndicators?: {
+      wasDelivered?: boolean;
+      hadResponse?: boolean;
+      resultedInPayment?: boolean;
+      totalEvents?: number;
+    };
   }>;
   riskProfile: {
     score: number;
     level: 'low' | 'medium' | 'high' | 'critical';
     factors: string[];
+  };
+  // AI Communication Intelligence (if available)
+  aiInsights?: {
+    totalInteractions: number;
+    successfulActions: number;
+    successRate: number;
+    channelEffectiveness: {
+      email: number;
+      sms: number;
+      voice: number;
+    };
+    preferredChannel: string;
+    preferredContactTime: string;
+    averageResponseTime: number | null;
+    averagePaymentDelay: number | null;
+    paymentReliability: number;
+    learningConfidence: number;
+    lastUpdated?: string;
   };
 };
 
@@ -2371,6 +2405,109 @@ export default function ActionCentre() {
                               )}
                             </CardContent>
                           </Card>
+
+                          {/* AI Communication Intelligence */}
+                          {(contactDetails as ContactDetails).aiInsights && (
+                            <Card className="bg-white/70 backdrop-blur-md border-0 shadow-lg">
+                              <CardHeader className="pb-3">
+                                <CardTitle className="text-sm font-medium flex items-center space-x-2">
+                                  <Brain className="h-4 w-4 text-[#17B6C3]" />
+                                  <span>AI Communication Intelligence</span>
+                                </CardTitle>
+                              </CardHeader>
+                              <CardContent className="pt-0 space-y-3">
+                                {/* Success Rate */}
+                                <div className="flex justify-between items-center">
+                                  <span className="text-sm text-slate-600">Success Rate</span>
+                                  <span className="text-sm font-medium">{(contactDetails as ContactDetails).aiInsights!.successRate}%</span>
+                                </div>
+                                <Progress 
+                                  value={(contactDetails as ContactDetails).aiInsights!.successRate} 
+                                  className="h-2"
+                                />
+                                
+                                {/* Channel Effectiveness */}
+                                <div className="space-y-2">
+                                  <span className="text-sm font-medium text-slate-700">Channel Effectiveness</span>
+                                  <div className="grid grid-cols-3 gap-2 text-xs">
+                                    <div className="text-center p-2 bg-blue-50 rounded">
+                                      <Mail className="h-3 w-3 mx-auto mb-1 text-blue-600" />
+                                      <div className="font-medium">{Math.round((contactDetails as ContactDetails).aiInsights!.channelEffectiveness.email * 100)}%</div>
+                                      <div className="text-slate-500">Email</div>
+                                    </div>
+                                    <div className="text-center p-2 bg-green-50 rounded">
+                                      <MessageSquare className="h-3 w-3 mx-auto mb-1 text-green-600" />
+                                      <div className="font-medium">{Math.round((contactDetails as ContactDetails).aiInsights!.channelEffectiveness.sms * 100)}%</div>
+                                      <div className="text-slate-500">SMS</div>
+                                    </div>
+                                    <div className="text-center p-2 bg-purple-50 rounded">
+                                      <Phone className="h-3 w-3 mx-auto mb-1 text-purple-600" />
+                                      <div className="font-medium">{Math.round((contactDetails as ContactDetails).aiInsights!.channelEffectiveness.voice * 100)}%</div>
+                                      <div className="text-slate-500">Voice</div>
+                                    </div>
+                                  </div>
+                                </div>
+                                
+                                {/* Preferred Channel */}
+                                <div className="flex justify-between items-center">
+                                  <span className="text-sm text-slate-600">Preferred Channel</span>
+                                  <Badge variant="outline" className="capitalize">
+                                    {(contactDetails as ContactDetails).aiInsights!.preferredChannel}
+                                  </Badge>
+                                </div>
+                                
+                                {/* Learning Confidence */}
+                                <div className="flex justify-between items-center">
+                                  <span className="text-sm text-slate-600">AI Confidence</span>
+                                  <span className="text-sm font-medium">{Math.round((contactDetails as ContactDetails).aiInsights!.learningConfidence * 100)}%</span>
+                                </div>
+                                
+                                {/* Interaction Stats */}
+                                <div className="grid grid-cols-2 gap-4 pt-2 border-t border-slate-200">
+                                  <div className="text-center">
+                                    <div className="font-medium text-sm">{(contactDetails as ContactDetails).aiInsights!.totalInteractions}</div>
+                                    <div className="text-xs text-slate-500">Total Interactions</div>
+                                  </div>
+                                  <div className="text-center">
+                                    <div className="font-medium text-sm">{Math.round((contactDetails as ContactDetails).aiInsights!.paymentReliability * 100)}%</div>
+                                    <div className="text-xs text-slate-500">Payment Reliability</div>
+                                  </div>
+                                </div>
+                              </CardContent>
+                            </Card>
+                          )}
+
+                          {/* Payment History */}
+                          {(contactDetails as ContactDetails).paymentHistory && (contactDetails as ContactDetails).paymentHistory.length > 0 && (
+                            <Card className="bg-white/70 backdrop-blur-md border-0 shadow-lg">
+                              <CardHeader className="pb-3">
+                                <CardTitle className="text-sm font-medium">Recent Payments</CardTitle>
+                              </CardHeader>
+                              <CardContent className="pt-0">
+                                <ScrollArea className="h-32">
+                                  <div className="space-y-2">
+                                    {(contactDetails as ContactDetails).paymentHistory.slice(0, 5).map((payment, index) => (
+                                      <div key={index} className="flex justify-between items-center p-2 bg-slate-50 rounded text-xs">
+                                        <div>
+                                          <div className="font-medium">{payment.invoiceNumber}</div>
+                                          <div className="text-slate-500">{new Date(payment.dueDate).toLocaleDateString()}</div>
+                                        </div>
+                                        <div className="text-right">
+                                          <div className="font-medium">${payment.amount.toLocaleString()}</div>
+                                          <Badge 
+                                            variant={payment.status === 'paid' ? 'default' : 'outline'}
+                                            className="text-xs"
+                                          >
+                                            {payment.status}
+                                          </Badge>
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </ScrollArea>
+                              </CardContent>
+                            </Card>
+                          )}
                         </div>
                       ) : (
                         <div className="text-center py-8">
@@ -2406,7 +2543,7 @@ export default function ActionCentre() {
                           <ScrollArea className="h-[300px] pr-4">
                             <div className="space-y-3">
                               {communicationHistory.map((comm: CommunicationHistoryItem, index: number) => (
-                                <div key={index} className="flex items-start space-x-3 p-4 bg-white/70 rounded-lg border border-white/50 hover:bg-white/90 transition-colors">
+                                <div key={comm.id || index} className="flex items-start space-x-3 p-4 bg-white/70 rounded-lg border border-white/50 hover:bg-white/90 transition-colors">
                                   <div className={`p-2 rounded-full ${
                                     comm.type === 'email' ? 'bg-blue-100 text-blue-600' :
                                     comm.type === 'sms' ? 'bg-green-100 text-green-600' :
@@ -2421,6 +2558,19 @@ export default function ActionCentre() {
                                     <div className="flex items-center justify-between mb-2">
                                       <div className="flex items-center space-x-2">
                                         <span className="text-sm font-medium capitalize">{comm.type}</span>
+                                        {/* Priority Indicator */}
+                                        {(comm as any).priority && (
+                                          <Badge 
+                                            variant="outline" 
+                                            className={`text-xs ${
+                                              (comm as any).priority === 'high' ? 'border-red-300 text-red-700 bg-red-50' :
+                                              (comm as any).priority === 'medium' ? 'border-orange-300 text-orange-700 bg-orange-50' :
+                                              'border-blue-300 text-blue-700 bg-blue-50'
+                                            }`}
+                                          >
+                                            {(comm as any).priority}
+                                          </Badge>
+                                        )}
                                         {comm.templateName && (
                                           <Badge variant="outline" className="text-xs">
                                             {comm.templateName}
@@ -2441,6 +2591,37 @@ export default function ActionCentre() {
                                         {comm.content}
                                       </p>
                                     )}
+                                    
+                                    {/* Effectiveness Indicators */}
+                                    {(comm as any).effectivenessIndicators && (
+                                      <div className="flex items-center space-x-3 mb-2 text-xs">
+                                        {(comm as any).effectivenessIndicators.wasDelivered && (
+                                          <div className="flex items-center space-x-1 text-green-600">
+                                            <CheckCircle className="h-3 w-3" />
+                                            <span>Delivered</span>
+                                          </div>
+                                        )}
+                                        {(comm as any).effectivenessIndicators.hadResponse && (
+                                          <div className="flex items-center space-x-1 text-blue-600">
+                                            <MessageSquare className="h-3 w-3" />
+                                            <span>Response</span>
+                                          </div>
+                                        )}
+                                        {(comm as any).effectivenessIndicators.resultedInPayment && (
+                                          <div className="flex items-center space-x-1 text-purple-600">
+                                            <DollarSign className="h-3 w-3" />
+                                            <span>Payment</span>
+                                          </div>
+                                        )}
+                                        {(comm as any).effectivenessIndicators.totalEvents && (
+                                          <div className="flex items-center space-x-1 text-slate-500">
+                                            <Hash className="h-3 w-3" />
+                                            <span>{(comm as any).effectivenessIndicators.totalEvents} events</span>
+                                          </div>
+                                        )}
+                                      </div>
+                                    )}
+                                    
                                     <div className="flex items-center justify-between">
                                       <Badge 
                                         variant="secondary" 
@@ -2455,7 +2636,7 @@ export default function ActionCentre() {
                                         {comm.status || 'Unknown'}
                                       </Badge>
                                       {comm.outcome && (
-                                        <span className="text-xs text-slate-500">
+                                        <span className="text-xs text-slate-500 truncate max-w-[150px]" title={comm.outcome}>
                                           {comm.outcome}
                                         </span>
                                       )}

@@ -42,7 +42,8 @@ import {
   type ActionLog,
   type PaymentPromise,
   invoices,
-  seasonalPatterns
+  seasonalPatterns,
+  customerLearningProfiles
 } from "@shared/schema";
 import { getOverdueCategoryFromDueDate } from "@shared/utils/overdueUtils";
 import { eq, and, desc, sql, count, avg, gte, lte, inArray } from 'drizzle-orm';
@@ -1841,10 +1842,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const allInvoices = await storage.getInvoices(user.tenantId, 100); // Get recent invoices
       const contactInvoices = allInvoices.filter(invoice => invoice.contactId === id).slice(0, 10);
       
-      // Get recent action items for communication history  
+      // Get comprehensive communication history data
       const actionHistory = await storage.getActionItemsByContact(id, user.tenantId);
       
-      // Get risk profile data (default for now - can be enhanced with ML later)
+      // Get detailed action logs for richer communication context
+      const enrichedCommunications = [];
+      for (const action of actionHistory.slice(0, 20)) { // Limit to recent 20 actions
+        try {
+          const actionLogs = await storage.getActionLogs(action.id, user.tenantId);
+          enrichedCommunications.push({
+            ...action,
+            detailedLogs: actionLogs
+          });
+        } catch (error) {
+          // If logs fail, include action without detailed logs
+          enrichedCommunications.push({
+            ...action,
+            detailedLogs: []
+          });
+        }
+      }
+      
+      // Try to get customer learning profile for AI insights
+      let customerProfile = null;
+      try {
+        // Note: This may fail if the profile doesn't exist, which is fine
+        const profiles = await db.select()
+          .from(customerLearningProfiles)
+          .where(and(
+            eq(customerLearningProfiles.contactId, id),
+            eq(customerLearningProfiles.tenantId, user.tenantId)
+          ))
+          .limit(1);
+        
+        customerProfile = profiles[0] || null;
+      } catch (error) {
+        console.log('Customer learning profile not available:', error instanceof Error ? error.message : 'Unknown error');
+        customerProfile = null;
+      }
+      
+      // Get risk profile data (enhanced with learning profile if available)
       const riskScore = null; // TODO: Implement proper risk scoring
 
       // Assemble contact details response
@@ -1857,17 +1894,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
           dueDate: invoice.dueDate.toISOString(),
           paidDate: invoice.paidDate?.toISOString(),
         })),
-        communicationHistory: actionHistory.map(action => ({
-          type: action.type as 'email' | 'sms' | 'phone',
+        communicationHistory: enrichedCommunications.map(action => ({
+          id: action.id,
+          type: action.type as 'email' | 'sms' | 'phone' | 'call',
           date: action.createdAt?.toISOString() || new Date().toISOString(),
-          subject: action.notes || action.type,
-          status: action.status === 'completed' ? 'sent' : 'pending',
+          subject: action.notes || `${action.type.charAt(0).toUpperCase() + action.type.slice(1)} communication`,
+          status: action.status,
+          priority: action.priority,
+          outcome: action.outcome || null,
+          assignedTo: action.assignedToUserId,
+          dueAt: action.dueAt?.toISOString(),
+          invoiceId: action.invoiceId,
+          // Enhanced with detailed event logs
+          events: action.detailedLogs?.map(log => ({
+            eventType: log.eventType,
+            details: log.details,
+            createdAt: log.createdAt?.toISOString(),
+            createdBy: log.createdByUserId
+          })) || [],
+          // Calculate effectiveness if multiple events exist
+          effectivenessIndicators: {
+            wasDelivered: action.detailedLogs?.some(log => log.eventType === 'sent_email' || log.eventType === 'sent_sms'),
+            hadResponse: action.detailedLogs?.some(log => log.eventType === 'responded'),
+            resultedInPayment: action.outcome?.toLowerCase().includes('payment') || action.outcome?.toLowerCase().includes('paid'),
+            totalEvents: action.detailedLogs?.length || 0
+          }
         })),
         riskProfile: {
           score: riskScore?.score ? parseFloat(riskScore.score) : 0.5,
           level: riskScore?.riskLevel as 'low' | 'medium' | 'high' | 'critical' || 'medium',
           factors: riskScore?.factors ? (riskScore.factors as string[]) : ['No risk assessment available'],
         },
+        // AI Communication Intelligence (if available)
+        aiInsights: customerProfile ? {
+          totalInteractions: customerProfile.totalInteractions || 0,
+          successfulActions: customerProfile.successfulActions || 0,
+          successRate: customerProfile.totalInteractions > 0 
+            ? Math.round((customerProfile.successfulActions / customerProfile.totalInteractions) * 100)
+            : 0,
+          channelEffectiveness: {
+            email: parseFloat(customerProfile.emailEffectiveness?.toString() || '0.5'),
+            sms: parseFloat(customerProfile.smsEffectiveness?.toString() || '0.5'),
+            voice: parseFloat(customerProfile.voiceEffectiveness?.toString() || '0.5'),
+          },
+          preferredChannel: customerProfile.preferredChannel || 'unknown',
+          preferredContactTime: customerProfile.preferredContactTime || 'unknown',
+          averageResponseTime: customerProfile.averageResponseTime || null,
+          averagePaymentDelay: customerProfile.averagePaymentDelay || null,
+          paymentReliability: parseFloat(customerProfile.paymentReliability?.toString() || '0.5'),
+          learningConfidence: parseFloat(customerProfile.learningConfidence?.toString() || '0.1'),
+          lastUpdated: customerProfile.lastUpdated?.toISOString()
+        } : null,
       };
 
       res.json(contactDetails);
