@@ -1837,8 +1837,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Contact not found" });
       }
 
-      // Get related invoices for payment history
-      const invoices = await storage.getInvoices(user.tenantId, { contactId: id, limit: 10 });
+      // Get related invoices for payment history (filtered by contact ID)
+      const allInvoices = await storage.getInvoices(user.tenantId, 100); // Get recent invoices
+      const contactInvoices = allInvoices.filter(invoice => invoice.contactId === id).slice(0, 10);
       
       // Get recent action items for communication history  
       const actionHistory = await storage.getActionItemsByContact(id, user.tenantId);
@@ -1849,7 +1850,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Assemble contact details response
       const contactDetails = {
         ...contact,
-        paymentHistory: invoices.invoices.map(invoice => ({
+        paymentHistory: contactInvoices.map(invoice => ({
           invoiceNumber: invoice.invoiceNumber,
           amount: parseFloat(invoice.amount),
           status: invoice.status,
