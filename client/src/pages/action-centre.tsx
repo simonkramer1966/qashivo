@@ -1357,31 +1357,11 @@ export default function ActionCentre() {
                           <TableHead className="w-[100px]">
                             <Button 
                               variant="ghost" 
-                              onClick={() => handleSort('amount')}
-                              className="h-auto p-0 font-semibold hover:bg-transparent"
-                              data-testid="header-overdue"
-                            >
-                              Overdue {renderSortIcon('amount')}
-                            </Button>
-                          </TableHead>
-                          <TableHead className="w-[100px]">
-                            <Button 
-                              variant="ghost" 
                               onClick={() => handleSort('priority')}
                               className="h-auto p-0 font-semibold hover:bg-transparent"
                               data-testid="header-priority"
                             >
                               Priority {renderSortIcon('priority')}
-                            </Button>
-                          </TableHead>
-                          <TableHead className="w-[100px]">
-                            <Button 
-                              variant="ghost" 
-                              onClick={() => handleSort('risk')}
-                              className="h-auto p-0 font-semibold hover:bg-transparent"
-                              data-testid="header-risk"
-                            >
-                              Risk {renderSortIcon('risk')}
                             </Button>
                           </TableHead>
                           <TableHead className="w-[120px]">
@@ -1464,30 +1444,30 @@ export default function ActionCentre() {
                               </div>
                             </TableCell>
                             <TableCell>
-                              <div className="font-medium">
-                                {'totalAmount' in action 
-                                  ? formatCurrency(Number(action.totalAmount) || 0) 
-                                  : (action.amount ? formatCurrency(Number(action.amount) || 0) : 'N/A')
-                                }
+                              <div className="space-y-1">
+                                <div className="font-medium">
+                                  {'totalAmount' in action 
+                                    ? formatCurrency(Number(action.totalAmount) || 0) 
+                                    : (action.amount ? formatCurrency(Number(action.amount) || 0) : 'N/A')
+                                  }
+                                </div>
+                                <div className="text-sm text-slate-600">
+                                  {action.daysOverdue !== undefined && action.daysOverdue > 0 ? `${action.daysOverdue} days overdue` : 'Current'}
+                                </div>
                               </div>
                             </TableCell>
                             <TableCell>
-                              <div className="text-sm">
-                                {action.daysOverdue !== undefined ? `${action.daysOverdue} days` : 'N/A'}
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <Badge className={getPriorityBadge(action.priority || 'medium')}>
-                                {action.priority || 'medium'}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>
-                              <div className={`inline-flex px-2 py-1 rounded text-xs font-medium ${
-                                action.riskScore !== undefined 
-                                  ? `${getRiskLevelStyle(action.riskScore).bg} ${getRiskLevelStyle(action.riskScore).color}`
-                                  : 'bg-gray-100 text-gray-600'
-                              }`}>
-                                {action.riskScore !== undefined ? `${Math.round(action.riskScore * 100)}%` : 'N/A'}
+                              <div className="space-y-1">
+                                <Badge className={getPriorityBadge(action.priority || 'medium')}>
+                                  {action.priority || 'medium'}
+                                </Badge>
+                                <div className={`text-sm ${
+                                  action.riskScore !== undefined 
+                                    ? getRiskLevelStyle(action.riskScore).color
+                                    : 'text-gray-600'
+                                }`}>
+                                  Risk: {action.riskScore !== undefined ? `${Math.round(action.riskScore * 100)}%` : 'N/A'}
+                                </div>
                               </div>
                             </TableCell>
                             <TableCell>
