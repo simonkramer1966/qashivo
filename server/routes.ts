@@ -1669,7 +1669,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ...basicMetrics,
         // Add frontend-expected field names as aliases
         totalActions: basicMetrics.totalOpen,
-        todayActions: basicMetrics.totalOpen, // Show all active items as "today's work"
+        todayActions: basicMetrics.todayActionsCount, // FIX: Use actual count for "today" queue
         overdueActions: basicMetrics.overdueCount,
         highRiskActions: Math.ceil(basicMetrics.overdueCount * 0.3), // Estimate 30% of overdue items are high risk
         avgDaysOverdue: basicMetrics.avgCompletionTime,

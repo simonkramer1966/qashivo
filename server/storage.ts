@@ -329,6 +329,7 @@ export interface IStorage {
   getActionItemsByInvoice(invoiceId: string, tenantId: string): Promise<ActionItem[]>;
   getActionCentreMetrics(tenantId: string): Promise<{
     totalOpen: number;
+    todayActionsCount: number; // NEW: Actual count for "today" queue
     dueTodayCount: number;
     overdueCount: number;
     completedToday: number;
@@ -3147,6 +3148,7 @@ export class DatabaseStorage implements IStorage {
 
   async getActionCentreMetrics(tenantId: string): Promise<{
     totalOpen: number;
+    todayActionsCount: number; // NEW: Actual count for "today" queue
     dueTodayCount: number;
     overdueCount: number;
     completedToday: number;
@@ -3188,6 +3190,18 @@ export class DatabaseStorage implements IStorage {
       ));
 
     console.log(`📋 Found ${uniqueInvoicesWithActions.length} unique invoices with active action items`);
+
+    // Calculate "today" actions count - get all active action items for proper count
+    const todayActionItems = await db
+      .select({ id: actionItems.id })
+      .from(actionItems)
+      .where(and(
+        eq(actionItems.tenantId, tenantId),
+        inArray(actionItems.status, activeStatuses)
+      ));
+    
+    const todayActionsCount = todayActionItems.length;
+    console.log(`📋 Found ${todayActionsCount} active action items for "today" queue`);
 
     // Initialize category counters
     let soonCount = 0;
@@ -3252,6 +3266,7 @@ export class DatabaseStorage implements IStorage {
 
     return {
       totalOpen,
+      todayActionsCount, // NEW: Actual count for "today" queue
       dueTodayCount,
       overdueCount,
       completedToday: completedTodayCount.count || 0,
