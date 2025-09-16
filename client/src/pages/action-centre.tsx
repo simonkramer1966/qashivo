@@ -1764,8 +1764,12 @@ export default function ActionCentre() {
                                 <div className="text-sm text-slate-600">
                                   {(() => {
                                     try {
-                                      if (typeof action.daysOverdue === 'number' && !isNaN(action.daysOverdue) && action.daysOverdue > 0) {
-                                        return `${action.daysOverdue} days overdue`;
+                                      // Safely access daysOverdue with comprehensive validation
+                                      const actionAny = action as any;
+                                      const daysOverdue = actionAny?.daysOverdue;
+                                      
+                                      if (typeof daysOverdue === 'number' && !isNaN(daysOverdue) && isFinite(daysOverdue) && daysOverdue > 0) {
+                                        return `${daysOverdue} days overdue`;
                                       }
                                       return 'Current';
                                     } catch (error) {
@@ -1782,11 +1786,29 @@ export default function ActionCentre() {
                                   {action.priority || 'medium'}
                                 </Badge>
                                 <div className={`text-sm ${
-                                  action.riskScore !== undefined 
-                                    ? getRiskLevelStyle(action.riskScore).color
-                                    : 'text-gray-600'
+                                  (() => {
+                                    try {
+                                      const actionAny = action as any;
+                                      const riskScore = actionAny?.riskScore;
+                                      return (typeof riskScore === 'number' && !isNaN(riskScore) && isFinite(riskScore))
+                                        ? getRiskLevelStyle(riskScore).color
+                                        : 'text-gray-600';
+                                    } catch (error) {
+                                      return 'text-gray-600';
+                                    }
+                                  })()
                                 }`}>
-                                  Risk: {action.riskScore !== undefined ? `${Math.round(action.riskScore * 100)}%` : 'N/A'}
+                                  Risk: {(() => {
+                                    try {
+                                      const actionAny = action as any;
+                                      const riskScore = actionAny?.riskScore;
+                                      return (typeof riskScore === 'number' && !isNaN(riskScore) && isFinite(riskScore))
+                                        ? `${Math.round(riskScore * 100)}%`
+                                        : 'N/A';
+                                    } catch (error) {
+                                      return 'N/A';
+                                    }
+                                  })()}
                                 </div>
                               </div>
                             </TableCell>
