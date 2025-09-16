@@ -191,16 +191,25 @@ const isInvoiceQueue = (queueId: string): boolean => {
 
 // Helper function to determine next recommended action based on overdue days
 const getRecommendedAction = (daysOverdue: number): { type: string; priority: string } => {
-  if (daysOverdue <= 0) {
-    return { type: 'Courtesy Reminder', priority: 'low' };
-  } else if (daysOverdue <= 7) {
+  try {
+    // Ensure daysOverdue is a valid number
+    const validDaysOverdue = typeof daysOverdue === 'number' && !isNaN(daysOverdue) ? daysOverdue : 0;
+    
+    if (validDaysOverdue <= 0) {
+      return { type: 'Courtesy Reminder', priority: 'low' };
+    } else if (validDaysOverdue <= 7) {
+      return { type: 'Payment Reminder', priority: 'medium' };
+    } else if (validDaysOverdue <= 30) {
+      return { type: 'Collection Call', priority: 'high' };
+    } else if (validDaysOverdue <= 60) {
+      return { type: 'Formal Notice', priority: 'urgent' };
+    } else {
+      return { type: 'Legal Action', priority: 'urgent' };
+    }
+  } catch (error) {
+    console.error('Error in getRecommendedAction:', error, 'daysOverdue:', daysOverdue);
+    // Return a safe default
     return { type: 'Payment Reminder', priority: 'medium' };
-  } else if (daysOverdue <= 30) {
-    return { type: 'Collection Call', priority: 'high' };
-  } else if (daysOverdue <= 60) {
-    return { type: 'Formal Notice', priority: 'urgent' };
-  } else {
-    return { type: 'Legal Action', priority: 'urgent' };
   }
 };
 
@@ -363,16 +372,77 @@ export default function ActionCentre() {
   
   // Transform invoice data to display format - with safe property access
   const transformInvoiceToDisplayItem = useCallback((invoice: Invoice): EnhancedInvoiceItem => {
-    // Safely handle null/undefined invoice
-    if (!invoice || typeof invoice !== 'object') {
-      console.warn('Invalid invoice object provided to transformInvoiceToDisplayItem:', invoice);
-      // Create a minimal valid invoice object, then cast through unknown to avoid type errors
+    try {
+      // Safely handle null/undefined invoice
+      if (!invoice || typeof invoice !== 'object') {
+        console.warn('Invalid invoice object provided to transformInvoiceToDisplayItem:', invoice);
+        // Create a minimal valid invoice object, then cast through unknown to avoid type errors
+        const fallbackInvoice = {
+          id: 'unknown',
+          tenantId: 'unknown',
+          contactId: '',
+          xeroInvoiceId: null,
+          invoiceNumber: 'N/A',
+          amount: '0',
+          amountPaid: '0',
+          taxAmount: '0',
+          status: 'pending',
+          collectionStage: 'initial',
+          isOnHold: false,
+          issueDate: new Date(),
+          dueDate: new Date(),
+          paidDate: null,
+          description: null,
+          currency: 'USD',
+          workflowId: null,
+          lastReminderSent: null,
+          reminderCount: 0,
+          nextAction: null,
+          nextActionDate: null,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          // Enhanced properties
+          contactName: 'Unknown Contact',
+          daysOverdue: 0,
+          riskScore: 0.1,
+          preferredMethod: 'email' as const,
+          type: 'Courtesy Reminder',
+          priority: 'low',
+          dueAt: new Date().toISOString(),
+          invoiceId: 'unknown'
+        } as unknown as EnhancedInvoiceItem;
+        return fallbackInvoice;
+      }
+
+      // Safely extract daysOverdue from invoice object
+      const invoiceAny = invoice as any;
+      const daysOverdue = typeof invoiceAny.daysOverdue === 'number' ? invoiceAny.daysOverdue : 0;
+      
+      // Get recommended action based on overdue days
+      const recommendedAction = getRecommendedAction(daysOverdue);
+      
+      return {
+        ...invoice,
+        contactName: typeof invoiceAny.contactName === 'string' ? invoiceAny.contactName : 'Unknown Contact',
+        companyName: typeof invoiceAny.companyName === 'string' ? invoiceAny.companyName : undefined,
+        daysOverdue,
+        riskScore: Math.min(0.1 + (daysOverdue * 0.02), 0.95), // Calculate risk based on overdue days
+        preferredMethod: 'email' as const,
+        // Action item compatibility fields
+        type: recommendedAction.type,
+        priority: recommendedAction.priority,
+        dueAt: new Date().toISOString(), // Use current time for "due by" for next action
+        invoiceId: invoice.id || 'unknown' // Safely access ID with fallback
+      } as unknown as EnhancedInvoiceItem;
+    } catch (error) {
+      console.error('Error in transformInvoiceToDisplayItem:', error, 'invoice:', invoice);
+      // Return a safe fallback invoice on error
       const fallbackInvoice = {
-        id: 'unknown',
+        id: invoice?.id || 'error-fallback',
         tenantId: 'unknown',
         contactId: '',
         xeroInvoiceId: null,
-        invoiceNumber: 'N/A',
+        invoiceNumber: 'ERROR',
         amount: '0',
         amountPaid: '0',
         taxAmount: '0',
@@ -392,64 +462,60 @@ export default function ActionCentre() {
         createdAt: new Date(),
         updatedAt: new Date(),
         // Enhanced properties
-        contactName: 'Unknown Contact',
+        contactName: 'Error Contact',
         daysOverdue: 0,
         riskScore: 0.1,
         preferredMethod: 'email' as const,
-        type: 'Courtesy Reminder',
-        priority: 'low',
+        type: 'Payment Reminder',
+        priority: 'medium',
         dueAt: new Date().toISOString(),
-        invoiceId: 'unknown'
+        invoiceId: invoice?.id || 'error-fallback'
       } as unknown as EnhancedInvoiceItem;
       return fallbackInvoice;
     }
-
-    // Safely extract daysOverdue from invoice object
-    const invoiceAny = invoice as any;
-    const daysOverdue = typeof invoiceAny.daysOverdue === 'number' ? invoiceAny.daysOverdue : 0;
-    
-    // Get recommended action based on overdue days
-    const recommendedAction = getRecommendedAction(daysOverdue);
-    
-    return {
-      ...invoice,
-      contactName: typeof invoiceAny.contactName === 'string' ? invoiceAny.contactName : 'Unknown Contact',
-      companyName: typeof invoiceAny.companyName === 'string' ? invoiceAny.companyName : undefined,
-      daysOverdue,
-      riskScore: Math.min(0.1 + (daysOverdue * 0.02), 0.95), // Calculate risk based on overdue days
-      preferredMethod: 'email' as const,
-      // Action item compatibility fields
-      type: recommendedAction.type,
-      priority: recommendedAction.priority,
-      dueAt: new Date().toISOString(), // Use current time for "due by" for next action
-      invoiceId: invoice.id || 'unknown' // Safely access ID with fallback
-    } as unknown as EnhancedInvoiceItem;
   }, []);
   
   // Extract and transform data from appropriate response - with safe null checks
   const queueData: QueueDisplayItem[] = useMemo(() => {
-    if (useInvoiceData) {
-      // Safely handle invoice response
-      if (!invoiceResponse || typeof invoiceResponse !== 'object') {
-        return [];
+    try {
+      if (useInvoiceData) {
+        // Safely handle invoice response
+        if (!invoiceResponse || typeof invoiceResponse !== 'object') {
+          return [];
+        }
+        const response = invoiceResponse as InvoiceResponse;
+        if (!response.invoices || !Array.isArray(response.invoices)) {
+          return [];
+        }
+        
+        // Transform each invoice safely
+        const transformedInvoices: QueueDisplayItem[] = [];
+        for (let i = 0; i < response.invoices.length; i++) {
+          try {
+            const transformedInvoice = transformInvoiceToDisplayItem(response.invoices[i]);
+            transformedInvoices.push(transformedInvoice);
+          } catch (error) {
+            console.error(`Error transforming invoice at index ${i}:`, error, response.invoices[i]);
+            // Skip this invoice and continue with the next one
+          }
+        }
+        return transformedInvoices;
+      } else {
+        // Safely handle action items response
+        if (!queueResponse || typeof queueResponse !== 'object') {
+          return [];
+        }
+        const response = queueResponse as QueueResponse;
+        if (!response.actionItems || !Array.isArray(response.actionItems)) {
+          return [];
+        }
+        return response.actionItems;
       }
-      const response = invoiceResponse as InvoiceResponse;
-      if (!response.invoices || !Array.isArray(response.invoices)) {
-        return [];
-      }
-      return response.invoices.map(transformInvoiceToDisplayItem);
-    } else {
-      // Safely handle action items response
-      if (!queueResponse || typeof queueResponse !== 'object') {
-        return [];
-      }
-      const response = queueResponse as QueueResponse;
-      if (!response.actionItems || !Array.isArray(response.actionItems)) {
-        return [];
-      }
-      return response.actionItems;
+    } catch (error) {
+      console.error('Error in queueData useMemo:', error);
+      return [];
     }
-  }, [useInvoiceData, invoiceResponse, queueResponse]);
+  }, [useInvoiceData, invoiceResponse, queueResponse, transformInvoiceToDisplayItem]);
     
   const pagination = useMemo(() => {
     const defaultPagination = { page: 1, limit: 25, total: 0, totalPages: 1 };
