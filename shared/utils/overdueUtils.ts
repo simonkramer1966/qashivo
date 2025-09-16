@@ -78,8 +78,15 @@ export function getOverdueCategoryFromDueDate(dueDate: string | Date, currentDat
 
 /**
  * Get detailed information about an overdue category
+ * Safe version that handles invalid categories gracefully
  */
-export function getOverdueCategoryInfo(category: OverdueCategory, daysOverdue: number): OverdueCategoryInfo {
+export function getOverdueCategoryInfo(category: OverdueCategory | string, daysOverdue: number = 0): OverdueCategoryInfo {
+  // Handle invalid categories by defaulting to 'current'
+  const validCategories: OverdueCategory[] = ['soon', 'current', 'recent', 'overdue', 'serious', 'escalation'];
+  const safeCategory: OverdueCategory = validCategories.includes(category as OverdueCategory) 
+    ? (category as OverdueCategory) 
+    : 'current';
+
   const categoryMap: Record<OverdueCategory, Omit<OverdueCategoryInfo, 'category' | 'daysOverdue'>> = {
     soon: {
       label: 'Soon',
@@ -126,9 +133,9 @@ export function getOverdueCategoryInfo(category: OverdueCategory, daysOverdue: n
   };
 
   return {
-    category,
+    category: safeCategory,
     daysOverdue,
-    ...categoryMap[category]
+    ...categoryMap[safeCategory]
   };
 }
 
