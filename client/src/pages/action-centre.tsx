@@ -366,12 +366,32 @@ export default function ActionCentre() {
     // Safely handle null/undefined invoice
     if (!invoice || typeof invoice !== 'object') {
       console.warn('Invalid invoice object provided to transformInvoiceToDisplayItem:', invoice);
-      return {
+      // Create a minimal valid invoice object, then cast through unknown to avoid type errors
+      const fallbackInvoice = {
         id: 'unknown',
+        tenantId: 'unknown',
         contactId: '',
+        xeroInvoiceId: null,
         invoiceNumber: 'N/A',
-        amount: 0,
-        dueDate: new Date().toISOString(),
+        amount: '0',
+        amountPaid: '0',
+        taxAmount: '0',
+        status: 'pending',
+        collectionStage: 'initial',
+        isOnHold: false,
+        issueDate: new Date(),
+        dueDate: new Date(),
+        paidDate: null,
+        description: null,
+        currency: 'USD',
+        workflowId: null,
+        lastReminderSent: null,
+        reminderCount: 0,
+        nextAction: null,
+        nextActionDate: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        // Enhanced properties
         contactName: 'Unknown Contact',
         daysOverdue: 0,
         riskScore: 0.1,
@@ -380,7 +400,8 @@ export default function ActionCentre() {
         priority: 'low',
         dueAt: new Date().toISOString(),
         invoiceId: 'unknown'
-      } as EnhancedInvoiceItem;
+      } as unknown as EnhancedInvoiceItem;
+      return fallbackInvoice;
     }
 
     // Safely extract daysOverdue from invoice object
@@ -402,7 +423,7 @@ export default function ActionCentre() {
       priority: recommendedAction.priority,
       dueAt: new Date().toISOString(), // Use current time for "due by" for next action
       invoiceId: invoice.id || 'unknown' // Safely access ID with fallback
-    };
+    } as unknown as EnhancedInvoiceItem;
   }, []);
   
   // Extract and transform data from appropriate response - with safe null checks
