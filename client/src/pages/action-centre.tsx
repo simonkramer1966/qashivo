@@ -378,8 +378,30 @@ export default function ActionCentre() {
     ? communicationHistoryResponse as CommunicationHistoryResponse 
     : [];
 
-  // Combine loading and error states
-  const queueLoading = useInvoiceData ? invoiceLoading : actionLoading;
+  // Enhanced loading and error states with transition safety
+  // Add transition detection to prevent race conditions during category switches
+  const isTransitioning = useMemo(() => {
+    // Check if we're switching data types and don't have the appropriate data yet
+    if (useInvoiceData) {
+      // If we need invoice data but don't have it (and it's not loading), we're transitioning
+      return !invoiceResponse && !invoiceLoading;
+    } else {
+      // If we need action data but don't have it (and it's not loading), we're transitioning
+      return !queueResponse && !actionLoading;
+    }
+  }, [useInvoiceData, invoiceResponse, queueResponse, invoiceLoading, actionLoading]);
+  
+  // Safe loading state calculation - always show loading during transitions
+  const queueLoading = useMemo(() => {
+    // Always show loading during state transitions to prevent processing incorrect data
+    if (isTransitioning) {
+      return true;
+    }
+    
+    // Return the appropriate loading state based on current data type
+    return useInvoiceData ? invoiceLoading : actionLoading;
+  }, [isTransitioning, useInvoiceData, invoiceLoading, actionLoading]);
+  
   const error = useInvoiceData ? invoiceError : actionError;
   
   // Transform invoice data to display format - with safe property access and robust error handling
@@ -524,6 +546,22 @@ export default function ActionCentre() {
       // Early return with empty array during loading states to prevent transformation of undefined data
       if (queueLoading) {
         return [];
+      }
+      
+      // Enhanced transition safety - ensure we have data consistency before processing
+      // Prevent processing during race conditions where data type doesn't match expected type
+      if (useInvoiceData) {
+        // If we expect invoice data but have action data instead, wait for correct data
+        if (queueResponse && !invoiceResponse) {
+          console.debug('Queue type expects invoice data but only have action data, waiting for invoice response');
+          return [];
+        }
+      } else {
+        // If we expect action data but have invoice data instead, wait for correct data
+        if (invoiceResponse && !queueResponse) {
+          console.debug('Queue type expects action data but only have invoice data, waiting for queue response');
+          return [];
+        }
       }
       
       if (useInvoiceData) {
