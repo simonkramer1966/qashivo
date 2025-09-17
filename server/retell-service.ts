@@ -1,13 +1,19 @@
 import Retell from 'retell-sdk';
 import { InsertVoiceCall, VoiceCall } from '@shared/schema';
 
-if (!process.env.RETELL_API_KEY) {
-  throw new Error('RETELL_API_KEY environment variable must be set');
-}
+let retell: Retell | null = null;
 
-const retell = new Retell({
-  apiKey: process.env.RETELL_API_KEY,
-});
+function getRetellClient(): Retell {
+  if (!retell) {
+    if (!process.env.RETELL_API_KEY) {
+      throw new Error('RETELL_API_KEY environment variable must be set');
+    }
+    retell = new Retell({
+      apiKey: process.env.RETELL_API_KEY,
+    });
+  }
+  return retell;
+}
 
 export interface CreateCallParams {
   fromNumber: string;
@@ -41,7 +47,8 @@ export class RetellService {
     });
     
     try {
-      const response = await retell.call.createPhoneCall({
+      const retellClient = getRetellClient();
+      const response = await retellClient.call.createPhoneCall({
         from_number: params.fromNumber,
         to_number: params.toNumber,
         agent_id: params.agentId || process.env.RETELL_AGENT_ID,
@@ -71,7 +78,8 @@ export class RetellService {
    */
   async getCall(callId: string): Promise<any> {
     try {
-      return await retell.call.retrieve(callId);
+      const retellClient = getRetellClient();
+      return await retellClient.call.retrieve(callId);
     } catch (error: any) {
       console.error('Failed to retrieve call:', error);
       throw new Error(`Failed to retrieve call: ${error.message}`);
@@ -83,7 +91,8 @@ export class RetellService {
    */
   async listPhoneNumbers(): Promise<any[]> {
     try {
-      const response = await retell.phoneNumber.list();
+      const retellClient = getRetellClient();
+      const response = await retellClient.phoneNumber.list();
       return Array.isArray(response) ? response : (response as any)?.data || [];
     } catch (error: any) {
       console.error('Failed to list phone numbers:', error);
@@ -185,7 +194,8 @@ Keep the call brief and professional.`,
         starting_state: "default"
       };
 
-      return await retell.agent.create(agentConfig);
+      const retellClient = getRetellClient();
+      return await retellClient.agent.create(agentConfig);
     } catch (error: any) {
       console.error('Failed to create agent:', error);
       throw new Error(`Failed to create agent: ${error.message}`);
@@ -197,7 +207,8 @@ Keep the call brief and professional.`,
    */
   async updateAgent(agentId: string, config: any): Promise<any> {
     try {
-      return await retell.agent.update(agentId, config);
+      const retellClient = getRetellClient();
+      return await retellClient.agent.update(agentId, config);
     } catch (error: any) {
       console.error('Failed to update agent:', error);
       throw new Error(`Failed to update agent: ${error.message}`);
@@ -209,7 +220,8 @@ Keep the call brief and professional.`,
    */
   async listAgents(): Promise<any[]> {
     try {
-      const response = await retell.agent.list();
+      const retellClient = getRetellClient();
+      const response = await retellClient.agent.list();
       return Array.isArray(response) ? response : (response as any)?.data || [];
     } catch (error: any) {
       console.error('Failed to list agents:', error);
@@ -224,7 +236,8 @@ Keep the call brief and professional.`,
     try {
       // Note: This is a placeholder implementation
       // The actual Retell API might have different parameters and endpoints
-      const response = await retell.phoneNumber.create({
+      const retellClient = getRetellClient();
+      const response = await retellClient.phoneNumber.create({
         area_code: areaCode,
         number_type: numberType,
       } as any);
