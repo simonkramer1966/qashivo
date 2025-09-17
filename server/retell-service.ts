@@ -36,8 +36,8 @@ export class RetellService {
       const response = await retell.call.createPhoneCall({
         from_number: params.fromNumber,
         to_number: params.toNumber,
-        override_agent_id: params.agentId,
-        retell_llm_dynamic_variables: params.dynamicVariables,
+        agent_id: params.agentId || process.env.RETELL_AGENT_ID,
+        dynamic_variables: params.dynamicVariables,
         metadata: params.metadata,
       });
 
@@ -51,6 +51,9 @@ export class RetellService {
       };
     } catch (error: any) {
       console.error('Retell AI call creation failed:', error);
+      if (error.status === 404) {
+        throw new Error(`Failed to create call: Retell resource not found. Check that agent_id (${params.agentId || process.env.RETELL_AGENT_ID}) and from_number (${params.fromNumber}) exist in your Retell account.`);
+      }
       throw new Error(`Failed to create call: ${error.message}`);
     }
   }
