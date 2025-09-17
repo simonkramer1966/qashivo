@@ -32,6 +32,14 @@ export class RetellService {
    * Create an outbound phone call using Retell AI
    */
   async createCall(params: CreateCallParams): Promise<CallResult> {
+    // Debug: Log the environment variables being used
+    console.log("🔧 Debug - Environment variables:", {
+      RETELL_AGENT_ID: process.env.RETELL_AGENT_ID,
+      RETELL_PHONE_NUMBER: process.env.RETELL_PHONE_NUMBER,
+      passed_agentId: params.agentId,
+      passed_fromNumber: params.fromNumber
+    });
+    
     try {
       const response = await retell.call.createPhoneCall({
         from_number: params.fromNumber,
