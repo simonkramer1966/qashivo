@@ -1,3 +1,9 @@
+// Early-boot environment debugging - check values at process startup
+console.log("🔍 [EARLY-BOOT] Environment variables at startup:");
+console.log("🔍 RETELL_API_KEY:", process.env.RETELL_API_KEY ? '***PRESENT***' : 'MISSING');
+console.log("🔍 RETELL_AGENT_ID:", process.env.RETELL_AGENT_ID);
+console.log("🔍 RETELL_PHONE_NUMBER:", process.env.RETELL_PHONE_NUMBER);
+
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
