@@ -5603,13 +5603,45 @@ Payment required immediately to avoid collection action. Contact us NOW.`
 
       console.log("🤖 Creating AI call with enhanced context:", enhancedDynamicVariables);
 
+      // Format phone number to E.164 format for Retell AI
+      const formatPhoneToE164 = (phone: string): string => {
+        // Remove all non-digit characters
+        const digits = phone.replace(/\D/g, '');
+        
+        // Handle UK numbers starting with 07 -> +447
+        if (digits.startsWith('07') && digits.length === 11) {
+          return `+447${digits.substring(2)}`;
+        }
+        
+        // Handle UK numbers starting with 447 -> +447
+        if (digits.startsWith('447') && digits.length === 13) {
+          return `+${digits}`;
+        }
+        
+        // If already starts with +, return as is
+        if (phone.startsWith('+')) {
+          return phone;
+        }
+        
+        // Default: assume UK and add +44
+        if (digits.length === 10 || digits.length === 11) {
+          return `+44${digits.startsWith('0') ? digits.substring(1) : digits}`;
+        }
+        
+        // Return original if can't determine format
+        return phone;
+      };
+
+      const formattedRecipient = formatPhoneToE164(recipient);
+      console.log(`📞 Phone number formatted: "${recipient}" -> "${formattedRecipient}"`);
+
       // Use RetellService to create the AI call
       const { RetellService } = await import('./retell-service');
       const retellService = new RetellService();
       
       const callResult = await retellService.createCall({
         fromNumber: process.env.RETELL_PHONE_NUMBER || "+12345678900",
-        toNumber: recipient,
+        toNumber: formattedRecipient,
         agentId: process.env.RETELL_AGENT_ID,
         dynamicVariables: enhancedDynamicVariables,
         metadata: {
