@@ -21,7 +21,8 @@ const VARIABLE_NAME_MAPPING: Record<string, string> = {
   daysOverdue: 'days_overdue',
   dueDate: 'due_date',
   amountPaid: 'amount_paid',
-  outstandingAmount: 'outstanding_amount',
+  outstandingAmount: 'total_outstanding',
+  invoiceCount: 'invoice_count',
   
   // Communication
   customMessage: 'custom_message',
@@ -99,6 +100,56 @@ function coerceToString(value: any): string {
 }
 
 /**
+ * List of variables that are expected by the Retell AI prompt
+ * Only these 9 variables should be sent to match the prompt exactly:
+ * {{customer_name}}, {{organisation_name}}, {{company_name}}, {{invoice_number}}, 
+ * {{invoice_amount}}, {{total_outstanding}}, {{days_overdue}}, {{invoice_count}}, {{due_date}}
+ */
+const RETELL_EXPECTED_VARIABLES = new Set([
+  'customer_name',
+  'organisation_name', 
+  'company_name',
+  'invoice_number',
+  'invoice_amount',
+  'total_outstanding',
+  'days_overdue',
+  'invoice_count',
+  'due_date'
+]);
+
+/**
+ * Filters variables to only include those expected by the Retell AI prompt
+ * This prevents sending extra variables that don't exist in the prompt template
+ * 
+ * @param variables - The normalized variables object
+ * @param context - Optional context for logging
+ * @returns Filtered variables object containing only Retell-expected variables
+ */
+function filterRetellVariables(
+  variables: Record<string, string>,
+  context: string = 'RETELL_CALL'
+): Record<string, string> {
+  const filteredVariables: Record<string, string> = {};
+  const droppedVariables: string[] = [];
+  
+  for (const [key, value] of Object.entries(variables)) {
+    if (RETELL_EXPECTED_VARIABLES.has(key)) {
+      filteredVariables[key] = value;
+    } else {
+      droppedVariables.push(key);
+    }
+  }
+  
+  console.log(`🔍 [${context}] Filtering variables for Retell AI:`);
+  console.log(`🔍 [${context}] Expected variables: ${Array.from(RETELL_EXPECTED_VARIABLES).join(', ')}`);
+  console.log(`🔍 [${context}] Variables sent: ${Object.keys(filteredVariables).join(', ')}`);
+  console.log(`🔍 [${context}] Variables dropped: ${droppedVariables.join(', ') || 'none'}`);
+  console.log(`🔍 [${context}] Final variable count: ${Object.keys(filteredVariables).length}/9 expected`);
+  
+  return filteredVariables;
+}
+
+/**
  * Normalizes dynamic variables for Retell AI integration
  * 
  * This function:
@@ -106,11 +157,12 @@ function coerceToString(value: any): string {
  * 2. Maps camelCase keys to snake_case using predefined mappings
  * 3. Coerces all values to strings
  * 4. Removes undefined/null values
- * 5. Logs the transformation for debugging
+ * 5. Filters to only include the 9 variables expected by Retell prompt
+ * 6. Logs the transformation for debugging
  * 
  * @param variables - The variables object to normalize (can be string or object)
  * @param context - Optional context for logging (e.g., "AI_CALL", "MCP_CALL")
- * @returns Normalized variables object with snake_case keys and string values
+ * @returns Normalized and filtered variables object with only Retell-expected variables
  */
 export function normalizeDynamicVariables(
   variables: Record<string, any> | string | null | undefined,
@@ -164,10 +216,16 @@ export function normalizeDynamicVariables(
     console.log(`🔧 [${context}] Key: ${normalizedKey}, Value: "${stringValue}" (type: ${typeof value})`);
   }
 
-  console.log(`🔧 [${context}] Final normalized variables:`, normalizedVariables);
-  console.log(`🔧 [${context}] Transformation complete. ${Object.keys(normalizedVariables).length} variables processed`);
+  console.log(`🔧 [${context}] Pre-filter normalized variables:`, normalizedVariables);
+  console.log(`🔧 [${context}] Pre-filter variable count: ${Object.keys(normalizedVariables).length}`);
+  
+  // Filter to only include Retell-expected variables
+  const filteredVariables = filterRetellVariables(normalizedVariables, context);
+  
+  console.log(`🔧 [${context}] Final filtered variables:`, filteredVariables);
+  console.log(`🔧 [${context}] Transformation complete. ${Object.keys(filteredVariables).length}/9 expected variables processed`);
 
-  return normalizedVariables;
+  return filteredVariables;
 }
 
 /**
