@@ -46,7 +46,7 @@ import {
   customerLearningProfiles
 } from "@shared/schema";
 import { getOverdueCategoryFromDueDate } from "@shared/utils/overdueUtils";
-import { eq, and, desc, sql, count, avg, gte, lte, inArray } from 'drizzle-orm';
+import { eq, and, desc, sql, count, avg, gte, lte, inArray, or, isNull } from 'drizzle-orm';
 import { db } from './db';
 import { z } from "zod";
 
@@ -5377,7 +5377,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
       const segmentService = new CustomerSegmentationService();
 
       // Enhanced AI context variables with ML intelligence
-      let enhancedDynamicVariables = {
+      let enhancedDynamicVariables: Record<string, any> = {
         // Basic context
         customer_name: dynamicVariables?.contactName || "Customer",
         organisation_name: tenant?.name || "Nexus AR",
@@ -5659,6 +5659,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
         contactId: contactId || null,
         invoiceId: invoiceId || null,
         retellCallId: callResult.callId,
+        retellAgentId: callResult.agentId || process.env.RETELL_AGENT_ID || 'default-agent',
         fromNumber: callResult.fromNumber,
         toNumber: callResult.toNumber,
         agentId: callResult.agentId,

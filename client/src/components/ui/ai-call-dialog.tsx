@@ -161,25 +161,22 @@ export function AiCallDialog({
         throw new Error("Please enter a valid phone number");
       }
 
-      // Prepare dynamic variables for AI call
+      // Prepare simple dynamic variables that backend will enhance with ML intelligence
       const dynamicVariables = {
-        contactId,
-        invoiceId: invoiceId || undefined,
         contactName: contactData?.name || "Customer",
         companyName: contactData?.companyName || contactData?.name || "Customer",
         context: invoiceId ? 'invoice_collection' : 'general_contact',
         contextId: invoiceId || contactId,
-        aiSettings: callConfig,
-        customMessage: `AI call configured with ${callConfig.tone} tone, ${callConfig.personality} personality, and ${callConfig.speed} speed.`,
       };
 
       const payload = {
-        message: `AI-powered collection call to ${contactData?.name || 'customer'}`,
+        message: `AI-powered collection call to ${contactData?.name || 'customer'} with ${callConfig.tone} tone and ${callConfig.personality} personality`,
         recipient: phoneNumber,
         isAICall: true,
         dynamicVariables,
-        invoiceId: invoiceId || undefined,
         contactId,
+        invoiceId: invoiceId || undefined,
+        templateId: undefined, // Could be added later for template support
       };
 
       const response = await apiRequest('POST', '/api/retell/ai-call', payload);
