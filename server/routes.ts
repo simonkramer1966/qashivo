@@ -1181,6 +1181,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Contact not found" });
       }
 
+      // Ensure proper content-type is set before parsing
+      res.setHeader('Content-Type', 'application/json');
+
       const noteData = insertContactNoteSchema.parse({
         ...req.body,
         contactId,
@@ -1189,13 +1192,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       const note = await storage.createNote(noteData);
-      res.status(201).json(note);
+      
+      // Return a properly structured JSON response
+      return res.status(201).json({
+        success: true,
+        note: note,
+        message: "Note created successfully"
+      });
     } catch (error) {
       console.error("Error creating contact note:", error);
+      
+      // Ensure proper content-type for error responses
+      res.setHeader('Content-Type', 'application/json');
+      
       if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Invalid note data", errors: error.errors });
+        return res.status(400).json({ 
+          success: false,
+          message: "Invalid note data", 
+          errors: error.errors 
+        });
       }
-      res.status(500).json({ message: "Failed to create contact note" });
+      
+      return res.status(500).json({ 
+        success: false,
+        message: "Failed to create contact note" 
+      });
     }
   });
 
