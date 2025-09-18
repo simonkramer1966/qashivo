@@ -1009,21 +1009,39 @@ export default function ActionCentre() {
   const createNoteMutation = useMutation({
     mutationFn: async ({ contactId, content }: { contactId: string; content: string }) => {
       const response = await apiRequest('POST', `/api/contacts/${contactId}/notes`, { content });
-      return response.json();
+      
+      // Handle the response more robustly
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
+      // Try to parse JSON, but don't fail if response is empty
+      try {
+        const data = await response.json();
+        return data;
+      } catch (jsonError) {
+        // If JSON parsing fails but request was successful, return success indicator
+        console.warn('Note saved but response JSON parsing failed:', jsonError);
+        return { success: true, message: 'Note saved successfully' };
+      }
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      console.log('Note creation successful:', data);
       toast({
         title: "Note Added",
         description: "The note has been saved successfully.",
       });
+      // Invalidate the notes query to refresh the list
       queryClient.invalidateQueries({ queryKey: ["/api/contacts", selectedContactId, "notes"] });
+      // Reset form state and close dialog
       setNoteContent("");
       setShowAddNoteDialog(false);
     },
-    onError: () => {
+    onError: (error) => {
+      console.error('Note creation failed:', error);
       toast({
         title: "Error",
-        description: "Failed to save note. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to save note. Please try again.",
         variant: "destructive",
       });
     },
