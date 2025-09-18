@@ -146,6 +146,7 @@ import { XeroSyncService } from "./services/xeroSync";
 import { generateMockData } from "./mock-data";
 import { retellService } from "./retell-service";
 import { createRetellClient } from "./mcp/client";
+import { normalizeDynamicVariables, logVariableTransformation } from "./utils/retellVariableNormalizer";
 import Stripe from "stripe";
 import { registerSyncRoutes } from "./routes/syncRoutes";
 import { webhookHandler } from "./services/webhookHandler";
@@ -379,12 +380,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
           switch (name) {
             case 'create_phone_call':
               try {
-                const call = await retellClient.call.createPhoneCall({
+                // Critical Fix: Normalize dynamic variables for Retell AI
+                const normalizedVariables = normalizeDynamicVariables(toolArgs.dynamic_variables, 'MCP_HTTP');
+                logVariableTransformation(toolArgs.dynamic_variables, normalizedVariables, 'MCP_HTTP');
+                
+                // Prepare the final payload with normalized variables
+                const callPayload = {
                   from_number: toolArgs.from_number,
                   to_number: toolArgs.to_number,
                   agent_id: toolArgs.agent_id,
-                  dynamic_variables: toolArgs.dynamic_variables || {}
-                } as any);
+                  dynamic_variables: normalizedVariables
+                };
+                
+                // Log final payload keys being sent to Retell
+                console.log("📤 [MCP_HTTP] Final payload keys sent to Retell:", Object.keys(callPayload.dynamic_variables || {}));
+                console.log("📤 [MCP_HTTP] Full dynamic variables payload:", callPayload.dynamic_variables);
+                
+                const call = await retellClient.call.createPhoneCall(callPayload as any);
                 
                 return res.json({
                   content: [{

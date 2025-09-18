@@ -1,5 +1,6 @@
 import Retell from 'retell-sdk';
 import { InsertVoiceCall, VoiceCall } from '@shared/schema';
+import { normalizeDynamicVariables, logVariableTransformation } from './utils/retellVariableNormalizer';
 
 let retell: Retell | null = null;
 
@@ -46,15 +47,27 @@ export class RetellService {
       passed_fromNumber: params.fromNumber
     });
     
+    // Critical Fix: Normalize dynamic variables for Retell AI
+    const normalizedVariables = normalizeDynamicVariables(params.dynamicVariables, 'AI_CALL');
+    logVariableTransformation(params.dynamicVariables, normalizedVariables, 'AI_CALL');
+    
     try {
       const retellClient = getRetellClient();
-      const response = await retellClient.call.createPhoneCall({
+      
+      // Prepare the final payload
+      const callPayload = {
         from_number: params.fromNumber,
         to_number: params.toNumber,
         agent_id: params.agentId || process.env.RETELL_AGENT_ID,
-        dynamic_variables: params.dynamicVariables,
+        dynamic_variables: normalizedVariables,
         metadata: params.metadata,
-      });
+      };
+      
+      // Log final payload keys being sent to Retell
+      console.log("📤 [AI_CALL] Final payload keys sent to Retell:", Object.keys(callPayload.dynamic_variables || {}));
+      console.log("📤 [AI_CALL] Full dynamic variables payload:", callPayload.dynamic_variables);
+      
+      const response = await retellClient.call.createPhoneCall(callPayload);
 
       return {
         callId: response.call_id,
@@ -170,25 +183,18 @@ export class RetellService {
             value: "This is a demonstration call"
           }
         ],
-        general_prompt: config.instructions || `You are a professional debt collection agent working for Nexus AR. When you call someone:
-
-1. Greet them professionally: "Hello {{customer_name}}, this is calling from {{company_name}} regarding your account."
-
-2. If this is a demo call (indicated by custom_message), say: "{{custom_message}}"
-
-3. For real collections, reference specific details:
-   - Invoice number: {{invoice_number}} 
-   - Amount: ${{invoice_amount}} or ${{total_outstanding}} if multiple invoices
-   - Days overdue: {{days_overdue}} days  
-   - Due date: {{due_date}}
-
-4. Be polite but professional. Offer payment options and ask when they can make payment.
-
-5. Always maintain compliance with debt collection regulations.
-
-6. End with next steps and contact information.
-
-Keep the call brief and professional.`,
+        general_prompt: config.instructions || "You are a professional debt collection agent working for Nexus AR. When you call someone:\n\n" +
+          "1. Greet them professionally: \"Hello {{customer_name}}, this is calling from {{company_name}} regarding your account.\"\n\n" +
+          "2. If this is a demo call (indicated by custom_message), say: \"{{custom_message}}\"\n\n" +
+          "3. For real collections, reference specific details:\n" +
+          "   - Invoice number: {{invoice_number}}\n" +
+          "   - Amount: ${{invoice_amount}} or ${{total_outstanding}} if multiple invoices\n" +
+          "   - Days overdue: {{days_overdue}} days\n" +
+          "   - Due date: {{due_date}}\n\n" +
+          "4. Be polite but professional. Offer payment options and ask when they can make payment.\n\n" +
+          "5. Always maintain compliance with debt collection regulations.\n\n" +
+          "6. End with next steps and contact information.\n\n" +
+          "Keep the call brief and professional.",
         general_tools: [],
         states: [],
         starting_state: "default"
