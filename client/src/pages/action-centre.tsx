@@ -2504,7 +2504,7 @@ export default function ActionCentre() {
                     <TabsContent value="history" className="p-6">
                       <div className="space-y-4">
                         {/* Payment History */}
-                        {(contactDetails as ContactDetails).paymentHistory && (contactDetails as ContactDetails).paymentHistory.length > 0 && (
+                        {contactDetails && (contactDetails as ContactDetails).paymentHistory && (contactDetails as ContactDetails).paymentHistory.length > 0 && (
                           <Card className="bg-white/70 backdrop-blur-md border-0 shadow-lg">
                             <CardHeader className="pb-3">
                               <CardTitle className="text-sm font-medium">Recent Payments</CardTitle>
