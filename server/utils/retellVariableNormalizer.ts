@@ -22,7 +22,10 @@ const VARIABLE_NAME_MAPPING: Record<string, string> = {
   dueDate: 'due_date',
   amountPaid: 'amount_paid',
   outstandingAmount: 'total_outstanding',
+  outstanding_amount: 'total_outstanding', // Handle snake_case input
   invoiceCount: 'invoice_count',
+  invoice_count: 'invoice_count', // Handle snake_case input
+  amount: 'invoice_amount', // Map generic 'amount' to 'invoice_amount'
   
   // Communication
   customMessage: 'custom_message',

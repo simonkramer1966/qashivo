@@ -5310,15 +5310,35 @@ Payment required immediately to avoid collection action. Contact us NOW.`
         return res.status(400).json({ message: "Retell AI not configured for this tenant" });
       }
 
-      // Create dynamic variables for the call
+      // Get tenant information for organisation_name
+      const tenant = await storage.getTenant(user.tenantId);
+      
+      // Get all outstanding invoices for this contact to calculate total_outstanding and invoice_count
+      const allInvoices = await storage.getInvoices(user.tenantId);
+      const contactInvoices = allInvoices.filter(inv => inv.contactId === contactId && inv.status !== 'paid');
+      const totalOutstanding = contactInvoices.reduce((sum, inv) => sum + parseFloat(inv.amount.toString()), 0);
+      const invoiceCount = contactInvoices.length;
+      
+      console.log(`🔧 [AI_CALL] Contact ${contactId}: Found ${invoiceCount} outstanding invoices, total: $${totalOutstanding}`);
+
+      // Create dynamic variables for the call with all 9 required variables
       const dynamicVariables = {
         customer_name: contact.name,
+        organisation_name: tenant?.name || "Nexus AR",
         company_name: contact.companyName || contact.name,
-        invoice_number: invoice?.invoiceNumber || "N/A",
-        amount: invoice?.amount || "0",
+        invoice_number: invoice?.invoiceNumber || (contactInvoices[0]?.invoiceNumber || "N/A"),
+        invoice_amount: invoice?.amount?.toString() || (contactInvoices[0]?.amount?.toString() || "0"),
+        total_outstanding: totalOutstanding.toString(),
         days_overdue: invoice ? Math.floor((Date.now() - new Date(invoice.dueDate).getTime()) / (1000 * 60 * 60 * 24)) : 0,
+        invoice_count: invoiceCount.toString(),
+        due_date: invoice?.dueDate || (contactInvoices[0]?.dueDate || formatDate(new Date())),
         custom_message: message || ""
       };
+      
+      console.log(`🔍 [AI_CALL] Created variables before Retell call:`, dynamicVariables);
+      console.log(`🔍 [AI_CALL] Variable count: ${Object.keys(dynamicVariables).length}/9 expected`);
+      console.log(`🔍 [AI_CALL] Final variable count: ${Object.keys(dynamicVariables).length}/9 expected ${Object.keys(dynamicVariables).length === 9 ? '✅' : '❌'}`);
+      console.log(`📤 [AI_CALL] Final payload keys: [${Object.keys(dynamicVariables).join(', ')}]`);
 
       // Make the call using Retell AI
       const callResult = await retellService.createCall({
@@ -5424,12 +5444,22 @@ Payment required immediately to avoid collection action. Contact us NOW.`
           if (invoice) {
             const daysOverdue = invoice.dueDate ? Math.max(0, Math.floor((new Date().getTime() - new Date(invoice.dueDate).getTime()) / (1000 * 60 * 60 * 24))) : 0;
             
+            // Get all outstanding invoices for this contact to calculate total_outstanding and invoice_count
+            const allInvoices = await storage.getInvoices(user.tenantId);
+            const contactInvoices = allInvoices.filter(inv => inv.contactId === invoice.contactId && inv.status !== 'paid');
+            const totalOutstanding = contactInvoices.reduce((sum, inv) => sum + parseFloat(inv.amount.toString()), 0);
+            const invoiceCount = contactInvoices.length;
+            
+            console.log(`🔧 [AI_CALL] Contact ${invoice.contactId}: Found ${invoiceCount} outstanding invoices, total: $${totalOutstanding}`);
+
             enhancedDynamicVariables = {
               ...enhancedDynamicVariables,
               invoice_number: invoice.invoiceNumber,
               invoice_amount: invoice.amount,
               amount_paid: invoice.amountPaid || "0.00",
               outstanding_amount: String(parseFloat(invoice.amount || "0") - parseFloat(invoice.amountPaid || "0")),
+              total_outstanding: totalOutstanding.toString(), // Sum of ALL outstanding invoices for this contact
+              invoice_count: invoiceCount.toString(), // Count of ALL outstanding invoices for this contact
               due_date: invoice.dueDate ? invoice.dueDate.toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
               days_overdue: String(daysOverdue)
             };
