@@ -2601,6 +2601,10 @@ export const insertPaymentPromiseSchema = createInsertSchema(paymentPromises).om
   updatedAt: true,
 });
 
+// Type exports for Contact Notes
+export type ContactNote = typeof contactNotes.$inferSelect;
+export type InsertContactNote = z.infer<typeof insertContactNoteSchema>;
+
 // Type exports for Action Centre tables
 export type ActionItem = typeof actionItems.$inferSelect;
 export type InsertActionItem = z.infer<typeof insertActionItemSchema>;

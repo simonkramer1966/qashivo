@@ -7,7 +7,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { apiRequest } from "@/lib/queryClient";
 import { Component, ErrorInfo, ReactNode } from 'react';
-import type { ActionItem, Contact, Invoice } from "@shared/schema";
+import type { ActionItem, Contact, Invoice, ContactNote, InsertContactNote } from "@shared/schema";
 import NewSidebar from "@/components/layout/new-sidebar";
 import Header from "@/components/layout/header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -69,7 +69,8 @@ import {
   MousePointer,
   Command,
   HelpCircle,
-  Brain
+  Brain,
+  FileText
 } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -313,6 +314,8 @@ export default function ActionCentre() {
   const [lastSelectedIndex, setLastSelectedIndex] = useState<number | null>(null);
   const [focusedRowIndex, setFocusedRowIndex] = useState<number | null>(null);
   const [showKeyboardHelp, setShowKeyboardHelp] = useState(false);
+  const [showAddNoteDialog, setShowAddNoteDialog] = useState(false);
+  const [noteContent, setNoteContent] = useState("");
   
   // Refs for keyboard navigation
   const tableRef = useRef<HTMLTableElement>(null);
@@ -496,6 +499,23 @@ export default function ActionCentre() {
   const communicationHistory: CommunicationHistoryItem[] = Array.isArray(communicationHistoryResponse) 
     ? communicationHistoryResponse as CommunicationHistoryResponse 
     : [];
+
+  // Fetch contact notes for selected contact
+  const { data: contactNotes, isLoading: notesLoading } = useQuery({
+    queryKey: ["/api/contacts", selectedContactId, "notes"],
+    queryFn: async () => {
+      if (!selectedContactId) {
+        throw new Error('No contact ID provided');
+      }
+      const response = await fetch(`/api/contacts/${selectedContactId}/notes`);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch contact notes: ${response.statusText}`);
+      }
+      return response.json() as Promise<ContactNote[]>;
+    },
+    enabled: isAuthenticated && !!selectedContactId,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
 
   // Enhanced loading and error states with transition safety
   // Add transition detection to prevent race conditions during category switches
@@ -980,6 +1000,30 @@ export default function ActionCentre() {
       toast({
         title: "Update Failed",
         description: "Failed to update action status",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Create note mutation
+  const createNoteMutation = useMutation({
+    mutationFn: async ({ contactId, content }: { contactId: string; content: string }) => {
+      const response = await apiRequest('POST', `/api/contacts/${contactId}/notes`, { content });
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Note Added",
+        description: "The note has been saved successfully.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/contacts", selectedContactId, "notes"] });
+      setNoteContent("");
+      setShowAddNoteDialog(false);
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to save note. Please try again.",
         variant: "destructive",
       });
     },
@@ -2353,8 +2397,9 @@ export default function ActionCentre() {
                 {/* Contact Details Tabs */}
                 <div className="flex-1 overflow-y-auto">
                   <Tabs defaultValue="details" className="h-full">
-                    <TabsList className="grid w-full grid-cols-3 mx-6 mt-4">
+                    <TabsList className="grid w-full grid-cols-4 mx-6 mt-4">
                       <TabsTrigger value="details">Details</TabsTrigger>
+                      <TabsTrigger value="notes" disabled={!selectedContactId} data-testid="tab-notes">Notes</TabsTrigger>
                       <TabsTrigger value="history">History</TabsTrigger>
                       <TabsTrigger value="actions">Actions</TabsTrigger>
                     </TabsList>
@@ -2497,6 +2542,62 @@ export default function ActionCentre() {
                       ) : (
                         <div className="text-center py-8">
                           <p className="text-sm text-slate-600">No contact details available</p>
+                        </div>
+                      )}
+                    </TabsContent>
+
+                    <TabsContent value="notes" className="p-6 space-y-4">
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-sm font-medium text-slate-700">Contact Notes</h4>
+                        <Button
+                          size="sm"
+                          onClick={() => setShowAddNoteDialog(true)}
+                          className="bg-[#17B6C3] hover:bg-[#1396A1] text-white"
+                          disabled={!selectedContactId}
+                          data-testid="button-add-note"
+                        >
+                          <FileText className="h-4 w-4 mr-2" />
+                          Add Note
+                        </Button>
+                      </div>
+
+                      {notesLoading ? (
+                        <div className="text-center py-8">
+                          <RefreshCw className="h-6 w-6 animate-spin text-[#17B6C3] mx-auto mb-2" />
+                          <p className="text-sm text-slate-600">Loading notes...</p>
+                        </div>
+                      ) : (contactNotes && contactNotes.length > 0) ? (
+                        <ScrollArea className="h-[400px] pr-4">
+                          <div className="space-y-3">
+                            {contactNotes.map((note: ContactNote, index: number) => (
+                              <Card key={note.id} className="bg-white/70 backdrop-blur-md border-0 shadow-lg" data-testid={`note-item-${index}`}>
+                                <CardContent className="pt-4">
+                                  <div className="flex items-start justify-between mb-2">
+                                    <div className="flex items-center space-x-2">
+                                      <User className="h-4 w-4 text-slate-400" />
+                                      <span className="text-sm font-medium text-slate-700" data-testid={`note-author-${index}`}>
+                                        User
+                                      </span>
+                                    </div>
+                                    <span className="text-xs text-slate-500" data-testid={`note-timestamp-${index}`}>
+                                      {note.createdAt ? formatDate(note.createdAt) : 'N/A'}
+                                    </span>
+                                  </div>
+                                  <p className="text-sm text-slate-700 leading-relaxed" data-testid={`note-content-${index}`}>
+                                    {note.content}
+                                  </p>
+                                </CardContent>
+                              </Card>
+                            ))}
+                          </div>
+                        </ScrollArea>
+                      ) : (
+                        <div className="text-center py-12">
+                          <FileText className="h-12 w-12 text-slate-300 mx-auto mb-4" />
+                          <p className="text-sm text-slate-600 mb-2" data-testid="empty-notes-message">No notes yet</p>
+                          <p className="text-xs text-slate-500">
+                            Add the first note about this contact
+                          </p>
                         </div>
                       )}
                     </TabsContent>
@@ -3027,6 +3128,67 @@ export default function ActionCentre() {
                 <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Sending...</>
               ) : (
                 <><Send className="h-4 w-4 mr-2" /> Send to {selectedItems.size} Contacts</>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Note Dialog */}
+      <Dialog open={showAddNoteDialog} onOpenChange={setShowAddNoteDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add Contact Note</DialogTitle>
+            <DialogDescription>
+              Add a note about this contact for future reference.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="note-content">Note Content</Label>
+              <Textarea
+                id="note-content"
+                placeholder="Enter your note here..."
+                value={noteContent}
+                onChange={(e) => setNoteContent(e.target.value)}
+                rows={4}
+                maxLength={5000}
+                data-testid="input-note-content"
+                className="resize-none"
+              />
+              <div className="text-xs text-slate-500 mt-1">
+                {noteContent.length}/5000 characters
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setShowAddNoteDialog(false);
+                setNoteContent("");
+              }}
+              data-testid="button-cancel-note"
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={() => {
+                if (selectedContactId && noteContent.trim()) {
+                  createNoteMutation.mutate({
+                    contactId: selectedContactId,
+                    content: noteContent.trim()
+                  });
+                }
+              }}
+              disabled={createNoteMutation.isPending || !noteContent.trim() || !selectedContactId}
+              data-testid="button-save-note"
+              className="bg-[#17B6C3] hover:bg-[#1396A1] text-white"
+            >
+              {createNoteMutation.isPending ? (
+                <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Saving...</>
+              ) : (
+                <>Save Note</>
               )}
             </Button>
           </DialogFooter>

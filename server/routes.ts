@@ -5,7 +5,8 @@ import crypto from "crypto";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated, isOwner } from "./replitAuth";
 import { 
-  insertContactSchema, 
+  insertContactSchema,
+  insertContactNoteSchema, 
   insertInvoiceSchema, 
   insertActionSchema,
   insertWorkflowSchema,
@@ -32,6 +33,7 @@ import {
   insertPaymentPromiseSchema,
   type Invoice,
   type Contact,
+  type ContactNote,
   type Bill,
   type BankAccount,
   type BankTransaction,
@@ -1137,6 +1139,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid contact data", errors: error.errors });
       }
       res.status(500).json({ message: "Failed to create contact" });
+    }
+  });
+
+  // Contact Notes routes
+  app.get("/api/contacts/:contactId/notes", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { contactId } = req.params;
+      
+      // Verify contact exists and user has access to it
+      const contact = await storage.getContact(contactId, user.tenantId);
+      if (!contact) {
+        return res.status(404).json({ message: "Contact not found" });
+      }
+
+      const notes = await storage.listNotesByContact(user.tenantId, contactId);
+      res.json(notes);
+    } catch (error) {
+      console.error("Error fetching contact notes:", error);
+      res.status(500).json({ message: "Failed to fetch contact notes" });
+    }
+  });
+
+  app.post("/api/contacts/:contactId/notes", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { contactId } = req.params;
+      
+      // Verify contact exists and user has access to it
+      const contact = await storage.getContact(contactId, user.tenantId);
+      if (!contact) {
+        return res.status(404).json({ message: "Contact not found" });
+      }
+
+      const noteData = insertContactNoteSchema.parse({
+        ...req.body,
+        contactId,
+        createdByUserId: user.id,
+        tenantId: user.tenantId,
+      });
+
+      const note = await storage.createNote(noteData);
+      res.status(201).json(note);
+    } catch (error) {
+      console.error("Error creating contact note:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid note data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create contact note" });
     }
   });
 

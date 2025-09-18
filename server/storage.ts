@@ -2,6 +2,7 @@ import {
   users,
   tenants,
   contacts,
+  contactNotes,
   invoices,
   actions,
   workflows,
@@ -37,6 +38,8 @@ import {
   type InsertTenant,
   type Contact,
   type InsertContact,
+  type ContactNote,
+  type InsertContactNote,
   type Invoice,
   type InsertInvoice,
   type Action,
@@ -145,6 +148,10 @@ export interface IStorage {
   createContact(contact: InsertContact): Promise<Contact>;
   updateContact(id: string, tenantId: string, updates: Partial<InsertContact>): Promise<Contact>;
   deleteContact(id: string, tenantId: string): Promise<void>;
+  
+  // Contact Notes operations
+  listNotesByContact(tenantId: string, contactId: string): Promise<ContactNote[]>;
+  createNote(note: InsertContactNote & { tenantId: string }): Promise<ContactNote>;
   
   // Invoice operations
   getInvoices(tenantId: string, limit?: number): Promise<(Invoice & { contact: Contact })[]>;
@@ -530,6 +537,22 @@ export class DatabaseStorage implements IStorage {
       .update(contacts)
       .set({ isActive: false, updatedAt: new Date() })
       .where(and(eq(contacts.id, id), eq(contacts.tenantId, tenantId)));
+  }
+
+  // Contact Notes operations
+  async listNotesByContact(tenantId: string, contactId: string): Promise<ContactNote[]> {
+    const notes = await db
+      .select()
+      .from(contactNotes)
+      .where(and(eq(contactNotes.tenantId, tenantId), eq(contactNotes.contactId, contactId)))
+      .orderBy(desc(contactNotes.createdAt));
+    
+    return notes;
+  }
+
+  async createNote(note: InsertContactNote & { tenantId: string }): Promise<ContactNote> {
+    const [createdNote] = await db.insert(contactNotes).values(note).returning();
+    return createdNote;
   }
 
   // Bulk delete methods for cleanup
