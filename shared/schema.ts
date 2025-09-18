@@ -90,6 +90,21 @@ export const contacts = pgTable("contacts", {
   index("idx_contacts_tenant_id").on(table.tenantId),
 ]);
 
+// Contact Notes table
+export const contactNotes = pgTable("contact_notes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  contactId: varchar("contact_id").notNull().references(() => contacts.id),
+  content: text("content").notNull(),
+  createdByUserId: varchar("created_by_user_id").notNull().references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  // Performance indexes for querying notes by contact
+  index("idx_contact_notes_contact_id").on(table.contactId),
+  index("idx_contact_notes_tenant_id").on(table.tenantId),
+  index("idx_contact_notes_created_at").on(table.createdAt),
+]);
+
 // Invoices table
 export const invoices = pgTable("invoices", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -1310,6 +1325,13 @@ export const insertContactSchema = createInsertSchema(contacts).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
+});
+
+export const insertContactNoteSchema = createInsertSchema(contactNotes).omit({
+  id: true,
+  createdAt: true,
+}).extend({
+  content: z.string().min(1, "Content is required").max(5000, "Content must be 5000 characters or less"),
 });
 
 export const insertInvoiceSchema = createInsertSchema(invoices).omit({
