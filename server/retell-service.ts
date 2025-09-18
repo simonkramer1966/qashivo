@@ -177,10 +177,10 @@ export class RetellService {
 2. If this is a demo call (indicated by custom_message), say: "{{custom_message}}"
 
 3. For real collections, reference specific details:
-   - Invoice number: \{\{invoice_number\}\} 
-   - Amount: $\{\{invoice_amount\}\} or $\{\{total_outstanding\}\} if multiple invoices
-   - Days overdue: \{\{days_overdue\}\} days  
-   - Due date: \{\{due_date\}\}
+   - Invoice number: {{invoice_number}} 
+   - Amount: ${{invoice_amount}} or ${{total_outstanding}} if multiple invoices
+   - Days overdue: {{days_overdue}} days  
+   - Due date: {{due_date}}
 
 4. Be polite but professional. Offer payment options and ask when they can make payment.
 

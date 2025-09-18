@@ -5603,6 +5603,13 @@ Payment required immediately to avoid collection action. Contact us NOW.`
 
       console.log("🤖 Creating AI call with enhanced context:", enhancedDynamicVariables);
 
+      // Import and apply variable normalization for Retell AI
+      const { normalizeDynamicVariables, logVariableTransformation } = await import('./utils/retellVariableNormalizer');
+      
+      // Normalize variables before sending to Retell AI (fixes camelCase -> snake_case issue)
+      const normalizedDynamicVariables = normalizeDynamicVariables(enhancedDynamicVariables, 'AI_CALL');
+      logVariableTransformation(enhancedDynamicVariables, normalizedDynamicVariables, 'AI_CALL');
+
       // Format phone number to E.164 format for Retell AI
       const formatPhoneToE164 = (phone: string): string => {
         // Remove all non-digit characters
@@ -5643,7 +5650,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
         fromNumber: process.env.RETELL_PHONE_NUMBER || "+12345678900",
         toNumber: formattedRecipient,
         agentId: process.env.RETELL_AGENT_ID,
-        dynamicVariables: enhancedDynamicVariables,
+        dynamicVariables: normalizedDynamicVariables,
         metadata: {
           type: "ai-call",
           tenantId: user.tenantId,
@@ -5667,7 +5674,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
         direction: callResult.direction,
         message: message,
         templateId: templateId || null,
-        dynamicVariables: enhancedDynamicVariables,
+        dynamicVariables: normalizedDynamicVariables,
         callType: 'ai-call',
         createdByUserId: user.id,
         scheduledAt: new Date(),
@@ -5686,7 +5693,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
         completedAt: new Date(),
         metadata: { 
           retellCallId: callResult.callId, 
-          dynamicVariables: enhancedDynamicVariables,
+          dynamicVariables: normalizedDynamicVariables,
           aiEnhanced: true,
           callType: 'ai-call'
         },
@@ -5696,7 +5703,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
         voiceCall,
         retellCallId: callResult.callId,
         message: `AI call initiated to ${recipient}`,
-        dynamicVariables: enhancedDynamicVariables,
+        dynamicVariables: normalizedDynamicVariables,
         aiEnhanced: true
       });
     } catch (error: any) {

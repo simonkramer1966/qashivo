@@ -13,12 +13,20 @@ export const registerCallTools = (server: McpServer, retellClient: Retell) => {
     },
     async (data: any) => {
       try {
+        // Import normalization function for Retell variable handling
+        const { normalizeDynamicVariables, logVariableTransformation } = await import('../../utils/retellVariableNormalizer');
+        
+        // Normalize dynamic variables before sending to Retell AI (fixes camelCase -> snake_case issue)
+        const originalVariables = data.dynamic_variables || {};
+        const normalizedVariables = normalizeDynamicVariables(originalVariables, 'MCP_CALL');
+        logVariableTransformation(originalVariables, normalizedVariables, 'MCP_CALL');
+        
         // Use the actual Retell SDK properties as they are documented
         const call = await retellClient.call.createPhoneCall({
           from_number: data.from_number,
           to_number: data.to_number,
           agent_id: data.agent_id,
-          dynamic_variables: data.dynamic_variables || {}
+          dynamic_variables: normalizedVariables
         } as any);
         
         return {
