@@ -257,6 +257,7 @@ export default function ActionCentre() {
   
   // State management
   const [selectedQueue, setSelectedQueue] = useState('today');
+  const [tab, setTab] = useState('details'); // Controlled tab state for unified tabs
 
   // Comprehensive error handling for table layout and ResizeObserver issues
   useEffect(() => {
@@ -2274,9 +2275,15 @@ export default function ActionCentre() {
                       <p className="text-sm text-slate-600">{selectedAction.contactName || 'Unknown Contact'}</p>
                     </div>
                   </div>
-                  
+                </div>
+
+                {/* Unified Tabs Provider - wraps both TabsList and TabsContent */}
+                <Tabs value={tab} onValueChange={setTab} className="h-full flex flex-col">
+                  {/* Unified Actions and Tabs Container */}
+                  <div className="px-6 w-full space-y-4">
                   {/* Quick Actions */}
-                  <div className="grid grid-cols-4 gap-2">
+                  <div className="w-full flex flex-wrap gap-2 md:flex-nowrap">
+                    <div className="grid grid-cols-4 gap-2 w-full">
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
@@ -2409,18 +2416,22 @@ export default function ActionCentre() {
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
+                    </div>
                   </div>
-                </div>
 
-                {/* Contact Details Tabs */}
-                <div className="flex-1 overflow-y-auto">
-                  <Tabs defaultValue="details" className="h-full">
-                    <TabsList className="grid w-full grid-cols-4 mx-6 mt-4">
+                  {/* Contact Details Tabs */}
+                  <div className="w-full">
+                    <TabsList className="w-full grid grid-cols-4 justify-start p-0">
                       <TabsTrigger value="details">Details</TabsTrigger>
                       <TabsTrigger value="notes" disabled={!selectedContactId} data-testid="tab-notes">Notes</TabsTrigger>
                       <TabsTrigger value="history">History</TabsTrigger>
                       <TabsTrigger value="actions">Actions</TabsTrigger>
                     </TabsList>
+                  </div>
+                </div>
+
+                  {/* Contact Details Content */}
+                  <div className="flex-1 overflow-y-auto">
                     
                     <TabsContent value="details" className="p-6 space-y-4">
                       {contactLoading ? (
@@ -2840,8 +2851,8 @@ export default function ActionCentre() {
                         Escalate
                       </Button>
                     </TabsContent>
-                  </Tabs>
-                </div>
+                  </div>
+                </Tabs>
               </div>
             ) : (
               <div className="flex items-center justify-center h-full">
