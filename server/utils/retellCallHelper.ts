@@ -14,6 +14,13 @@
 import { createRetellClient } from '../mcp/client';
 import { normalizeDynamicVariables, logVariableTransformation } from './retellVariableNormalizer';
 
+/**
+ * Check if debug logging is enabled (replicating from normalizer for consistency)
+ */
+function isDebugLoggingEnabled(): boolean {
+  return process.env.NODE_ENV === 'development' || process.env.RETELL_DEBUG === 'true';
+}
+
 export interface RetellCallOptions {
   fromNumber?: string;
   toNumber: string;
@@ -109,8 +116,10 @@ export async function createUnifiedRetellCall(options: RetellCallOptions): Promi
     throw new Error('RETELL_API_KEY is not configured');
   }
 
-  console.log(`🚀 [${context}] Creating unified Retell call`);
-  console.log(`🚀 [${context}] Original variables:`, dynamicVariables);
+  if (isDebugLoggingEnabled()) {
+    console.log(`🚀 [${context}] Creating unified Retell call`);
+    console.log(`🚀 [${context}] Original variables:`, dynamicVariables);
+  }
 
   // 1. Normalize dynamic variables using the proven utility
   const normalizedVariables = normalizeDynamicVariables(dynamicVariables, context);
@@ -120,20 +129,24 @@ export async function createUnifiedRetellCall(options: RetellCallOptions): Promi
   const formattedFromNumber = formatPhoneToE164(fromNumber);
   const formattedToNumber = formatPhoneToE164(toNumber);
   
-  console.log(`📞 [${context}] Phone formatting: from "${fromNumber}" -> "${formattedFromNumber}"`);
-  console.log(`📞 [${context}] Phone formatting: to "${toNumber}" -> "${formattedToNumber}"`);
+  if (isDebugLoggingEnabled()) {
+    console.log(`📞 [${context}] Phone formatting: from "${fromNumber}" -> "${formattedFromNumber}"`);
+    console.log(`📞 [${context}] Phone formatting: to "${toNumber}" -> "${formattedToNumber}"`);
+  }
 
   // 3. Clean phone numbers for Retell (remove formatting)
   const cleanFromNumber = formattedFromNumber.replace(/[()\\s-]/g, '');
   const cleanToNumber = formattedToNumber.replace(/[()\\s-]/g, '');
 
-  console.log(`🔧 [${context}] Retell API call parameters:`, {
-    from_number: cleanFromNumber,
-    to_number: cleanToNumber,
-    agent_id: agentId,
-    variable_count: Object.keys(normalizedVariables).length,
-    metadata_keys: Object.keys(metadata)
-  });
+  if (isDebugLoggingEnabled()) {
+    console.log(`🔧 [${context}] Retell API call parameters:`, {
+      from_number: cleanFromNumber,
+      to_number: cleanToNumber,
+      agent_id: agentId,
+      variable_count: Object.keys(normalizedVariables).length,
+      metadata_keys: Object.keys(metadata)
+    });
+  }
 
   // 4. Create Retell client and make the call
   const retellClient = createRetellClient(retellApiKey);
@@ -152,7 +165,9 @@ export async function createUnifiedRetellCall(options: RetellCallOptions): Promi
     callId = (call as any).call_id || callId;
     callStatus = (call as any).call_status || callStatus;
     
-    console.log(`✅ [${context}] Retell call created successfully:`, { callId, callStatus });
+    if (isDebugLoggingEnabled()) {
+      console.log(`✅ [${context}] Retell call created successfully:`, { callId, callStatus });
+    }
   } catch (retellError: any) {
     console.error(`❌ [${context}] Retell API error:`, retellError);
     console.error(`❌ [${context}] Full error details:`, {
@@ -163,7 +178,9 @@ export async function createUnifiedRetellCall(options: RetellCallOptions): Promi
     });
     
     // For demo purposes, don't throw - return demo call info
-    console.log(`📞 [${context}] Using fallback call ID for demo purposes`);
+    if (isDebugLoggingEnabled()) {
+      console.log(`📞 [${context}] Using fallback call ID for demo purposes`);
+    }
     callStatus = "demo";
   }
 
@@ -178,7 +195,9 @@ export async function createUnifiedRetellCall(options: RetellCallOptions): Promi
     normalizedVariables
   };
 
-  console.log(`🎯 [${context}] Unified call result:`, result);
+  if (isDebugLoggingEnabled()) {
+    console.log(`🎯 [${context}] Unified call result:`, result);
+  }
   return result;
 }
 
