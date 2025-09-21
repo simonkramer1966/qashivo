@@ -1,6 +1,5 @@
 import Retell from 'retell-sdk';
 import { InsertVoiceCall, VoiceCall } from '@shared/schema';
-import { normalizeDynamicVariables, logVariableTransformation } from './utils/retellVariableNormalizer';
 
 let retell: Retell | null = null;
 
@@ -37,52 +36,38 @@ export class RetellService {
   
   /**
    * Create an outbound phone call using Retell AI
+   * Now uses unified helper for consistency across all Retell endpoints
    */
   async createCall(params: CreateCallParams): Promise<CallResult> {
-    // Debug: Log the environment variables being used
-    console.log("🔧 Debug - Environment variables:", {
-      RETELL_AGENT_ID: process.env.RETELL_AGENT_ID,
-      RETELL_PHONE_NUMBER: process.env.RETELL_PHONE_NUMBER,
-      passed_agentId: params.agentId,
-      passed_fromNumber: params.fromNumber
-    });
-    
-    // Critical Fix: Normalize dynamic variables for Retell AI
-    const normalizedVariables = normalizeDynamicVariables(params.dynamicVariables, 'AI_CALL');
-    logVariableTransformation(params.dynamicVariables, normalizedVariables, 'AI_CALL');
-    
     try {
-      const retellClient = getRetellClient();
+      // Import and use the unified Retell call helper
+      const { createUnifiedRetellCall } = await import('./utils/retellCallHelper');
       
-      // Prepare the final payload
-      const callPayload = {
-        from_number: params.fromNumber,
-        to_number: params.toNumber,
-        agent_id: params.agentId || process.env.RETELL_AGENT_ID,
-        dynamic_variables: normalizedVariables,
-        metadata: params.metadata,
-      };
-      
-      // Log final payload keys being sent to Retell
-      console.log("📤 [AI_CALL] Final payload keys sent to Retell:", Object.keys(callPayload.dynamic_variables || {}));
-      console.log("📤 [AI_CALL] Full dynamic variables payload:", callPayload.dynamic_variables);
-      
-      const response = await retellClient.call.createPhoneCall(callPayload);
+      // Use unified call creation (handles all normalization, phone formatting, logging)
+      const callResult = await createUnifiedRetellCall({
+        fromNumber: params.fromNumber,
+        toNumber: params.toNumber,
+        agentId: params.agentId,
+        dynamicVariables: params.dynamicVariables,
+        metadata: {
+          ...params.metadata,
+          source: 'retell_service'
+        },
+        context: 'RETELL_SERVICE'
+      });
 
+      // Return in the expected CallResult format
       return {
-        callId: response.call_id,
-        agentId: response.agent_id,
-        status: response.call_status,
-        fromNumber: response.from_number,
-        toNumber: response.to_number,
-        direction: response.direction,
+        callId: callResult.callId,
+        agentId: callResult.agentId,
+        status: callResult.status,
+        fromNumber: callResult.fromNumber,
+        toNumber: callResult.toNumber,
+        direction: callResult.direction,
       };
     } catch (error: any) {
-      console.error('Retell AI call creation failed:', error);
-      if (error.status === 404) {
-        throw new Error(`Failed to create call: Retell resource not found. Check that agent_id (${params.agentId || process.env.RETELL_AGENT_ID}) and from_number (${params.fromNumber}) exist in your Retell account.`);
-      }
-      throw new Error(`Failed to create call: ${error.message}`);
+      console.error('RetellService call creation failed:', error);
+      throw new Error(`Failed to create call via RetellService: ${error.message}`);
     }
   }
 
