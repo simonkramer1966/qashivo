@@ -196,12 +196,12 @@ function filterRetellVariables(
  * 2. Maps camelCase keys to snake_case using predefined mappings
  * 3. Coerces all values to strings
  * 4. Removes undefined/null values
- * 5. Filters to only include the 9 variables expected by Retell prompt
- * 6. Logs the transformation for debugging
+ * 5. Filters to include core prompt variables plus additional context variables
+ * 6. Logs the transformation for debugging (PII-safe in production)
  * 
  * @param variables - The variables object to normalize (can be string or object)
  * @param context - Optional context for logging (e.g., "AI_CALL", "MCP_CALL")
- * @returns Normalized and filtered variables object with only Retell-expected variables
+ * @returns Normalized variables object with core prompt variables plus additional context
  */
 export function normalizeDynamicVariables(
   variables: Record<string, any> | string | null | undefined,
