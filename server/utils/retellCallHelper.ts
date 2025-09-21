@@ -45,8 +45,8 @@ function formatPhoneToE164(phone: string): string {
     return `+447${digits.substring(2)}`;
   }
   
-  // Handle UK numbers starting with 447 -> +447
-  if (digits.startsWith('447') && digits.length === 13) {
+  // Handle UK numbers starting with 447 -> +447  
+  if (digits.startsWith('447') && digits.length === 12) {
     return `+${digits}`;
   }
   
