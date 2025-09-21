@@ -103,12 +103,10 @@ function coerceToString(value: any): string {
 }
 
 /**
- * List of variables that are expected by the Retell AI prompt
- * Only these 9 variables should be sent to match the prompt exactly:
- * {{customer_name}}, {{organisation_name}}, {{company_name}}, {{invoice_number}}, 
- * {{invoice_amount}}, {{total_outstanding}}, {{days_overdue}}, {{invoice_count}}, {{due_date}}
+ * Core variables expected by the Retell AI prompt template
+ * Additional variables are allowed and will be passed through
  */
-const RETELL_EXPECTED_VARIABLES = new Set([
+const RETELL_CORE_VARIABLES = new Set([
   'customer_name',
   'organisation_name', 
   'company_name',
@@ -121,34 +119,72 @@ const RETELL_EXPECTED_VARIABLES = new Set([
 ]);
 
 /**
- * Filters variables to only include those expected by the Retell AI prompt
- * This prevents sending extra variables that don't exist in the prompt template
+ * Check if debug logging is enabled
+ */
+function isDebugLoggingEnabled(): boolean {
+  return process.env.NODE_ENV === 'development' || process.env.RETELL_DEBUG === 'true';
+}
+
+/**
+ * Redact PII from values for safe logging
+ */
+function redactPII(value: string, key: string): string {
+  const piiKeys = ['customer_name', 'company_name', 'organisation_name', 'invoice_amount', 'total_outstanding'];
+  
+  if (!isDebugLoggingEnabled() && piiKeys.includes(key)) {
+    if (key.includes('amount') || key.includes('outstanding')) {
+      return '[AMOUNT_REDACTED]';
+    }
+    if (key.includes('name')) {
+      return '[NAME_REDACTED]';
+    }
+    return '[PII_REDACTED]';
+  }
+  
+  return value;
+}
+
+/**
+ * Filters variables to include core prompt variables plus configurable additional ones
+ * Now less restrictive to allow legitimate additional context variables
  * 
  * @param variables - The normalized variables object
  * @param context - Optional context for logging
- * @returns Filtered variables object containing only Retell-expected variables
+ * @param allowAdditionalVars - Whether to allow non-core variables (default: true)
+ * @returns Filtered variables object
  */
 function filterRetellVariables(
   variables: Record<string, string>,
-  context: string = 'RETELL_CALL'
+  context: string = 'RETELL_CALL',
+  allowAdditionalVars: boolean = true
 ): Record<string, string> {
   const filteredVariables: Record<string, string> = {};
-  const droppedVariables: string[] = [];
+  let includedCount = 0;
+  let excludedCount = 0;
   
   for (const [key, value] of Object.entries(variables)) {
-    if (RETELL_EXPECTED_VARIABLES.has(key)) {
+    const isCoreVariable = RETELL_CORE_VARIABLES.has(key);
+    const shouldInclude = isCoreVariable || allowAdditionalVars;
+    
+    if (shouldInclude) {
       filteredVariables[key] = value;
+      includedCount++;
+      
+      if (isDebugLoggingEnabled()) {
+        const redactedValue = redactPII(value, key);
+        console.log(`✅ [${context}] Including variable: ${key} = "${redactedValue}" (${isCoreVariable ? 'core' : 'additional'})`);
+      }
     } else {
-      droppedVariables.push(key);
+      excludedCount++;
+      if (isDebugLoggingEnabled()) {
+        console.log(`❌ [${context}] Excluding variable: ${key} (not allowed)`);
+      }
     }
   }
   
-  console.log(`🔍 [${context}] Filtering variables for Retell AI:`);
-  console.log(`🔍 [${context}] Expected variables: ${Array.from(RETELL_EXPECTED_VARIABLES).join(', ')}`);
-  console.log(`🔍 [${context}] Variables sent: ${Object.keys(filteredVariables).join(', ')}`);
-  console.log(`🔍 [${context}] Variables dropped: ${droppedVariables.join(', ') || 'none'}`);
-  console.log(`🔍 [${context}] Final variable count: ${Object.keys(filteredVariables).length}/9 expected`);
-  
+  if (isDebugLoggingEnabled()) {
+    console.log(`🔧 [${context}] Filter summary: ${includedCount} included, ${excludedCount} excluded`);
+  }
   return filteredVariables;
 }
 
@@ -171,8 +207,10 @@ export function normalizeDynamicVariables(
   variables: Record<string, any> | string | null | undefined,
   context: string = 'RETELL_CALL'
 ): Record<string, string> {
-  console.log(`🔧 [${context}] Starting variable normalization`);
-  console.log(`🔧 [${context}] Original variables:`, variables);
+  if (isDebugLoggingEnabled()) {
+    console.log(`🔧 [${context}] Starting variable normalization`);
+    console.log(`🔧 [${context}] Original variables:`, variables);
+  }
 
   let parsedVariables: Record<string, any> = {};
 
@@ -180,7 +218,9 @@ export function normalizeDynamicVariables(
   if (typeof variables === 'string') {
     try {
       parsedVariables = JSON.parse(variables);
-      console.log(`🔧 [${context}] Parsed JSON string successfully`);
+      if (isDebugLoggingEnabled()) {
+        console.log(`🔧 [${context}] Parsed JSON string successfully`);
+      }
     } catch (error) {
       console.error(`❌ [${context}] Failed to parse JSON string:`, error);
       return {};
@@ -216,17 +256,22 @@ export function normalizeDynamicVariables(
     const stringValue = coerceToString(value);
     normalizedVariables[normalizedKey] = stringValue;
 
-    console.log(`🔧 [${context}] Key: ${normalizedKey}, Value: "${stringValue}" (type: ${typeof value})`);
+    if (isDebugLoggingEnabled()) {
+      const redactedValue = redactPII(stringValue, normalizedKey);
+      console.log(`🔧 [${context}] Key: ${normalizedKey}, Value: "${redactedValue}" (type: ${typeof value})`);
+    }
   }
 
-  console.log(`🔧 [${context}] Pre-filter normalized variables:`, normalizedVariables);
-  console.log(`🔧 [${context}] Pre-filter variable count: ${Object.keys(normalizedVariables).length}`);
+  if (isDebugLoggingEnabled()) {
+    console.log(`🔧 [${context}] Pre-filter variable count: ${Object.keys(normalizedVariables).length}`);
+  }
   
   // Filter to only include Retell-expected variables
   const filteredVariables = filterRetellVariables(normalizedVariables, context);
   
-  console.log(`🔧 [${context}] Final filtered variables:`, filteredVariables);
-  console.log(`🔧 [${context}] Transformation complete. ${Object.keys(filteredVariables).length}/9 expected variables processed`);
+  if (isDebugLoggingEnabled()) {
+    console.log(`🔧 [${context}] Transformation complete. ${Object.keys(filteredVariables).length} variables processed`);
+  }
 
   return filteredVariables;
 }
@@ -239,6 +284,10 @@ export function logVariableTransformation(
   normalized: Record<string, string>,
   context: string = 'RETELL_CALL'
 ): void {
+  if (!isDebugLoggingEnabled()) {
+    return; // Skip logging in production to avoid PII exposure
+  }
+
   console.log(`📊 [${context}] Variable Transformation Summary:`);
   console.log(`📊 [${context}] Original type:`, typeof original);
   console.log(`📊 [${context}] Original keys:`, original && typeof original === 'object' ? Object.keys(original) : 'N/A');
