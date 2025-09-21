@@ -177,7 +177,16 @@ export async function createUnifiedRetellCall(options: RetellCallOptions): Promi
       response: retellError.response || 'No response data'
     });
     
-    // For demo purposes, don't throw - return demo call info
+    // In production, throw the error to surface it properly
+    // Only use demo fallback in development
+    const isProduction = process.env.NODE_ENV === 'production';
+    const isDemoMode = process.env.RETELL_DEMO_MODE === 'true';
+    
+    if (isProduction && !isDemoMode) {
+      throw new Error(`Retell API call failed: ${retellError.message}`);
+    }
+    
+    // For demo/development purposes, return demo call info
     if (isDebugLoggingEnabled()) {
       console.log(`📞 [${context}] Using fallback call ID for demo purposes`);
     }
