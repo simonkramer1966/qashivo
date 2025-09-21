@@ -2664,79 +2664,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get tenant information for fallback organization name
       const tenant = await storage.getTenant(user.tenantId);
       
-      // Create dynamic variables for the call using static test data
-      const dynamicVariables = {
-        customer_name: customerName || "Test Customer",
-        company_name: companyName || "Test Company",
-        invoice_number: invoiceNumber || "TEST-001",
-        invoice_amount: invoiceAmount || "1500.00",
-        total_outstanding: totalOutstanding || "0.00",
-        days_overdue: daysOverdue || "0",
-        invoice_count: invoiceCount || "1",
-        due_date: dueDate || formatDate(new Date()),
-        organisation_name: organisationName || tenant?.name || "Nexus AR",
-        demo_message: demoMessage || "This is a professional collection call regarding outstanding invoices."
-      };
-
-      console.log("📞 Creating call with dynamic variables:", dynamicVariables);
-
-      // Use direct Retell API call
-      let callId = `demo-${Date.now()}`;
-      let callStatus = "queued";
+      // Import the unified Retell helper
+      const { createUnifiedRetellCall, createStandardCollectionVariables } = await import('./utils/retellCallHelper');
       
-      try {
-        const retellClient = createRetellClient(process.env.RETELL_API_KEY!);
-        
-        console.log("🔧 Retell API call parameters:", {
-          from_number: process.env.RETELL_PHONE_NUMBER,
-          to_number: phone,
-          agent_id: process.env.RETELL_AGENT_ID,
-          has_dynamic_variables: !!dynamicVariables
-        });
-        
-        // Format and clean phone numbers for Retell
-        const formattedPhone = formatPhoneToE164(phone);
-        const cleanFromNumber = process.env.RETELL_PHONE_NUMBER!.replace(/[()\\s-]/g, '');
-        const cleanToNumber = formattedPhone.replace(/[()\\s-]/g, '');
-        
-        console.log(`📞 Test call phone formatting: "${phone}" → "${formattedPhone}"`);
-        
-        console.log("🧹 Cleaned phone numbers:", {
-          from: cleanFromNumber,
-          to: cleanToNumber
-        });
-        
-        const call = await retellClient.call.createPhoneCall({
-          from_number: cleanFromNumber,
-          to_number: cleanToNumber,
-          agent_id: process.env.RETELL_AGENT_ID!,
-          retell_llm_dynamic_variables: dynamicVariables
-        } as any);
-        
-        callId = (call as any).call_id || callId;
-        callStatus = (call as any).call_status || callStatus;
-        
-        console.log("✅ Retell call created successfully:", { callId, callStatus });
-      } catch (error: any) {
-        console.error("❌ Retell API call failed:", error.message);
-        console.error("❌ Full error details:", {
-          message: error.message,
-          status: error.status,
-          statusText: error.statusText,
-          response: error.response?.data || error.response || "No response data"
-        });
-        console.log("📞 Using fallback call ID for demo purposes");
-      }
+      // Create standard collection variables using the helper (accepts any format)
+      const variablesData = createStandardCollectionVariables({
+        customerName: customerName || "Test Customer",
+        companyName: companyName || "Test Company", 
+        organisationName: organisationName || tenant?.name || "Nexus AR",
+        invoiceNumber: invoiceNumber || "TEST-001",
+        invoiceAmount: invoiceAmount || "1500.00",
+        totalOutstanding: totalOutstanding || "0.00",
+        daysOverdue: daysOverdue || "0",
+        invoiceCount: invoiceCount || "1",
+        dueDate: dueDate || new Date(),
+        customMessage: demoMessage || "This is a professional collection call regarding outstanding invoices."
+      });
+
+      // Use unified Retell call creation (handles variable normalization, phone formatting, etc.)
+      const callResult = await createUnifiedRetellCall({
+        toNumber: phone,
+        dynamicVariables: variablesData,
+        context: 'TEST_VOICE',
+        metadata: {
+          type: 'test_call',
+          tenantId: user.tenantId,
+          userId: user.id
+        }
+      });
 
       // Store the test call record
       const voiceCallData = insertVoiceCallSchema.parse({
         tenantId: user.tenantId,
-        retellCallId: callId,
-        retellAgentId: process.env.RETELL_AGENT_ID || "default-agent",
-        fromNumber: process.env.RETELL_PHONE_NUMBER || "Unknown",
-        toNumber: phone,
-        direction: "outbound",
-        status: callStatus,
+        retellCallId: callResult.callId,
+        retellAgentId: callResult.agentId,
+        fromNumber: callResult.fromNumber,
+        toNumber: callResult.toNumber,
+        direction: callResult.direction,
+        status: callResult.status,
         scheduledAt: new Date(),
       });
 
@@ -2749,16 +2714,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         type: 'voice',
         status: 'completed',
         subject: 'TEST VOICE - Communication Test',
-        content: `Test voice call initiated to ${phone} for ${customerName || 'Test Customer'}`,
+        content: `Test voice call initiated to ${callResult.toNumber} for ${customerName || 'Test Customer'}`,
         completedAt: new Date(),
-        metadata: { retellCallId: callId, dynamicVariables },
+        metadata: { 
+          retellCallId: callResult.callId, 
+          dynamicVariables: callResult.normalizedVariables,
+          unifiedCall: true 
+        },
       });
 
       res.status(201).json({
         voiceCall,
-        retellCallId: callId,
-        message: `Call initiated to ${phone}`,
-        dynamicVariables: dynamicVariables
+        retellCallId: callResult.callId,
+        message: `Call initiated to ${callResult.toNumber}`,
+        dynamicVariables: callResult.normalizedVariables
       });
     } catch (error: any) {
       console.error("Error creating test voice call:", error);
