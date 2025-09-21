@@ -37,6 +37,7 @@ import Profile from "@/pages/Profile";
 import OwnerDashboard from "@/pages/owner-dashboard";
 import HealthDashboard from "@/pages/HealthDashboard";
 import TestCommunicationDialog from "@/pages/test-communication-dialog";
+import LeadFlowSettings from "@/pages/leadflow-settings";
 import { useAuth } from "@/hooks/useAuth";
 
 function Router() {
@@ -83,6 +84,7 @@ function Router() {
       <Route path="/hr" component={HRManagement} />
       <Route path="/legal" component={LegalCompliance} />
       <Route path="/settings" component={Settings} />
+      <Route path="/leadflow-settings" component={LeadFlowSettings} />
       <Route path="/profile" component={Profile} />
       <Route path="/health-dashboard" component={HealthDashboard} />
       <Route path="/ui-choices" component={UIChoices} />
