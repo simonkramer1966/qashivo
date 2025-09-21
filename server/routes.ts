@@ -96,6 +96,15 @@ const invoicesQuerySchema = z.object({
   limit: z.string().optional().default('50').transform(Number)
 });
 
+// Contact filtering query schema for server-side filtering
+const contactsQuerySchema = z.object({
+  search: z.string().optional(),
+  sortBy: z.enum(['name', 'company', 'email', 'outstanding', 'lastContact']).optional().default('name'),
+  sortDir: z.enum(['asc', 'desc']).optional().default('asc'),
+  page: z.string().optional().default('1').transform(Number),
+  limit: z.string().optional().default('50').transform(Number)
+});
+
 // Action Centre validation schemas
 const actionItemQuerySchema = z.object({
   status: z.enum(['open', 'in_progress', 'completed', 'snoozed', 'canceled']).optional(),
@@ -1048,8 +1057,90 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
 
-      const contacts = await storage.getContacts(user.tenantId);
-      res.json(contacts);
+      // Validate and parse query parameters using Zod schema
+      const validatedQuery = contactsQuerySchema.parse(req.query);
+      const { search, sortBy, sortDir, page, limit } = validatedQuery;
+
+      console.log(`📊 Paginated Contacts API - Tenant: ${user.tenantId}, Filters: search="${search}", sortBy=${sortBy}, sortDir=${sortDir}, page=${page}, limit=${limit}`);
+      
+      // Check if storage has paginated method, otherwise use fallback
+      if (typeof storage.getContactsFiltered === 'function') {
+        // Use paginated method if available
+        const result = await storage.getContactsFiltered(user.tenantId, {
+          search,
+          sortBy,
+          sortDir,
+          page,
+          limit
+        });
+
+        console.log(`📊 Server-side filtered results: ${result.contacts.length}/${result.pagination.total} contacts (page ${page})`);
+        res.json(result);
+      } else {
+        // Fallback: get all contacts and implement pagination in memory
+        const allContacts = await storage.getContacts(user.tenantId);
+        
+        // Filter contacts based on search
+        let filteredContacts = allContacts;
+        if (search && search.trim()) {
+          const searchLower = search.toLowerCase();
+          filteredContacts = allContacts.filter(contact => 
+            contact.name?.toLowerCase().includes(searchLower) ||
+            contact.email?.toLowerCase().includes(searchLower) ||
+            contact.companyName?.toLowerCase().includes(searchLower) ||
+            contact.phone?.toLowerCase().includes(searchLower)
+          );
+        }
+
+        // Sort contacts
+        filteredContacts.sort((a, b) => {
+          let aValue = '';
+          let bValue = '';
+          
+          switch (sortBy) {
+            case 'name':
+              aValue = a.name?.toLowerCase() || '';
+              bValue = b.name?.toLowerCase() || '';
+              break;
+            case 'company':
+              aValue = a.companyName?.toLowerCase() || '';
+              bValue = b.companyName?.toLowerCase() || '';
+              break;
+            case 'email':
+              aValue = a.email?.toLowerCase() || '';
+              bValue = b.email?.toLowerCase() || '';
+              break;
+            default:
+              aValue = a.name?.toLowerCase() || '';
+              bValue = b.name?.toLowerCase() || '';
+          }
+          
+          if (sortDir === 'desc') {
+            return bValue.localeCompare(aValue);
+          }
+          return aValue.localeCompare(bValue);
+        });
+
+        // Implement pagination
+        const total = filteredContacts.length;
+        const totalPages = Math.ceil(total / limit);
+        const offset = (page - 1) * limit;
+        const paginatedContacts = filteredContacts.slice(offset, offset + limit);
+
+        const result = {
+          contacts: paginatedContacts,
+          pagination: {
+            page,
+            limit,
+            total,
+            totalPages,
+            systemTotal: allContacts.length
+          }
+        };
+
+        console.log(`📊 Server-side filtered results: ${paginatedContacts.length}/${total} contacts (page ${page})`);
+        res.json(result);
+      }
     } catch (error) {
       console.error("Error fetching contacts:", error);
       res.status(500).json({ message: "Failed to fetch contacts" });

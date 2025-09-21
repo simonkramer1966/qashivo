@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Search, Mail, Phone, Building, User, Users, ChevronUp, ChevronDown, Star, MoreHorizontal, Eye, MessageSquare, Calendar, AlertCircle, CheckCircle, Pause, TrendingUp, TrendingDown, Minus, Shield, X } from "lucide-react";
+import { Plus, Search, Mail, Phone, Building, User, Users, ChevronUp, ChevronDown, Star, MoreHorizontal, Eye, MessageSquare, Calendar, AlertCircle, CheckCircle, Pause, TrendingUp, TrendingDown, Minus, Shield, X, ChevronLeft, ChevronRight, Filter } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { CommunicationPreviewDialog } from "@/components/ui/communication-preview-dialog";
@@ -23,6 +23,10 @@ export default function Customers() {
   const [search, setSearch] = useState("");
   const [sortField, setSortField] = useState<string>("");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+  
+  // Pagination state for customers
+  const [customersCurrentPage, setCustomersCurrentPage] = useState(1);
+  const [customersItemsPerPage, setCustomersItemsPerPage] = useState(50);
   
   // Risk score generation state
   const [isGeneratingRiskScores, setIsGeneratingRiskScores] = useState(false);
@@ -49,10 +53,42 @@ export default function Customers() {
     }
   }, [isAuthenticated, isLoading, toast]);
 
-  const { data: contacts = [], isLoading: contactsLoading, error } = useQuery({
-    queryKey: ["/api/contacts"],
+  // Server-side filtered contacts with pagination
+  const { data: contactsResponse, isLoading: contactsLoading, error } = useQuery({
+    queryKey: ["/api/contacts", { search, page: customersCurrentPage, limit: customersItemsPerPage, sortBy: sortField, sortDir: sortDirection }],
+    queryFn: async () => {
+      const params = new URLSearchParams({
+        page: customersCurrentPage.toString(),
+        limit: customersItemsPerPage.toString()
+      });
+      
+      // Only add search parameter if it has a value
+      if (search && search.trim()) {
+        params.append('search', search.trim());
+      }
+      
+      // Add sort parameters if specified
+      if (sortField) {
+        params.append('sortBy', sortField);
+        params.append('sortDir', sortDirection);
+      }
+      
+      const response = await fetch(`/api/contacts?${params}`);
+      if (!response.ok) throw new Error('Failed to fetch contacts');
+      return response.json();
+    },
     enabled: isAuthenticated,
   });
+
+  // Extract contacts and pagination from the response
+  const contacts = contactsResponse?.contacts || [];
+  const pagination = contactsResponse?.pagination || { page: 1, limit: 50, total: 0, totalPages: 1, systemTotal: 0 };
+  const customersTotalPages = pagination.totalPages;
+
+  // Reset page to 1 when search changes
+  useEffect(() => {
+    setCustomersCurrentPage(1);
+  }, [search, sortField, sortDirection]);
 
   // Fetch available collection schedules
   const { data: schedules = [] } = useQuery({
@@ -589,26 +625,62 @@ export default function Customers() {
                   />
                 </div>
               </div>
-              <div className="flex items-center space-x-3">
+              <Button 
+                onClick={() => setSearch("")}
+                disabled={!search}
+                variant="outline"
+                size="sm"
+                className="border-gray-200/30 bg-white/70 hover:bg-gray-50"
+                data-testid="button-clear-search"
+              >
+                <X className="h-4 w-4" />
+                Clear
+              </Button>
+              <Button 
+                onClick={() => generateRiskScoresMutation.mutate()}
+                disabled={isGeneratingRiskScores}
+                className="bg-[#17B6C3] hover:bg-[#1396A1] text-white"
+                data-testid="button-generate-risk-scores"
+              >
+                <Shield className="mr-2 h-4 w-4" />
+                {isGeneratingRiskScores ? "Generating..." : "Generate Risk Scores"}
+              </Button>
+              <Select value={customersItemsPerPage.toString()} onValueChange={(value) => setCustomersItemsPerPage(Number(value))}>
+                <SelectTrigger className="w-[120px] bg-white/70 border-gray-200/30" data-testid="select-customers-per-page">
+                  <SelectValue placeholder="Per page" />
+                </SelectTrigger>
+                <SelectContent className="bg-white border-gray-200">
+                  <SelectItem value="25">25 per page</SelectItem>
+                  <SelectItem value="50">50 per page</SelectItem>
+                  <SelectItem value="100">100 per page</SelectItem>
+                  <SelectItem value="200">200 per page</SelectItem>
+                </SelectContent>
+              </Select>
+              <div className="flex items-center gap-2">
                 <Button 
-                  onClick={() => setSearch("")}
-                  disabled={!search}
-                  variant="outline"
-                  size="sm"
-                  className="border-gray-200/30 bg-white/70 hover:bg-gray-50"
-                  data-testid="button-clear-search"
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => setCustomersCurrentPage(prev => Math.max(1, prev - 1))}
+                  disabled={customersCurrentPage === 1}
+                  className="px-2 bg-white/70 border-gray-200/30"
+                  data-testid="button-customers-prev-page"
                 >
-                  <X className="h-4 w-4" />
-                  Clear
+                  <ChevronLeft className="h-4 w-4" />
                 </Button>
+                
+                <span className="text-sm text-slate-600 min-w-[80px] text-center" data-testid="text-customers-page-info">
+                  Page {customersCurrentPage} of {customersTotalPages || 1}
+                </span>
+                
                 <Button 
-                  onClick={() => generateRiskScoresMutation.mutate()}
-                  disabled={isGeneratingRiskScores}
-                  className="bg-[#17B6C3] hover:bg-[#1396A1] text-white"
-                  data-testid="button-generate-risk-scores"
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => setCustomersCurrentPage(prev => Math.min(customersTotalPages, prev + 1))}
+                  disabled={customersCurrentPage >= customersTotalPages}
+                  className="px-2 bg-white/70 border-gray-200/30"
+                  data-testid="button-customers-next-page"
                 >
-                  <Shield className="mr-2 h-4 w-4" />
-                  {isGeneratingRiskScores ? "Generating..." : "Generate Risk Scores"}
+                  <ChevronRight className="h-4 w-4" />
                 </Button>
               </div>
             </div>
@@ -621,7 +693,7 @@ export default function Customers() {
                 <div className="p-2 bg-[#17B6C3]/10 rounded-lg mr-3">
                   <Users className="h-5 w-5 text-[#17B6C3]" />
                 </div>
-                All Customers ({sortedContacts.length})
+                All Customers ({contacts.length} / {(pagination.total || 0).toLocaleString()} / {(pagination.systemTotal || 0).toLocaleString()})
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-0">
