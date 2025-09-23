@@ -2216,6 +2216,13 @@ export default function ActionCentre() {
                                   <DropdownMenuItem 
                                     onClick={(e) => {
                                       e.stopPropagation();
+                                      console.debug('Payment Plan Menu Clicked - Action Data:', {
+                                        id: action?.id,
+                                        contactId: action?.contactId,
+                                        contactName: action?.contactName,
+                                        invoiceId: action?.invoiceId,
+                                        fullAction: action
+                                      });
                                       setPaymentPlanAction(action);
                                       setShowPaymentPlanDialog(true);
                                     }}
