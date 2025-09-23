@@ -101,25 +101,11 @@ export default function CallLogs() {
   // Fetch voice calls
   const { data: voiceCallsResponse, isLoading: callsLoading, error } = useQuery({
     queryKey: ["/api/voice-calls", { status: statusFilter }],
-    queryFn: async () => {
-      const params = new URLSearchParams();
-      if (statusFilter && statusFilter !== "all") {
-        params.append('status', statusFilter);
-      }
-      
-      const url = `/api/voice-calls${params.toString() ? '?' + params.toString() : ''}`;
-      const response = await fetch(url);
-      
-      if (!response.ok) {
-        throw new Error(`Failed to fetch voice calls: ${response.statusText}`);
-      }
-      
-      return response.json();
-    },
     enabled: !!isAuthenticated && !isLoading,
-  });
+  }) as { data: { voiceCalls: VoiceCall[] } | undefined; isLoading: boolean; error: any };
 
   const voiceCalls = voiceCallsResponse?.voiceCalls || [];
+
 
   // Filter and sort voice calls
   const filteredAndSortedCalls = useMemo(() => {
