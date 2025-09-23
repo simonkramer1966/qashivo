@@ -115,8 +115,9 @@ export const invoices = pgTable("invoices", {
   amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
   amountPaid: decimal("amount_paid", { precision: 10, scale: 2 }).default("0"),
   taxAmount: decimal("tax_amount", { precision: 10, scale: 2 }).default("0"),
-  status: varchar("status").notNull().default("pending"), // pending, paid, overdue, cancelled
+  status: varchar("status").notNull().default("pending"), // pending, paid, overdue, cancelled, payment_plan
   collectionStage: varchar("collection_stage").default("initial"), // initial, reminder_1, reminder_2, formal_notice, final_notice, escalated
+  paymentPlanId: varchar("payment_plan_id").references(() => paymentPlans.id),
   isOnHold: boolean("is_on_hold").default(false), // whether invoice is on hold (excluded from collections workflow)
   issueDate: timestamp("issue_date").notNull(),
   dueDate: timestamp("due_date").notNull(),
@@ -138,6 +139,84 @@ export const invoices = pgTable("invoices", {
   index("idx_invoices_created_at").on(table.createdAt),
   index("idx_invoices_contact_id").on(table.contactId),
   index("idx_invoices_next_action_date").on(table.tenantId, table.nextActionDate),
+  index("idx_invoices_payment_plan_id").on(table.paymentPlanId),
+]);
+
+// Payment Plans table
+export const paymentPlans = pgTable("payment_plans", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  contactId: varchar("contact_id").notNull().references(() => contacts.id),
+  
+  // Plan details
+  totalAmount: decimal("total_amount", { precision: 10, scale: 2 }).notNull(),
+  initialPaymentAmount: decimal("initial_payment_amount", { precision: 10, scale: 2 }).default("0"),
+  
+  // Dates
+  planStartDate: timestamp("plan_start_date").notNull(),
+  initialPaymentDate: timestamp("initial_payment_date"),
+  
+  // Configuration
+  paymentFrequency: varchar("payment_frequency").notNull(), // weekly, monthly, quarterly
+  numberOfPayments: integer("number_of_payments").notNull(),
+  
+  // Status and tracking
+  status: varchar("status").notNull().default("active"), // active, completed, defaulted, cancelled
+  currentPaymentNumber: integer("current_payment_number").default(0),
+  totalPaidAmount: decimal("total_paid_amount", { precision: 10, scale: 2 }).default("0"),
+  
+  // Metadata
+  notes: text("notes"),
+  createdByUserId: varchar("created_by_user_id").notNull().references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_payment_plans_tenant").on(table.tenantId),
+  index("idx_payment_plans_contact").on(table.contactId),
+  index("idx_payment_plans_status").on(table.status),
+  index("idx_payment_plans_start_date").on(table.planStartDate),
+]);
+
+// Payment Plan Schedules table (individual scheduled payments)
+export const paymentPlanSchedules = pgTable("payment_plan_schedules", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  paymentPlanId: varchar("payment_plan_id").notNull().references(() => paymentPlans.id),
+  
+  // Payment details
+  paymentNumber: integer("payment_number").notNull(), // 1, 2, 3, etc.
+  dueDate: timestamp("due_date").notNull(),
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  
+  // Status tracking
+  status: varchar("status").notNull().default("pending"), // pending, paid, overdue, skipped
+  paymentDate: timestamp("payment_date"),
+  paymentReference: varchar("payment_reference"), // Reference from accounting system
+  paymentMethod: varchar("payment_method"), // bank_transfer, credit_card, cheque, etc.
+  
+  // Metadata
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_payment_plan_schedules_plan").on(table.paymentPlanId),
+  index("idx_payment_plan_schedules_due_date").on(table.dueDate),
+  index("idx_payment_plan_schedules_status").on(table.status),
+  unique("unique_payment_plan_payment_number").on(table.paymentPlanId, table.paymentNumber),
+]);
+
+// Payment Plan Invoices table (links invoices to payment plans)
+export const paymentPlanInvoices = pgTable("payment_plan_invoices", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  paymentPlanId: varchar("payment_plan_id").notNull().references(() => paymentPlans.id),
+  invoiceId: varchar("invoice_id").notNull().references(() => invoices.id),
+  
+  // Tracking
+  addedAt: timestamp("added_at").defaultNow(),
+  addedByUserId: varchar("added_by_user_id").notNull().references(() => users.id),
+}, (table) => [
+  index("idx_payment_plan_invoices_plan").on(table.paymentPlanId),
+  index("idx_payment_plan_invoices_invoice").on(table.invoiceId),
+  unique("unique_payment_plan_invoice").on(table.paymentPlanId, table.invoiceId),
 ]);
 
 // Cached Xero invoices table for sync functionality
