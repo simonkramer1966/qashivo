@@ -1267,15 +1267,24 @@ export default function ActionCentre() {
 
   const calculatePaymentSchedule = () => {
     const totalAmount = Array.from(selectedPaymentInvoices.values())
-      .reduce((sum, invoice) => sum + parseFloat(invoice.totalAmount || "0"), 0);
+      .reduce((sum, invoice) => sum + parseFloat(invoice.amount || "0"), 0);
     
     const initialAmount = parseFloat(initialPaymentAmount) || 0;
     const remainingAmount = totalAmount - initialAmount;
     const numPayments = parseInt(numRemainingPayments);
     const paymentAmount = numPayments > 0 ? remainingAmount / numPayments : 0;
     
-    const schedule = [];
+    // Validate start date
+    if (!planStartDate) {
+      return { schedule: [], totalAmount, remainingAmount, paymentAmount };
+    }
+    
     const startDate = new Date(planStartDate);
+    if (isNaN(startDate.getTime())) {
+      return { schedule: [], totalAmount, remainingAmount, paymentAmount };
+    }
+    
+    const schedule = [];
     
     for (let i = 0; i < numPayments; i++) {
       const paymentDate = new Date(startDate);
@@ -1283,6 +1292,13 @@ export default function ActionCentre() {
         paymentDate.setDate(startDate.getDate() + (i * 7));
       } else if (paymentFrequency === "monthly") {
         paymentDate.setMonth(startDate.getMonth() + i);
+      } else if (paymentFrequency === "quarterly") {
+        paymentDate.setMonth(startDate.getMonth() + (i * 3));
+      }
+      
+      // Validate payment date before using
+      if (isNaN(paymentDate.getTime())) {
+        continue;
       }
       
       schedule.push({
