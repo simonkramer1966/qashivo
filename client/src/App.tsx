@@ -38,6 +38,7 @@ import OwnerDashboard from "@/pages/owner-dashboard";
 import HealthDashboard from "@/pages/HealthDashboard";
 import TestCommunicationDialog from "@/pages/test-communication-dialog";
 import LeadFlowSettings from "@/pages/leadflow-settings";
+import CallLogs from "@/pages/call-logs";
 import { useAuth } from "@/hooks/useAuth";
 
 function Router() {
@@ -76,6 +77,7 @@ function Router() {
       <Route path="/invoices" component={Invoices} />
       <Route path="/invoices-xero" component={InvoicesXero} />
       <Route path="/contacts" component={Contacts} />
+      <Route path="/call-logs" component={CallLogs} />
       <Route path="/action-centre" component={ActionCentre} />
       <Route path="/workflows" component={Workflows} />
       <Route path="/workflow-builder" component={WorkflowBuilder} />

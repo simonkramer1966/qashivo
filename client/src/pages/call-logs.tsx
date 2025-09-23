@@ -297,7 +297,7 @@ export default function CallLogs() {
       <NewSidebar />
       
       <div className="lg:ml-64">
-        <Header />
+        <Header title="Call Logs" subtitle="Track and analyze voice call outcomes" />
         
         <main className="p-8">
           <div className="space-y-8">
