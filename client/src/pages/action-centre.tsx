@@ -390,31 +390,19 @@ export default function ActionCentre() {
   // Get contact ID from payment plan action - use same logic as selectedContactId
   const paymentPlanContactId = useMemo(() => {
     if (!paymentPlanAction || typeof paymentPlanAction !== 'object') {
-      console.debug('Payment Plan: No paymentPlanAction or invalid type:', paymentPlanAction);
       return null;
     }
     
-    console.debug('Payment Plan: Action data:', {
-      id: paymentPlanAction.id,
-      contactId: paymentPlanAction.contactId,
-      invoiceId: paymentPlanAction.invoiceId,
-      contactName: paymentPlanAction.contactName,
-      fullAction: paymentPlanAction
-    });
-    
     // For all items, use contactId directly (this should be the contact ID)
     if (paymentPlanAction.contactId) {
-      console.debug('Payment Plan: Using contactId:', paymentPlanAction.contactId);
       return paymentPlanAction.contactId;
     }
     
     // If no contactId, check if this is an invoice item with id that represents contactId
     if (paymentPlanAction.id && paymentPlanAction.invoiceId) {
-      console.debug('Payment Plan: This appears to be an invoice item, using id as contactId:', paymentPlanAction.id);
       return paymentPlanAction.id;
     }
     
-    console.debug('Payment Plan: No contactId found in action');
     return null;
   }, [paymentPlanAction]);
 
@@ -423,25 +411,15 @@ export default function ActionCentre() {
     queryKey: ["/api/invoices/outstanding", paymentPlanContactId],
     enabled: !!paymentPlanContactId && showPaymentPlanDialog,
     queryFn: async () => {
-      console.debug('=== API CALL TRIGGERED ===');
-      console.debug('Contact ID for API call:', paymentPlanContactId);
-      console.debug('URL will be:', `/api/invoices/outstanding/${paymentPlanContactId}`);
-      console.debug('showPaymentPlanDialog:', showPaymentPlanDialog);
-      console.debug('paymentPlanAction:', paymentPlanAction);
-      
       const response = await fetch(`/api/invoices/outstanding/${paymentPlanContactId}`, {
         credentials: "include"
       });
       
-      console.debug('API Response status:', response.status);
-      
       if (!response.ok) {
-        console.error('API call failed:', response.status, response.statusText);
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       
       const data = await response.json();
-      console.debug('API Response data:', data);
       return data;
     }
   });
@@ -2246,23 +2224,8 @@ export default function ActionCentre() {
                                   <DropdownMenuItem 
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      alert(`PAYMENT PLAN CLICKED! Action ID: ${action?.id}, Contact ID: ${action?.contactId}, Contact Name: ${action?.contactName}`);
-                                      console.debug('=== PAYMENT PLAN MENU CLICKED ===');
-                                      console.debug('Action Data:', {
-                                        id: action?.id,
-                                        contactId: action?.contactId,
-                                        contactName: action?.contactName,
-                                        invoiceId: action?.invoiceId,
-                                        type: typeof action,
-                                        isNull: action === null,
-                                        isUndefined: action === undefined,
-                                        fullAction: action
-                                      });
-                                      console.debug('About to call setPaymentPlanAction with:', action);
                                       setPaymentPlanAction(action);
-                                      console.debug('About to call setShowPaymentPlanDialog(true)');
                                       setShowPaymentPlanDialog(true);
-                                      console.debug('=== PAYMENT PLAN MENU CLICKED END ===');
                                     }}
                                     data-testid={`menu-payment-plan-${action.id}`}
                                   >
@@ -3118,12 +3081,6 @@ export default function ActionCentre() {
 
       {/* Payment Plan Dialog */}
       <Dialog open={showPaymentPlanDialog} onOpenChange={(open) => {
-        console.debug('Payment Plan Dialog State Change:', {
-          open,
-          paymentPlanAction,
-          paymentPlanContactId,
-          showPaymentPlanDialog
-        });
         if (!open) {
           setShowPaymentPlanDialog(false);
           setPaymentPlanAction(null);
