@@ -192,11 +192,7 @@ export default function Invoices() {
   // Payment Plan Creation Mutation
   const createPaymentPlanMutation = useMutation({
     mutationFn: async (paymentPlanData: any) => {
-      return await apiRequest("/api/payment-plans", {
-        method: "POST",
-        body: JSON.stringify(paymentPlanData),
-        headers: { "Content-Type": "application/json" }
-      });
+      return await apiRequest("POST", "/api/payment-plans", paymentPlanData);
     },
     onSuccess: (data) => {
       toast({
