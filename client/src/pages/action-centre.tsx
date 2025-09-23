@@ -374,6 +374,19 @@ export default function ActionCentre() {
     invoiceId: '',
   });
 
+  // Payment Plan dialog state
+  const [showPaymentPlanDialog, setShowPaymentPlanDialog] = useState(false);
+  const [paymentPlanAction, setPaymentPlanAction] = useState<QueueDisplayItem | null>(null);
+  
+  // Payment plan form state
+  const [initialPaymentAmount, setInitialPaymentAmount] = useState("");
+  const [initialPaymentDate, setInitialPaymentDate] = useState("");
+  const [numRemainingPayments, setNumRemainingPayments] = useState("3");
+  const [paymentFrequency, setPaymentFrequency] = useState("monthly");
+  const [paymentPlanNotes, setPaymentPlanNotes] = useState("");
+  const [planStartDate, setPlanStartDate] = useState("");
+  const [selectedPaymentInvoices, setSelectedPaymentInvoices] = useState<Map<string, any>>(new Map());
+
   // Redirect to home if not authenticated
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -1152,6 +1165,98 @@ export default function ActionCentre() {
 
     },
   });
+
+  // Payment Plan creation mutation
+  const createPaymentPlanMutation = useMutation({
+    mutationFn: async (paymentPlanData: any) => {
+      const response = await apiRequest('POST', '/api/payment-plans', paymentPlanData);
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Payment Plan Created",
+        description: `Payment plan created successfully with ${data.paymentPlan.installments.length} installments`,
+      });
+      // Reset form and close dialog
+      resetPaymentPlanForm();
+      setShowPaymentPlanDialog(false);
+      setPaymentPlanAction(null);
+      // Refresh queue data
+      queryClient.invalidateQueries({ queryKey: ["/api/action-centre/queue"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
+    },
+    onError: (error: any) => {
+      console.error('Payment plan creation error:', error);
+      toast({
+        title: "Payment Plan Failed",
+        description: "Failed to create payment plan. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Payment plan helper functions
+  const resetPaymentPlanForm = () => {
+    setInitialPaymentAmount("");
+    setInitialPaymentDate("");
+    setNumRemainingPayments("3");
+    setPaymentFrequency("monthly");
+    setPaymentPlanNotes("");
+    setPlanStartDate("");
+    setSelectedPaymentInvoices(new Map());
+  };
+
+  const validatePaymentPlanForm = () => {
+    const errors: string[] = [];
+    
+    if (selectedPaymentInvoices.size === 0) {
+      errors.push("Please select at least one invoice");
+    }
+    
+    const totalAmount = Array.from(selectedPaymentInvoices.values())
+      .reduce((sum, invoice) => sum + parseFloat(invoice.totalAmount || "0"), 0);
+    
+    const initialAmount = parseFloat(initialPaymentAmount) || 0;
+    if (initialAmount > totalAmount) {
+      errors.push("Initial payment cannot exceed total invoice amount");
+    }
+    
+    if (!planStartDate) {
+      errors.push("Please select a plan start date");
+    }
+    
+    return errors;
+  };
+
+  const calculatePaymentSchedule = () => {
+    const totalAmount = Array.from(selectedPaymentInvoices.values())
+      .reduce((sum, invoice) => sum + parseFloat(invoice.totalAmount || "0"), 0);
+    
+    const initialAmount = parseFloat(initialPaymentAmount) || 0;
+    const remainingAmount = totalAmount - initialAmount;
+    const numPayments = parseInt(numRemainingPayments);
+    const paymentAmount = numPayments > 0 ? remainingAmount / numPayments : 0;
+    
+    const schedule = [];
+    const startDate = new Date(planStartDate);
+    
+    for (let i = 0; i < numPayments; i++) {
+      const paymentDate = new Date(startDate);
+      if (paymentFrequency === "weekly") {
+        paymentDate.setDate(startDate.getDate() + (i * 7));
+      } else if (paymentFrequency === "monthly") {
+        paymentDate.setMonth(startDate.getMonth() + i);
+      }
+      
+      schedule.push({
+        installmentNumber: i + 1,
+        amount: paymentAmount,
+        dueDate: paymentDate.toISOString().split('T')[0]
+      });
+    }
+    
+    return { schedule, totalAmount, remainingAmount, paymentAmount };
+  };
   
   // Selection handlers
   const handleSelectItem = useCallback((itemId: string, index: number, event?: React.MouseEvent) => {
@@ -2065,6 +2170,22 @@ export default function ActionCentre() {
                                   >
                                     <Phone className="h-4 w-4 mr-2" />
                                     Make Call
+                                  </DropdownMenuItem>
+                                  
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuLabel className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                                    Account Management
+                                  </DropdownMenuLabel>
+                                  <DropdownMenuItem 
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setPaymentPlanAction(action);
+                                      setShowPaymentPlanDialog(true);
+                                    }}
+                                    data-testid={`menu-payment-plan-${action.id}`}
+                                  >
+                                    <CalendarIcon className="h-4 w-4 mr-2" />
+                                    Create Payment Plan
                                   </DropdownMenuItem>
                                 </DropdownMenuContent>
                               </DropdownMenu>
