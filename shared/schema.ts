@@ -1419,6 +1419,47 @@ export const insertInvoiceSchema = createInsertSchema(invoices).omit({
   updatedAt: true,
 });
 
+export type Invoice = typeof invoices.$inferSelect;
+export type InsertInvoice = z.infer<typeof insertInvoiceSchema>;
+
+// Payment Plan schemas
+export const insertPaymentPlanSchema = createInsertSchema(paymentPlans).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  currentPaymentNumber: true,
+  totalPaidAmount: true,
+}).extend({
+  totalAmount: z.string().min(1, "Total amount is required"),
+  initialPaymentAmount: z.string().default("0"),
+  numberOfPayments: z.number().min(1, "At least 1 payment required").max(120, "Maximum 120 payments allowed"),
+  planStartDate: z.date({ required_error: "Plan start date is required" }),
+  initialPaymentDate: z.date().optional(),
+  notes: z.string().max(1000, "Notes must be 1000 characters or less").optional(),
+});
+
+export const insertPaymentPlanScheduleSchema = createInsertSchema(paymentPlanSchedules).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  paymentDate: true,
+  paymentReference: true,
+  paymentMethod: true,
+});
+
+export const insertPaymentPlanInvoiceSchema = createInsertSchema(paymentPlanInvoices).omit({
+  id: true,
+  addedAt: true,
+});
+
+// Payment Plan TypeScript types
+export type PaymentPlan = typeof paymentPlans.$inferSelect;
+export type InsertPaymentPlan = z.infer<typeof insertPaymentPlanSchema>;
+export type PaymentPlanSchedule = typeof paymentPlanSchedules.$inferSelect;
+export type InsertPaymentPlanSchedule = z.infer<typeof insertPaymentPlanScheduleSchema>;
+export type PaymentPlanInvoice = typeof paymentPlanInvoices.$inferSelect;
+export type InsertPaymentPlanInvoice = z.infer<typeof insertPaymentPlanInvoiceSchema>;
+
 // Outstanding invoice summary for payment plan selection
 export const outstandingInvoiceSummarySchema = z.object({
   id: z.string(),
