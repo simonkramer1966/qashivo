@@ -50,10 +50,10 @@ const navigationItems = [
   { name: "Invoices", href: "/invoices", icon: FileText },
   { name: "Invoice Health", href: "/health-dashboard", icon: Activity },
   // { name: "Invoices - Xero", href: "/invoices-xero", icon: ExternalLink },
-  { name: "Call Logs", href: "/call-logs", icon: Phone },
   { name: "Workflows", href: "/workflows", icon: Workflow },
   { name: "AI Suggestions", href: "/ai-suggestions", icon: Bot },
   { name: "Reports", href: "/reports", icon: BarChart },
+  { name: "Call Logs", href: "/call-logs", icon: Phone },
 ];
 
 // Owner-only navigation items
