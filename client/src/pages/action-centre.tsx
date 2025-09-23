@@ -1270,45 +1270,59 @@ export default function ActionCentre() {
       .reduce((sum, invoice) => sum + parseFloat(invoice.amount || "0"), 0);
     
     const initialAmount = parseFloat(initialPaymentAmount) || 0;
-    const remainingAmount = totalAmount - initialAmount;
-    const numPayments = parseInt(numRemainingPayments);
-    const paymentAmount = numPayments > 0 ? remainingAmount / numPayments : 0;
-    
-    // Validate start date
-    if (!planStartDate) {
-      return { schedule: [], totalAmount, remainingAmount, paymentAmount };
-    }
-    
-    const startDate = new Date(planStartDate);
-    if (isNaN(startDate.getTime())) {
-      return { schedule: [], totalAmount, remainingAmount, paymentAmount };
-    }
+    const remainingBalance = totalAmount - initialAmount;
+    const numPayments = parseInt(numRemainingPayments || "1");
     
     const schedule = [];
     
-    for (let i = 0; i < numPayments; i++) {
-      const paymentDate = new Date(startDate);
-      if (paymentFrequency === "weekly") {
-        paymentDate.setDate(startDate.getDate() + (i * 7));
-      } else if (paymentFrequency === "monthly") {
-        paymentDate.setMonth(startDate.getMonth() + i);
-      } else if (paymentFrequency === "quarterly") {
-        paymentDate.setMonth(startDate.getMonth() + (i * 3));
-      }
-      
-      // Validate payment date before using
-      if (isNaN(paymentDate.getTime())) {
-        continue;
-      }
-      
+    // Add initial payment if specified (matching Invoices page)
+    if (initialAmount > 0 && initialPaymentDate) {
       schedule.push({
-        installmentNumber: i + 1,
-        amount: paymentAmount,
-        dueDate: paymentDate.toISOString().split('T')[0]
+        label: "Initial Payment",
+        amount: initialAmount,
+        date: initialPaymentDate
       });
     }
     
-    return { schedule, totalAmount, remainingAmount, paymentAmount };
+    // Add remaining payments using plan start date
+    if (remainingBalance > 0 && numPayments > 0 && planStartDate) {
+      const paymentAmount = remainingBalance / numPayments;
+      
+      // Validate start date
+      const startDate = new Date(planStartDate);
+      if (isNaN(startDate.getTime())) {
+        return { schedule, totalAmount, remainingAmount: remainingBalance, paymentAmount };
+      }
+      
+      for (let i = 0; i < numPayments; i++) {
+        const paymentDate = new Date(startDate);
+        if (paymentFrequency === "weekly") {
+          paymentDate.setDate(startDate.getDate() + (i * 7));
+        } else if (paymentFrequency === "monthly") {
+          paymentDate.setMonth(startDate.getMonth() + i);
+        } else if (paymentFrequency === "quarterly") {
+          paymentDate.setMonth(startDate.getMonth() + (i * 3));
+        }
+        
+        // Validate payment date before using
+        if (isNaN(paymentDate.getTime())) {
+          continue;
+        }
+        
+        // Last payment gets remainder to handle rounding
+        const amount = i === numPayments - 1 ? 
+          (remainingBalance - (paymentAmount * (numPayments - 1))) :
+          paymentAmount;
+        
+        schedule.push({
+          label: `Payment ${i + 1}`,
+          amount: amount,
+          date: paymentDate.toISOString().split('T')[0]
+        });
+      }
+    }
+    
+    return { schedule, totalAmount, remainingAmount: remainingBalance, paymentAmount: remainingBalance / numPayments };
   };
   
   // Selection handlers
