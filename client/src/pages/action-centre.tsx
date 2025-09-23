@@ -387,6 +387,12 @@ export default function ActionCentre() {
   const [planStartDate, setPlanStartDate] = useState("");
   const [selectedPaymentInvoices, setSelectedPaymentInvoices] = useState<Map<string, any>>(new Map());
 
+  // Get contact invoices for payment plan (moved to top level to follow Rules of Hooks)
+  const contactInvoicesQuery = useQuery({
+    queryKey: ["/api/invoices/outstanding", paymentPlanAction?.contactId || paymentPlanAction?.id],
+    enabled: !!paymentPlanAction && showPaymentPlanDialog,
+  });
+
   // Redirect to home if not authenticated
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -3056,12 +3062,6 @@ export default function ActionCentre() {
           </DialogHeader>
 
           {paymentPlanAction && (() => {
-            // Get contact invoices for payment plan
-            const contactInvoicesQuery = useQuery({
-              queryKey: ["/api/invoices/outstanding", paymentPlanAction.contactId || paymentPlanAction.id],
-              enabled: !!paymentPlanAction && showPaymentPlanDialog,
-            });
-
             const contactInvoices = (contactInvoicesQuery.data as any[]) || [];
             const validationErrors = validatePaymentPlanForm();
             const scheduleData = selectedPaymentInvoices.size > 0 && planStartDate ? calculatePaymentSchedule() : null;
