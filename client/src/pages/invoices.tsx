@@ -74,7 +74,95 @@ export default function Invoices() {
   const [showDisputeDialog, setShowDisputeDialog] = useState(false);
   const [paymentPlanInvoice, setPaymentPlanInvoice] = useState<any>(null);
   const [disputeInvoice, setDisputeInvoice] = useState<any>(null);
+  
+  // Payment plan form state
+  const [initialPaymentAmount, setInitialPaymentAmount] = useState("");
+  const [initialPaymentDate, setInitialPaymentDate] = useState("");
+  const [numRemainingPayments, setNumRemainingPayments] = useState("3");
+  const [paymentFrequency, setPaymentFrequency] = useState("monthly");
   const [viewInvoice, setViewInvoice] = useState<any>(null);
+
+  // Helper functions for payment plan calculations
+  const calculatePaymentDates = (startDate: string, frequency: string, numPayments: number) => {
+    if (!startDate) return [];
+    
+    const dates = [];
+    const start = new Date(startDate);
+    
+    for (let i = 0; i < numPayments; i++) {
+      const paymentDate = new Date(start);
+      
+      switch (frequency) {
+        case 'weekly':
+          paymentDate.setDate(start.getDate() + (i * 7));
+          break;
+        case 'monthly':
+          paymentDate.setMonth(start.getMonth() + i);
+          break;
+        case 'quarterly':
+          paymentDate.setMonth(start.getMonth() + (i * 3));
+          break;
+        default:
+          paymentDate.setMonth(start.getMonth() + i);
+      }
+      
+      dates.push(paymentDate.toISOString().split('T')[0]);
+    }
+    
+    return dates;
+  };
+
+  const formatDateForDisplay = (dateString: string) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-GB', { 
+      day: 'numeric', 
+      month: 'short', 
+      year: 'numeric' 
+    });
+  };
+
+  const calculatePaymentSchedule = () => {
+    const invoiceAmount = Number(paymentPlanInvoice?.amount || 0);
+    const initialAmount = Number(initialPaymentAmount || 0);
+    const remainingBalance = invoiceAmount - initialAmount;
+    const numPayments = parseInt(numRemainingPayments || "1");
+    
+    const schedule = [];
+    
+    // Add initial payment if specified
+    if (initialAmount > 0 && initialPaymentDate) {
+      schedule.push({
+        label: "Initial Payment",
+        amount: initialAmount,
+        date: initialPaymentDate
+      });
+    }
+    
+    // Add remaining payments
+    if (remainingBalance > 0 && numPayments > 0 && initialPaymentDate) {
+      const paymentAmount = remainingBalance / numPayments;
+      const startDate = initialAmount > 0 ? 
+        new Date(new Date(initialPaymentDate).getTime() + 
+          (paymentFrequency === 'weekly' ? 7 : paymentFrequency === 'quarterly' ? 90 : 30) * 24 * 60 * 60 * 1000)
+          .toISOString().split('T')[0] :
+        initialPaymentDate;
+      
+      const paymentDates = calculatePaymentDates(startDate, paymentFrequency, numPayments);
+      
+      paymentDates.forEach((date, index) => {
+        schedule.push({
+          label: `Payment ${index + 1}`,
+          amount: index === numPayments - 1 ? 
+            (remainingBalance - (paymentAmount * (numPayments - 1))) : // Last payment gets remainder
+            paymentAmount,
+          date
+        });
+      });
+    }
+    
+    return schedule;
+  };
   
   // Pagination state for invoices
   const [invoicesCurrentPage, setInvoicesCurrentPage] = useState(1);
@@ -1191,7 +1279,16 @@ export default function Invoices() {
       </Dialog>
 
       {/* Payment Plan Dialog */}
-      <Dialog open={showPaymentPlanDialog} onOpenChange={setShowPaymentPlanDialog}>
+      <Dialog open={showPaymentPlanDialog} onOpenChange={(open) => {
+        setShowPaymentPlanDialog(open);
+        if (!open) {
+          // Reset form when dialog closes
+          setInitialPaymentAmount("");
+          setInitialPaymentDate("");
+          setNumRemainingPayments("3");
+          setPaymentFrequency("monthly");
+        }
+      }}>
         <DialogContent className="max-w-2xl bg-white">
           <DialogHeader>
             <DialogTitle>Setup Payment Plan</DialogTitle>
@@ -1201,64 +1298,128 @@ export default function Invoices() {
           </DialogHeader>
           
           <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="text-sm font-medium">Number of Payments</label>
-                <Select defaultValue="3">
-                  <SelectTrigger className="bg-white border-gray-200">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="bg-white border-gray-200">
-                    <SelectItem value="2">2 payments</SelectItem>
-                    <SelectItem value="3">3 payments</SelectItem>
-                    <SelectItem value="4">4 payments</SelectItem>
-                    <SelectItem value="6">6 payments</SelectItem>
-                  </SelectContent>
-                </Select>
+            {/* Initial Payment Section */}
+            <div className="border-b border-gray-200 pb-4">
+              <h4 className="font-medium mb-3 text-gray-900">Initial Payment</h4>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium">Initial Payment Amount (£)</label>
+                  <Input 
+                    type="number"
+                    placeholder="0.00"
+                    value={initialPaymentAmount}
+                    onChange={(e) => setInitialPaymentAmount(e.target.value)}
+                    className="bg-white border-gray-200"
+                    min="0"
+                    max={paymentPlanInvoice?.amount || 0}
+                    step="0.01"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Initial Payment Date</label>
+                  <Input 
+                    type="date" 
+                    value={initialPaymentDate}
+                    onChange={(e) => setInitialPaymentDate(e.target.value)}
+                    className="bg-white border-gray-200" 
+                  />
+                </div>
               </div>
-              <div>
-                <label className="text-sm font-medium">Payment Frequency</label>
-                <Select defaultValue="monthly">
-                  <SelectTrigger className="bg-white border-gray-200">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="bg-white border-gray-200">
-                    <SelectItem value="weekly">Weekly</SelectItem>
-                    <SelectItem value="monthly">Monthly</SelectItem>
-                    <SelectItem value="quarterly">Quarterly</SelectItem>
-                  </SelectContent>
-                </Select>
+            </div>
+
+            {/* Remaining Balance Section */}
+            <div className="border-b border-gray-200 pb-4">
+              <h4 className="font-medium mb-3 text-gray-900">Remaining Balance</h4>
+              <div className="bg-blue-50 p-3 rounded-lg mb-3">
+                <div className="flex justify-between items-center text-sm">
+                  <span>Total Invoice Amount:</span>
+                  <span className="font-medium">£{Number(paymentPlanInvoice?.amount || 0).toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between items-center text-sm">
+                  <span>Initial Payment:</span>
+                  <span className="font-medium">-£{Number(initialPaymentAmount || 0).toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between items-center text-sm font-medium pt-2 border-t border-blue-200 mt-2">
+                  <span>Remaining Balance:</span>
+                  <span>£{Math.max(0, Number(paymentPlanInvoice?.amount || 0) - Number(initialPaymentAmount || 0)).toLocaleString()}</span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium">Number of Remaining Payments</label>
+                  <Input 
+                    type="number"
+                    value={numRemainingPayments}
+                    onChange={(e) => setNumRemainingPayments(e.target.value)}
+                    className="bg-white border-gray-200"
+                    min="1"
+                    placeholder="e.g. 3"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Payment Frequency</label>
+                  <Select value={paymentFrequency} onValueChange={setPaymentFrequency}>
+                    <SelectTrigger className="bg-white border-gray-200">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white border-gray-200">
+                      <SelectItem value="weekly">Weekly</SelectItem>
+                      <SelectItem value="monthly">Monthly</SelectItem>
+                      <SelectItem value="quarterly">Quarterly</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             </div>
             
-            <div>
-              <label className="text-sm font-medium">First Payment Date</label>
-              <Input type="date" className="bg-white border-gray-200" />
-            </div>
-            
+            {/* Payment Schedule Preview */}
             <div className="bg-gray-50 p-4 rounded-lg">
-              <h4 className="font-medium mb-2">Payment Schedule Preview</h4>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span>Payment 1:</span>
-                  <span>£{Math.ceil(Number(paymentPlanInvoice?.amount || 0) / 3).toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Payment 2:</span>
-                  <span>£{Math.ceil(Number(paymentPlanInvoice?.amount || 0) / 3).toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Payment 3:</span>
-                  <span>£{Math.ceil(Number(paymentPlanInvoice?.amount || 0) / 3).toLocaleString()}</span>
-                </div>
-              </div>
+              <h4 className="font-medium mb-3">Payment Schedule Preview</h4>
+              {(() => {
+                const schedule = calculatePaymentSchedule();
+                if (schedule.length === 0) {
+                  return (
+                    <div className="text-sm text-gray-500 text-center py-4">
+                      Enter payment details above to see schedule preview
+                    </div>
+                  );
+                }
+                
+                return (
+                  <div className="space-y-2 text-sm">
+                    {schedule.map((payment, index) => (
+                      <div key={index} className="flex justify-between items-center">
+                        <span className="flex items-center gap-2">
+                          <span className="font-medium">{payment.label}:</span>
+                          <span className="text-gray-600">
+                            {formatDateForDisplay(payment.date)}
+                          </span>
+                        </span>
+                        <span className="font-medium">
+                          £{payment.amount.toFixed(2)}
+                        </span>
+                      </div>
+                    ))}
+                    <div className="border-t border-gray-300 pt-2 mt-3">
+                      <div className="flex justify-between items-center font-medium">
+                        <span>Total:</span>
+                        <span>£{schedule.reduce((sum, p) => sum + p.amount, 0).toFixed(2)}</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
             
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setShowPaymentPlanDialog(false)}>
                 Cancel
               </Button>
-              <Button className="bg-[#17B6C3] hover:bg-[#1396A1] text-white">
+              <Button 
+                className="bg-[#17B6C3] hover:bg-[#1396A1] text-white"
+                disabled={!initialPaymentDate || Number(paymentPlanInvoice?.amount || 0) <= 0}
+              >
                 Create Payment Plan
               </Button>
             </div>
