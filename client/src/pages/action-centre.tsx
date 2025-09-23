@@ -422,6 +422,28 @@ export default function ActionCentre() {
   const contactInvoicesQuery = useQuery({
     queryKey: ["/api/invoices/outstanding", paymentPlanContactId],
     enabled: !!paymentPlanContactId && showPaymentPlanDialog,
+    queryFn: async () => {
+      console.debug('=== API CALL TRIGGERED ===');
+      console.debug('Contact ID for API call:', paymentPlanContactId);
+      console.debug('URL will be:', `/api/invoices/outstanding/${paymentPlanContactId}`);
+      console.debug('showPaymentPlanDialog:', showPaymentPlanDialog);
+      console.debug('paymentPlanAction:', paymentPlanAction);
+      
+      const response = await fetch(`/api/invoices/outstanding/${paymentPlanContactId}`, {
+        credentials: "include"
+      });
+      
+      console.debug('API Response status:', response.status);
+      
+      if (!response.ok) {
+        console.error('API call failed:', response.status, response.statusText);
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      console.debug('API Response data:', data);
+      return data;
+    }
   });
 
   // Redirect to home if not authenticated
