@@ -387,10 +387,41 @@ export default function ActionCentre() {
   const [planStartDate, setPlanStartDate] = useState("");
   const [selectedPaymentInvoices, setSelectedPaymentInvoices] = useState<Map<string, any>>(new Map());
 
+  // Get contact ID from payment plan action - use same logic as selectedContactId
+  const paymentPlanContactId = useMemo(() => {
+    if (!paymentPlanAction || typeof paymentPlanAction !== 'object') {
+      console.debug('Payment Plan: No paymentPlanAction or invalid type:', paymentPlanAction);
+      return null;
+    }
+    
+    console.debug('Payment Plan: Action data:', {
+      id: paymentPlanAction.id,
+      contactId: paymentPlanAction.contactId,
+      invoiceId: paymentPlanAction.invoiceId,
+      contactName: paymentPlanAction.contactName,
+      fullAction: paymentPlanAction
+    });
+    
+    // For all items, use contactId directly (this should be the contact ID)
+    if (paymentPlanAction.contactId) {
+      console.debug('Payment Plan: Using contactId:', paymentPlanAction.contactId);
+      return paymentPlanAction.contactId;
+    }
+    
+    // If no contactId, check if this is an invoice item with id that represents contactId
+    if (paymentPlanAction.id && paymentPlanAction.invoiceId) {
+      console.debug('Payment Plan: This appears to be an invoice item, using id as contactId:', paymentPlanAction.id);
+      return paymentPlanAction.id;
+    }
+    
+    console.debug('Payment Plan: No contactId found in action');
+    return null;
+  }, [paymentPlanAction]);
+
   // Get contact invoices for payment plan (moved to top level to follow Rules of Hooks)
   const contactInvoicesQuery = useQuery({
-    queryKey: ["/api/invoices/outstanding", paymentPlanAction?.contactId || paymentPlanAction?.id],
-    enabled: !!paymentPlanAction && showPaymentPlanDialog,
+    queryKey: ["/api/invoices/outstanding", paymentPlanContactId],
+    enabled: !!paymentPlanContactId && showPaymentPlanDialog,
   });
 
   // Redirect to home if not authenticated
