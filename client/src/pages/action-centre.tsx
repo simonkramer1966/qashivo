@@ -3375,10 +3375,10 @@ export default function ActionCentre() {
                         {scheduleData.schedule.map((payment: any, index: number) => (
                           <div key={index} className="flex justify-between items-center p-2 bg-white rounded border">
                             <span className="flex items-center gap-2">
-                              <span className="font-medium">Payment {payment.installmentNumber}:</span>
+                              <span className="font-medium">{payment.label}:</span>
                               <span className="text-gray-600">
                                 {(() => {
-                                  const date = new Date(payment.dueDate);
+                                  const date = new Date(payment.date);
                                   return date.toLocaleDateString('en-GB', {
                                     day: 'numeric',
                                     month: 'short',
