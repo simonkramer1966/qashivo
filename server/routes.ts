@@ -2794,6 +2794,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Voice Calls List API - For call logs page
+  app.get("/api/voice-calls", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { contactId, status, limit } = req.query;
+
+      // Build filters object
+      const filters: any = {};
+      if (contactId) filters.contactId = contactId as string;
+      if (status) filters.status = status as string;
+      if (limit) filters.limit = parseInt(limit as string, 10);
+
+      // Get voice calls with filters
+      const voiceCalls = await storage.getVoiceCalls(user.tenantId, filters);
+
+      res.json({
+        success: true,
+        voiceCalls,
+        total: voiceCalls.length
+      });
+    } catch (error: any) {
+      console.error("Error retrieving voice calls:", error);
+      res.status(500).json({ message: error.message || "Failed to retrieve voice calls" });
+    }
+  });
+
   // Voice Call Retrieval API - For MCP tools to find calls
   app.get("/api/voice-calls/:retellCallId", isAuthenticated, async (req: any, res) => {
     try {
