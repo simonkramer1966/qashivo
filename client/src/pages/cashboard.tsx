@@ -479,11 +479,7 @@ export default function Cashboard() {
                 {actionItems.map((item) => (
                   <Card 
                     key={item.id} 
-                    className={`glass-card cursor-pointer transition-all duration-200 hover:scale-105 border-l-4 ${
-                      item.type === 'urgent' ? 'border-l-red-500' : 
-                      item.type === 'attention' ? 'border-l-amber-500' : 
-                      'border-l-green-500'
-                    }`}
+                    className="glass-card cursor-pointer transition-all duration-200 hover:scale-105"
                     onClick={item.onClick}
                     data-testid={`card-action-${item.type}`}
                   >
@@ -494,7 +490,14 @@ export default function Cashboard() {
                           item.type === 'attention' ? 'text-amber-600' : 
                           'text-green-600'
                         }`} />
-                        <Badge variant={item.type === 'urgent' ? 'destructive' : item.type === 'attention' ? 'default' : 'secondary'} className="text-xs">
+                        <Badge 
+                          variant={item.type === 'urgent' ? 'destructive' : item.type === 'attention' ? 'default' : 'secondary'} 
+                          className={`text-xs ${
+                            item.type === 'urgent' ? 'bg-red-500 hover:bg-red-600 text-white' : 
+                            item.type === 'attention' ? 'bg-amber-500 hover:bg-amber-600 text-white' : 
+                            'bg-green-500 hover:bg-green-600 text-white'
+                          }`}
+                        >
                           {item.type.toUpperCase()}
                         </Badge>
                       </div>
