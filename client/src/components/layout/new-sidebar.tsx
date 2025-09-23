@@ -297,7 +297,7 @@ export default function NewSidebar() {
                   <DropdownMenuSubTrigger className="pl-7 pr-3 py-3 text-[#17B6C3]" data-testid="menu-item-change-organization">
                     <div className="font-medium text-sm text-[#17B6C3]">Change organisation</div>
                   </DropdownMenuSubTrigger>
-                  <DropdownMenuSubContent className="w-64 bg-red-500 border-red-600 z-[9999] shadow-2xl border-4 !opacity-100 !visible !block !fixed !right-4 !top-20 transform-none">
+                  <DropdownMenuSubContent className="w-64 bg-white border-gray-200 z-[60] shadow-lg border !opacity-100 !visible !block">
                     {/* Search Bar */}
                     <div className="relative p-2">
                       <Search className="absolute left-5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
