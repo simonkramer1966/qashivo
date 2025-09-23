@@ -3033,6 +3033,296 @@ export default function ActionCentre() {
           setAiCallDialog({ isOpen: false, contactId: '', invoiceId: '' });
         }}
       />
+
+      {/* Payment Plan Dialog */}
+      <Dialog open={showPaymentPlanDialog} onOpenChange={(open) => {
+        if (!open) {
+          setShowPaymentPlanDialog(false);
+          setPaymentPlanAction(null);
+          resetPaymentPlanForm();
+        }
+      }}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-white/95 backdrop-blur-sm border-white/50">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold flex items-center gap-2">
+              <div className="p-2 bg-[#17B6C3]/10 rounded-lg">
+                <CalendarIcon className="h-5 w-5 text-[#17B6C3]" />
+              </div>
+              Create Payment Plan
+            </DialogTitle>
+            <DialogDescription className="text-gray-600">
+              Set up a flexible payment plan for outstanding invoices with customizable installments.
+            </DialogDescription>
+          </DialogHeader>
+
+          {paymentPlanAction && (() => {
+            // Get contact invoices for payment plan
+            const contactInvoicesQuery = useQuery({
+              queryKey: ["/api/invoices/outstanding", paymentPlanAction.contactId || paymentPlanAction.id],
+              enabled: !!paymentPlanAction && showPaymentPlanDialog,
+            });
+
+            const contactInvoices = (contactInvoicesQuery.data as any[]) || [];
+            const validationErrors = validatePaymentPlanForm();
+            const scheduleData = selectedPaymentInvoices.size > 0 && planStartDate ? calculatePaymentSchedule() : null;
+
+            return (
+              <div className="space-y-6">
+                {/* Step 1: Invoice Selection */}
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="w-6 h-6 bg-[#17B6C3] text-white text-sm rounded-full flex items-center justify-center font-medium">1</span>
+                    <h3 className="text-lg font-semibold">Select Invoices</h3>
+                  </div>
+
+                  {contactInvoicesQuery.isLoading ? (
+                    <div className="flex items-center justify-center py-4">
+                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#17B6C3]"></div>
+                      <span className="ml-2 text-gray-600">Loading invoices...</span>
+                    </div>
+                  ) : (
+                    <div className="space-y-2 max-h-48 overflow-y-auto border rounded-lg bg-white/70">
+                      {contactInvoices.length > 0 ? contactInvoices.map((invoice: any) => (
+                        <div key={invoice.id} className="flex items-center space-x-3 p-3 hover:bg-gray-50 border-b border-gray-100 last:border-b-0">
+                          <Checkbox
+                            id={`invoice-${invoice.id}`}
+                            checked={selectedPaymentInvoices.has(invoice.id)}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setSelectedPaymentInvoices(prev => new Map(prev).set(invoice.id, invoice));
+                              } else {
+                                const newMap = new Map(selectedPaymentInvoices);
+                                newMap.delete(invoice.id);
+                                setSelectedPaymentInvoices(newMap);
+                              }
+                            }}
+                            data-testid={`checkbox-invoice-${invoice.id}`}
+                          />
+                          <label htmlFor={`invoice-${invoice.id}`} className="flex-1 cursor-pointer">
+                            <div className="flex justify-between items-center">
+                              <div>
+                                <span className="font-medium text-gray-900">Invoice #{invoice.number}</span>
+                                <span className="text-sm text-gray-500 ml-2">
+                                  Due: {new Date(invoice.dueDate).toLocaleDateString()}
+                                </span>
+                              </div>
+                              <span className="font-semibold text-gray-900">${parseFloat(invoice.totalAmount).toFixed(2)}</span>
+                            </div>
+                          </label>
+                        </div>
+                      )) : (
+                        <div className="p-4 text-center text-gray-500">
+                          No outstanding invoices found for this contact.
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Step 2: Initial Payment */}
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="w-6 h-6 bg-[#17B6C3] text-white text-sm rounded-full flex items-center justify-center font-medium">2</span>
+                    <h3 className="text-lg font-semibold">Initial Payment (Optional)</h3>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="initialPaymentAmount">Initial Payment Amount ($)</Label>
+                      <Input
+                        id="initialPaymentAmount"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        placeholder="0.00"
+                        value={initialPaymentAmount}
+                        onChange={(e) => setInitialPaymentAmount(e.target.value)}
+                        className="bg-white/70 border-gray-200/30"
+                        data-testid="input-initial-payment-amount"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="initialPaymentDate">Initial Payment Date</Label>
+                      <Input
+                        id="initialPaymentDate"
+                        type="date"
+                        value={initialPaymentDate}
+                        onChange={(e) => setInitialPaymentDate(e.target.value)}
+                        className="bg-white/70 border-gray-200/30"
+                        data-testid="input-initial-payment-date"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Step 3: Payment Plan Setup */}
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="w-6 h-6 bg-[#17B6C3] text-white text-sm rounded-full flex items-center justify-center font-medium">3</span>
+                    <h3 className="text-lg font-semibold">Installment Plan</h3>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <Label htmlFor="numRemainingPayments">Number of Payments</Label>
+                      <Select value={numRemainingPayments} onValueChange={setNumRemainingPayments}>
+                        <SelectTrigger className="bg-white/70 border-gray-200/30">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="bg-white border-gray-200">
+                          <SelectItem value="1">1 Payment</SelectItem>
+                          <SelectItem value="2">2 Payments</SelectItem>
+                          <SelectItem value="3">3 Payments</SelectItem>
+                          <SelectItem value="4">4 Payments</SelectItem>
+                          <SelectItem value="6">6 Payments</SelectItem>
+                          <SelectItem value="12">12 Payments</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label htmlFor="paymentFrequency">Payment Frequency</Label>
+                      <Select value={paymentFrequency} onValueChange={setPaymentFrequency}>
+                        <SelectTrigger className="bg-white/70 border-gray-200/30">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="bg-white border-gray-200">
+                          <SelectItem value="weekly">Weekly</SelectItem>
+                          <SelectItem value="monthly">Monthly</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label htmlFor="planStartDate">Plan Start Date</Label>
+                      <Input
+                        id="planStartDate"
+                        type="date"
+                        value={planStartDate}
+                        onChange={(e) => setPlanStartDate(e.target.value)}
+                        className="bg-white/70 border-gray-200/30"
+                        data-testid="input-plan-start-date"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Payment Schedule Preview */}
+                {scheduleData && (
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <span className="w-6 h-6 bg-[#17B6C3] text-white text-sm rounded-full flex items-center justify-center font-medium">4</span>
+                      <h3 className="text-lg font-semibold">Payment Schedule Preview</h3>
+                    </div>
+                    <div className="bg-white/70 border border-gray-200/30 rounded-lg p-4">
+                      <div className="grid grid-cols-3 gap-4 mb-4 text-sm font-medium text-gray-700 border-b pb-2">
+                        <span>Total Amount: ${scheduleData.totalAmount.toFixed(2)}</span>
+                        <span>Initial Payment: ${(parseFloat(initialPaymentAmount) || 0).toFixed(2)}</span>
+                        <span>Remaining: ${scheduleData.remainingAmount.toFixed(2)}</span>
+                      </div>
+                      <div className="space-y-2 max-h-48 overflow-y-auto">
+                        {scheduleData.schedule.map((payment, index) => (
+                          <div key={index} className="flex justify-between items-center py-2 px-3 bg-gray-50 rounded">
+                            <span className="font-medium">Payment {payment.installmentNumber}</span>
+                            <span className="text-gray-600">{new Date(payment.dueDate).toLocaleDateString()}</span>
+                            <span className="font-semibold">${payment.amount.toFixed(2)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Step 5: Notes */}
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="w-6 h-6 bg-[#17B6C3] text-white text-sm rounded-full flex items-center justify-center font-medium">5</span>
+                    <h3 className="text-lg font-semibold">Notes (Optional)</h3>
+                  </div>
+                  <Textarea
+                    placeholder="Add any additional notes about this payment plan..."
+                    value={paymentPlanNotes}
+                    onChange={(e) => setPaymentPlanNotes(e.target.value)}
+                    className="bg-white/70 border-gray-200/30"
+                    rows={3}
+                    data-testid="textarea-payment-plan-notes"
+                  />
+                </div>
+
+                {/* Validation Errors */}
+                {validationErrors.length > 0 && (
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                    <div className="flex items-center gap-2 mb-2">
+                      <AlertCircle className="h-4 w-4 text-red-500" />
+                      <span className="font-medium text-red-700">Please fix the following:</span>
+                    </div>
+                    <ul className="list-disc list-inside text-red-600 text-sm space-y-1">
+                      {validationErrors.map((error, index) => (
+                        <li key={index}>{error}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+
+          <DialogFooter className="flex justify-between">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowPaymentPlanDialog(false);
+                setPaymentPlanAction(null);
+                resetPaymentPlanForm();
+              }}
+              data-testid="button-cancel-payment-plan"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                const errors = validatePaymentPlanForm();
+                if (errors.length > 0) {
+                  toast({
+                    title: "Validation Error",
+                    description: "Please fix the form errors before submitting.",
+                    variant: "destructive",
+                  });
+                  return;
+                }
+
+                const scheduleData = calculatePaymentSchedule();
+                const invoiceIds = Array.from(selectedPaymentInvoices.keys());
+
+                createPaymentPlanMutation.mutate({
+                  contactId: paymentPlanAction?.contactId || paymentPlanAction?.id,
+                  invoiceIds,
+                  initialPaymentAmount: parseFloat(initialPaymentAmount) || 0,
+                  initialPaymentDate: initialPaymentDate || null,
+                  installments: scheduleData.schedule.map(s => ({
+                    installmentNumber: s.installmentNumber,
+                    amount: s.amount,
+                    dueDate: new Date(s.dueDate).toISOString(),
+                    status: 'pending'
+                  })),
+                  notes: paymentPlanNotes
+                });
+              }}
+              disabled={createPaymentPlanMutation.isPending || validatePaymentPlanForm().length > 0}
+              className="bg-[#17B6C3] hover:bg-[#1396A1] text-white"
+              data-testid="button-create-payment-plan"
+            >
+              {createPaymentPlanMutation.isPending ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Creating Plan...
+                </>
+              ) : (
+                <>
+                  <CalendarIcon className="h-4 w-4 mr-2" />
+                  Create Payment Plan
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       
       {/* Bulk Complete Dialog */}
       <Dialog open={bulkDialogs.complete} onOpenChange={(open) => setBulkDialogs(prev => ({ ...prev, complete: open }))}>
