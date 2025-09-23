@@ -3431,22 +3431,22 @@ export default function ActionCentre() {
                   return;
                 }
 
-                const scheduleData = calculatePaymentSchedule();
-                const invoiceIds = Array.from(selectedPaymentInvoices.keys());
+                const selectedInvoiceIds = Array.from(selectedPaymentInvoices.keys());
+                const totalAmount = Array.from(selectedPaymentInvoices.values())
+                  .reduce((sum, invoice) => sum + parseFloat(invoice.amount || "0"), 0);
 
-                createPaymentPlanMutation.mutate({
-                  contactId: paymentPlanAction?.contactId || paymentPlanAction?.id,
-                  invoiceIds,
-                  initialPaymentAmount: parseFloat(initialPaymentAmount) || 0,
-                  initialPaymentDate: initialPaymentDate || null,
-                  installments: scheduleData.schedule.map(s => ({
-                    installmentNumber: s.installmentNumber,
-                    amount: s.amount,
-                    dueDate: new Date(s.dueDate).toISOString(),
-                    status: 'pending'
-                  })),
-                  notes: paymentPlanNotes
-                });
+                const paymentPlanData = {
+                  invoiceIds: selectedInvoiceIds,
+                  totalAmount: totalAmount.toString(),
+                  initialPaymentAmount: initialPaymentAmount || "0",
+                  initialPaymentDate: initialPaymentDate ? new Date(initialPaymentDate).toISOString() : null,
+                  planStartDate: planStartDate ? new Date(planStartDate).toISOString() : null,
+                  paymentFrequency,
+                  numberOfPayments: parseInt(numRemainingPayments || "3"),
+                  notes: paymentPlanNotes || ""
+                };
+
+                createPaymentPlanMutation.mutate(paymentPlanData);
               }}
               disabled={createPaymentPlanMutation.isPending || validatePaymentPlanForm().length > 0}
               className="bg-[#17B6C3] hover:bg-[#1396A1] text-white"
