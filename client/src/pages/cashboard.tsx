@@ -443,7 +443,7 @@ export default function Cashboard() {
               </div>
 
               {/* Health Status Banner */}
-              <Card className={`glass-card border-l-4 ${healthStatus.status === 'healthy' ? 'border-l-green-500' : healthStatus.status === 'warning' ? 'border-l-amber-500' : 'border-l-red-500'}`} data-testid="card-health-status">
+              <Card className="glass-card" data-testid="card-health-status">
                 <CardContent className="p-4 sm:p-6">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div className="flex items-center space-x-3 sm:space-x-4">
