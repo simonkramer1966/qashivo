@@ -1251,7 +1251,7 @@ export default function ActionCentre() {
     }
     
     const totalAmount = Array.from(selectedPaymentInvoices.values())
-      .reduce((sum, invoice) => sum + parseFloat(invoice.totalAmount || "0"), 0);
+      .reduce((sum, invoice) => sum + parseFloat(invoice.amount || "0"), 0);
     
     const initialAmount = parseFloat(initialPaymentAmount) || 0;
     if (initialAmount > totalAmount) {
