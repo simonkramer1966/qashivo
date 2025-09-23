@@ -80,6 +80,7 @@ export default function Invoices() {
   const [initialPaymentDate, setInitialPaymentDate] = useState("");
   const [numRemainingPayments, setNumRemainingPayments] = useState("3");
   const [paymentFrequency, setPaymentFrequency] = useState("monthly");
+  const [paymentPlanNotes, setPaymentPlanNotes] = useState("");
   const [viewInvoice, setViewInvoice] = useState<any>(null);
 
   // Hook for fetching outstanding invoices for a contact
@@ -1592,6 +1593,22 @@ export default function Invoices() {
                     </SelectContent>
                   </Select>
                 </div>
+              </div>
+              
+              {/* Notes field */}
+              <div className="mt-4">
+                <label className="text-sm font-medium">Notes (Optional)</label>
+                <textarea 
+                  value={paymentPlanNotes}
+                  onChange={(e) => setPaymentPlanNotes(e.target.value)}
+                  className="mt-1 w-full px-3 py-2 bg-white/70 border border-gray-200/30 rounded-md text-sm resize-none"
+                  rows={3}
+                  placeholder="Add any additional notes or special terms for this payment plan..."
+                  data-testid="textarea-payment-plan-notes"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  These notes will be saved with the payment plan for future reference
+                </p>
               </div>
             </div>
             
