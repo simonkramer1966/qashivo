@@ -2224,6 +2224,7 @@ export default function ActionCentre() {
                                   <DropdownMenuItem 
                                     onClick={(e) => {
                                       e.stopPropagation();
+                                      alert(`PAYMENT PLAN CLICKED! Action ID: ${action?.id}, Contact ID: ${action?.contactId}, Contact Name: ${action?.contactName}`);
                                       console.debug('=== PAYMENT PLAN MENU CLICKED ===');
                                       console.debug('Action Data:', {
                                         id: action?.id,
