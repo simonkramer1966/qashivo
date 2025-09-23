@@ -86,6 +86,16 @@ export default function Invoices() {
   const useOutstandingInvoices = (contactId: string | null) => {
     return useQuery({
       queryKey: ["/api/invoices/outstanding", contactId],
+      queryFn: async () => {
+        if (!contactId) return [];
+        const response = await fetch(`/api/invoices/outstanding/${contactId}`, {
+          credentials: "include"
+        });
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+      },
       enabled: !!contactId,
       staleTime: 5 * 60 * 1000, // 5 minutes
     });
@@ -103,9 +113,9 @@ export default function Invoices() {
   // Calculate total from selected payment invoices
   const totalSelectedAmount = useMemo(() => {
     let total = 0;
-    for (const invoice of selectedPaymentInvoices.values()) {
+    Array.from(selectedPaymentInvoices.values()).forEach(invoice => {
       total += Number(invoice.amount || 0);
-    }
+    });
     return total;
   }, [selectedPaymentInvoices]);
 
