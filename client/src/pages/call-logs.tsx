@@ -106,7 +106,6 @@ export default function CallLogs() {
 
   const voiceCalls = voiceCallsResponse?.voiceCalls || [];
 
-
   // Filter and sort voice calls
   const filteredAndSortedCalls = useMemo(() => {
     let filtered = [...voiceCalls];
@@ -279,15 +278,13 @@ export default function CallLogs() {
   }
 
   return (
-    <div className="min-h-screen page-gradient">
+    <div className="flex h-screen page-gradient">
       <NewSidebar />
-      
-      <div className="lg:ml-64">
+      <main className="flex-1 overflow-y-auto">
         <Header title="Call Logs" subtitle="Track and analyze voice call outcomes" />
         
-        <main className="p-8">
+        <div className="p-8">
           <div className="space-y-8">
-
             {/* Filters */}
             <Card className="card-glass" data-testid="card-filters">
               <CardContent className="p-6">
@@ -575,8 +572,8 @@ export default function CallLogs() {
               </div>
             )}
           </div>
-        </main>
-      </div>
+        </div>
+      </main>
 
       {/* Transcript Dialog */}
       <Dialog open={showTranscriptDialog} onOpenChange={setShowTranscriptDialog}>
