@@ -32,6 +32,9 @@ import {
   budgets,
   budgetLines,
   exchangeRates,
+  paymentPlans,
+  paymentPlanSchedules,
+  paymentPlanInvoices,
   type User,
   type UpsertUser,
   type Tenant,
@@ -108,6 +111,12 @@ import {
   type InsertActionLog,
   type PaymentPromise,
   type InsertPaymentPromise,
+  type PaymentPlan,
+  type InsertPaymentPlan,
+  type PaymentPlanSchedule,
+  type InsertPaymentPlanSchedule,
+  type PaymentPlanInvoice,
+  type InsertPaymentPlanInvoice,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, sql, count, sum, ne, isNotNull, gte, lte, lt, or, ilike, inArray } from "drizzle-orm";
@@ -366,6 +375,29 @@ export interface IStorage {
   createPaymentPromise(paymentPromise: InsertPaymentPromise): Promise<PaymentPromise>;
   updatePaymentPromise(id: string, tenantId: string, updates: Partial<InsertPaymentPromise>): Promise<PaymentPromise>;
   deletePaymentPromise(id: string, tenantId: string): Promise<void>;
+
+  // Payment Plan operations
+  getPaymentPlans(tenantId: string, filters?: { status?: string; contactId?: string }): Promise<(PaymentPlan & { contact: Contact; createdByUser: User })[]>;
+  getPaymentPlan(id: string, tenantId: string): Promise<(PaymentPlan & { contact: Contact; createdByUser: User }) | undefined>;
+  getPaymentPlanWithDetails(id: string, tenantId: string): Promise<(PaymentPlan & { 
+    contact: Contact; 
+    createdByUser: User; 
+    schedules: PaymentPlanSchedule[]; 
+    invoices: (Invoice & { contact: Contact })[] 
+  }) | undefined>;
+  createPaymentPlan(paymentPlan: InsertPaymentPlan): Promise<PaymentPlan>;
+  updatePaymentPlan(id: string, tenantId: string, updates: Partial<InsertPaymentPlan>): Promise<PaymentPlan>;
+  deletePaymentPlan(id: string, tenantId: string): Promise<void>;
+
+  // Payment Plan Schedule operations
+  getPaymentPlanSchedules(paymentPlanId: string): Promise<PaymentPlanSchedule[]>;
+  createPaymentPlanSchedule(schedule: InsertPaymentPlanSchedule): Promise<PaymentPlanSchedule>;
+  updatePaymentPlanSchedule(id: string, updates: Partial<InsertPaymentPlanSchedule>): Promise<PaymentPlanSchedule>;
+  
+  // Payment Plan Invoice linking operations
+  linkInvoicesToPaymentPlan(paymentPlanId: string, invoiceIds: string[], addedByUserId: string): Promise<PaymentPlanInvoice[]>;
+  unlinkInvoiceFromPaymentPlan(paymentPlanId: string, invoiceId: string): Promise<void>;
+  getPaymentPlanInvoices(paymentPlanId: string): Promise<PaymentPlanInvoice[]>;
 
   // RBAC operations
   getUsersInTenant(tenantId: string): Promise<User[]>;
@@ -3475,6 +3507,172 @@ export class DatabaseStorage implements IStorage {
     await db
       .delete(paymentPromises)
       .where(and(eq(paymentPromises.id, id), eq(paymentPromises.tenantId, tenantId)));
+  }
+
+  // Payment Plan operations implementation
+  async getPaymentPlans(tenantId: string, filters?: { status?: string; contactId?: string }): Promise<(PaymentPlan & { contact: Contact; createdByUser: User })[]> {
+    const conditions = [eq(paymentPlans.tenantId, tenantId)];
+    
+    if (filters?.status) conditions.push(eq(paymentPlans.status, filters.status));
+    if (filters?.contactId) conditions.push(eq(paymentPlans.contactId, filters.contactId));
+
+    const results = await db
+      .select()
+      .from(paymentPlans)
+      .innerJoin(contacts, eq(paymentPlans.contactId, contacts.id))
+      .innerJoin(users, eq(paymentPlans.createdByUserId, users.id))
+      .where(and(...conditions))
+      .orderBy(desc(paymentPlans.createdAt));
+
+    return results.map(row => ({
+      ...row.payment_plans,
+      contact: row.contacts,
+      createdByUser: row.users,
+    }));
+  }
+
+  async getPaymentPlan(id: string, tenantId: string): Promise<(PaymentPlan & { contact: Contact; createdByUser: User }) | undefined> {
+    const [result] = await db
+      .select()
+      .from(paymentPlans)
+      .innerJoin(contacts, eq(paymentPlans.contactId, contacts.id))
+      .innerJoin(users, eq(paymentPlans.createdByUserId, users.id))
+      .where(and(eq(paymentPlans.id, id), eq(paymentPlans.tenantId, tenantId)));
+
+    if (!result) return undefined;
+
+    return {
+      ...result.payment_plans,
+      contact: result.contacts,
+      createdByUser: result.users,
+    };
+  }
+
+  async getPaymentPlanWithDetails(id: string, tenantId: string): Promise<(PaymentPlan & { 
+    contact: Contact; 
+    createdByUser: User; 
+    schedules: PaymentPlanSchedule[]; 
+    invoices: (Invoice & { contact: Contact })[] 
+  }) | undefined> {
+    // Get the payment plan with contact and user
+    const paymentPlan = await this.getPaymentPlan(id, tenantId);
+    if (!paymentPlan) return undefined;
+
+    // Get payment schedules
+    const schedules = await this.getPaymentPlanSchedules(id);
+
+    // Get linked invoices
+    const invoiceLinks = await db
+      .select()
+      .from(paymentPlanInvoices)
+      .innerJoin(invoices, eq(paymentPlanInvoices.invoiceId, invoices.id))
+      .innerJoin(contacts, eq(invoices.contactId, contacts.id))
+      .where(eq(paymentPlanInvoices.paymentPlanId, id));
+
+    const linkedInvoices = invoiceLinks.map(row => ({
+      ...row.invoices,
+      contact: row.contacts,
+    }));
+
+    return {
+      ...paymentPlan,
+      schedules,
+      invoices: linkedInvoices,
+    };
+  }
+
+  async createPaymentPlan(paymentPlanData: InsertPaymentPlan): Promise<PaymentPlan> {
+    const [paymentPlan] = await db.insert(paymentPlans).values(paymentPlanData).returning();
+    return paymentPlan;
+  }
+
+  async updatePaymentPlan(id: string, tenantId: string, updates: Partial<InsertPaymentPlan>): Promise<PaymentPlan> {
+    const [paymentPlan] = await db
+      .update(paymentPlans)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(and(eq(paymentPlans.id, id), eq(paymentPlans.tenantId, tenantId)))
+      .returning();
+    return paymentPlan;
+  }
+
+  async deletePaymentPlan(id: string, tenantId: string): Promise<void> {
+    // Delete payment plan schedules first (cascade)
+    await db.delete(paymentPlanSchedules).where(eq(paymentPlanSchedules.paymentPlanId, id));
+    
+    // Delete payment plan invoice links
+    await db.delete(paymentPlanInvoices).where(eq(paymentPlanInvoices.paymentPlanId, id));
+    
+    // Delete payment plan
+    await db
+      .delete(paymentPlans)
+      .where(and(eq(paymentPlans.id, id), eq(paymentPlans.tenantId, tenantId)));
+  }
+
+  // Payment Plan Schedule operations implementation
+  async getPaymentPlanSchedules(paymentPlanId: string): Promise<PaymentPlanSchedule[]> {
+    const schedules = await db
+      .select()
+      .from(paymentPlanSchedules)
+      .where(eq(paymentPlanSchedules.paymentPlanId, paymentPlanId))
+      .orderBy(paymentPlanSchedules.paymentNumber);
+    return schedules;
+  }
+
+  async createPaymentPlanSchedule(scheduleData: InsertPaymentPlanSchedule): Promise<PaymentPlanSchedule> {
+    const [schedule] = await db.insert(paymentPlanSchedules).values(scheduleData).returning();
+    return schedule;
+  }
+
+  async updatePaymentPlanSchedule(id: string, updates: Partial<InsertPaymentPlanSchedule>): Promise<PaymentPlanSchedule> {
+    const [schedule] = await db
+      .update(paymentPlanSchedules)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(paymentPlanSchedules.id, id))
+      .returning();
+    return schedule;
+  }
+
+  // Payment Plan Invoice linking operations implementation
+  async linkInvoicesToPaymentPlan(paymentPlanId: string, invoiceIds: string[], addedByUserId: string): Promise<PaymentPlanInvoice[]> {
+    const linksData = invoiceIds.map(invoiceId => ({
+      paymentPlanId,
+      invoiceId,
+      addedByUserId,
+    }));
+
+    const links = await db.insert(paymentPlanInvoices).values(linksData).returning();
+    
+    // Update invoice status to 'payment_plan'
+    await db
+      .update(invoices)
+      .set({ status: 'payment_plan', paymentPlanId })
+      .where(inArray(invoices.id, invoiceIds));
+
+    return links;
+  }
+
+  async unlinkInvoiceFromPaymentPlan(paymentPlanId: string, invoiceId: string): Promise<void> {
+    // Remove the link
+    await db
+      .delete(paymentPlanInvoices)
+      .where(and(
+        eq(paymentPlanInvoices.paymentPlanId, paymentPlanId),
+        eq(paymentPlanInvoices.invoiceId, invoiceId)
+      ));
+
+    // Reset invoice status to 'pending' and clear payment plan reference
+    await db
+      .update(invoices)
+      .set({ status: 'pending', paymentPlanId: null })
+      .where(eq(invoices.id, invoiceId));
+  }
+
+  async getPaymentPlanInvoices(paymentPlanId: string): Promise<PaymentPlanInvoice[]> {
+    const links = await db
+      .select()
+      .from(paymentPlanInvoices)
+      .where(eq(paymentPlanInvoices.paymentPlanId, paymentPlanId));
+    return links;
   }
 }
 
