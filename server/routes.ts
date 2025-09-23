@@ -2735,6 +2735,93 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Voice Call Outcome Update API - For MCP tools
+  app.put("/api/voice-calls/:id/outcome", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { id } = req.params;
+      const { 
+        customerResponse, 
+        callSuccessful, 
+        followUpRequired, 
+        userSentiment, 
+        disconnectionReason,
+        transcript,
+        callAnalysis 
+      } = req.body;
+
+      // Build the update payload with only the fields that are provided
+      const updates: any = {};
+      if (customerResponse !== undefined) updates.customerResponse = customerResponse;
+      if (callSuccessful !== undefined) updates.callSuccessful = callSuccessful;
+      if (followUpRequired !== undefined) updates.followUpRequired = followUpRequired;
+      if (userSentiment !== undefined) updates.userSentiment = userSentiment;
+      if (disconnectionReason !== undefined) updates.disconnectionReason = disconnectionReason;
+      if (transcript !== undefined) updates.transcript = transcript;
+      if (callAnalysis !== undefined) updates.callAnalysis = callAnalysis;
+
+      // Update the voice call record
+      const updatedCall = await storage.updateVoiceCall(id, user.tenantId, updates);
+
+      // Log the outcome update as an action for audit trail
+      await storage.createAction({
+        tenantId: user.tenantId,
+        userId: user.id,
+        type: 'call_outcome',
+        status: 'completed',
+        subject: `Call Outcome: ${customerResponse || 'Updated'}`,
+        content: `Call outcome updated - Customer Response: ${customerResponse}, Successful: ${callSuccessful}, Follow-up Required: ${followUpRequired}`,
+        completedAt: new Date(),
+        metadata: { 
+          voiceCallId: id,
+          outcomeData: updates,
+          source: 'mcp_tool'
+        },
+      });
+
+      res.json({
+        success: true,
+        voiceCall: updatedCall,
+        message: "Call outcome updated successfully"
+      });
+    } catch (error: any) {
+      console.error("Error updating voice call outcome:", error);
+      res.status(500).json({ message: error.message || "Failed to update call outcome" });
+    }
+  });
+
+  // Voice Call Retrieval API - For MCP tools to find calls
+  app.get("/api/voice-calls/:retellCallId", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { retellCallId } = req.params;
+
+      // Find the voice call by Retell call ID
+      const voiceCalls = await storage.getVoiceCalls(user.tenantId);
+      const voiceCall = voiceCalls.find(call => call.retellCallId === retellCallId);
+
+      if (!voiceCall) {
+        return res.status(404).json({ message: "Voice call not found" });
+      }
+
+      res.json({
+        success: true,
+        voiceCall
+      });
+    } catch (error: any) {
+      console.error("Error retrieving voice call:", error);
+      res.status(500).json({ message: error.message || "Failed to retrieve voice call" });
+    }
+  });
+
   // Workflow routes
   app.get("/api/workflows", isAuthenticated, async (req: any, res) => {
     try {

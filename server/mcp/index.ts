@@ -4,6 +4,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { registerCallTools } from "./tools/call.js";
 import { registerEmailTools } from "./tools/email.js";
+import { registerCallOutcomeTools } from "./tools/callOutcomes.js";
 import { createRetellClient } from "./client.js";
 
 function createMcpServer() {
@@ -22,6 +23,7 @@ function createMcpServer() {
 
   registerCallTools(mcpServer, retellClient);
   registerEmailTools(mcpServer);
+  registerCallOutcomeTools(mcpServer);
 
   return mcpServer;
 }
