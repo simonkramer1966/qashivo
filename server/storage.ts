@@ -1762,6 +1762,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getVoiceCalls(tenantId: string, filters?: { contactId?: string; status?: string; limit?: number }): Promise<(VoiceCall & { contact: Contact; invoice?: Invoice })[]> {
+    
     let query = db
       .select({
         id: voiceCalls.id,
@@ -1917,6 +1918,7 @@ export class DatabaseStorage implements IStorage {
     const result = await query
       .orderBy(desc(voiceCalls.createdAt))
       .limit(filters?.limit || 50);
+
 
     return result.map(row => ({
       ...row,
