@@ -1206,8 +1206,7 @@ export default function ActionCentre() {
   // Payment Plan creation mutation
   const createPaymentPlanMutation = useMutation({
     mutationFn: async (paymentPlanData: any) => {
-      const response = await apiRequest('POST', '/api/payment-plans', paymentPlanData);
-      return response.json();
+      return await apiRequest('POST', '/api/payment-plans', paymentPlanData);
     },
     onSuccess: (data) => {
       toast({
