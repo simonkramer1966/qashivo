@@ -98,6 +98,7 @@ import {
   type InsertBudgetLine,
   type ExchangeRate,
   type InsertExchangeRate,
+  type OutstandingInvoiceSummary,
   actionItems,
   actionLogs,
   paymentPromises,
@@ -2322,6 +2323,50 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(invoices.createdAt));
     
     return result;
+  }
+
+  // Get outstanding invoices for a specific contact (for payment plan creation)
+  async getOutstandingInvoicesByContact(tenantId: string, contactId: string): Promise<OutstandingInvoiceSummary[]> {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const result = await db
+      .select({
+        id: invoices.id,
+        invoiceNumber: invoices.invoiceNumber,
+        amount: invoices.amount,
+        dueDate: invoices.dueDate,
+        contactId: invoices.contactId,
+        contactName: contacts.name,
+      })
+      .from(invoices)
+      .innerJoin(contacts, eq(invoices.contactId, contacts.id))
+      .where(
+        and(
+          eq(invoices.tenantId, tenantId),
+          eq(invoices.contactId, contactId),
+          ne(invoices.status, 'paid'),
+          ne(invoices.status, 'cancelled'),
+          eq(invoices.isOnHold, false)
+        )
+      )
+      .orderBy(invoices.dueDate);
+
+    // Calculate days past due and return formatted results
+    return result.map(invoice => {
+      const dueDate = new Date(invoice.dueDate);
+      const daysPastDue = Math.max(0, Math.ceil((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24)));
+      
+      return {
+        id: invoice.id,
+        invoiceNumber: invoice.invoiceNumber,
+        amount: invoice.amount,
+        dueDate: invoice.dueDate.toISOString().split('T')[0],
+        contactId: invoice.contactId,
+        contactName: invoice.contactName,
+        daysPastDue
+      };
+    });
   }
 
   async getInvoiceHealthScore(invoiceId: string, tenantId: string): Promise<InvoiceHealthScore | undefined> {

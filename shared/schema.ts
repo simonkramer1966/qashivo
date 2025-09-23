@@ -1340,6 +1340,19 @@ export const insertInvoiceSchema = createInsertSchema(invoices).omit({
   updatedAt: true,
 });
 
+// Outstanding invoice summary for payment plan selection
+export const outstandingInvoiceSummarySchema = z.object({
+  id: z.string(),
+  invoiceNumber: z.string(),
+  amount: z.string(), // Decimal as string for precision
+  dueDate: z.string(), // ISO date string
+  contactId: z.string(),
+  contactName: z.string(),
+  daysPastDue: z.number(),
+});
+
+export type OutstandingInvoiceSummary = z.infer<typeof outstandingInvoiceSummarySchema>;
+
 export const insertCachedXeroInvoiceSchema = createInsertSchema(cachedXeroInvoices).omit({
   id: true,
   createdAt: true,

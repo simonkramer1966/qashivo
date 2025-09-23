@@ -1026,6 +1026,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get outstanding invoices for a specific contact (for payment plan creation)
+  app.get("/api/invoices/outstanding/:contactId", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { contactId } = req.params;
+      
+      // Get outstanding invoices for the specific contact
+      const outstandingInvoices = await storage.getOutstandingInvoicesByContact(user.tenantId, contactId);
+      
+      res.json(outstandingInvoices);
+    } catch (error) {
+      console.error("Error fetching outstanding invoices for contact:", error);
+      res.status(500).json({ message: "Failed to fetch outstanding invoices", error: error instanceof Error ? error.message : 'Unknown error' });
+    }
+  });
+
   app.post("/api/invoices", isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.claims.sub);
