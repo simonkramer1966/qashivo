@@ -1533,14 +1533,14 @@ export default function Invoices() {
                           </span>
                         </span>
                         <span className="font-medium text-[#17B6C3]">
-                          £{payment.amount.toFixed(2)}
+                          £{payment.amount.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </span>
                       </div>
                     ))}
                     <div className="border-t border-gray-300 pt-2 mt-3 bg-white p-2 rounded">
                       <div className="flex justify-between items-center font-medium">
                         <span>Total Payment Plan:</span>
-                        <span className="text-lg text-[#17B6C3]">£{schedule.reduce((sum, p) => sum + p.amount, 0).toFixed(2)}</span>
+                        <span className="text-lg text-[#17B6C3]">£{schedule.reduce((sum, p) => sum + p.amount, 0).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                       </div>
                     </div>
                   </div>
