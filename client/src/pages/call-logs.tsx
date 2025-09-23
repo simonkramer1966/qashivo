@@ -301,13 +301,6 @@ export default function CallLogs() {
         
         <main className="p-8">
           <div className="space-y-8">
-            {/* Header */}
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900" data-testid="text-page-title">Call Logs</h1>
-                <p className="text-gray-600 mt-1">Track and analyze voice call outcomes</p>
-              </div>
-            </div>
 
             {/* Filters */}
             <Card className="card-glass" data-testid="card-filters">
