@@ -188,6 +188,63 @@ export default function Invoices() {
 
   const validationErrors = validateForm();
 
+  // Payment Plan Creation Mutation
+  const createPaymentPlanMutation = useMutation({
+    mutationFn: async (paymentPlanData: any) => {
+      return await apiRequest("/api/payment-plans", {
+        method: "POST",
+        body: JSON.stringify(paymentPlanData),
+        headers: { "Content-Type": "application/json" }
+      });
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Payment Plan Created",
+        description: `Successfully created payment plan with ${data.schedules?.length || 0} installments for ${data.linkedInvoices} invoice${data.linkedInvoices !== 1 ? 's' : ''}.`
+      });
+      
+      // Reset form and close dialog
+      setSelectedPaymentInvoices(new Map());
+      setInitialPaymentAmount("");
+      setInitialPaymentDate("");
+      setPlanStartDate("");
+      setPaymentFrequency("monthly");
+      setNumRemainingPayments("3");
+      setPaymentPlanNotes("");
+      setShowPaymentPlanDialog(false);
+      
+      // Invalidate and refetch invoices to show updated status
+      queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
+    },
+    onError: (error: any) => {
+      console.error("Payment plan creation error:", error);
+      toast({
+        variant: "destructive",
+        title: "Payment Plan Creation Failed",
+        description: error.message || "Unable to create payment plan. Please try again."
+      });
+    }
+  });
+
+  const handleCreatePaymentPlan = () => {
+    if (validationErrors.length > 0) return;
+    
+    const selectedInvoiceIds = Array.from(selectedPaymentInvoices.keys());
+    
+    const paymentPlanData = {
+      invoiceIds: selectedInvoiceIds,
+      totalAmount: totalSelectedAmount.toString(),
+      initialPaymentAmount: initialPaymentAmount || "0",
+      initialPaymentDate: initialPaymentDate ? new Date(initialPaymentDate).toISOString() : null,
+      planStartDate: planStartDate ? new Date(planStartDate).toISOString() : null,
+      paymentFrequency,
+      numberOfPayments: parseInt(numRemainingPayments || "3"),
+      notes: paymentPlanNotes || ""
+    };
+    
+    createPaymentPlanMutation.mutate(paymentPlanData);
+  };
+
   const calculatePaymentSchedule = () => {
     const initialAmount = Number(initialPaymentAmount || 0);
     const remainingBalance = totalSelectedAmount - initialAmount;
@@ -1598,9 +1655,18 @@ export default function Invoices() {
               </Button>
               <Button 
                 className="bg-[#17B6C3] hover:bg-[#1396A1] text-white"
-                disabled={validationErrors.length > 0}
+                disabled={validationErrors.length > 0 || createPaymentPlanMutation.isPending}
+                onClick={handleCreatePaymentPlan}
+                data-testid="button-create-payment-plan"
               >
-                Create Payment Plan ({selectedPaymentInvoices.size} invoice{selectedPaymentInvoices.size !== 1 ? 's' : ''})
+                {createPaymentPlanMutation.isPending ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Creating Plan...
+                  </>
+                ) : (
+                  `Create Payment Plan (${selectedPaymentInvoices.size} invoice${selectedPaymentInvoices.size !== 1 ? 's' : ''})`
+                )}
               </Button>
             </div>
           </div>
