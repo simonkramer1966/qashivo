@@ -2807,7 +2807,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Build filters object
       const filters: any = {};
       if (contactId) filters.contactId = contactId as string;
-      if (status) filters.status = status as string;
+      if (status && status !== 'all') filters.status = status as string;
       if (limit) filters.limit = parseInt(limit as string, 10);
 
       // Get voice calls with filters
