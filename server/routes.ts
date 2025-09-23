@@ -2481,6 +2481,152 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Payment Plan API endpoints
+  app.post("/api/payment-plans", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      // Parse and validate the payment plan data
+      const { 
+        invoiceIds, 
+        totalAmount, 
+        initialPaymentAmount = "0", 
+        initialPaymentDate, 
+        planStartDate, 
+        paymentFrequency, 
+        numberOfPayments, 
+        notes 
+      } = req.body;
+
+      // Validate required fields
+      if (!invoiceIds || !Array.isArray(invoiceIds) || invoiceIds.length === 0) {
+        return res.status(400).json({ message: "At least one invoice must be selected" });
+      }
+      if (!totalAmount || !planStartDate || !paymentFrequency || !numberOfPayments) {
+        return res.status(400).json({ message: "Missing required payment plan data" });
+      }
+
+      // Get the first invoice to extract contact info
+      const firstInvoice = await storage.getInvoice(invoiceIds[0], user.tenantId);
+      if (!firstInvoice) {
+        return res.status(400).json({ message: "Invalid invoice ID" });
+      }
+
+      // Create the payment plan
+      const paymentPlanData = {
+        tenantId: user.tenantId,
+        contactId: firstInvoice.contactId,
+        totalAmount,
+        initialPaymentAmount,
+        planStartDate: new Date(planStartDate),
+        initialPaymentDate: initialPaymentDate ? new Date(initialPaymentDate) : undefined,
+        paymentFrequency,
+        numberOfPayments: parseInt(numberOfPayments),
+        notes,
+        createdByUserId: user.id,
+      };
+
+      const paymentPlan = await storage.createPaymentPlan(paymentPlanData);
+
+      // Generate payment schedules
+      const schedules = [];
+      const remainingAmount = parseFloat(totalAmount) - parseFloat(initialPaymentAmount || "0");
+      const installmentAmount = remainingAmount / numberOfPayments;
+      
+      let currentDate = new Date(planStartDate);
+      
+      for (let i = 1; i <= numberOfPayments; i++) {
+        // Calculate next payment date based on frequency
+        if (i > 1) {
+          switch (paymentFrequency) {
+            case 'weekly':
+              currentDate.setDate(currentDate.getDate() + 7);
+              break;
+            case 'monthly':
+              currentDate.setMonth(currentDate.getMonth() + 1);
+              break;
+            case 'quarterly':
+              currentDate.setMonth(currentDate.getMonth() + 3);
+              break;
+          }
+        }
+
+        const scheduleData = {
+          paymentPlanId: paymentPlan.id,
+          paymentNumber: i,
+          dueDate: new Date(currentDate),
+          amount: installmentAmount.toFixed(2),
+        };
+
+        const schedule = await storage.createPaymentPlanSchedule(scheduleData);
+        schedules.push(schedule);
+      }
+
+      // Link invoices to payment plan
+      await storage.linkInvoicesToPaymentPlan(paymentPlan.id, invoiceIds, user.id);
+
+      // Return the complete payment plan with schedules
+      res.status(201).json({
+        paymentPlan,
+        schedules,
+        linkedInvoices: invoiceIds.length,
+      });
+
+    } catch (error) {
+      console.error("Error creating payment plan:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid payment plan data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create payment plan", error: error instanceof Error ? error.message : "Unknown error" });
+    }
+  });
+
+  app.get("/api/payment-plans", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { status, contactId } = req.query;
+      const filters: { status?: string; contactId?: string } = {};
+      if (status) filters.status = status as string;
+      if (contactId) filters.contactId = contactId as string;
+
+      const paymentPlans = await storage.getPaymentPlans(user.tenantId, filters);
+      res.json(paymentPlans);
+
+    } catch (error) {
+      console.error("Error fetching payment plans:", error);
+      res.status(500).json({ message: "Failed to fetch payment plans" });
+    }
+  });
+
+  app.get("/api/payment-plans/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { id } = req.params;
+      const paymentPlan = await storage.getPaymentPlanWithDetails(id, user.tenantId);
+      
+      if (!paymentPlan) {
+        return res.status(404).json({ message: "Payment plan not found" });
+      }
+
+      res.json(paymentPlan);
+
+    } catch (error) {
+      console.error("Error fetching payment plan:", error);
+      res.status(500).json({ message: "Failed to fetch payment plan" });
+    }
+  });
+
   // Bulk Operations
   app.post("/api/action-items/bulk/complete", isAuthenticated, async (req: any, res) => {
     try {
