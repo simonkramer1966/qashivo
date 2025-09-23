@@ -1951,6 +1951,14 @@ export default function ActionCentre() {
                                 isFocused ? 'ring-2 ring-blue-300' : ''
                               }`}
                               onClick={(e) => {
+                                console.debug('Table Row Clicked - Action Data Check:', {
+                                  id: action?.id,
+                                  contactId: action?.contactId,
+                                  contactName: action?.contactName,
+                                  invoiceId: action?.invoiceId,
+                                  type: typeof action,
+                                  fullAction: action
+                                });
                                 handleSelectItem(action.id, index, e);
                                 setSelectedAction(action);
                               }}
@@ -2216,15 +2224,22 @@ export default function ActionCentre() {
                                   <DropdownMenuItem 
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      console.debug('Payment Plan Menu Clicked - Action Data:', {
+                                      console.debug('=== PAYMENT PLAN MENU CLICKED ===');
+                                      console.debug('Action Data:', {
                                         id: action?.id,
                                         contactId: action?.contactId,
                                         contactName: action?.contactName,
                                         invoiceId: action?.invoiceId,
+                                        type: typeof action,
+                                        isNull: action === null,
+                                        isUndefined: action === undefined,
                                         fullAction: action
                                       });
+                                      console.debug('About to call setPaymentPlanAction with:', action);
                                       setPaymentPlanAction(action);
+                                      console.debug('About to call setShowPaymentPlanDialog(true)');
                                       setShowPaymentPlanDialog(true);
+                                      console.debug('=== PAYMENT PLAN MENU CLICKED END ===');
                                     }}
                                     data-testid={`menu-payment-plan-${action.id}`}
                                   >
@@ -3080,6 +3095,12 @@ export default function ActionCentre() {
 
       {/* Payment Plan Dialog */}
       <Dialog open={showPaymentPlanDialog} onOpenChange={(open) => {
+        console.debug('Payment Plan Dialog State Change:', {
+          open,
+          paymentPlanAction,
+          paymentPlanContactId,
+          showPaymentPlanDialog
+        });
         if (!open) {
           setShowPaymentPlanDialog(false);
           setPaymentPlanAction(null);
