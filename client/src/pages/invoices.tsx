@@ -82,6 +82,33 @@ export default function Invoices() {
   const [paymentFrequency, setPaymentFrequency] = useState("monthly");
   const [viewInvoice, setViewInvoice] = useState<any>(null);
 
+  // Hook for fetching outstanding invoices for a contact
+  const useOutstandingInvoices = (contactId: string | null) => {
+    return useQuery({
+      queryKey: ["/api/invoices/outstanding", contactId],
+      enabled: !!contactId,
+      staleTime: 5 * 60 * 1000, // 5 minutes
+    });
+  };
+
+  // State for outstanding invoices selection in payment plan
+  const [selectedPaymentInvoices, setSelectedPaymentInvoices] = useState<Map<string, any>>(new Map());
+  const [planStartDate, setPlanStartDate] = useState("");
+  
+  // Fetch outstanding invoices when dialog opens
+  const { data: outstandingInvoices = [], isLoading: outstandingLoading } = useOutstandingInvoices(
+    paymentPlanInvoice?.contactId || null
+  );
+
+  // Calculate total from selected payment invoices
+  const totalSelectedAmount = useMemo(() => {
+    let total = 0;
+    for (const invoice of selectedPaymentInvoices.values()) {
+      total += Number(invoice.amount || 0);
+    }
+    return total;
+  }, [selectedPaymentInvoices]);
+
   // Helper functions for payment plan calculations
   const calculatePaymentDates = (startDate: string, frequency: string, numPayments: number) => {
     if (!startDate) return [];
@@ -123,9 +150,8 @@ export default function Invoices() {
   };
 
   const calculatePaymentSchedule = () => {
-    const invoiceAmount = Number(paymentPlanInvoice?.amount || 0);
     const initialAmount = Number(initialPaymentAmount || 0);
-    const remainingBalance = invoiceAmount - initialAmount;
+    const remainingBalance = totalSelectedAmount - initialAmount;
     const numPayments = parseInt(numRemainingPayments || "1");
     
     const schedule = [];
@@ -139,16 +165,10 @@ export default function Invoices() {
       });
     }
     
-    // Add remaining payments
-    if (remainingBalance > 0 && numPayments > 0 && initialPaymentDate) {
+    // Add remaining payments using plan start date
+    if (remainingBalance > 0 && numPayments > 0 && planStartDate) {
       const paymentAmount = remainingBalance / numPayments;
-      const startDate = initialAmount > 0 ? 
-        new Date(new Date(initialPaymentDate).getTime() + 
-          (paymentFrequency === 'weekly' ? 7 : paymentFrequency === 'quarterly' ? 90 : 30) * 24 * 60 * 60 * 1000)
-          .toISOString().split('T')[0] :
-        initialPaymentDate;
-      
-      const paymentDates = calculatePaymentDates(startDate, paymentFrequency, numPayments);
+      const paymentDates = calculatePaymentDates(planStartDate, paymentFrequency, numPayments);
       
       paymentDates.forEach((date, index) => {
         schedule.push({
@@ -163,6 +183,29 @@ export default function Invoices() {
     
     return schedule;
   };
+
+  // Effect to pre-select the triggering invoice when dialog opens
+  useEffect(() => {
+    if (showPaymentPlanDialog && paymentPlanInvoice) {
+      // Pre-select the triggering invoice
+      const newSelection = new Map();
+      newSelection.set(paymentPlanInvoice.id, paymentPlanInvoice);
+      setSelectedPaymentInvoices(newSelection);
+      
+      // Set default plan start date to tomorrow
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      setPlanStartDate(tomorrow.toISOString().split('T')[0]);
+    } else if (!showPaymentPlanDialog) {
+      // Reset state when dialog closes
+      setSelectedPaymentInvoices(new Map());
+      setInitialPaymentAmount("");
+      setInitialPaymentDate("");
+      setNumRemainingPayments("3");
+      setPaymentFrequency("monthly");
+      setPlanStartDate("");
+    }
+  }, [showPaymentPlanDialog, paymentPlanInvoice]);
   
   // Pagination state for invoices
   const [invoicesCurrentPage, setInvoicesCurrentPage] = useState(1);
@@ -1279,28 +1322,99 @@ export default function Invoices() {
       </Dialog>
 
       {/* Payment Plan Dialog */}
-      <Dialog open={showPaymentPlanDialog} onOpenChange={(open) => {
-        setShowPaymentPlanDialog(open);
-        if (!open) {
-          // Reset form when dialog closes
-          setInitialPaymentAmount("");
-          setInitialPaymentDate("");
-          setNumRemainingPayments("3");
-          setPaymentFrequency("monthly");
-        }
-      }}>
-        <DialogContent className="max-w-2xl bg-white">
+      <Dialog open={showPaymentPlanDialog} onOpenChange={setShowPaymentPlanDialog}>
+        <DialogContent className="max-w-4xl bg-white max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Setup Payment Plan</DialogTitle>
             <DialogDescription>
-              Create a payment plan for invoice {paymentPlanInvoice?.invoiceNumber} (£{Number(paymentPlanInvoice?.amount || 0).toLocaleString()})
+              Create a flexible payment plan with multiple invoices
             </DialogDescription>
           </DialogHeader>
           
-          <div className="space-y-4">
-            {/* Initial Payment Section */}
-            <div className="border-b border-gray-200 pb-4">
-              <h4 className="font-medium mb-3 text-gray-900">Initial Payment</h4>
+          <div className="space-y-6">
+            {/* Section 1: Invoice Selection */}
+            <div className="border-b border-gray-200 pb-6">
+              <h4 className="font-medium mb-4 text-gray-900">Select Invoices for Payment Plan</h4>
+              
+              {outstandingLoading ? (
+                <div className="text-center py-8">
+                  <div className="animate-pulse">
+                    <div className="h-4 bg-gray-200 rounded w-1/4 mx-auto mb-2"></div>
+                    <div className="h-4 bg-gray-200 rounded w-1/2 mx-auto"></div>
+                  </div>
+                  <p className="text-sm text-gray-500 mt-2">Loading outstanding invoices...</p>
+                </div>
+              ) : (
+                <>
+                  <div className="bg-blue-50 p-4 rounded-lg mb-4">
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <p className="text-sm text-gray-700">
+                          Customer: <span className="font-medium">{outstandingInvoices[0]?.contactName || "Unknown"}</span>
+                        </p>
+                        <p className="text-sm text-gray-600">
+                          {selectedPaymentInvoices.size} of {outstandingInvoices.length} invoices selected
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm text-gray-600">Selected Total</p>
+                        <p className="text-xl font-bold text-[#17B6C3]">
+                          £{totalSelectedAmount.toLocaleString()}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="border border-gray-200 rounded-lg overflow-hidden">
+                    <table className="w-full">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="text-left p-3 text-sm font-medium text-gray-700">Select</th>
+                          <th className="text-left p-3 text-sm font-medium text-gray-700">Invoice #</th>
+                          <th className="text-left p-3 text-sm font-medium text-gray-700">Amount</th>
+                          <th className="text-left p-3 text-sm font-medium text-gray-700">Due Date</th>
+                          <th className="text-left p-3 text-sm font-medium text-gray-700">Days Past Due</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {outstandingInvoices.map((invoice: any) => (
+                          <tr key={invoice.id} className="border-t border-gray-200 hover:bg-gray-50">
+                            <td className="p-3">
+                              <Checkbox
+                                checked={selectedPaymentInvoices.has(invoice.id)}
+                                onCheckedChange={(checked) => {
+                                  const newSelection = new Map(selectedPaymentInvoices);
+                                  if (checked) {
+                                    newSelection.set(invoice.id, invoice);
+                                  } else {
+                                    newSelection.delete(invoice.id);
+                                  }
+                                  setSelectedPaymentInvoices(newSelection);
+                                }}
+                              />
+                            </td>
+                            <td className="p-3 text-sm font-medium">{invoice.invoiceNumber}</td>
+                            <td className="p-3 text-sm">£{Number(invoice.amount).toLocaleString()}</td>
+                            <td className="p-3 text-sm">{formatDate(invoice.dueDate)}</td>
+                            <td className="p-3 text-sm">
+                              {invoice.daysPastDue > 0 ? (
+                                <span className="text-red-600">{invoice.daysPastDue} days</span>
+                              ) : (
+                                <span className="text-green-600">Current</span>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Section 2: Initial Payment (Optional) */}
+            <div className="border-b border-gray-200 pb-6">
+              <h4 className="font-medium mb-4 text-gray-900">Initial Payment (Optional)</h4>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="text-sm font-medium">Initial Payment Amount (£)</label>
@@ -1309,11 +1423,14 @@ export default function Invoices() {
                     placeholder="0.00"
                     value={initialPaymentAmount}
                     onChange={(e) => setInitialPaymentAmount(e.target.value)}
-                    className="bg-white border-gray-200"
+                    className="bg-white/70 border-gray-200/30"
                     min="0"
-                    max={paymentPlanInvoice?.amount || 0}
+                    max={totalSelectedAmount}
                     step="0.01"
                   />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Optional upfront payment (max: £{totalSelectedAmount.toLocaleString()})
+                  </p>
                 </div>
                 <div>
                   <label className="text-sm font-medium">Initial Payment Date</label>
@@ -1321,19 +1438,19 @@ export default function Invoices() {
                     type="date" 
                     value={initialPaymentDate}
                     onChange={(e) => setInitialPaymentDate(e.target.value)}
-                    className="bg-white border-gray-200" 
+                    className="bg-white/70 border-gray-200/30" 
                   />
                 </div>
               </div>
             </div>
 
-            {/* Remaining Balance Section */}
-            <div className="border-b border-gray-200 pb-4">
-              <h4 className="font-medium mb-3 text-gray-900">Remaining Balance</h4>
-              <div className="bg-blue-50 p-3 rounded-lg mb-3">
+            {/* Section 3: Installment Plan */}
+            <div className="border-b border-gray-200 pb-6">
+              <h4 className="font-medium mb-4 text-gray-900">Installment Plan</h4>
+              <div className="bg-blue-50 p-3 rounded-lg mb-4">
                 <div className="flex justify-between items-center text-sm">
-                  <span>Total Invoice Amount:</span>
-                  <span className="font-medium">£{Number(paymentPlanInvoice?.amount || 0).toLocaleString()}</span>
+                  <span>Total Selected:</span>
+                  <span className="font-medium">£{totalSelectedAmount.toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between items-center text-sm">
                   <span>Initial Payment:</span>
@@ -1341,18 +1458,27 @@ export default function Invoices() {
                 </div>
                 <div className="flex justify-between items-center text-sm font-medium pt-2 border-t border-blue-200 mt-2">
                   <span>Remaining Balance:</span>
-                  <span>£{Math.max(0, Number(paymentPlanInvoice?.amount || 0) - Number(initialPaymentAmount || 0)).toLocaleString()}</span>
+                  <span>£{Math.max(0, totalSelectedAmount - Number(initialPaymentAmount || 0)).toLocaleString()}</span>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-3 gap-4">
                 <div>
-                  <label className="text-sm font-medium">Number of Remaining Payments</label>
+                  <label className="text-sm font-medium">Plan Start Date</label>
+                  <Input 
+                    type="date" 
+                    value={planStartDate}
+                    onChange={(e) => setPlanStartDate(e.target.value)}
+                    className="bg-white/70 border-gray-200/30" 
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Number of Payments</label>
                   <Input 
                     type="number"
                     value={numRemainingPayments}
                     onChange={(e) => setNumRemainingPayments(e.target.value)}
-                    className="bg-white border-gray-200"
+                    className="bg-white/70 border-gray-200/30"
                     min="1"
                     placeholder="e.g. 3"
                   />
@@ -1373,15 +1499,15 @@ export default function Invoices() {
               </div>
             </div>
             
-            {/* Payment Schedule Preview */}
+            {/* Section 4: Payment Schedule Preview */}
             <div className="bg-gray-50 p-4 rounded-lg">
               <h4 className="font-medium mb-3">Payment Schedule Preview</h4>
               {(() => {
                 const schedule = calculatePaymentSchedule();
-                if (schedule.length === 0) {
+                if (schedule.length === 0 || selectedPaymentInvoices.size === 0) {
                   return (
                     <div className="text-sm text-gray-500 text-center py-4">
-                      Enter payment details above to see schedule preview
+                      Select invoices and configure payment details to see schedule preview
                     </div>
                   );
                 }
@@ -1389,22 +1515,22 @@ export default function Invoices() {
                 return (
                   <div className="space-y-2 text-sm">
                     {schedule.map((payment, index) => (
-                      <div key={index} className="flex justify-between items-center">
+                      <div key={index} className="flex justify-between items-center p-2 bg-white rounded border">
                         <span className="flex items-center gap-2">
                           <span className="font-medium">{payment.label}:</span>
                           <span className="text-gray-600">
                             {formatDateForDisplay(payment.date)}
                           </span>
                         </span>
-                        <span className="font-medium">
+                        <span className="font-medium text-[#17B6C3]">
                           £{payment.amount.toFixed(2)}
                         </span>
                       </div>
                     ))}
-                    <div className="border-t border-gray-300 pt-2 mt-3">
+                    <div className="border-t border-gray-300 pt-2 mt-3 bg-white p-2 rounded">
                       <div className="flex justify-between items-center font-medium">
-                        <span>Total:</span>
-                        <span>£{schedule.reduce((sum, p) => sum + p.amount, 0).toFixed(2)}</span>
+                        <span>Total Payment Plan:</span>
+                        <span className="text-lg text-[#17B6C3]">£{schedule.reduce((sum, p) => sum + p.amount, 0).toFixed(2)}</span>
                       </div>
                     </div>
                   </div>
@@ -1412,15 +1538,15 @@ export default function Invoices() {
               })()}
             </div>
             
-            <div className="flex justify-end gap-2">
+            <div className="flex justify-end gap-2 pt-4 border-t border-gray-200">
               <Button variant="outline" onClick={() => setShowPaymentPlanDialog(false)}>
                 Cancel
               </Button>
               <Button 
                 className="bg-[#17B6C3] hover:bg-[#1396A1] text-white"
-                disabled={!initialPaymentDate || Number(paymentPlanInvoice?.amount || 0) <= 0}
+                disabled={selectedPaymentInvoices.size === 0 || !planStartDate}
               >
-                Create Payment Plan
+                Create Payment Plan ({selectedPaymentInvoices.size} invoice{selectedPaymentInvoices.size !== 1 ? 's' : ''})
               </Button>
             </div>
           </div>
