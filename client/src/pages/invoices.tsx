@@ -159,6 +159,35 @@ export default function Invoices() {
     });
   };
 
+  // Form validation
+  const validateForm = () => {
+    const errors: string[] = [];
+    
+    // Check if any invoices are selected
+    if (selectedPaymentInvoices.size === 0) {
+      errors.push("Please select at least one invoice");
+    }
+    
+    // Check if plan start date is provided
+    if (!planStartDate) {
+      errors.push("Please provide a plan start date");
+    }
+    
+    // Check if initial payment date is after plan start date
+    if (initialPaymentDate && planStartDate && initialPaymentDate > planStartDate) {
+      errors.push("Initial payment date cannot be after the plan start date");
+    }
+    
+    // Check if initial payment amount exceeds total
+    if (Number(initialPaymentAmount || 0) > totalSelectedAmount) {
+      errors.push("Initial payment amount cannot exceed total invoice amount");
+    }
+    
+    return errors;
+  };
+
+  const validationErrors = validateForm();
+
   const calculatePaymentSchedule = () => {
     const initialAmount = Number(initialPaymentAmount || 0);
     const remainingBalance = totalSelectedAmount - initialAmount;
@@ -1548,13 +1577,28 @@ export default function Invoices() {
               })()}
             </div>
             
+            {/* Validation Errors */}
+            {validationErrors.length > 0 && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                <h4 className="text-sm font-medium text-red-800 mb-2">Please fix the following issues:</h4>
+                <ul className="text-sm text-red-700 space-y-1">
+                  {validationErrors.map((error, index) => (
+                    <li key={index} className="flex items-start gap-2">
+                      <span className="text-red-500 mt-0.5">•</span>
+                      <span>{error}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            
             <div className="flex justify-end gap-2 pt-4 border-t border-gray-200">
               <Button variant="outline" onClick={() => setShowPaymentPlanDialog(false)}>
                 Cancel
               </Button>
               <Button 
                 className="bg-[#17B6C3] hover:bg-[#1396A1] text-white"
-                disabled={selectedPaymentInvoices.size === 0 || !planStartDate}
+                disabled={validationErrors.length > 0}
               >
                 Create Payment Plan ({selectedPaymentInvoices.size} invoice{selectedPaymentInvoices.size !== 1 ? 's' : ''})
               </Button>
