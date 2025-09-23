@@ -48,7 +48,7 @@ const navigationItems = [
   { name: "Action Centre", href: "/action-centre", icon: Target },
   { name: "Customers", href: "/customers", icon: Users },
   { name: "Invoices", href: "/invoices", icon: FileText },
-  { name: "Invoice Health", href: "/health-dashboard", icon: Activity },
+  // { name: "Invoice Health", href: "/health-dashboard", icon: Activity },
   // { name: "Invoices - Xero", href: "/invoices-xero", icon: ExternalLink },
   { name: "Workflows", href: "/workflows", icon: Workflow },
   { name: "AI Suggestions", href: "/ai-suggestions", icon: Bot },
