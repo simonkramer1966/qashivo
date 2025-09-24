@@ -1056,8 +1056,11 @@ export default function Invoices() {
                             </div>
                           </td>
                           <td className="py-4" data-testid={`cell-amount-due-date-${invoice.id}`}>
-                            <div className="font-medium text-foreground" data-testid={`text-amount-${invoice.id}`}>
+                            <div className="font-medium text-foreground flex items-center gap-2" data-testid={`text-amount-${invoice.id}`}>
                               £{Number(invoice.amount).toLocaleString()}
+                              {(invoice.paymentPlanId || invoice.status === 'payment_plan') && (
+                                <Calendar className="h-4 w-4 text-green-600" data-testid={`icon-payment-plan-${invoice.id}`} />
+                              )}
                             </div>
                             <div className="text-xs text-muted-foreground" data-testid={`text-due-date-${invoice.id}`}>
                               {formatDate(invoice.dueDate)}
@@ -1070,12 +1073,6 @@ export default function Invoices() {
                                 </div>
                               ) : null;
                             })()}
-                            {(invoice.paymentPlanId || invoice.status === 'payment_plan') && (
-                              <div className="inline-flex items-center gap-1 mt-1 px-2 py-1 rounded-md text-xs font-medium text-green-600 bg-green-50" data-testid={`indicator-payment-plan-${invoice.id}`}>
-                                <Calendar className="h-3 w-3" />
-                                Payment Plan
-                              </div>
-                            )}
                           </td>
                           <td className="py-4" data-testid={`cell-category-prob-${invoice.id}`}>
                             <div>{getOverdueCategoryBadge(invoice)}</div>
