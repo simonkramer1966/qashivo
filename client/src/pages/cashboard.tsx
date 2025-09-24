@@ -571,6 +571,13 @@ export default function Cashboard() {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-4">
                 {[
                   { 
+                    label: 'Current', 
+                    amount: 85000, 
+                    count: 42, 
+                    color: 'text-[#17B6C3]',
+                    description: 'Not yet due'
+                  },
+                  { 
                     label: 'Due', 
                     amount: 60457, 
                     count: 18, 
@@ -631,7 +638,7 @@ export default function Cashboard() {
                   >
                     <CardContent className="p-4">
                       <div className="text-center">
-                        <div className={`text-2xl font-bold ${category.color} mb-1`} data-testid={`text-aging-amount-${category.label.toLowerCase()}`}>
+                        <div className={`text-lg font-bold ${category.color} mb-1`} data-testid={`text-aging-amount-${category.label.toLowerCase()}`}>
                           {formatCurrency(category.amount)}
                         </div>
                         <div className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-1" data-testid={`text-aging-label-${category.label.toLowerCase()}`}>
