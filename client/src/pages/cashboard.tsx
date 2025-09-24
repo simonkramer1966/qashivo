@@ -572,6 +572,83 @@ export default function Cashboard() {
               </Card>
             </div>
 
+            {/* Aging Analysis Cards */}
+            <div className="mb-6 sm:mb-8">
+              <h2 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4 text-slate-900 dark:text-slate-100">Invoice Aging Analysis</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                {[
+                  { 
+                    label: 'Soon', 
+                    amount: 60457, 
+                    count: 18, 
+                    color: 'text-blue-600',
+                    bgColor: 'bg-blue-50 dark:bg-blue-900/20',
+                    borderColor: 'border-blue-200 dark:border-blue-800',
+                    description: 'Due within 7 days'
+                  },
+                  { 
+                    label: 'Recent', 
+                    amount: 74000, 
+                    count: 50, 
+                    color: 'text-amber-600',
+                    bgColor: 'bg-amber-50 dark:bg-amber-900/20',
+                    borderColor: 'border-amber-200 dark:border-amber-800',
+                    description: '8-30 days overdue'
+                  },
+                  { 
+                    label: 'Overdue', 
+                    amount: overdueAmount || 125000, 
+                    count: metrics?.overdueCount || 127, 
+                    color: 'text-red-600',
+                    bgColor: 'bg-red-50 dark:bg-red-900/20',
+                    borderColor: 'border-red-200 dark:border-red-800',
+                    description: '31-60 days overdue'
+                  },
+                  { 
+                    label: 'Serious', 
+                    amount: 89500, 
+                    count: 32, 
+                    color: 'text-orange-600',
+                    bgColor: 'bg-orange-50 dark:bg-orange-900/20',
+                    borderColor: 'border-orange-200 dark:border-orange-800',
+                    description: '61-90 days overdue'
+                  },
+                  { 
+                    label: 'Escalate', 
+                    amount: 156000, 
+                    count: metrics?.escalatedCount || 45, 
+                    color: 'text-purple-600',
+                    bgColor: 'bg-purple-50 dark:bg-purple-900/20',
+                    borderColor: 'border-purple-200 dark:border-purple-800',
+                    description: '90+ days overdue'
+                  }
+                ].map((category) => (
+                  <Card 
+                    key={category.label} 
+                    className={`glass-card hover:shadow-lg transition-all duration-200 hover:scale-105 ${category.bgColor} ${category.borderColor} border`}
+                    data-testid={`card-aging-${category.label.toLowerCase()}`}
+                  >
+                    <CardContent className="p-4">
+                      <div className="text-center">
+                        <div className={`text-2xl font-bold ${category.color} mb-1`} data-testid={`text-aging-amount-${category.label.toLowerCase()}`}>
+                          {formatCurrency(category.amount)}
+                        </div>
+                        <div className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-1" data-testid={`text-aging-label-${category.label.toLowerCase()}`}>
+                          {category.label.toUpperCase()}
+                        </div>
+                        <div className={`text-xs font-medium ${category.color} mb-2`} data-testid={`text-aging-count-${category.label.toLowerCase()}`}>
+                          {category.count} invoices
+                        </div>
+                        <div className="text-xs text-slate-600 dark:text-slate-400" data-testid={`text-aging-description-${category.label.toLowerCase()}`}>
+                          {category.description}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+
             {/* Priority Actions Row */}
             <div className="mb-6 sm:mb-8">
               <h2 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4 text-slate-900 dark:text-slate-100">Priority Actions</h2>
