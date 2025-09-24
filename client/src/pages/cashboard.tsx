@@ -698,6 +698,9 @@ export default function Cashboard() {
                         {firstRowCards.map(renderCard)}
                       </div>
                       
+                      {/* Exceptions Heading */}
+                      <h3 className="text-md sm:text-lg font-semibold mb-3 text-slate-900 dark:text-slate-100">Exceptions</h3>
+                      
                       {/* Second Row: PYMT PLANS to Legal (3 wider cards) */}
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                         {secondRowCards.map(renderCard)}
