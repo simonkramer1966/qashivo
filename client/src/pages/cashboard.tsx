@@ -655,7 +655,15 @@ export default function Cashboard() {
                   // Calculate total amount for percentage calculations (only main aging categories)
                   const totalAmountAging = firstRowCards.reduce((sum, cat) => sum + cat.amount, 0);
 
-                  const renderCard = (category) => {
+                  const renderCard = (category: {
+                    label: string;
+                    amount: number;
+                    count: number;
+                    color: string;
+                    description: string;
+                    trend: string;
+                    trendColor: string;
+                  }) => {
                     const percentage = Math.round((category.amount / totalAmountAging) * 100);
                     const isException = ['PYMT PLANS', 'Disputes', 'Legal'].includes(category.label);
                     
