@@ -1843,9 +1843,9 @@ export default function ActionCentre() {
             </div>
 
             {/* Tab Navigation */}
-            <div className="border-b border-white/50 bg-white/40 backdrop-blur-sm px-4">
-              <div className="flex items-center justify-between">
-                <div className="flex space-x-1">
+            <div className="border-b border-white/50 bg-white/40 backdrop-blur-sm">
+              <div className="flex items-center">
+                <div className="flex flex-1">
                   {tabOptions.map((tabOption) => (
                     <button
                       key={tabOption.id}
@@ -1854,14 +1854,14 @@ export default function ActionCentre() {
                         setCurrentPage(1);
                         setSelectedAction(null);
                       }}
-                      className={`px-4 py-3 text-sm font-medium rounded-t-lg transition-all duration-200 ${
+                      className={`flex-1 px-4 py-3 text-sm font-medium transition-all duration-200 border-b-2 ${
                         selectedTab === tabOption.id
-                          ? 'bg-white text-[#17B6C3] border-b-2 border-[#17B6C3]'
-                          : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                          ? 'bg-white text-[#17B6C3] border-[#17B6C3]'
+                          : 'text-slate-600 hover:text-slate-900 hover:bg-white/60 border-transparent'
                       }`}
                       data-testid={`tab-${tabOption.id}`}
                     >
-                      <div className="flex items-center space-x-2">
+                      <div className="flex items-center justify-center space-x-2">
                         <span>{tabOption.label}</span>
                         {tabOption.count > 0 && (
                           <Badge 
@@ -1877,7 +1877,7 @@ export default function ActionCentre() {
                 </div>
                 
                 {/* Tab Actions */}
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center px-4">
                   <Button 
                     variant="ghost" 
                     size="sm"
