@@ -95,7 +95,7 @@ export default function PaymentPlans() {
 
   // Fetch payment plans
   const { data: paymentPlansResponse, isLoading: plansLoading, error } = useQuery({
-    queryKey: ["/api/payment-plans", { status: statusFilter }],
+    queryKey: ["/api/payment-plans", statusFilter !== "all" ? { status: statusFilter } : {}],
     enabled: !!isAuthenticated && !isLoading,
   }) as { data: PaymentPlan[] | undefined; isLoading: boolean; error: any };
 
