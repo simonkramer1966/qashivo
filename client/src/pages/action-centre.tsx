@@ -1277,20 +1277,18 @@ export default function ActionCentre() {
     setSelectedPaymentInvoices(new Map());
   };
 
-  // Auto-select all available invoices when payment plan dialog opens (like Invoice page)
+  // Auto-select first invoice when payment plan dialog opens
   useEffect(() => {
     if (showPaymentPlanDialog && paymentPlanAction && !contactInvoicesQuery.isLoading) {
       const contactInvoices = (contactInvoicesQuery.data as any[]) || [];
       
       if (contactInvoices.length > 0) {
-        // Auto-select all available invoices
+        // Auto-select only the first invoice (user can add others)
         const newSelection = new Map();
-        contactInvoices.forEach(invoice => {
-          newSelection.set(invoice.id, invoice);
-        });
+        newSelection.set(contactInvoices[0].id, contactInvoices[0]);
         setSelectedPaymentInvoices(newSelection);
         
-        // Set default plan start date to tomorrow (like Invoice page)
+        // Set default plan start date to tomorrow
         const tomorrow = new Date();
         tomorrow.setDate(tomorrow.getDate() + 1);
         setPlanStartDate(tomorrow.toISOString().split('T')[0]);
@@ -3325,7 +3323,26 @@ export default function ActionCentre() {
                         <table className="w-full">
                           <thead className="bg-gray-50">
                             <tr>
-                              <th className="text-left p-3 text-sm font-medium text-gray-700">Select</th>
+                              <th className="text-left p-3 text-sm font-medium text-gray-700">
+                                <div className="flex items-center gap-2">
+                                  <Checkbox
+                                    checked={selectedPaymentInvoices.size === contactInvoices.length}
+                                    onCheckedChange={(checked) => {
+                                      const newSelection = new Map();
+                                      if (checked) {
+                                        // Select all invoices
+                                        contactInvoices.forEach(invoice => {
+                                          newSelection.set(invoice.id, invoice);
+                                        });
+                                      }
+                                      // If unchecked, newSelection stays empty (deselect all)
+                                      setSelectedPaymentInvoices(newSelection);
+                                    }}
+                                    data-testid="checkbox-select-all-invoices"
+                                  />
+                                  <span>Select All</span>
+                                </div>
+                              </th>
                               <th className="text-left p-3 text-sm font-medium text-gray-700">Invoice #</th>
                               <th className="text-left p-3 text-sm font-medium text-gray-700">Amount</th>
                               <th className="text-left p-3 text-sm font-medium text-gray-700">Due Date</th>
