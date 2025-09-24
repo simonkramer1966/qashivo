@@ -1070,6 +1070,12 @@ export default function Invoices() {
                                 </div>
                               ) : null;
                             })()}
+                            {(invoice.paymentPlanId || invoice.status === 'payment_plan') && (
+                              <div className="inline-flex items-center gap-1 mt-1 px-2 py-1 rounded-md text-xs font-medium text-green-600 bg-green-50" data-testid={`indicator-payment-plan-${invoice.id}`}>
+                                <Calendar className="h-3 w-3" />
+                                Payment Plan
+                              </div>
+                            )}
                           </td>
                           <td className="py-4" data-testid={`cell-category-prob-${invoice.id}`}>
                             <div>{getOverdueCategoryBadge(invoice)}</div>
