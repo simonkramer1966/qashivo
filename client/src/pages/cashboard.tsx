@@ -568,7 +568,7 @@ export default function Cashboard() {
 
             {/* Aging Analysis Cards */}
             <div className="mb-6 sm:mb-8">
-              <h2 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4 text-slate-900 dark:text-slate-100">Invoice Ageing Analysis</h2>
+              <h2 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4 text-slate-900 dark:text-slate-100">Invoice Ageing</h2>
               
               {(() => {
                 const agingCategories = [
