@@ -631,23 +631,23 @@ export default function Cashboard() {
                     key={category.label} 
                     className={`glass-card hover:shadow-lg transition-all duration-200 hover:scale-105 ${
                       category.label === 'Payment Plans' ? 'bg-[#17B6C3] border-[#17B6C3] border-2' : 
-                      category.label === 'Disputes' ? 'border-red-800 border-2' : 
+                      category.label === 'Disputes' ? 'bg-red-800 border-red-800 border-2' : 
                       category.label === 'Legal' ? 'border-black border-2' : ''
                     }`}
                     data-testid={`card-aging-${category.label.toLowerCase()}`}
                   >
                     <CardContent className="p-4">
                       <div className="text-center">
-                        <div className={`text-lg font-bold ${category.label === 'Payment Plans' ? 'text-white' : category.color} mb-1`} data-testid={`text-aging-amount-${category.label.toLowerCase()}`}>
+                        <div className={`text-lg font-bold ${category.label === 'Payment Plans' || category.label === 'Disputes' ? 'text-white' : category.color} mb-1`} data-testid={`text-aging-amount-${category.label.toLowerCase()}`}>
                           {formatCurrency(category.amount)}
                         </div>
-                        <div className={`text-sm font-semibold ${category.label === 'Payment Plans' ? 'text-white' : 'text-slate-900 dark:text-slate-100'} mb-1`} data-testid={`text-aging-label-${category.label.toLowerCase()}`}>
+                        <div className={`text-sm font-semibold ${category.label === 'Payment Plans' || category.label === 'Disputes' ? 'text-white' : 'text-slate-900 dark:text-slate-100'} mb-1`} data-testid={`text-aging-label-${category.label.toLowerCase()}`}>
                           {category.label.toUpperCase()}
                         </div>
-                        <div className={`text-xs font-medium ${category.label === 'Payment Plans' ? 'text-white' : category.color} mb-2`} data-testid={`text-aging-count-${category.label.toLowerCase()}`}>
+                        <div className={`text-xs font-medium ${category.label === 'Payment Plans' || category.label === 'Disputes' ? 'text-white' : category.color} mb-2`} data-testid={`text-aging-count-${category.label.toLowerCase()}`}>
                           {category.count} invoices
                         </div>
-                        <div className={`text-xs ${category.label === 'Payment Plans' ? 'text-white/80' : 'text-slate-600 dark:text-slate-400'}`} data-testid={`text-aging-description-${category.label.toLowerCase()}`}>
+                        <div className={`text-xs ${category.label === 'Payment Plans' || category.label === 'Disputes' ? 'text-white/80' : 'text-slate-600 dark:text-slate-400'}`} data-testid={`text-aging-description-${category.label.toLowerCase()}`}>
                           {category.description}
                         </div>
                       </div>
