@@ -498,7 +498,6 @@ export default function Cashboard() {
                         value: eom, 
                         icon: Calendar, 
                         color: 'text-orange-600',
-                        subtitle: 'Payroll Critical',
                         testId: 'eom-position'
                       },
                       { 
