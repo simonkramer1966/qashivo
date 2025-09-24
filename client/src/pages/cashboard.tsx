@@ -575,42 +575,35 @@ export default function Cashboard() {
             {/* Aging Analysis Cards */}
             <div className="mb-6 sm:mb-8">
               <h2 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4 text-slate-900 dark:text-slate-100">Invoice Aging Analysis</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 {[
                   { 
-                    label: 'Soon', 
+                    label: 'Due', 
                     amount: 60457, 
                     count: 18, 
                     color: 'text-[#17B6C3]',
-                    description: 'Due within 7 days'
-                  },
-                  { 
-                    label: 'Recent', 
-                    amount: 74000, 
-                    count: 50, 
-                    color: 'text-[#17B6C3]',
-                    description: '1-8 days overdue'
+                    description: '-7 to 0 days'
                   },
                   { 
                     label: 'Overdue', 
                     amount: overdueAmount || 125000, 
                     count: metrics?.overdueCount || 127, 
                     color: 'text-[#17B6C3]',
-                    description: '31-60 days overdue'
+                    description: '1-30 days overdue'
                   },
                   { 
                     label: 'Serious', 
                     amount: 89500, 
                     count: 32, 
                     color: 'text-[#17B6C3]',
-                    description: '61-90 days overdue'
+                    description: '31-60 days overdue'
                   },
                   { 
                     label: 'Escalate', 
                     amount: 156000, 
                     count: metrics?.escalatedCount || 45, 
                     color: 'text-[#17B6C3]',
-                    description: '90+ days overdue'
+                    description: '60+ days overdue'
                   }
                 ].map((category) => (
                   <Card 

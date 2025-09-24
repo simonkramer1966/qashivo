@@ -4,10 +4,8 @@
  */
 
 export type OverdueCategory = 
-  | 'soon'                 // Due within next 7 days (-7 to -1 days overdue)
-  | 'current'              // Due today (0 days overdue)
-  | 'recent'               // Recently overdue (1-7 days overdue)
-  | 'overdue'              // 8-30 days overdue (standard collection actions)
+  | 'due'                  // Due within next 7 days (-7 to 0 days)
+  | 'overdue'              // 1-30 days overdue (immediate collection actions)
   | 'serious'              // 31-60 days overdue (intensive collection efforts)
   | 'escalation';          // 60+ days overdue (legal/external collection)
 
@@ -16,10 +14,8 @@ export type OverdueCategory =
  * This ensures consistency between client and server-side filtering
  */
 export const CATEGORY_DAY_RANGES: Record<OverdueCategory, [number, number]> = {
-  soon: [-7, -1],         // Due within next 7 days
-  current: [0, 0],        // Due today
-  recent: [1, 7],         // Recently overdue (1-7 days)
-  overdue: [8, 30],       // Standard collection actions (8-30 days)
+  due: [-7, 0],           // Due within next 7 days to today
+  overdue: [1, 30],       // Recently overdue (1-30 days)
   serious: [31, 60],      // Intensive collection efforts (31-60 days)
   escalation: [61, Infinity] // Legal/external collection (60+ days)
 };
@@ -64,7 +60,7 @@ export function categorizeOverdueStatus(daysOverdue: number): OverdueCategory {
   }
   
   // Handle cases where daysOverdue < -7 (invoices due more than 7 days away)
-  return 'current';  // Default for invoices due far in the future
+  return 'due';  // Default for invoices due far in the future
 }
 
 /**
@@ -81,40 +77,26 @@ export function getOverdueCategoryFromDueDate(dueDate: string | Date, currentDat
  * Safe version that handles invalid categories gracefully
  */
 export function getOverdueCategoryInfo(category: OverdueCategory | string, daysOverdue: number = 0): OverdueCategoryInfo {
-  // Handle invalid categories by defaulting to 'current'
-  const validCategories: OverdueCategory[] = ['soon', 'current', 'recent', 'overdue', 'serious', 'escalation'];
+  // Handle invalid categories by defaulting to 'due'
+  const validCategories: OverdueCategory[] = ['due', 'overdue', 'serious', 'escalation'];
   const safeCategory: OverdueCategory = validCategories.includes(category as OverdueCategory) 
     ? (category as OverdueCategory) 
-    : 'current';
+    : 'due';
 
   const categoryMap: Record<OverdueCategory, Omit<OverdueCategoryInfo, 'category' | 'daysOverdue'>> = {
-    soon: {
-      label: 'Soon',
-      priority: 6,
-      color: 'text-yellow-700 dark:text-yellow-400',
-      bgColor: 'bg-yellow-100 dark:bg-yellow-900/20',
-      description: 'Due within next 7 days - proactive outreach recommended'
-    },
-    current: {
-      label: 'Current',
-      priority: 5,
-      color: 'text-green-700 dark:text-green-400',
-      bgColor: 'bg-green-100 dark:bg-green-900/20',
-      description: 'Due today - immediate attention needed'
-    },
-    recent: {
-      label: 'Recent',
+    due: {
+      label: 'Due',
       priority: 4,
       color: 'text-blue-700 dark:text-blue-400',
       bgColor: 'bg-blue-100 dark:bg-blue-900/20',
-      description: 'Recently overdue - gentle reminder needed'
+      description: 'Due within next 7 days - proactive outreach recommended'
     },
     overdue: {
       label: 'Overdue',
       priority: 3,
       color: 'text-orange-700 dark:text-orange-400',
       bgColor: 'bg-orange-100 dark:bg-orange-900/20',
-      description: 'Standard collection actions required'
+      description: 'Immediate collection actions required'
     },
     serious: {
       label: 'Serious',
@@ -213,10 +195,10 @@ export function getOverdueCategorySummary<T extends { dueDate: string | Date, am
   }, {} as Record<OverdueCategory, { count: number; totalAmount: number }>);
 
   invoices.forEach(invoice => {
-    // For paid invoices, count them as current
+    // For paid invoices, count them as due for summary purposes
     if (invoice.status === 'paid') {
-      summary.current.count++;
-      summary.current.totalAmount += typeof invoice.amount === 'string' ? parseFloat(invoice.amount) : invoice.amount;
+      summary.due.count++;
+      summary.due.totalAmount += typeof invoice.amount === 'string' ? parseFloat(invoice.amount) : invoice.amount;
       return;
     }
 

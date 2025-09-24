@@ -228,7 +228,7 @@ interface InvoiceResponse {
 
 // Helper function to determine if a queue uses invoice data
 const isInvoiceQueue = (queueId: string): boolean => {
-  const invoiceQueueIds = ['soon', 'recent', 'overdue', 'serious', 'escalation'];
+  const invoiceQueueIds = ['due', 'overdue', 'serious', 'escalation'];
   return invoiceQueueIds.includes(queueId);
 };
 
@@ -1755,21 +1755,14 @@ export default function ActionCentre() {
       id: 'today', 
       label: 'Today\'s Actions', 
       icon: Calendar, 
-      count: (queueCounts.current || 0) + (queueCounts.soon || 0) // Today includes current and soon items
+      count: (queueCounts.current || 0) + (queueCounts.due || 0) // Today includes current and due items
     },
     { 
-      id: 'soon', 
-      label: 'Soon', 
+      id: 'due', 
+      label: 'Due', 
       icon: Clock, 
-      count: queueCounts.soon || 0,
-      category: getOverdueCategoryInfo('soon', 0)
-    },
-    { 
-      id: 'recent', 
-      label: 'Recent', 
-      icon: RefreshCw, 
-      count: queueCounts.recent || 0,
-      category: getOverdueCategoryInfo('recent', 0)
+      count: queueCounts.due || 0,
+      category: getOverdueCategoryInfo('due', 0)
     },
     { 
       id: 'overdue', 

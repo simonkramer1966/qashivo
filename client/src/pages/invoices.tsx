@@ -60,9 +60,9 @@ export default function Invoices() {
       case 'paid':
         return [{ category: 'paid' as const, label: 'Paid' }];
       case 'pending':
-        return getAllOverdueCategories().filter(cat => ['soon', 'current'].includes(cat.category));
+        return getAllOverdueCategories().filter(cat => ['due'].includes(cat.category));
       case 'overdue':
-        return getAllOverdueCategories().filter(cat => ['recent', 'overdue', 'serious', 'escalation'].includes(cat.category));
+        return getAllOverdueCategories().filter(cat => ['overdue', 'serious', 'escalation'].includes(cat.category));
       case 'all':
       default:
         return [{ category: 'paid' as const, label: 'Paid' }, ...getAllOverdueCategories()];

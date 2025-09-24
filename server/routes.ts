@@ -90,7 +90,7 @@ const nudgeInvoiceSchema = z.object({
 const invoicesQuerySchema = z.object({
   status: z.enum(['pending', 'overdue', 'paid', 'cancelled', 'all']).optional().default('all'),
   search: z.string().optional(),
-  overdue: z.enum(['paid', 'soon', 'current', 'recent', 'overdue', 'serious', 'escalation', 'all']).optional().default('all'),
+  overdue: z.enum(['paid', 'due', 'overdue', 'serious', 'escalation', 'all']).optional().default('all'),
   contactId: z.string().optional(),
   page: z.string().optional().default('1').transform(Number),
   limit: z.string().optional().default('50').transform(Number)
@@ -115,7 +115,7 @@ const actionItemQuerySchema = z.object({
   limit: z.string().optional().default('50').transform(Number),
   // New ML prioritization parameters
   useSmartPriority: z.string().optional().default('false').transform(str => str === 'true'),
-  queueType: z.enum(['today', 'soon', 'recent', 'overdue', 'serious', 'escalation']).optional().default('today'),
+  queueType: z.enum(['today', 'due', 'overdue', 'serious', 'escalation']).optional().default('today'),
   sortBy: z.enum(['priority', 'dueDate', 'amount', 'risk', 'smart']).optional().default('smart'),
 });
 
