@@ -660,7 +660,7 @@ export default function Cashboard() {
                     data-testid={`card-aging-${category.label.toLowerCase()}`}
                   >
                     {/* Percentage Circle */}
-                    <div className="absolute top-2 left-2 w-8 h-8 bg-gray-500 rounded-full flex items-center justify-center">
+                    <div className="absolute top-2 left-2 2xl:top-auto 2xl:bottom-2 w-8 h-8 bg-gray-500 rounded-full flex items-center justify-center">
                       <span className="text-white text-xs font-semibold">
                         {Math.round((category.amount / totalAmountAging) * 100)}%
                       </span>
