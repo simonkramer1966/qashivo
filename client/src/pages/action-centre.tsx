@@ -2297,7 +2297,7 @@ export default function ActionCentre() {
                                     data-testid={`menu-voice-msg-${action.id}`}
                                   >
                                     <Voicemail className="h-4 w-4 mr-2" />
-                                    Voice Msg
+                                    Voice Message
                                   </DropdownMenuItem>
                                   <DropdownMenuItem 
                                     onClick={(e) => {
