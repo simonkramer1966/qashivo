@@ -226,10 +226,10 @@ interface InvoiceResponse {
   };
 }
 
-// Helper function to determine if a queue uses invoice data
-const isInvoiceQueue = (queueId: string): boolean => {
-  const invoiceQueueIds = ['due', 'overdue', 'serious', 'escalation'];
-  return invoiceQueueIds.includes(queueId);
+// Helper function to determine if a tab uses invoice data
+const isInvoiceTab = (tabId: string): boolean => {
+  // All tabs use invoice data in the new tab-based structure
+  return ['broken-promises', 'disputes', 'payment-plans', 'escalations'].includes(tabId);
 };
 
 // Helper function to determine next recommended action based on overdue days
@@ -475,7 +475,7 @@ export default function ActionCentre() {
   } : null;
 
   // Fetch data based on selected tab
-  const useInvoiceData = ['disputes', 'payment-plans', 'escalations'].includes(selectedTab);
+  const useInvoiceData = isInvoiceTab(selectedTab);
   
   // Action items query (for 'today' queue)
   const { data: queueResponse, isLoading: actionLoading, error: actionError } = useQuery({
@@ -1822,6 +1822,58 @@ export default function ActionCentre() {
                   <Filter className="h-4 w-4 mr-2" />
                   Filter
                 </Button>
+              </div>
+            </div>
+
+            {/* Tab Navigation */}
+            <div className="border-b border-white/50 bg-white/40 backdrop-blur-sm px-4">
+              <div className="flex items-center justify-between">
+                <div className="flex space-x-1">
+                  {tabOptions.map((tabOption) => (
+                    <button
+                      key={tabOption.id}
+                      onClick={() => {
+                        setSelectedTab(tabOption.id);
+                        setCurrentPage(1);
+                        setSelectedAction(null);
+                      }}
+                      className={`px-4 py-3 text-sm font-medium rounded-t-lg transition-all duration-200 ${
+                        selectedTab === tabOption.id
+                          ? 'bg-white text-[#17B6C3] border-b-2 border-[#17B6C3]'
+                          : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                      }`}
+                      data-testid={`tab-${tabOption.id}`}
+                    >
+                      <div className="flex items-center space-x-2">
+                        <span>{tabOption.label}</span>
+                        {tabOption.count > 0 && (
+                          <Badge 
+                            variant="secondary" 
+                            className={`${selectedTab === tabOption.id ? 'bg-[#17B6C3]/20 text-[#17B6C3]' : ''}`}
+                          >
+                            {tabOption.count}
+                          </Badge>
+                        )}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+                
+                {/* Tab Actions */}
+                <div className="flex items-center space-x-2">
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={() => {
+                      queryClient.invalidateQueries({ queryKey: ["/api/action-centre/queue"] });
+                      queryClient.invalidateQueries({ queryKey: ["/api/action-centre/metrics"] });
+                    }}
+                    data-testid="button-refresh-tabs"
+                    title="Refresh data"
+                  >
+                    <RefreshCw className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
             </div>
 
