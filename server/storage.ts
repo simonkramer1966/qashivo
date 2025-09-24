@@ -398,6 +398,7 @@ export interface IStorage {
   linkInvoicesToPaymentPlan(paymentPlanId: string, invoiceIds: string[], addedByUserId: string): Promise<PaymentPlanInvoice[]>;
   unlinkInvoiceFromPaymentPlan(paymentPlanId: string, invoiceId: string): Promise<void>;
   getPaymentPlanInvoices(paymentPlanId: string): Promise<PaymentPlanInvoice[]>;
+  checkInvoicesForExistingPaymentPlans(invoiceIds: string[], tenantId: string): Promise<{ invoiceId: string; paymentPlan: PaymentPlan & { contact: Contact } }[]>;
 
   // RBAC operations
   getUsersInTenant(tenantId: string): Promise<User[]>;
@@ -3673,6 +3674,35 @@ export class DatabaseStorage implements IStorage {
       .from(paymentPlanInvoices)
       .where(eq(paymentPlanInvoices.paymentPlanId, paymentPlanId));
     return links;
+  }
+
+  async checkInvoicesForExistingPaymentPlans(invoiceIds: string[], tenantId: string): Promise<{ invoiceId: string; paymentPlan: PaymentPlan & { contact: Contact } }[]> {
+    if (invoiceIds.length === 0) return [];
+
+    const results = await db
+      .select({
+        invoiceId: paymentPlanInvoices.invoiceId,
+        paymentPlan: paymentPlans,
+        contact: contacts,
+      })
+      .from(paymentPlanInvoices)
+      .innerJoin(paymentPlans, eq(paymentPlanInvoices.paymentPlanId, paymentPlans.id))
+      .innerJoin(contacts, eq(paymentPlans.contactId, contacts.id))
+      .where(
+        and(
+          inArray(paymentPlanInvoices.invoiceId, invoiceIds),
+          eq(paymentPlans.tenantId, tenantId),
+          eq(paymentPlans.status, 'active')
+        )
+      );
+
+    return results.map(result => ({
+      invoiceId: result.invoiceId,
+      paymentPlan: {
+        ...result.paymentPlan,
+        contact: result.contact
+      }
+    }));
   }
 }
 

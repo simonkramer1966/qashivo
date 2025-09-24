@@ -2627,6 +2627,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Check if invoices already have active payment plans
+  app.post("/api/payment-plans/check-duplicates", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { invoiceIds } = req.body;
+      
+      if (!invoiceIds || !Array.isArray(invoiceIds) || invoiceIds.length === 0) {
+        return res.status(400).json({ message: "Invoice IDs are required" });
+      }
+
+      const duplicates = await storage.checkInvoicesForExistingPaymentPlans(invoiceIds, user.tenantId);
+      
+      res.json({
+        hasDuplicates: duplicates.length > 0,
+        duplicates,
+        invoicesWithExistingPlans: duplicates.map(d => d.invoiceId)
+      });
+
+    } catch (error) {
+      console.error("Error checking for duplicate payment plans:", error);
+      res.status(500).json({ message: "Failed to check for duplicate payment plans" });
+    }
+  });
+
   // Bulk Operations
   app.post("/api/action-items/bulk/complete", isAuthenticated, async (req: any, res) => {
     try {
