@@ -2238,29 +2238,6 @@ export default function ActionCentre() {
                                     <DropdownMenuLabel>Action</DropdownMenuLabel>
                                     <DropdownMenuSeparator />
                                     <DropdownMenuItem 
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        completeActionMutation.mutate({ 
-                                          actionId: action.id,
-                                          outcome: 'Completed manually'
-                                      });
-                                    }}
-                                    data-testid={`menu-complete-${action.id}`}
-                                  >
-                                    <CheckCircle className="h-4 w-4 mr-2" />
-                                    Complete
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem 
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      // TODO: Implement individual snooze dialog
-                                    }}
-                                    data-testid={`menu-snooze-${action.id}`}
-                                  >
-                                    <Clock className="h-4 w-4 mr-2" />
-                                    Snooze
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem 
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       setCommunicationDialog({
