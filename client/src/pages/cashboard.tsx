@@ -569,9 +569,9 @@ export default function Cashboard() {
             {/* Aging Analysis Cards */}
             <div className="mb-6 sm:mb-8">
               <h2 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4 text-slate-900 dark:text-slate-100">Invoice Ageing Analysis</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-4 2xl:grid-cols-8 gap-3">
-                {(() => {
-                  const agingCategories = [
+              
+              {(() => {
+                const agingCategories = [
                   { 
                     label: 'Current', 
                     amount: 85000, 
@@ -646,10 +646,14 @@ export default function Cashboard() {
                   }
                   ];
 
+                  // Split into two rows: first 5 cards (Current to Escalate) and last 3 cards (PYMT PLANS to Legal)
+                  const firstRowCards = agingCategories.slice(0, 5);
+                  const secondRowCards = agingCategories.slice(5, 8);
+                  
                   // Calculate total amount for percentage calculations
                   const totalAmountAging = agingCategories.reduce((sum, cat) => sum + cat.amount, 0);
 
-                  return agingCategories.map((category) => (
+                  const renderCard = (category) => (
                   <Card 
                     key={category.label} 
                     className={`glass-card hover:shadow-lg transition-all duration-200 hover:scale-105 relative ${
@@ -660,7 +664,7 @@ export default function Cashboard() {
                     data-testid={`card-aging-${category.label.toLowerCase()}`}
                   >
                     {/* Percentage Circle */}
-                    <div className="absolute top-2 left-2 2xl:top-auto 2xl:bottom-2 w-8 h-8 bg-gray-500 rounded-full flex items-center justify-center">
+                    <div className="absolute top-2 left-2 w-8 h-8 bg-gray-500 rounded-full flex items-center justify-center">
                       <span className="text-white text-xs font-semibold">
                         {Math.round((category.amount / totalAmountAging) * 100)}%
                       </span>
@@ -685,9 +689,22 @@ export default function Cashboard() {
                       </div>
                     </CardContent>
                   </Card>
-                  ));
+                  );
+
+                  return (
+                    <div className="space-y-4">
+                      {/* First Row: Current to Escalate (5 cards) */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3">
+                        {firstRowCards.map(renderCard)}
+                      </div>
+                      
+                      {/* Second Row: PYMT PLANS to Legal (3 wider cards) */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                        {secondRowCards.map(renderCard)}
+                      </div>
+                    </div>
+                  );
                 })()}
-              </div>
             </div>
 
             {/* Recent Activity Feed and Top Debtors */}
