@@ -30,6 +30,8 @@ import {
   Mail, 
   Phone, 
   MessageSquare, 
+  MessageCircle,
+  Voicemail,
   ChevronRight,
   RefreshCw,
   Filter,
@@ -2250,7 +2252,7 @@ export default function ActionCentre() {
                                     data-testid={`menu-email-${action.id}`}
                                   >
                                     <Mail className="h-4 w-4 mr-2" />
-                                    Send Email
+                                    Email
                                   </DropdownMenuItem>
                                   <DropdownMenuItem 
                                     onClick={(e) => {
@@ -2265,7 +2267,22 @@ export default function ActionCentre() {
                                     data-testid={`menu-sms-${action.id}`}
                                   >
                                     <MessageSquare className="h-4 w-4 mr-2" />
-                                    Send SMS
+                                    SMS
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem 
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setCommunicationDialog({
+                                        isOpen: true,
+                                        type: 'whatsapp',
+                                        context: (isInvoiceItem(action) ? 'invoice' : 'customer'),
+                                        contextId: (isInvoiceItem(action) ? action.id : action.contactId),
+                                      });
+                                    }}
+                                    data-testid={`menu-whatsapp-${action.id}`}
+                                  >
+                                    <MessageCircle className="h-4 w-4 mr-2" />
+                                    WhatsApp
                                   </DropdownMenuItem>
                                   <DropdownMenuItem 
                                     onClick={(e) => {
@@ -2277,10 +2294,39 @@ export default function ActionCentre() {
                                         contextId: (isInvoiceItem(action) ? action.id : action.contactId),
                                       });
                                     }}
-                                    data-testid={`menu-call-${action.id}`}
+                                    data-testid={`menu-voice-msg-${action.id}`}
                                   >
-                                    <Phone className="h-4 w-4 mr-2" />
-                                    Make Call
+                                    <Voicemail className="h-4 w-4 mr-2" />
+                                    Voice Msg
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem 
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      // Validate contactId exists before opening dialog
+                                      const contactId = action.contactId;
+                                      if (contactId) {
+                                        setAiCallDialog({
+                                          isOpen: true,
+                                          contactId,
+                                          invoiceId: action.invoiceId || '',
+                                        });
+                                      } else {
+                                        toast({
+                                          title: "No Contact Information",
+                                          description: "This action doesn't have associated contact information.",
+                                          variant: "destructive",
+                                        });
+                                      }
+                                    }}
+                                    data-testid={`menu-ai-call-${action.id}`}
+                                  >
+                                    <div className="flex items-center">
+                                      <div className="relative mr-2">
+                                        <Phone className="h-4 w-4" />
+                                        <div className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-amber-400 rounded-full"></div>
+                                      </div>
+                                      AI Call
+                                    </div>
                                   </DropdownMenuItem>
                                   
                                   <DropdownMenuSeparator />
