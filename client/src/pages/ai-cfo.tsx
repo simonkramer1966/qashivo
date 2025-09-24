@@ -150,7 +150,7 @@ export default function AiCfo() {
         type: 'assistant',
         content: `Hello! I'm your AI CFO advisor. I can help you optimize your accounts receivable, improve cashflow, and provide strategic financial insights based on your current AR performance. 
 
-I can see you currently have ${(dashboardData as any)?.totalOutstanding ? `$${(dashboardData as any).totalOutstanding.toLocaleString()}` : 'substantial amounts'} in outstanding receivables. How can I help you today?`,
+I can see you currently have ${(dashboardData as any)?.totalOutstanding ? `£${(dashboardData as any).totalOutstanding.toLocaleString()}` : 'substantial amounts'} in outstanding receivables. How can I help you today?`,
         timestamp: new Date()
       };
       setMessages([welcomeMessage]);
@@ -349,7 +349,7 @@ I can see you currently have ${(dashboardData as any)?.totalOutstanding ? `$${(d
                   <div>
                     <p className="text-sm font-medium text-gray-600">Total Outstanding</p>
                     <p className="text-3xl font-bold text-gray-900">
-                      ${(dashboardData as any)?.totalOutstanding?.toLocaleString() || '0'}
+                      £{(dashboardData as any)?.totalOutstanding?.toLocaleString() || '0'}
                     </p>
                   </div>
                   <div className="p-2 bg-[#17B6C3]/10 rounded-lg">
@@ -365,7 +365,7 @@ I can see you currently have ${(dashboardData as any)?.totalOutstanding ? `$${(d
                   <div>
                     <p className="text-sm font-medium text-gray-600">Overdue Amount</p>
                     <p className="text-3xl font-bold text-gray-900">
-                      ${(dashboardData as any)?.overdueAmount?.toLocaleString() || '0'}
+                      £{(dashboardData as any)?.overdueAmount?.toLocaleString() || '0'}
                     </p>
                   </div>
                   <div className="p-2 bg-red-500/10 rounded-lg">

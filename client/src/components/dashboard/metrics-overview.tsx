@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { ArrowUp, ArrowDown, AlertTriangle, Clock, TrendingUp, Calendar, ArrowUpRight, ArrowDownRight, DollarSign } from "lucide-react";
+import { formatCurrency } from "@/lib/utils";
 
 export default function MetricsOverview() {
   const { data: metrics, isLoading } = useQuery({
@@ -25,7 +26,7 @@ export default function MetricsOverview() {
   const metricsData = [
     {
       title: "Total Outstanding",
-      value: `$${((metrics as any)?.totalOutstanding || 0).toLocaleString()}`,
+      value: formatCurrency((metrics as any)?.totalOutstanding || 0, 'GBP'),
       change: "+12%",
       changeType: "increase" as const,
       icon: DollarSign,

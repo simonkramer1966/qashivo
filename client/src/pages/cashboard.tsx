@@ -652,7 +652,7 @@ export default function Cashboard() {
                             tick={{ fontSize: 10 }}
                             axisLine={false}
                             tickLine={false}
-                            tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`}
+                            tickFormatter={(value) => `£${(value / 1000).toFixed(0)}k`}
                             width={60}
                           />
                           <Tooltip 
