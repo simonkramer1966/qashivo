@@ -575,7 +575,7 @@ export default function Cashboard() {
             {/* Aging Analysis Cards */}
             <div className="mb-6 sm:mb-8">
               <h2 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4 text-slate-900 dark:text-slate-100">Invoice Aging Analysis</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-4">
                 {[
                   { 
                     label: 'Due', 
@@ -604,6 +604,27 @@ export default function Cashboard() {
                     count: metrics?.escalatedCount || 45, 
                     color: 'text-[#17B6C3]',
                     description: '60+ days overdue'
+                  },
+                  { 
+                    label: 'Payment Plans', 
+                    amount: 42300, 
+                    count: 8, 
+                    color: 'text-[#17B6C3]',
+                    description: 'Active payment plans'
+                  },
+                  { 
+                    label: 'Disputes', 
+                    amount: 15800, 
+                    count: 3, 
+                    color: 'text-[#17B6C3]',
+                    description: 'Under dispute'
+                  },
+                  { 
+                    label: 'Legal', 
+                    amount: 28500, 
+                    count: 2, 
+                    color: 'text-[#17B6C3]',
+                    description: 'Legal proceedings'
                   }
                 ].map((category) => (
                   <Card 
