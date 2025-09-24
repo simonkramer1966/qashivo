@@ -27,7 +27,8 @@ import {
   X,
   Gauge,
   Target,
-  Phone
+  Phone,
+  CreditCard
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -54,6 +55,7 @@ const navigationItems = [
   { name: "AI Suggestions", href: "/ai-suggestions", icon: Bot },
   { name: "Reports", href: "/reports", icon: BarChart },
   { name: "Call Logs", href: "/call-logs", icon: Phone },
+  { name: "Payment Plans", href: "/payment-plans", icon: CreditCard },
 ];
 
 // Owner-only navigation items

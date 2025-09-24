@@ -130,8 +130,8 @@ export default function PaymentPlans() {
     // Apply sorting
     if (sortColumn) {
       filtered.sort((a, b) => {
-        let aValue: any = a[sortColumn as keyof PaymentPlan];
-        let bValue: any = b[sortColumn as keyof PaymentPlan];
+        let aValue: any = (a as any)[sortColumn];
+        let bValue: any = (b as any)[sortColumn];
         
         // Handle nested properties
         if (sortColumn.includes('.')) {
@@ -246,7 +246,7 @@ export default function PaymentPlans() {
         <NewSidebar />
         
         <div className="flex-1 ml-64">
-          <Header />
+          <Header title="Payment Plans" subtitle="Manage customer payment plans" />
           
           <main className="p-8">
             <div className="max-w-7xl mx-auto">
