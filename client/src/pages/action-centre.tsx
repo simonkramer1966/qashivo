@@ -1915,7 +1915,7 @@ export default function ActionCentre() {
                           </button>
                         </TooltipTrigger>
                         {sidebarCollapsed && (
-                          <TooltipContent side="right" className="bg-white text-slate-900 border border-slate-200 shadow-lg z-50">
+                          <TooltipContent side="right" className="bg-white text-slate-900 border border-slate-200 shadow-lg z-[9999]">
                             <p>{queue.label} ({queue.count})</p>
                           </TooltipContent>
                         )}
@@ -2401,7 +2401,7 @@ export default function ActionCentre() {
                               )}
                             </Button>
                           </TooltipTrigger>
-                          <TooltipContent>
+                          <TooltipContent className="z-[9999]">
                             <p>Complete Actions (C)</p>
                           </TooltipContent>
                         </Tooltip>
@@ -2420,7 +2420,7 @@ export default function ActionCentre() {
                               <Mail className="h-4 w-4" />
                             </Button>
                           </TooltipTrigger>
-                          <TooltipContent>
+                          <TooltipContent className="z-[9999]">
                             <p>Send Bulk Email (E)</p>
                           </TooltipContent>
                         </Tooltip>
@@ -2439,7 +2439,7 @@ export default function ActionCentre() {
                               <MessageSquare className="h-4 w-4" />
                             </Button>
                           </TooltipTrigger>
-                          <TooltipContent>
+                          <TooltipContent className="z-[9999]">
                             <p>Send Bulk SMS (S)</p>
                           </TooltipContent>
                         </Tooltip>
@@ -2457,7 +2457,7 @@ export default function ActionCentre() {
                               <User className="h-4 w-4" />
                             </Button>
                           </TooltipTrigger>
-                          <TooltipContent>
+                          <TooltipContent className="z-[9999]">
                             <p>Assign Actions</p>
                           </TooltipContent>
                         </Tooltip>
@@ -2558,7 +2558,7 @@ export default function ActionCentre() {
                             <span className="text-xs">Email</span>
                           </Button>
                         </TooltipTrigger>
-                        <TooltipContent>
+                        <TooltipContent className="z-[9999]">
                           <p>Send email using templates</p>
                         </TooltipContent>
                       </Tooltip>
@@ -2582,7 +2582,7 @@ export default function ActionCentre() {
                             <span className="text-xs">SMS</span>
                           </Button>
                         </TooltipTrigger>
-                        <TooltipContent>
+                        <TooltipContent className="z-[9999]">
                           <p>Send SMS reminder</p>
                         </TooltipContent>
                       </Tooltip>
@@ -2606,7 +2606,7 @@ export default function ActionCentre() {
                             <span className="text-xs">VM</span>
                           </Button>
                         </TooltipTrigger>
-                        <TooltipContent>
+                        <TooltipContent className="z-[9999]">
                           <p>Leave voice message</p>
                         </TooltipContent>
                       </Tooltip>
@@ -2666,7 +2666,7 @@ export default function ActionCentre() {
                             <span className="text-xs">AI Call</span>
                           </Button>
                         </TooltipTrigger>
-                        <TooltipContent>
+                        <TooltipContent className="z-[9999]">
                           <p>AI-powered call with intelligent agent</p>
                         </TooltipContent>
                       </Tooltip>
