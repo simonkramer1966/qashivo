@@ -2992,7 +2992,7 @@ export default function ActionCentre() {
                                         <div className="text-slate-500">{new Date(payment.dueDate).toLocaleDateString()}</div>
                                       </div>
                                       <div className="text-right">
-                                        <div className="font-medium">${payment.amount.toLocaleString()}</div>
+                                        <div className="font-medium">£{payment.amount.toLocaleString()}</div>
                                         <Badge 
                                           variant={payment.status === 'paid' ? 'default' : 'outline'}
                                           className="text-xs"
