@@ -144,6 +144,52 @@ export default function Cashboard() {
     // Fallback: estimate based on collection patterns
     Math.max(1, Math.floor(cashPosition / 2000)); // Assume $2k daily burn rate
 
+  // Calculate key cash flow projections
+  const calculateCashFlowProjections = () => {
+    const today = new Date();
+    const currentMonth = today.getMonth();
+    const currentYear = today.getFullYear();
+    const endOfMonth = new Date(currentYear, currentMonth + 1, 0); // Last day of current month
+    const thirtyDaysOut = new Date(today.getTime() + (30 * 24 * 60 * 60 * 1000));
+    const sixtyDaysOut = new Date(today.getTime() + (60 * 24 * 60 * 60 * 1000));
+
+    if (cashflowData?.forecast) {
+      // Find projections based on forecast data
+      const eomForecast = cashflowData.forecast.find(day => {
+        const forecastDate = new Date(day.date);
+        return forecastDate.toDateString() === endOfMonth.toDateString();
+      });
+      
+      const thirtyDayForecast = cashflowData.forecast.find(day => {
+        const forecastDate = new Date(day.date);
+        return forecastDate >= thirtyDaysOut;
+      });
+      
+      const sixtyDayForecast = cashflowData.forecast.find(day => {
+        const forecastDate = new Date(day.date);
+        return forecastDate >= sixtyDaysOut;
+      });
+
+      return {
+        eom: eomForecast?.runningBalance || cashPosition * 1.05, // Slight growth estimate
+        thirtyDays: thirtyDayForecast?.runningBalance || cashPosition * 1.1,
+        sixtyDays: sixtyDayForecast?.runningBalance || cashPosition * 1.15
+      };
+    } else {
+      // Fallback calculations based on collection patterns
+      const dailyInflow = cashflowData?.summary?.averageDailyInflow || (totalOutstanding * 0.01); // 1% of outstanding per day
+      const daysToEOM = Math.ceil((endOfMonth.getTime() - today.getTime()) / (24 * 60 * 60 * 1000));
+      
+      return {
+        eom: cashPosition + (dailyInflow * daysToEOM),
+        thirtyDays: cashPosition + (dailyInflow * 30),
+        sixtyDays: cashPosition + (dailyInflow * 60)
+      };
+    }
+  };
+
+  const { eom, thirtyDays, sixtyDays } = calculateCashFlowProjections();
+
   // Determine cash health status
   const getCashHealthStatus = () => {
     if (projectedRunway > 90) return { status: 'healthy', color: 'text-green-600', bgColor: 'bg-green-50', icon: CheckCircle };
@@ -330,31 +376,24 @@ export default function Cashboard() {
                   </div>
                 </div>
 
-                {/* Loading Health Status Banner */}
-                <Card className="glass-card border-l-4 border-l-slate-300 animate-pulse" data-testid="card-health-status">
+                {/* Loading Cash Flow Projections */}
+                <Card className="glass-card animate-pulse" data-testid="card-cash-flow-projections">
                   <CardContent className="p-4 sm:p-6">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                      <div className="flex items-center space-x-3 sm:space-x-4">
-                        <div className="p-2 sm:p-3 rounded-full bg-slate-200 dark:bg-slate-700 flex-shrink-0">
-                          <div className="h-5 w-5 sm:h-6 sm:w-6 bg-slate-300 dark:bg-slate-600 rounded"></div>
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+                      {[1, 2, 3, 4].map((i) => (
+                        <div key={i} className="text-center">
+                          <div className="flex items-center justify-center mb-2">
+                            <div className="p-2 bg-slate-200 dark:bg-slate-700 rounded-lg">
+                              <div className="h-5 w-5 bg-slate-300 dark:bg-slate-600 rounded"></div>
+                            </div>
+                          </div>
+                          <div className="h-8 bg-slate-300 dark:bg-slate-700 rounded mb-2"></div>
+                          <div className="h-4 bg-slate-300 dark:bg-slate-700 rounded w-20 mx-auto"></div>
+                          {i === 2 && (
+                            <div className="h-3 bg-slate-300 dark:bg-slate-700 rounded w-16 mx-auto mt-1"></div>
+                          )}
                         </div>
-                        <div>
-                          <div className="h-6 bg-slate-300 dark:bg-slate-700 rounded mb-2 w-48"></div>
-                          <div className="h-4 bg-slate-300 dark:bg-slate-700 rounded w-32"></div>
-                        </div>
-                      </div>
-                      <div className="text-left sm:text-right">
-                        <div className="h-8 bg-slate-300 dark:bg-slate-700 rounded mb-2 w-24"></div>
-                        <div className="h-3 bg-slate-300 dark:bg-slate-700 rounded w-20"></div>
-                      </div>
-                    </div>
-                    
-                    <div className="mt-4">
-                      <div className="flex justify-between text-sm mb-2">
-                        <div className="h-3 bg-slate-300 dark:bg-slate-700 rounded w-20"></div>
-                        <div className="h-3 bg-slate-300 dark:bg-slate-700 rounded w-16"></div>
-                      </div>
-                      <div className="h-2 bg-slate-300 dark:bg-slate-700 rounded"></div>
+                      ))}
                     </div>
                   </CardContent>
                 </Card>
@@ -442,31 +481,65 @@ export default function Cashboard() {
                 </div>
               </div>
 
-              {/* Health Status Banner */}
-              <Card className="glass-card" data-testid="card-health-status">
+              {/* Cash Flow Projections */}
+              <Card className="glass-card" data-testid="card-cash-flow-projections">
                 <CardContent className="p-4 sm:p-6">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <div className="flex items-center space-x-3 sm:space-x-4">
-                      <div className={`p-2 sm:p-3 rounded-full ${healthStatus.bgColor} flex-shrink-0`}>
-                        <healthStatus.icon className={`h-5 w-5 sm:h-6 sm:w-6 ${healthStatus.color}`} />
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+                    {[
+                      { 
+                        label: 'Current Position', 
+                        value: cashPosition, 
+                        icon: DollarSign, 
+                        color: 'text-[#17B6C3]',
+                        testId: 'current-position'
+                      },
+                      { 
+                        label: 'EOM', 
+                        value: eom, 
+                        icon: Calendar, 
+                        color: 'text-orange-600',
+                        subtitle: 'Payroll Critical',
+                        testId: 'eom-position'
+                      },
+                      { 
+                        label: '30 Days', 
+                        value: thirtyDays, 
+                        icon: TrendingUp, 
+                        color: 'text-green-600',
+                        testId: '30-days-position'
+                      },
+                      { 
+                        label: '60 Days', 
+                        value: sixtyDays, 
+                        icon: TrendingUp, 
+                        color: 'text-blue-600',
+                        testId: '60-days-position'
+                      }
+                    ].map((metric) => (
+                      <div key={metric.label} className="text-center" data-testid={`metric-${metric.testId}`}>
+                        <div className="flex items-center justify-center mb-2">
+                          <div className={`p-2 bg-white/50 rounded-lg border border-white/30`}>
+                            <metric.icon className={`h-5 w-5 ${metric.color}`} />
+                          </div>
+                        </div>
+                        <div className={`text-2xl sm:text-3xl font-bold ${metric.color} mb-1`} data-testid={`text-value-${metric.testId}`}>
+                          {formatCurrency(metric.value)}
+                        </div>
+                        <div className="text-sm font-medium text-slate-900 dark:text-slate-100" data-testid={`text-label-${metric.testId}`}>
+                          {metric.label}
+                        </div>
+                        {metric.subtitle && (
+                          <div className="text-xs text-slate-600 dark:text-slate-400 mt-1" data-testid={`text-subtitle-${metric.testId}`}>
+                            {metric.subtitle}
+                          </div>
+                        )}
+                        {metric.label === 'Current Position' && !cashflowData?.forecast?.[0]?.runningBalance && (
+                          <div className="text-xs text-slate-600 dark:text-slate-400 mt-1">
+                            (estimated)
+                          </div>
+                        )}
                       </div>
-                      <div>
-                        <h3 className="text-lg sm:text-xl font-semibold capitalize" data-testid="text-health-status">
-                          {healthStatus.status} Cash Position
-                        </h3>
-                        <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400">
-                          Current financial health overview
-                        </p>
-                      </div>
-                    </div>
-                    <div className="text-left sm:text-right">
-                      <div className="text-xl sm:text-2xl font-bold text-[#17B6C3]" data-testid="text-cash-position">
-                        {formatCurrency(cashPosition)}
-                      </div>
-                      <div className="text-xs sm:text-sm text-slate-600 dark:text-slate-400">
-                        Current Position {!cashflowData?.forecast?.[0]?.runningBalance && '(estimated)'}
-                      </div>
-                    </div>
+                    ))}
                   </div>
                 </CardContent>
               </Card>
