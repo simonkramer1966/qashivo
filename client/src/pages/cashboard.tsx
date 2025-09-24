@@ -743,97 +743,40 @@ export default function Cashboard() {
                 <CardHeader>
                   <CardTitle className="flex items-center space-x-2">
                     <Users className="h-5 w-5 text-[#17B6C3]" />
-                    <span>Top Debtors</span>
+                    <span>Top 10 Debtors</span>
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-4">
+                  <div className="space-y-3">
                     {[
-                      {
-                        id: 1,
-                        company: 'MegaCorp Industries',
-                        contact: 'Sarah Johnson',
-                        amount: 45600,
-                        overdueDays: 67,
-                        invoices: 8,
-                        risk: 'high'
-                      },
-                      {
-                        id: 2,
-                        company: 'Global Tech Solutions',
-                        contact: 'Mike Chen',
-                        amount: 32400,
-                        overdueDays: 45,
-                        invoices: 5,
-                        risk: 'medium'
-                      },
-                      {
-                        id: 3,
-                        company: 'Premium Services Ltd',
-                        contact: 'Emma Wilson',
-                        amount: 28900,
-                        overdueDays: 23,
-                        invoices: 3,
-                        risk: 'medium'
-                      },
-                      {
-                        id: 4,
-                        company: 'Digital Innovations',
-                        contact: 'James Thompson',
-                        amount: 19750,
-                        overdueDays: 89,
-                        invoices: 12,
-                        risk: 'high'
-                      },
-                      {
-                        id: 5,
-                        company: 'Creative Solutions',
-                        contact: 'Lisa Rodriguez',
-                        amount: 15200,
-                        overdueDays: 34,
-                        invoices: 4,
-                        risk: 'medium'
-                      }
-                    ].map((debtor, index) => (
-                      <div key={debtor.id} className="flex items-center space-x-4 p-3 bg-white/30 rounded-lg border border-white/20">
-                        <div className="flex-shrink-0">
-                          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${
-                            debtor.risk === 'high' ? 'bg-red-100 text-red-800' :
-                            debtor.risk === 'medium' ? 'bg-amber-100 text-amber-800' :
-                            'bg-green-100 text-green-800'
-                          }`}>
-                            {index + 1}
-                          </div>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between mb-1">
+                      { id: 1, company: 'MegaCorp Industries', amount: 45600 },
+                      { id: 2, company: 'Global Tech Solutions', amount: 32400 },
+                      { id: 3, company: 'Premium Services Ltd', amount: 28900 },
+                      { id: 4, company: 'Digital Innovations', amount: 19750 },
+                      { id: 5, company: 'Creative Solutions', amount: 15200 },
+                      { id: 6, company: 'Advanced Systems Corp', amount: 12800 },
+                      { id: 7, company: 'Innovation Partners', amount: 9600 },
+                      { id: 8, company: 'Future Tech Ltd', amount: 7450 },
+                      { id: 9, company: 'Smart Solutions Inc', amount: 6200 },
+                      { id: 10, company: 'NextGen Enterprises', amount: 4950 }
+                    ].map((debtor) => {
+                      const concentrationPercentage = ((debtor.amount / (totalOutstanding || 1)) * 100).toFixed(1);
+                      return (
+                        <div key={debtor.id} className="flex items-center justify-between p-3 bg-white/30 rounded-lg border border-white/20">
+                          <div className="flex-1 min-w-0">
                             <h4 className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate">
                               {debtor.company}
                             </h4>
-                            <span className="text-sm font-bold text-[#17B6C3]">
-                              {formatCurrency(debtor.amount)}
-                            </span>
-                          </div>
-                          <div className="flex items-center justify-between">
-                            <p className="text-xs text-slate-600 dark:text-slate-400 truncate">
-                              {debtor.contact}
+                            <p className="text-xs text-slate-600 dark:text-slate-400">
+                              {concentrationPercentage}% of total outstanding
                             </p>
-                            <div className="flex items-center space-x-2 text-xs">
-                              <span className="text-slate-600 dark:text-slate-400">
-                                {debtor.overdueDays} days
-                              </span>
-                              <span className={`px-2 py-1 rounded-full font-medium ${
-                                debtor.risk === 'high' ? 'bg-red-100 text-red-800' :
-                                debtor.risk === 'medium' ? 'bg-amber-100 text-amber-800' :
-                                'bg-green-100 text-green-800'
-                              }`}>
-                                {debtor.risk}
-                              </span>
-                            </div>
                           </div>
+                          <span className="text-sm font-bold text-[#17B6C3] ml-4">
+                            {formatCurrency(debtor.amount)}
+                          </span>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </CardContent>
               </Card>
