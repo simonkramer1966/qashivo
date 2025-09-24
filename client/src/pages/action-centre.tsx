@@ -1835,7 +1835,7 @@ export default function ActionCentre() {
       <NewSidebar />
       <main className="flex-1 overflow-hidden">
         <Header 
-          title="Action Centre" 
+          title="Action Centre - Human Intervention Required" 
           subtitle="Prioritized actions for optimal collection results"
         />
         
