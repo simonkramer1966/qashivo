@@ -192,12 +192,13 @@ export default function Invoices() {
   // Payment Plan Creation Mutation
   const createPaymentPlanMutation = useMutation({
     mutationFn: async (paymentPlanData: any) => {
-      return await apiRequest("POST", "/api/payment-plans", paymentPlanData);
+      const response = await apiRequest("POST", "/api/payment-plans", paymentPlanData);
+      return await response.json();
     },
     onSuccess: (data) => {
       toast({
         title: "Payment Plan Created",
-        description: `Successfully created payment plan with ${data.schedules?.length || 0} installments for ${data.linkedInvoices} invoice${data.linkedInvoices !== 1 ? 's' : ''}.`
+        description: `Successfully created payment plan with ${data.paymentPlan?.installments?.length || 0} installments for ${data.paymentPlan?.invoiceIds?.length || 1} invoice${data.paymentPlan?.invoiceIds?.length !== 1 ? 's' : ''}.`
       });
       
       // Reset form and close dialog

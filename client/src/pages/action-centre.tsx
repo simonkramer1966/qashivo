@@ -2275,7 +2275,7 @@ export default function ActionCentre() {
                                       e.stopPropagation();
                                       setCommunicationDialog({
                                         isOpen: true,
-                                        type: 'whatsapp',
+                                        type: 'sms',
                                         context: (isInvoiceItem(action) ? 'invoice' : 'customer'),
                                         contextId: (isInvoiceItem(action) ? action.id : action.contactId),
                                       });
