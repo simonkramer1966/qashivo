@@ -664,9 +664,11 @@ export default function Cashboard() {
                     const trendIcon = category.trend === 'up' ? '↗️' : 
                                      category.trend === 'down' ? '↘️' : '➡️';
                     
+                    const escalateNote = category.label === 'Escalate' ? ' These are least likely to pay without formal escalation, such as legal action or collections' : '';
+                    
                     const tooltipContent = isException 
-                      ? `${category.label}: ${formatCurrency(category.amount)} (${percentage}% of aging total). Currently ${trendText} ${trendIcon}. These invoices can also appear in aging categories above.`
-                      : `${category.label}: ${formatCurrency(category.amount)} represents ${percentage}% of total aging portfolio. ${category.count} invoices ${category.description}. Currently ${trendText} ${trendIcon}.`;
+                      ? `${category.label}: ${formatCurrency(category.amount)} (${percentage}% of aging total) Currently ${trendText} ${trendIcon} These invoices can also appear in aging categories above`
+                      : `${category.label}: ${formatCurrency(category.amount)} represents ${percentage}% of total aging portfolio ${category.count} invoices ${category.description} Currently ${trendText} ${trendIcon}${escalateNote}`;
                     
                     return (
                     <Tooltip>
