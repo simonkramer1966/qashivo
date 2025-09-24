@@ -537,14 +537,14 @@ export default function Cashboard() {
                         label: '30 Days', 
                         value: thirtyDays, 
                         icon: TrendingUp, 
-                        color: 'text-green-600',
+                        color: 'text-[#17B6C3]',
                         testId: '30-days-position'
                       },
                       { 
                         label: '60 Days', 
                         value: sixtyDays, 
                         icon: TrendingUp, 
-                        color: 'text-blue-600',
+                        color: 'text-[#17B6C3]',
                         testId: '60-days-position'
                       }
                     ].map((metric) => (
