@@ -659,9 +659,14 @@ export default function Cashboard() {
                     const percentage = Math.round((category.amount / totalAmountAging) * 100);
                     const isException = ['PYMT PLANS', 'Disputes', 'Legal'].includes(category.label);
                     
+                    const trendText = category.trend === 'up' ? 'trending up' : 
+                                     category.trend === 'down' ? 'trending down' : 'stable';
+                    const trendIcon = category.trend === 'up' ? '↗️' : 
+                                     category.trend === 'down' ? '↘️' : '➡️';
+                    
                     const tooltipContent = isException 
-                      ? `${category.label}: ${formatCurrency(category.amount)} (${percentage}% of aging total). These invoices can also appear in aging categories above.`
-                      : `${category.label}: ${formatCurrency(category.amount)} represents ${percentage}% of total aging portfolio. ${category.count} invoices ${category.description}.`;
+                      ? `${category.label}: ${formatCurrency(category.amount)} (${percentage}% of aging total). Currently ${trendText} ${trendIcon}. These invoices can also appear in aging categories above.`
+                      : `${category.label}: ${formatCurrency(category.amount)} represents ${percentage}% of total aging portfolio. ${category.count} invoices ${category.description}. Currently ${trendText} ${trendIcon}.`;
                     
                     return (
                     <Tooltip>
