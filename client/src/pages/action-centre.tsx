@@ -1894,7 +1894,7 @@ export default function ActionCentre() {
                                   <Icon className={`h-4 w-4 ${isSelected ? 'text-[#17B6C3]' : 'text-slate-600'}`} />
                                 </div>
                                 {queue.count > 0 && (
-                                  <div className="absolute -top-1 -right-1 min-w-[20px] h-5 bg-[#17B6C3] text-white text-xs rounded-full flex items-center justify-center px-1">
+                                  <div className="absolute -top-2 -right-1 min-w-[20px] h-5 bg-[#17B6C3] text-white text-xs rounded-full flex items-center justify-center px-1">
                                     {queue.count > 99 ? '99+' : queue.count}
                                   </div>
                                 )}
@@ -1915,7 +1915,7 @@ export default function ActionCentre() {
                           </button>
                         </TooltipTrigger>
                         {sidebarCollapsed && (
-                          <TooltipContent side="right" className="bg-slate-900 text-white">
+                          <TooltipContent side="right" className="bg-white text-slate-900 border border-slate-200 shadow-lg">
                             <p>{queue.label} ({queue.count})</p>
                           </TooltipContent>
                         )}
