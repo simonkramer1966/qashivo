@@ -747,7 +747,7 @@ export default function Cashboard() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-0.5">
+                  <div className="space-y-0">
                     {[
                       { id: 1, company: 'MegaCorp Industries', amount: 45600 },
                       { id: 2, company: 'Global Tech Solutions', amount: 32400 },
