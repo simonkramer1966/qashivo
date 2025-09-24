@@ -2514,21 +2514,9 @@ export default function ActionCentre() {
               <div className="h-full flex flex-col">
                 {/* Contact Header */}
                 <div className="p-6 border-b border-white/50">
-                  <div className="flex items-center space-x-3 mb-4">
-                    <Avatar className="h-12 w-12">
-                      <AvatarFallback>
-                        {(() => {
-                          // Use company name for avatar initials when available, fallback to contact name
-                          const primaryName = selectedAction.companyName || selectedAction.contactName;
-                          if (!primaryName || typeof primaryName !== 'string') return '??';
-                          return primaryName.split(' ').map(n => n[0] || '').filter(c => c).join('').toUpperCase() || '??';
-                        })()}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <h3 className="font-semibold text-slate-900">{selectedAction.companyName || 'Unknown Company'}</h3>
-                      <p className="text-sm text-slate-600">{selectedAction.contactName || 'Unknown Contact'}</p>
-                    </div>
+                  <div className="mb-4">
+                    <h3 className="font-semibold text-slate-900">{selectedAction.companyName || 'Unknown Company'}</h3>
+                    <p className="text-sm text-slate-600">{selectedAction.contactName || 'Unknown Contact'}</p>
                   </div>
                 </div>
 
