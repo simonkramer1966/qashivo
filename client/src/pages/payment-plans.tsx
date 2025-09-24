@@ -136,8 +136,8 @@ export default function PaymentPlans() {
         // Handle nested properties
         if (sortColumn.includes('.')) {
           const keys = sortColumn.split('.');
-          aValue = keys.reduce((obj, key) => obj?.[key], a);
-          bValue = keys.reduce((obj, key) => obj?.[key], b);
+          aValue = keys.reduce((obj: any, key) => obj?.[key], a);
+          bValue = keys.reduce((obj: any, key) => obj?.[key], b);
         }
         
         // Handle null/undefined values
