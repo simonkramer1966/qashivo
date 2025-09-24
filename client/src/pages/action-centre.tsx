@@ -24,6 +24,7 @@ import {
   Target, 
   Calendar, 
   AlertTriangle, 
+  Frown,
   Clock, 
   TrendingUp, 
   Users, 
@@ -2349,7 +2350,7 @@ export default function ActionCentre() {
                                     }}
                                     data-testid={`menu-dispute-${action.id}`}
                                   >
-                                    <AlertTriangle className="h-4 w-4 mr-2" />
+                                    <Frown className="h-4 w-4 mr-2" />
                                     Dispute
                                   </DropdownMenuItem>
                                 </DropdownMenuContent>
