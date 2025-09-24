@@ -1277,6 +1277,30 @@ export default function ActionCentre() {
     setSelectedPaymentInvoices(new Map());
   };
 
+  // Auto-select all available invoices when payment plan dialog opens (like Invoice page)
+  useEffect(() => {
+    if (showPaymentPlanDialog && paymentPlanAction && !contactInvoicesQuery.isLoading) {
+      const contactInvoices = (contactInvoicesQuery.data as any[]) || [];
+      
+      if (contactInvoices.length > 0) {
+        // Auto-select all available invoices
+        const newSelection = new Map();
+        contactInvoices.forEach(invoice => {
+          newSelection.set(invoice.id, invoice);
+        });
+        setSelectedPaymentInvoices(newSelection);
+        
+        // Set default plan start date to tomorrow (like Invoice page)
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        setPlanStartDate(tomorrow.toISOString().split('T')[0]);
+      }
+    } else if (!showPaymentPlanDialog) {
+      // Reset state when dialog closes
+      resetPaymentPlanForm();
+    }
+  }, [showPaymentPlanDialog, paymentPlanAction, contactInvoicesQuery.isLoading, contactInvoicesQuery.data]);
+
   const validatePaymentPlanForm = () => {
     const errors: string[] = [];
     const contactInvoices = (contactInvoicesQuery.data as any[]) || [];
@@ -3567,6 +3591,17 @@ export default function ActionCentre() {
                 }
 
                 const selectedInvoiceIds = Array.from(selectedPaymentInvoices.keys());
+                
+                // Final defensive check to prevent empty invoice submissions
+                if (selectedInvoiceIds.length === 0) {
+                  toast({
+                    title: "No Invoices Selected",
+                    description: "Please select at least one invoice to create a payment plan.",
+                    variant: "destructive",
+                  });
+                  return;
+                }
+                
                 const totalAmount = Array.from(selectedPaymentInvoices.values())
                   .reduce((sum, invoice) => sum + parseFloat(invoice.amount || "0"), 0);
 
