@@ -3,6 +3,7 @@ import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -38,7 +39,7 @@ import NewSidebar from "@/components/layout/new-sidebar";
 import { formatCurrency } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip as RechartsTooltip } from 'recharts';
 
 // Types for API responses
 interface CashMetrics {
@@ -570,6 +571,7 @@ export default function Cashboard() {
             <div className="mb-6 sm:mb-8">
               <h2 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4 text-slate-900 dark:text-slate-100">Invoice Ageing</h2>
               
+              <TooltipProvider>
               {(() => {
                 const agingCategories = [
                   { 
@@ -653,16 +655,26 @@ export default function Cashboard() {
                   // Calculate total amount for percentage calculations (only main aging categories)
                   const totalAmountAging = firstRowCards.reduce((sum, cat) => sum + cat.amount, 0);
 
-                  const renderCard = (category) => (
-                  <Card 
-                    key={category.label} 
-                    className={`glass-card hover:shadow-lg transition-all duration-200 hover:scale-105 relative ${
-                      category.label === 'PYMT PLANS' ? 'bg-[#17B6C3] border-[#17B6C3] border-2' : 
-                      category.label === 'Disputes' ? 'bg-red-800 border-red-800 border-2' : 
-                      category.label === 'Legal' ? 'bg-black border-black border-2' : ''
-                    }`}
-                    data-testid={`card-aging-${category.label.toLowerCase()}`}
-                  >
+                  const renderCard = (category) => {
+                    const percentage = Math.round((category.amount / totalAmountAging) * 100);
+                    const isException = ['PYMT PLANS', 'Disputes', 'Legal'].includes(category.label);
+                    
+                    const tooltipContent = isException 
+                      ? `${category.label}: ${formatCurrency(category.amount)} (${percentage}% of aging total). These invoices can also appear in aging categories above.`
+                      : `${category.label}: ${formatCurrency(category.amount)} represents ${percentage}% of total aging portfolio. ${category.count} invoices ${category.description}.`;
+                    
+                    return (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Card 
+                          key={category.label} 
+                          className={`glass-card hover:shadow-lg transition-all duration-200 hover:scale-105 relative cursor-help ${
+                            category.label === 'PYMT PLANS' ? 'bg-[#17B6C3] border-[#17B6C3] border-2' : 
+                            category.label === 'Disputes' ? 'bg-red-800 border-red-800 border-2' : 
+                            category.label === 'Legal' ? 'bg-black border-black border-2' : ''
+                          }`}
+                          data-testid={`card-aging-${category.label.toLowerCase()}`}
+                        >
                     {/* Percentage Circle */}
                     <div className="absolute top-2 left-2 w-8 h-8 bg-gray-500 rounded-full flex items-center justify-center">
                       <span className="text-white text-xs font-semibold">
@@ -688,8 +700,14 @@ export default function Cashboard() {
                         </div>
                       </div>
                     </CardContent>
-                  </Card>
-                  );
+                        </Card>
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-xs">
+                        <p>{tooltipContent}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                    );
+                  };
 
                   return (
                     <div className="space-y-4">
@@ -707,7 +725,9 @@ export default function Cashboard() {
                       </div>
                     </div>
                   );
-                })()}
+                })()
+                }
+              </TooltipProvider>
             </div>
 
             {/* Recent Activity Feed and Top Debtors */}
