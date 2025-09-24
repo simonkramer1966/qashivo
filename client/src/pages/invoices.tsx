@@ -1203,16 +1203,6 @@ export default function Invoices() {
                                     View Comms History
                                   </DropdownMenuItem>
                                   <DropdownMenuItem 
-                                    data-testid={`menu-hold-invoice-${invoice.id}`}
-                                    onClick={() => toast({ 
-                                      title: "Hold Invoice", 
-                                      description: `Invoice ${invoice.invoiceNumber} hold toggled` 
-                                    })}
-                                  >
-                                    <Pause className="mr-2 h-4 w-4" />
-                                    Hold Invoice
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem 
                                     data-testid={`menu-mark-paid-${invoice.id}`}
                                   >
                                     <CheckCircle className="mr-2 h-4 w-4" />
