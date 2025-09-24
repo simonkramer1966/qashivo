@@ -1246,7 +1246,7 @@ export default function ActionCentre() {
     onSuccess: (data) => {
       toast({
         title: "Payment Plan Created",
-        description: `Payment plan created successfully with ${data.paymentPlan.installments.length} installments`,
+        description: `Payment plan created successfully with ${data.schedules?.length || 0} installments`,
       });
       // Reset form and close dialog
       resetPaymentPlanForm();
@@ -1255,6 +1255,7 @@ export default function ActionCentre() {
       // Refresh queue data
       queryClient.invalidateQueries({ queryKey: ["/api/action-centre/queue"] });
       queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/payment-plans"] });
     },
     onError: (error: any) => {
       console.error('Payment plan creation error:', error);
