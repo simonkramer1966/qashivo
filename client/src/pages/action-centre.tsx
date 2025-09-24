@@ -2301,16 +2301,36 @@ export default function ActionCentre() {
                                     Voice Message
                                   </DropdownMenuItem>
                                   <DropdownMenuItem 
-                                    onClick={(e) => {
+                                    onClick={async (e) => {
                                       e.stopPropagation();
                                       // Validate contactId exists before opening dialog
                                       const contactId = action.contactId;
                                       if (contactId) {
-                                        setAiCallDialog({
-                                          isOpen: true,
-                                          contactId,
-                                          invoiceId: action.invoiceId || '',
-                                        });
+                                        try {
+                                          const response = await fetch(`/api/contacts/${contactId}`);
+                                          if (response.ok) {
+                                            // Contact exists, proceed normally
+                                            setAiCallDialog({
+                                              isOpen: true,
+                                              contactId,
+                                              invoiceId: action.invoiceId || '',
+                                            });
+                                          } else {
+                                            // Contact doesn't exist, show error
+                                            toast({
+                                              title: "Contact Not Found",
+                                              description: "The contact for this action no longer exists. Please refresh the data.",
+                                              variant: "destructive",
+                                            });
+                                          }
+                                        } catch (error) {
+                                          console.error('Error validating contact:', error);
+                                          toast({
+                                            title: "Error",
+                                            description: "Failed to validate contact information.",
+                                            variant: "destructive",
+                                          });
+                                        }
                                       } else {
                                         toast({
                                           title: "No Contact Information",
