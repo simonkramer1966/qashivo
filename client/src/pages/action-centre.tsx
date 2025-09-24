@@ -474,10 +474,27 @@ export default function ActionCentre() {
     queueCounts: (rawMetrics as any).queueCounts ?? {}, // Extract queue counts for category badges
   } : null;
 
+  // Map tabs to backend filter parameters
+  const getTabFilterParams = (tabId: string) => {
+    switch (tabId) {
+      case 'broken-promises':
+        return { overdue: 'overdue' }; // Overdue and missed payments
+      case 'disputes':
+        return { overdue: 'serious' }; // Disputed/challenged invoices
+      case 'payment-plans':
+        return { overdue: 'recent' }; // Payment plan related invoices
+      case 'escalations':
+        return { overdue: 'escalation' }; // High-risk legal cases
+      default:
+        return { overdue: 'all' };
+    }
+  };
+
   // Fetch data based on selected tab
   const useInvoiceData = isInvoiceTab(selectedTab);
+  const tabFilterParams = getTabFilterParams(selectedTab);
   
-  // Action items query (for 'today' queue)
+  // Action items query - not currently used since all tabs use invoice data
   const { data: queueResponse, isLoading: actionLoading, error: actionError } = useQuery({
     queryKey: ["/api/action-centre/queue", { 
       tabType: selectedTab, 
@@ -492,11 +509,11 @@ export default function ActionCentre() {
     staleTime: 2 * 60 * 1000, // 2 minutes
   });
   
-  // Invoice data query (for category queues)
+  // Invoice data query (for all tabs)
   const { data: invoiceResponse, isLoading: invoiceLoading, error: invoiceError } = useQuery({
     queryKey: ["/api/invoices", {
       status: 'all',
-      tabFilter: selectedTab, // Use tab for filtering
+      ...tabFilterParams, // Map tab to appropriate overdue category
       search: debouncedSearch,
       page: currentPage,
       limit: itemsPerPage,
