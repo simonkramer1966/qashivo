@@ -29,7 +29,9 @@ import {
   RefreshCw,
   Eye,
   Settings,
-  Scale
+  Scale,
+  Activity,
+  AlertCircle
 } from "lucide-react";
 import NewSidebar from "@/components/layout/new-sidebar";
 import { formatCurrency } from "@/lib/utils";
@@ -648,227 +650,194 @@ export default function Cashboard() {
               </div>
             </div>
 
-            {/* Priority Actions Row */}
-            <div className="mb-6 sm:mb-8">
-              <h2 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4 text-slate-900 dark:text-slate-100">Priority Actions</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-                {actionItems.map((item) => (
-                  <Card 
-                    key={item.id} 
-                    className="glass-card cursor-pointer transition-all duration-200 hover:scale-105"
-                    onClick={item.onClick}
-                    data-testid={`card-action-${item.type}`}
-                  >
-                    <CardContent className="p-4 sm:p-6">
-                      <div className="flex items-start justify-between mb-3 sm:mb-4">
-                        <item.icon className={`h-5 w-5 sm:h-6 sm:w-6 ${
-                          item.type === 'urgent' ? 'text-red-600' : 
-                          item.type === 'attention' ? 'text-amber-600' : 
-                          'text-green-600'
-                        }`} />
-                        <Badge 
-                          variant={item.type === 'urgent' ? 'destructive' : item.type === 'attention' ? 'default' : 'secondary'} 
-                          className={`text-xs ${
-                            item.type === 'urgent' ? 'bg-red-500 hover:bg-red-600 text-white' : 
-                            item.type === 'attention' ? 'bg-amber-500 hover:bg-amber-600 text-white' : 
-                            'bg-green-500 hover:bg-green-600 text-white'
-                          }`}
-                        >
-                          {item.type.toUpperCase()}
-                        </Badge>
-                      </div>
-                      <h3 className="text-sm sm:text-base font-semibold text-slate-900 dark:text-slate-100 mb-2" data-testid={`text-action-title-${item.type}`}>
-                        {item.title}
-                      </h3>
-                      <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mb-3 sm:mb-4">
-                        {item.description}
-                      </p>
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-0">
-                        <div className="text-base sm:text-lg font-bold text-[#17B6C3]" data-testid={`text-action-value-${item.type}`}>
-                          {formatCurrency(item.value)}
-                        </div>
-                        <Button size="sm" variant="outline" className="text-xs sm:text-sm" data-testid={`button-action-${item.type}`}>
-                          <span className="hidden sm:inline">{item.action}</span>
-                          <span className="sm:hidden">Action</span>
-                          <ArrowRight className="h-3 w-3 sm:h-4 sm:w-4 ml-1 sm:ml-2" />
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </div>
-
-            {/* Simple Cash Flow Chart */}
-            <div className="mb-6 sm:mb-8">
-              <Card className="glass-card" data-testid="card-cashflow-chart">
-                <CardHeader className="pb-3 sm:pb-6">
-                  <CardTitle className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                    <span className="text-base sm:text-lg">3-Month Cash Flow Trend</span>
-                    <Badge variant="outline" className="text-xs sm:text-sm w-fit">Expected Scenario</Badge>
+            {/* Recent Activity Feed and Top Debtors */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
+              {/* Recent Activity Feed */}
+              <Card className="glass-card" data-testid="card-recent-activity">
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <Activity className="h-5 w-5 text-[#17B6C3]" />
+                    <span>Recent Activity</span>
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="pt-0">
-                  {cashflowLoading ? (
-                    <div className="h-48 sm:h-64 flex items-center justify-center">
-                      <div className="w-6 h-6 sm:w-8 sm:h-8 border-4 border-[#17B6C3] border-t-transparent rounded-full animate-spin"></div>
-                    </div>
-                  ) : (
-                    <div className="h-48 sm:h-64">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={chartData}>
-                          <XAxis 
-                            dataKey="date" 
-                            tick={{ fontSize: 10 }}
-                            axisLine={false}
-                            tickLine={false}
-                            interval="preserveStartEnd"
-                          />
-                          <YAxis 
-                            tick={{ fontSize: 10 }}
-                            axisLine={false}
-                            tickLine={false}
-                            tickFormatter={(value) => `£${(value / 1000).toFixed(0)}k`}
-                            width={60}
-                          />
-                          <Tooltip 
-                            formatter={(value: any) => [formatCurrency(value), 'Expected']}
-                            labelFormatter={(label) => `Date: ${label}`}
-                            contentStyle={{ fontSize: '12px' }}
-                          />
-                          <Line 
-                            type="monotone" 
-                            dataKey="expected" 
-                            stroke="#17B6C3" 
-                            strokeWidth={2}
-                            dot={false}
-                          />
-                        </LineChart>
-                      </ResponsiveContainer>
-                    </div>
-                  )}
+                <CardContent>
+                  <div className="space-y-4">
+                    {[
+                      {
+                        id: 1,
+                        type: 'payment',
+                        customer: 'Acme Corp Ltd',
+                        amount: 2450,
+                        time: '2 hours ago',
+                        icon: CheckCircle,
+                        color: 'text-green-600'
+                      },
+                      {
+                        id: 2,
+                        type: 'overdue',
+                        customer: 'Digital Solutions Inc',
+                        amount: 8750,
+                        time: '4 hours ago',
+                        icon: AlertTriangle,
+                        color: 'text-amber-600'
+                      },
+                      {
+                        id: 3,
+                        type: 'reminder',
+                        customer: 'Tech Innovations Ltd',
+                        amount: 1200,
+                        time: '6 hours ago',
+                        icon: Mail,
+                        color: 'text-blue-600'
+                      },
+                      {
+                        id: 4,
+                        type: 'payment',
+                        customer: 'Creative Agency',
+                        amount: 5600,
+                        time: '1 day ago',
+                        icon: CheckCircle,
+                        color: 'text-green-600'
+                      },
+                      {
+                        id: 5,
+                        type: 'dispute',
+                        customer: 'Global Systems',
+                        amount: 3400,
+                        time: '2 days ago',
+                        icon: AlertCircle,
+                        color: 'text-red-600'
+                      }
+                    ].map((activity) => (
+                      <div key={activity.id} className="flex items-start space-x-3 p-3 bg-white/30 rounded-lg border border-white/20">
+                        <activity.icon className={`h-5 w-5 ${activity.color} mt-0.5 flex-shrink-0`} />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between mb-1">
+                            <p className="text-sm font-medium text-slate-900 dark:text-slate-100 truncate">
+                              {activity.customer}
+                            </p>
+                            <span className="text-xs text-slate-600 dark:text-slate-400">
+                              {activity.time}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <p className="text-xs text-slate-600 dark:text-slate-400 capitalize">
+                              {activity.type === 'overdue' ? 'Invoice overdue' : 
+                               activity.type === 'payment' ? 'Payment received' :
+                               activity.type === 'reminder' ? 'Reminder sent' :
+                               activity.type === 'dispute' ? 'Payment disputed' : activity.type}
+                            </p>
+                            <span className="text-sm font-semibold text-[#17B6C3]">
+                              {formatCurrency(activity.amount)}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Top Debtors */}
+              <Card className="glass-card" data-testid="card-top-debtors">
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <Users className="h-5 w-5 text-[#17B6C3]" />
+                    <span>Top Debtors</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {[
+                      {
+                        id: 1,
+                        company: 'MegaCorp Industries',
+                        contact: 'Sarah Johnson',
+                        amount: 45600,
+                        overdueDays: 67,
+                        invoices: 8,
+                        risk: 'high'
+                      },
+                      {
+                        id: 2,
+                        company: 'Global Tech Solutions',
+                        contact: 'Mike Chen',
+                        amount: 32400,
+                        overdueDays: 45,
+                        invoices: 5,
+                        risk: 'medium'
+                      },
+                      {
+                        id: 3,
+                        company: 'Premium Services Ltd',
+                        contact: 'Emma Wilson',
+                        amount: 28900,
+                        overdueDays: 23,
+                        invoices: 3,
+                        risk: 'medium'
+                      },
+                      {
+                        id: 4,
+                        company: 'Digital Innovations',
+                        contact: 'James Thompson',
+                        amount: 19750,
+                        overdueDays: 89,
+                        invoices: 12,
+                        risk: 'high'
+                      },
+                      {
+                        id: 5,
+                        company: 'Creative Solutions',
+                        contact: 'Lisa Rodriguez',
+                        amount: 15200,
+                        overdueDays: 34,
+                        invoices: 4,
+                        risk: 'medium'
+                      }
+                    ].map((debtor, index) => (
+                      <div key={debtor.id} className="flex items-center space-x-4 p-3 bg-white/30 rounded-lg border border-white/20">
+                        <div className="flex-shrink-0">
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${
+                            debtor.risk === 'high' ? 'bg-red-100 text-red-800' :
+                            debtor.risk === 'medium' ? 'bg-amber-100 text-amber-800' :
+                            'bg-green-100 text-green-800'
+                          }`}>
+                            {index + 1}
+                          </div>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between mb-1">
+                            <h4 className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate">
+                              {debtor.company}
+                            </h4>
+                            <span className="text-sm font-bold text-[#17B6C3]">
+                              {formatCurrency(debtor.amount)}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <p className="text-xs text-slate-600 dark:text-slate-400 truncate">
+                              {debtor.contact}
+                            </p>
+                            <div className="flex items-center space-x-2 text-xs">
+                              <span className="text-slate-600 dark:text-slate-400">
+                                {debtor.overdueDays} days
+                              </span>
+                              <span className={`px-2 py-1 rounded-full font-medium ${
+                                debtor.risk === 'high' ? 'bg-red-100 text-red-800' :
+                                debtor.risk === 'medium' ? 'bg-amber-100 text-amber-800' :
+                                'bg-green-100 text-green-800'
+                              }`}>
+                                {debtor.risk}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </CardContent>
               </Card>
             </div>
-
-            {/* Key Numbers Row */}
-            <div className="mb-6 sm:mb-8">
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-                {[
-                  { label: 'Total Outstanding', value: totalOutstanding, icon: DollarSign, color: 'text-blue-600' },
-                  { label: overdueInvoices ? 'Overdue Amount' : 'Overdue Amount (est)', value: overdueAmount, icon: Clock, color: 'text-red-600' },
-                  { label: 'Collection Rate', value: `${metrics?.collectionRate || 0}%`, icon: Target, color: 'text-green-600' },
-                  { label: 'Avg Days to Pay', value: `${metrics?.avgDaysToPay || 0} days`, icon: Calendar, color: 'text-amber-600' }
-                ].map((metric, index) => (
-                  <Card key={index} className="glass-card-light" data-testid={`card-metric-${index}`}>
-                    <CardContent className="p-3 sm:p-4">
-                      <div className="flex items-center space-x-2 sm:space-x-3">
-                        <metric.icon className={`h-4 w-4 sm:h-5 sm:w-5 ${metric.color} flex-shrink-0`} />
-                        <div className="min-w-0">
-                          <div className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 truncate">{metric.label}</div>
-                          <div className="text-sm sm:text-lg font-semibold text-slate-900 dark:text-slate-100 truncate" data-testid={`text-metric-value-${index}`}>
-                            {typeof metric.value === 'number' ? formatCurrency(metric.value) : metric.value}
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </div>
-
-            {/* Advanced Analysis Section (Progressive Disclosure) */}
-            <Card className="glass-card" data-testid="card-advanced-analysis">
-              <Collapsible open={showAdvanced} onOpenChange={setShowAdvanced}>
-                <CollapsibleTrigger asChild>
-                  <CardHeader className="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors" data-testid="button-toggle-advanced">
-                    <CardTitle className="flex items-center justify-between">
-                      <span className="flex items-center space-x-2">
-                        <BarChart3 className="h-5 w-5 text-[#17B6C3]" />
-                        <span>Advanced Analysis</span>
-                      </span>
-                      {showAdvanced ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
-                    </CardTitle>
-                  </CardHeader>
-                </CollapsibleTrigger>
-                <CollapsibleContent>
-                  <CardContent className="pt-0">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div>
-                        <h4 className="font-semibold mb-3 text-slate-900 dark:text-slate-100">Cash Flow Scenarios (90-day)</h4>
-                        <div className="space-y-3">
-                          {[
-                            { name: 'Optimistic', value: cashflowData?.summary?.totalOptimistic || (cashPosition * 1.2) },
-                            { name: 'Expected', value: cashflowData?.summary?.totalExpected || cashPosition },
-                            { name: 'Pessimistic', value: cashflowData?.summary?.totalPessimistic || (cashPosition * 0.8) }
-                          ].map((scenario) => (
-                            <div key={scenario.name} className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
-                              <span className="text-sm font-medium">{scenario.name}</span>
-                              <span className="text-sm text-[#17B6C3]">
-                                {formatCurrency(scenario.value)}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                        {cashflowData?.summary && (
-                          <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                            <div className="text-xs text-slate-600 dark:text-slate-400">
-                              <strong>Confidence Range:</strong> {formatCurrency(cashflowData.summary.confidenceRange)}
-                            </div>
-                            <div className="text-xs text-slate-600 dark:text-slate-400 mt-1">
-                              <strong>Daily Average:</strong> {formatCurrency(cashflowData.summary.averageDailyInflow)}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                      <div>
-                        <h4 className="font-semibold mb-3 text-slate-900 dark:text-slate-100">AI-Powered Recommendations</h4>
-                        <div className="space-y-3">
-                          {/* Dynamic recommendations based on data */}
-                          {metrics?.collectionRate && metrics.collectionRate < 75 && (
-                            <div className="flex items-start space-x-2 text-sm p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
-                              <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
-                              <div>
-                                <div className="font-medium text-amber-800 dark:text-amber-200">Low Collection Rate Detected</div>
-                                <div className="text-amber-700 dark:text-amber-300">Consider implementing automated payment reminders</div>
-                              </div>
-                            </div>
-                          )}
-                          
-                          {overdueAmount > 10000 && (
-                            <div className="flex items-start space-x-2 text-sm p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
-                              <Clock className="h-4 w-4 text-red-600 mt-0.5 flex-shrink-0" />
-                              <div>
-                                <div className="font-medium text-red-800 dark:text-red-200">High Overdue Amount</div>
-                                <div className="text-red-700 dark:text-red-300">Priority follow-up needed on {metrics?.overdueCount || 0} overdue invoices</div>
-                              </div>
-                            </div>
-                          )}
-                          
-                          {projectedRunway < 60 && (
-                            <div className="flex items-start space-x-2 text-sm p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-200 dark:border-orange-800">
-                              <TrendingDown className="h-4 w-4 text-orange-600 mt-0.5 flex-shrink-0" />
-                              <div>
-                                <div className="font-medium text-orange-800 dark:text-orange-200">Short Cash Runway</div>
-                                <div className="text-orange-700 dark:text-orange-300">Consider accelerating collections or extending payment terms</div>
-                              </div>
-                            </div>
-                          )}
-                          
-                          <div className="flex items-center space-x-2 text-sm p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
-                            <TrendingUp className="h-4 w-4 text-green-600 flex-shrink-0" />
-                            <div>
-                              <div className="font-medium text-green-800 dark:text-green-200">Growth Opportunity</div>
-                              <div className="text-green-700 dark:text-green-300">Offer 2% discount for payments within 10 days</div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </CollapsibleContent>
-              </Collapsible>
-            </Card>
 
           </div>
         </main>
