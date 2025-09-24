@@ -667,7 +667,7 @@ export default function Cashboard() {
                     const currentNote = category.label === 'Current' ? ' Monitoring these helps you forecast cash inflows.' : '';
                     const dueNote = category.label === 'Due' ? ' A gentle reminder can increase on-time payments and avoid them slipping into overdue.' : '';
                     const overdueNote = category.label === 'Overdue' ? ' Chasing now is critical — most payments are still recoverable during this stage.' : '';
-                    const escalateNote = category.label === 'Escalate' ? ' These are least likely to pay without formal escalation, such as legal action or collections.' : '';
+                    const escalateNote = category.label === 'Escalate' ? ' These invoices are high risk of late payment. Stronger actions, such as phone calls, are usually required here. These are least likely to pay without formal escalation, such as legal action or collections.' : '';
                     const pymtPlanNote = category.label === 'PYMT PLANS' ? ' Invoices being repaid in instalments. These don\'t appear in the Action Centre unless a payment is missed.' : '';
                     const disputeNote = category.label === 'Disputes' ? ' Invoices the customer has challenged. No chasing is done until resolved. Resolve disputes to return them to active collections.' : '';
                     const legalNote = category.label === 'Legal' ? ' Invoices escalated beyond credit control. These are in legal proceedings or external collections.' : '';
