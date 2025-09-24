@@ -661,79 +661,89 @@ export default function Cashboard() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-4">
-                    {[
-                      {
-                        id: 1,
-                        type: 'payment',
-                        customer: 'Acme Corp Ltd',
-                        amount: 2450,
-                        time: '2 hours ago',
-                        icon: CheckCircle,
-                        color: 'text-green-600'
-                      },
-                      {
-                        id: 2,
-                        type: 'overdue',
-                        customer: 'Digital Solutions Inc',
-                        amount: 8750,
-                        time: '4 hours ago',
-                        icon: AlertTriangle,
-                        color: 'text-amber-600'
-                      },
-                      {
-                        id: 3,
-                        type: 'reminder',
-                        customer: 'Tech Innovations Ltd',
-                        amount: 1200,
-                        time: '6 hours ago',
-                        icon: Mail,
-                        color: 'text-blue-600'
-                      },
-                      {
-                        id: 4,
-                        type: 'payment',
-                        customer: 'Creative Agency',
-                        amount: 5600,
-                        time: '1 day ago',
-                        icon: CheckCircle,
-                        color: 'text-green-600'
-                      },
-                      {
-                        id: 5,
-                        type: 'dispute',
-                        customer: 'Global Systems',
-                        amount: 3400,
-                        time: '2 days ago',
-                        icon: AlertCircle,
-                        color: 'text-red-600'
-                      }
-                    ].map((activity) => (
-                      <div key={activity.id} className="flex items-start space-x-3 p-3 bg-white/30 rounded-lg border border-white/20">
-                        <activity.icon className={`h-5 w-5 ${activity.color} mt-0.5 flex-shrink-0`} />
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between mb-1">
-                            <p className="text-sm font-medium text-slate-900 dark:text-slate-100 truncate">
+                  <div className="max-h-64 overflow-y-auto">
+                    <div className="divide-y divide-gray-200/30">
+                      {[
+                        {
+                          id: 1,
+                          type: 'payment',
+                          customer: 'Acme Corp Ltd',
+                          amount: 2450,
+                          time: '2 hours ago'
+                        },
+                        {
+                          id: 2,
+                          type: 'overdue',
+                          customer: 'Digital Solutions Inc',
+                          amount: 8750,
+                          time: '4 hours ago'
+                        },
+                        {
+                          id: 3,
+                          type: 'reminder',
+                          customer: 'Tech Innovations Ltd',
+                          amount: 1200,
+                          time: '6 hours ago'
+                        },
+                        {
+                          id: 4,
+                          type: 'payment',
+                          customer: 'Creative Agency',
+                          amount: 5600,
+                          time: '1 day ago'
+                        },
+                        {
+                          id: 5,
+                          type: 'dispute',
+                          customer: 'Global Systems',
+                          amount: 3400,
+                          time: '2 days ago'
+                        },
+                        {
+                          id: 6,
+                          type: 'payment',
+                          customer: 'Marketing Plus',
+                          amount: 1800,
+                          time: '3 days ago'
+                        },
+                        {
+                          id: 7,
+                          type: 'reminder',
+                          customer: 'Design Studio',
+                          amount: 4200,
+                          time: '4 days ago'
+                        },
+                        {
+                          id: 8,
+                          type: 'overdue',
+                          customer: 'Tech Consultants',
+                          amount: 6300,
+                          time: '5 days ago'
+                        }
+                      ].map((activity) => (
+                        <div key={activity.id} className="flex justify-between items-center py-1.5 text-xs">
+                          <div className="flex items-center space-x-2 flex-1 min-w-0">
+                            <span className="text-slate-900 dark:text-slate-100 font-medium truncate">
                               {activity.customer}
-                            </p>
-                            <span className="text-xs text-slate-600 dark:text-slate-400">
+                            </span>
+                            <span className="text-slate-600 dark:text-slate-400">
+                              {activity.type === 'overdue' ? 'overdue' : 
+                               activity.type === 'payment' ? 'paid' :
+                               activity.type === 'reminder' ? 'reminded' :
+                               activity.type === 'dispute' ? 'disputed' : activity.type}
+                            </span>
+                          </div>
+                          <div className="flex items-center space-x-2 ml-4">
+                            <span className="font-semibold text-[#17B6C3]">
+                              {formatCurrency(activity.amount)}
+                            </span>
+                            <span className="text-slate-600 dark:text-slate-400">
                               {activity.time}
                             </span>
                           </div>
-                          <div className="flex items-center justify-between">
-                            <p className="text-xs text-slate-600 dark:text-slate-400 capitalize">
-                              {activity.type === 'overdue' ? 'Invoice overdue' : 
-                               activity.type === 'payment' ? 'Payment received' :
-                               activity.type === 'reminder' ? 'Reminder sent' :
-                               activity.type === 'dispute' ? 'Payment disputed' : activity.type}
-                            </p>
-                            <span className="text-sm font-semibold text-[#17B6C3]">
-                              {formatCurrency(activity.amount)}
-                            </span>
-                          </div>
                         </div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
                 </CardContent>
               </Card>
