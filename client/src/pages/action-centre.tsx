@@ -273,6 +273,19 @@ export default function ActionCentre() {
     localStorage.setItem('action-centre-sidebar-collapsed', JSON.stringify(newState));
   }, [sidebarCollapsed]);
 
+  // Keyboard shortcut for toggling sidebar (Cmd+B)
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.metaKey && event.key.toLowerCase() === 'b') {
+        event.preventDefault();
+        toggleSidebar();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [toggleSidebar]);
+
   // State management
   const [selectedQueue, setSelectedQueue] = useState('today');
   const [tab, setTab] = useState('details'); // Controlled tab state for unified tabs
