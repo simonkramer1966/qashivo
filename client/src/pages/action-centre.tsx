@@ -271,37 +271,9 @@ export default function ActionCentre() {
     hasDuplicates
   } = usePaymentPlanValidation();
   
-  // Sidebar collapse state with localStorage persistence
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('action-centre-sidebar-collapsed');
-      return saved ? JSON.parse(saved) : false;
-    }
-    return false;
-  });
-  
-  // Toggle sidebar function
-  const toggleSidebar = useCallback(() => {
-    const newState = !sidebarCollapsed;
-    setSidebarCollapsed(newState);
-    localStorage.setItem('action-centre-sidebar-collapsed', JSON.stringify(newState));
-  }, [sidebarCollapsed]);
-
-  // Keyboard shortcut for toggling sidebar (Cmd+B)
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.metaKey && event.key.toLowerCase() === 'b') {
-        event.preventDefault();
-        toggleSidebar();
-      }
-    };
-
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [toggleSidebar]);
 
   // State management
-  const [selectedQueue, setSelectedQueue] = useState('today');
+  const [selectedTab, setSelectedTab] = useState('broken-promises');
   const [tab, setTab] = useState('details'); // Controlled tab state for unified tabs
 
   // Comprehensive error handling for table layout and ResizeObserver issues
@@ -502,13 +474,13 @@ export default function ActionCentre() {
     queueCounts: (rawMetrics as any).queueCounts ?? {}, // Extract queue counts for category badges
   } : null;
 
-  // Fetch queue data with filters - use action items for 'today', invoices for category queues
-  const useInvoiceData = isInvoiceQueue(selectedQueue);
+  // Fetch data based on selected tab
+  const useInvoiceData = ['disputes', 'payment-plans', 'escalations'].includes(selectedTab);
   
   // Action items query (for 'today' queue)
   const { data: queueResponse, isLoading: actionLoading, error: actionError } = useQuery({
     queryKey: ["/api/action-centre/queue", { 
-      queueType: selectedQueue, 
+      tabType: selectedTab, 
       search: debouncedSearch, 
       page: currentPage, 
       limit: itemsPerPage,
@@ -524,7 +496,7 @@ export default function ActionCentre() {
   const { data: invoiceResponse, isLoading: invoiceLoading, error: invoiceError } = useQuery({
     queryKey: ["/api/invoices", {
       status: 'all',
-      overdue: selectedQueue, // Use queue name as overdue category
+      tabFilter: selectedTab, // Use tab for filtering
       search: debouncedSearch,
       page: currentPage,
       limit: itemsPerPage,
@@ -1712,7 +1684,7 @@ export default function ActionCentre() {
       // Continue gracefully - don't prevent the component from functioning
     }
     
-  }, [selectedQueue, currentPage, clearSelection, queryClient]);
+  }, [selectedTab, currentPage, clearSelection, queryClient]);
   
   // Show keyboard help on first visit (optional)
   useEffect(() => {
@@ -1745,45 +1717,31 @@ export default function ActionCentre() {
     return <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-teal-50" />;
   }
 
-  // Queue options for sidebar with proper metrics typing
+  // Tab options for the new tab-based interface
   const queueMetrics = metrics as (QueueMetrics & { queueCounts?: Record<string, number> }) | undefined;
   const queueCounts = queueMetrics?.queueCounts || {};
   
-  // Define overdue category-based queue options with icons and colors
-  const queueOptions = [
+  // Define tab options with their respective data
+  const tabOptions = [
     { 
-      id: 'today', 
-      label: 'Today\'s Actions', 
-      icon: Calendar, 
-      count: (queueCounts.current || 0) + (queueCounts.due || 0) // Today includes current and due items
+      id: 'broken-promises', 
+      label: 'Broken Promises', 
+      count: (queueCounts.overdue || 0) + (queueCounts.serious || 0) // Overdue + missed payments
     },
     { 
-      id: 'due', 
-      label: 'Due', 
-      icon: Clock, 
-      count: queueCounts.due || 0,
-      category: getOverdueCategoryInfo('due', 0)
+      id: 'disputes', 
+      label: 'Disputes', 
+      count: queueCounts.disputes || 0
     },
     { 
-      id: 'overdue', 
-      label: 'Overdue', 
-      icon: AlertTriangle, 
-      count: queueCounts.overdue || 0,
-      category: getOverdueCategoryInfo('overdue', 0)
+      id: 'payment-plans', 
+      label: 'Payment Plans', 
+      count: queueCounts.paymentPlans || 0
     },
     { 
-      id: 'serious', 
-      label: 'Serious', 
-      icon: AlertCircle, 
-      count: queueCounts.serious || 0,
-      category: getOverdueCategoryInfo('serious', 0)
-    },
-    { 
-      id: 'escalation', 
-      label: 'Escalation', 
-      icon: XCircle, 
-      count: queueCounts.escalation || 0,
-      category: getOverdueCategoryInfo('escalation', 0)
+      id: 'escalations', 
+      label: 'Escalations', 
+      count: queueCounts.escalation || 0
     },
   ];
 
@@ -1840,138 +1798,7 @@ export default function ActionCentre() {
         />
         
         <div ref={containerRef} className="h-[calc(100vh-80px)] flex" data-testid="container-action-centre">
-          {/* Left Sidebar - Queue Navigation */}
-          <div className={`${sidebarCollapsed ? 'w-16' : 'w-80'} border-r border-white/50 bg-white/40 backdrop-blur-sm transition-all duration-300 ease-in-out`}>
-            <div className={`${sidebarCollapsed ? 'p-2' : 'p-6'}`}>
-              <div className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-between'} mb-6`}>
-                {!sidebarCollapsed && (
-                  <h3 className="text-lg font-semibold text-slate-900">Action Queues</h3>
-                )}
-                <div className="flex items-center space-x-1">
-                  <Button 
-                    variant="ghost" 
-                    size="sm"
-                    onClick={toggleSidebar}
-                    className="hover:bg-white/60"
-                    data-testid="button-toggle-sidebar"
-                    title={sidebarCollapsed ? 'Expand sidebar (Cmd+B)' : 'Collapse sidebar (Cmd+B)'}
-                  >
-                    {sidebarCollapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
-                  </Button>
-                  {!sidebarCollapsed && (
-                    <Button 
-                      variant="ghost" 
-                      size="sm"
-                      onClick={() => {
-                        queryClient.invalidateQueries({ queryKey: ["/api/action-centre/queue"] });
-                        queryClient.invalidateQueries({ queryKey: ["/api/action-centre/metrics"] });
-                      }}
-                      data-testid="button-refresh-queues"
-                    >
-                      <RefreshCw className="h-4 w-4" />
-                    </Button>
-                  )}
-                </div>
-              </div>
-
-              {/* Metrics Summary */}
-              {!sidebarCollapsed ? (
-                <div className="grid grid-cols-2 gap-4 mb-6">
-                  <Card className="bg-white/70 backdrop-blur-md border-0 shadow-lg p-4">
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-[#17B6C3]" data-testid="text-total-actions">
-                        {metricsLoading ? '-' : metrics?.totalActions || 0}
-                      </div>
-                      <div className="text-xs text-slate-600">Total Actions</div>
-                    </div>
-                  </Card>
-                  <Card className="bg-white/70 backdrop-blur-md border-0 shadow-lg p-4">
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-slate-900" data-testid="text-total-value">
-                        {metricsLoading ? '-' : (metrics?.totalValue || 0).toLocaleString()}
-                      </div>
-                      <div className="text-xs text-slate-600">Total Value</div>
-                    </div>
-                  </Card>
-                </div>
-              ) : (
-                <div className="mb-6 space-y-2">
-                  <div className="bg-white/70 backdrop-blur-md border-0 shadow-lg rounded-lg p-2 text-center">
-                    <div className="text-sm font-bold text-[#17B6C3]" data-testid="text-total-actions-collapsed">
-                      {metricsLoading ? '-' : metrics?.totalActions || 0}
-                    </div>
-                  </div>
-                  <div className="bg-white/70 backdrop-blur-md border-0 shadow-lg rounded-lg p-2 text-center">
-                    <div className="text-sm font-bold text-slate-900" data-testid="text-total-value-collapsed">
-                      {metricsLoading ? '-' : (metrics?.totalValue ? `${Math.round(metrics.totalValue / 1000)}k` : 0)}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Queue List */}
-              <div className="space-y-2">
-                {queueOptions.map((queue) => {
-                  const Icon = queue.icon;
-                  const isSelected = selectedQueue === queue.id;
-                  
-                  return (
-                    <TooltipProvider key={queue.id}>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <button
-                            onClick={() => {
-                              setSelectedQueue(queue.id);
-                              setCurrentPage(1);
-                              setSelectedAction(null);
-                            }}
-                            className={`w-full flex items-center ${sidebarCollapsed ? 'justify-center p-2' : 'justify-between p-3'} rounded-lg transition-all duration-200 ${
-                              isSelected 
-                                ? 'bg-[#17B6C3]/10 border border-[#17B6C3]/20 text-[#17B6C3]' 
-                                : 'hover:bg-white/60 text-slate-700'
-                            }`}
-                            data-testid={`button-queue-${queue.id}`}
-                          >
-                            {sidebarCollapsed ? (
-                              <div className="relative">
-                                <div className={`p-2 rounded-lg ${isSelected ? 'bg-[#17B6C3]/10' : 'bg-slate-100'}`}>
-                                  <Icon className={`h-4 w-4 ${isSelected ? 'text-[#17B6C3]' : 'text-slate-600'}`} />
-                                </div>
-                                {queue.count > 0 && (
-                                  <div className="absolute -top-2 -right-1 min-w-[20px] h-5 bg-[#17B6C3] text-white text-xs rounded-full flex items-center justify-center px-1">
-                                    {queue.count > 99 ? '99+' : queue.count}
-                                  </div>
-                                )}
-                              </div>
-                            ) : (
-                              <>
-                                <div className="flex items-center space-x-3">
-                                  <div className={`p-2 rounded-lg ${isSelected ? 'bg-[#17B6C3]/10' : 'bg-slate-100'}`}>
-                                    <Icon className={`h-4 w-4 ${isSelected ? 'text-[#17B6C3]' : 'text-slate-600'}`} />
-                                  </div>
-                                  <span className="font-medium">{queue.label}</span>
-                                </div>
-                                <Badge variant="secondary" className={isSelected ? 'bg-[#17B6C3]/20 text-[#17B6C3]' : ''}>
-                                  {queue.count}
-                                </Badge>
-                              </>
-                            )}
-                          </button>
-                        </TooltipTrigger>
-                        {sidebarCollapsed && (
-                          <TooltipContent side="right" className="bg-white text-slate-900 border border-slate-200 shadow-lg z-[9999]">
-                            <p>{queue.label} ({queue.count})</p>
-                          </TooltipContent>
-                        )}
-                      </Tooltip>
-                    </TooltipProvider>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-
-          {/* Center Panel - Action Worklist */}
+          {/* Main Panel - Action Worklist with Tabs */}
           <div className="flex-1 flex flex-col">
             {/* Search and Filters */}
             <div className="border-b border-white/50 bg-white/40 backdrop-blur-sm p-4">
