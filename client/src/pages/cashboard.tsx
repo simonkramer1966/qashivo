@@ -763,17 +763,17 @@ export default function Cashboard() {
                       const concentrationPercentage = ((debtor.amount / (totalOutstanding || 1)) * 100).toFixed(1);
                       return (
                         <div key={debtor.id} className="flex items-center justify-between p-3 bg-white/30 rounded-lg border border-white/20">
-                          <div className="flex-1 min-w-0">
-                            <h4 className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate">
-                              {debtor.company}
-                            </h4>
-                            <p className="text-xs text-slate-600 dark:text-slate-400">
-                              {concentrationPercentage}% of total outstanding
-                            </p>
+                          <h4 className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate flex-1 min-w-0">
+                            {debtor.company}
+                          </h4>
+                          <div className="flex items-center space-x-3 ml-4">
+                            <span className="text-sm font-bold text-[#17B6C3]">
+                              {formatCurrency(debtor.amount)}
+                            </span>
+                            <span className="text-xs text-slate-600 dark:text-slate-400">
+                              ({concentrationPercentage}%)
+                            </span>
                           </div>
-                          <span className="text-sm font-bold text-[#17B6C3] ml-4">
-                            {formatCurrency(debtor.amount)}
-                          </span>
                         </div>
                       );
                     })}
