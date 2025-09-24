@@ -610,7 +610,7 @@ export default function Cashboard() {
                     amount: 42300, 
                     count: 8, 
                     color: 'text-[#17B6C3]',
-                    description: 'Active payment plans'
+                    description: 'Active pymt plans'
                   },
                   { 
                     label: 'Disputes', 
