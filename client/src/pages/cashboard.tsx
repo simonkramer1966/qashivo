@@ -667,9 +667,10 @@ export default function Cashboard() {
                     const escalateNote = category.label === 'Escalate' ? ' These are least likely to pay without formal escalation, such as legal action or collections.' : '';
                     const pymtPlanNote = category.label === 'PYMT PLANS' ? ' Invoices being repaid in instalments. These don\'t appear in the Action Centre unless a payment is missed.' : '';
                     const disputeNote = category.label === 'Disputes' ? ' Invoices the customer has challenged. No chasing is done until resolved. Resolve disputes to return them to active collections.' : '';
+                    const legalNote = category.label === 'Legal' ? ' Invoices escalated beyond credit control. These are in legal proceedings or external collections.' : '';
                     
                     const tooltipContent = isException 
-                      ? `${category.label}: ${formatCurrency(category.amount)} (${percentage}% of aging total). Currently ${trendText} ${trendIcon}.${pymtPlanNote}${disputeNote} These invoices can also appear in aging categories above.`
+                      ? `${category.label}: ${formatCurrency(category.amount)} (${percentage}% of aging total). Currently ${trendText} ${trendIcon}.${pymtPlanNote}${disputeNote}${legalNote} These invoices can also appear in aging categories above.`
                       : `${category.label}: ${formatCurrency(category.amount)} represents ${percentage}% of total aging portfolio. ${category.count} invoices ${category.description}. Currently ${trendText} ${trendIcon}.${escalateNote}`;
                     
                     return (
