@@ -650,8 +650,8 @@ export default function Cashboard() {
                   const firstRowCards = agingCategories.slice(0, 5);
                   const secondRowCards = agingCategories.slice(5, 8);
                   
-                  // Calculate total amount for percentage calculations
-                  const totalAmountAging = agingCategories.reduce((sum, cat) => sum + cat.amount, 0);
+                  // Calculate total amount for percentage calculations (only main aging categories)
+                  const totalAmountAging = firstRowCards.reduce((sum, cat) => sum + cat.amount, 0);
 
                   const renderCard = (category) => (
                   <Card 
