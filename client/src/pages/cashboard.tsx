@@ -669,78 +669,74 @@ export default function Cashboard() {
                           type: 'payment',
                           customer: 'Acme Corp Ltd',
                           amount: 2450,
-                          time: '2 hours ago'
+                          time: '2 hours'
                         },
                         {
                           id: 2,
                           type: 'overdue',
                           customer: 'Digital Solutions Inc',
                           amount: 8750,
-                          time: '4 hours ago'
+                          time: '4 hours'
                         },
                         {
                           id: 3,
                           type: 'reminder',
                           customer: 'Tech Innovations Ltd',
                           amount: 1200,
-                          time: '6 hours ago'
+                          time: '6 hours'
                         },
                         {
                           id: 4,
                           type: 'payment',
                           customer: 'Creative Agency',
                           amount: 5600,
-                          time: '1 day ago'
+                          time: '1 day'
                         },
                         {
                           id: 5,
                           type: 'dispute',
                           customer: 'Global Systems',
                           amount: 3400,
-                          time: '2 days ago'
+                          time: '2 days'
                         },
                         {
                           id: 6,
                           type: 'payment',
                           customer: 'Marketing Plus',
                           amount: 1800,
-                          time: '3 days ago'
+                          time: '3 days'
                         },
                         {
                           id: 7,
                           type: 'reminder',
                           customer: 'Design Studio',
                           amount: 4200,
-                          time: '4 days ago'
+                          time: '4 days'
                         },
                         {
                           id: 8,
                           type: 'overdue',
                           customer: 'Tech Consultants',
                           amount: 6300,
-                          time: '5 days ago'
+                          time: '5 days'
                         }
                       ].map((activity) => (
-                        <div key={activity.id} className="flex justify-between items-center py-1.5 text-xs">
-                          <div className="flex items-center space-x-2 flex-1 min-w-0">
-                            <span className="text-slate-900 dark:text-slate-100 font-medium truncate">
-                              {activity.customer}
-                            </span>
-                            <span className="text-slate-600 dark:text-slate-400">
-                              {activity.type === 'overdue' ? 'overdue' : 
-                               activity.type === 'payment' ? 'paid' :
-                               activity.type === 'reminder' ? 'reminded' :
-                               activity.type === 'dispute' ? 'disputed' : activity.type}
-                            </span>
-                          </div>
-                          <div className="flex items-center space-x-2 ml-4">
-                            <span className="font-semibold text-[#17B6C3]">
-                              {formatCurrency(activity.amount)}
-                            </span>
-                            <span className="text-slate-600 dark:text-slate-400">
-                              {activity.time}
-                            </span>
-                          </div>
+                        <div key={activity.id} className="grid grid-cols-4 gap-2 items-center py-1.5 text-xs">
+                          <span className="text-slate-900 dark:text-slate-100 font-medium truncate">
+                            {activity.customer}
+                          </span>
+                          <span className="text-slate-600 dark:text-slate-400 text-left">
+                            {activity.type === 'overdue' ? 'overdue' : 
+                             activity.type === 'payment' ? 'paid' :
+                             activity.type === 'reminder' ? 'reminded' :
+                             activity.type === 'dispute' ? 'disputed' : activity.type}
+                          </span>
+                          <span className="font-semibold text-[#17B6C3] text-right">
+                            {formatCurrency(activity.amount)}
+                          </span>
+                          <span className="text-slate-600 dark:text-slate-400 text-right">
+                            {activity.time}
+                          </span>
                         </div>
                       ))}
                     </div>
