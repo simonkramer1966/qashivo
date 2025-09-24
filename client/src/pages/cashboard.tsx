@@ -747,7 +747,7 @@ export default function Cashboard() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-0">
+                  <div className="divide-y divide-gray-200/30">
                     {[
                       { id: 1, company: 'MegaCorp Industries', amount: 45600 },
                       { id: 2, company: 'Global Tech Solutions', amount: 32400 },
@@ -762,15 +762,15 @@ export default function Cashboard() {
                     ].map((debtor) => {
                       const concentrationPercentage = ((debtor.amount / (totalOutstanding || 1)) * 100).toFixed(1);
                       return (
-                        <div key={debtor.id} className="flex items-center justify-between p-3 bg-white/30 rounded-lg border border-white/20">
-                          <h4 className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate flex-1 min-w-0">
+                        <div key={debtor.id} className="flex justify-between items-center py-1.5 text-xs">
+                          <span className="text-slate-900 dark:text-slate-100 truncate flex-1 min-w-0 font-medium">
                             {debtor.company}
-                          </h4>
-                          <div className="flex items-center space-x-3 ml-4">
-                            <span className="text-sm font-bold text-[#17B6C3]">
+                          </span>
+                          <div className="flex items-center space-x-2 ml-4">
+                            <span className="font-semibold text-[#17B6C3]">
                               {formatCurrency(debtor.amount)}
                             </span>
-                            <span className="text-xs text-slate-600 dark:text-slate-400">
+                            <span className="text-slate-600 dark:text-slate-400">
                               ({concentrationPercentage}%)
                             </span>
                           </div>
