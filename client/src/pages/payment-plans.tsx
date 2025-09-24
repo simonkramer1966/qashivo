@@ -241,25 +241,13 @@ export default function PaymentPlans() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-teal-50">
-      <div className="flex">
-        <NewSidebar />
+    <div className="flex h-screen page-gradient">
+      <NewSidebar />
+      <main className="flex-1 overflow-y-auto">
+        <Header title="Payment Plans" subtitle="Manage and track all customer payment plans" />
         
-        <div className="flex-1 ml-64">
-          <Header title="Payment Plans" subtitle="Manage customer payment plans" />
-          
-          <main className="p-8">
-            <div className="max-w-7xl mx-auto">
-              {/* Header */}
-              <div className="mb-8">
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="p-2 bg-[#17B6C3]/10 rounded-lg">
-                    <CreditCard className="w-6 h-6 text-[#17B6C3]" />
-                  </div>
-                  <h1 className="text-2xl font-bold text-gray-900">Payment Plans</h1>
-                </div>
-                <p className="text-gray-600">Manage and track all customer payment plans</p>
-              </div>
+        <div className="p-8">
+          <div className="max-w-7xl mx-auto">
 
               {/* Filters and Search */}
               <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg mb-8">
@@ -618,9 +606,8 @@ export default function PaymentPlans() {
                 </CardContent>
               </Card>
             </div>
-          </main>
-        </div>
-      </div>
+          </div>
+        </main>
 
       {/* Payment Plan Details Dialog */}
       <Dialog open={showDetailsDialog} onOpenChange={setShowDetailsDialog}>
