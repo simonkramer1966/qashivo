@@ -1915,7 +1915,7 @@ export default function ActionCentre() {
                           </button>
                         </TooltipTrigger>
                         {sidebarCollapsed && (
-                          <TooltipContent side="right" className="bg-white text-slate-900 border border-slate-200 shadow-lg">
+                          <TooltipContent side="right" className="bg-white text-slate-900 border border-slate-200 shadow-lg z-50">
                             <p>{queue.label} ({queue.count})</p>
                           </TooltipContent>
                         )}
