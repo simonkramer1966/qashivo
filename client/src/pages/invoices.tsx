@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { formatDate } from "../../../shared/utils/dateFormatter";
 import { useAuth } from "@/hooks/useAuth";
+import { usePaymentPlanValidation } from "@/hooks/usePaymentPlanValidation";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { apiRequest } from "@/lib/queryClient";
 import { useLocation } from "wouter";
@@ -31,6 +32,16 @@ export default function Invoices() {
   const { isAuthenticated, isLoading } = useAuth();
   const queryClient = useQueryClient();
   const [location] = useLocation();
+  
+  // Payment plan validation hook
+  const {
+    isChecking: isCheckingDuplicates,
+    duplicateResult,
+    checkForDuplicates,
+    clearDuplicateResult,
+    getFormattedDuplicateMessage,
+    hasDuplicates
+  } = usePaymentPlanValidation();
   const [search, setSearch] = useState("");
   
   // Parse URL parameters to set initial filter
@@ -224,10 +235,28 @@ export default function Invoices() {
     }
   });
 
-  const handleCreatePaymentPlan = () => {
+  const handleCreatePaymentPlan = async () => {
     if (validationErrors.length > 0) return;
     
     const selectedInvoiceIds = Array.from(selectedPaymentInvoices.keys());
+    
+    // Check for duplicate payment plans
+    try {
+      const duplicateCheck = await checkForDuplicates(selectedInvoiceIds);
+      
+      if (duplicateCheck.hasDuplicates) {
+        const message = getFormattedDuplicateMessage();
+        const confirmMessage = `${message}. Do you want to create a new payment plan anyway? This will result in multiple active payment plans for the same invoices.`;
+        
+        const userConfirmed = window.confirm(confirmMessage);
+        if (!userConfirmed) {
+          return; // User cancelled
+        }
+      }
+    } catch (error) {
+      console.error('Error checking for duplicates:', error);
+      // Proceed with creation if duplicate check fails
+    }
     
     const paymentPlanData = {
       invoiceIds: selectedInvoiceIds,
