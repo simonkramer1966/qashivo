@@ -1279,6 +1279,12 @@ export default function ActionCentre() {
 
   const validatePaymentPlanForm = () => {
     const errors: string[] = [];
+    const contactInvoices = (contactInvoicesQuery.data as any[]) || [];
+    
+    // Check if there are any invoices available at all
+    if (contactInvoices.length === 0) {
+      errors.push("No outstanding invoices available for this customer");
+    }
     
     if (selectedPaymentInvoices.size === 0) {
       errors.push("Please select at least one invoice");
@@ -3247,6 +3253,22 @@ export default function ActionCentre() {
                         <div className="h-4 bg-gray-200 rounded w-1/2 mx-auto"></div>
                       </div>
                       <p className="text-sm text-gray-500 mt-2">Loading outstanding invoices...</p>
+                    </div>
+                  ) : contactInvoices.length === 0 ? (
+                    <div className="text-center py-8">
+                      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
+                        <div className="flex flex-col items-center">
+                          <div className="p-3 bg-yellow-100 rounded-full mb-4">
+                            <svg className="h-8 w-8 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                            </svg>
+                          </div>
+                          <h3 className="text-lg font-medium text-yellow-800 mb-2">No Outstanding Invoices</h3>
+                          <p className="text-sm text-yellow-700 text-center max-w-md">
+                            This customer doesn't have any outstanding invoices available for payment plans. Payment plans can only be created when there are unpaid invoices.
+                          </p>
+                        </div>
+                      </div>
                     </div>
                   ) : (
                     <>
