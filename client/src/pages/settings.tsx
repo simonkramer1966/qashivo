@@ -664,6 +664,7 @@ export default function Settings() {
   // Organization settings state
   const [organizationName, setOrganizationName] = useState("");
   const [organizationCurrency, setOrganizationCurrency] = useState(DEFAULT_CURRENCY);
+  const [eomDay, setEomDay] = useState<string>("31");
 
   // Xero sync settings state
   const [autoSync, setAutoSync] = useState(true);
@@ -676,6 +677,7 @@ export default function Settings() {
       companyName?: string;
       tagline?: string;
       currency?: string;
+      eomDay?: string;
     };
     xeroAccessToken?: string;
     xeroTenantId?: string;
@@ -720,6 +722,7 @@ export default function Settings() {
       setTagline(tenant.settings?.tagline || "Debt Recovery Suite");
       setOrganizationName(tenant.name || "");
       setOrganizationCurrency(tenant.settings?.currency || DEFAULT_CURRENCY);
+      setEomDay(tenant.settings?.eomDay || "31");
     }
   }, [tenant]);
 
@@ -800,6 +803,7 @@ export default function Settings() {
       settings: {
         ...tenant?.settings,
         currency: organizationCurrency,
+        eomDay: eomDay,
       },
     });
   };
@@ -1097,6 +1101,27 @@ export default function Settings() {
                         ))}
                       </SelectContent>
                     </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="eomDay">EOM Day for Cash Flow</Label>
+                    <Select 
+                      value={eomDay} 
+                      onValueChange={setEomDay}
+                    >
+                      <SelectTrigger className="bg-white/70 border-gray-200/30" data-testid="select-eom-day">
+                        <SelectValue placeholder="Select EOM day" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-white border-gray-200">
+                        {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => (
+                          <SelectItem key={day} value={day.toString()}>
+                            Day {day} of the month
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                      Set the day of month for EOM cash flow calculations (typically payroll day)
+                    </p>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="subdomain">Subdomain</Label>

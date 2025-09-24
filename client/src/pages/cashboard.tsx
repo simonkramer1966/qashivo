@@ -124,6 +124,22 @@ export default function Cashboard() {
     refetchOnMount: false,
   });
 
+  // Fetch tenant information for EOM day setting
+  const { data: tenant } = useQuery<{
+    id: string;
+    name: string;
+    settings?: {
+      companyName?: string;
+      tagline?: string;
+      currency?: string;
+      eomDay?: string;
+    };
+  }>({
+    queryKey: ['/api/tenant'],
+    enabled: isAuthenticated,
+    refetchOnMount: false,
+  });
+
   // Calculate derived metrics from real data
   const totalOutstanding = metrics?.totalOutstanding || 0;
   
@@ -149,7 +165,23 @@ export default function Cashboard() {
     const today = new Date();
     const currentMonth = today.getMonth();
     const currentYear = today.getFullYear();
-    const endOfMonth = new Date(currentYear, currentMonth + 1, 0); // Last day of current month
+    
+    // Use tenant's EOM day setting, default to 31 (end of month)
+    const eomDaySetting = parseInt(tenant?.settings?.eomDay || "31");
+    const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+    const actualEomDay = Math.min(eomDaySetting, daysInMonth); // Don't exceed actual days in month
+    
+    const endOfMonth = new Date(currentYear, currentMonth, actualEomDay); // Custom EOM day
+    // If EOM day has passed this month, use next month's EOM day
+    if (endOfMonth < today) {
+      const nextMonth = currentMonth + 1;
+      const nextYear = nextMonth > 11 ? currentYear + 1 : currentYear;
+      const adjustedMonth = nextMonth > 11 ? 0 : nextMonth;
+      const nextMonthDays = new Date(nextYear, adjustedMonth + 1, 0).getDate();
+      const nextEomDay = Math.min(eomDaySetting, nextMonthDays);
+      endOfMonth.setFullYear(nextYear, adjustedMonth, nextEomDay);
+    }
+    
     const thirtyDaysOut = new Date(today.getTime() + (30 * 24 * 60 * 60 * 1000));
     const sixtyDaysOut = new Date(today.getTime() + (60 * 24 * 60 * 60 * 1000));
 
@@ -491,7 +523,8 @@ export default function Cashboard() {
                         value: cashPosition, 
                         icon: DollarSign, 
                         color: 'text-[#17B6C3]',
-                        testId: 'current-position'
+                        testId: 'current-position',
+                        subtitle: !cashflowData?.forecast?.[0]?.runningBalance ? '(estimated)' : undefined
                       },
                       { 
                         label: 'EOM', 
@@ -530,11 +563,6 @@ export default function Cashboard() {
                         {metric.subtitle && (
                           <div className="text-xs text-slate-600 dark:text-slate-400 mt-1" data-testid={`text-subtitle-${metric.testId}`}>
                             {metric.subtitle}
-                          </div>
-                        )}
-                        {metric.label === 'Current Position' && !cashflowData?.forecast?.[0]?.runningBalance && (
-                          <div className="text-xs text-slate-600 dark:text-slate-400 mt-1">
-                            (estimated)
                           </div>
                         )}
                       </div>
