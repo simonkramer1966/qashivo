@@ -4,6 +4,7 @@ import { useToast } from "@/hooks/use-toast";
 import { formatDate } from "../../../shared/utils/dateFormatter";
 import { getOverdueCategoryInfo, type OverdueCategory } from "../../../shared/utils/overdueUtils";
 import { useAuth } from "@/hooks/useAuth";
+import { usePaymentPlanValidation } from "@/hooks/usePaymentPlanValidation";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { apiRequest } from "@/lib/queryClient";
 import { Component, ErrorInfo, ReactNode } from 'react';
@@ -259,6 +260,16 @@ export default function ActionCentre() {
   const { toast } = useToast();
   const { isAuthenticated, isLoading } = useAuth();
   const queryClient = useQueryClient();
+  
+  // Payment plan validation hook
+  const {
+    isChecking: isCheckingDuplicates,
+    duplicateResult,
+    checkForDuplicates,
+    clearDuplicateResult,
+    getFormattedDuplicateMessage,
+    hasDuplicates
+  } = usePaymentPlanValidation();
   
   // Sidebar collapse state with localStorage persistence
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
@@ -3599,7 +3610,7 @@ export default function ActionCentre() {
               Cancel
             </Button>
             <Button
-              onClick={() => {
+              onClick={async () => {
                 const errors = validatePaymentPlanForm();
                 if (errors.length > 0) {
                   toast({
@@ -3620,6 +3631,24 @@ export default function ActionCentre() {
                     variant: "destructive",
                   });
                   return;
+                }
+
+                // Check for duplicate payment plans
+                try {
+                  const duplicateCheck = await checkForDuplicates(selectedInvoiceIds);
+                  
+                  if (duplicateCheck.hasDuplicates) {
+                    const message = getFormattedDuplicateMessage();
+                    const confirmMessage = `${message}. Do you want to create a new payment plan anyway? This will result in multiple active payment plans for the same invoices.`;
+                    
+                    const userConfirmed = window.confirm(confirmMessage);
+                    if (!userConfirmed) {
+                      return; // User cancelled
+                    }
+                  }
+                } catch (error) {
+                  console.error('Error checking for duplicates:', error);
+                  // Proceed with creation if duplicate check fails
                 }
                 
                 const totalAmount = Array.from(selectedPaymentInvoices.values())
