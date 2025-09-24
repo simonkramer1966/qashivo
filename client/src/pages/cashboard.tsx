@@ -629,7 +629,7 @@ export default function Cashboard() {
                 ].map((category) => (
                   <Card 
                     key={category.label} 
-                    className="glass-card hover:shadow-lg transition-all duration-200 hover:scale-105"
+                    className={`glass-card hover:shadow-lg transition-all duration-200 hover:scale-105 ${category.label === 'Payment Plans' ? 'border-orange-500' : ''}`}
                     data-testid={`card-aging-${category.label.toLowerCase()}`}
                   >
                     <CardContent className="p-4">
