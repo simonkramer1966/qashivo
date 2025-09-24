@@ -581,51 +581,41 @@ export default function Cashboard() {
                     label: 'Soon', 
                     amount: 60457, 
                     count: 18, 
-                    color: 'text-blue-600',
-                    bgColor: 'bg-blue-50 dark:bg-blue-900/20',
-                    borderColor: 'border-blue-200 dark:border-blue-800',
+                    color: 'text-[#17B6C3]',
                     description: 'Due within 7 days'
                   },
                   { 
                     label: 'Recent', 
                     amount: 74000, 
                     count: 50, 
-                    color: 'text-amber-600',
-                    bgColor: 'bg-amber-50 dark:bg-amber-900/20',
-                    borderColor: 'border-amber-200 dark:border-amber-800',
+                    color: 'text-[#17B6C3]',
                     description: '8-30 days overdue'
                   },
                   { 
                     label: 'Overdue', 
                     amount: overdueAmount || 125000, 
                     count: metrics?.overdueCount || 127, 
-                    color: 'text-red-600',
-                    bgColor: 'bg-red-50 dark:bg-red-900/20',
-                    borderColor: 'border-red-200 dark:border-red-800',
+                    color: 'text-[#17B6C3]',
                     description: '31-60 days overdue'
                   },
                   { 
                     label: 'Serious', 
                     amount: 89500, 
                     count: 32, 
-                    color: 'text-orange-600',
-                    bgColor: 'bg-orange-50 dark:bg-orange-900/20',
-                    borderColor: 'border-orange-200 dark:border-orange-800',
+                    color: 'text-[#17B6C3]',
                     description: '61-90 days overdue'
                   },
                   { 
                     label: 'Escalate', 
                     amount: 156000, 
                     count: metrics?.escalatedCount || 45, 
-                    color: 'text-purple-600',
-                    bgColor: 'bg-purple-50 dark:bg-purple-900/20',
-                    borderColor: 'border-purple-200 dark:border-purple-800',
+                    color: 'text-[#17B6C3]',
                     description: '90+ days overdue'
                   }
                 ].map((category) => (
                   <Card 
                     key={category.label} 
-                    className={`glass-card hover:shadow-lg transition-all duration-200 hover:scale-105 ${category.bgColor} ${category.borderColor} border`}
+                    className="glass-card hover:shadow-lg transition-all duration-200 hover:scale-105"
                     data-testid={`card-aging-${category.label.toLowerCase()}`}
                   >
                     <CardContent className="p-4">
