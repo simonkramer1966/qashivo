@@ -666,6 +666,7 @@ export default function Cashboard() {
                     
                     const currentNote = category.label === 'Current' ? ' Monitoring these helps you forecast cash inflows.' : '';
                     const dueNote = category.label === 'Due' ? ' A gentle reminder can increase on-time payments and avoid them slipping into overdue.' : '';
+                    const overdueNote = category.label === 'Overdue' ? ' Chasing now is critical — most payments are still recoverable during this stage.' : '';
                     const escalateNote = category.label === 'Escalate' ? ' These are least likely to pay without formal escalation, such as legal action or collections.' : '';
                     const pymtPlanNote = category.label === 'PYMT PLANS' ? ' Invoices being repaid in instalments. These don\'t appear in the Action Centre unless a payment is missed.' : '';
                     const disputeNote = category.label === 'Disputes' ? ' Invoices the customer has challenged. No chasing is done until resolved. Resolve disputes to return them to active collections.' : '';
@@ -673,7 +674,7 @@ export default function Cashboard() {
                     
                     const tooltipContent = isException 
                       ? `${category.label}: ${formatCurrency(category.amount)} (${percentage}% of aging total). Currently ${trendText} ${trendIcon}.${pymtPlanNote}${disputeNote}${legalNote} These invoices can also appear in aging categories above.`
-                      : `${category.label}: ${formatCurrency(category.amount)} represents ${percentage}% of total aging portfolio. ${category.count} invoices ${category.description}. Currently ${trendText} ${trendIcon}.${currentNote}${dueNote}${escalateNote}`;
+                      : `${category.label}: ${formatCurrency(category.amount)} represents ${percentage}% of total aging portfolio. ${category.count} invoices ${category.description}. Currently ${trendText} ${trendIcon}.${currentNote}${dueNote}${overdueNote}${escalateNote}`;
                     
                     return (
                     <Tooltip>
