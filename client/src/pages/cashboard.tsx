@@ -665,9 +665,10 @@ export default function Cashboard() {
                                      category.trend === 'down' ? '↘️' : '➡️';
                     
                     const escalateNote = category.label === 'Escalate' ? ' These are least likely to pay without formal escalation, such as legal action or collections' : '';
+                    const pymtPlanNote = category.label === 'PYMT PLANS' ? ' Invoices being repaid in instalments These don\'t appear in the Action Centre unless a payment is missed' : '';
                     
                     const tooltipContent = isException 
-                      ? `${category.label}: ${formatCurrency(category.amount)} (${percentage}% of aging total) Currently ${trendText} ${trendIcon} These invoices can also appear in aging categories above`
+                      ? `${category.label}: ${formatCurrency(category.amount)} (${percentage}% of aging total) Currently ${trendText} ${trendIcon}${pymtPlanNote} These invoices can also appear in aging categories above`
                       : `${category.label}: ${formatCurrency(category.amount)} represents ${percentage}% of total aging portfolio ${category.count} invoices ${category.description} Currently ${trendText} ${trendIcon}${escalateNote}`;
                     
                     return (
