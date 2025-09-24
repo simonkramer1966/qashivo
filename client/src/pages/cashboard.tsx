@@ -589,7 +589,7 @@ export default function Cashboard() {
                     amount: 74000, 
                     count: 50, 
                     color: 'text-[#17B6C3]',
-                    description: '8-30 days overdue'
+                    description: '1-8 days overdue'
                   },
                   { 
                     label: 'Overdue', 
