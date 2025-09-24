@@ -570,7 +570,8 @@ export default function Cashboard() {
             <div className="mb-6 sm:mb-8">
               <h2 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4 text-slate-900 dark:text-slate-100">Invoice Ageing Analysis</h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-4 2xl:grid-cols-8 gap-3">
-                {[
+                {(() => {
+                  const agingCategories = [
                   { 
                     label: 'Current', 
                     amount: 85000, 
@@ -643,16 +644,27 @@ export default function Cashboard() {
                     trend: 'stable',
                     trendColor: 'text-gray-500'
                   }
-                ].map((category) => (
+                  ];
+
+                  // Calculate total amount for percentage calculations
+                  const totalAmountAging = agingCategories.reduce((sum, cat) => sum + cat.amount, 0);
+
+                  return agingCategories.map((category) => (
                   <Card 
                     key={category.label} 
-                    className={`glass-card hover:shadow-lg transition-all duration-200 hover:scale-105 ${
+                    className={`glass-card hover:shadow-lg transition-all duration-200 hover:scale-105 relative ${
                       category.label === 'PYMT PLANS' ? 'bg-[#17B6C3] border-[#17B6C3] border-2' : 
                       category.label === 'Disputes' ? 'bg-red-800 border-red-800 border-2' : 
                       category.label === 'Legal' ? 'bg-black border-black border-2' : ''
                     }`}
                     data-testid={`card-aging-${category.label.toLowerCase()}`}
                   >
+                    {/* Percentage Circle */}
+                    <div className="absolute top-2 left-2 w-8 h-8 bg-gray-500 rounded-full flex items-center justify-center">
+                      <span className="text-white text-xs font-semibold">
+                        {Math.round((category.amount / totalAmountAging) * 100)}%
+                      </span>
+                    </div>
                     <CardContent className="p-4">
                       <div className="text-center">
                         <div className={`text-lg font-bold ${category.label === 'PYMT PLANS' || category.label === 'Disputes' || category.label === 'Legal' ? 'text-white' : category.color} mb-1 flex items-center justify-center gap-2`} data-testid={`text-aging-amount-${category.label.toLowerCase()}`}>
@@ -673,7 +685,8 @@ export default function Cashboard() {
                       </div>
                     </CardContent>
                   </Card>
-                ))}
+                  ));
+                })()}
               </div>
             </div>
 
