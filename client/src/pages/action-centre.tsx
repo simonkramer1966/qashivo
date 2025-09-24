@@ -70,7 +70,9 @@ import {
   Command,
   HelpCircle,
   Brain,
-  FileText
+  FileText,
+  PanelLeftClose,
+  PanelLeftOpen
 } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -255,6 +257,22 @@ export default function ActionCentre() {
   const { isAuthenticated, isLoading } = useAuth();
   const queryClient = useQueryClient();
   
+  // Sidebar collapse state with localStorage persistence
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('action-centre-sidebar-collapsed');
+      return saved ? JSON.parse(saved) : false;
+    }
+    return false;
+  });
+  
+  // Toggle sidebar function
+  const toggleSidebar = useCallback(() => {
+    const newState = !sidebarCollapsed;
+    setSidebarCollapsed(newState);
+    localStorage.setItem('action-centre-sidebar-collapsed', JSON.stringify(newState));
+  }, [sidebarCollapsed]);
+
   // State management
   const [selectedQueue, setSelectedQueue] = useState('today');
   const [tab, setTab] = useState('details'); // Controlled tab state for unified tabs
