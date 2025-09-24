@@ -631,7 +631,7 @@ export default function Cashboard() {
                     key={category.label} 
                     className={`glass-card hover:shadow-lg transition-all duration-200 hover:scale-105 ${
                       category.label === 'Payment Plans' ? 'border-green-800' : 
-                      category.label === 'Disputes' ? 'border-red-800' : 
+                      category.label === 'Disputes' ? 'border-red-800 border-2' : 
                       category.label === 'Legal' ? 'border-black border-2' : ''
                     }`}
                     data-testid={`card-aging-${category.label.toLowerCase()}`}
