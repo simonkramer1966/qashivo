@@ -1299,29 +1299,37 @@ export default function ActionCentre() {
     }
   }, [showPaymentPlanDialog, paymentPlanAction, contactInvoicesQuery.isLoading, contactInvoicesQuery.data]);
 
+  // Calculate total from selected payment invoices (like Invoice page)
+  const totalSelectedAmount = useMemo(() => {
+    let total = 0;
+    Array.from(selectedPaymentInvoices.values()).forEach(invoice => {
+      total += Number(invoice.amount || 0);
+    });
+    return total;
+  }, [selectedPaymentInvoices]);
+
+  // Simple validation logic (copied exactly from Invoice page)
   const validatePaymentPlanForm = () => {
     const errors: string[] = [];
-    const contactInvoices = (contactInvoicesQuery.data as any[]) || [];
     
-    // Check if there are any invoices available at all
-    if (contactInvoices.length === 0) {
-      errors.push("No outstanding invoices available for this customer");
-    }
-    
+    // Check if any invoices are selected
     if (selectedPaymentInvoices.size === 0) {
       errors.push("Please select at least one invoice");
     }
     
-    const totalAmount = Array.from(selectedPaymentInvoices.values())
-      .reduce((sum, invoice) => sum + parseFloat(invoice.amount || "0"), 0);
-    
-    const initialAmount = parseFloat(initialPaymentAmount) || 0;
-    if (initialAmount > totalAmount) {
-      errors.push("Initial payment cannot exceed total invoice amount");
+    // Check if plan start date is provided
+    if (!planStartDate) {
+      errors.push("Please provide a plan start date");
     }
     
-    if (!planStartDate) {
-      errors.push("Please select a plan start date");
+    // Check if initial payment date is after plan start date
+    if (initialPaymentDate && planStartDate && initialPaymentDate > planStartDate) {
+      errors.push("Initial payment date cannot be after the plan start date");
+    }
+    
+    // Check if initial payment amount exceeds total
+    if (Number(initialPaymentAmount || 0) > totalSelectedAmount) {
+      errors.push("Initial payment amount cannot exceed total invoice amount");
     }
     
     return errors;
@@ -3307,13 +3315,7 @@ export default function ActionCentre() {
                           <div className="text-right">
                             <p className="text-sm text-gray-600">Selected Total</p>
                             <p className="text-xl font-bold text-[#17B6C3]">
-                              £{(() => {
-                                let total = 0;
-                                selectedPaymentInvoices.forEach(invoice => {
-                                  total += Number(invoice.amount) || 0;
-                                });
-                                return total.toLocaleString();
-                              })()}
+                              £{totalSelectedAmount.toLocaleString()}
                             </p>
                           </div>
                         </div>
