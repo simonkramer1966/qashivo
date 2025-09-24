@@ -31,7 +31,8 @@ import {
   Settings,
   Scale,
   Activity,
-  AlertCircle
+  AlertCircle,
+  Minus
 } from "lucide-react";
 import NewSidebar from "@/components/layout/new-sidebar";
 import { formatCurrency } from "@/lib/utils";
@@ -575,56 +576,72 @@ export default function Cashboard() {
                     amount: 85000, 
                     count: 42, 
                     color: 'text-[#17B6C3]',
-                    description: 'Not yet due'
+                    description: 'Not yet due',
+                    trend: 'up',
+                    trendColor: 'text-green-500'
                   },
                   { 
                     label: 'Due', 
                     amount: 60457, 
                     count: 18, 
                     color: 'text-[#17B6C3]',
-                    description: '-7 to 0 days'
+                    description: '-7 to 0 days',
+                    trend: 'down',
+                    trendColor: 'text-green-500'
                   },
                   { 
                     label: 'Overdue', 
                     amount: overdueAmount || 125000, 
                     count: metrics?.overdueCount || 127, 
                     color: 'text-[#17B6C3]',
-                    description: '1-30 days overdue'
+                    description: '1-30 days overdue',
+                    trend: 'up',
+                    trendColor: 'text-red-500'
                   },
                   { 
                     label: 'Serious', 
                     amount: 89500, 
                     count: 32, 
                     color: 'text-[#17B6C3]',
-                    description: '31-60 days overdue'
+                    description: '31-60 days overdue',
+                    trend: 'down',
+                    trendColor: 'text-green-500'
                   },
                   { 
                     label: 'Escalate', 
                     amount: 156000, 
                     count: metrics?.escalatedCount || 45, 
                     color: 'text-[#17B6C3]',
-                    description: '60+ days overdue'
+                    description: '60+ days overdue',
+                    trend: 'up',
+                    trendColor: 'text-red-500'
                   },
                   { 
                     label: 'PYMT PLANS', 
                     amount: 42300, 
                     count: 8, 
                     color: 'text-[#17B6C3]',
-                    description: 'Active pymt plans'
+                    description: 'Active pymt plans',
+                    trend: 'down',
+                    trendColor: 'text-green-500'
                   },
                   { 
                     label: 'Disputes', 
                     amount: 15800, 
                     count: 3, 
                     color: 'text-[#17B6C3]',
-                    description: 'Under dispute'
+                    description: 'Under dispute',
+                    trend: 'up',
+                    trendColor: 'text-red-500'
                   },
                   { 
                     label: 'Legal', 
                     amount: 28500, 
                     count: 2, 
                     color: 'text-[#17B6C3]',
-                    description: 'Legal proceedings'
+                    description: 'Legal proceedings',
+                    trend: 'stable',
+                    trendColor: 'text-gray-500'
                   }
                 ].map((category) => (
                   <Card 
@@ -638,8 +655,11 @@ export default function Cashboard() {
                   >
                     <CardContent className="p-4">
                       <div className="text-center">
-                        <div className={`text-lg font-bold ${category.label === 'PYMT PLANS' || category.label === 'Disputes' || category.label === 'Legal' ? 'text-white' : category.color} mb-1`} data-testid={`text-aging-amount-${category.label.toLowerCase()}`}>
+                        <div className={`text-lg font-bold ${category.label === 'PYMT PLANS' || category.label === 'Disputes' || category.label === 'Legal' ? 'text-white' : category.color} mb-1 flex items-center justify-center gap-2`} data-testid={`text-aging-amount-${category.label.toLowerCase()}`}>
                           {formatCurrency(category.amount)}
+                          {category.trend === 'up' && <TrendingUp className={`h-4 w-4 ${category.label === 'PYMT PLANS' || category.label === 'Disputes' || category.label === 'Legal' ? 'text-white' : category.trendColor}`} />}
+                          {category.trend === 'down' && <TrendingDown className={`h-4 w-4 ${category.label === 'PYMT PLANS' || category.label === 'Disputes' || category.label === 'Legal' ? 'text-white' : category.trendColor}`} />}
+                          {category.trend === 'stable' && <Minus className={`h-4 w-4 ${category.label === 'PYMT PLANS' || category.label === 'Disputes' || category.label === 'Legal' ? 'text-white' : category.trendColor}`} />}
                         </div>
                         <div className={`text-sm font-semibold ${category.label === 'PYMT PLANS' || category.label === 'Disputes' || category.label === 'Legal' ? 'text-white' : 'text-slate-900 dark:text-slate-100'} mb-1`} data-testid={`text-aging-label-${category.label.toLowerCase()}`}>
                           {category.label.toUpperCase()}
