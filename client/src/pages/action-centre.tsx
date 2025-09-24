@@ -1875,22 +1875,6 @@ export default function ActionCentre() {
                     </button>
                   ))}
                 </div>
-                
-                {/* Tab Actions */}
-                <div className="flex items-center px-4">
-                  <Button 
-                    variant="ghost" 
-                    size="sm"
-                    onClick={() => {
-                      queryClient.invalidateQueries({ queryKey: ["/api/action-centre/queue"] });
-                      queryClient.invalidateQueries({ queryKey: ["/api/action-centre/metrics"] });
-                    }}
-                    data-testid="button-refresh-tabs"
-                    title="Refresh data"
-                  >
-                    <RefreshCw className="h-4 w-4" />
-                  </Button>
-                </div>
               </div>
             </div>
 
