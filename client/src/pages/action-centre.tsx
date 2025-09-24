@@ -2320,13 +2320,11 @@ export default function ActionCentre() {
                                     }}
                                     data-testid={`menu-ai-call-${action.id}`}
                                   >
-                                    <div className="flex items-center">
-                                      <div className="relative mr-2">
-                                        <Phone className="h-4 w-4" />
-                                        <div className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-amber-400 rounded-full"></div>
-                                      </div>
-                                      AI Call
+                                    <div className="relative h-4 w-4 mr-2">
+                                      <Phone className="h-4 w-4" />
+                                      <div className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-amber-400 rounded-full"></div>
                                     </div>
+                                    AI Call
                                   </DropdownMenuItem>
                                   
                                   <DropdownMenuSeparator />
