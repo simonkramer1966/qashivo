@@ -515,13 +515,12 @@ export default function Cashboard() {
 
               {/* Cash Flow Projections */}
               <Card className="glass-card" data-testid="card-cash-flow-projections">
-                <CardContent className="p-4 sm:p-6">
+                <CardContent className="p-3 sm:p-4">
                   <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
                     {[
                       { 
                         label: 'Current Position', 
                         value: cashPosition, 
-                        icon: DollarSign, 
                         color: 'text-[#17B6C3]',
                         testId: 'current-position',
                         subtitle: !cashflowData?.forecast?.[0]?.runningBalance ? '(estimated)' : undefined
@@ -529,31 +528,23 @@ export default function Cashboard() {
                       { 
                         label: 'EOM', 
                         value: eom, 
-                        icon: Calendar, 
                         color: 'text-orange-600',
                         testId: 'eom-position'
                       },
                       { 
                         label: '30 Days', 
                         value: thirtyDays, 
-                        icon: TrendingUp, 
                         color: 'text-[#17B6C3]',
                         testId: '30-days-position'
                       },
                       { 
                         label: '60 Days', 
                         value: sixtyDays, 
-                        icon: TrendingUp, 
                         color: 'text-[#17B6C3]',
                         testId: '60-days-position'
                       }
                     ].map((metric) => (
                       <div key={metric.label} className="text-center" data-testid={`metric-${metric.testId}`}>
-                        <div className="flex items-center justify-center mb-2">
-                          <div className={`p-2 bg-white/50 rounded-lg border border-white/30`}>
-                            <metric.icon className={`h-5 w-5 ${metric.color}`} />
-                          </div>
-                        </div>
                         <div className={`text-2xl sm:text-3xl font-bold ${metric.color} mb-1`} data-testid={`text-value-${metric.testId}`}>
                           {formatCurrency(metric.value)}
                         </div>
