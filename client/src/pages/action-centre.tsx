@@ -2100,40 +2100,12 @@ export default function ActionCentre() {
                                 />
                               </TableCell>
                               <TableCell>
-                                <div className="flex items-center space-x-3">
-                                  <Avatar className="h-8 w-8">
-                                    <AvatarFallback className="text-xs">
-                                      {(() => {
-                                        try {
-                                          // Use company name for avatar initials when available, fallback to contact name
-                                          const primaryName = action.companyName || action.contactName;
-                                          if (!primaryName || typeof primaryName !== 'string' || primaryName.trim().length === 0) {
-                                            return 'C';
-                                          }
-                                          
-                                          const initials = primaryName
-                                            .trim()
-                                            .split(' ')
-                                            .map(n => (n && n.length > 0) ? n[0].toUpperCase() : '')
-                                            .filter(c => c && c.length > 0)
-                                            .join('')
-                                            .substring(0, 2); // Limit to 2 characters max
-                                            
-                                          return initials || 'C';
-                                        } catch (error) {
-                                          console.warn('Error generating avatar initials:', error);
-                                          return 'C';
-                                        }
-                                      })()}
-                                    </AvatarFallback>
-                                  </Avatar>
-                                  <div>
-                                    <div className="font-medium text-slate-900">
-                                      {(action.companyName && typeof action.companyName === 'string' && action.companyName.trim()) || 'Unknown Company'}
-                                    </div>
-                                    <div className="text-sm text-slate-600">
-                                      {(action.contactName && typeof action.contactName === 'string' && action.contactName.trim()) || 'Unknown Contact'}
-                                    </div>
+                                <div>
+                                  <div className="font-medium text-slate-900">
+                                    {(action.companyName && typeof action.companyName === 'string' && action.companyName.trim()) || 'Unknown Company'}
+                                  </div>
+                                  <div className="text-sm text-slate-600">
+                                    {(action.contactName && typeof action.contactName === 'string' && action.contactName.trim()) || 'Unknown Contact'}
                                   </div>
                                 </div>
                               </TableCell>
