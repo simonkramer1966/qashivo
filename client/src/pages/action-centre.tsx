@@ -2340,7 +2340,17 @@ export default function ActionCentre() {
                                     data-testid={`menu-payment-plan-${action.id}`}
                                   >
                                     <CalendarIcon className="h-4 w-4 mr-2" />
-                                    Create Payment Plan
+                                    Payment Plan
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem 
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      // TODO: Implement dispute functionality
+                                    }}
+                                    data-testid={`menu-dispute-${action.id}`}
+                                  >
+                                    <AlertTriangle className="h-4 w-4 mr-2" />
+                                    Dispute
                                   </DropdownMenuItem>
                                 </DropdownMenuContent>
                               </DropdownMenu>
