@@ -482,7 +482,7 @@ export default function ActionCentre() {
       case 'disputes':
         return { overdue: 'serious' }; // Disputed/challenged invoices
       case 'payment-plans':
-        return { overdue: 'recent' }; // Payment plan related invoices
+        return { overdue: 'due' }; // Payment plan related invoices (use 'due' instead of 'recent')
       case 'escalations':
         return { overdue: 'escalation' }; // High-risk legal cases
       default:
