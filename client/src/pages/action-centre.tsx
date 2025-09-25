@@ -230,8 +230,14 @@ interface InvoiceResponse {
 
 // Helper function to determine if a tab uses invoice data
 const isInvoiceTab = (tabId: string): boolean => {
-  // All tabs use invoice data in the new workflow structure
-  return ['due', 'overdue', 'promises', 'broken-promises', 'payment-plans', 'legal', 'debt-recovery'].includes(tabId);
+  // Only implemented workflow tabs use invoice data
+  return ['due', 'overdue'].includes(tabId);
+};
+
+// Helper function to determine if a tab is implemented
+const isImplementedTab = (tabId: string): boolean => {
+  // Only Due and Overdue are currently implemented
+  return ['due', 'overdue'].includes(tabId);
 };
 
 // Helper function to determine next recommended action based on overdue days
@@ -503,7 +509,7 @@ export default function ActionCentre() {
   const useInvoiceData = isInvoiceTab(selectedTab);
   const tabFilterParams = getTabFilterParams(selectedTab);
   
-  // Action items query - not currently used since all tabs use invoice data
+  // Action items query - only for implemented tabs that need action item data
   const { data: queueResponse, isLoading: actionLoading, error: actionError } = useQuery({
     queryKey: ["/api/action-centre/queue", { 
       tabType: selectedTab, 
@@ -514,11 +520,11 @@ export default function ActionCentre() {
       sortDirection,
       useSmartPriority: true
     }],
-    enabled: isAuthenticated && !useInvoiceData,
+    enabled: isAuthenticated && !useInvoiceData && isImplementedTab(selectedTab),
     staleTime: 2 * 60 * 1000, // 2 minutes
   });
   
-  // Invoice data query (for all tabs)
+  // Invoice data query (only for implemented tabs)
   const { data: invoiceResponse, isLoading: invoiceLoading, error: invoiceError } = useQuery({
     queryKey: ["/api/invoices", {
       status: 'all',
@@ -529,7 +535,7 @@ export default function ActionCentre() {
       sortBy: sortColumn,
       sortDirection
     }],
-    enabled: isAuthenticated && useInvoiceData,
+    enabled: isAuthenticated && useInvoiceData && isImplementedTab(selectedTab),
     staleTime: 2 * 60 * 1000, // 2 minutes
   });
 
