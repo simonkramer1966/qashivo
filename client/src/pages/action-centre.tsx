@@ -53,6 +53,7 @@ import {
   ChevronLeft,
   ChevronDown,
   ChevronUp,
+  FileX,
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
