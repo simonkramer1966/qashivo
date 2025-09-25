@@ -1864,7 +1864,7 @@ export default function ActionCentre() {
                     >
                       <div className="flex items-center justify-center space-x-2">
                         <span>{tabOption.label}</span>
-                        {tabOption.count > 0 && (
+                        {typeof tabOption.count === 'number' && (
                           <Badge 
                             variant="secondary" 
                             className={`${selectedTab === tabOption.id ? 'bg-[#17B6C3]/20 text-[#17B6C3]' : ''}`}
