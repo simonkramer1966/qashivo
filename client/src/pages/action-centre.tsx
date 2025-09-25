@@ -2517,148 +2517,8 @@ export default function ActionCentre() {
 
                 {/* Unified Tabs Provider - wraps both TabsList and TabsContent */}
                 <Tabs value={tab} onValueChange={setTab} className="h-full flex flex-col">
-                  {/* Unified Actions and Tabs Container */}
-                  <div className="px-6 w-full space-y-4">
-                  {/* Quick Actions */}
-                  <div className="w-full flex flex-wrap gap-2 md:flex-nowrap">
-                    <div className="grid grid-cols-4 gap-2 w-full">
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setCommunicationDialog({
-                              isOpen: true,
-                              type: 'email',
-                              context: selectedAction.invoiceId ? 'invoice' : 'customer',
-                              contextId: selectedAction.invoiceId || selectedAction.contactId,
-                            })}
-                            className="flex flex-col items-center p-3 h-auto hover:bg-blue-50 hover:border-blue-200"
-                            data-testid="button-send-email"
-                          >
-                            <Mail className="h-4 w-4 mb-1" />
-                            <span className="text-xs">Email</span>
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent className="z-[9999]">
-                          <p>Send email using templates</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setCommunicationDialog({
-                              isOpen: true,
-                              type: 'sms',
-                              context: selectedAction.invoiceId ? 'invoice' : 'customer',
-                              contextId: selectedAction.invoiceId || selectedAction.contactId,
-                            })}
-                            className="flex flex-col items-center p-3 h-auto hover:bg-green-50 hover:border-green-200"
-                            data-testid="button-send-sms"
-                          >
-                            <MessageSquare className="h-4 w-4 mb-1" />
-                            <span className="text-xs">SMS</span>
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent className="z-[9999]">
-                          <p>Send SMS reminder</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setCommunicationDialog({
-                              isOpen: true,
-                              type: 'voice',
-                              context: selectedAction.invoiceId ? 'invoice' : 'customer',
-                              contextId: selectedAction.invoiceId || selectedAction.contactId,
-                            })}
-                            className="flex flex-col items-center p-3 h-auto hover:bg-purple-50 hover:border-purple-200"
-                            data-testid="button-make-call"
-                          >
-                            <Phone className="h-4 w-4 mb-1" />
-                            <span className="text-xs">VM</span>
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent className="z-[9999]">
-                          <p>Leave voice message</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={async () => {
-                              // Validate contactId exists before opening dialog
-                              const contactId = selectedAction.contactId;
-                              if (contactId) {
-                                try {
-                                  const response = await fetch(`/api/contacts/${contactId}`);
-                                  if (response.ok) {
-                                    // Contact exists, proceed normally
-                                    setAiCallDialog({
-                                      isOpen: true,
-                                      contactId,
-                                      invoiceId: selectedAction.invoiceId || '',
-                                    });
-                                  } else {
-                                    // Contact doesn't exist, show error
-                                    toast({
-                                      title: "Contact Not Found",
-                                      description: "The contact for this action no longer exists. Please refresh the data.",
-                                      variant: "destructive",
-                                    });
-                                  }
-                                } catch (error) {
-                                  console.error('Error validating contact:', error);
-                                  toast({
-                                    title: "Error",
-                                    description: "Failed to validate contact information.",
-                                    variant: "destructive",
-                                  });
-                                }
-                              } else {
-                                toast({
-                                  title: "No Contact Information",
-                                  description: "This action doesn't have associated contact information.",
-                                  variant: "destructive",
-                                });
-                              }
-                            }}
-                            className="flex flex-col items-center p-3 h-auto hover:bg-amber-50 hover:border-amber-200"
-                            data-testid="button-ai-call"
-                          >
-                            <div className="relative">
-                              <Phone className="h-4 w-4 mb-1" />
-                              <div className="absolute -top-1 -right-1 w-2 h-2 bg-amber-400 rounded-full flex items-center justify-center">
-                                <span className="text-[6px] text-amber-900 font-bold">AI</span>
-                              </div>
-                            </div>
-                            <span className="text-xs">AI Call</span>
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent className="z-[9999]">
-                          <p>AI-powered call with intelligent agent</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                    </div>
-                  </div>
-
                   {/* Contact Details Tabs */}
-                  <div className="w-full">
+                  <div className="px-6 w-full">
                     <TabsList className="w-full grid grid-cols-4 justify-start p-0">
                       <TabsTrigger value="details">Details</TabsTrigger>
                       <TabsTrigger value="notes" disabled={!selectedContactId} data-testid="tab-notes">Notes</TabsTrigger>
@@ -2666,7 +2526,6 @@ export default function ActionCentre() {
                       <TabsTrigger value="actions">Actions</TabsTrigger>
                     </TabsList>
                   </div>
-                </div>
 
                   {/* Contact Details Content */}
                   <div className="flex-1 overflow-y-auto">
