@@ -2056,8 +2056,14 @@ export default function ActionCentre() {
             <div className="flex-1 overflow-hidden flex flex-col">
               {queueLoading ? (
                 <div className="flex items-center justify-center h-64">
-                  <div className="text-center">
-                    <p className="text-slate-600">No data</p>
+                  <div className="text-center space-y-4">
+                    <div className="mx-auto w-20 h-20 bg-gradient-to-br from-slate-100 to-slate-200 rounded-2xl flex items-center justify-center shadow-lg">
+                      <FileX className="h-10 w-10 text-slate-400" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-semibold text-slate-700 mb-2">No Data Available</h3>
+                      <p className="text-slate-500 max-w-sm mx-auto">There are currently no action items to display in this workflow stage.</p>
+                    </div>
                   </div>
                 </div>
               ) : queueData.length === 0 ? (
