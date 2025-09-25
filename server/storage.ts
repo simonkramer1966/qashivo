@@ -354,9 +354,7 @@ export interface IStorage {
     avgCompletionTime: number;
     successRate: number;
     // Category-specific counts for invoice overdue categories
-    soonCount: number;
-    currentCount: number;
-    recentCount: number;
+    dueCount: number;
     overdueInvoicesCount: number;
     seriousCount: number;
     escalationCount: number;
@@ -3259,9 +3257,7 @@ export class DatabaseStorage implements IStorage {
     avgCompletionTime: number;
     successRate: number;
     // Category-specific counts for invoice overdue categories
-    soonCount: number;
-    currentCount: number;
-    recentCount: number;
+    dueCount: number;
     overdueInvoicesCount: number;
     seriousCount: number;
     escalationCount: number;
@@ -3369,9 +3365,7 @@ export class DatabaseStorage implements IStorage {
       avgCompletionTime: 2.5, // days - calculated from historical data
       successRate: 87.5, // percentage - calculated from completion rates
       // Category-specific counts for invoice overdue categories
-      soonCount,
-      currentCount,
-      recentCount,
+      dueCount,
       overdueInvoicesCount,
       seriousCount,
       escalationCount,
