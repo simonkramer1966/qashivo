@@ -1900,14 +1900,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         highRiskActions: Math.ceil(basicMetrics.overdueCount * 0.3), // Estimate 30% of overdue items are high risk
         avgDaysOverdue: basicMetrics.avgCompletionTime,
         totalValue: Math.floor(basicMetrics.highRiskExposure),
-        // Queue category counts for frontend badges - NOW USING ALL INVOICE COUNTS instead of action item counts
+        // NEW WORKFLOW STRUCTURE: Map existing invoice categories to workflow buckets
         queueCounts: {
-          soon: invoiceCounts.soon,
-          current: invoiceCounts.current, 
-          recent: invoiceCounts.recent,
-          overdue: invoiceCounts.overdue,
-          serious: invoiceCounts.serious,
-          escalation: invoiceCounts.escalation
+          // Due = invoices due soon but not yet overdue
+          due: invoiceCounts.soon + invoiceCounts.current,
+          // Overdue = all overdue invoices WITHOUT exception status (default bucket for >0 days overdue)
+          overdue: invoiceCounts.overdue + invoiceCounts.serious + invoiceCounts.escalation,
+          // Promises = invoices with active PTPs (0 until PTP system implemented)
+          promises: 0,
+          // Broken Promises = invoices with broken PTPs (0 until PTP system implemented)
+          brokenPromises: 0,
+          // Payment Plans = invoices with active payment arrangements (query needed)
+          paymentPlans: 0, // TODO: Query invoices.paymentPlanId IS NOT NULL count
+          // Legal = invoices in legal proceedings (0 until legal status implemented)  
+          legal: 0,
+          // Debt Recovery = invoices with external agencies (0 until debt recovery implemented)
+          debtRecovery: 0
         },
         prioritization: {
           cacheStatus: cacheStats,

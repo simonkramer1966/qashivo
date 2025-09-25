@@ -1739,27 +1739,42 @@ export default function ActionCentre() {
   const queueMetrics = metrics as (QueueMetrics & { queueCounts?: Record<string, number> }) | undefined;
   const queueCounts = queueMetrics?.queueCounts || {};
   
-  // Define tab options with their respective data
+  // Define tab options with their respective data - New workflow structure
   const tabOptions = [
+    { 
+      id: 'due', 
+      label: 'Due', 
+      count: queueCounts.due || 0 // Invoices due soon (not yet overdue)
+    },
+    { 
+      id: 'overdue', 
+      label: 'Overdue', 
+      count: queueCounts.overdue || 0 // All overdue invoices without exception status
+    },
+    { 
+      id: 'promises', 
+      label: 'Promises', 
+      count: queueCounts.promises || 0 // Active PTPs waiting for promise date
+    },
     { 
       id: 'broken-promises', 
       label: 'Broken Promises', 
-      count: queueCounts.overdue || 0 // Overdue invoices
-    },
-    { 
-      id: 'disputes', 
-      label: 'Disputes', 
-      count: queueCounts.serious || 0 // Serious category maps to disputes
+      count: queueCounts.brokenPromises || 0 // Broken PTPs needing immediate action
     },
     { 
       id: 'payment-plans', 
       label: 'Payment Plans', 
-      count: queueCounts.paymentPlans || 0 // Keep as-is for now
+      count: queueCounts.paymentPlans || 0 // Invoices with active payment arrangements
     },
     { 
-      id: 'escalations', 
-      label: 'Escalations', 
-      count: queueCounts.escalation || 0 // Escalation category
+      id: 'legal', 
+      label: 'Legal', 
+      count: queueCounts.legal || 0 // Invoices in legal proceedings
+    },
+    { 
+      id: 'debt-recovery', 
+      label: 'Debt Recovery', 
+      count: queueCounts.debtRecovery || 0 // Invoices with external agencies
     },
   ];
 
