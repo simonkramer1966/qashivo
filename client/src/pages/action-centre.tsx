@@ -73,6 +73,8 @@ import {
   MousePointer,
   Command,
   HelpCircle,
+  Scale,
+  Shield,
   Brain,
   FileText,
   PanelLeftClose,
@@ -228,8 +230,8 @@ interface InvoiceResponse {
 
 // Helper function to determine if a tab uses invoice data
 const isInvoiceTab = (tabId: string): boolean => {
-  // All tabs use invoice data in the new tab-based structure
-  return ['broken-promises', 'disputes', 'payment-plans', 'escalations'].includes(tabId);
+  // All tabs use invoice data in the new workflow structure
+  return ['due', 'overdue', 'promises', 'broken-promises', 'payment-plans', 'legal', 'debt-recovery'].includes(tabId);
 };
 
 // Helper function to determine next recommended action based on overdue days
@@ -478,14 +480,20 @@ export default function ActionCentre() {
   // Map tabs to backend filter parameters
   const getTabFilterParams = (tabId: string) => {
     switch (tabId) {
+      case 'due':
+        return { overdue: 'due' }; // Invoices due soon but not yet overdue
+      case 'overdue':
+        return { overdue: 'overdue' }; // All overdue invoices without exception status
+      case 'promises':
+        return { overdue: 'all' }; // PTPs - will need custom filtering when implemented
       case 'broken-promises':
-        return { overdue: 'overdue' }; // Overdue and missed payments
-      case 'disputes':
-        return { overdue: 'serious' }; // Disputed/challenged invoices
+        return { overdue: 'overdue' }; // Broken PTPs - overdue invoices for now
       case 'payment-plans':
-        return { overdue: 'due' }; // Payment plan related invoices (use 'due' instead of 'recent')
-      case 'escalations':
-        return { overdue: 'escalation' }; // High-risk legal cases
+        return { overdue: 'due' }; // Payment plans - invoices with arrangements
+      case 'legal':
+        return { overdue: 'escalation' }; // Legal proceedings - escalated cases
+      case 'debt-recovery':
+        return { overdue: 'escalation' }; // Debt recovery - also escalated cases
       default:
         return { overdue: 'all' };
     }
@@ -1739,44 +1747,91 @@ export default function ActionCentre() {
   const queueMetrics = metrics as (QueueMetrics & { queueCounts?: Record<string, number> }) | undefined;
   const queueCounts = queueMetrics?.queueCounts || {};
   
-  // Define tab options with their respective data - New workflow structure
-  const tabOptions = [
+  // Enhanced tab structure with two-tier workflow hierarchy
+  const primaryTabs = [
     { 
       id: 'due', 
       label: 'Due', 
-      count: queueCounts.due || 0 // Invoices due soon (not yet overdue)
+      subtitle: 'Customers due within 7 days',
+      icon: Clock,
+      count: queueCounts.due || 0,
+      tier: 'primary',
+      accentColor: 'teal',
+      borderColor: 'border-[#17B6C3]',
+      bgGradient: 'from-[#17B6C3]/10 to-[#17B6C3]/5'
     },
     { 
       id: 'overdue', 
       label: 'Overdue', 
-      count: queueCounts.overdue || 0 // All overdue invoices without exception status
+      subtitle: 'Invoices >1 day overdue without exception',
+      icon: AlertTriangle,
+      count: queueCounts.overdue || 0,
+      tier: 'primary',
+      accentColor: 'amber',
+      borderColor: 'border-amber-500',
+      bgGradient: 'from-amber-500/10 to-amber-500/5'
     },
+  ];
+
+  const secondaryTabs = [
     { 
       id: 'promises', 
       label: 'Promises', 
-      count: queueCounts.promises || 0 // Active PTPs waiting for promise date
+      subtitle: 'Active PTPs awaiting promise date',
+      icon: CheckCircle,
+      count: queueCounts.promises || 0,
+      tier: 'secondary',
+      accentColor: 'teal',
+      borderColor: 'border-[#17B6C3]/30',
+      bgGradient: 'from-[#17B6C3]/5 to-transparent'
     },
     { 
       id: 'broken-promises', 
       label: 'Broken Promises', 
-      count: queueCounts.brokenPromises || 0 // Broken PTPs needing immediate action
+      subtitle: 'Broken PTPs requiring immediate action',
+      icon: XCircle,
+      count: queueCounts.brokenPromises || 0,
+      tier: 'secondary',
+      accentColor: 'red',
+      borderColor: 'border-red-400/30',
+      bgGradient: 'from-red-400/5 to-transparent'
     },
     { 
       id: 'payment-plans', 
       label: 'Payment Plans', 
-      count: queueCounts.paymentPlans || 0 // Invoices with active payment arrangements
+      subtitle: 'Invoices with active payment arrangements',
+      icon: Calendar,
+      count: queueCounts.paymentPlans || 0,
+      tier: 'secondary',
+      accentColor: 'blue',
+      borderColor: 'border-blue-400/30',
+      bgGradient: 'from-blue-400/5 to-transparent'
     },
     { 
       id: 'legal', 
       label: 'Legal', 
-      count: queueCounts.legal || 0 // Invoices in legal proceedings
+      subtitle: 'Invoices in legal proceedings',
+      icon: Scale,
+      count: queueCounts.legal || 0,
+      tier: 'secondary',
+      accentColor: 'purple',
+      borderColor: 'border-purple-400/30',
+      bgGradient: 'from-purple-400/5 to-transparent'
     },
     { 
       id: 'debt-recovery', 
       label: 'Debt Recovery', 
-      count: queueCounts.debtRecovery || 0 // Invoices with external agencies
+      subtitle: 'External agency collections',
+      icon: Shield,
+      count: queueCounts.debtRecovery || 0,
+      tier: 'secondary',
+      accentColor: 'red',
+      borderColor: 'border-red-600/30',
+      bgGradient: 'from-red-600/5 to-transparent'
     },
   ];
+
+  const allTabs = [...primaryTabs, ...secondaryTabs];
 
   // Get priority badge styling
   const getPriorityBadge = (priority: string) => {
@@ -1858,38 +1913,135 @@ export default function ActionCentre() {
               </div>
             </div>
 
-            {/* Tab Navigation */}
+            {/* Enhanced Two-Tier Tab Navigation */}
             <div className="border-b border-white/50 bg-white/40 backdrop-blur-sm">
-              <div className="flex items-center">
-                <div className="flex flex-1">
-                  {tabOptions.map((tabOption) => (
-                    <button
-                      key={tabOption.id}
-                      onClick={() => {
-                        setSelectedTab(tabOption.id);
-                        setCurrentPage(1);
-                        setSelectedAction(null);
-                      }}
-                      className={`flex-1 px-4 py-3 text-sm font-medium transition-all duration-200 border-b-2 ${
-                        selectedTab === tabOption.id
-                          ? 'bg-white text-[#17B6C3] border-[#17B6C3]'
-                          : 'text-slate-600 hover:text-slate-900 hover:bg-white/60 border-slate-200'
-                      }`}
-                      data-testid={`tab-${tabOption.id}`}
-                    >
-                      <div className="flex items-center justify-center space-x-2">
-                        <span>{tabOption.label}</span>
-                        {typeof tabOption.count === 'number' && (
-                          <Badge 
-                            variant="secondary" 
-                            className={`${selectedTab === tabOption.id ? 'bg-[#17B6C3]/20 text-[#17B6C3]' : ''}`}
-                          >
-                            {tabOption.count}
-                          </Badge>
-                        )}
-                      </div>
-                    </button>
-                  ))}
+              {/* Primary Tier - Urgent Actions */}
+              <div className="px-4 pt-4 pb-2">
+                <div className="flex items-center space-x-1 mb-2">
+                  <div className="w-2 h-2 rounded-full bg-[#17B6C3]"></div>
+                  <span className="text-xs font-medium text-slate-600 uppercase tracking-wide">Priority Actions</span>
+                </div>
+                <div className="flex space-x-3">
+                  {primaryTabs.map((tab) => {
+                    const IconComponent = tab.icon;
+                    const isSelected = selectedTab === tab.id;
+                    return (
+                      <button
+                        key={tab.id}
+                        onClick={() => {
+                          setSelectedTab(tab.id);
+                          setCurrentPage(1);
+                          setSelectedAction(null);
+                        }}
+                        className={`group relative flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-300 hover:scale-105 ${
+                          isSelected
+                            ? `bg-gradient-to-r ${tab.bgGradient} ${tab.borderColor} border-2 shadow-lg backdrop-blur-md`
+                            : 'bg-white/70 border border-gray-200/30 hover:bg-white/90 hover:shadow-md backdrop-blur-sm'
+                        }`}
+                        data-testid={`tab-${tab.id}`}
+                      >
+                        {/* Icon Chip */}
+                        <div className={`p-2 rounded-lg transition-colors ${
+                          isSelected 
+                            ? 'bg-[#17B6C3]/20 text-[#17B6C3]' 
+                            : 'bg-slate-100 text-slate-600 group-hover:bg-[#17B6C3]/10 group-hover:text-[#17B6C3]'
+                        }`}>
+                          <IconComponent className="h-4 w-4" />
+                        </div>
+                        
+                        {/* Label and Count */}
+                        <div className="flex-1">
+                          <div className="flex items-center space-x-2">
+                            <span className={`font-semibold text-sm ${
+                              isSelected ? 'text-[#17B6C3]' : 'text-slate-700 group-hover:text-slate-900'
+                            }`}>
+                              {tab.label}
+                            </span>
+                            <Badge 
+                              variant="secondary" 
+                              className={`text-xs px-2 py-0.5 ${
+                                isSelected 
+                                  ? 'bg-[#17B6C3]/20 text-[#17B6C3] border-[#17B6C3]/30' 
+                                  : 'bg-slate-100 text-slate-600 border-slate-200'
+                              }`}
+                            >
+                              {tab.count}
+                            </Badge>
+                          </div>
+                          <p className={`text-xs ${
+                            isSelected ? 'text-[#17B6C3]/80' : 'text-slate-500'
+                          }`}>
+                            {tab.subtitle}
+                          </p>
+                        </div>
+
+                        {/* Progressive Accent Bar */}
+                        <div className={`absolute bottom-0 left-0 right-0 h-1 rounded-b-lg transition-all duration-300 ${
+                          isSelected ? `bg-gradient-to-r ${tab.bgGradient}` : 'bg-transparent'
+                        }`} />
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Secondary Tier - Specialized Workflows */}
+              <div className="px-4 pb-4">
+                <div className="flex items-center space-x-1 mb-2">
+                  <div className="w-2 h-2 rounded-full bg-slate-400"></div>
+                  <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">Workflow Stages</span>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {secondaryTabs.map((tab) => {
+                    const IconComponent = tab.icon;
+                    const isSelected = selectedTab === tab.id;
+                    return (
+                      <button
+                        key={tab.id}
+                        onClick={() => {
+                          setSelectedTab(tab.id);
+                          setCurrentPage(1);
+                          setSelectedAction(null);
+                        }}
+                        className={`group flex items-center space-x-2 px-3 py-2 rounded-full transition-all duration-200 hover:scale-105 ${
+                          isSelected
+                            ? `bg-gradient-to-r ${tab.bgGradient} ${tab.borderColor} border shadow-md`
+                            : 'bg-white/60 border border-slate-200/30 hover:bg-white/80 hover:shadow-sm'
+                        }`}
+                        data-testid={`tab-${tab.id}`}
+                      >
+                        {/* Icon */}
+                        <div className={`p-1.5 rounded-full transition-colors ${
+                          isSelected 
+                            ? tab.accentColor === 'teal' ? 'bg-[#17B6C3]/20 text-[#17B6C3]' 
+                              : tab.accentColor === 'red' ? 'bg-red-500/20 text-red-600'
+                              : tab.accentColor === 'blue' ? 'bg-blue-500/20 text-blue-600'
+                              : tab.accentColor === 'purple' ? 'bg-purple-500/20 text-purple-600'
+                              : 'bg-slate-100 text-slate-600'
+                            : 'bg-slate-100/80 text-slate-500 group-hover:bg-slate-200'
+                        }`}>
+                          <IconComponent className="h-3 w-3" />
+                        </div>
+                        
+                        {/* Label and Count */}
+                        <span className={`text-xs font-medium ${
+                          isSelected ? 'text-slate-700' : 'text-slate-600 group-hover:text-slate-700'
+                        }`}>
+                          {tab.label}
+                        </span>
+                        <Badge 
+                          variant="outline" 
+                          className={`text-xs px-1.5 py-0 h-5 ${
+                            isSelected 
+                              ? 'border-current text-slate-600' 
+                              : 'border-slate-300 text-slate-500'
+                          }`}
+                        >
+                          {tab.count}
+                        </Badge>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             </div>
