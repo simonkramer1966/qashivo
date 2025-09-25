@@ -1885,10 +1885,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
 
-      const [basicMetrics, invoiceCounts, cacheStats] = await Promise.all([
+      const [basicMetrics, invoiceCounts, cacheStats, filteredInvoiceCounts] = await Promise.all([
         storage.getActionCentreMetrics(user.tenantId),
         storage.getInvoiceCountsByOverdueCategory(user.tenantId),
-        Promise.resolve(actionPrioritizationService.getCacheStats())
+        Promise.resolve(actionPrioritizationService.getCacheStats()),
+        // Get filtered invoice counts that match what's displayed
+        Promise.all([
+          storage.getInvoices(user.tenantId, { overdue: 'due' }).then(result => ({ due: result.total })),
+          storage.getInvoices(user.tenantId, { overdue: 'overdue' }).then(result => ({ overdue: result.total })),
+          storage.getInvoices(user.tenantId, { overdue: 'serious' }).then(result => ({ serious: result.total })),
+          storage.getInvoices(user.tenantId, { overdue: 'escalation' }).then(result => ({ escalation: result.total }))
+        ]).then(results => ({
+          due: results[0].due,
+          overdue: results[1].overdue,
+          serious: results[2].serious,
+          escalation: results[3].escalation
+        }))
       ]);
 
       const enhancedMetrics = {
@@ -1902,10 +1914,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         totalValue: Math.floor(basicMetrics.highRiskExposure),
         // NEW WORKFLOW STRUCTURE: Map existing invoice categories to workflow buckets
         queueCounts: {
-          // Due = invoices due within next 7 days but not yet overdue
-          due: invoiceCounts.due,
-          // Overdue = all overdue invoices WITHOUT exception status (default bucket for >0 days overdue)
-          overdue: invoiceCounts.overdue + invoiceCounts.serious + invoiceCounts.escalation,
+          // Due = invoices due within next 7 days but not yet overdue (filtered count)
+          due: filteredInvoiceCounts.due,
+          // Overdue = all overdue invoices WITHOUT exception status (filtered count)
+          overdue: filteredInvoiceCounts.overdue + filteredInvoiceCounts.serious + filteredInvoiceCounts.escalation,
           // Promises = invoices with active PTPs (0 until PTP system implemented)
           promises: 0,
           // Broken Promises = invoices with broken PTPs (0 until PTP system implemented)
