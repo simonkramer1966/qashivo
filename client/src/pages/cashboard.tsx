@@ -889,34 +889,6 @@ export default function Cashboard() {
               </Card>
             </div>
 
-            {/* AI Insights Card */}
-            <div className="flex justify-end">
-              <div className="w-full lg:w-1/2">
-                <Card className="glass-card" data-testid="card-ai-insights">
-                  <CardHeader>
-                    <CardTitle className="flex items-center space-x-2">
-                      <span className="text-xl">🔍</span>
-                      <span>AI Insights</span>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-3">
-                      {[
-                        "3 promises to pay are due this week (£18,500).",
-                        "2 customers missed agreed dates — recommend escalation.",
-                        "Charlie handled 14 chases this week, saving ~5 hours of manual effort.",
-                        "Top 3 debtors account for 52% of your overdue balance — focus here for maximum impact.",
-                        "Overdue invoices increased 12% in the last 7 days — trend suggests tighter cash next month."
-                      ].map((insight, index) => (
-                        <div key={index} className="text-sm text-slate-900 dark:text-slate-100 leading-relaxed" data-testid={`text-ai-insight-${index}`}>
-                          {insight}
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            </div>
 
           </div>
         </main>
