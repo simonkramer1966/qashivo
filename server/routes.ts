@@ -1891,10 +1891,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         Promise.resolve(actionPrioritizationService.getCacheStats()),
         // Get filtered invoice counts that match what's displayed
         Promise.all([
-          storage.getInvoices(user.tenantId, { overdue: 'due' }).then(result => result.total),
-          storage.getInvoices(user.tenantId, { overdue: 'overdue' }).then(result => result.total),
-          storage.getInvoices(user.tenantId, { overdue: 'serious' }).then(result => result.total),
-          storage.getInvoices(user.tenantId, { overdue: 'escalation' }).then(result => result.total)
+          storage.getInvoicesFiltered(user.tenantId, { overdueCategory: 'due' }).then(result => result.total),
+          storage.getInvoicesFiltered(user.tenantId, { overdueCategory: 'overdue' }).then(result => result.total),
+          storage.getInvoicesFiltered(user.tenantId, { overdueCategory: 'serious' }).then(result => result.total),
+          storage.getInvoicesFiltered(user.tenantId, { overdueCategory: 'escalation' }).then(result => result.total)
         ]).then(results => ({
           due: results[0],
           overdue: results[1],
