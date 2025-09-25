@@ -3405,9 +3405,7 @@ export class DatabaseStorage implements IStorage {
 
     // Initialize category counters
     const categoryCounts: Record<OverdueCategory, number> = {
-      soon: 0,
-      current: 0,
-      recent: 0,
+      due: 0,
       overdue: 0,
       serious: 0,
       escalation: 0,
@@ -3421,7 +3419,7 @@ export class DatabaseStorage implements IStorage {
       categoryCounts[overdueCategoryInfo.category]++;
     });
 
-    console.log(`📈 Invoice category counts: soon=${categoryCounts.soon}, current=${categoryCounts.current}, recent=${categoryCounts.recent}, overdue=${categoryCounts.overdue}, serious=${categoryCounts.serious}, escalation=${categoryCounts.escalation}`);
+    console.log(`📈 Invoice category counts: due=${categoryCounts.due}, overdue=${categoryCounts.overdue}, serious=${categoryCounts.serious}, escalation=${categoryCounts.escalation}`);
 
     return categoryCounts;
   }
