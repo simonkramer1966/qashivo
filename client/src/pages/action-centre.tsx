@@ -1744,22 +1744,22 @@ export default function ActionCentre() {
     { 
       id: 'broken-promises', 
       label: 'Broken Promises', 
-      count: (queueCounts.overdue || 0) + (queueCounts.serious || 0) // Overdue + missed payments
+      count: queueCounts.overdue || 0 // Overdue invoices
     },
     { 
       id: 'disputes', 
       label: 'Disputes', 
-      count: queueCounts.disputes || 0
+      count: queueCounts.serious || 0 // Serious category maps to disputes
     },
     { 
       id: 'payment-plans', 
       label: 'Payment Plans', 
-      count: queueCounts.paymentPlans || 0
+      count: queueCounts.paymentPlans || 0 // Keep as-is for now
     },
     { 
       id: 'escalations', 
       label: 'Escalations', 
-      count: queueCounts.escalation || 0
+      count: queueCounts.escalation || 0 // Escalation category
     },
   ];
 
