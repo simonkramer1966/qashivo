@@ -3307,9 +3307,7 @@ export class DatabaseStorage implements IStorage {
     console.log(`📋 Found ${todayActionsCount} active action items for "today" queue`);
 
     // Initialize category counters
-    let soonCount = 0;
-    let currentCount = 0;
-    let recentCount = 0;
+    let dueCount = 0;
     let overdueInvoicesCount = 0;
     let seriousCount = 0;
     let escalationCount = 0;
@@ -3324,14 +3322,8 @@ export class DatabaseStorage implements IStorage {
       totalValue += amount;
 
       switch (category) {
-        case 'soon':
-          soonCount++;
-          break;
-        case 'current':
-          currentCount++;
-          break;
-        case 'recent':
-          recentCount++;
+        case 'due':
+          dueCount++;
           break;
         case 'overdue':
           overdueInvoicesCount++;
@@ -3347,8 +3339,8 @@ export class DatabaseStorage implements IStorage {
 
     // Calculate legacy metrics for backwards compatibility
     const totalOpen = uniqueInvoicesWithActions.length;
-    const dueTodayCount = currentCount; // "Current" category represents due today
-    const overdueCount = recentCount + overdueInvoicesCount + seriousCount + escalationCount; // All overdue categories
+    const dueTodayCount = dueCount; // "Due" category represents due today and soon
+    const overdueCount = overdueInvoicesCount + seriousCount + escalationCount; // All overdue categories
 
     // Completed today count - items completed today (based on updatedAt)
     const [completedTodayCount] = await db
@@ -3361,7 +3353,7 @@ export class DatabaseStorage implements IStorage {
         lt(actionItems.updatedAt, startOfTomorrowUTC)
       ));
 
-    console.log(`📈 Category counts: soon=${soonCount}, current=${currentCount}, recent=${recentCount}, overdue=${overdueInvoicesCount}, serious=${seriousCount}, escalation=${escalationCount}`);
+    console.log(`📈 Category counts: due=${dueCount}, overdue=${overdueInvoicesCount}, serious=${seriousCount}, escalation=${escalationCount}`);
     console.log(`📈 Legacy metrics: totalOpen=${totalOpen}, dueToday=${dueTodayCount}, overdue=${overdueCount}, completedToday=${completedTodayCount.count}, totalValue=${totalValue}`);
 
     // Calculate high-risk exposure (30% of total value as estimate)

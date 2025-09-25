@@ -1902,8 +1902,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         totalValue: Math.floor(basicMetrics.highRiskExposure),
         // NEW WORKFLOW STRUCTURE: Map existing invoice categories to workflow buckets
         queueCounts: {
-          // Due = invoices due soon but not yet overdue
-          due: invoiceCounts.soon + invoiceCounts.current,
+          // Due = invoices due within next 7 days but not yet overdue
+          due: invoiceCounts.due,
           // Overdue = all overdue invoices WITHOUT exception status (default bucket for >0 days overdue)
           overdue: invoiceCounts.overdue + invoiceCounts.serious + invoiceCounts.escalation,
           // Promises = invoices with active PTPs (0 until PTP system implemented)
