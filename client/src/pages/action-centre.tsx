@@ -2057,8 +2057,7 @@ export default function ActionCentre() {
               {queueLoading ? (
                 <div className="flex items-center justify-center h-64">
                   <div className="text-center">
-                    <RefreshCw className="h-8 w-8 animate-spin text-[#17B6C3] mx-auto mb-2" />
-                    <p className="text-slate-600">Loading actions...</p>
+                    <p className="text-slate-600">No data</p>
                   </div>
                 </div>
               ) : queueData.length === 0 ? (
