@@ -2072,7 +2072,7 @@ export default function ActionCentre() {
               ) : (
                 <>
                   {/* Desktop Table - Hidden on mobile/tablet */}
-                  <div className="hidden lg:block flex-1 overflow-y-auto" style={{ contain: 'layout style size' }}>
+                  <div className="hidden md:block flex-1 overflow-y-auto" style={{ contain: 'layout style size' }}>
                     <Table ref={tableRef} style={{ tableLayout: 'fixed', width: '100%' }}>
                       <TableHeader className="sticky top-0 bg-white/90 backdrop-blur-sm">
                         <TableRow>
@@ -2495,7 +2495,7 @@ export default function ActionCentre() {
                   </div>
 
                   {/* Mobile/Tablet Card Layout - Hidden on desktop */}
-                  <div className="lg:hidden flex-1 overflow-y-auto">
+                  <div className="md:hidden flex-1 overflow-y-auto">
                     <div className="space-y-4 p-4">
                       {queueData.map((action: QueueDisplayItem, index: number) => {
                         const isSelected = selectedItems.has(action.id);
