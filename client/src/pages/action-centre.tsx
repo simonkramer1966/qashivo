@@ -2450,6 +2450,21 @@ export default function ActionCentre() {
                                   <DropdownMenuItem 
                                     onClick={(e) => {
                                       e.stopPropagation();
+                                      // TODO: Implement payment promise functionality
+                                      toast({
+                                        title: "Payment Promise",
+                                        description: "Payment promise functionality will be available soon.",
+                                        variant: "default",
+                                      });
+                                    }}
+                                    data-testid={`menu-payment-promise-${action.id}`}
+                                  >
+                                    <CheckCircle className="h-4 w-4 mr-2" />
+                                    Payment Promise
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem 
+                                    onClick={(e) => {
+                                      e.stopPropagation();
                                       setPaymentPlanAction(action);
                                       setShowPaymentPlanDialog(true);
                                     }}
