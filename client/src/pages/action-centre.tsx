@@ -335,14 +335,6 @@ export default function ActionCentre() {
   const [showAddNoteDialog, setShowAddNoteDialog] = useState(false);
   const [noteContent, setNoteContent] = useState("");
   
-  // Invoice detail dialog state
-  const [showInvoiceDetailDialog, setShowInvoiceDetailDialog] = useState(false);
-  const [selectedInvoiceDetails, setSelectedInvoiceDetails] = useState<{
-    invoiceId: string;
-    contactId: string;
-    invoiceNumber: string;
-    contactName: string;
-  } | null>(null);
   
   // Refs for keyboard navigation
   const tableRef = useRef<HTMLTableElement>(null);
@@ -1866,7 +1858,7 @@ export default function ActionCentre() {
                       className={`flex-1 px-4 py-3 text-sm font-medium transition-all duration-200 border-b-2 ${
                         selectedTab === tabOption.id
                           ? 'bg-white text-[#17B6C3] border-[#17B6C3]'
-                          : 'text-slate-600 hover:text-slate-900 hover:bg-white/60 border-transparent'
+                          : 'text-slate-600 hover:text-slate-900 hover:bg-white/60 border-slate-200'
                       }`}
                       data-testid={`tab-${tabOption.id}`}
                     >
@@ -2011,19 +2003,6 @@ export default function ActionCentre() {
                                 });
                                 handleSelectItem(action.id, index, e);
                                 setSelectedAction(action);
-                              }}
-                              onDoubleClick={(e) => {
-                                e.stopPropagation();
-                                // Open invoice detail dialog on double-click
-                                if (action.invoiceId && action.contactId) {
-                                  setSelectedInvoiceDetails({
-                                    invoiceId: action.invoiceId,
-                                    contactId: action.contactId,
-                                    invoiceNumber: action.invoiceNumber || 'N/A',
-                                    contactName: action.contactName || 'Unknown Contact'
-                                  });
-                                  setShowInvoiceDetailDialog(true);
-                                }
                               }}
                               onKeyDown={(e) => {
                                 if (e.key === ' ' || e.key === 'Enter') {
@@ -3891,200 +3870,6 @@ export default function ActionCentre() {
         </DialogContent>
       </Dialog>
 
-      {/* Invoice Detail Dialog */}
-      <Dialog open={showInvoiceDetailDialog} onOpenChange={setShowInvoiceDetailDialog}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-white/95 backdrop-blur-sm border-white/50">
-          <DialogHeader>
-            <DialogTitle className="text-xl font-bold flex items-center gap-2">
-              <div className="p-2 bg-[#17B6C3]/10 rounded-lg">
-                <Target className="h-5 w-5 text-[#17B6C3]" />
-              </div>
-              Invoice Details
-            </DialogTitle>
-            <DialogDescription className="text-gray-600">
-              {selectedInvoiceDetails?.invoiceNumber} - {selectedInvoiceDetails?.contactName}
-            </DialogDescription>
-          </DialogHeader>
-          
-          {selectedInvoiceDetails && (
-            <InvoiceDetailContent 
-              invoiceId={selectedInvoiceDetails.invoiceId}
-              contactId={selectedInvoiceDetails.contactId}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
     </div>
-  );
-}
-
-// Invoice Detail Content Component
-function InvoiceDetailContent({ invoiceId, contactId }: { invoiceId: string; contactId: string }) {
-  // Fetch invoice details
-  const { data: invoice, isLoading: invoiceLoading } = useQuery({
-    queryKey: ["/api/invoices", invoiceId],
-    enabled: !!invoiceId,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-  });
-
-  // Fetch contact notes
-  const { data: notes, isLoading: notesLoading } = useQuery({
-    queryKey: ["/api/contacts", contactId, "notes"],
-    enabled: !!contactId,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-  });
-
-  // Fetch communication history
-  const { data: history, isLoading: historyLoading } = useQuery({
-    queryKey: ["/api/communications/history", { invoiceId }],
-    enabled: !!invoiceId,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-  });
-
-  return (
-    <Tabs defaultValue="details" className="w-full">
-      <TabsList className="grid w-full grid-cols-3">
-        <TabsTrigger value="details">Details</TabsTrigger>
-        <TabsTrigger value="notes">Notes</TabsTrigger>
-        <TabsTrigger value="history">History</TabsTrigger>
-      </TabsList>
-      
-      <TabsContent value="details" className="space-y-4">
-        <Card className="bg-white/80 backdrop-blur-sm border-white/50">
-          <CardHeader>
-            <CardTitle className="text-lg">Invoice Information</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {invoiceLoading ? (
-              <div className="flex items-center justify-center h-32">
-                <Loader2 className="h-8 w-8 animate-spin text-[#17B6C3]" />
-              </div>
-            ) : invoice ? (
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <h4 className="font-medium text-gray-700">Invoice Number</h4>
-                  <p className="text-gray-900">{invoice.invoiceNumber || 'N/A'}</p>
-                </div>
-                <div>
-                  <h4 className="font-medium text-gray-700">Amount</h4>
-                  <p className="text-gray-900 font-semibold">
-                    {new Intl.NumberFormat('en-US', {
-                      style: 'currency',
-                      currency: 'USD',
-                    }).format(invoice.amount || 0)}
-                  </p>
-                </div>
-                <div>
-                  <h4 className="font-medium text-gray-700">Due Date</h4>
-                  <p className="text-gray-900">
-                    {invoice.dueDate ? formatDate(invoice.dueDate) : 'N/A'}
-                  </p>
-                </div>
-                <div>
-                  <h4 className="font-medium text-gray-700">Status</h4>
-                  <Badge className={`${
-                    invoice.status === 'paid' ? 'bg-green-100 text-green-800' :
-                    invoice.status === 'overdue' ? 'bg-red-100 text-red-800' :
-                    'bg-yellow-100 text-yellow-800'
-                  }`}>
-                    {invoice.status?.toUpperCase() || 'UNKNOWN'}
-                  </Badge>
-                </div>
-                <div>
-                  <h4 className="font-medium text-gray-700">Contact</h4>
-                  <p className="text-gray-900">{invoice.contact?.name || 'N/A'}</p>
-                  <p className="text-gray-600 text-sm">{invoice.contact?.email || ''}</p>
-                </div>
-                <div>
-                  <h4 className="font-medium text-gray-700">Company</h4>
-                  <p className="text-gray-900">{invoice.contact?.companyName || 'N/A'}</p>
-                </div>
-              </div>
-            ) : (
-              <div className="text-center py-8">
-                <p className="text-gray-500">No invoice details available</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </TabsContent>
-      
-      <TabsContent value="notes" className="space-y-4">
-        <Card className="bg-white/80 backdrop-blur-sm border-white/50">
-          <CardHeader>
-            <CardTitle className="text-lg">Contact Notes</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {notesLoading ? (
-              <div className="flex items-center justify-center h-32">
-                <Loader2 className="h-8 w-8 animate-spin text-[#17B6C3]" />
-              </div>
-            ) : notes && notes.length > 0 ? (
-              <div className="space-y-4">
-                {notes.map((note: any, index: number) => (
-                  <div key={index} className="border border-gray-200 rounded-lg p-4">
-                    <div className="flex justify-between items-start mb-2">
-                      <p className="text-sm text-gray-600">
-                        {formatDate(note.createdAt)}
-                      </p>
-                    </div>
-                    <p className="text-gray-900">{note.content}</p>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-8">
-                <MessageSquare className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-                <p className="text-gray-500">No notes found for this contact</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </TabsContent>
-      
-      <TabsContent value="history" className="space-y-4">
-        <Card className="bg-white/80 backdrop-blur-sm border-white/50">
-          <CardHeader>
-            <CardTitle className="text-lg">Communication History</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {historyLoading ? (
-              <div className="flex items-center justify-center h-32">
-                <Loader2 className="h-8 w-8 animate-spin text-[#17B6C3]" />
-              </div>
-            ) : history && history.length > 0 ? (
-              <div className="space-y-4">
-                {history.map((entry: any, index: number) => (
-                  <div key={index} className="border border-gray-200 rounded-lg p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        {entry.type === 'email' && <Mail className="h-4 w-4 text-blue-500" />}
-                        {entry.type === 'sms' && <MessageSquare className="h-4 w-4 text-green-500" />}
-                        {entry.type === 'voice' && <Phone className="h-4 w-4 text-purple-500" />}
-                        <span className="font-medium capitalize">{entry.type || 'Action'}</span>
-                      </div>
-                      <span className="text-sm text-gray-500">
-                        {formatDate(entry.createdAt)}
-                      </span>
-                    </div>
-                    <p className="text-gray-700">{entry.content || entry.subject || entry.details || 'No details available'}</p>
-                    {entry.status && (
-                      <div className="mt-2">
-                        <Badge variant="secondary">{entry.status}</Badge>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-8">
-                <Mail className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-                <p className="text-gray-500">No communication history found for this invoice</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </TabsContent>
-    </Tabs>
   );
 }
