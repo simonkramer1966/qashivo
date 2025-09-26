@@ -15,23 +15,65 @@ export interface OnboardingPhaseData {
   business_setup?: {
     companyProfile: {
       industry: string;
+      industrySubcategory: string;
       companySize: string;
       businessType: string;
+      yearsInBusiness: string;
+      annualRevenue: string;
+      customerBase: string;
       primaryMarket: string;
+      geographicCoverage: string;
+      businessModel: string;
     };
     collectionsStrategy: {
       automationLevels: {
-        newCustomers: 'manual' | 'semi-auto' | 'full-auto';
-        establishedCustomers: 'manual' | 'semi-auto' | 'full-auto';
-        highRiskCustomers: 'manual' | 'semi-auto' | 'full-auto';
-        vipCustomers: 'manual' | 'semi-auto' | 'full-auto';
+        newCustomers: 'manual' | 'conservative' | 'balanced' | 'aggressive';
+        establishedCustomers: 'manual' | 'conservative' | 'balanced' | 'aggressive';
+        highRiskCustomers: 'manual' | 'conservative' | 'balanced' | 'aggressive';
+        vipCustomers: 'manual' | 'conservative' | 'balanced' | 'aggressive' | 'white-glove';
       };
-      riskTolerance: {
-        confidenceThreshold: number; // 70-95%
-        escalationTriggers: {
-          amount: number;
-          daysOverdue: number;
-        };
+      collectionChannels: {
+        email: boolean;
+        sms: boolean;
+        phone: boolean;
+        letters: boolean;
+      };
+      escalationWorkflow: {
+        firstReminder: number;
+        secondReminder: number;
+        finalNotice: number;
+        collectionAgency: number;
+      };
+      communicationTone: 'friendly' | 'professional' | 'firm';
+    };
+    paymentTerms: {
+      defaultTerms: string;
+      earlyPaymentDiscount: {
+        enabled: boolean;
+        percentage: number;
+        days: number;
+      };
+      latePaymentFees: {
+        enabled: boolean;
+        type: 'percentage' | 'fixed';
+        amount: number;
+      };
+      acceptedPaymentMethods: string[];
+    };
+    riskAssessment: {
+      creditLimits: {
+        newCustomer: number;
+        establishedCustomer: number;
+        requireCreditCheck: boolean;
+      };
+      riskFactors: {
+        industryRisk: 'low' | 'medium' | 'high';
+        paymentHistory: 'low' | 'medium' | 'high';
+        creditScore: 'low' | 'medium' | 'high';
+      };
+      writeOffPolicy: {
+        threshold: number;
+        requireApproval: boolean;
       };
     };
     communicationPreferences: {
@@ -41,14 +83,13 @@ export interface OnboardingPhaseData {
         start: string;
         end: string;
       };
+      teamNotifications: {
+        newOverdue: boolean;
+        paymentReceived: boolean;
+        escalations: boolean;
+      };
     };
-    teamSetup: {
-      members: Array<{
-        email: string;
-        role: string;
-        permissions: string[];
-      }>;
-    };
+    completedSteps?: number;
   };
   brand_customization?: {
     branding: {
@@ -351,12 +392,27 @@ export class OnboardingService {
   private validateBusinessSetup(data?: OnboardingPhaseData['business_setup']) {
     const missingRequirements: string[] = [];
     
+    // Company Profile Requirements
     if (!data?.companyProfile?.industry) {
       missingRequirements.push('Company industry selection required');
     }
     
+    if (!data?.companyProfile?.companySize) {
+      missingRequirements.push('Company size selection required');
+    }
+    
+    if (!data?.companyProfile?.businessType) {
+      missingRequirements.push('Business type selection required');
+    }
+    
+    // Collections Strategy Requirements
     if (!data?.collectionsStrategy?.automationLevels) {
       missingRequirements.push('Automation level preferences required');
+    }
+    
+    // Payment Terms Requirements
+    if (!data?.paymentTerms?.defaultTerms) {
+      missingRequirements.push('Default payment terms required');
     }
 
     return {
