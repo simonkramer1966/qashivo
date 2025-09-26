@@ -120,7 +120,7 @@ export function AIReviewLaunchPhase({
           firstCollectionScheduled: true,
           aiProfiles: {
             ...aiProfiles,
-            approved: workflowRecommendations.filter(r => r.approved).length
+            approved: workflowRecommendations.filter((r: any) => r.approved).length
           }
         }
       });
@@ -133,7 +133,7 @@ export function AIReviewLaunchPhase({
     }, 2000);
   };
 
-  const approvedCount = workflowRecommendations.filter(r => r.approved).length;
+  const approvedCount = workflowRecommendations.filter((r: any) => r.approved).length;
   const canComplete = automationSettings.automationActivated && automationSettings.firstCollectionScheduled;
 
   return (
@@ -193,7 +193,7 @@ export function AIReviewLaunchPhase({
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {workflowRecommendations.map((recommendation, index) => (
+          {workflowRecommendations.map((recommendation: any, index: number) => (
             <div 
               key={index}
               className={`p-4 rounded-lg border transition-all ${

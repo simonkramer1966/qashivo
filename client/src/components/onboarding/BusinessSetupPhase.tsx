@@ -198,7 +198,7 @@ export function BusinessSetupPhase({
                 <Label htmlFor="company-size">Company Size</Label>
                 <Select 
                   value={companyProfile.companySize} 
-                  onValueChange={(value) => setCompanyProfile(prev => ({ ...prev, companySize: value }))}
+                  onValueChange={(value) => setCompanyProfile((prev: typeof companyProfile) => ({ ...prev, companySize: value }))}
                 >
                   <SelectTrigger className="bg-white/70 border-gray-200/30">
                     <SelectValue placeholder="Select company size" />
@@ -217,7 +217,7 @@ export function BusinessSetupPhase({
                 <Label htmlFor="business-type">Business Type</Label>
                 <Select 
                   value={companyProfile.businessType} 
-                  onValueChange={(value) => setCompanyProfile(prev => ({ ...prev, businessType: value }))}
+                  onValueChange={(value) => setCompanyProfile((prev: typeof companyProfile) => ({ ...prev, businessType: value }))}
                 >
                   <SelectTrigger className="bg-white/70 border-gray-200/30">
                     <SelectValue placeholder="Select business type" />
@@ -234,7 +234,7 @@ export function BusinessSetupPhase({
                 <Label htmlFor="primary-market">Primary Market</Label>
                 <Select 
                   value={companyProfile.primaryMarket} 
-                  onValueChange={(value) => setCompanyProfile(prev => ({ ...prev, primaryMarket: value }))}
+                  onValueChange={(value) => setCompanyProfile((prev: typeof companyProfile) => ({ ...prev, primaryMarket: value }))}
                 >
                   <SelectTrigger className="bg-white/70 border-gray-200/30">
                     <SelectValue placeholder="Select primary market" />
@@ -273,7 +273,7 @@ export function BusinessSetupPhase({
                       <RadioGroup 
                         value={level as string} 
                         onValueChange={(value) => 
-                          setCollectionsStrategy(prev => ({
+                          setCollectionsStrategy((prev: typeof collectionsStrategy) => ({
                             ...prev,
                             automationLevels: {
                               ...prev.automationLevels,
@@ -309,7 +309,7 @@ export function BusinessSetupPhase({
                     max="95"
                     value={collectionsStrategy.riskTolerance.confidenceThreshold}
                     onChange={(e) => 
-                      setCollectionsStrategy(prev => ({
+                      setCollectionsStrategy((prev: typeof collectionsStrategy) => ({
                         ...prev,
                         riskTolerance: {
                           ...prev.riskTolerance,
@@ -332,7 +332,7 @@ export function BusinessSetupPhase({
                     max="90"
                     value={collectionsStrategy.riskTolerance.escalationTriggers.daysOverdue}
                     onChange={(e) => 
-                      setCollectionsStrategy(prev => ({
+                      setCollectionsStrategy((prev: typeof collectionsStrategy) => ({
                         ...prev,
                         riskTolerance: {
                           ...prev.riskTolerance,
@@ -371,7 +371,7 @@ export function BusinessSetupPhase({
                   type="time"
                   value={communicationPreferences.businessHours.start}
                   onChange={(e) => 
-                    setCommunicationPreferences(prev => ({
+                    setCommunicationPreferences((prev: typeof communicationPreferences) => ({
                       ...prev,
                       businessHours: {
                         ...prev.businessHours,
@@ -389,7 +389,7 @@ export function BusinessSetupPhase({
                   type="time"
                   value={communicationPreferences.businessHours.end}
                   onChange={(e) => 
-                    setCommunicationPreferences(prev => ({
+                    setCommunicationPreferences((prev: typeof communicationPreferences) => ({
                       ...prev,
                       businessHours: {
                         ...prev.businessHours,
@@ -412,14 +412,14 @@ export function BusinessSetupPhase({
                       checked={communicationPreferences.preferredDays.includes(day)}
                       onCheckedChange={(checked) => {
                         if (checked) {
-                          setCommunicationPreferences(prev => ({
+                          setCommunicationPreferences((prev: typeof communicationPreferences) => ({
                             ...prev,
                             preferredDays: [...prev.preferredDays, day]
                           }));
                         } else {
-                          setCommunicationPreferences(prev => ({
+                          setCommunicationPreferences((prev: typeof communicationPreferences) => ({
                             ...prev,
-                            preferredDays: prev.preferredDays.filter(d => d !== day)
+                            preferredDays: prev.preferredDays.filter((d: string) => d !== day)
                           }));
                         }
                       }}

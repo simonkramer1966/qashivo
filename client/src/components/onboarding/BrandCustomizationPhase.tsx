@@ -118,13 +118,13 @@ export function BrandCustomizationPhase({
                   <Input
                     type="color"
                     value={branding.primaryColor}
-                    onChange={(e) => setBranding(prev => ({ ...prev, primaryColor: e.target.value }))}
+                    onChange={(e) => setBranding((prev: typeof branding) => ({ ...prev, primaryColor: e.target.value }))}
                     className="w-12 h-10 p-1 border border-gray-200"
                   />
                   <Input
                     type="text"
                     value={branding.primaryColor}
-                    onChange={(e) => setBranding(prev => ({ ...prev, primaryColor: e.target.value }))}
+                    onChange={(e) => setBranding((prev: typeof branding) => ({ ...prev, primaryColor: e.target.value }))}
                     className="bg-white/70 border-gray-200/30"
                     placeholder="#17B6C3"
                   />
@@ -137,13 +137,13 @@ export function BrandCustomizationPhase({
                   <Input
                     type="color"
                     value={branding.secondaryColor}
-                    onChange={(e) => setBranding(prev => ({ ...prev, secondaryColor: e.target.value }))}
+                    onChange={(e) => setBranding((prev: typeof branding) => ({ ...prev, secondaryColor: e.target.value }))}
                     className="w-12 h-10 p-1 border border-gray-200"
                   />
                   <Input
                     type="text"
                     value={branding.secondaryColor}
-                    onChange={(e) => setBranding(prev => ({ ...prev, secondaryColor: e.target.value }))}
+                    onChange={(e) => setBranding((prev: typeof branding) => ({ ...prev, secondaryColor: e.target.value }))}
                     className="bg-white/70 border-gray-200/30"
                     placeholder="#1396A1"
                   />
@@ -186,7 +186,7 @@ export function BrandCustomizationPhase({
               <Label>Communication Tone</Label>
               <RadioGroup 
                 value={branding.communicationTone} 
-                onValueChange={(value) => setBranding(prev => ({ ...prev, communicationTone: value }))}
+                onValueChange={(value) => setBranding((prev: typeof branding) => ({ ...prev, communicationTone: value }))}
               >
                 <div className="space-y-3">
                   <div className="flex items-start space-x-3 p-3 rounded-lg border border-gray-200">
@@ -249,7 +249,7 @@ export function BrandCustomizationPhase({
                     id="portal-customization"
                     checked={customerExperience.portalCustomization}
                     onCheckedChange={(checked) => 
-                      setCustomerExperience(prev => ({ ...prev, portalCustomization: checked }))
+                      setCustomerExperience((prev: typeof customerExperience) => ({ ...prev, portalCustomization: checked }))
                     }
                   />
                 </div>
@@ -267,7 +267,7 @@ export function BrandCustomizationPhase({
                     id="email-branding"
                     checked={customerExperience.emailBranding}
                     onCheckedChange={(checked) => 
-                      setCustomerExperience(prev => ({ ...prev, emailBranding: checked }))
+                      setCustomerExperience((prev: typeof customerExperience) => ({ ...prev, emailBranding: checked }))
                     }
                   />
                 </div>
