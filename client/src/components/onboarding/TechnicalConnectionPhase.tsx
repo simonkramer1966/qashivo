@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { 
@@ -35,22 +36,30 @@ export function TechnicalConnectionPhase({
 }: TechnicalConnectionPhaseProps) {
   const [connectionStep, setConnectionStep] = useState(0);
   const [importProgress, setImportProgress] = useState(0);
+  const [selectedProvider, setSelectedProvider] = useState('xero');
   const { toast } = useToast();
+
+  // Accounting provider options
+  const accountingProviders = [
+    { value: 'xero', label: 'Xero', available: true },
+    { value: 'quickbooks', label: 'QuickBooks Online', available: false },
+    { value: 'sage', label: 'Sage Business Cloud', available: false }
+  ];
   
   const techData = phaseData.technical_connection || {};
-  const isXeroConnected = techData.xeroConnected || false;
-  const isDataImported = techData.xeroImportCompleted || false;
+  const isProviderConnected = techData[`${selectedProvider}Connected`] || false;
+  const isDataImported = techData[`${selectedProvider}ImportCompleted`] || false;
   const importSummary = techData.importSummary;
   
-  // Xero automated import mutation
-  const xeroImportMutation = useMutation({
-    mutationFn: () => apiRequest('/api/onboarding/xero-import', { method: 'POST' }),
-    onSuccess: (data) => {
+  // Automated import mutation
+  const providerImportMutation = useMutation({
+    mutationFn: () => apiRequest('/api/onboarding/xero-import', 'POST'),
+    onSuccess: (data: any) => {
       if (data.success) {
         onUpdate({
           technical_connection: {
             ...techData,
-            xeroImportCompleted: true,
+            [`${selectedProvider}ImportCompleted`]: true,
             importSummary: data.summary,
             importTimestamp: new Date().toISOString()
           }
@@ -68,59 +77,68 @@ export function TechnicalConnectionPhase({
       }
     },
     onError: (error: any) => {
-      console.error('Xero import failed:', error);
+      console.error('Provider import failed:', error);
       if (error.requiresAuth) {
         toast({
-          title: "Xero Connection Required",
-          description: "Please connect your Xero account first.",
+          title: "Connection Required",
+          description: `Please connect your ${accountingProviders.find(p => p.value === selectedProvider)?.label} account first.`,
           variant: "destructive"
         });
       } else {
         toast({
           title: "Import Failed",
-          description: error.message || "Failed to import data from Xero.",
+          description: error.message || `Failed to import data from ${accountingProviders.find(p => p.value === selectedProvider)?.label}.`,
           variant: "destructive"
         });
       }
     }
   });
 
-  const handleXeroConnect = () => {
-    // Redirect to Xero OAuth
-    window.open('/api/xero/auth-url', '_blank');
-    
-    // Poll for OAuth completion every 2 seconds
-    const checkConnection = setInterval(async () => {
-      try {
-        // Check if user has Xero tokens by calling the tenant endpoint
-        const response = await fetch('/api/tenant');
-        const tenant = await response.json();
-        
-        // Check if tenant has Xero connection info
-        if (tenant?.xeroConnected || tenant?.hasXeroTokens) {
-          onUpdate({
-            technical_connection: {
-              ...techData,
-              xeroConnected: true
-            }
-          });
-          setConnectionStep(1);
-          clearInterval(checkConnection);
-          toast({
-            title: "Xero Connected! ✅",
-            description: "Successfully connected to your Xero account."
-          });
+  const handleProviderConnect = () => {
+    if (selectedProvider === 'xero') {
+      // Redirect to Xero OAuth
+      window.open('/api/xero/auth-url', '_blank');
+      
+      // Poll for OAuth completion every 2 seconds
+      const checkConnection = setInterval(async () => {
+        try {
+          // Check if user has Xero tokens by calling the tenant endpoint
+          const response = await fetch('/api/tenant');
+          const tenant = await response.json();
+          
+          // Check if tenant has Xero connection info
+          if (tenant?.xeroConnected || tenant?.hasXeroTokens) {
+            onUpdate({
+              technical_connection: {
+                ...techData,
+                xeroConnected: true,
+                selectedProvider: selectedProvider
+              }
+            });
+            setConnectionStep(1);
+            clearInterval(checkConnection);
+            toast({
+              title: "Xero Connected! ✅",
+              description: "Successfully connected to your Xero account."
+            });
+          }
+        } catch (error) {
+          console.error('Error checking connection status:', error);
         }
-      } catch (error) {
-        console.error('Error checking Xero connection status:', error);
-      }
-    }, 2000);
-    
-    // Clear interval after 60 seconds if not connected
-    setTimeout(() => {
-      clearInterval(checkConnection);
-      // Could show a timeout message here
-    }, 60000);
+      }, 2000);
+      
+      // Clear interval after 60 seconds if not connected
+      setTimeout(() => {
+        clearInterval(checkConnection);
+      }, 60000);
+    } else {
+      // For QuickBooks and Sage - show coming soon message
+      toast({
+        title: `${accountingProviders.find(p => p.value === selectedProvider)?.label} Integration`,
+        description: "Coming soon! Currently available in beta. Contact support for early access.",
+        variant: "default"
+      });
+    }
   };
 
   const handleAutomatedImport = () => {
@@ -130,33 +148,33 @@ export function TechnicalConnectionPhase({
     // Start progress animation that matches the actual import progress
     const progressInterval = setInterval(() => {
       setImportProgress(prev => {
-        if (prev >= 85 || xeroImportMutation.isSuccess) {
+        if (prev >= 85 || providerImportMutation.isSuccess) {
           clearInterval(progressInterval);
-          return xeroImportMutation.isSuccess ? 100 : 85;
+          return providerImportMutation.isSuccess ? 100 : 85;
         }
         return prev + 8;
       });
     }, 400);
     
     // Clear progress interval when mutation completes
-    if (xeroImportMutation.isSuccess || xeroImportMutation.isError) {
+    if (providerImportMutation.isSuccess || providerImportMutation.isError) {
       clearInterval(progressInterval);
       setImportProgress(100);
     }
     
     // Perform actual import
-    xeroImportMutation.mutate();
+    providerImportMutation.mutate();
   };
 
-  const canComplete = isXeroConnected && isDataImported;
+  const canComplete = isProviderConnected && isDataImported;
 
   return (
     <div className="space-y-6" data-testid="technical-connection-phase">
       {/* Phase Overview */}
       <div className="text-center mb-8">
-        <h2 className="text-2xl font-bold mb-2">AI-Powered Xero Integration</h2>
+        <h2 className="text-2xl font-bold mb-2">AI Powered Accounting Integration</h2>
         <p className="text-gray-600 max-w-2xl mx-auto">
-          Connect your Xero account for intelligent data import with automatic AI profile generation. 
+          Connect your cloud accounting system for intelligent data import with automatic AI profile generation. 
           Our system analyzes your data to create personalized collection strategies.
         </p>
         <div className="flex items-center justify-center gap-2 mt-3">
@@ -167,12 +185,45 @@ export function TechnicalConnectionPhase({
         </div>
       </div>
 
+      {/* Provider Selection */}
+      <div className="max-w-md mx-auto mb-8">
+        <Card className="bg-white/70 backdrop-blur-md border-gray-200">
+          <CardHeader className="pb-4">
+            <CardTitle className="text-lg text-center">Select Your Accounting System</CardTitle>
+            <CardDescription className="text-center">
+              Choose your cloud accounting platform to get started
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Select value={selectedProvider} onValueChange={setSelectedProvider}>
+              <SelectTrigger className="w-full bg-white/70 border-gray-200/30">
+                <SelectValue placeholder="Select accounting system" />
+              </SelectTrigger>
+              <SelectContent className="bg-white border-gray-200">
+                {accountingProviders.map((provider) => (
+                  <SelectItem key={provider.value} value={provider.value}>
+                    <div className="flex items-center justify-between w-full">
+                      <span>{provider.label}</span>
+                      {!provider.available && (
+                        <Badge variant="secondary" className="ml-2 text-xs">
+                          Coming Soon
+                        </Badge>
+                      )}
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </CardContent>
+        </Card>
+      </div>
+
       {/* Connection Steps */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         
-        {/* Step 1: Xero Connection */}
+        {/* Step 1: Provider Connection */}
         <Card className={`transition-all duration-300 ${
-          isXeroConnected 
+          isProviderConnected 
             ? 'bg-green-50 border-green-200' 
             : 'bg-white/70 backdrop-blur-md border-gray-200 hover:shadow-lg'
         }`}>
@@ -182,30 +233,33 @@ export function TechnicalConnectionPhase({
                 <ExternalLink className="w-5 h-5" />
               </div>
               <div>
-                <CardTitle className="text-lg">Connect to Xero</CardTitle>
+                <CardTitle className="text-lg">
+                  Connect to {accountingProviders.find(p => p.value === selectedProvider)?.label}
+                </CardTitle>
                 <CardDescription>
                   Authorize secure access to your accounting data
                 </CardDescription>
               </div>
-              {isXeroConnected && (
+              {isProviderConnected && (
                 <CheckCircle2 className="w-6 h-6 text-green-500 ml-auto" />
               )}
             </div>
           </CardHeader>
           <CardContent>
-            {!isXeroConnected ? (
+            {!isProviderConnected ? (
               <div className="space-y-4">
                 <p className="text-sm text-gray-600">
-                  Click below to securely connect your Xero account. We only request read-only access 
+                  Click below to securely connect your {accountingProviders.find(p => p.value === selectedProvider)?.label} account. We only request read-only access 
                   to your customer and invoice data.
                 </p>
                 <Button 
-                  onClick={handleXeroConnect}
-                  className="w-full bg-[#17B6C3] hover:bg-[#1396A1] text-white"
-                  data-testid="button-connect-xero"
+                  onClick={handleProviderConnect}
+                  disabled={!accountingProviders.find(p => p.value === selectedProvider)?.available}
+                  className="w-full bg-[#17B6C3] hover:bg-[#1396A1] text-white disabled:opacity-50"
+                  data-testid="button-connect-provider"
                 >
                   <ExternalLink className="w-4 h-4 mr-2" />
-                  Connect to Xero
+                  Connect to {accountingProviders.find(p => p.value === selectedProvider)?.label}
                 </Button>
                 <div className="flex items-center gap-2 text-xs text-gray-500">
                   <AlertCircle className="w-3 h-3" />
@@ -216,7 +270,9 @@ export function TechnicalConnectionPhase({
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 text-green-500" />
-                  <span className="text-sm text-green-700">Successfully connected to Xero</span>
+                  <span className="text-sm text-green-700">
+                    Successfully connected to {accountingProviders.find(p => p.value === selectedProvider)?.label}
+                  </span>
                 </div>
                 <Badge variant="secondary" className="bg-green-100 text-green-700">
                   Connected
@@ -230,14 +286,14 @@ export function TechnicalConnectionPhase({
         <Card className={`transition-all duration-300 ${
           isDataImported 
             ? 'bg-green-50 border-green-200' 
-            : isXeroConnected 
+            : isProviderConnected 
             ? 'bg-white/70 backdrop-blur-md border-gray-200 hover:shadow-lg'
             : 'bg-gray-50 border-gray-200 opacity-60'
         }`}>
           <CardHeader>
             <div className="flex items-center gap-3">
               <div className={`p-2 rounded-lg text-white ${
-                isXeroConnected ? 'bg-[#17B6C3]' : 'bg-gray-400'
+                isProviderConnected ? 'bg-[#17B6C3]' : 'bg-gray-400'
               }`}>
                 <Brain className="w-5 h-5" />
               </div>
@@ -253,24 +309,24 @@ export function TechnicalConnectionPhase({
             </div>
           </CardHeader>
           <CardContent>
-            {!isXeroConnected ? (
+            {!isProviderConnected ? (
               <p className="text-sm text-gray-500">
-                Connect to Xero first to enable AI-powered import
+                Connect to {accountingProviders.find(p => p.value === selectedProvider)?.label} first to enable AI-powered import
               </p>
             ) : !isDataImported ? (
               <div className="space-y-4">
-                {connectionStep === 2 || xeroImportMutation.isPending ? (
+                {connectionStep === 2 || providerImportMutation.isPending ? (
                   <div className="space-y-3">
                     <div className="flex items-center gap-2">
                       <Loader2 className="w-4 h-4 animate-spin text-[#17B6C3]" />
                       <span className="text-sm">
-                        {importProgress < 30 ? "Connecting to Xero..." :
+                        {importProgress < 30 ? `Connecting to ${accountingProviders.find(p => p.value === selectedProvider)?.label}...` :
                          importProgress < 60 ? "Importing contacts and invoices..." :
                          importProgress < 85 ? "Analyzing payment patterns..." :
                          "Generating AI collection profiles..."}
                       </span>
                     </div>
-                    <Progress value={xeroImportMutation.isSuccess ? 100 : importProgress} className="h-2" />
+                    <Progress value={providerImportMutation.isSuccess ? 100 : importProgress} className="h-2" />
                     <div className="text-xs text-gray-500 space-y-1">
                       <p className={importProgress >= 30 ? "text-green-600" : ""}>
                         • {importProgress >= 30 ? "✓" : "•"} Importing contacts and invoices
@@ -282,9 +338,9 @@ export function TechnicalConnectionPhase({
                         • {importProgress >= 85 ? "✓" : "•"} Generating AI collection profiles
                       </p>
                     </div>
-                    {xeroImportMutation.isError && (
+                    {providerImportMutation.isError && (
                       <div className="text-xs text-red-600">
-                        Import failed. Please try again or check your Xero connection.
+                        Import failed. Please try again or check your {accountingProviders.find(p => p.value === selectedProvider)?.label} connection.
                       </div>
                     )}
                   </div>
