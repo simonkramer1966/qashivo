@@ -480,3 +480,5 @@ export function BusinessSetupPhase({
     </div>
   );
 }
+
+export default BusinessSetupPhase;

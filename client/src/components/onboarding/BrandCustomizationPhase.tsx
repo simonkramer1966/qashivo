@@ -304,3 +304,5 @@ export function BrandCustomizationPhase({
     </div>
   );
 }
+
+export default BrandCustomizationPhase;

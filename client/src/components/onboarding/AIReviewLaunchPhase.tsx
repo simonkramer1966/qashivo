@@ -364,3 +364,5 @@ export function AIReviewLaunchPhase({
     </div>
   );
 }
+
+export default AIReviewLaunchPhase;

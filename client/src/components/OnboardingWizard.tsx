@@ -21,9 +21,9 @@ import {
 
 // Phase Components (simplified for now, will be expanded)
 import { TechnicalConnectionPhase } from "./onboarding/TechnicalConnectionPhase";
-import { BusinessSetupPhase } from "./onboarding/BusinessSetupPhase";
-import { BrandCustomizationPhase } from "./onboarding/BrandCustomizationPhase";
-import { AIReviewLaunchPhase } from "./onboarding/AIReviewLaunchPhase";
+import BusinessSetupPhase from "./onboarding/BusinessSetupPhase";
+import BrandCustomizationPhase from "./onboarding/BrandCustomizationPhase";
+import AIReviewLaunchPhase from "./onboarding/AIReviewLaunchPhase";
 
 export type OnboardingPhase = 'technical_connection' | 'business_setup' | 'brand_customization' | 'ai_review_launch';
 
