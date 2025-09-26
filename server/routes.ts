@@ -1010,6 +1010,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Xero automated data import for onboarding
+  app.post('/api/onboarding/xero-import', isAuthenticated, async (req: any, res) => {
+    try {
+      const { withRBACContext } = await import("./middleware/rbac");
+      
+      // Apply RBAC context manually
+      await new Promise<void>((resolve, reject) => {
+        withRBACContext(req, res, (error) => {
+          if (error) reject(error);
+          else resolve();
+        });
+      });
+      
+      const { tenantId } = req.rbac;
+      
+      // Get Xero tokens for this tenant
+      const xeroTokens = await storage.getXeroTokens(tenantId);
+      if (!xeroTokens) {
+        return res.status(400).json({ 
+          message: "Xero not connected. Please connect your Xero account first.",
+          requiresAuth: true
+        });
+      }
+      
+      // Import data using XeroOnboardingService
+      const { xeroOnboardingService } = await import('./services/xeroOnboardingService');
+      const importResult = await xeroOnboardingService.performAutomatedDataImport(xeroTokens, tenantId);
+      
+      if (importResult.success) {
+        // Update onboarding progress
+        await onboardingService.updatePhaseProgress(tenantId, 'technical_connection', {
+          xeroImportCompleted: true,
+          importSummary: importResult.summary,
+          importTimestamp: new Date().toISOString()
+        });
+        
+        console.log(`✅ Xero onboarding import completed for tenant ${tenantId} in ${importResult.timeElapsed}ms`);
+      }
+      
+      res.json(importResult);
+    } catch (error) {
+      console.error("Error performing Xero automated import:", error);
+      if (error instanceof Error && (error.message.includes("not associated") || error.message.includes("Authorization"))) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      res.status(500).json({ message: "Failed to perform automated import" });
+    }
+  });
+
   // Auth routes
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
     console.log('🔍 /api/auth/user endpoint hit, authenticated:', !!req.user);
