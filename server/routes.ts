@@ -4,6 +4,7 @@ import { createServer, type Server } from "http";
 import crypto from "crypto";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated, isOwner } from "./replitAuth";
+import { withRBACContext, requirePermission } from "./middleware/rbac";
 import { 
   insertContactSchema,
   insertContactNoteSchema, 
@@ -153,6 +154,7 @@ import { sendPaymentReminderSMS } from "./services/twilio";
 import { ActionPrioritizationService } from "./services/actionPrioritizationService";
 import { formatDate } from "../shared/utils/dateFormatter";
 import { xeroService } from "./services/xero";
+import { onboardingService } from "./services/onboardingService";
 import { XeroSyncService } from "./services/xeroSync";
 import { generateMockData } from "./mock-data";
 import { retellService } from "./retell-service";

@@ -56,6 +56,20 @@ export const tenants = pgTable("tenants", {
   xeroLastSyncAt: timestamp("xero_last_sync_at"),
   xeroAutoSync: boolean("xero_auto_sync").default(true),
   collectionsAutomationEnabled: boolean("collections_automation_enabled").default(true),
+  
+  // Onboarding-specific fields
+  companyLogoUrl: varchar("company_logo_url"),
+  brandPrimaryColor: varchar("brand_primary_color").default("#17B6C3"),
+  brandSecondaryColor: varchar("brand_secondary_color").default("#1396A1"),
+  communicationTone: varchar("communication_tone").default("professional"), // professional, friendly, firm
+  industry: varchar("industry"),
+  companySize: varchar("company_size"), // small, medium, large, enterprise
+  businessType: varchar("business_type").default("b2b"), // b2b, b2c, mixed
+  primaryMarket: varchar("primary_market").default("domestic"), // domestic, international, both
+  automationPreference: jsonb("automation_preference").default("{}"), // per customer segment preferences
+  onboardingCompleted: boolean("onboarding_completed").default(false),
+  onboardingCompletedAt: timestamp("onboarding_completed_at"),
+  
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -1359,6 +1373,35 @@ export const collectionABTests = pgTable("collection_ab_tests", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Onboarding progress tracking table
+export const onboardingProgress = pgTable("onboarding_progress", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  currentPhase: varchar("current_phase").notNull().default("technical_connection"), // technical_connection, business_setup, brand_customization, ai_review_launch
+  completedPhases: jsonb("completed_phases").default("[]"), // Array of completed phases
+  phaseData: jsonb("phase_data").default("{}"), // Data collected in each phase
+  startedAt: timestamp("started_at").defaultNow(),
+  completedAt: timestamp("completed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  unique("onboarding_progress_tenant").on(table.tenantId)
+]);
+
+// Industry-specific onboarding templates
+export const onboardingTemplates = pgTable("onboarding_templates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  industry: varchar("industry").notNull(),
+  businessType: varchar("business_type").notNull(), // b2b, b2c, mixed
+  templateType: varchar("template_type").notNull(), // workflow, communication, automation_settings, collection_schedule
+  templateData: jsonb("template_data").notNull(),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_onboarding_templates_industry_type").on(table.industry, table.businessType, table.templateType)
+]);
+
 // AI learning relations
 export const customerLearningProfilesRelations = relations(customerLearningProfiles, ({ one }) => ({
   tenant: one(tenants, {
@@ -1389,6 +1432,14 @@ export const actionEffectivenessRelations = relations(actionEffectiveness, ({ on
 export const collectionABTestsRelations = relations(collectionABTests, ({ one }) => ({
   tenant: one(tenants, {
     fields: [collectionABTests.tenantId],
+    references: [tenants.id],
+  }),
+}));
+
+// Onboarding relations
+export const onboardingProgressRelations = relations(onboardingProgress, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [onboardingProgress.tenantId],
     references: [tenants.id],
   }),
 }));
@@ -1619,6 +1670,20 @@ export const insertCollectionABTestSchema = createInsertSchema(collectionABTests
   updatedAt: true,
 });
 
+// Onboarding insert schemas
+export const insertOnboardingProgressSchema = createInsertSchema(onboardingProgress).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  startedAt: true,
+});
+
+export const insertOnboardingTemplateSchema = createInsertSchema(onboardingTemplates).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
@@ -1626,8 +1691,6 @@ export type InsertTenant = z.infer<typeof insertTenantSchema>;
 export type Tenant = typeof tenants.$inferSelect;
 export type InsertContact = z.infer<typeof insertContactSchema>;
 export type Contact = typeof contacts.$inferSelect;
-export type InsertInvoice = z.infer<typeof insertInvoiceSchema>;
-export type Invoice = typeof invoices.$inferSelect;
 export type InsertCachedXeroInvoice = z.infer<typeof insertCachedXeroInvoiceSchema>;
 export type CachedXeroInvoice = typeof cachedXeroInvoices.$inferSelect;
 export type InsertAction = z.infer<typeof insertActionSchema>;
@@ -1680,6 +1743,12 @@ export type InsertActionEffectiveness = z.infer<typeof insertActionEffectiveness
 export type ActionEffectiveness = typeof actionEffectiveness.$inferSelect;
 export type InsertCollectionABTest = z.infer<typeof insertCollectionABTestSchema>;
 export type CollectionABTest = typeof collectionABTests.$inferSelect;
+
+// Onboarding types
+export type InsertOnboardingProgress = z.infer<typeof insertOnboardingProgressSchema>;
+export type OnboardingProgress = typeof onboardingProgress.$inferSelect;
+export type InsertOnboardingTemplate = z.infer<typeof insertOnboardingTemplateSchema>;
+export type OnboardingTemplate = typeof onboardingTemplates.$inferSelect;
 
 // Node Configuration Types
 export interface TriggerNodeConfig {
