@@ -810,6 +810,96 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ===== ONBOARDING API ENDPOINTS =====
+  
+  // Initialize onboarding for a tenant
+  app.post('/api/onboarding/start', isAuthenticated, withRBACContext, async (req: any, res) => {
+    try {
+      const { tenantId } = req.rbac;
+      const progress = await onboardingService.initializeOnboarding(tenantId);
+      res.json(progress);
+    } catch (error) {
+      console.error("Error starting onboarding:", error);
+      res.status(500).json({ message: "Failed to start onboarding" });
+    }
+  });
+
+  // Get current onboarding progress
+  app.get('/api/onboarding/progress', isAuthenticated, withRBACContext, async (req: any, res) => {
+    try {
+      const { tenantId } = req.rbac;
+      const progress = await onboardingService.getOnboardingProgress(tenantId);
+      const stats = await onboardingService.getOnboardingStats(tenantId);
+      
+      res.json({ progress, stats });
+    } catch (error) {
+      console.error("Error fetching onboarding progress:", error);
+      res.status(500).json({ message: "Failed to fetch onboarding progress" });
+    }
+  });
+
+  // Update phase progress
+  app.put('/api/onboarding/progress', isAuthenticated, withRBACContext, async (req: any, res) => {
+    try {
+      const { tenantId } = req.rbac;
+      const { phase, data } = req.body;
+      
+      await onboardingService.updatePhaseProgress(tenantId, phase, data);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error updating onboarding progress:", error);
+      res.status(500).json({ message: "Failed to update onboarding progress" });
+    }
+  });
+
+  // Complete a phase
+  app.post('/api/onboarding/complete-phase', isAuthenticated, withRBACContext, async (req: any, res) => {
+    try {
+      const { tenantId } = req.rbac;
+      const { phase } = req.body;
+      
+      // Validate phase can be completed
+      const validation = await onboardingService.validatePhaseCompletion(tenantId, phase);
+      if (!validation.canComplete) {
+        return res.status(400).json({ 
+          message: "Phase cannot be completed", 
+          missingRequirements: validation.missingRequirements 
+        });
+      }
+      
+      await onboardingService.completePhase(tenantId, phase);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error completing onboarding phase:", error);
+      res.status(500).json({ message: "Failed to complete onboarding phase" });
+    }
+  });
+
+  // Complete entire onboarding
+  app.post('/api/onboarding/complete', isAuthenticated, withRBACContext, async (req: any, res) => {
+    try {
+      const { tenantId } = req.rbac;
+      
+      await onboardingService.completeOnboarding(tenantId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error completing onboarding:", error);
+      res.status(500).json({ message: "Failed to complete onboarding" });
+    }
+  });
+
+  // Check onboarding status
+  app.get('/api/onboarding/status', isAuthenticated, withRBACContext, async (req: any, res) => {
+    try {
+      const { tenantId } = req.rbac;
+      const completed = await onboardingService.isOnboardingCompleted(tenantId);
+      res.json({ completed });
+    } catch (error) {
+      console.error("Error checking onboarding status:", error);
+      res.status(500).json({ message: "Failed to check onboarding status" });
+    }
+  });
+
   // Auth routes
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
     console.log('🔍 /api/auth/user endpoint hit, authenticated:', !!req.user);
