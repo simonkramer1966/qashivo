@@ -4,7 +4,6 @@ import { createServer, type Server } from "http";
 import crypto from "crypto";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated, isOwner } from "./replitAuth";
-import { withRBACContext, requirePermission } from "./middleware/rbac";
 import { 
   insertContactSchema,
   insertContactNoteSchema, 
@@ -812,51 +811,134 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ===== ONBOARDING API ENDPOINTS =====
   
+  // Onboarding request validation schemas
+  const onboardingPhaseSchema = z.enum(['technical_connection', 'business_setup', 'brand_customization', 'ai_review_launch']);
+  const updateProgressSchema = z.object({
+    phase: onboardingPhaseSchema,
+    data: z.record(z.any()).optional()
+  });
+  const completePhaseSchema = z.object({
+    phase: onboardingPhaseSchema
+  });
+
   // Initialize onboarding for a tenant
-  app.post('/api/onboarding/start', isAuthenticated, withRBACContext, async (req: any, res) => {
+  app.post('/api/onboarding/start', isAuthenticated, async (req: any, res) => {
     try {
+      const { withRBACContext } = await import("./middleware/rbac");
+      
+      // Apply RBAC context manually
+      await new Promise<void>((resolve, reject) => {
+        withRBACContext(req, res, (error) => {
+          if (error) reject(error);
+          else resolve();
+        });
+      });
+      
       const { tenantId } = req.rbac;
       const progress = await onboardingService.initializeOnboarding(tenantId);
       res.json(progress);
     } catch (error) {
       console.error("Error starting onboarding:", error);
+      if (error instanceof Error && (error.message.includes("not associated") || error.message.includes("Authorization"))) {
+        return res.status(403).json({ message: "Access denied" });
+      }
       res.status(500).json({ message: "Failed to start onboarding" });
     }
   });
 
   // Get current onboarding progress
-  app.get('/api/onboarding/progress', isAuthenticated, withRBACContext, async (req: any, res) => {
+  app.get('/api/onboarding/progress', isAuthenticated, async (req: any, res) => {
     try {
+      const { withRBACContext } = await import("./middleware/rbac");
+      
+      // Apply RBAC context manually
+      await new Promise<void>((resolve, reject) => {
+        withRBACContext(req, res, (error) => {
+          if (error) reject(error);
+          else resolve();
+        });
+      });
+      
       const { tenantId } = req.rbac;
       const progress = await onboardingService.getOnboardingProgress(tenantId);
-      const stats = await onboardingService.getOnboardingStats(tenantId);
       
+      // Auto-initialize if no progress exists
+      if (!progress) {
+        const newProgress = await onboardingService.initializeOnboarding(tenantId);
+        const stats = await onboardingService.getOnboardingStats(tenantId);
+        return res.json({ progress: newProgress, stats });
+      }
+      
+      const stats = await onboardingService.getOnboardingStats(tenantId);
       res.json({ progress, stats });
     } catch (error) {
       console.error("Error fetching onboarding progress:", error);
+      if (error instanceof Error && (error.message.includes("not associated") || error.message.includes("Authorization"))) {
+        return res.status(403).json({ message: "Access denied" });
+      }
       res.status(500).json({ message: "Failed to fetch onboarding progress" });
     }
   });
 
   // Update phase progress
-  app.put('/api/onboarding/progress', isAuthenticated, withRBACContext, async (req: any, res) => {
+  app.put('/api/onboarding/progress', isAuthenticated, async (req: any, res) => {
     try {
-      const { tenantId } = req.rbac;
-      const { phase, data } = req.body;
+      // Validate request body first
+      const validationResult = updateProgressSchema.safeParse(req.body);
+      if (!validationResult.success) {
+        return res.status(400).json({ 
+          message: "Invalid request body", 
+          errors: validationResult.error.errors 
+        });
+      }
       
-      await onboardingService.updatePhaseProgress(tenantId, phase, data);
+      const { withRBACContext } = await import("./middleware/rbac");
+      
+      // Apply RBAC context manually
+      await new Promise<void>((resolve, reject) => {
+        withRBACContext(req, res, (error) => {
+          if (error) reject(error);
+          else resolve();
+        });
+      });
+      
+      const { tenantId } = req.rbac;
+      const { phase, data } = validationResult.data;
+      await onboardingService.updatePhaseProgress(tenantId, phase, data || {});
       res.json({ success: true });
     } catch (error) {
       console.error("Error updating onboarding progress:", error);
+      if (error instanceof Error && (error.message.includes("not associated") || error.message.includes("Authorization"))) {
+        return res.status(403).json({ message: "Access denied" });
+      }
       res.status(500).json({ message: "Failed to update onboarding progress" });
     }
   });
 
   // Complete a phase
-  app.post('/api/onboarding/complete-phase', isAuthenticated, withRBACContext, async (req: any, res) => {
+  app.post('/api/onboarding/complete-phase', isAuthenticated, async (req: any, res) => {
     try {
+      // Validate request body first
+      const validationResult = completePhaseSchema.safeParse(req.body);
+      if (!validationResult.success) {
+        return res.status(400).json({ 
+          message: "Invalid request body", 
+          errors: validationResult.error.errors 
+        });
+      }
+      
+      const { withRBACContext } = await import("./middleware/rbac");
+      
+      // Apply RBAC context manually
+      await new Promise<void>((resolve, reject) => {
+        withRBACContext(req, res, (error) => {
+          if (error) reject(error);
+          else resolve();
+        });
+      });
+      
       const { tenantId } = req.rbac;
-      const { phase } = req.body;
+      const { phase } = validationResult.data;
       
       // Validate phase can be completed
       const validation = await onboardingService.validatePhaseCompletion(tenantId, phase);
@@ -871,31 +953,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ success: true });
     } catch (error) {
       console.error("Error completing onboarding phase:", error);
+      if (error instanceof Error && (error.message.includes("not associated") || error.message.includes("Authorization"))) {
+        return res.status(403).json({ message: "Access denied" });
+      }
       res.status(500).json({ message: "Failed to complete onboarding phase" });
     }
   });
 
   // Complete entire onboarding
-  app.post('/api/onboarding/complete', isAuthenticated, withRBACContext, async (req: any, res) => {
+  app.post('/api/onboarding/complete', isAuthenticated, async (req: any, res) => {
     try {
-      const { tenantId } = req.rbac;
+      const { withRBACContext } = await import("./middleware/rbac");
       
+      // Apply RBAC context manually
+      await new Promise<void>((resolve, reject) => {
+        withRBACContext(req, res, (error) => {
+          if (error) reject(error);
+          else resolve();
+        });
+      });
+      
+      const { tenantId } = req.rbac;
       await onboardingService.completeOnboarding(tenantId);
       res.json({ success: true });
     } catch (error) {
       console.error("Error completing onboarding:", error);
+      if (error instanceof Error && (error.message.includes("not associated") || error.message.includes("Authorization"))) {
+        return res.status(403).json({ message: "Access denied" });
+      }
       res.status(500).json({ message: "Failed to complete onboarding" });
     }
   });
 
   // Check onboarding status
-  app.get('/api/onboarding/status', isAuthenticated, withRBACContext, async (req: any, res) => {
+  app.get('/api/onboarding/status', isAuthenticated, async (req: any, res) => {
     try {
+      const { withRBACContext } = await import("./middleware/rbac");
+      
+      // Apply RBAC context manually
+      await new Promise<void>((resolve, reject) => {
+        withRBACContext(req, res, (error) => {
+          if (error) reject(error);
+          else resolve();
+        });
+      });
+      
       const { tenantId } = req.rbac;
       const completed = await onboardingService.isOnboardingCompleted(tenantId);
       res.json({ completed });
     } catch (error) {
       console.error("Error checking onboarding status:", error);
+      if (error instanceof Error && (error.message.includes("not associated") || error.message.includes("Authorization"))) {
+        return res.status(403).json({ message: "Access denied" });
+      }
       res.status(500).json({ message: "Failed to check onboarding status" });
     }
   });
