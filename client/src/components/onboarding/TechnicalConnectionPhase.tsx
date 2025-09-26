@@ -94,12 +94,31 @@ export function TechnicalConnectionPhase({
     }
   });
 
-  const handleProviderConnect = () => {
+  const handleProviderConnect = async () => {
     if (selectedProvider === 'xero') {
-      // Redirect to Xero OAuth
-      window.open('/api/xero/auth-url', '_blank');
+      try {
+        // Get the Xero OAuth URL from the API
+        const response = await fetch('/api/xero/auth-url');
+        const data = await response.json();
+        
+        if (data.authUrl) {
+          // Redirect to Xero OAuth in the same window
+          window.location.href = data.authUrl;
+          return; // Exit early since we're redirecting
+        } else {
+          throw new Error('No auth URL returned');
+        }
+      } catch (error) {
+        console.error('Failed to get Xero auth URL:', error);
+        toast({
+          title: "Connection Failed",
+          description: "Failed to start Xero connection. Please try again.",
+          variant: "destructive"
+        });
+        return;
+      }
       
-      // Poll for OAuth completion every 2 seconds
+      // Poll for OAuth completion every 2 seconds (this will run after redirect back)
       const checkConnection = setInterval(async () => {
         try {
           // Check if user has Xero tokens by calling the tenant endpoint
@@ -366,7 +385,7 @@ export function TechnicalConnectionPhase({
                     </div>
                     <Button 
                       onClick={handleAutomatedImport}
-                      disabled={connectionStep > 0 || xeroImportMutation.isPending}
+                      disabled={connectionStep > 0 || providerImportMutation.isPending}
                       className="w-full bg-[#17B6C3] hover:bg-[#1396A1] text-white"
                       data-testid="button-import-data"
                     >
