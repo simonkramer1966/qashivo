@@ -7817,15 +7817,22 @@ Payment required immediately to avoid collection action. Contact us NOW.`
 
       let tenants: any[] = [];
       
-      // Always include both Nexus AR and Demo Agency organizations
+      // Always include authorized organizations
       const allTenants = await storage.getAllTenants();
       const NEXUS_AR_TENANT_ID = "9ffa8e58-af89-4f6a-adee-7fe09d956295";
       const DEMO_TENANT_ID = "bfa5f70f-4af5-421a-9d05-26df67f45c15";
+      const QASHIVO_PRODUCTION_TENANT_ID = "7c91ba57-23d2-47eb-be4f-8440700fca60";
       
-      // Add Nexus AR tenant
+      // Add Nexus AR tenant (original data)
       const nexusTenant = allTenants.find(t => t.id === NEXUS_AR_TENANT_ID);
       if (nexusTenant) {
         tenants.push(nexusTenant);
+      }
+      
+      // Add Qashivo Production tenant (clean production environment)
+      const qashivoTenant = allTenants.find(t => t.id === QASHIVO_PRODUCTION_TENANT_ID);
+      if (qashivoTenant) {
+        tenants.push(qashivoTenant);
       }
       
       // Add demo organization by fixed ID (security: prevents name-based privilege escalation)
@@ -7834,7 +7841,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
         tenants.push(demoTenant);
       }
       
-      console.log(`🔒 Security: User ${user.id} (role: ${user.role}) can access ${tenants.length} tenant(s) (Nexus AR + Demo)`);
+      console.log(`🔒 Security: User ${user.id} (role: ${user.role}) can access ${tenants.length} tenant(s) (Nexus AR + Qashivo Production + Demo)`);
       res.json(tenants);
     } catch (error) {
       console.error("Error fetching accessible tenants:", error);
@@ -7857,16 +7864,17 @@ Payment required immediately to avoid collection action. Contact us NOW.`
         return res.status(404).json({ message: "User not found" });
       }
 
-      // Get accessible tenants (Nexus AR + Demo Agency)
+      // Get accessible tenants (Nexus AR + Qashivo Production + Demo Agency)
       const NEXUS_AR_TENANT_ID = "9ffa8e58-af89-4f6a-adee-7fe09d956295";
       const DEMO_TENANT_ID = "bfa5f70f-4af5-421a-9d05-26df67f45c15";
-      const accessibleTenantIds = [NEXUS_AR_TENANT_ID, DEMO_TENANT_ID];
+      const QASHIVO_PRODUCTION_TENANT_ID = "7c91ba57-23d2-47eb-be4f-8440700fca60";
+      const accessibleTenantIds = [NEXUS_AR_TENANT_ID, QASHIVO_PRODUCTION_TENANT_ID, DEMO_TENANT_ID];
 
       // Check if the target tenant is accessible
       if (!accessibleTenantIds.includes(tenantId)) {
         console.warn(`🚨 SECURITY: User ${user.id} (role: ${user.role}) attempted to switch to unauthorized tenant ${tenantId}`);
         return res.status(403).json({ 
-          message: "Access denied. You can only switch between your organization and the demo organization." 
+          message: "Access denied. You can only switch between authorized organizations." 
         });
       }
 
