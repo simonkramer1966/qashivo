@@ -401,9 +401,16 @@ export default function NewSidebar() {
                   data-testid="button-organization-dropdown"
                 >
                   <div className="font-medium text-sm">
-                    {tenant?.settings?.companyName || tenant?.name || "Loading..."}
+                    {switchTenantMutation.isPending 
+                      ? "Switching..." 
+                      : (tenant?.settings?.companyName || tenant?.name || "Loading...")
+                    }
                   </div>
-                  <ChevronDown className="h-4 w-4 text-gray-400" />
+                  {switchTenantMutation.isPending ? (
+                    <RefreshCw className="h-4 w-4 text-gray-400 animate-spin" />
+                  ) : (
+                    <ChevronDown className="h-4 w-4 text-gray-400" />
+                  )}
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent className="w-56 glass-card-strong border-white/30 overflow-visible" align="start" side="bottom">
@@ -450,8 +457,13 @@ export default function NewSidebar() {
                               return (
                                 <DropdownMenuItem
                                   key={org.id}
-                                  className="pl-3 pr-3 py-3 cursor-pointer hover:bg-gray-50 mx-2"
-                                  onClick={() => handleOrganizationSelect(org.id)}
+                                  className={cn(
+                                    "pl-3 pr-3 py-3 mx-2",
+                                    switchTenantMutation.isPending 
+                                      ? "opacity-50 cursor-not-allowed" 
+                                      : "cursor-pointer hover:bg-gray-50"
+                                  )}
+                                  onClick={() => !switchTenantMutation.isPending && handleOrganizationSelect(org.id)}
                                   data-testid={`dropdown-organization-${org.id}`}
                                 >
                                   <div className="flex items-center space-x-3 w-full">
@@ -488,8 +500,13 @@ export default function NewSidebar() {
                                     return (
                                       <DropdownMenuItem
                                         key={org.id}
-                                        className="pl-3 pr-3 py-3 cursor-pointer hover:bg-gray-50 mx-2"
-                                        onClick={() => handleOrganizationSelect(org.id)}
+                                        className={cn(
+                                          "pl-3 pr-3 py-3 mx-2",
+                                          switchTenantMutation.isPending 
+                                            ? "opacity-50 cursor-not-allowed" 
+                                            : "cursor-pointer hover:bg-gray-50"
+                                        )}
+                                        onClick={() => !switchTenantMutation.isPending && handleOrganizationSelect(org.id)}
                                         data-testid={`dropdown-client-${org.id}`}
                                       >
                                         <div className="flex items-center space-x-3 w-full">
@@ -525,8 +542,13 @@ export default function NewSidebar() {
                                 return (
                                   <DropdownMenuItem
                                     key={org.id}
-                                    className="pl-3 pr-3 py-3 cursor-pointer hover:bg-gray-50 mx-2"
-                                    onClick={() => handleOrganizationSelect(org.id)}
+                                    className={cn(
+                                      "pl-3 pr-3 py-3 mx-2",
+                                      switchTenantMutation.isPending 
+                                        ? "opacity-50 cursor-not-allowed" 
+                                        : "cursor-pointer hover:bg-gray-50"
+                                    )}
+                                    onClick={() => !switchTenantMutation.isPending && handleOrganizationSelect(org.id)}
                                     data-testid={`dropdown-organization-${org.id}`}
                                   >
                                     <div className="flex items-center space-x-3 w-full">
