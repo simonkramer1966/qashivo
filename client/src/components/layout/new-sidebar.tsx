@@ -190,6 +190,11 @@ export default function NewSidebar() {
 
   // Get all navigation items based on user role (Enhanced for Partner-Client System)
   const getAllNavigationItems = () => {
+    // For business dashboard, only show Dashboard
+    if (location === '/business-dashboard') {
+      return [{ name: "Dashboard", href: "/business-dashboard", icon: Gauge }];
+    }
+    
     let allItems = [...navigationItems];
     
     // Add owner-only items if user is an owner
@@ -312,7 +317,7 @@ export default function NewSidebar() {
       </div>
 
       {/* Organization Dropdown - Similar to Xero */}
-      {!isCollapsed && (
+      {!isCollapsed && location !== '/business-dashboard' && (
         <div className="px-4 pb-4 mt-2.5">
           {canSwitchOrganizations ? (
             <DropdownMenu>
