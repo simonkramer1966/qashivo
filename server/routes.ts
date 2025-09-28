@@ -7807,7 +7807,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
     }
   });
 
-  // Get accessible tenants for organization dropdown
+  // Get accessible tenants for organization dropdown (Enhanced for Partner-Client System)
   app.get("/api/user/accessible-tenants", isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.claims.sub);
@@ -7817,7 +7817,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
 
       let tenants: any[] = [];
       
-      // Always include authorized organizations
+      // Always include authorized system organizations
       const allTenants = await storage.getAllTenants();
       const NEXUS_AR_TENANT_ID = "9ffa8e58-af89-4f6a-adee-7fe09d956295";
       const DEMO_TENANT_ID = "bfa5f70f-4af5-421a-9d05-26df67f45c15";
@@ -7826,22 +7826,53 @@ Payment required immediately to avoid collection action. Contact us NOW.`
       // Add Nexus AR tenant (original data)
       const nexusTenant = allTenants.find(t => t.id === NEXUS_AR_TENANT_ID);
       if (nexusTenant) {
-        tenants.push(nexusTenant);
+        tenants.push({ ...nexusTenant, accessType: 'system' });
       }
       
       // Add Qashivo Production tenant (clean production environment)
       const qashivoTenant = allTenants.find(t => t.id === QASHIVO_PRODUCTION_TENANT_ID);
       if (qashivoTenant) {
-        tenants.push(qashivoTenant);
+        tenants.push({ ...qashivoTenant, accessType: 'system' });
       }
       
       // Add demo organization by fixed ID (security: prevents name-based privilege escalation)
       const demoTenant = allTenants.find(t => t.id === DEMO_TENANT_ID);
       if (demoTenant) {
-        tenants.push(demoTenant);
+        tenants.push({ ...demoTenant, accessType: 'system' });
       }
       
-      console.log(`🔒 Security: User ${user.id} (role: ${user.role}) can access ${tenants.length} tenant(s) (Nexus AR + Qashivo Production + Demo)`);
+      // ENHANCED: Add client tenants for partners (B2B2C Model)
+      if (user.role === 'partner') {
+        try {
+          const clientTenants = await storage.getAccessibleTenantsByPartner(user.id);
+          const clientTenantsWithType = clientTenants.map(clientAccess => ({
+            ...clientAccess,
+            accessType: 'partner_client',
+            relationship: {
+              accessLevel: clientAccess.relationship.accessLevel,
+              permissions: clientAccess.relationship.permissions,
+              establishedAt: clientAccess.relationship.establishedAt,
+              lastAccessedAt: clientAccess.relationship.lastAccessedAt
+            }
+          }));
+          tenants.push(...clientTenantsWithType);
+          
+          console.log(`👥 Partner Access: User ${user.id} has partner access to ${clientTenants.length} client tenant(s)`);
+        } catch (error) {
+          console.error('Error fetching partner client tenants:', error);
+          // Don't fail the request, just log the error
+        }
+      }
+      
+      // Add user's own tenant if not already included
+      if (user.tenantId && !tenants.find(t => t.id === user.tenantId)) {
+        const ownTenant = allTenants.find(t => t.id === user.tenantId);
+        if (ownTenant) {
+          tenants.push({ ...ownTenant, accessType: 'owner' });
+        }
+      }
+      
+      console.log(`🔒 Enhanced Security: User ${user.id} (role: ${user.role}) can access ${tenants.length} tenant(s) via ${user.role === 'partner' ? 'system + partner relationships' : 'system access'}`);
       res.json(tenants);
     } catch (error) {
       console.error("Error fetching accessible tenants:", error);
@@ -7849,7 +7880,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
     }
   });
 
-  // Switch organization (SECURITY ENHANCED)
+  // Switch organization (ENHANCED SECURITY with Partner-Client Support)
   app.post("/api/user/switch-tenant", isAuthenticated, async (req: any, res) => {
     try {
       // Validate request body with Zod
@@ -7864,15 +7895,41 @@ Payment required immediately to avoid collection action. Contact us NOW.`
         return res.status(404).json({ message: "User not found" });
       }
 
-      // Get accessible tenants (Nexus AR + Qashivo Production + Demo Agency)
+      // Get system accessible tenants (Nexus AR + Qashivo Production + Demo Agency)
       const NEXUS_AR_TENANT_ID = "9ffa8e58-af89-4f6a-adee-7fe09d956295";
       const DEMO_TENANT_ID = "bfa5f70f-4af5-421a-9d05-26df67f45c15";
       const QASHIVO_PRODUCTION_TENANT_ID = "7c91ba57-23d2-47eb-be4f-8440700fca60";
-      const accessibleTenantIds = [NEXUS_AR_TENANT_ID, QASHIVO_PRODUCTION_TENANT_ID, DEMO_TENANT_ID];
+      const systemAccessibleTenantIds = [NEXUS_AR_TENANT_ID, QASHIVO_PRODUCTION_TENANT_ID, DEMO_TENANT_ID];
+      
+      let hasAccess = false;
+      let accessType = '';
+      
+      // Check system access first
+      if (systemAccessibleTenantIds.includes(tenantId)) {
+        hasAccess = true;
+        accessType = 'system';
+      }
+      
+      // ENHANCED: Check partner-client access for partners
+      if (!hasAccess && user.role === 'partner') {
+        const canAccess = await storage.canPartnerAccessTenant(user.id, tenantId);
+        if (canAccess) {
+          hasAccess = true;
+          accessType = 'partner_client';
+          // Update last access time for this partner-client relationship
+          await storage.updatePartnerLastAccess(user.id, tenantId);
+        }
+      }
+      
+      // Check access to user's own tenant
+      if (!hasAccess && user.tenantId === tenantId) {
+        hasAccess = true;
+        accessType = 'owner';
+      }
 
-      // Check if the target tenant is accessible
-      if (!accessibleTenantIds.includes(tenantId)) {
-        console.warn(`🚨 SECURITY: User ${user.id} (role: ${user.role}) attempted to switch to unauthorized tenant ${tenantId}`);
+      // Deny access if no valid permission found
+      if (!hasAccess) {
+        console.warn(`🚨 ENHANCED SECURITY: User ${user.id} (role: ${user.role}) attempted to switch to unauthorized tenant ${tenantId}`);
         return res.status(403).json({ 
           message: "Access denied. You can only switch between authorized organizations." 
         });
@@ -7887,8 +7944,15 @@ Payment required immediately to avoid collection action. Contact us NOW.`
       // Update user's tenantId
       await storage.updateUser(user.id, { tenantId });
       
-      console.log(`🔒 Security: User ${user.id} successfully switched to tenant ${tenantId} (${targetTenant.name})`);
-      res.json(targetTenant);
+      console.log(`✅ ENHANCED SECURITY: User ${user.id} (role: ${user.role}) successfully switched from ${user.tenantId} to ${tenantId} (${targetTenant.name}) via ${accessType} access`);
+      
+      // Return enhanced response with access type information
+      res.json({
+        message: "Organization switched successfully",
+        tenant: targetTenant,
+        accessType,
+        switchedAt: new Date().toISOString()
+      });
     } catch (error) {
       console.error("Error in tenant switch request:", error);
       if (error instanceof z.ZodError) {
