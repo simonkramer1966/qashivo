@@ -163,6 +163,7 @@ import Stripe from "stripe";
 import { registerSyncRoutes } from "./routes/syncRoutes";
 import { webhookHandler } from "./services/webhookHandler";
 import { ForecastEngine, type ForecastConfig, type ForecastScenario } from "../shared/forecast";
+import { subscriptionService } from "./services/subscriptionService";
 
 // Initialize Stripe
 if (!process.env.STRIPE_SECRET_KEY) {
@@ -12234,6 +12235,317 @@ ${tenant.name}
         return res.status(400).json({ message: "Invalid request data", errors: error.errors });
       }
       res.status(500).json({ message: "Failed to update tenant metadata" });
+    }
+  });
+
+  // ==================== SUBSCRIPTION MANAGEMENT API ====================
+
+  // GET /api/subscription/plans - Get available plans by type
+  app.get("/api/subscription/plans", isAuthenticated, async (req: any, res) => {
+    try {
+      const typeFilter = req.query.type as 'partner' | 'client' | undefined;
+      const plans = await storage.getSubscriptionPlans(typeFilter);
+      res.json(plans);
+    } catch (error) {
+      console.error("Error fetching subscription plans:", error);
+      res.status(500).json({ message: "Failed to fetch subscription plans" });
+    }
+  });
+
+  // POST /api/subscription/subscribe - Subscribe tenant to a plan
+  app.post("/api/subscription/subscribe", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      // Only owners can manage subscriptions
+      if (user.role !== 'owner') {
+        return res.status(403).json({ message: "Access denied. Owner role required." });
+      }
+
+      const subscribeSchema = z.object({
+        planId: z.string().min(1, "Plan ID is required"),
+        stripeCustomerId: z.string().optional(),
+      });
+
+      const { planId, stripeCustomerId } = subscribeSchema.parse(req.body);
+
+      // Check if tenant already has an active subscription
+      const existingMetadata = await storage.getTenantMetadata(user.tenantId);
+      if (existingMetadata?.stripeSubscriptionId) {
+        return res.status(400).json({ 
+          message: "Tenant already has an active subscription. Use upgrade-downgrade endpoint to change plans." 
+        });
+      }
+
+      let finalStripeCustomerId = stripeCustomerId;
+      if (!finalStripeCustomerId) {
+        // Create Stripe customer if not provided
+        const customer = await stripe.customers.create({
+          email: user.email || undefined,
+          name: `${user.firstName || ''} ${user.lastName || ''}`.trim() || undefined,
+          metadata: {
+            tenantId: user.tenantId,
+            userId: user.id,
+          }
+        });
+        finalStripeCustomerId = customer.id;
+      }
+
+      const { subscription, metadata } = await subscriptionService.subscribeTenantToPlan(
+        user.tenantId,
+        planId,
+        finalStripeCustomerId
+      );
+
+      res.json({
+        success: true,
+        subscription: {
+          id: subscription.id,
+          status: subscription.status,
+          currentPeriodStart: (subscription as any).current_period_start,
+          currentPeriodEnd: (subscription as any).current_period_end,
+        },
+        metadata,
+      });
+    } catch (error) {
+      console.error("Error subscribing tenant to plan:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid request data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to subscribe to plan" });
+    }
+  });
+
+  // GET /api/subscription/usage - Get current billing usage for partners
+  app.get("/api/subscription/usage", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const metadata = await storage.getTenantMetadata(user.tenantId);
+      if (!metadata || metadata.tenantType !== 'partner') {
+        return res.status(400).json({ message: "Usage tracking only available for partner tenants" });
+      }
+
+      const usage = await subscriptionService.getPartnerUsage(user.tenantId);
+      res.json(usage);
+    } catch (error) {
+      console.error("Error fetching partner usage:", error);
+      res.status(500).json({ message: "Failed to fetch usage data" });
+    }
+  });
+
+  // POST /api/subscription/upgrade-downgrade - Change subscription plans
+  app.post("/api/subscription/upgrade-downgrade", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      // Only owners can manage subscriptions
+      if (user.role !== 'owner') {
+        return res.status(403).json({ message: "Access denied. Owner role required." });
+      }
+
+      const changeSchema = z.object({
+        newPlanId: z.string().min(1, "New plan ID is required"),
+      });
+
+      const { newPlanId } = changeSchema.parse(req.body);
+
+      const { subscription, metadata } = await subscriptionService.changeSubscriptionPlan(
+        user.tenantId,
+        newPlanId
+      );
+
+      res.json({
+        success: true,
+        subscription: {
+          id: subscription.id,
+          status: subscription.status,
+          currentPeriodStart: (subscription as any).current_period_start,
+          currentPeriodEnd: (subscription as any).current_period_end,
+        },
+        metadata,
+      });
+    } catch (error) {
+      console.error("Error changing subscription plan:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid request data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to change subscription plan" });
+    }
+  });
+
+  // POST /api/subscription/update-partner-billing - Update partner billing based on client count
+  app.post("/api/subscription/update-partner-billing", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const metadata = await storage.getTenantMetadata(user.tenantId);
+      if (!metadata || metadata.tenantType !== 'partner') {
+        return res.status(400).json({ message: "Billing updates only available for partner tenants" });
+      }
+
+      await subscriptionService.updatePartnerBilling(user.tenantId);
+      
+      // Return updated usage info
+      const usage = await subscriptionService.getPartnerUsage(user.tenantId);
+      res.json({ success: true, usage });
+    } catch (error) {
+      console.error("Error updating partner billing:", error);
+      res.status(500).json({ message: "Failed to update billing" });
+    }
+  });
+
+  // GET /api/subscription/status - Get current subscription status
+  app.get("/api/subscription/status", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const metadata = await storage.getTenantMetadata(user.tenantId);
+      if (!metadata) {
+        return res.json({ 
+          hasSubscription: false,
+          tenantType: 'client',
+          message: "No subscription found"
+        });
+      }
+
+      const response = {
+        hasSubscription: !!metadata.stripeSubscriptionId,
+        tenantType: metadata.tenantType,
+        subscriptionStatus: metadata.subscriptionStatus,
+        subscriptionPlan: metadata.subscriptionPlan,
+        isInTrial: metadata.isInTrial,
+        currentClientCount: metadata.currentClientCount,
+        currentMonthInvoices: metadata.currentMonthInvoices,
+        subscriptionStartDate: metadata.subscriptionStartDate,
+        subscriptionEndDate: metadata.subscriptionEndDate,
+      };
+
+      res.json(response);
+    } catch (error) {
+      console.error("Error fetching subscription status:", error);
+      res.status(500).json({ message: "Failed to fetch subscription status" });
+    }
+  });
+
+  // ==================== SUBSCRIPTION SEEDING API ====================
+
+  // POST /api/subscription/seed-plans - Create initial subscription plans
+  app.post("/api/subscription/seed-plans", isAuthenticated, isOwner, async (req: any, res) => {
+    try {
+      console.log("🌱 Seeding subscription plans...");
+
+      // Check if plans already exist
+      const existingPlans = await storage.getSubscriptionPlans();
+      if (existingPlans.length > 0) {
+        return res.status(400).json({ 
+          message: "Subscription plans already exist",
+          existingPlans: existingPlans.length 
+        });
+      }
+
+      // Create Direct Customer Plan
+      const clientPlan = await storage.createSubscriptionPlan({
+        name: "Direct Customer Plan",
+        type: "client",
+        description: "Monthly subscription for direct customers with full access to collections automation and AR management.",
+        monthlyPrice: "29.00",
+        yearlyPrice: "290.00", // 10 months price for yearly
+        currency: "GBP",
+        maxClientTenants: 0, // Not applicable for client plans
+        maxUsers: 5,
+        maxInvoicesPerMonth: 1000,
+        features: JSON.stringify([
+          "collections_automation",
+          "ai_insights",
+          "payment_tracking",
+          "customer_management",
+          "basic_reporting",
+          "email_reminders",
+          "sms_notifications"
+        ]),
+        isActive: true,
+      });
+
+      // Create Partner Wholesale Plan
+      const partnerPlan = await storage.createSubscriptionPlan({
+        name: "Partner Wholesale Plan",
+        type: "partner",
+        description: "Per-client billing plan for accounting partners managing multiple client tenants.",
+        monthlyPrice: "19.00",
+        yearlyPrice: "190.00", // 10 months price for yearly
+        currency: "GBP",
+        maxClientTenants: 0, // Unlimited
+        maxUsers: 20,
+        maxInvoicesPerMonth: 5000,
+        features: JSON.stringify([
+          "collections_automation",
+          "ai_insights",
+          "payment_tracking",
+          "customer_management",
+          "advanced_reporting",
+          "multi_tenant_management",
+          "partner_dashboard",
+          "client_billing",
+          "white_label",
+          "api_access",
+          "email_reminders",
+          "sms_notifications",
+          "phone_automation"
+        ]),
+        isActive: true,
+      });
+
+      // Create Stripe products and prices for both plans
+      const clientStripeData = await subscriptionService.createStripeProductsAndPrices(clientPlan);
+      const partnerStripeData = await subscriptionService.createStripeProductsAndPrices(partnerPlan);
+
+      // Update plans with Stripe IDs
+      await storage.updateSubscriptionPlan(clientPlan.id, {
+        stripeProductId: clientStripeData.productId,
+        stripePriceId: clientStripeData.priceId,
+      });
+
+      await storage.updateSubscriptionPlan(partnerPlan.id, {
+        stripeProductId: partnerStripeData.productId,
+        stripePriceId: partnerStripeData.priceId,
+      });
+
+      const updatedClientPlan = await storage.getSubscriptionPlan(clientPlan.id);
+      const updatedPartnerPlan = await storage.getSubscriptionPlan(partnerPlan.id);
+
+      console.log("✅ Subscription plans seeded successfully");
+
+      res.json({
+        success: true,
+        message: "Subscription plans created successfully",
+        plans: {
+          client: updatedClientPlan,
+          partner: updatedPartnerPlan,
+        },
+        stripe: {
+          client: clientStripeData,
+          partner: partnerStripeData,
+        }
+      });
+    } catch (error) {
+      console.error("Error seeding subscription plans:", error);
+      res.status(500).json({ message: "Failed to seed subscription plans", error: error instanceof Error ? error.message : "Unknown error" });
     }
   });
 
