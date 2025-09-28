@@ -176,6 +176,30 @@ export default function NewSidebar() {
       queryClient.invalidateQueries({ queryKey: ['/api/dashboard/top-debtors'] });
       queryClient.invalidateQueries({ queryKey: ['/api/dashboard/exceptions'] });
       
+      // Analytics queries (including aging analysis)
+      queryClient.invalidateQueries({ predicate: (query) => {
+        const key = query.queryKey[0];
+        return typeof key === 'string' && key.startsWith('/api/analytics/');
+      }});
+      
+      // Action Centre queries
+      queryClient.invalidateQueries({ predicate: (query) => {
+        const key = query.queryKey[0];
+        return typeof key === 'string' && key.startsWith('/api/action-centre/');
+      }});
+      
+      // Sync and data management queries
+      queryClient.invalidateQueries({ predicate: (query) => {
+        const key = query.queryKey[0];
+        return typeof key === 'string' && key.startsWith('/api/sync/');
+      }});
+      
+      // Bills and financial queries
+      queryClient.invalidateQueries({ predicate: (query) => {
+        const key = query.queryKey[0];
+        return typeof key === 'string' && key.startsWith('/api/bills/');
+      }});
+      
       // Core business data
       queryClient.invalidateQueries({ queryKey: ['/api/invoices'] });
       queryClient.invalidateQueries({ queryKey: ['/api/contacts'] });
