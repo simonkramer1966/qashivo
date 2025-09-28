@@ -164,6 +164,7 @@ import { registerSyncRoutes } from "./routes/syncRoutes";
 import { webhookHandler } from "./services/webhookHandler";
 import { ForecastEngine, type ForecastConfig, type ForecastScenario } from "../shared/forecast";
 import { subscriptionService } from "./services/subscriptionService";
+import { businessAnalyticsService } from "./services/businessAnalytics";
 
 // Initialize Stripe
 if (!process.env.STRIPE_SECRET_KEY) {
@@ -751,6 +752,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error cleaning up contacts:", error);
       res.status(500).json({ message: "Failed to clean up contacts" });
+    }
+  });
+
+  // Business Analytics Endpoints (Owner Only)
+  
+  // GET /api/business/analytics/overview - Core business metrics
+  app.get('/api/business/analytics/overview', isAuthenticated, isOwner, async (req: any, res) => {
+    try {
+      const metrics = await businessAnalyticsService.getBusinessOverview();
+      res.json(metrics);
+    } catch (error) {
+      console.error('Error fetching business overview:', error);
+      res.status(500).json({ 
+        message: 'Failed to fetch business metrics', 
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // GET /api/business/analytics/revenue - Detailed revenue analytics
+  app.get('/api/business/analytics/revenue', isAuthenticated, isOwner, async (req: any, res) => {
+    try {
+      const analytics = await businessAnalyticsService.getRevenueAnalytics();
+      res.json(analytics);
+    } catch (error) {
+      console.error('Error fetching revenue analytics:', error);
+      res.status(500).json({ 
+        message: 'Failed to fetch revenue analytics', 
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // GET /api/business/analytics/clients - Client metrics and trends
+  app.get('/api/business/analytics/clients', isAuthenticated, isOwner, async (req: any, res) => {
+    try {
+      const metrics = await businessAnalyticsService.getClientMetrics();
+      res.json(metrics);
+    } catch (error) {
+      console.error('Error fetching client metrics:', error);
+      res.status(500).json({ 
+        message: 'Failed to fetch client metrics', 
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // GET /api/business/analytics/partners - Partner performance metrics
+  app.get('/api/business/analytics/partners', isAuthenticated, isOwner, async (req: any, res) => {
+    try {
+      const metrics = await businessAnalyticsService.getPartnerMetrics();
+      res.json(metrics);
+    } catch (error) {
+      console.error('Error fetching partner metrics:', error);
+      res.status(500).json({ 
+        message: 'Failed to fetch partner metrics', 
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
     }
   });
 

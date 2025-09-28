@@ -41,6 +41,7 @@ import LeadFlowSettings from "@/pages/leadflow-settings";
 import CallLogs from "@/pages/call-logs";
 import PaymentPlans from "@/pages/payment-plans";
 import PartnerDashboard from "@/pages/partner";
+import BusinessDashboard from "@/pages/business-dashboard";
 import { OnboardingWizard } from "@/components/OnboardingWizard";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -99,6 +100,7 @@ function Router() {
       <Route path="/ui-sage" component={UISage} />
       <Route path="/subscribe" component={Subscribe} />
       <Route path="/owner" component={OwnerDashboard} />
+      <Route path="/business-dashboard" component={BusinessDashboard} />
       <Route path="/partner" component={PartnerDashboard} />
       <Route path="/test-dialog" component={TestCommunicationDialog} />
       <Route path="/onboarding" component={OnboardingWizard} />
