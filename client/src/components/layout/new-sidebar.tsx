@@ -194,10 +194,22 @@ export default function NewSidebar() {
         return typeof key === 'string' && key.startsWith('/api/sync/');
       }});
       
-      // Bills and financial queries
+      // Bills and financial queries (using both /api/bills and /api/bills/)
       queryClient.invalidateQueries({ predicate: (query) => {
         const key = query.queryKey[0];
-        return typeof key === 'string' && key.startsWith('/api/bills/');
+        return typeof key === 'string' && (key.startsWith('/api/bills') || key.startsWith('/api/bank-accounts'));
+      }});
+      
+      // Cashflow and forecasting queries
+      queryClient.invalidateQueries({ predicate: (query) => {
+        const key = query.queryKey[0];
+        return typeof key === 'string' && key.startsWith('/api/cashflow/');
+      }});
+      
+      // Customer risk and performance queries
+      queryClient.invalidateQueries({ predicate: (query) => {
+        const key = query.queryKey[0];
+        return typeof key === 'string' && (key.startsWith('/api/customer/') || key.includes('customer-risk'));
       }});
       
       // Core business data
@@ -253,11 +265,17 @@ export default function NewSidebar() {
         );
       }});
 
-      // Force immediate refetch of critical dashboard queries
-      queryClient.refetchQueries({ queryKey: ['/api/dashboard/metrics'] });
-      queryClient.refetchQueries({ queryKey: ['/api/dashboard/recent-activity'] });
-      queryClient.refetchQueries({ queryKey: ['/api/dashboard/top-debtors'] });
-      queryClient.refetchQueries({ queryKey: ['/api/dashboard/exceptions'] });
+      // COMPREHENSIVE FIX: Clear all cached data to force complete refresh
+      console.log('🔄 Comprehensive cache clear - removing ALL queries for tenant switch');
+      queryClient.clear();
+      
+      // Force immediate refetch of critical dashboard queries  
+      setTimeout(() => {
+        queryClient.refetchQueries({ queryKey: ['/api/dashboard/metrics'] });
+        queryClient.refetchQueries({ queryKey: ['/api/dashboard/recent-activity'] });
+        queryClient.refetchQueries({ queryKey: ['/api/dashboard/top-debtors'] });
+        queryClient.refetchQueries({ queryKey: ['/api/dashboard/exceptions'] });
+      }, 100);
     },
   });
 
