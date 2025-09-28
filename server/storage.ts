@@ -117,6 +117,18 @@ import {
   type InsertPaymentPlanSchedule,
   type PaymentPlanInvoice,
   type InsertPaymentPlanInvoice,
+  subscriptionPlans,
+  partnerClientRelationships,
+  tenantInvitations,
+  tenantMetadata,
+  type SubscriptionPlan,
+  type InsertSubscriptionPlan,
+  type PartnerClientRelationship,
+  type InsertPartnerClientRelationship,
+  type TenantInvitation,
+  type InsertTenantInvitation,
+  type TenantMetadata,
+  type InsertTenantMetadata,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, sql, count, sum, ne, isNotNull, gte, lte, lt, or, ilike, inArray } from "drizzle-orm";
@@ -408,6 +420,38 @@ export interface IStorage {
   acceptUserInvitation(inviteToken: string, userData: { firstName?: string; lastName?: string }): Promise<User>;
   revokeUserInvitation(invitationId: string): Promise<void>;
   getPendingInvitations(tenantId: string): Promise<{ id: string; email: string; role: string; invitedBy: string; createdAt: Date }[]>;
+
+  // Partner-Client System operations
+  getSubscriptionPlans(type?: string): Promise<SubscriptionPlan[]>;
+  getSubscriptionPlan(id: string): Promise<SubscriptionPlan | undefined>;
+  createSubscriptionPlan(plan: InsertSubscriptionPlan): Promise<SubscriptionPlan>;
+  updateSubscriptionPlan(id: string, updates: Partial<InsertSubscriptionPlan>): Promise<SubscriptionPlan>;
+  
+  // Partner-Client Relationships
+  getPartnerClientRelationships(partnerUserId: string): Promise<(PartnerClientRelationship & { clientTenant: Tenant; partnerTenant: Tenant })[]>;
+  getClientPartnerRelationships(clientTenantId: string): Promise<(PartnerClientRelationship & { partnerUser: User; partnerTenant: Tenant })[]>;
+  createPartnerClientRelationship(relationship: InsertPartnerClientRelationship): Promise<PartnerClientRelationship>;
+  updatePartnerClientRelationship(id: string, updates: Partial<InsertPartnerClientRelationship>): Promise<PartnerClientRelationship>;
+  terminatePartnerClientRelationship(id: string, terminatedBy: string, reason?: string): Promise<PartnerClientRelationship>;
+  
+  // Tenant Invitations
+  getTenantInvitations(clientTenantId: string): Promise<(TenantInvitation & { invitedByUser: User; partnerUser?: User })[]>;
+  getTenantInvitationsByPartner(partnerEmail: string): Promise<(TenantInvitation & { clientTenant: Tenant; invitedByUser: User })[]>;
+  getTenantInvitation(id: string): Promise<(TenantInvitation & { clientTenant: Tenant; invitedByUser: User; partnerUser?: User }) | undefined>;
+  createTenantInvitation(invitation: InsertTenantInvitation): Promise<TenantInvitation>;
+  updateTenantInvitation(id: string, updates: Partial<InsertTenantInvitation>): Promise<TenantInvitation>;
+  acceptTenantInvitation(id: string, partnerUserId: string, responseMessage?: string): Promise<{ invitation: TenantInvitation; relationship: PartnerClientRelationship }>;
+  declineTenantInvitation(id: string, responseMessage?: string): Promise<TenantInvitation>;
+  
+  // Tenant Metadata  
+  getTenantMetadata(tenantId: string): Promise<(TenantMetadata & { subscriptionPlan?: SubscriptionPlan }) | undefined>;
+  createTenantMetadata(metadata: InsertTenantMetadata): Promise<TenantMetadata>;
+  updateTenantMetadata(tenantId: string, updates: Partial<InsertTenantMetadata>): Promise<TenantMetadata>;
+  
+  // Partner-specific operations
+  getAccessibleTenantsByPartner(partnerUserId: string): Promise<(Tenant & { relationship: PartnerClientRelationship })[]>;
+  canPartnerAccessTenant(partnerUserId: string, clientTenantId: string): Promise<boolean>;
+  updatePartnerLastAccess(partnerUserId: string, clientTenantId: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -3687,6 +3731,315 @@ export class DatabaseStorage implements IStorage {
         contact: result.contact
       }
     }));
+  }
+
+  // Partner-Client System operations implementation
+  async getSubscriptionPlans(type?: string): Promise<SubscriptionPlan[]> {
+    const query = db.select().from(subscriptionPlans).where(eq(subscriptionPlans.isActive, true));
+    
+    if (type) {
+      return await query.where(eq(subscriptionPlans.type, type));
+    }
+    
+    return await query;
+  }
+
+  async getSubscriptionPlan(id: string): Promise<SubscriptionPlan | undefined> {
+    const [plan] = await db.select().from(subscriptionPlans).where(eq(subscriptionPlans.id, id));
+    return plan;
+  }
+
+  async createSubscriptionPlan(planData: InsertSubscriptionPlan): Promise<SubscriptionPlan> {
+    const [plan] = await db.insert(subscriptionPlans).values(planData).returning();
+    return plan;
+  }
+
+  async updateSubscriptionPlan(id: string, updates: Partial<InsertSubscriptionPlan>): Promise<SubscriptionPlan> {
+    const [plan] = await db
+      .update(subscriptionPlans)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(subscriptionPlans.id, id))
+      .returning();
+    return plan;
+  }
+
+  // Partner-Client Relationships implementation
+  async getPartnerClientRelationships(partnerUserId: string): Promise<(PartnerClientRelationship & { clientTenant: Tenant; partnerTenant: Tenant })[]> {
+    const results = await db
+      .select({
+        relationship: partnerClientRelationships,
+        clientTenant: tenants,
+        partnerTenant: alias(tenants, 'partnerTenant'),
+      })
+      .from(partnerClientRelationships)
+      .innerJoin(tenants, eq(partnerClientRelationships.clientTenantId, tenants.id))
+      .innerJoin(alias(tenants, 'partnerTenant'), eq(partnerClientRelationships.partnerTenantId, alias(tenants, 'partnerTenant').id))
+      .where(and(
+        eq(partnerClientRelationships.partnerUserId, partnerUserId),
+        eq(partnerClientRelationships.status, 'active')
+      ));
+
+    return results.map(result => ({
+      ...result.relationship,
+      clientTenant: result.clientTenant,
+      partnerTenant: result.partnerTenant,
+    }));
+  }
+
+  async getClientPartnerRelationships(clientTenantId: string): Promise<(PartnerClientRelationship & { partnerUser: User; partnerTenant: Tenant })[]> {
+    const results = await db
+      .select({
+        relationship: partnerClientRelationships,
+        partnerUser: users,
+        partnerTenant: tenants,
+      })
+      .from(partnerClientRelationships)
+      .innerJoin(users, eq(partnerClientRelationships.partnerUserId, users.id))
+      .innerJoin(tenants, eq(partnerClientRelationships.partnerTenantId, tenants.id))
+      .where(and(
+        eq(partnerClientRelationships.clientTenantId, clientTenantId),
+        eq(partnerClientRelationships.status, 'active')
+      ));
+
+    return results.map(result => ({
+      ...result.relationship,
+      partnerUser: result.partnerUser,
+      partnerTenant: result.partnerTenant,
+    }));
+  }
+
+  async createPartnerClientRelationship(relationshipData: InsertPartnerClientRelationship): Promise<PartnerClientRelationship> {
+    const [relationship] = await db.insert(partnerClientRelationships).values(relationshipData).returning();
+    return relationship;
+  }
+
+  async updatePartnerClientRelationship(id: string, updates: Partial<InsertPartnerClientRelationship>): Promise<PartnerClientRelationship> {
+    const [relationship] = await db
+      .update(partnerClientRelationships)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(partnerClientRelationships.id, id))
+      .returning();
+    return relationship;
+  }
+
+  async terminatePartnerClientRelationship(id: string, terminatedBy: string, reason?: string): Promise<PartnerClientRelationship> {
+    const [relationship] = await db
+      .update(partnerClientRelationships)
+      .set({
+        status: 'terminated',
+        terminatedAt: new Date(),
+        terminatedBy,
+        terminationReason: reason,
+        updatedAt: new Date(),
+      })
+      .where(eq(partnerClientRelationships.id, id))
+      .returning();
+    return relationship;
+  }
+
+  // Tenant Invitations implementation
+  async getTenantInvitations(clientTenantId: string): Promise<(TenantInvitation & { invitedByUser: User; partnerUser?: User })[]> {
+    const results = await db
+      .select({
+        invitation: tenantInvitations,
+        invitedByUser: users,
+        partnerUser: alias(users, 'partnerUser'),
+      })
+      .from(tenantInvitations)
+      .innerJoin(users, eq(tenantInvitations.invitedByUserId, users.id))
+      .leftJoin(alias(users, 'partnerUser'), eq(tenantInvitations.partnerUserId, alias(users, 'partnerUser').id))
+      .where(eq(tenantInvitations.clientTenantId, clientTenantId));
+
+    return results.map(result => ({
+      ...result.invitation,
+      invitedByUser: result.invitedByUser,
+      partnerUser: result.partnerUser || undefined,
+    }));
+  }
+
+  async getTenantInvitationsByPartner(partnerEmail: string): Promise<(TenantInvitation & { clientTenant: Tenant; invitedByUser: User })[]> {
+    const results = await db
+      .select({
+        invitation: tenantInvitations,
+        clientTenant: tenants,
+        invitedByUser: users,
+      })
+      .from(tenantInvitations)
+      .innerJoin(tenants, eq(tenantInvitations.clientTenantId, tenants.id))
+      .innerJoin(users, eq(tenantInvitations.invitedByUserId, users.id))
+      .where(eq(tenantInvitations.partnerEmail, partnerEmail));
+
+    return results.map(result => ({
+      ...result.invitation,
+      clientTenant: result.clientTenant,
+      invitedByUser: result.invitedByUser,
+    }));
+  }
+
+  async getTenantInvitation(id: string): Promise<(TenantInvitation & { clientTenant: Tenant; invitedByUser: User; partnerUser?: User }) | undefined> {
+    const [result] = await db
+      .select({
+        invitation: tenantInvitations,
+        clientTenant: tenants,
+        invitedByUser: users,
+        partnerUser: alias(users, 'partnerUser'),
+      })
+      .from(tenantInvitations)
+      .innerJoin(tenants, eq(tenantInvitations.clientTenantId, tenants.id))
+      .innerJoin(users, eq(tenantInvitations.invitedByUserId, users.id))
+      .leftJoin(alias(users, 'partnerUser'), eq(tenantInvitations.partnerUserId, alias(users, 'partnerUser').id))
+      .where(eq(tenantInvitations.id, id));
+
+    if (!result) return undefined;
+
+    return {
+      ...result.invitation,
+      clientTenant: result.clientTenant,
+      invitedByUser: result.invitedByUser,
+      partnerUser: result.partnerUser || undefined,
+    };
+  }
+
+  async createTenantInvitation(invitationData: InsertTenantInvitation): Promise<TenantInvitation> {
+    const [invitation] = await db.insert(tenantInvitations).values(invitationData).returning();
+    return invitation;
+  }
+
+  async updateTenantInvitation(id: string, updates: Partial<InsertTenantInvitation>): Promise<TenantInvitation> {
+    const [invitation] = await db
+      .update(tenantInvitations)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(tenantInvitations.id, id))
+      .returning();
+    return invitation;
+  }
+
+  async acceptTenantInvitation(id: string, partnerUserId: string, responseMessage?: string): Promise<{ invitation: TenantInvitation; relationship: PartnerClientRelationship }> {
+    // Update invitation as accepted
+    const [invitation] = await db
+      .update(tenantInvitations)
+      .set({
+        status: 'accepted',
+        partnerUserId,
+        respondedAt: new Date(),
+        responseMessage,
+        updatedAt: new Date(),
+      })
+      .where(eq(tenantInvitations.id, id))
+      .returning();
+
+    // Get partner's tenant ID
+    const partner = await this.getUser(partnerUserId);
+    if (!partner?.tenantId) {
+      throw new Error('Partner user must have a tenant');
+    }
+
+    // Create partner-client relationship
+    const [relationship] = await db
+      .insert(partnerClientRelationships)
+      .values({
+        partnerUserId,
+        partnerTenantId: partner.tenantId,
+        clientTenantId: invitation.clientTenantId,
+        status: 'active',
+        accessLevel: invitation.accessLevel,
+        permissions: invitation.permissions,
+        establishedBy: 'invitation',
+        establishedAt: new Date(),
+      })
+      .returning();
+
+    return { invitation, relationship };
+  }
+
+  async declineTenantInvitation(id: string, responseMessage?: string): Promise<TenantInvitation> {
+    const [invitation] = await db
+      .update(tenantInvitations)
+      .set({
+        status: 'declined',
+        respondedAt: new Date(),
+        responseMessage,
+        updatedAt: new Date(),
+      })
+      .where(eq(tenantInvitations.id, id))
+      .returning();
+    return invitation;
+  }
+
+  // Tenant Metadata implementation
+  async getTenantMetadata(tenantId: string): Promise<(TenantMetadata & { subscriptionPlan?: SubscriptionPlan }) | undefined> {
+    const [result] = await db
+      .select({
+        metadata: tenantMetadata,
+        subscriptionPlan: subscriptionPlans,
+      })
+      .from(tenantMetadata)
+      .leftJoin(subscriptionPlans, eq(tenantMetadata.subscriptionPlanId, subscriptionPlans.id))
+      .where(eq(tenantMetadata.tenantId, tenantId));
+
+    if (!result) return undefined;
+
+    return {
+      ...result.metadata,
+      subscriptionPlan: result.subscriptionPlan || undefined,
+    };
+  }
+
+  async createTenantMetadata(metadataData: InsertTenantMetadata): Promise<TenantMetadata> {
+    const [metadata] = await db.insert(tenantMetadata).values(metadataData).returning();
+    return metadata;
+  }
+
+  async updateTenantMetadata(tenantId: string, updates: Partial<InsertTenantMetadata>): Promise<TenantMetadata> {
+    const [metadata] = await db
+      .update(tenantMetadata)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(tenantMetadata.tenantId, tenantId))
+      .returning();
+    return metadata;
+  }
+
+  // Partner-specific operations implementation
+  async getAccessibleTenantsByPartner(partnerUserId: string): Promise<(Tenant & { relationship: PartnerClientRelationship })[]> {
+    const results = await db
+      .select({
+        tenant: tenants,
+        relationship: partnerClientRelationships,
+      })
+      .from(partnerClientRelationships)
+      .innerJoin(tenants, eq(partnerClientRelationships.clientTenantId, tenants.id))
+      .where(and(
+        eq(partnerClientRelationships.partnerUserId, partnerUserId),
+        eq(partnerClientRelationships.status, 'active')
+      ));
+
+    return results.map(result => ({
+      ...result.tenant,
+      relationship: result.relationship,
+    }));
+  }
+
+  async canPartnerAccessTenant(partnerUserId: string, clientTenantId: string): Promise<boolean> {
+    const [relationship] = await db
+      .select()
+      .from(partnerClientRelationships)
+      .where(and(
+        eq(partnerClientRelationships.partnerUserId, partnerUserId),
+        eq(partnerClientRelationships.clientTenantId, clientTenantId),
+        eq(partnerClientRelationships.status, 'active')
+      ));
+    
+    return !!relationship;
+  }
+
+  async updatePartnerLastAccess(partnerUserId: string, clientTenantId: string): Promise<void> {
+    await db
+      .update(partnerClientRelationships)
+      .set({ lastAccessedAt: new Date(), updatedAt: new Date() })
+      .where(and(
+        eq(partnerClientRelationships.partnerUserId, partnerUserId),
+        eq(partnerClientRelationships.clientTenantId, clientTenantId)
+      ));
   }
 }
 

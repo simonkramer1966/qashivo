@@ -36,7 +36,7 @@ export const users = pgTable("users", {
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
   tenantId: varchar("tenant_id").references(() => tenants.id),
-  role: varchar("role").notNull().default("user"), // owner, admin, user
+  role: varchar("role").notNull().default("user"), // owner, admin, user, partner, client_owner, client_user
   stripeCustomerId: varchar("stripe_customer_id"),
   stripeSubscriptionId: varchar("stripe_subscription_id"),
   createdAt: timestamp("created_at").defaultNow(),
@@ -2816,3 +2816,245 @@ export type InsertActionLog = z.infer<typeof insertActionLogSchema>;
 
 export type PaymentPromise = typeof paymentPromises.$inferSelect;
 export type InsertPaymentPromise = z.infer<typeof insertPaymentPromiseSchema>;
+
+// === PARTNER-CLIENT SUBSCRIPTION SYSTEM ===
+
+// Subscription plans for partners and clients
+export const subscriptionPlans = pgTable("subscription_plans", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull(), // "Partner Pro", "Client Standard", etc.
+  type: varchar("type").notNull(), // "partner", "client"
+  description: text("description"),
+  
+  // Pricing
+  monthlyPrice: decimal("monthly_price", { precision: 10, scale: 2 }).notNull(),
+  yearlyPrice: decimal("yearly_price", { precision: 10, scale: 2 }),
+  currency: varchar("currency").default("USD"),
+  
+  // Limits and features
+  maxClientTenants: integer("max_client_tenants").default(0), // 0 = unlimited for partners
+  maxUsers: integer("max_users").default(5),
+  maxInvoicesPerMonth: integer("max_invoices_per_month").default(1000),
+  
+  // Feature flags
+  features: jsonb("features").default("[]"), // Array of feature names
+  
+  // Stripe integration
+  stripePriceId: varchar("stripe_price_id"),
+  stripeProductId: varchar("stripe_product_id"),
+  
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Partner-client relationships
+export const partnerClientRelationships = pgTable("partner_client_relationships", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // The partner (accountant)
+  partnerUserId: varchar("partner_user_id").notNull().references(() => users.id),
+  partnerTenantId: varchar("partner_tenant_id").notNull().references(() => tenants.id),
+  
+  // The client tenant they have access to
+  clientTenantId: varchar("client_tenant_id").notNull().references(() => tenants.id),
+  
+  // Relationship metadata
+  status: varchar("status").notNull().default("active"), // active, suspended, terminated
+  accessLevel: varchar("access_level").notNull().default("full"), // full, read_only, limited
+  
+  // Permission overrides
+  permissions: jsonb("permissions").default("[]"), // Specific permissions for this relationship
+  
+  // Relationship tracking
+  establishedAt: timestamp("established_at").defaultNow(),
+  establishedBy: varchar("established_by").notNull(), // "invitation", "direct_assignment"
+  lastAccessedAt: timestamp("last_accessed_at"),
+  
+  // Termination tracking
+  terminatedAt: timestamp("terminated_at"),
+  terminatedBy: varchar("terminated_by").references(() => users.id),
+  terminationReason: text("termination_reason"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  // Ensure unique partner-client relationships
+  unique("unique_partner_client").on(table.partnerUserId, table.clientTenantId),
+  // Performance indexes
+  index("idx_partner_relationships_partner").on(table.partnerUserId),
+  index("idx_partner_relationships_client").on(table.clientTenantId),
+  index("idx_partner_relationships_status").on(table.status),
+]);
+
+// Tenant invitations system
+export const tenantInvitations = pgTable("tenant_invitations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Invitation details
+  clientTenantId: varchar("client_tenant_id").notNull().references(() => tenants.id),
+  invitedByUserId: varchar("invited_by_user_id").notNull().references(() => users.id),
+  
+  // Partner being invited
+  partnerEmail: varchar("partner_email").notNull(),
+  partnerUserId: varchar("partner_user_id").references(() => users.id), // Set when partner exists
+  
+  // Invitation configuration
+  accessLevel: varchar("access_level").notNull().default("full"),
+  permissions: jsonb("permissions").default("[]"),
+  personalMessage: text("personal_message"),
+  
+  // Status tracking
+  status: varchar("status").notNull().default("pending"), // pending, accepted, declined, expired, cancelled
+  
+  // Response tracking
+  respondedAt: timestamp("responded_at"),
+  responseMessage: text("response_message"),
+  
+  // Expiration
+  expiresAt: timestamp("expires_at").notNull(), // 7 days from creation
+  
+  // Email tracking
+  emailSentAt: timestamp("email_sent_at"),
+  emailOpenedAt: timestamp("email_opened_at"),
+  remindersSent: integer("reminders_sent").default(0),
+  lastReminderSentAt: timestamp("last_reminder_sent_at"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  // Performance indexes
+  index("idx_invitations_client_tenant").on(table.clientTenantId),
+  index("idx_invitations_partner_email").on(table.partnerEmail),
+  index("idx_invitations_status").on(table.status),
+  index("idx_invitations_expires_at").on(table.expiresAt),
+]);
+
+// Enhanced tenants table for partner support
+export const tenantMetadata = pgTable("tenant_metadata", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  
+  // Tenant type and subscription
+  tenantType: varchar("tenant_type").notNull().default("client"), // "partner", "client"
+  subscriptionPlanId: varchar("subscription_plan_id").references(() => subscriptionPlans.id),
+  
+  // Billing information
+  stripeCustomerId: varchar("stripe_customer_id"),
+  stripeSubscriptionId: varchar("stripe_subscription_id"),
+  billingEmail: varchar("billing_email"),
+  
+  // Usage tracking
+  currentMonthInvoices: integer("current_month_invoices").default(0),
+  currentClientCount: integer("current_client_count").default(0), // For partners
+  
+  // Subscription status
+  subscriptionStatus: varchar("subscription_status").default("active"), // active, past_due, cancelled, suspended
+  subscriptionStartDate: timestamp("subscription_start_date"),
+  subscriptionEndDate: timestamp("subscription_end_date"),
+  
+  // Trial information
+  trialStartDate: timestamp("trial_start_date"),
+  trialEndDate: timestamp("trial_end_date"),
+  isInTrial: boolean("is_in_trial").default(false),
+  
+  // Feature usage limits
+  usageLimits: jsonb("usage_limits").default("{}"), // Custom limits per tenant
+  currentUsage: jsonb("current_usage").default("{}"), // Current usage statistics
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  unique("unique_tenant_metadata").on(table.tenantId),
+  index("idx_tenant_metadata_type").on(table.tenantType),
+  index("idx_tenant_metadata_subscription").on(table.subscriptionPlanId),
+  index("idx_tenant_metadata_status").on(table.subscriptionStatus),
+]);
+
+// Relations for partner system
+export const subscriptionPlansRelations = relations(subscriptionPlans, ({ many }) => ({
+  tenantMetadata: many(tenantMetadata),
+}));
+
+export const partnerClientRelationshipsRelations = relations(partnerClientRelationships, ({ one }) => ({
+  partnerUser: one(users, {
+    fields: [partnerClientRelationships.partnerUserId],
+    references: [users.id],
+  }),
+  partnerTenant: one(tenants, {
+    fields: [partnerClientRelationships.partnerTenantId],
+    references: [tenants.id],
+  }),
+  clientTenant: one(tenants, {
+    fields: [partnerClientRelationships.clientTenantId],
+    references: [tenants.id],
+  }),
+  terminatedByUser: one(users, {
+    fields: [partnerClientRelationships.terminatedBy],
+    references: [users.id],
+  }),
+}));
+
+export const tenantInvitationsRelations = relations(tenantInvitations, ({ one }) => ({
+  clientTenant: one(tenants, {
+    fields: [tenantInvitations.clientTenantId],
+    references: [tenants.id],
+  }),
+  invitedByUser: one(users, {
+    fields: [tenantInvitations.invitedByUserId],
+    references: [users.id],
+  }),
+  partnerUser: one(users, {
+    fields: [tenantInvitations.partnerUserId],
+    references: [users.id],
+  }),
+}));
+
+export const tenantMetadataRelations = relations(tenantMetadata, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [tenantMetadata.tenantId],
+    references: [tenants.id],
+  }),
+  subscriptionPlan: one(subscriptionPlans, {
+    fields: [tenantMetadata.subscriptionPlanId],
+    references: [subscriptionPlans.id],
+  }),
+}));
+
+// Insert schemas for partner system
+export const insertSubscriptionPlanSchema = createInsertSchema(subscriptionPlans).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertPartnerClientRelationshipSchema = createInsertSchema(partnerClientRelationships).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertTenantInvitationSchema = createInsertSchema(tenantInvitations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertTenantMetadataSchema = createInsertSchema(tenantMetadata).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Type exports for partner system
+export type SubscriptionPlan = typeof subscriptionPlans.$inferSelect;
+export type InsertSubscriptionPlan = z.infer<typeof insertSubscriptionPlanSchema>;
+
+export type PartnerClientRelationship = typeof partnerClientRelationships.$inferSelect;
+export type InsertPartnerClientRelationship = z.infer<typeof insertPartnerClientRelationshipSchema>;
+
+export type TenantInvitation = typeof tenantInvitations.$inferSelect;
+export type InsertTenantInvitation = z.infer<typeof insertTenantInvitationSchema>;
+
+export type TenantMetadata = typeof tenantMetadata.$inferSelect;
+export type InsertTenantMetadata = z.infer<typeof insertTenantMetadataSchema>;
