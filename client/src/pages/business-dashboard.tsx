@@ -43,6 +43,7 @@ import {
 import { cn } from "@/lib/utils";
 import ProtectedComponent from "@/components/rbac/ProtectedComponent";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import NewSidebar from "@/components/layout/new-sidebar";
 
 interface BusinessMetrics {
   mrr: number;
@@ -721,7 +722,12 @@ export default function BusinessDashboard() {
       }
       data-testid="business-dashboard-protected"
     >
-      <BusinessDashboardContent />
+      <div className="flex h-screen overflow-hidden">
+        <NewSidebar />
+        <div className="flex-1 overflow-auto">
+          <BusinessDashboardContent />
+        </div>
+      </div>
     </ProtectedComponent>
   );
 }
