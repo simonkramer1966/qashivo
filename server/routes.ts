@@ -11916,6 +11916,329 @@ ${tenant.name}
 
   // ==================== END RBAC MANAGEMENT API ====================
 
+  // ==================== PARTNER-CLIENT SYSTEM API ====================
+
+  // Get subscription plans (for partner dashboard)
+  app.get("/api/partner/subscription-plans", isAuthenticated, async (req: any, res) => {
+    try {
+      const { type } = req.query;
+      const plans = await storage.getSubscriptionPlans(type);
+      res.json(plans);
+    } catch (error) {
+      console.error("Error fetching subscription plans:", error);
+      res.status(500).json({ message: "Failed to fetch subscription plans" });
+    }
+  });
+
+  // Get partner's client relationships
+  app.get("/api/partner/clients", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Only partners can access this endpoint
+      if (user.role !== 'partner') {
+        return res.status(403).json({ message: "Access denied. Partner role required." });
+      }
+
+      const relationships = await storage.getPartnerClientRelationships(user.id);
+      res.json(relationships);
+    } catch (error) {
+      console.error("Error fetching partner clients:", error);
+      res.status(500).json({ message: "Failed to fetch client relationships" });
+    }
+  });
+
+  // Get client's partner relationships (for client dashboard)
+  app.get("/api/client/partners", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const relationships = await storage.getClientPartnerRelationships(user.tenantId);
+      res.json(relationships);
+    } catch (error) {
+      console.error("Error fetching client partners:", error);
+      res.status(500).json({ message: "Failed to fetch partner relationships" });
+    }
+  });
+
+  // Terminate partner-client relationship
+  app.delete("/api/partner/clients/:relationshipId", isAuthenticated, async (req: any, res) => {
+    try {
+      const { relationshipId } = req.params;
+      const { reason } = req.body;
+      const user = await storage.getUser(req.user.claims.sub);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Only partners or tenant owners can terminate relationships
+      if (user.role !== 'partner' && user.role !== 'owner') {
+        return res.status(403).json({ message: "Access denied. Partner or owner role required." });
+      }
+
+      const relationship = await storage.terminatePartnerClientRelationship(
+        relationshipId, 
+        user.id, 
+        reason
+      );
+      
+      console.log(`🔗 Partnership terminated: ${user.id} terminated relationship ${relationshipId}`);
+      res.json({
+        success: true,
+        relationship,
+        message: "Partnership terminated successfully"
+      });
+    } catch (error) {
+      console.error("Error terminating partnership:", error);
+      res.status(500).json({ message: "Failed to terminate partnership" });
+    }
+  });
+
+  // ==================== TENANT INVITATION SYSTEM ====================
+
+  // Create tenant invitation (client invites partner)
+  app.post("/api/invitations/create", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      // Only owners and admins can create invitations
+      if (!['owner', 'admin'].includes(user.role || '')) {
+        return res.status(403).json({ message: "Access denied. Owner or admin role required." });
+      }
+
+      const invitationSchema = z.object({
+        partnerEmail: z.string().email("Valid email address required"),
+        accessLevel: z.enum(['read_only', 'read_write', 'full_access']).default('read_write'),
+        permissions: z.array(z.string()).default([]),
+        customMessage: z.string().optional(),
+        expiresAt: z.string().optional()
+      });
+
+      const validated = invitationSchema.parse(req.body);
+      
+      // Create the invitation
+      const invitation = await storage.createTenantInvitation({
+        clientTenantId: user.tenantId,
+        partnerEmail: validated.partnerEmail,
+        invitedByUserId: user.id,
+        accessLevel: validated.accessLevel,
+        permissions: validated.permissions,
+        customMessage: validated.customMessage,
+        status: 'pending',
+        expiresAt: validated.expiresAt ? new Date(validated.expiresAt) : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days default
+      });
+
+      console.log(`📧 Invitation created: ${user.email} invited ${validated.partnerEmail} as partner`);
+      
+      // TODO: Send email notification to partner
+      // await emailService.sendPartnerInvitation(validated.partnerEmail, invitation);
+      
+      res.json({
+        success: true,
+        invitation,
+        message: "Invitation sent successfully"
+      });
+    } catch (error) {
+      console.error("Error creating invitation:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid request data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create invitation" });
+    }
+  });
+
+  // Get tenant invitations for current tenant
+  app.get("/api/invitations/outgoing", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const invitations = await storage.getTenantInvitations(user.tenantId);
+      res.json(invitations);
+    } catch (error) {
+      console.error("Error fetching outgoing invitations:", error);
+      res.status(500).json({ message: "Failed to fetch invitations" });
+    }
+  });
+
+  // Get incoming invitations for partner (by email)
+  app.get("/api/invitations/incoming", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.email) {
+        return res.status(400).json({ message: "User email not found" });
+      }
+
+      const invitations = await storage.getTenantInvitationsByPartner(user.email);
+      res.json(invitations);
+    } catch (error) {
+      console.error("Error fetching incoming invitations:", error);
+      res.status(500).json({ message: "Failed to fetch invitations" });
+    }
+  });
+
+  // Accept tenant invitation
+  app.post("/api/invitations/:invitationId/accept", isAuthenticated, async (req: any, res) => {
+    try {
+      const { invitationId } = req.params;
+      const { responseMessage } = req.body;
+      const user = await storage.getUser(req.user.claims.sub);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Get the invitation to verify the partner email matches
+      const invitation = await storage.getTenantInvitation(invitationId);
+      if (!invitation) {
+        return res.status(404).json({ message: "Invitation not found" });
+      }
+
+      if (invitation.partnerEmail !== user.email) {
+        return res.status(403).json({ message: "This invitation is not for your email address" });
+      }
+
+      if (invitation.status !== 'pending') {
+        return res.status(400).json({ message: "Invitation is no longer pending" });
+      }
+
+      if (invitation.expiresAt && new Date() > invitation.expiresAt) {
+        return res.status(400).json({ message: "Invitation has expired" });
+      }
+
+      const result = await storage.acceptTenantInvitation(invitationId, user.id, responseMessage);
+      
+      console.log(`🤝 Partnership established: ${user.email} accepted invitation from ${invitation.clientTenant.name}`);
+      
+      res.json({
+        success: true,
+        invitation: result.invitation,
+        relationship: result.relationship,
+        message: "Invitation accepted and partnership established"
+      });
+    } catch (error) {
+      console.error("Error accepting invitation:", error);
+      res.status(500).json({ message: "Failed to accept invitation" });
+    }
+  });
+
+  // Decline tenant invitation
+  app.post("/api/invitations/:invitationId/decline", isAuthenticated, async (req: any, res) => {
+    try {
+      const { invitationId } = req.params;
+      const { responseMessage } = req.body;
+      const user = await storage.getUser(req.user.claims.sub);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Get the invitation to verify the partner email matches
+      const invitation = await storage.getTenantInvitation(invitationId);
+      if (!invitation) {
+        return res.status(404).json({ message: "Invitation not found" });
+      }
+
+      if (invitation.partnerEmail !== user.email) {
+        return res.status(403).json({ message: "This invitation is not for your email address" });
+      }
+
+      if (invitation.status !== 'pending') {
+        return res.status(400).json({ message: "Invitation is no longer pending" });
+      }
+
+      const declinedInvitation = await storage.declineTenantInvitation(invitationId, responseMessage);
+      
+      console.log(`❌ Partnership declined: ${user.email} declined invitation from ${invitation.clientTenant.name}`);
+      
+      res.json({
+        success: true,
+        invitation: declinedInvitation,
+        message: "Invitation declined"
+      });
+    } catch (error) {
+      console.error("Error declining invitation:", error);
+      res.status(500).json({ message: "Failed to decline invitation" });
+    }
+  });
+
+  // Get tenant metadata (subscription info, etc.)
+  app.get("/api/tenant/metadata", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const metadata = await storage.getTenantMetadata(user.tenantId);
+      res.json(metadata || { tenantId: user.tenantId });
+    } catch (error) {
+      console.error("Error fetching tenant metadata:", error);
+      res.status(500).json({ message: "Failed to fetch tenant metadata" });
+    }
+  });
+
+  // Update tenant metadata
+  app.put("/api/tenant/metadata", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      // Only owners can update metadata
+      if (user.role !== 'owner') {
+        return res.status(403).json({ message: "Access denied. Owner role required." });
+      }
+
+      const metadataSchema = z.object({
+        subscriptionPlanId: z.string().optional(),
+        billingEmail: z.string().email().optional(),
+        maxClientConnections: z.number().int().min(0).optional(),
+        features: z.array(z.string()).optional(),
+        settings: z.record(z.any()).optional()
+      });
+
+      const validated = metadataSchema.parse(req.body);
+      
+      // Check if metadata exists
+      let metadata = await storage.getTenantMetadata(user.tenantId);
+      
+      if (metadata) {
+        // Update existing metadata
+        metadata = await storage.updateTenantMetadata(user.tenantId, validated);
+      } else {
+        // Create new metadata
+        metadata = await storage.createTenantMetadata({
+          tenantId: user.tenantId,
+          ...validated
+        });
+      }
+      
+      res.json(metadata);
+    } catch (error) {
+      console.error("Error updating tenant metadata:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid request data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to update tenant metadata" });
+    }
+  });
+
+  // ==================== END PARTNER-CLIENT SYSTEM API ====================
+
   const httpServer = createServer(app);
   return httpServer;
 }
