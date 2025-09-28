@@ -58,6 +58,11 @@ const navigationItems = [
   { name: "Payment Plans", href: "/payment-plans", icon: CreditCard },
 ];
 
+// Partner-specific navigation items
+const partnerNavigationItems = [
+  { name: "My Nexus", href: "/partner", icon: Building2 },
+];
+
 // Owner-only navigation items
 const ownerNavigationItems: typeof navigationItems = [];
 
@@ -127,13 +132,20 @@ export default function NewSidebar() {
     gcTime: 30 * 60 * 1000, // 30 minutes
   });
 
-  // Fetch accessible tenants for organization dropdown
+  // Fetch accessible tenants for organization dropdown (Enhanced for Partner-Client System)
   const { data: accessibleTenants = [] } = useQuery<Array<{
     id: string;
     name: string;
     settings?: {
       companyName?: string;
       tagline?: string;
+    };
+    accessType?: 'system' | 'partner_client' | 'owner';
+    relationship?: {
+      accessLevel: string;
+      permissions: string[];
+      establishedAt: string;
+      lastAccessedAt?: string;
     };
   }>>({
     queryKey: ['/api/user/accessible-tenants'],
@@ -176,7 +188,7 @@ export default function NewSidebar() {
     return location === href || location.startsWith(href + "/") || location.startsWith(href + "?");
   };
 
-  // Get all navigation items based on user role
+  // Get all navigation items based on user role (Enhanced for Partner-Client System)
   const getAllNavigationItems = () => {
     let allItems = [...navigationItems];
     
@@ -185,10 +197,32 @@ export default function NewSidebar() {
       allItems = [...allItems, ...ownerNavigationItems];
     }
     
+    // Add partner-specific items if user is a partner
+    if ((user as any)?.role === "partner") {
+      allItems = [...partnerNavigationItems, ...allItems];
+    }
+    
     return allItems;
   };
 
-  const canSwitchOrganizations = (user as any)?.role === "owner" && accessibleTenants.length > 1;
+  // Enhanced logic for partner-client system: owners AND partners can switch organizations
+  const canSwitchOrganizations = (
+    ((user as any)?.role === "owner" || (user as any)?.role === "partner") && 
+    accessibleTenants.length > 1
+  );
+  
+  // Separate tenants by access type for better UX
+  const tenantsByType = useMemo(() => {
+    const systemTenants = accessibleTenants.filter(t => t.accessType === 'system');
+    const ownedTenants = accessibleTenants.filter(t => t.accessType === 'owner');
+    const partnerClientTenants = accessibleTenants.filter(t => t.accessType === 'partner_client');
+    
+    return {
+      system: systemTenants,
+      owned: ownedTenants,
+      partnerClients: partnerClientTenants
+    };
+  }, [accessibleTenants]);
 
   // Computed properties for organization filtering
   const organizationsToShow = useMemo(() => {
@@ -323,35 +357,118 @@ export default function NewSidebar() {
                       )}
                     </div>
                     
-                    {/* Organization List */}
+                    {/* Enhanced Organization List with Partner-Client Support */}
                     <div className="max-h-64 overflow-y-auto">
                       {organizationsToShow.length > 0 ? (
-                        organizationsToShow.map((org) => {
-                          const companyName = org.settings?.companyName || org.name;
-                          const initials = getCompanyInitials(companyName);
-                          const isCurrentOrg = org.id === tenant?.id;
-                          
-                          return (
-                            <DropdownMenuItem
-                              key={org.id}
-                              className="pl-3 pr-3 py-3 cursor-pointer hover:bg-gray-50 mx-2"
-                              onClick={() => handleOrganizationSelect(org.id)}
-                              data-testid={`dropdown-organization-${org.id}`}
-                            >
-                              <div className="flex items-center space-x-3 w-full">
-                                <div className="w-8 h-8 rounded-lg bg-[#17B6C3] flex items-center justify-center text-white font-bold text-xs">
-                                  {initials}
-                                </div>
-                                <div className="flex-1 text-left">
-                                  <div className="font-medium text-sm text-gray-900">{companyName}</div>
-                                </div>
-                                {isCurrentOrg && (
-                                  <Check className="h-4 w-4 text-[#17B6C3] stroke-[3]" />
-                                )}
-                              </div>
-                            </DropdownMenuItem>
-                          );
-                        })
+                        <div>
+                          {/* Show search results without categorization */}
+                          {orgSearchQuery.trim() ? (
+                            organizationsToShow.map((org) => {
+                              const companyName = org.settings?.companyName || org.name;
+                              const initials = getCompanyInitials(companyName);
+                              const isCurrentOrg = org.id === tenant?.id;
+                              const accessBadge = org.accessType === 'partner_client' ? 'Client' : 
+                                                 org.accessType === 'system' ? 'System' : 'Owned';
+                              
+                              return (
+                                <DropdownMenuItem
+                                  key={org.id}
+                                  className="pl-3 pr-3 py-3 cursor-pointer hover:bg-gray-50 mx-2"
+                                  onClick={() => handleOrganizationSelect(org.id)}
+                                  data-testid={`dropdown-organization-${org.id}`}
+                                >
+                                  <div className="flex items-center space-x-3 w-full">
+                                    <div className="w-8 h-8 rounded-lg bg-[#17B6C3] flex items-center justify-center text-white font-bold text-xs">
+                                      {initials}
+                                    </div>
+                                    <div className="flex-1 text-left">
+                                      <div className="font-medium text-sm text-gray-900">{companyName}</div>
+                                      <div className="text-xs text-gray-500">{accessBadge}</div>
+                                    </div>
+                                    {isCurrentOrg && (
+                                      <Check className="h-4 w-4 text-[#17B6C3] stroke-[3]" />
+                                    )}
+                                  </div>
+                                </DropdownMenuItem>
+                              );
+                            })
+                          ) : (
+                            /* Categorized view for non-search */
+                            <div>
+                              {/* My Clients Section (for partners) */}
+                              {tenantsByType.partnerClients.length > 0 && (
+                                <>
+                                  <div className="px-3 py-2 text-xs font-medium text-gray-500 bg-gray-50">
+                                    My Clients
+                                  </div>
+                                  {tenantsByType.partnerClients.map((org) => {
+                                    const companyName = org.settings?.companyName || org.name;
+                                    const initials = getCompanyInitials(companyName);
+                                    const isCurrentOrg = org.id === tenant?.id;
+                                    const lastAccessed = org.relationship?.lastAccessedAt ? 
+                                      new Date(org.relationship.lastAccessedAt).toLocaleDateString() : null;
+                                    
+                                    return (
+                                      <DropdownMenuItem
+                                        key={org.id}
+                                        className="pl-3 pr-3 py-3 cursor-pointer hover:bg-gray-50 mx-2"
+                                        onClick={() => handleOrganizationSelect(org.id)}
+                                        data-testid={`dropdown-client-${org.id}`}
+                                      >
+                                        <div className="flex items-center space-x-3 w-full">
+                                          <div className="w-8 h-8 rounded-lg bg-[#17B6C3] flex items-center justify-center text-white font-bold text-xs">
+                                            {initials}
+                                          </div>
+                                          <div className="flex-1 text-left">
+                                            <div className="font-medium text-sm text-gray-900">{companyName}</div>
+                                            <div className="text-xs text-gray-500">
+                                              {org.relationship?.accessLevel} access
+                                              {lastAccessed && ` • Last: ${lastAccessed}`}
+                                            </div>
+                                          </div>
+                                          {isCurrentOrg && (
+                                            <Check className="h-4 w-4 text-[#17B6C3] stroke-[3]" />
+                                          )}
+                                        </div>
+                                      </DropdownMenuItem>
+                                    );
+                                  })}
+                                  {(tenantsByType.system.length > 0 || tenantsByType.owned.length > 0) && (
+                                    <div className="mx-4 my-2 h-px bg-gray-200"></div>
+                                  )}
+                                </>
+                              )}
+                              
+                              {/* System & Owned Organizations */}
+                              {[...tenantsByType.system, ...tenantsByType.owned].map((org) => {
+                                const companyName = org.settings?.companyName || org.name;
+                                const initials = getCompanyInitials(companyName);
+                                const isCurrentOrg = org.id === tenant?.id;
+                                
+                                return (
+                                  <DropdownMenuItem
+                                    key={org.id}
+                                    className="pl-3 pr-3 py-3 cursor-pointer hover:bg-gray-50 mx-2"
+                                    onClick={() => handleOrganizationSelect(org.id)}
+                                    data-testid={`dropdown-organization-${org.id}`}
+                                  >
+                                    <div className="flex items-center space-x-3 w-full">
+                                      <div className="w-8 h-8 rounded-lg bg-[#17B6C3] flex items-center justify-center text-white font-bold text-xs">
+                                        {initials}
+                                      </div>
+                                      <div className="flex-1 text-left">
+                                        <div className="font-medium text-sm text-gray-900">{companyName}</div>
+                                      </div>
+                                      {isCurrentOrg && (
+                                        <Check className="h-4 w-4 text-[#17B6C3] stroke-[3]" />
+                                      )}
+                                    </div>
+                                  </DropdownMenuItem>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
                       ) : (
                         <div className="px-5 py-3 text-sm text-gray-500 text-center">
                           {orgSearchQuery ? "No organizations found" : "No organizations available"}
