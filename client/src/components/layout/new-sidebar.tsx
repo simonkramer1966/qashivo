@@ -28,7 +28,9 @@ import {
   Gauge,
   Target,
   Phone,
-  CreditCard
+  CreditCard,
+  BookOpen,
+  Calculator
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -190,9 +192,16 @@ export default function NewSidebar() {
 
   // Get all navigation items based on user role (Enhanced for Partner-Client System)
   const getAllNavigationItems = () => {
-    // For business dashboard, only show Dashboard
-    if (location === '/business-dashboard') {
-      return [{ name: "Dashboard", href: "/business-dashboard", icon: Gauge }];
+    // For business dashboard, show business management items
+    if (location === '/business-dashboard' || location.startsWith('/business-dashboard')) {
+      return [
+        { name: "Dashboard", href: "/business-dashboard", icon: Gauge },
+        { name: "Clients", href: "/business-dashboard/clients", icon: Users },
+        { name: "Partners", href: "/business-dashboard/partners", icon: Building2 },
+        { name: "Prices & Plans", href: "/business-dashboard/pricing", icon: CreditCard },
+        { name: "Payment Processing", href: "/business-dashboard/payments", icon: Calculator },
+        { name: "Accounting", href: "/business-dashboard/accounting", icon: BookOpen }
+      ];
     }
     
     let allItems = [...navigationItems];
@@ -612,24 +621,6 @@ export default function NewSidebar() {
         </ul>
       </nav>
 
-      {/* Footer - CFO Charlie */}
-      <div className={cn("border-t border-white/30 glass-card-light", isCollapsed ? "p-2" : "p-4")}>
-        <button
-          onClick={() => handleNavigation("/ai-cfo")}
-          className={cn(
-            "w-full flex items-center rounded-lg text-sm font-medium transition-all duration-200 text-left",
-            isCollapsed ? "justify-center px-2 py-3" : "space-x-3 px-4 py-3",
-            isActivePath("/ai-cfo")
-              ? "bg-[#17B6C3] text-white shadow-sm"
-              : "text-gray-600 hover:bg-white hover:text-gray-900 hover:shadow-sm"
-          )}
-          data-testid="nav-cfo-charlie"
-          title={isCollapsed ? "CFO Charlie" : undefined}
-        >
-          <Bot className="w-5 h-5" />
-          {!isCollapsed && <span>CFO Charlie</span>}
-        </button>
-      </div>
     </aside>
 
     </>
