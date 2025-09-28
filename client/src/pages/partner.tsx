@@ -173,7 +173,7 @@ export default function PartnerDashboard() {
               <Building2 className="h-6 w-6 text-[#17B6C3]" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">My Nexus</h1>
+              <h1 className="text-2xl font-bold text-gray-900">My Qashivo</h1>
               <p className="text-gray-500">Manage your client relationships and invitations</p>
             </div>
           </div>
