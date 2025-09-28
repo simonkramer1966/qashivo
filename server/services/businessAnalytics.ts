@@ -340,29 +340,29 @@ export class BusinessAnalyticsService {
     activeRelationships: number;
     avgClientsPerPartner: number;
   }> {
-    const [totalResult, activeResult, avgResult] = await Promise.all([
+    const [totalResult, activeResult] = await Promise.all([
       db.select({ count: count() }).from(partnerClientRelationships),
       db.select({ count: count() }).from(partnerClientRelationships)
-        .where(eq(partnerClientRelationships.status, 'active')),
-      db.select({ 
-        partnerCount: count(),
-        avgClients: avg(sql`CAST(client_count AS DECIMAL)`)
-      }).from(
-        db.select({
-          partnerTenantId: partnerClientRelationships.partnerTenantId,
-          client_count: count()
-        })
-        .from(partnerClientRelationships)
         .where(eq(partnerClientRelationships.status, 'active'))
-        .groupBy(partnerClientRelationships.partnerTenantId)
-        .as('partner_stats')
-      )
     ]);
+
+    // Calculate average clients per partner with a simpler approach
+    const partnerClientCounts = await db
+      .select({
+        partnerTenantId: partnerClientRelationships.partnerTenantId,
+        clientCount: count()
+      })
+      .from(partnerClientRelationships)
+      .where(eq(partnerClientRelationships.status, 'active'))
+      .groupBy(partnerClientRelationships.partnerTenantId);
+
+    const avgClientsPerPartner = partnerClientCounts.length > 0 ? 
+      partnerClientCounts.reduce((sum, p) => sum + p.clientCount, 0) / partnerClientCounts.length : 0;
 
     return {
       totalRelationships: totalResult[0]?.count || 0,
       activeRelationships: activeResult[0]?.count || 0,
-      avgClientsPerPartner: parseFloat(avgResult[0]?.avgClients || '0')
+      avgClientsPerPartner: avgClientsPerPartner
     };
   }
 

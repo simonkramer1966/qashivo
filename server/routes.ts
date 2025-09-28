@@ -147,6 +147,49 @@ const bulkNudgeSchema = z.object({
   templateId: z.string().optional(),
   customMessage: z.string().optional()
 });
+
+// Client & Partner Management validation schemas
+const clientsQuerySchema = z.object({
+  search: z.string().optional(),
+  partnerId: z.string().optional(),
+  subscriptionStatus: z.enum(['active', 'trial', 'canceled', 'past_due', 'unpaid']).optional(),
+  healthScore: z.enum(['low', 'medium', 'high', 'critical']).optional(),
+  planType: z.enum(['partner', 'client']).optional(),
+  createdAfter: z.string().optional().transform(str => str ? new Date(str) : undefined),
+  createdBefore: z.string().optional().transform(str => str ? new Date(str) : undefined),
+  lastActivityAfter: z.string().optional().transform(str => str ? new Date(str) : undefined),
+  page: z.string().optional().default('1').transform(Number),
+  limit: z.string().optional().default('50').transform(Number),
+  sortBy: z.enum(['name', 'health', 'revenue', 'lastActivity', 'createdAt']).optional().default('name'),
+  sortDirection: z.enum(['asc', 'desc']).optional().default('asc')
+});
+
+const partnersQuerySchema = z.object({
+  search: z.string().optional(),
+  performanceScore: z.enum(['low', 'medium', 'high']).optional(),
+  clientCountMin: z.string().optional().transform(Number),
+  clientCountMax: z.string().optional().transform(Number),
+  revenueMin: z.string().optional().transform(Number),
+  revenueMax: z.string().optional().transform(Number),
+  joinedAfter: z.string().optional().transform(str => str ? new Date(str) : undefined),
+  joinedBefore: z.string().optional().transform(str => str ? new Date(str) : undefined),
+  page: z.string().optional().default('1').transform(Number),
+  limit: z.string().optional().default('50').transform(Number),
+  sortBy: z.enum(['name', 'performance', 'revenue', 'clients', 'joinDate']).optional().default('name'),
+  sortDirection: z.enum(['asc', 'desc']).optional().default('asc')
+});
+
+const assignPartnerSchema = z.object({
+  partnerId: z.string().min(1, 'Partner ID is required')
+});
+
+const commissionsQuerySchema = z.object({
+  period: z.string().optional(), // "2025-01" format
+  partnerId: z.string().optional(),
+  status: z.enum(['pending', 'calculated', 'paid']).optional(),
+  page: z.string().optional().default('1').transform(Number),
+  limit: z.string().optional().default('50').transform(Number)
+});
 import { generateCollectionSuggestions, generateEmailDraft, generateAiCfoResponse } from "./services/openai";
 import { sendReminderEmail, DEFAULT_FROM, DEFAULT_FROM_EMAIL } from "./services/sendgrid";
 import { sendPaymentReminderSMS } from "./services/twilio";
@@ -165,6 +208,7 @@ import { webhookHandler } from "./services/webhookHandler";
 import { ForecastEngine, type ForecastConfig, type ForecastScenario } from "../shared/forecast";
 import { subscriptionService } from "./services/subscriptionService";
 import { businessAnalyticsService } from "./services/businessAnalytics";
+import { clientPartnerService } from "./services/clientPartnerService";
 
 // Initialize Stripe
 if (!process.env.STRIPE_SECRET_KEY) {
@@ -808,6 +852,119 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('Error fetching partner metrics:', error);
       res.status(500).json({ 
         message: 'Failed to fetch partner metrics', 
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Client & Partner Management Endpoints (Owner Only)
+  
+  // GET /api/business/clients - Complete client directory with filtering
+  app.get('/api/business/clients', isAuthenticated, isOwner, async (req: any, res) => {
+    try {
+      const filters = clientsQuerySchema.parse(req.query);
+      const result = await clientPartnerService.getClientDirectory(filters);
+      res.json(result);
+    } catch (error) {
+      console.error('Error fetching client directory:', error);
+      res.status(500).json({ 
+        message: 'Failed to fetch client directory', 
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // GET /api/business/clients/:id/health - Individual client health details
+  app.get('/api/business/clients/:id/health', isAuthenticated, isOwner, async (req: any, res) => {
+    try {
+      const { id: tenantId } = req.params;
+      const healthDetails = await clientPartnerService.getClientHealthDetails(tenantId);
+      res.json(healthDetails);
+    } catch (error) {
+      console.error('Error fetching client health details:', error);
+      res.status(500).json({ 
+        message: 'Failed to fetch client health details', 
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // GET /api/business/partners/:id/performance - Partner performance metrics
+  app.get('/api/business/partners/:id/performance', isAuthenticated, isOwner, async (req: any, res) => {
+    try {
+      const { id: partnerId } = req.params;
+      const performance = await clientPartnerService.getPartnerPerformance(partnerId);
+      res.json(performance);
+    } catch (error) {
+      console.error('Error fetching partner performance:', error);
+      res.status(500).json({ 
+        message: 'Failed to fetch partner performance', 
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // GET /api/business/commissions - Commission tracking and reports
+  app.get('/api/business/commissions', isAuthenticated, isOwner, async (req: any, res) => {
+    try {
+      const filters = commissionsQuerySchema.parse(req.query);
+      const period = filters.period || new Date().toISOString().slice(0, 7); // Current month as default
+      const commissions = await clientPartnerService.calculateCommissions(period);
+      
+      // Apply filters
+      let filteredCommissions = commissions;
+      if (filters.partnerId) {
+        filteredCommissions = commissions.filter(c => c.partnerId === filters.partnerId);
+      }
+      if (filters.status) {
+        filteredCommissions = filteredCommissions.filter(c => c.status === filters.status);
+      }
+
+      // Pagination
+      const total = filteredCommissions.length;
+      const totalPages = Math.ceil(total / filters.limit);
+      const offset = (filters.page - 1) * filters.limit;
+      const paginatedCommissions = filteredCommissions.slice(offset, offset + filters.limit);
+
+      res.json({
+        commissions: paginatedCommissions,
+        total,
+        pagination: { 
+          page: filters.page, 
+          limit: filters.limit, 
+          totalPages 
+        }
+      });
+    } catch (error) {
+      console.error('Error fetching commissions:', error);
+      res.status(500).json({ 
+        message: 'Failed to fetch commissions', 
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // POST /api/business/clients/:id/assign-partner - Change partner assignments
+  app.post('/api/business/clients/:id/assign-partner', isAuthenticated, isOwner, async (req: any, res) => {
+    try {
+      const { id: clientTenantId } = req.params;
+      const { partnerId } = assignPartnerSchema.parse(req.body);
+      
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user) {
+        return res.status(401).json({ message: "User not found" });
+      }
+
+      await clientPartnerService.assignClientToPartner(clientTenantId, partnerId, user.id);
+      
+      res.json({ 
+        success: true, 
+        message: "Client successfully assigned to new partner" 
+      });
+    } catch (error) {
+      console.error('Error assigning client to partner:', error);
+      res.status(500).json({ 
+        message: 'Failed to assign client to partner', 
         error: error instanceof Error ? error.message : 'Unknown error'
       });
     }

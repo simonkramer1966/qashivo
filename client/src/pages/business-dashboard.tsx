@@ -13,7 +13,10 @@ import {
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
-  ShieldAlert
+  ShieldAlert,
+  Heart,
+  UserCheck,
+  FileText
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -44,6 +47,9 @@ import { cn } from "@/lib/utils";
 import ProtectedComponent from "@/components/rbac/ProtectedComponent";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import NewSidebar from "@/components/layout/new-sidebar";
+import ClientDirectory from "@/components/dashboard/ClientDirectory";
+import PartnerPerformanceDashboard from "@/components/dashboard/PartnerPerformanceDashboard";
+import CommissionTracking from "@/components/dashboard/CommissionTracking";
 
 interface BusinessMetrics {
   mrr: number;
@@ -341,11 +347,19 @@ function BusinessDashboardContent() {
 
         {/* Main Analytics Tabs */}
         <Tabs defaultValue="revenue" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4 glass-card-light">
+          <TabsList className="grid w-full grid-cols-6 glass-card-light">
             <TabsTrigger value="revenue" data-testid="tab-revenue">Revenue</TabsTrigger>
             <TabsTrigger value="clients" data-testid="tab-clients">Clients</TabsTrigger>
             <TabsTrigger value="partners" data-testid="tab-partners">Partners</TabsTrigger>
             <TabsTrigger value="performance" data-testid="tab-performance">Performance</TabsTrigger>
+            <TabsTrigger value="client-management" data-testid="tab-client-management">
+              <Heart className="h-4 w-4 mr-1" />
+              Client Management
+            </TabsTrigger>
+            <TabsTrigger value="partner-operations" data-testid="tab-partner-operations">
+              <UserCheck className="h-4 w-4 mr-1" />
+              Partner Operations
+            </TabsTrigger>
           </TabsList>
 
           {/* Revenue Analytics Tab */}
@@ -697,6 +711,26 @@ function BusinessDashboardContent() {
                 </div>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          {/* Client Management Tab */}
+          <TabsContent value="client-management" className="space-y-6">
+            <ClientDirectory />
+          </TabsContent>
+
+          {/* Partner Operations Tab */}
+          <TabsContent value="partner-operations" className="space-y-6">
+            <div className="space-y-6">
+              <PartnerPerformanceDashboard />
+              
+              <div className="border-t pt-6">
+                <h3 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
+                  <FileText className="h-5 w-5" />
+                  Commission Tracking
+                </h3>
+                <CommissionTracking />
+              </div>
+            </div>
           </TabsContent>
         </Tabs>
       </div>
