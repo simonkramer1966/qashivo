@@ -163,14 +163,77 @@ export default function NewSidebar() {
       return response.json();
     },
     onSuccess: () => {
-      // Invalidate specific queries to refresh data for the new tenant
+      // Comprehensive query invalidation to ensure complete tenant isolation
+      
+      // Core tenant and user data
       queryClient.invalidateQueries({ queryKey: ['/api/tenant'] });
       queryClient.invalidateQueries({ queryKey: ['/api/user/accessible-tenants'] });
       queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
+      
+      // Dashboard core metrics and components
       queryClient.invalidateQueries({ queryKey: ['/api/dashboard/metrics'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/dashboard/recent-activity'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/dashboard/top-debtors'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/dashboard/exceptions'] });
+      
+      // Core business data
       queryClient.invalidateQueries({ queryKey: ['/api/invoices'] });
       queryClient.invalidateQueries({ queryKey: ['/api/contacts'] });
       queryClient.invalidateQueries({ queryKey: ['/api/collections'] });
+      
+      // Business analytics and partner system
+      queryClient.invalidateQueries({ predicate: (query) => {
+        const key = query.queryKey[0];
+        return typeof key === 'string' && key.startsWith('/api/business/');
+      }});
+      
+      // ML and AI analytics
+      queryClient.invalidateQueries({ predicate: (query) => {
+        const key = query.queryKey[0];
+        return typeof key === 'string' && key.startsWith('/api/ml/');
+      }});
+      
+      // Collections and AI learning
+      queryClient.invalidateQueries({ predicate: (query) => {
+        const key = query.queryKey[0];
+        return typeof key === 'string' && (
+          key.startsWith('/api/collections/') ||
+          key.startsWith('/api/ai/')
+        );
+      }});
+      
+      // Voice and call data
+      queryClient.invalidateQueries({ predicate: (query) => {
+        const key = query.queryKey[0];
+        return typeof key === 'string' && key.startsWith('/api/voice/');
+      }});
+      
+      // Integration-specific data
+      queryClient.invalidateQueries({ predicate: (query) => {
+        const key = query.queryKey[0];
+        return typeof key === 'string' && (
+          key.startsWith('/api/xero/') ||
+          key.startsWith('/api/quickbooks/') ||
+          key.startsWith('/api/sage/') ||
+          key.startsWith('/api/retell/')
+        );
+      }});
+      
+      // Settings and configuration
+      queryClient.invalidateQueries({ predicate: (query) => {
+        const key = query.queryKey[0];
+        return typeof key === 'string' && (
+          key.startsWith('/api/accounting/') ||
+          key.startsWith('/api/subscription/') ||
+          key.startsWith('/api/rbac/')
+        );
+      }});
+
+      // Force immediate refetch of critical dashboard queries
+      queryClient.refetchQueries({ queryKey: ['/api/dashboard/metrics'] });
+      queryClient.refetchQueries({ queryKey: ['/api/dashboard/recent-activity'] });
+      queryClient.refetchQueries({ queryKey: ['/api/dashboard/top-debtors'] });
+      queryClient.refetchQueries({ queryKey: ['/api/dashboard/exceptions'] });
     },
   });
 
