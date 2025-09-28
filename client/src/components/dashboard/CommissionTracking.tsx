@@ -480,7 +480,7 @@ export default function CommissionTracking() {
   // Build query string from filters
   const queryParams = new URLSearchParams();
   Object.entries(filters).forEach(([key, value]) => {
-    if (value && value !== '') {
+    if (value && value !== '' && value !== 'all') {
       queryParams.append(key, value.toString());
     }
   });
@@ -583,7 +583,7 @@ export default function CommissionTracking() {
                   <SelectValue placeholder="All Statuses" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Statuses</SelectItem>
+                  <SelectItem value="all">All Statuses</SelectItem>
                   <SelectItem value="pending">Pending</SelectItem>
                   <SelectItem value="calculated">Calculated</SelectItem>
                   <SelectItem value="paid">Paid</SelectItem>

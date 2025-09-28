@@ -189,7 +189,7 @@ export default function ClientDirectory() {
   // Build query string from filters
   const queryParams = new URLSearchParams();
   Object.entries(filters).forEach(([key, value]) => {
-    if (value && value !== '') {
+    if (value && value !== '' && value !== 'all') {
       queryParams.append(key, value.toString());
     }
   });
@@ -287,7 +287,7 @@ export default function ClientDirectory() {
                 <SelectValue placeholder="Health Score" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Health Scores</SelectItem>
+                <SelectItem value="all">All Health Scores</SelectItem>
                 <SelectItem value="low">Low Risk (80-100%)</SelectItem>
                 <SelectItem value="medium">Medium Risk (60-79%)</SelectItem>
                 <SelectItem value="high">High Risk (40-59%)</SelectItem>
@@ -301,7 +301,7 @@ export default function ClientDirectory() {
                 <SelectValue placeholder="Subscription Status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Statuses</SelectItem>
+                <SelectItem value="all">All Statuses</SelectItem>
                 <SelectItem value="active">Active</SelectItem>
                 <SelectItem value="trial">Trial</SelectItem>
                 <SelectItem value="canceled">Canceled</SelectItem>
