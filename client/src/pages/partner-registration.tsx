@@ -150,7 +150,7 @@ export default function PartnerRegistration() {
                 <CreditCard className="h-6 w-6 text-[#17B6C3]" />
               </div>
               <h3 className="font-bold text-slate-900 mb-2">Wholesale Pricing</h3>
-              <p className="text-sm text-slate-600">£19/client vs £29 direct. Better margins for your business.</p>
+              <p className="text-sm text-slate-600">Generous affiliate partner pricing giving better margins for your business.</p>
             </CardContent>
           </Card>
         </div>
