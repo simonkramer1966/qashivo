@@ -182,6 +182,22 @@ export default function Cashboard() {
     refetchOnMount: false,
   });
 
+  // Fetch top debtors data
+  const { data: topDebtorsData, isLoading: debtorsLoading } = useQuery<Array<{
+    id: string;
+    rank: number;
+    company: string;
+    amount: number;
+    invoiceCount: number;
+    oldestInvoiceDate: Date | null;
+    email: string | null;
+    phone: string | null;
+  }>>({
+    queryKey: ["/api/dashboard/top-debtors"],
+    enabled: isAuthenticated,
+    refetchOnMount: false,
+  });
+
   // Calculate derived metrics from real data
   const totalOutstanding = metrics?.totalOutstanding || 0;
   
@@ -418,7 +434,7 @@ export default function Cashboard() {
   );
 
   // Health status loading
-  if (metricsLoading || cashflowLoading || overdueLoading || agingLoading || activityLoading) {
+  if (metricsLoading || cashflowLoading || overdueLoading || agingLoading || activityLoading || debtorsLoading) {
     return (
       <div className="flex h-screen bg-background">
         <NewSidebar />
@@ -801,21 +817,11 @@ export default function Cashboard() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="divide-y divide-gray-200/30">
-                    {[
-                      { id: 1, company: 'MegaCorp Industries', amount: 45600 },
-                      { id: 2, company: 'Global Tech Solutions', amount: 32400 },
-                      { id: 3, company: 'Premium Services Ltd', amount: 28900 },
-                      { id: 4, company: 'Digital Innovations', amount: 19750 },
-                      { id: 5, company: 'Creative Solutions', amount: 15200 },
-                      { id: 6, company: 'Advanced Systems Corp', amount: 12800 },
-                      { id: 7, company: 'Innovation Partners', amount: 9600 },
-                      { id: 8, company: 'Future Tech Ltd', amount: 7450 },
-                      { id: 9, company: 'Smart Solutions Inc', amount: 6200 },
-                      { id: 10, company: 'NextGen Enterprises', amount: 4950 }
-                    ].map((debtor) => {
-                      const concentrationPercentage = ((debtor.amount / (totalOutstanding || 1)) * 100).toFixed(1);
-                      return (
+                  {topDebtorsData && topDebtorsData.length > 0 ? (
+                    <div className="divide-y divide-gray-200/30">
+                      {topDebtorsData.map((debtor) => {
+                        const concentrationPercentage = ((debtor.amount / (totalOutstanding || 1)) * 100).toFixed(1);
+                        return (
                         <div key={debtor.id} className="flex justify-between items-center py-1.5 text-xs">
                           <span className="text-slate-900 dark:text-slate-100 truncate flex-1 min-w-0 font-medium">
                             {debtor.company}
@@ -829,9 +835,15 @@ export default function Cashboard() {
                             </span>
                           </div>
                         </div>
-                      );
-                    })}
-                  </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-slate-600 dark:text-slate-400">
+                      <Users className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                      <p>No debtors found</p>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </div>
