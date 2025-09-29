@@ -41,6 +41,7 @@ import LeadFlowSettings from "@/pages/leadflow-settings";
 import CallLogs from "@/pages/call-logs";
 import PaymentPlans from "@/pages/payment-plans";
 import PartnerDashboard from "@/pages/partner";
+import PartnerRegistration from "@/pages/partner-registration";
 import BusinessDashboard from "@/pages/business-dashboard";
 import { OnboardingWizard } from "@/components/OnboardingWizard";
 import { useAuth } from "@/hooks/useAuth";
@@ -69,6 +70,7 @@ function Router() {
       <Route path="/about" component={About} />
       <Route path="/investors" component={Investors} />
       <Route path="/contact" component={Contact} />
+      <Route path="/partner/register" component={PartnerRegistration} />
       <Route path="/" component={Landing} />
       <Route path="/:rest*" component={NotFound} />
     </Switch>

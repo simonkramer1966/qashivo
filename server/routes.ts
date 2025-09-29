@@ -8395,6 +8395,62 @@ Payment required immediately to avoid collection action. Contact us NOW.`
     }
   });
 
+  // Partner registration endpoint (no auth required)
+  app.post('/api/partner/register', async (req: any, res) => {
+    try {
+      const { companyName, contactName, email, phone, website, expectedClients } = req.body;
+      
+      // Validate required fields
+      if (!companyName || !contactName || !email || !phone || !expectedClients) {
+        return res.status(400).json({ message: 'Missing required fields' });
+      }
+      
+      // Create tenant for partner
+      const tenant = await storage.createTenant({
+        name: companyName,
+        subdomain: `partner-${companyName.toLowerCase().replace(/[^a-z0-9]/g, '-')}`,
+        companyName,
+        primaryContactName: contactName,
+        primaryContactEmail: email,
+        phone,
+        website: website || undefined,
+      });
+      
+      // Create tenant metadata with partner type and trial
+      const trialStartDate = new Date();
+      const trialEndDate = new Date();
+      trialEndDate.setDate(trialEndDate.getDate() + 30); // 30-day trial
+      
+      await storage.createTenantMetadata({
+        tenantId: tenant.id,
+        tenantType: 'partner',
+        isInTrial: true,
+        trialStartDate,
+        trialEndDate,
+        usageLimits: {
+          maxClients: parseInt(expectedClients.split('-')[1] || expectedClients) || 10,
+          maxUsers: 5,
+        },
+        currentUsage: {
+          clients: 0,
+          users: 0,
+        },
+      });
+      
+      // TODO: Send welcome email with login instructions
+      console.log(`✅ Partner registration: ${companyName} (${email}) - 30-day trial started`);
+      
+      res.json({ 
+        message: 'Partner registration successful', 
+        tenantId: tenant.id,
+        trialEndDate 
+      });
+    } catch (error) {
+      console.error('Partner registration error:', error);
+      res.status(500).json({ message: 'Registration failed. Please try again.' });
+    }
+  });
+
   // Stripe payment route for one-time payments
   app.post("/api/create-payment-intent", isAuthenticated, async (req: any, res) => {
     try {
