@@ -44,6 +44,9 @@ import {
   type ActionLog,
   type PaymentPromise,
   invoices,
+  contacts,
+  actions,
+  bankTransactions,
   seasonalPatterns,
   customerLearningProfiles
 } from "@shared/schema";
@@ -1345,7 +1348,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           createdAt: actions.createdAt,
           contactName: contacts.name,
           invoiceNumber: invoices.invoiceNumber,
-          invoiceAmount: invoices.amountDue,
+          invoiceAmount: invoices.amount,
         })
         .from(actions)
         .leftJoin(contacts, eq(actions.contactId, contacts.id))
@@ -1380,8 +1383,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .orderBy(desc(bankTransactions.createdAt))
         .limit(10);
 
+      // Define activity type
+      interface Activity {
+        id: string;
+        type: string;
+        customer: string;
+        amount: number;
+        time: string;
+        timestamp: Date | null;
+        source: 'action' | 'payment';
+      }
+
       // Combine and format the activities
-      const activities = [];
+      const activities: Activity[] = [];
 
       // Add collection actions
       recentActions.forEach(action => {

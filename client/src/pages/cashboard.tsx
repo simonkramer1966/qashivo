@@ -167,6 +167,21 @@ export default function Cashboard() {
     refetchOnMount: false,
   });
 
+  // Fetch recent activity data
+  const { data: recentActivityData, isLoading: activityLoading } = useQuery<Array<{
+    id: string;
+    type: string;
+    customer: string;
+    amount: number;
+    time: string;
+    timestamp: Date | null;
+    source: 'action' | 'payment';
+  }>>({
+    queryKey: ["/api/dashboard/recent-activity"],
+    enabled: isAuthenticated,
+    refetchOnMount: false,
+  });
+
   // Calculate derived metrics from real data
   const totalOutstanding = metrics?.totalOutstanding || 0;
   
@@ -403,7 +418,7 @@ export default function Cashboard() {
   );
 
   // Health status loading
-  if (metricsLoading || cashflowLoading || overdueLoading || agingLoading) {
+  if (metricsLoading || cashflowLoading || overdueLoading || agingLoading || activityLoading) {
     return (
       <div className="flex h-screen bg-background">
         <NewSidebar />
@@ -745,65 +760,9 @@ export default function Cashboard() {
                 </CardHeader>
                 <CardContent>
                   <div className="max-h-64 overflow-y-auto">
-                    <div className="divide-y divide-gray-200/30">
-                      {[
-                        {
-                          id: 1,
-                          type: 'payment',
-                          customer: 'Acme Corp Ltd',
-                          amount: 2450,
-                          time: '2 hours'
-                        },
-                        {
-                          id: 2,
-                          type: 'overdue',
-                          customer: 'Digital Solutions Inc',
-                          amount: 8750,
-                          time: '4 hours'
-                        },
-                        {
-                          id: 3,
-                          type: 'reminder',
-                          customer: 'Tech Innovations Ltd',
-                          amount: 1200,
-                          time: '6 hours'
-                        },
-                        {
-                          id: 4,
-                          type: 'payment',
-                          customer: 'Creative Agency',
-                          amount: 5600,
-                          time: '1 day'
-                        },
-                        {
-                          id: 5,
-                          type: 'dispute',
-                          customer: 'Global Systems',
-                          amount: 3400,
-                          time: '2 days'
-                        },
-                        {
-                          id: 6,
-                          type: 'payment',
-                          customer: 'Marketing Plus',
-                          amount: 1800,
-                          time: '3 days'
-                        },
-                        {
-                          id: 7,
-                          type: 'reminder',
-                          customer: 'Design Studio',
-                          amount: 4200,
-                          time: '4 days'
-                        },
-                        {
-                          id: 8,
-                          type: 'overdue',
-                          customer: 'Tech Consultants',
-                          amount: 6300,
-                          time: '5 days'
-                        }
-                      ].map((activity) => (
+                    {recentActivityData && recentActivityData.length > 0 ? (
+                      <div className="divide-y divide-gray-200/30">
+                        {recentActivityData.map((activity) => (
                         <div key={activity.id} className="grid grid-cols-4 gap-2 items-center py-1.5 text-xs">
                           <span className="text-slate-900 dark:text-slate-100 font-medium truncate">
                             {activity.customer}
@@ -821,8 +780,14 @@ export default function Cashboard() {
                             {activity.time}
                           </span>
                         </div>
-                      ))}
-                    </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-8 text-slate-600 dark:text-slate-400">
+                        <Activity className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                        <p>No recent activity</p>
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>
