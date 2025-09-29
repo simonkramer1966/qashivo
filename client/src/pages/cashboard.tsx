@@ -144,6 +144,29 @@ export default function Cashboard() {
     refetchOnMount: false,
   });
 
+  // Fetch aging analysis data
+  const { data: agingData, isLoading: agingLoading } = useQuery<{
+    buckets: Array<{
+      bucket: string;
+      amount: number;
+      count: number;
+      percentage: number;
+      countPercentage: number;
+      averageAmount: number;
+      topCustomers: Array<{ name: string; amount: number }>;
+    }>;
+    summary: {
+      totalOutstanding: number;
+      totalInvoices: number;
+      averageAge: number;
+      oldestInvoice: number;
+    };
+  }>({
+    queryKey: ["/api/analytics/aging-analysis"],
+    enabled: isAuthenticated,
+    refetchOnMount: false,
+  });
+
   // Calculate derived metrics from real data
   const totalOutstanding = metrics?.totalOutstanding || 0;
   
@@ -380,7 +403,7 @@ export default function Cashboard() {
   );
 
   // Health status loading
-  if (metricsLoading || cashflowLoading || overdueLoading) {
+  if (metricsLoading || cashflowLoading || overdueLoading || agingLoading) {
     return (
       <div className="flex h-screen bg-background">
         <NewSidebar />
@@ -573,84 +596,43 @@ export default function Cashboard() {
               
               <TooltipProvider>
               {(() => {
-                const agingCategories = [
-                  { 
-                    label: 'Current', 
-                    amount: 85000, 
-                    count: 42, 
-                    color: 'text-[#17B6C3]',
-                    description: 'Not yet due',
-                    trend: 'up',
-                    trendColor: 'text-green-500'
-                  },
-                  { 
-                    label: 'Due', 
-                    amount: 60457, 
-                    count: 18, 
-                    color: 'text-[#17B6C3]',
-                    description: '-7 to 0 days',
-                    trend: 'down',
-                    trendColor: 'text-green-500'
-                  },
-                  { 
-                    label: 'Overdue', 
-                    amount: overdueAmount || 125000, 
-                    count: metrics?.overdueCount || 127, 
-                    color: 'text-[#17B6C3]',
-                    description: '1-30 days overdue',
-                    trend: 'up',
-                    trendColor: 'text-red-500'
-                  },
-                  { 
-                    label: 'Serious', 
-                    amount: 89500, 
-                    count: 32, 
-                    color: 'text-[#17B6C3]',
-                    description: '31-60 days overdue',
-                    trend: 'down',
-                    trendColor: 'text-green-500'
-                  },
-                  { 
-                    label: 'Escalate', 
-                    amount: 156000, 
-                    count: metrics?.escalatedCount || 45, 
-                    color: 'text-[#17B6C3]',
-                    description: '60+ days overdue',
-                    trend: 'up',
-                    trendColor: 'text-red-500'
-                  },
-                  { 
-                    label: 'PYMT PLANS', 
-                    amount: 42300, 
-                    count: 8, 
-                    color: 'text-[#17B6C3]',
-                    description: 'Active pymt plans',
-                    trend: 'down',
-                    trendColor: 'text-green-500'
-                  },
-                  { 
-                    label: 'Disputes', 
-                    amount: 15800, 
-                    count: 3, 
-                    color: 'text-[#17B6C3]',
-                    description: 'Under dispute',
-                    trend: 'up',
-                    trendColor: 'text-red-500'
-                  },
-                  { 
-                    label: 'Legal', 
-                    amount: 28500, 
-                    count: 2, 
-                    color: 'text-[#17B6C3]',
-                    description: 'Legal proceedings',
-                    trend: 'stable',
-                    trendColor: 'text-gray-500'
-                  }
-                  ];
+                // Map API aging data to display format
+                const agingCategories = agingData?.buckets?.map(bucket => {
+                  // Map API bucket names to display labels
+                  const labelMapping: { [key: string]: { label: string; description: string; isException: boolean } } = {
+                    'Current': { label: 'Current', description: 'Not yet due', isException: false },
+                    '0-30 days': { label: 'Overdue', description: '1-30 days overdue', isException: false },
+                    '31-60 days': { label: 'Serious', description: '31-60 days overdue', isException: false },
+                    '61-90 days': { label: 'Escalate', description: '60+ days overdue', isException: false },
+                    '90+ days': { label: 'Escalate', description: '60+ days overdue', isException: false },
+                    'Payment Plans': { label: 'PYMT PLANS', description: 'Active pymt plans', isException: true },
+                    'Disputes': { label: 'Disputes', description: 'Under dispute', isException: true },
+                    'Legal': { label: 'Legal', description: 'Legal proceedings', isException: true }
+                  };
 
-                  // Split into two rows: first 5 cards (Current to Escalate) and last 3 cards (PYMT PLANS to Legal)
-                  const firstRowCards = agingCategories.slice(0, 5);
-                  const secondRowCards = agingCategories.slice(5, 8);
+                  const mapping = labelMapping[bucket.bucket] || { label: bucket.bucket, description: bucket.bucket, isException: false };
+                  
+                  return {
+                    label: mapping.label,
+                    amount: bucket.amount,
+                    count: bucket.count,
+                    color: 'text-[#17B6C3]',
+                    description: mapping.description,
+                    trend: bucket.amount > 0 ? 'up' : 'stable', // Simple trend logic for now
+                    trendColor: bucket.amount > 0 ? 'text-red-500' : 'text-gray-500',
+                    isException: mapping.isException
+                  };
+                }).filter(Boolean) || [
+                  // Fallback data when API is loading or no data
+                  { label: 'Current', amount: 0, count: 0, color: 'text-[#17B6C3]', description: 'Not yet due', trend: 'stable', trendColor: 'text-gray-500', isException: false },
+                  { label: 'Overdue', amount: 0, count: 0, color: 'text-[#17B6C3]', description: '1-30 days overdue', trend: 'stable', trendColor: 'text-gray-500', isException: false },
+                  { label: 'Serious', amount: 0, count: 0, color: 'text-[#17B6C3]', description: '31-60 days overdue', trend: 'stable', trendColor: 'text-gray-500', isException: false },
+                  { label: 'Escalate', amount: 0, count: 0, color: 'text-[#17B6C3]', description: '60+ days overdue', trend: 'stable', trendColor: 'text-gray-500', isException: false }
+                ];
+
+                  // Split into two rows: aging cards (Current, Overdue, Serious, Escalate) and exception cards (PYMT PLANS, Disputes, Legal)
+                  const firstRowCards = agingCategories.filter(cat => !cat.isException);
+                  const secondRowCards = agingCategories.filter(cat => cat.isException);
                   
                   // Calculate total amount for percentage calculations (only main aging categories)
                   const totalAmountAging = firstRowCards.reduce((sum, cat) => sum + cat.amount, 0);
