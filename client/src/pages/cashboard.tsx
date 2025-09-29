@@ -677,7 +677,10 @@ export default function Cashboard() {
                     trend: string;
                     trendColor: string;
                   }) => {
-                    const percentage = Math.round((category.amount / totalAmountAging) * 100);
+                    // Safe percentage calculation with fallback to 0 for NaN
+                    const percentage = totalAmountAging > 0 
+                      ? Math.round((category.amount / totalAmountAging) * 100) 
+                      : 0;
                     const isException = ['PYMT PLANS', 'Disputes', 'Legal'].includes(category.label);
                     
                     const trendText = category.trend === 'up' ? 'trending up' : 
@@ -702,7 +705,7 @@ export default function Cashboard() {
                       <TooltipTrigger asChild>
                         <Card 
                           key={category.label} 
-                          className={`glass-card hover:shadow-lg transition-all duration-200 hover:scale-105 relative cursor-help ${
+                          className={`glass-card hover:shadow-lg transition-all duration-200 hover:scale-105 relative cursor-help min-h-[120px] ${
                             category.label === 'PYMT PLANS' ? 'bg-[#17B6C3] border-[#17B6C3] border-2' : 
                             category.label === 'Disputes' ? 'bg-red-800 border-red-800 border-2' : 
                             category.label === 'Legal' ? 'bg-black border-black border-2' : ''
@@ -712,12 +715,12 @@ export default function Cashboard() {
                     {/* Percentage Circle */}
                     <div className="absolute top-2 left-2 w-8 h-8 bg-gray-500 rounded-full flex items-center justify-center">
                       <span className="text-white text-xs font-semibold">
-                        {Math.round((category.amount / totalAmountAging) * 100)}%
+                        {percentage}%
                       </span>
                     </div>
                     <CardContent className="p-4">
                       <div className="text-center">
-                        <div className={`text-lg font-bold ${category.label === 'PYMT PLANS' || category.label === 'Disputes' || category.label === 'Legal' ? 'text-white' : category.color} mb-1 flex items-center justify-center gap-2`} data-testid={`text-aging-amount-${category.label.toLowerCase()}`}>
+                        <div className={`text-lg font-bold ${category.label === 'PYMT PLANS' || category.label === 'Disputes' || category.label === 'Legal' ? 'text-white' : category.color} mb-1 flex items-center justify-center gap-2 min-w-[100px]`} data-testid={`text-aging-amount-${category.label.toLowerCase()}`}>
                           {formatCurrency(category.amount)}
                           {category.trend === 'up' && <TrendingUp className={`h-4 w-4 ${category.label === 'PYMT PLANS' || category.label === 'Disputes' || category.label === 'Legal' ? 'text-white' : category.trendColor}`} />}
                           {category.trend === 'down' && <TrendingDown className={`h-4 w-4 ${category.label === 'PYMT PLANS' || category.label === 'Disputes' || category.label === 'Legal' ? 'text-white' : category.trendColor}`} />}
@@ -753,7 +756,7 @@ export default function Cashboard() {
                       {/* Exceptions Heading */}
                       <h3 className="text-md sm:text-lg font-semibold mb-3 text-slate-900 dark:text-slate-100">Exceptions</h3>
                       
-                      {/* Second Row: PYMT PLANS to Legal (3 wider cards) */}
+                      {/* Second Row: PYMT PLANS to Legal (3 exception cards with fixed widths) */}
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                         {secondRowCards.map(renderCard)}
                       </div>

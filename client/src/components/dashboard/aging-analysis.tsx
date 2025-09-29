@@ -467,7 +467,7 @@ export default function AgingAnalysisHeatmap() {
                         cx="50%"
                         cy="50%"
                         labelLine={false}
-                        label={({bucket, percentage}) => `${bucket}: ${percentage}%`}
+                        label={({bucket, percentage}) => `${bucket}: ${isNaN(percentage) ? '0' : percentage}%`}
                         outerRadius={100}
                         dataKey="value"
                       >
@@ -476,7 +476,7 @@ export default function AgingAnalysisHeatmap() {
                         ))}
                       </Pie>
                       <Tooltip formatter={(value: any, name: string, props: any) => [
-                        `${value}% ($${props.payload.amount.toLocaleString()})`,
+                        `${isNaN(value) ? '0' : value}% ($${(props.payload.amount || 0).toLocaleString()})`,
                         name
                       ]} />
                     </PieChart>
@@ -487,7 +487,7 @@ export default function AgingAnalysisHeatmap() {
                   {aging.map((bucket) => (
                     <div 
                       key={bucket.bucket} 
-                      className="flex items-center justify-between p-3 rounded-lg border border-slate-200"
+                      className="flex items-center justify-between p-3 rounded-lg border border-slate-200 min-h-[60px]"
                       data-testid={`bucket-summary-${bucket.bucket.replace(/\s+/g, '-').toLowerCase()}`}
                     >
                       <div className="flex items-center space-x-3">
@@ -495,14 +495,14 @@ export default function AgingAnalysisHeatmap() {
                           className="w-4 h-4 rounded-full"
                           style={{ backgroundColor: AGING_COLORS[bucket.bucket as keyof typeof AGING_COLORS] }}
                         />
-                        <div>
+                        <div className="min-w-[120px]">
                           <p className="font-medium text-slate-900">{bucket.bucket}</p>
-                          <p className="text-xs text-slate-600">{bucket.count} invoices</p>
+                          <p className="text-xs text-slate-600">{bucket.count || 0} invoices</p>
                         </div>
                       </div>
-                      <div className="text-right">
+                      <div className="text-right min-w-[80px]">
                         <p className="font-semibold text-slate-900">${bucket.amount.toLocaleString()}</p>
-                        <p className="text-xs text-slate-600">{bucket.percentage}%</p>
+                        <p className="text-xs text-slate-600">{isNaN(bucket.percentage) ? '0' : bucket.percentage}%</p>
                       </div>
                     </div>
                   ))}
