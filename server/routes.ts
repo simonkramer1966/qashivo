@@ -8457,11 +8457,16 @@ Payment required immediately to avoid collection action. Contact us NOW.`
   // Client registration endpoint (no auth required)
   app.post('/api/client/register', async (req: any, res) => {
     try {
-      const { companyName, contactName, email, phone, website, monthlyRevenue } = req.body;
+      const { companyName, contactName, email, phone, website, monthlyRevenue, selectedPlan } = req.body;
       
       // Validate required fields
-      if (!companyName || !contactName || !email || !phone || !monthlyRevenue) {
+      if (!companyName || !contactName || !email || !phone || !monthlyRevenue || !selectedPlan) {
         return res.status(400).json({ message: 'Missing required fields' });
+      }
+      
+      // Validate plan selection
+      if (!['standard', 'premium'].includes(selectedPlan)) {
+        return res.status(400).json({ message: 'Invalid plan selection' });
       }
       
       // Create tenant for client
@@ -8475,7 +8480,8 @@ Payment required immediately to avoid collection action. Contact us NOW.`
             email,
             phone,
             website: website || undefined,
-            monthlyRevenue
+            monthlyRevenue,
+            selectedPlan
           }
         },
       });
@@ -8485,17 +8491,19 @@ Payment required immediately to avoid collection action. Contact us NOW.`
       const trialEndDate = new Date();
       trialEndDate.setDate(trialEndDate.getDate() + 30); // 30-day trial
       
+      // Set plan-specific limits
+      const planLimits = selectedPlan === 'premium' 
+        ? { maxInvoices: 5000, maxContacts: 2500, maxUsers: 10 }
+        : { maxInvoices: 1000, maxContacts: 500, maxUsers: 3 };
+      
       await storage.createTenantMetadata({
         tenantId: tenant.id,
         tenantType: 'client',
         isInTrial: true,
         trialStartDate,
         trialEndDate,
-        usageLimits: {
-          maxInvoices: 1000, // Higher limit for direct clients
-          maxContacts: 500,
-          maxUsers: 3,
-        },
+        selectedPlan, // Store the plan for post-trial billing
+        usageLimits: planLimits,
         currentUsage: {
           invoices: 0,
           contacts: 0,
@@ -8504,11 +8512,12 @@ Payment required immediately to avoid collection action. Contact us NOW.`
       });
       
       // TODO: Send welcome email with login instructions
-      console.log(`✅ Client registration: ${companyName} (${email}) - 30-day trial started`);
+      console.log(`✅ Client registration: ${companyName} (${email}) - ${selectedPlan} plan, 30-day trial started`);
       
       res.json({ 
         message: 'Client registration successful', 
         tenantId: tenant.id,
+        selectedPlan,
         trialEndDate 
       });
     } catch (error) {
