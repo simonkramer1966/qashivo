@@ -127,7 +127,6 @@ export default function SignIn() {
               </div>
               <ul className="text-sm text-slate-600 space-y-2 mb-4">
                 <li>• Full-featured collection automation</li>
-                <li>• Simple pricing at £29/month</li>
                 <li>• Direct support and onboarding</li>
                 <li>• All AI-powered features included</li>
               </ul>
