@@ -83,7 +83,7 @@ export default function SignIn() {
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-slate-900 mb-2">Welcome to Qashivo</h1>
           <p className="text-lg text-slate-600">
-            Sign in to access your automated debt collection dashboard
+            Sign in to access your Qashivo automated credit control dashboard
           </p>
         </div>
 
