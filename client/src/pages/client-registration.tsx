@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
 import { useMutation } from '@tanstack/react-query';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Loader2, CheckCircle, Users, Clock, CreditCard, Building } from 'lucide-react';
 
 const clientRegistrationSchema = z.object({
@@ -16,8 +17,22 @@ const clientRegistrationSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
   phone: z.string().min(10, 'Please enter a valid phone number'),
   website: z.string().url('Please enter a valid website URL').optional().or(z.literal('')),
-  monthlyRevenue: z.string().min(1, 'Please select your monthly revenue range')
+  monthlyRevenue: z.string().min(1, 'Please select your monthly revenue range'),
+  selectedPlan: z.enum(['standard', 'premium'], { required_error: 'Please select a plan' })
 });
+
+const PLAN_DETAILS = {
+  standard: {
+    name: 'Standard',
+    price: '£49',
+    features: ['Automated invoicing', 'Basic collections', 'Email integration', 'Monthly reports']
+  },
+  premium: {
+    name: 'Premium', 
+    price: '£99',
+    features: ['Everything in Standard', 'Advanced AI collections', 'SMS integration', 'Real-time analytics', 'Priority support']
+  }
+} as const;
 
 type ClientRegistrationForm = z.infer<typeof clientRegistrationSchema>;
 
@@ -39,6 +54,17 @@ const clientRegistrationMutation = async (data: ClientRegistrationForm) => {
 export default function ClientRegistration() {
   const { toast } = useToast();
   const [isSuccess, setIsSuccess] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState<'standard' | 'premium'>('standard');
+
+  // Get plan from URL parameters and sync with form
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const planParam = urlParams.get('plan');
+    if (planParam === 'standard' || planParam === 'premium') {
+      setSelectedPlan(planParam);
+      form.setValue('selectedPlan', planParam);
+    }
+  }, [form]);
 
   const form = useForm<ClientRegistrationForm>({
     resolver: zodResolver(clientRegistrationSchema),
@@ -48,7 +74,8 @@ export default function ClientRegistration() {
       email: '',
       phone: '',
       website: '',
-      monthlyRevenue: ''
+      monthlyRevenue: '',
+      selectedPlan: 'standard'
     }
   });
 
@@ -84,9 +111,18 @@ export default function ClientRegistration() {
             </div>
             <h1 className="text-2xl font-bold text-slate-900 mb-4">Welcome to Qashivo!</h1>
             <p className="text-slate-600 mb-6 leading-relaxed">
-              Your 30-day trial has started successfully. You'll receive an email with login details and next steps 
+              Your 30-day {PLAN_DETAILS[selectedPlan].name} plan trial has started successfully. You'll receive an email with login details and next steps 
               to start automating your debt collection and improving cash flow.
             </p>
+            <div className="bg-slate-50 rounded-lg p-4 mb-6">
+              <h3 className="font-medium text-slate-800 mb-2">Your Plan: {PLAN_DETAILS[selectedPlan].name}</h3>
+              <p className="text-sm text-slate-600 mb-2">
+                After your trial, you'll be billed {PLAN_DETAILS[selectedPlan].price}/month
+              </p>
+              <div className="text-xs text-slate-500">
+                Features: {PLAN_DETAILS[selectedPlan].features.slice(0, 2).join(', ')}...
+              </div>
+            </div>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button 
                 onClick={() => window.location.href = '/signin'}
@@ -117,8 +153,13 @@ export default function ClientRegistration() {
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-slate-900 mb-2">Start Your Free Trial</h1>
           <p className="text-lg text-slate-600">
-            Get paid 2 weeks faster with automated debt collection - £29/month after trial
+            Get paid 2 weeks faster with automated debt collection - {PLAN_DETAILS[selectedPlan].price}/month after trial
           </p>
+          <div className="inline-flex items-center bg-white/60 backdrop-blur-sm border border-white/40 rounded-full px-4 py-2 mt-2">
+            <span className="text-sm font-medium text-slate-700">
+              Selected: {PLAN_DETAILS[selectedPlan].name} Plan ({PLAN_DETAILS[selectedPlan].price}/month)
+            </span>
+          </div>
         </div>
 
         {/* Benefits Cards */}
@@ -171,6 +212,74 @@ export default function ClientRegistration() {
           <CardContent className="p-8">
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                {/* Plan Selection */}
+                <div className="mb-8 p-6 bg-slate-50/50 rounded-lg border border-slate-200/30">
+                  <FormField
+                    control={form.control}
+                    name="selectedPlan"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="font-medium text-slate-700 text-base">Select Your Plan *</FormLabel>
+                        <FormControl>
+                          <Select 
+                            value={field.value} 
+                            onValueChange={(value: 'standard' | 'premium') => {
+                              field.onChange(value);
+                              setSelectedPlan(value);
+                            }}
+                            data-testid="select-plan"
+                          >
+                            <SelectTrigger className="bg-white border-gray-200">
+                              <SelectValue placeholder="Choose your plan" />
+                            </SelectTrigger>
+                            <SelectContent className="bg-white">
+                              <SelectItem value="standard">
+                                <div className="flex items-center justify-between w-full">
+                                  <div>
+                                    <div className="font-medium">Standard Plan</div>
+                                    <div className="text-sm text-slate-500">Perfect for small businesses</div>
+                                  </div>
+                                  <div className="ml-4 font-bold text-slate-900">£49/month</div>
+                                </div>
+                              </SelectItem>
+                              <SelectItem value="premium">
+                                <div className="flex items-center justify-between w-full">
+                                  <div>
+                                    <div className="font-medium">Premium Plan</div>
+                                    <div className="text-sm text-slate-500">Advanced features & priority support</div>
+                                  </div>
+                                  <div className="ml-4 font-bold text-slate-900">£99/month</div>
+                                </div>
+                              </SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </FormControl>
+                        <FormMessage />
+                        
+                        {/* Plan Features */}
+                        <div className="mt-4 p-4 bg-white/60 rounded-lg border border-slate-200/20">
+                          <h4 className="font-medium text-slate-800 mb-2">
+                            {PLAN_DETAILS[selectedPlan].name} Plan Includes:
+                          </h4>
+                          <ul className="text-sm text-slate-600 space-y-1">
+                            {PLAN_DETAILS[selectedPlan].features.map((feature, index) => (
+                              <li key={index} className="flex items-center">
+                                <CheckCircle className="h-4 w-4 text-green-600 mr-2 flex-shrink-0" />
+                                {feature}
+                              </li>
+                            ))}
+                          </ul>
+                          <div className="mt-3 pt-3 border-t border-slate-200/30">
+                            <p className="text-sm font-medium text-slate-700">
+                              30-day free trial, then {PLAN_DETAILS[selectedPlan].price}/month
+                            </p>
+                          </div>
+                        </div>
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <FormField
                     control={form.control}
@@ -313,7 +422,7 @@ export default function ClientRegistration() {
                   
                   <p className="text-center text-sm text-slate-500 mt-4">
                     By signing up, you agree to our Terms of Service and Privacy Policy.<br/>
-                    30-day free trial, then £29/month. Cancel anytime.
+                    30-day free trial, then {PLAN_DETAILS[selectedPlan].price}/month. Cancel anytime.
                   </p>
                 </div>
               </form>
