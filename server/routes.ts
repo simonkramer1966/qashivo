@@ -1245,14 +1245,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const { tenantId } = req.rbac;
       
-      // Get Xero tokens for this tenant
-      const xeroTokens = await storage.getXeroTokens(tenantId);
-      if (!xeroTokens) {
+      // Get Xero tokens for this tenant (TODO: implement getXeroTokens method)
+      const tenant = await storage.getTenant(tenantId);
+      if (!tenant?.xeroAccessToken || !tenant?.xeroRefreshToken) {
         return res.status(400).json({ 
           message: "Xero not connected. Please connect your Xero account first.",
           requiresAuth: true
         });
       }
+      const xeroTokens = {
+        access_token: tenant.xeroAccessToken,
+        refresh_token: tenant.xeroRefreshToken,
+        tenantId: tenant.xeroTenantId
+      };
       
       // Import data using XeroOnboardingService
       const { xeroOnboardingService } = await import('./services/xeroOnboardingService');
@@ -1261,7 +1266,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (importResult.success) {
         // Update onboarding progress
         await onboardingService.updatePhaseProgress(tenantId, 'technical_connection', {
-          xeroImportCompleted: true,
+          accountingSyncCompleted: true,
           importSummary: importResult.summary,
           importTimestamp: new Date().toISOString()
         });
@@ -1746,20 +1751,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log(`📊 Paginated Contacts API - Tenant: ${user.tenantId}, Filters: search="${search}", sortBy=${sortBy}, sortDir=${sortDir}, page=${page}, limit=${limit}`);
       
-      // Check if storage has paginated method, otherwise use fallback
-      if (typeof storage.getContactsFiltered === 'function') {
-        // Use paginated method if available
-        const result = await storage.getContactsFiltered(user.tenantId, {
-          search,
-          sortBy,
-          sortDir,
-          page,
-          limit
-        });
-
-        console.log(`📊 Server-side filtered results: ${result.contacts.length}/${result.pagination.total} contacts (page ${page})`);
-        res.json(result);
-      } else {
+      // Use fallback pagination (TODO: implement getContactsFiltered method)
+      {
         // Fallback: get all contacts and implement pagination in memory
         const allContacts = await storage.getContacts(user.tenantId);
         
@@ -2962,7 +2955,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const actionItem = await storage.updateActionItem(id, user.tenantId, {
         status: 'completed',
-        completedAt: new Date(),
         outcome,
         notes,
       });
@@ -2999,7 +2991,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const actionItem = await storage.updateActionItem(id, user.tenantId, {
         status: 'snoozed',
         dueAt: newDueDate,
-        snoozeReason: reason,
+        notes: reason,
       });
       
       // Log the snooze
@@ -3127,8 +3119,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         type: 'ptp_followup',
         priority: 'medium',
         status: 'open',
-        title: `Follow up on payment promise for ${promiseData.amount}`,
-        description: `Payment promise made for ${promiseData.amount} due ${promiseData.promisedDate}`,
+        notes: `Follow up on payment promise for ${promiseData.promisedAmount} due ${promiseData.promisedDate}`,
         dueAt: new Date(new Date(promiseData.promisedDate).getTime() + 24 * 60 * 60 * 1000), // Day after promise date
         createdByUserId: user.id,
       });
@@ -8409,11 +8400,16 @@ Payment required immediately to avoid collection action. Contact us NOW.`
       const tenant = await storage.createTenant({
         name: companyName,
         subdomain: `partner-${companyName.toLowerCase().replace(/[^a-z0-9]/g, '-')}`,
-        companyName,
-        primaryContactName: contactName,
-        primaryContactEmail: email,
-        phone,
-        website: website || undefined,
+        settings: {
+          partnerInfo: {
+            companyName,
+            contactName,
+            email,
+            phone,
+            website: website || undefined,
+            expectedClients
+          }
+        },
       });
       
       // Create tenant metadata with partner type and trial
