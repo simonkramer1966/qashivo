@@ -665,6 +665,16 @@ export default function Cashboard() {
                   const firstRowCards = agingCategories.filter(cat => !cat.isException);
                   const secondRowCards = agingCategories.filter(cat => cat.isException);
                   
+                  // Ensure exception cards always show even if not in API data
+                  const exceptionCards = [
+                    { label: 'PYMT PLANS', amount: 0, count: 0, color: 'text-[#17B6C3]', description: 'Active pymt plans', trend: 'stable', trendColor: 'text-gray-500', isException: true },
+                    { label: 'Disputes', amount: 0, count: 0, color: 'text-[#17B6C3]', description: 'Under dispute', trend: 'stable', trendColor: 'text-gray-500', isException: true },
+                    { label: 'Legal', amount: 0, count: 0, color: 'text-[#17B6C3]', description: 'Legal proceedings', trend: 'stable', trendColor: 'text-gray-500', isException: true }
+                  ];
+                  
+                  // Use secondRowCards if it has data, otherwise use default exception cards
+                  const finalSecondRowCards = secondRowCards.length > 0 ? secondRowCards : exceptionCards;
+                  
                   // Calculate total amount for percentage calculations (only main aging categories)
                   const totalAmountAging = firstRowCards.reduce((sum, cat) => sum + cat.amount, 0);
 
@@ -748,8 +758,8 @@ export default function Cashboard() {
 
                   return (
                     <div className="space-y-4">
-                      {/* First Row: Current to Escalate (5 cards) */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3">
+                      {/* First Row: Current to Escalate (4 cards with full width) */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                         {firstRowCards.map(renderCard)}
                       </div>
                       
@@ -758,7 +768,7 @@ export default function Cashboard() {
                       
                       {/* Second Row: PYMT PLANS to Legal (3 exception cards with fixed widths) */}
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                        {secondRowCards.map(renderCard)}
+                        {finalSecondRowCards.map(renderCard)}
                       </div>
                     </div>
                   );
