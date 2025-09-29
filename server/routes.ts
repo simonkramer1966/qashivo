@@ -1291,6 +1291,137 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Recent Activity endpoint
+  app.get("/api/dashboard/recent-activity", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      // Helper function to get time ago
+      const getTimeAgo = (date: Date | null): string => {
+        if (!date) return 'unknown';
+        
+        const now = new Date();
+        const diffInMs = now.getTime() - new Date(date).getTime();
+        const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60));
+        const diffInDays = Math.floor(diffInHours / 24);
+
+        if (diffInDays === 0) {
+          if (diffInHours === 0) return 'just now';
+          return `${diffInHours} hour${diffInHours === 1 ? '' : 's'}`;
+        } else if (diffInDays === 1) {
+          return '1 day';
+        } else {
+          return `${diffInDays} days`;
+        }
+      };
+
+      // Helper function to map action types
+      const mapActionType = (actionType: string | null): string => {
+        const typeMapping: { [key: string]: string } = {
+          'email': 'reminder',
+          'call': 'call',
+          'sms': 'reminder', 
+          'reminder': 'reminder',
+          'dispute': 'dispute',
+          'follow_up': 'reminder',
+          'escalation': 'overdue'
+        };
+        
+        return typeMapping[actionType || ''] || 'activity';
+      };
+
+      // Get recent actions (last 30 days)
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+      const recentActions = await db
+        .select({
+          id: actions.id,
+          type: actions.type,
+          status: actions.status,
+          createdAt: actions.createdAt,
+          contactName: contacts.name,
+          invoiceNumber: invoices.invoiceNumber,
+          invoiceAmount: invoices.amountDue,
+        })
+        .from(actions)
+        .leftJoin(contacts, eq(actions.contactId, contacts.id))
+        .leftJoin(invoices, eq(actions.invoiceId, invoices.id))
+        .where(
+          and(
+            eq(actions.tenantId, user.tenantId),
+            gte(actions.createdAt, thirtyDaysAgo)
+          )
+        )
+        .orderBy(desc(actions.createdAt))
+        .limit(10);
+
+      // Get recent bank transactions (payments, last 30 days)
+      const recentPayments = await db
+        .select({
+          id: bankTransactions.id,
+          amount: bankTransactions.amount,
+          description: bankTransactions.description,
+          createdAt: bankTransactions.createdAt,
+          contactName: contacts.name,
+          type: bankTransactions.type,
+        })
+        .from(bankTransactions)
+        .leftJoin(contacts, eq(bankTransactions.contactId, contacts.id))
+        .where(
+          and(
+            eq(bankTransactions.tenantId, user.tenantId),
+            gte(bankTransactions.createdAt, thirtyDaysAgo)
+          )
+        )
+        .orderBy(desc(bankTransactions.createdAt))
+        .limit(10);
+
+      // Combine and format the activities
+      const activities = [];
+
+      // Add collection actions
+      recentActions.forEach(action => {
+        const timeAgo = getTimeAgo(action.createdAt);
+        activities.push({
+          id: action.id,
+          type: mapActionType(action.type),
+          customer: action.contactName || 'Unknown Contact',
+          amount: action.invoiceAmount || 0,
+          time: timeAgo,
+          timestamp: action.createdAt,
+          source: 'action'
+        });
+      });
+
+      // Add payments
+      recentPayments.forEach(payment => {
+        const timeAgo = getTimeAgo(payment.createdAt);
+        activities.push({
+          id: payment.id,
+          type: 'payment',
+          customer: payment.contactName || 'Unknown Contact',
+          amount: Math.abs(payment.amount || 0),
+          time: timeAgo,
+          timestamp: payment.createdAt,
+          source: 'payment'
+        });
+      });
+
+      // Sort by timestamp (most recent first) and limit to 8
+      activities.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+      const recentActivities = activities.slice(0, 8);
+
+      res.json(recentActivities);
+    } catch (error) {
+      console.error("Error fetching recent activity:", error);
+      res.status(500).json({ message: "Failed to fetch recent activity" });
+    }
+  });
+
   // Dashboard metrics
   app.get("/api/dashboard/metrics", isAuthenticated, async (req: any, res) => {
     try {
