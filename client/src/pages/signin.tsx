@@ -105,7 +105,6 @@ export default function SignIn() {
               </div>
               <ul className="text-sm text-slate-600 space-y-2 mb-4">
                 <li>• Multi-client management dashboard</li>
-                <li>• Wholesale pricing at £19/client</li>
                 <li>• White-label branding options</li>
                 <li>• Advanced reporting and analytics</li>
               </ul>
