@@ -56,16 +56,6 @@ export default function ClientRegistration() {
   const [isSuccess, setIsSuccess] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<'standard' | 'premium'>('standard');
 
-  // Get plan from URL parameters and sync with form
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const planParam = urlParams.get('plan');
-    if (planParam === 'standard' || planParam === 'premium') {
-      setSelectedPlan(planParam);
-      form.setValue('selectedPlan', planParam);
-    }
-  }, [form]);
-
   const form = useForm<ClientRegistrationForm>({
     resolver: zodResolver(clientRegistrationSchema),
     defaultValues: {
@@ -78,6 +68,16 @@ export default function ClientRegistration() {
       selectedPlan: 'standard'
     }
   });
+
+  // Get plan from URL parameters and sync with form
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const planParam = urlParams.get('plan');
+    if (planParam === 'standard' || planParam === 'premium') {
+      setSelectedPlan(planParam);
+      form.setValue('selectedPlan', planParam);
+    }
+  }, [form]);
 
   const registration = useMutation({
     mutationFn: clientRegistrationMutation,
