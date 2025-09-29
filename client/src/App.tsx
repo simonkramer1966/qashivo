@@ -5,45 +5,15 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
-import Landing from "@/pages/landing";
-import Dashboard from "@/pages/dashboard";
+// Core application pages
+import Cashboard from "@/pages/cashboard";
 import Invoices from "@/pages/invoices";
-import InvoicesXero from "@/pages/invoices-xero";
 import Contacts from "@/pages/contacts";
 import ActionCentre from "@/pages/action-centre";
-import Workflows from "@/pages/workflows";
-import WorkflowBuilder from "@/pages/workflow-builder";
 import Settings from "@/pages/settings";
-import AiSuggestions from "@/pages/ai-suggestions";
-import AiCfo from "@/pages/ai-cfo";
-import KPIAIForecasting from "@/pages/kpi-ai-forecasting";
-import HRManagement from "@/pages/hr-management";
-import LegalCompliance from "@/pages/legal-compliance";
-import UIChoices from "@/pages/ui-choices";
-import UIXero from "@/pages/ui-xero";
-import UIQuickBooks from "@/pages/ui-quickbooks";
-import UISage from "@/pages/ui-sage";
-import Cashflow from "@/pages/cashflow";
-import Cashboard from "@/pages/cashboard";
-import Features from "@/pages/features";
-import AiCapabilities from "@/pages/ai-capabilities";
-import Pricing from "@/pages/pricing";
-import About from "@/pages/about";
-import Contact from "@/pages/contact";
-import Investors from "@/pages/investors";
-import Demo from "@/pages/demo";
-import Subscribe from "@/pages/subscribe";
-import Profile from "@/pages/Profile";
-import OwnerDashboard from "@/pages/owner-dashboard";
-import HealthDashboard from "@/pages/HealthDashboard";
-import TestCommunicationDialog from "@/pages/test-communication-dialog";
-import LeadFlowSettings from "@/pages/leadflow-settings";
-import CallLogs from "@/pages/call-logs";
-import PaymentPlans from "@/pages/payment-plans";
 import PartnerDashboard from "@/pages/partner";
+// Signup and authentication pages
 import PartnerRegistration from "@/pages/partner-registration";
-import BusinessDashboard from "@/pages/business-dashboard";
-// import { OnboardingWizard } from "@/components/OnboardingWizard";
 import { useAuth } from "@/hooks/useAuth";
 
 function Router() {
@@ -62,26 +32,40 @@ function Router() {
   }
 
   return !isAuthenticated ? (
+    // Unauthenticated routes - only signup and signin pages
     <Switch>
-      <Route path="/features" component={Features} />
-      <Route path="/ai-capabilities" component={AiCapabilities} />
-      <Route path="/pricing" component={Pricing} />
-      <Route path="/demo" component={Demo} />
-      <Route path="/about" component={About} />
-      <Route path="/contact" component={Contact} />
       <Route path="/partner/register" component={PartnerRegistration} />
-      <Route path="/" component={Landing} />
+      <Route path="/client/register" component={() => <div>Client Registration Coming Soon</div>} />
+      <Route path="/signin" component={() => <div>Sign In Coming Soon</div>} />
+      <Route path="/" component={() => (
+        <div className="min-h-screen bg-white flex items-center justify-center">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold mb-4">Qashivo</h1>
+            <p className="text-gray-600 mb-8">Choose your signup option:</p>
+            <div className="space-y-4">
+              <a href="/partner/register" className="block bg-blue-500 text-white px-6 py-3 rounded">
+                Partner Registration
+              </a>
+              <a href="/client/register" className="block bg-green-500 text-white px-6 py-3 rounded">
+                Client Registration
+              </a>
+              <a href="/signin" className="block bg-gray-500 text-white px-6 py-3 rounded">
+                Sign In
+              </a>
+            </div>
+          </div>
+        </div>
+      )} />
       <Route path="/:rest*" component={NotFound} />
     </Switch>
   ) : (
+    // Authenticated routes - main application
     <Switch>
-      <Route path="/cashboard" component={Cashboard} />
-      <Route path="/cashflow" component={Cashflow} />
+      <Route path="/partner" component={PartnerDashboard} />
       <Route path="/contacts" component={Contacts} />
       <Route path="/invoices" component={Invoices} />
       <Route path="/action-centre" component={ActionCentre} />
       <Route path="/settings" component={Settings} />
-      <Route path="/partner/register" component={PartnerRegistration} />
       <Route path="/" component={Cashboard} />
       <Route path="/:rest*" component={NotFound} />
     </Switch>
