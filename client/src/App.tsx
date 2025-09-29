@@ -15,6 +15,7 @@ import PartnerDashboard from "@/pages/partner";
 // Signup and authentication pages
 import PartnerRegistration from "@/pages/partner-registration";
 import ClientRegistration from "@/pages/client-registration";
+import SignIn from "@/pages/signin";
 import { useAuth } from "@/hooks/useAuth";
 
 function Router() {
@@ -37,7 +38,7 @@ function Router() {
     <Switch>
       <Route path="/partner/register" component={PartnerRegistration} />
       <Route path="/client/register" component={ClientRegistration} />
-      <Route path="/signin" component={() => <div>Sign In Coming Soon</div>} />
+      <Route path="/signin" component={SignIn} />
       <Route path="/" component={() => (
         <div className="min-h-screen bg-white flex items-center justify-center">
           <div className="text-center">

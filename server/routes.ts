@@ -8510,6 +8510,30 @@ Payment required immediately to avoid collection action. Contact us NOW.`
     }
   });
 
+  // Get user type for smart routing
+  app.get('/api/user/type', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const tenantMetadata = await storage.getTenantMetadata(user.tenantId);
+      if (!tenantMetadata) {
+        return res.status(400).json({ message: "Tenant metadata not found" });
+      }
+
+      res.json({ 
+        tenantType: tenantMetadata.tenantType,
+        tenantId: user.tenantId,
+        isInTrial: tenantMetadata.isInTrial
+      });
+    } catch (error) {
+      console.error("Error getting user type:", error);
+      res.status(500).json({ message: "Failed to get user type" });
+    }
+  });
+
   // Stripe payment route for one-time payments
   app.post("/api/create-payment-intent", isAuthenticated, async (req: any, res) => {
     try {
