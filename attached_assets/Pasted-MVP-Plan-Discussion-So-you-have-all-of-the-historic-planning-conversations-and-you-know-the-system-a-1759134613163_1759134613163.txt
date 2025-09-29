@@ -1,0 +1,67 @@
+MVP Plan Discussion
+So you have all of the historic planning conversations and you know the system as it is at the moment.  I have a deadline of 24 October 2025 to deliver a working MVP with the following features.  Can you ask me questions so that you can create a development and testing plan so we can deliver this by the required deadline.  This are my thoughts so far.  It would be good to know what else you think we need to do to create a world class ‘Chase Smashing’ systems
+ 
+Partners
+Ability for new partners to sign up with a 30 day trial, no card required, but will need to enter details to continue beyond 30 days.
+
+Partners once signed up can be added to a clients Qashivo as a ‘Partner’ user and the clients system is visible in the Partners ‘My Qashivo’ page and the partner can access the clients ‘Qashivo’.
+
+The partner needs to be able to add their own team members (users) and give them access to certain clients so they can manage their credit control.
+
+Partner System View
+ 
+Clients
+Ability for new customers to sign up with a 30 day trial, no card required, but will need to enter details to continue beyond 30 days.
+
+The settings menu needs to be redesigned along the lines of Xero.
+
+Settings
+
+General
+Organisation
+Users
+Subscription and Billing
+Branding
+
+Communications
+Status (Inactive/Testing/Active)
+Templates
+Schedules
+Email Settings
+Voice Agent
+Legal & Debt Recovery
+Notifications
+
+Financial
+Integration
+Financial Settings
+Online Payments
+ 
+Financial
+We need Stripe operational and ‘the add card after 30 days process’ in place so that when they login after 30 days the system requests they add their card details if they wish to continue.
+Need a way to test the Stripe process?
+
+
+Collections Operations (Partners/Clients)
+
+Methods of Operation
+Manual (all sorting of invoices, communication notes & outbound communications are manually created)
+Semi Auto (invoices are sorted for action by Qashivo AI, the client is assigned to an automated Email comms schedule with prompts for SMS, Voice Message and AI Voice Calls which can be authorised by the user
+Autonomous (full hands off operation with results fed back to the user with the ability for the user to intervene where necessary and take individual clients back to Manual or Semi Auto.
+Clients can be assigned to either of the methods of operation so high value or sensitive clients can have a manual approach, some on Semi Auto and small clients perhaps of Autonomous
+
+
+
+
+
+Qashivo Business View
+
+We need a well organised business view of the system with the ability to add new Qashivo business users who are part of the Qashivo team.  I’m thinking a requirement to have a Qashivo email should be a condition.  Perhaps at a later stage this should be implemented after we have an MVP finished.
+
+Sidebar Menu
+Business Operations Dashboard
+Clients (This is a list - Headings = Client name, Contact name, Status (Trial or Live), Subscription (Standard, Premium, Enterprise)
+Partners (This is a list - Headings = Partner name, Contact name, Status (Trial or Live), Subscription (Standard, Premium, Enterprise)
+Prices & Plans (where we manage all of our prices and subscription plans and what each subscription allows access to.  Would be good to also be able to model pricing changes and impact based upon existing customer usage and estimate of future customer acquisitions)
+Payment Processing (where we integrate and control our Stripe account and integration)
+Accounting (this is where we integrate with our own Qashivo Xero subscription)

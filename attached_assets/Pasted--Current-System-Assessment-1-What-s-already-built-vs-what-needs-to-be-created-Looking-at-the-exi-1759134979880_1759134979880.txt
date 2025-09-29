@@ -1,0 +1,19 @@
+	Current System Assessment
+1.	What's already built vs. what needs to be created? Looking at the existing Nexus AR codebase, I can see you have tenant management, authentication, and invoice processing. Which of these MVP features can leverage existing code vs. need to be built from scratch?  Not sure need your feedback and help with this?
+
+
+
+2.	Partner vs. Client Priority - Which should we tackle first? The partner onboarding flow or the client experience? This will affect our development sequence.  Partner onboarding flow
+Technical Architecture Questions
+3.	Multi-tenant complexity - How will the partner-client relationship work technically? Should partners see a unified dashboard of all their clients, or switch between individual client views?  Unified dashboard of all their clients
+4.	Stripe Integration Scope - Do you need just basic subscription billing, or also the online payments feature for client invoices? This affects complexity significantly.  Subscription billing for Qashivo but each of the clients needs to be able to add their payment method so this can be added to their outbound collections comms
+5.	Collections Automation - The Manual/Semi-Auto/Autonomous modes sound sophisticated. Should we start with Manual mode and build up, or is Semi-Auto the minimum viable version?  Semi Auto is the minimum viable version
+User Experience Priorities
+6.	Settings Redesign - When you mention "redesigned along the lines of Xero," do you have specific wireframes or just want that organizational structure?  That organisation structure and we can build out from there
+7.	Trial Experience - What's the key conversion moment? Is it when they connect their accounting software, send their first collection email, or something else?
+Testing & Launch Strategy
+8.	Testing Approach - Do you have existing customers who could beta test, or will this be a fresh launch?  A couple of existing customers
+9.	Resource Constraints - Is this just you developing, or do you have a team? This affects how we prioritize and sequence the work.  Just me
+
+What are your thoughts on these questions? Once I understand your priorities better, I can create a detailed development roadmap with milestones leading to your October deadline.
+
