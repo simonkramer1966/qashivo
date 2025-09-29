@@ -14,6 +14,7 @@ import Settings from "@/pages/settings";
 import PartnerDashboard from "@/pages/partner";
 // Signup and authentication pages
 import PartnerRegistration from "@/pages/partner-registration";
+import ClientRegistration from "@/pages/client-registration";
 import { useAuth } from "@/hooks/useAuth";
 
 function Router() {
@@ -35,7 +36,7 @@ function Router() {
     // Unauthenticated routes - only signup and signin pages
     <Switch>
       <Route path="/partner/register" component={PartnerRegistration} />
-      <Route path="/client/register" component={() => <div>Client Registration Coming Soon</div>} />
+      <Route path="/client/register" component={ClientRegistration} />
       <Route path="/signin" component={() => <div>Sign In Coming Soon</div>} />
       <Route path="/" component={() => (
         <div className="min-h-screen bg-white flex items-center justify-center">

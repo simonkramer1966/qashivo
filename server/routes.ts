@@ -8447,6 +8447,69 @@ Payment required immediately to avoid collection action. Contact us NOW.`
     }
   });
 
+  // Client registration endpoint (no auth required)
+  app.post('/api/client/register', async (req: any, res) => {
+    try {
+      const { companyName, contactName, email, phone, website, monthlyRevenue } = req.body;
+      
+      // Validate required fields
+      if (!companyName || !contactName || !email || !phone || !monthlyRevenue) {
+        return res.status(400).json({ message: 'Missing required fields' });
+      }
+      
+      // Create tenant for client
+      const tenant = await storage.createTenant({
+        name: companyName,
+        subdomain: `client-${companyName.toLowerCase().replace(/[^a-z0-9]/g, '-')}`,
+        settings: {
+          clientInfo: {
+            companyName,
+            contactName,
+            email,
+            phone,
+            website: website || undefined,
+            monthlyRevenue
+          }
+        },
+      });
+      
+      // Create tenant metadata with client type and trial
+      const trialStartDate = new Date();
+      const trialEndDate = new Date();
+      trialEndDate.setDate(trialEndDate.getDate() + 30); // 30-day trial
+      
+      await storage.createTenantMetadata({
+        tenantId: tenant.id,
+        tenantType: 'client',
+        isInTrial: true,
+        trialStartDate,
+        trialEndDate,
+        usageLimits: {
+          maxInvoices: 1000, // Higher limit for direct clients
+          maxContacts: 500,
+          maxUsers: 3,
+        },
+        currentUsage: {
+          invoices: 0,
+          contacts: 0,
+          users: 0,
+        },
+      });
+      
+      // TODO: Send welcome email with login instructions
+      console.log(`✅ Client registration: ${companyName} (${email}) - 30-day trial started`);
+      
+      res.json({ 
+        message: 'Client registration successful', 
+        tenantId: tenant.id,
+        trialEndDate 
+      });
+    } catch (error) {
+      console.error('Client registration error:', error);
+      res.status(500).json({ message: 'Registration failed. Please try again.' });
+    }
+  });
+
   // Stripe payment route for one-time payments
   app.post("/api/create-payment-intent", isAuthenticated, async (req: any, res) => {
     try {
