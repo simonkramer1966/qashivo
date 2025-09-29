@@ -1284,12 +1284,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Auth routes
-  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
-    console.log('🔍 /api/auth/user endpoint hit, authenticated:', !!req.user);
+  // Auth routes - Check authentication status WITHOUT demo bypass for signup flows
+  app.get('/api/auth/user', async (req: any, res) => {
+    console.log('🔍 /api/auth/user endpoint hit');
+    
+    // Check if user is actually authenticated (without demo bypass)
+    if (!req.isAuthenticated() || !req.user?.claims?.sub) {
+      console.log('🔍 User not authenticated, returning null');
+      return res.json(null); // Return null for unauthenticated users
+    }
+    
     try {
       const userId = req.user.claims.sub;
-      console.log('🔍 Looking up user with ID:', userId);
+      console.log('🔍 Looking up authenticated user with ID:', userId);
       const user = await storage.getUser(userId);
       console.log('🔍 Found user:', !!user);
       res.json(user);
