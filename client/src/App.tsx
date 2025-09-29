@@ -47,82 +47,40 @@ import BusinessDashboard from "@/pages/business-dashboard";
 import { useAuth } from "@/hooks/useAuth";
 
 function Router() {
-  const { isAuthenticated, isLoading } = useAuth();
-
-  // Show loading state while checking authentication
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-8 h-8 border-4 border-[#17B6C3] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading...</p>
-        </div>
-      </div>
-    );
-  }
-
-  return !isAuthenticated ? (
+  // Simplified router to test partner registration
+  return (
     <Switch>
-      <Route path="/features" component={Features} />
-      <Route path="/ai-capabilities" component={AiCapabilities} />
-      <Route path="/pricing" component={Pricing} />
-      <Route path="/demo" component={Demo} />
-      <Route path="/about" component={About} />
-      <Route path="/investors" component={Investors} />
-      <Route path="/contact" component={Contact} />
       <Route path="/partner/register" component={PartnerRegistration} />
       <Route path="/" component={Landing} />
-      <Route path="/:rest*" component={NotFound} />
-    </Switch>
-  ) : (
-    <Switch>
-      <Route path="/ai-cfo" component={AiCfo} />
-      <Route path="/cashboard" component={Cashboard} />
-      <Route path="/cashflow" component={Cashflow} />
-      <Route path="/customers" component={Contacts} />
-      <Route path="/invoices" component={Invoices} />
-      <Route path="/invoices-xero" component={InvoicesXero} />
-      <Route path="/contacts" component={Contacts} />
-      <Route path="/call-logs" component={CallLogs} />
-      <Route path="/payment-plans" component={PaymentPlans} />
-      <Route path="/action-centre" component={ActionCentre} />
-      <Route path="/workflows" component={Workflows} />
-      <Route path="/workflow-builder" component={WorkflowBuilder} />
-      <Route path="/ai-suggestions" component={AiSuggestions} />
-      <Route path="/reports" component={KPIAIForecasting} />
-      <Route path="/hr" component={HRManagement} />
-      <Route path="/legal" component={LegalCompliance} />
-      <Route path="/settings" component={Settings} />
-      <Route path="/leadflow-settings" component={LeadFlowSettings} />
-      <Route path="/profile" component={Profile} />
-      <Route path="/health-dashboard" component={HealthDashboard} />
-      <Route path="/ui-choices" component={UIChoices} />
-      <Route path="/ui-xero" component={UIXero} />
-      <Route path="/ui-quickbooks" component={UIQuickBooks} />
-      <Route path="/ui-sage" component={UISage} />
-      <Route path="/subscribe" component={Subscribe} />
-      <Route path="/owner" component={OwnerDashboard} />
-      <Route path="/business-dashboard" component={BusinessDashboard} />
-      <Route path="/partner" component={PartnerDashboard} />
-      <Route path="/test-dialog" component={TestCommunicationDialog} />
-      {/* <Route path="/onboarding" component={OnboardingWizard} /> */}
-      <Route path="/" component={Cashboard} />
-      <Route path="/:rest*" component={NotFound} />
+      <Route path="/:rest*" component={() => (
+        <div className="min-h-screen bg-white flex items-center justify-center">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold mb-4">Page Not Found</h1>
+            <a href="/partner/register" className="text-blue-500 underline">Go to Partner Registration</a>
+          </div>
+        </div>
+      )} />
     </Switch>
   );
 }
 
 function App() {
   return (
-    <div className="min-h-screen bg-white p-8">
-      <h1 className="text-3xl font-bold text-gray-900 mb-4">Qashivo Partner Registration</h1>
-      <p className="text-gray-600">React is working! Testing basic rendering...</p>
-      <div className="mt-8">
-        <a href="/partner/register" className="bg-blue-500 text-white px-4 py-2 rounded">
-          Go to Partner Registration
-        </a>
-      </div>
-    </div>
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Suspense fallback={
+          <div className="min-h-screen bg-white flex items-center justify-center">
+            <div className="text-center">
+              <div className="w-8 h-8 border-4 border-[#17B6C3] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+              <p className="text-gray-600">Loading...</p>
+            </div>
+          </div>
+        }>
+          <Router />
+          <Toaster />
+        </Suspense>
+      </TooltipProvider>
+    </QueryClientProvider>
   );
 }
 
