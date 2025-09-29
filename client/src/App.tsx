@@ -43,7 +43,7 @@ import PaymentPlans from "@/pages/payment-plans";
 import PartnerDashboard from "@/pages/partner";
 import PartnerRegistration from "@/pages/partner-registration";
 import BusinessDashboard from "@/pages/business-dashboard";
-import { OnboardingWizard } from "@/components/OnboardingWizard";
+// import { OnboardingWizard } from "@/components/OnboardingWizard";
 import { useAuth } from "@/hooks/useAuth";
 
 function Router() {
@@ -105,7 +105,7 @@ function Router() {
       <Route path="/business-dashboard" component={BusinessDashboard} />
       <Route path="/partner" component={PartnerDashboard} />
       <Route path="/test-dialog" component={TestCommunicationDialog} />
-      <Route path="/onboarding" component={OnboardingWizard} />
+      {/* <Route path="/onboarding" component={OnboardingWizard} /> */}
       <Route path="/" component={Cashboard} />
       <Route path="/:rest*" component={NotFound} />
     </Switch>
@@ -114,21 +114,15 @@ function Router() {
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Suspense fallback={
-          <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
-            <div className="text-center">
-              <div className="w-8 h-8 border-4 border-[#17B6C3] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-              <p className="text-muted-foreground">Loading...</p>
-            </div>
-          </div>
-        }>
-          <Router />
-          <Toaster />
-        </Suspense>
-      </TooltipProvider>
-    </QueryClientProvider>
+    <div className="min-h-screen bg-white p-8">
+      <h1 className="text-3xl font-bold text-gray-900 mb-4">Qashivo Partner Registration</h1>
+      <p className="text-gray-600">React is working! Testing basic rendering...</p>
+      <div className="mt-8">
+        <a href="/partner/register" className="bg-blue-500 text-white px-4 py-2 rounded">
+          Go to Partner Registration
+        </a>
+      </div>
+    </div>
   );
 }
 

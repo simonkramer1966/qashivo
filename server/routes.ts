@@ -1254,9 +1254,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       const xeroTokens = {
-        access_token: tenant.xeroAccessToken,
-        refresh_token: tenant.xeroRefreshToken,
-        tenantId: tenant.xeroTenantId
+        accessToken: tenant.xeroAccessToken || '',
+        refreshToken: tenant.xeroRefreshToken || '',
+        tenantId: tenant.xeroTenantId,
+        expiresAt: new Date(Date.now() + 30 * 60 * 1000) // 30 minutes
       };
       
       // Import data using XeroOnboardingService
@@ -1266,9 +1267,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (importResult.success) {
         // Update onboarding progress
         await onboardingService.updatePhaseProgress(tenantId, 'technical_connection', {
-          accountingSyncCompleted: true,
-          importSummary: importResult.summary,
-          importTimestamp: new Date().toISOString()
+          xeroSetup: true,
+          dataImportCompleted: true
         });
         
         console.log(`✅ Xero onboarding import completed for tenant ${tenantId} in ${importResult.timeElapsed}ms`);
@@ -2784,7 +2784,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Get risk profile data (enhanced with learning profile if available)
-      const riskScore = null; // TODO: Implement proper risk scoring
+      const riskScore = { score: 0.5, riskLevel: 'medium', factors: ['Assessment pending'] }; // TODO: Implement proper risk scoring
 
       // Assemble contact details response
       const contactDetails = {
@@ -2823,16 +2823,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         })),
         riskProfile: {
-          score: riskScore?.score ? parseFloat(riskScore.score) : 0.5,
-          level: riskScore?.riskLevel as 'low' | 'medium' | 'high' | 'critical' || 'medium',
-          factors: riskScore?.factors ? (riskScore.factors as string[]) : ['No risk assessment available'],
+          score: typeof riskScore.score === 'number' ? riskScore.score : 0.5,
+          level: riskScore.riskLevel as 'low' | 'medium' | 'high' | 'critical',
+          factors: Array.isArray(riskScore.factors) ? riskScore.factors : ['No risk assessment available'],
         },
         // AI Communication Intelligence (if available)
         aiInsights: customerProfile ? {
           totalInteractions: customerProfile.totalInteractions || 0,
           successfulActions: customerProfile.successfulActions || 0,
-          successRate: customerProfile.totalInteractions > 0 
-            ? Math.round((customerProfile.successfulActions / customerProfile.totalInteractions) * 100)
+          successRate: (customerProfile.totalInteractions || 0) > 0 
+            ? Math.round(((customerProfile.successfulActions || 0) / (customerProfile.totalInteractions || 1)) * 100)
             : 0,
           channelEffectiveness: {
             email: parseFloat(customerProfile.emailEffectiveness?.toString() || '0.5'),
@@ -8424,7 +8424,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
         trialStartDate,
         trialEndDate,
         usageLimits: {
-          maxClients: parseInt(expectedClients.split('-')[1] || expectedClients) || 10,
+          maxClients: parseInt(String(expectedClients).split('-')[1] || String(expectedClients)) || 10,
           maxUsers: 5,
         },
         currentUsage: {
