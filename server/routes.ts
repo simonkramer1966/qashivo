@@ -1436,6 +1436,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Top Debtors endpoint
+  app.get("/api/dashboard/top-debtors", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      // Get top debtors by outstanding amount
+      const topDebtors = await db
+        .select({
+          id: contacts.id,
+          company: contacts.name,
+          totalOutstanding: sql<number>`SUM(CAST(${invoices.amount} AS DECIMAL) - CAST(COALESCE(${invoices.amountPaid}, '0') AS DECIMAL))`,
+          invoiceCount: sql<number>`COUNT(${invoices.id})`,
+          oldestInvoiceDate: sql<Date>`MIN(${invoices.dueDate})`,
+          contactEmail: contacts.email,
+          contactPhone: contacts.phone,
+        })
+        .from(contacts)
+        .leftJoin(invoices, and(
+          eq(invoices.contactId, contacts.id),
+          eq(invoices.tenantId, user.tenantId),
+          sql`CAST(${invoices.amount} AS DECIMAL) > CAST(COALESCE(${invoices.amountPaid}, '0') AS DECIMAL)` // Only unpaid invoices
+        ))
+        .where(eq(contacts.tenantId, user.tenantId))
+        .groupBy(contacts.id, contacts.name, contacts.email, contacts.phone)
+        .having(sql`SUM(CAST(${invoices.amount} AS DECIMAL) - CAST(COALESCE(${invoices.amountPaid}, '0') AS DECIMAL)) > 0`)
+        .orderBy(sql`SUM(CAST(${invoices.amount} AS DECIMAL) - CAST(COALESCE(${invoices.amountPaid}, '0') AS DECIMAL)) DESC`)
+        .limit(10);
+
+      // Format the response
+      const formattedDebtors = topDebtors.map((debtor, index) => ({
+        id: debtor.id,
+        rank: index + 1,
+        company: debtor.company || 'Unknown Company',
+        amount: Number(debtor.totalOutstanding) || 0,
+        invoiceCount: Number(debtor.invoiceCount) || 0,
+        oldestInvoiceDate: debtor.oldestInvoiceDate,
+        email: debtor.contactEmail,
+        phone: debtor.contactPhone,
+      }));
+
+      res.json(formattedDebtors);
+    } catch (error) {
+      console.error("Error fetching top debtors:", error);
+      res.status(500).json({ message: "Failed to fetch top debtors" });
+    }
+  });
+
   // Dashboard metrics
   app.get("/api/dashboard/metrics", isAuthenticated, async (req: any, res) => {
     try {
