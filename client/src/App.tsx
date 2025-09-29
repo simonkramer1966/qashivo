@@ -47,19 +47,43 @@ import BusinessDashboard from "@/pages/business-dashboard";
 import { useAuth } from "@/hooks/useAuth";
 
 function Router() {
-  // Simplified router to test partner registration
-  return (
+  const { isAuthenticated, isLoading } = useAuth();
+
+  // Show loading state while checking authentication
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-8 h-8 border-4 border-[#17B6C3] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return !isAuthenticated ? (
     <Switch>
+      <Route path="/features" component={Features} />
+      <Route path="/ai-capabilities" component={AiCapabilities} />
+      <Route path="/pricing" component={Pricing} />
+      <Route path="/demo" component={Demo} />
+      <Route path="/about" component={About} />
+      <Route path="/contact" component={Contact} />
       <Route path="/partner/register" component={PartnerRegistration} />
       <Route path="/" component={Landing} />
-      <Route path="/:rest*" component={() => (
-        <div className="min-h-screen bg-white flex items-center justify-center">
-          <div className="text-center">
-            <h1 className="text-2xl font-bold mb-4">Page Not Found</h1>
-            <a href="/partner/register" className="text-blue-500 underline">Go to Partner Registration</a>
-          </div>
-        </div>
-      )} />
+      <Route path="/:rest*" component={NotFound} />
+    </Switch>
+  ) : (
+    <Switch>
+      <Route path="/cashboard" component={Cashboard} />
+      <Route path="/cashflow" component={Cashflow} />
+      <Route path="/contacts" component={Contacts} />
+      <Route path="/invoices" component={Invoices} />
+      <Route path="/action-centre" component={ActionCentre} />
+      <Route path="/settings" component={Settings} />
+      <Route path="/partner/register" component={PartnerRegistration} />
+      <Route path="/" component={Cashboard} />
+      <Route path="/:rest*" component={NotFound} />
     </Switch>
   );
 }
