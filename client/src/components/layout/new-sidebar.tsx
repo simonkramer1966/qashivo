@@ -49,7 +49,7 @@ import nexusLogo from "@assets/Main Nexus Logo copy_1756923544828.png";
 const navigationItems = [
   { name: "Cashboard", href: "/", icon: Gauge },
   { name: "Action Centre", href: "/action-centre", icon: Target },
-  { name: "Customers", href: "/customers", icon: Users },
+  { name: "Customers", href: "/contacts", icon: Users },
   { name: "Invoices", href: "/invoices", icon: FileText },
   // { name: "Invoice Health", href: "/health-dashboard", icon: Activity },
   // { name: "Invoices - Xero", href: "/invoices-xero", icon: ExternalLink },
