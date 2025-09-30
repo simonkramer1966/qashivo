@@ -433,8 +433,7 @@ export default function NewSidebar() {
       {/* Organization Dropdown - Similar to Xero */}
       {!isCollapsed && location !== '/business-dashboard' && (
         <div className="px-4 pb-4 mt-2.5">
-          {canSwitchOrganizations ? (
-            <DropdownMenu>
+          <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
                   variant="outline"
@@ -694,17 +693,6 @@ export default function NewSidebar() {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-          ) : (
-            <Button
-              variant="outline"
-              className="w-full px-4 py-3 bg-white border-gray-200 cursor-default"
-              data-testid="button-organization-display"
-            >
-              <div className="font-medium text-sm">
-                {tenant?.settings?.companyName || tenant?.name || "Loading..."}
-              </div>
-            </Button>
-          )}
         </div>
       )}
       
