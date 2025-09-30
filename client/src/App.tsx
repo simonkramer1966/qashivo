@@ -19,50 +19,15 @@ import SignIn from "@/pages/signin";
 import { useAuth } from "@/hooks/useAuth";
 
 function Router() {
-  const { isAuthenticated, isLoading } = useAuth();
-
-  // Show loading state while checking authentication
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-8 h-8 border-4 border-[#17B6C3] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading...</p>
-        </div>
-      </div>
-    );
-  }
-
-  return !isAuthenticated ? (
-    // Unauthenticated routes - only signup and signin pages
+  // Bypass authentication - show Cashboard directly
+  return (
     <Switch>
+      {/* Registration and signin routes still available */}
       <Route path="/partner/register" component={PartnerRegistration} />
       <Route path="/client/register" component={ClientRegistration} />
       <Route path="/signin" component={SignIn} />
-      <Route path="/" component={() => (
-        <div className="min-h-screen bg-white flex items-center justify-center">
-          <div className="text-center">
-            <h1 className="text-2xl font-bold mb-4">Qashivo</h1>
-            <p className="text-gray-600 mb-8">Choose your signup option:</p>
-            <div className="space-y-4">
-              <a href="/partner/register" className="block bg-blue-500 text-white px-6 py-3 rounded">
-                Partner Registration
-              </a>
-              <a href="/client/register" className="block bg-green-500 text-white px-6 py-3 rounded">
-                Client Registration
-              </a>
-              <a href="/signin" className="block bg-gray-500 text-white px-6 py-3 rounded">
-                Sign In
-              </a>
-            </div>
-          </div>
-        </div>
-      )} />
-      <Route path="/:rest*" component={NotFound} />
-    </Switch>
-  ) : (
-    // Authenticated routes - main application
-    <Switch>
+      
+      {/* Main application routes - no auth required (temporary) */}
       <Route path="/partner" component={PartnerDashboard} />
       <Route path="/contacts" component={Contacts} />
       <Route path="/invoices" component={Invoices} />
