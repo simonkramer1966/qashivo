@@ -47,7 +47,7 @@ export default function SignIn() {
 
   const handleLogin = () => {
     // Redirect to Replit auth endpoint
-    window.location.href = '/auth/replit';
+    window.location.href = '/api/login';
   };
 
   // Show loading state while checking auth or user type
