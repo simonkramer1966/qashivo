@@ -102,29 +102,25 @@ interface ActionItem {
 }
 
 export default function Cashboard() {
-  const { isAuthenticated } = useAuth();
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [, setLocation] = useLocation();
   const { toast } = useToast();
 
-  // Fetch key metrics
+  // Fetch key metrics (authentication bypassed temporarily)
   const { data: metrics, isLoading: metricsLoading } = useQuery<CashMetrics>({
     queryKey: ["/api/dashboard/metrics"],
-    enabled: isAuthenticated,
     refetchOnMount: false,
   });
 
-  // Fetch cash flow forecast
+  // Fetch cash flow forecast (authentication bypassed temporarily)
   const { data: cashflowData, isLoading: cashflowLoading } = useQuery<CashFlowData>({
     queryKey: ["/api/analytics/cashflow-forecast"],
-    enabled: isAuthenticated,
     refetchOnMount: false,
   });
 
   // Fetch overdue invoices for accurate overdue amounts
   const { data: overdueInvoices, isLoading: overdueLoading } = useQuery<OverdueInvoice[]>({
     queryKey: ["/api/invoices/overdue"],
-    enabled: isAuthenticated,
     refetchOnMount: false,
   });
 
@@ -140,7 +136,6 @@ export default function Cashboard() {
     };
   }>({
     queryKey: ['/api/tenant'],
-    enabled: isAuthenticated,
     refetchOnMount: false,
   });
 
@@ -163,7 +158,6 @@ export default function Cashboard() {
     };
   }>({
     queryKey: ["/api/analytics/aging-analysis"],
-    enabled: isAuthenticated,
     refetchOnMount: false,
   });
 
@@ -178,7 +172,6 @@ export default function Cashboard() {
     source: 'action' | 'payment';
   }>>({
     queryKey: ["/api/dashboard/recent-activity"],
-    enabled: isAuthenticated,
     refetchOnMount: false,
   });
 
@@ -194,7 +187,6 @@ export default function Cashboard() {
     phone: string | null;
   }>>({
     queryKey: ["/api/dashboard/top-debtors"],
-    enabled: isAuthenticated,
     refetchOnMount: false,
   });
 
@@ -413,10 +405,6 @@ export default function Cashboard() {
       }
     }
   ];
-
-  if (!isAuthenticated) {
-    return null;
-  }
 
   // Loading state component for metrics
   const MetricSkeleton = () => (
