@@ -19,15 +19,32 @@ import SignIn from "@/pages/signin";
 import { useAuth } from "@/hooks/useAuth";
 
 function Router() {
-  // Bypass authentication - show Cashboard directly
-  return (
+  const { isAuthenticated, isLoading } = useAuth();
+
+  // Show loading state while checking authentication
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-8 h-8 border-4 border-[#17B6C3] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return !isAuthenticated ? (
+    // Unauthenticated routes - only signup and signin pages
     <Switch>
-      {/* Registration and signin routes still available */}
       <Route path="/partner/register" component={PartnerRegistration} />
       <Route path="/client/register" component={ClientRegistration} />
       <Route path="/signin" component={SignIn} />
-      
-      {/* Main application routes - no auth required (temporary) */}
+      <Route path="/" component={SignIn} />
+      <Route path="/:rest*" component={SignIn} />
+    </Switch>
+  ) : (
+    // Authenticated routes - main application
+    <Switch>
       <Route path="/partner" component={PartnerDashboard} />
       <Route path="/contacts" component={Contacts} />
       <Route path="/invoices" component={Invoices} />
