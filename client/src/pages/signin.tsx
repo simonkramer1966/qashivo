@@ -34,14 +34,17 @@ export default function SignIn() {
   // Handle smart routing based on user type
   useEffect(() => {
     if (isAuthenticated && userType && !typeLoading) {
-      if (userType.tenantType === 'partner') {
-        setLocation('/partner');
-      } else if (userType.tenantType === 'client') {
-        setLocation('/');  // Client dashboard (Cashboard)
-      } else {
-        // Fallback to default dashboard
-        setLocation('/');
-      }
+      // Temporarily route all users to Cashboard
+      setLocation('/');  // Cashboard
+      
+      // Original routing logic (commented out temporarily):
+      // if (userType.tenantType === 'partner') {
+      //   setLocation('/partner');
+      // } else if (userType.tenantType === 'client') {
+      //   setLocation('/');  // Client dashboard (Cashboard)
+      // } else {
+      //   setLocation('/');
+      // }
     }
   }, [isAuthenticated, userType, typeLoading, setLocation]);
 
