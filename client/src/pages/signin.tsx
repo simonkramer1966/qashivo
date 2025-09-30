@@ -34,17 +34,14 @@ export default function SignIn() {
   // Handle smart routing based on user type
   useEffect(() => {
     if (isAuthenticated && userType && !typeLoading) {
-      // Temporarily route all users to Cashboard
-      setLocation('/');  // Cashboard
-      
-      // Original routing logic (commented out temporarily):
-      // if (userType.tenantType === 'partner') {
-      //   setLocation('/partner');
-      // } else if (userType.tenantType === 'client') {
-      //   setLocation('/');  // Client dashboard (Cashboard)
-      // } else {
-      //   setLocation('/');
-      // }
+      if (userType.tenantType === 'partner') {
+        setLocation('/partner');
+      } else if (userType.tenantType === 'client') {
+        setLocation('/');  // Client dashboard (Cashboard)
+      } else {
+        // Fallback to default dashboard
+        setLocation('/');
+      }
     }
   }, [isAuthenticated, userType, typeLoading, setLocation]);
 
@@ -90,6 +87,52 @@ export default function SignIn() {
           </p>
         </div>
 
+        {/* Account Type Benefits */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+          {/* Partner Account */}
+          <Card className="bg-white/70 backdrop-blur-md border-0 shadow-xl">
+            <CardContent className="p-6">
+              <div className="flex items-center mb-4">
+                <div className="p-2 bg-blue-500/10 rounded-lg mr-4">
+                  <Users className="h-8 w-8 text-blue-600" />
+                </div>
+                <div>
+                  <CardTitle className="text-xl text-slate-900">Partner Account</CardTitle>
+                  <CardDescription className="text-slate-600">
+                    Manage multiple client accounts
+                  </CardDescription>
+                </div>
+              </div>
+              <ul className="text-sm text-slate-600 space-y-2 mb-4">
+                <li>• Multi-client management dashboard</li>
+                <li>• White-label branding options</li>
+                <li>• Advanced reporting and analytics</li>
+              </ul>
+            </CardContent>
+          </Card>
+
+          {/* Client Account */}
+          <Card className="bg-white/70 backdrop-blur-md border-0 shadow-xl">
+            <CardContent className="p-6">
+              <div className="flex items-center mb-4">
+                <div className="p-2 bg-[#17B6C3]/10 rounded-lg mr-4">
+                  <Building className="h-8 w-8 text-[#17B6C3]" />
+                </div>
+                <div>
+                  <CardTitle className="text-xl text-slate-900">Client Account</CardTitle>
+                  <CardDescription className="text-slate-600">
+                    Direct access for your business
+                  </CardDescription>
+                </div>
+              </div>
+              <ul className="text-sm text-slate-600 space-y-2 mb-4">
+                <li>• Full-featured collection automation</li>
+                <li>• Direct support and onboarding</li>
+                <li>• All AI-powered features included</li>
+              </ul>
+            </CardContent>
+          </Card>
+        </div>
 
         {/* Sign In Card */}
         <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-xl max-w-md mx-auto">
