@@ -10,6 +10,7 @@ import Cashboard from "@/pages/cashboard";
 import Invoices from "@/pages/invoices";
 import Contacts from "@/pages/contacts";
 import ActionCentre from "@/pages/action-centre";
+import Workflows from "@/pages/workflows";
 import Settings from "@/pages/settings";
 import PartnerDashboard from "@/pages/partner";
 // Signup and authentication pages
@@ -49,6 +50,7 @@ function Router() {
       <Route path="/contacts" component={Contacts} />
       <Route path="/invoices" component={Invoices} />
       <Route path="/action-centre" component={ActionCentre} />
+      <Route path="/workflows" component={Workflows} />
       <Route path="/settings" component={Settings} />
       <Route path="/" component={Cashboard} />
       <Route path="/:rest*" component={NotFound} />
