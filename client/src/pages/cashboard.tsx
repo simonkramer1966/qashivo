@@ -36,6 +36,7 @@ import {
   Minus
 } from "lucide-react";
 import NewSidebar from "@/components/layout/new-sidebar";
+import Header from "@/components/layout/header";
 import { formatCurrency } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
@@ -424,37 +425,19 @@ export default function Cashboard() {
   // Health status loading
   if (metricsLoading || cashflowLoading || overdueLoading || agingLoading || activityLoading || debtorsLoading) {
     return (
-      <div className="flex h-screen bg-background">
+      <div className="flex h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-teal-50">
         <NewSidebar />
-        <div className="flex-1 flex flex-col overflow-hidden">
-          <main className="flex-1 overflow-x-hidden overflow-y-auto">
+        <main className="flex-1 overflow-hidden">
+          <Header 
+            title="Cash Health Dashboard" 
+            subtitle="Your financial position at a glance"
+          />
+          
+          <div className="h-[calc(100vh-80px)] overflow-y-auto">
             <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 max-w-7xl">
               
-              {/* Loading Header */}
+              {/* Loading Cash Flow Projections */}
               <div className="mb-6 sm:mb-8">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
-                  <div>
-                    <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-slate-100">Cash Health Dashboard</h1>
-                    <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400">Your financial position at a glance</p>
-                  </div>
-                  <div className="flex gap-2 overflow-x-auto pb-2 sm:pb-0">
-                    {quickActions.map((action, index) => (
-                      <Button
-                        key={index}
-                        variant="outline"
-                        size="sm"
-                        onClick={action.onClick}
-                        className="flex-shrink-0"
-                        data-testid={`button-${action.label.toLowerCase().replace(' ', '-')}`}
-                      >
-                        <action.icon className="h-4 w-4 mr-1 sm:mr-2" />
-                        <span className="hidden xs:inline">{action.label}</span>
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Loading Cash Flow Projections */}
                 <Card className="glass-card animate-pulse" data-testid="card-cash-flow-projections">
                   <CardContent className="p-4 sm:p-6">
                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
@@ -522,42 +505,23 @@ export default function Cashboard() {
                 </div>
               </div>
             </div>
-          </main>
-        </div>
+          </div>
+        </main>
       </div>
     );
   }
 
   return (
-    <div className="flex h-screen bg-background">
+    <div className="flex h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-teal-50">
       <NewSidebar />
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <main className="flex-1 overflow-x-hidden overflow-y-auto">
+      <main className="flex-1 overflow-hidden">
+        <Header 
+          title="Cash Health Dashboard" 
+          subtitle="Your financial position at a glance"
+        />
+        
+        <div className="h-[calc(100vh-80px)] overflow-y-auto">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 max-w-7xl">
-            
-            {/* Cash Health Header */}
-            <div className="mb-6 sm:mb-8">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
-                <div>
-                  <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-slate-100">Cash Health Dashboard</h1>
-                  <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400">Your financial position at a glance</p>
-                </div>
-                <div className="flex gap-2 overflow-x-auto pb-2 sm:pb-0">
-                  {quickActions.map((action, index) => (
-                    <Button
-                      key={index}
-                      variant="outline"
-                      size="sm"
-                      onClick={action.onClick}
-                      className="flex-shrink-0"
-                      data-testid={`button-${action.label.toLowerCase().replace(' ', '-')}`}
-                    >
-                      <action.icon className="h-4 w-4 mr-1 sm:mr-2" />
-                      <span className="hidden xs:inline">{action.label}</span>
-                    </Button>
-                  ))}
-                </div>
-              </div>
 
               {/* Cash Flow Projections */}
               <Card className="glass-card" data-testid="card-cash-flow-projections">
@@ -607,7 +571,6 @@ export default function Cashboard() {
                   </div>
                 </CardContent>
               </Card>
-            </div>
 
             {/* Aging Analysis Cards */}
             <div className="mb-6 sm:mb-8">
@@ -848,11 +811,9 @@ export default function Cashboard() {
                 </CardContent>
               </Card>
             </div>
-
-
           </div>
-        </main>
-      </div>
+        </div>
+      </main>
     </div>
   );
 }
