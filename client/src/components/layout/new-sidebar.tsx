@@ -685,9 +685,9 @@ export default function NewSidebar() {
                 <DropdownMenuItem 
                   className="pl-7 pr-3 py-3 cursor-pointer hover:bg-gray-50"
                   onClick={() => setLocation('/owner')}
-                  data-testid="menu-item-my-nexus"
+                  data-testid="menu-item-my-qashivo"
                 >
-                  <div className="font-medium text-sm">My Nexus</div>
+                  <div className="font-medium text-sm">My Qashivo</div>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
