@@ -213,8 +213,8 @@ export default function ActivityLogPage() {
                   variant={commMode?.mode === 'testing' ? 'default' : 'outline'}
                   className={`h-auto flex-col items-start p-4 ${
                     commMode?.mode === 'testing' 
-                      ? 'bg-blue-600 hover:bg-blue-700 text-white' 
-                      : 'hover:bg-blue-50'
+                      ? 'bg-purple-600 hover:bg-purple-700 text-white' 
+                      : 'hover:bg-purple-50'
                   }`}
                   onClick={() => updateModeMutation.mutate('testing')}
                   disabled={updateModeMutation.isPending}
