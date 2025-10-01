@@ -187,23 +187,6 @@ export default function Header({ title, subtitle, action, noBorder = true, title
             </TooltipProvider>
           )}
 
-          {/* Collections Automation Switch */}
-          <div className="flex items-center gap-3 px-4 py-2 bg-white/70 backdrop-blur-sm border border-gray-200/50 rounded-lg min-w-[180px]">
-            <div className="flex items-center gap-2">
-              <Power className={`h-4 w-4 ${automationStatus?.enabled ? 'text-green-600' : 'text-red-500'}`} />
-              <span className="text-sm font-medium text-gray-700 whitespace-nowrap">
-                Automation {automationStatus?.enabled ? 'ON' : 'OFF'}
-              </span>
-            </div>
-            <Switch
-              checked={automationStatus?.enabled || false}
-              onCheckedChange={(checked) => automationToggleMutation.mutate(checked)}
-              disabled={isAutomationLoading || automationToggleMutation.isPending}
-              className="data-[state=checked]:bg-[#17B6C3] data-[state=unchecked]:bg-gray-200 [&>span]:bg-white [&>span]:data-[state=checked]:bg-white [&>span]:data-[state=unchecked]:bg-white"
-              data-testid="switch-automation-master"
-            />
-          </div>
-
           {/* User Profile */}
           <DropdownMenu>
             <DropdownMenuTrigger className="flex items-center space-x-3 hover:bg-accent hover:text-accent-foreground rounded-lg px-3 py-2 transition-colors" data-testid="button-user-menu">
