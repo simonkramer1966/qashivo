@@ -687,6 +687,14 @@ export default function NewSidebar() {
                   <div className="font-medium text-sm">Documentation</div>
                 </DropdownMenuItem>
                 
+                <DropdownMenuItem 
+                  className="pl-7 pr-3 py-3 cursor-pointer hover:bg-gray-50"
+                  onClick={() => setLocation('/documentation-review')}
+                  data-testid="menu-item-documentation-review"
+                >
+                  <div className="font-medium text-sm">📝 Doc Review</div>
+                </DropdownMenuItem>
+                
                 <div className="mx-4 my-2 h-px bg-gray-200"></div>
                 
                 {/* Bottom Section */}

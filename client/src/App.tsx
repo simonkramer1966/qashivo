@@ -15,6 +15,7 @@ import ActivityLog from "@/pages/activity-log";
 import Settings from "@/pages/settings";
 import PartnerDashboard from "@/pages/partner";
 import Documentation from "@/pages/documentation";
+import DocumentationReview from "@/pages/documentation-review";
 // Signup and authentication pages
 import PartnerRegistration from "@/pages/partner-registration";
 import ClientRegistration from "@/pages/client-registration";
@@ -55,6 +56,7 @@ function Router() {
       <Route path="/workflows" component={Workflows} />
       <Route path="/activity-log" component={ActivityLog} />
       <Route path="/documentation" component={Documentation} />
+      <Route path="/documentation-review" component={DocumentationReview} />
       <Route path="/settings" component={Settings} />
       <Route path="/" component={Cashboard} />
       <Route path="/:rest*" component={NotFound} />
