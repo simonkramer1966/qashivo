@@ -56,9 +56,6 @@ const navigationItems = [
   { name: "Workflows", href: "/workflows", icon: Workflow },
   { name: "AI Suggestions", href: "/ai-suggestions", icon: Bot },
   { name: "Reports", href: "/reports", icon: BarChart },
-  { name: "Call Logs", href: "/call-logs", icon: Phone },
-  { name: "Payment Plans", href: "/payment-plans", icon: CreditCard },
-  { name: "Activity Log", href: "/activity-log", icon: Activity },
 ];
 
 // Partner-specific navigation items
@@ -660,26 +657,26 @@ export default function NewSidebar() {
                 {/* Nexus-specific Items */}
                 <DropdownMenuItem 
                   className="pl-7 pr-3 py-3 cursor-pointer hover:bg-gray-50"
-                  onClick={() => setLocation('/reports')}
-                  data-testid="menu-item-kpi"
+                  onClick={() => setLocation('/call-logs')}
+                  data-testid="menu-item-call-logs"
                 >
-                  <div className="font-medium text-sm">KPI</div>
+                  <div className="font-medium text-sm">Call Logs</div>
                 </DropdownMenuItem>
                 
                 <DropdownMenuItem 
                   className="pl-7 pr-3 py-3 cursor-pointer hover:bg-gray-50"
-                  onClick={() => setLocation('/hr')}
-                  data-testid="menu-item-hr"
+                  onClick={() => setLocation('/payment-plans')}
+                  data-testid="menu-item-payment-plans"
                 >
-                  <div className="font-medium text-sm">HR</div>
+                  <div className="font-medium text-sm">Payment Plans</div>
                 </DropdownMenuItem>
                 
                 <DropdownMenuItem 
                   className="pl-7 pr-3 py-3 cursor-pointer hover:bg-gray-50"
-                  onClick={() => setLocation('/legal')}
-                  data-testid="menu-item-legal"
+                  onClick={() => setLocation('/activity-log')}
+                  data-testid="menu-item-activity-log"
                 >
-                  <div className="font-medium text-sm">Legal</div>
+                  <div className="font-medium text-sm">Activity Log</div>
                 </DropdownMenuItem>
                 
                 <div className="mx-4 my-2 h-px bg-gray-200"></div>
