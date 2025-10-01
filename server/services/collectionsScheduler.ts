@@ -1,6 +1,6 @@
 import { eq, and, inArray, gte, lt, sql } from "drizzle-orm";
 import { db } from "../db";
-import { tenants, actions, emailSenders, communicationTemplates, contacts, invoices } from "@shared/schema";
+import { tenants, actions, emailSenders, communicationTemplates, contacts, invoices, activityLogs } from "@shared/schema";
 import { checkCollectionActions, CollectionAction } from "./collectionsAutomation";
 import { sendEmail } from "./sendgrid";
 
@@ -155,6 +155,29 @@ class CollectionsScheduler {
       console.log(`🏁 Collections run completed in ${duration}ms`);
       console.log(`📈 Summary: ${totalActionsGenerated} actions found, ${totalActionsExecuted} executed, ${totalErrors} errors`);
 
+      // Log automation run to activity log
+      for (const tenant of enabledTenants) {
+        try {
+          await db.insert(activityLogs).values({
+            tenantId: tenant.id,
+            activityType: 'automation',
+            category: 'automation',
+            action: 'Collections Automation Run',
+            description: `Automated collections run completed - ${totalActionsGenerated} actions generated, ${totalActionsExecuted} executed successfully`,
+            result: totalErrors === 0 ? 'success' : (totalActionsExecuted > 0 ? 'success' : 'failure'),
+            duration,
+            metadata: {
+              actionsGenerated: totalActionsGenerated,
+              actionsExecuted: totalActionsExecuted,
+              errors: totalErrors,
+              tenantName: tenant.name
+            }
+          });
+        } catch (error) {
+          console.error(`Failed to log automation run for tenant ${tenant.id}:`, error);
+        }
+      }
+
     } catch (error: any) {
       console.error("❌ Critical error in collections run:", error);
     } finally {
@@ -240,6 +263,28 @@ class CollectionsScheduler {
             console.log(`    📱 SMS action not yet implemented for ${action.invoiceNumber}`);
             success = false;
             error = "SMS action not implemented";
+            
+            // Log SMS attempt
+            try {
+              await db.insert(activityLogs).values({
+                tenantId,
+                activityType: 'sms',
+                category: 'communication',
+                action: 'SMS Action Attempted',
+                description: `SMS collection reminder attempted for ${action.contactName} - invoice ${action.invoiceNumber}`,
+                result: 'skipped',
+                entityType: 'invoice',
+                entityId: action.invoiceId,
+                errorMessage: 'SMS functionality not yet implemented',
+                metadata: {
+                  contactName: action.contactName,
+                  invoiceNumber: action.invoiceNumber,
+                  daysOverdue: action.daysOverdue
+                }
+              });
+            } catch (err) {
+              console.error('Failed to log SMS attempt:', err);
+            }
             break;
             
           case 'voice':
@@ -247,6 +292,28 @@ class CollectionsScheduler {
             console.log(`    📞 Voice action not yet implemented for ${action.invoiceNumber}`);
             success = false;
             error = "Voice action not implemented";
+            
+            // Log voice call attempt
+            try {
+              await db.insert(activityLogs).values({
+                tenantId,
+                activityType: 'voice',
+                category: 'communication',
+                action: 'Voice Call Attempted',
+                description: `AI voice call attempted for ${action.contactName} - invoice ${action.invoiceNumber}`,
+                result: 'skipped',
+                entityType: 'invoice',
+                entityId: action.invoiceId,
+                errorMessage: 'Voice call functionality not yet implemented',
+                metadata: {
+                  contactName: action.contactName,
+                  invoiceNumber: action.invoiceNumber,
+                  daysOverdue: action.daysOverdue
+                }
+              });
+            } catch (err) {
+              console.error('Failed to log voice call attempt:', err);
+            }
             break;
             
           case 'manual':
@@ -349,9 +416,57 @@ class CollectionsScheduler {
 
       if (emailSent) {
         console.log(`    ✅ Email sent successfully to ${contact.email}`);
+        
+        // Log successful email send
+        try {
+          await db.insert(activityLogs).values({
+            tenantId,
+            activityType: 'email',
+            category: 'communication',
+            action: 'Collection Email Sent',
+            description: `Automated collection email sent to ${action.contactName} for invoice ${action.invoiceNumber}`,
+            result: 'success',
+            entityType: 'invoice',
+            entityId: action.invoiceId,
+            metadata: {
+              recipientEmail: contact.email,
+              recipientName: action.contactName,
+              invoiceNumber: action.invoiceNumber,
+              daysOverdue: action.daysOverdue,
+              amount: action.amount,
+              subject
+            }
+          });
+        } catch (error) {
+          console.error('Failed to log email activity:', error);
+        }
+        
         return true;
       } else {
         console.error(`    ❌ Failed to send email to ${contact.email}`);
+        
+        // Log failed email send
+        try {
+          await db.insert(activityLogs).values({
+            tenantId,
+            activityType: 'email',
+            category: 'communication',
+            action: 'Collection Email Failed',
+            description: `Failed to send collection email to ${action.contactName} for invoice ${action.invoiceNumber}`,
+            result: 'failure',
+            entityType: 'invoice',
+            entityId: action.invoiceId,
+            errorMessage: 'Email delivery failed',
+            metadata: {
+              recipientEmail: contact.email,
+              recipientName: action.contactName,
+              invoiceNumber: action.invoiceNumber
+            }
+          });
+        } catch (error) {
+          console.error('Failed to log email failure:', error);
+        }
+        
         return false;
       }
 
