@@ -59,6 +59,7 @@ export const tenants = pgTable("tenants", {
   
   // Communication Mode: off, testing, soft_live, live
   communicationMode: varchar("communication_mode").default("testing"), // off, testing, soft_live, live
+  testContactName: varchar("test_contact_name"), // Test contact name for soft_live mode
   testEmails: text("test_emails").array(), // Test email addresses for soft_live mode
   testPhones: text("test_phones").array(), // Test phone numbers for soft_live mode
   

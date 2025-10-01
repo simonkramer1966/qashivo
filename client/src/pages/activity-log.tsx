@@ -54,6 +54,11 @@ export default function ActivityLogPage() {
     search: "",
   });
   const [isCommModeExpanded, setIsCommModeExpanded] = useState(true);
+  const [testContact, setTestContact] = useState({
+    name: '',
+    email: '',
+    phone: ''
+  });
 
   // Fetch activity logs
   const { data: logs, isLoading: logsLoading, refetch } = useQuery<ActivityLog[]>({
@@ -68,19 +73,32 @@ export default function ActivityLogPage() {
   });
 
   // Fetch communication mode
-  const { data: commMode } = useQuery<{ mode: string; testEmails: string[]; testPhones: string[] }>({
+  const { data: commMode } = useQuery<{ 
+    mode: string; 
+    testContactName: string;
+    testEmails: string[]; 
+    testPhones: string[] 
+  }>({
     queryKey: ['/api/communications/mode'],
     enabled: isAuthenticated,
   });
 
+  // Populate test contact fields when commMode data is loaded
+  useEffect(() => {
+    if (commMode) {
+      setTestContact({
+        name: commMode.testContactName || '',
+        email: (commMode.testEmails && commMode.testEmails[0]) || '',
+        phone: (commMode.testPhones && commMode.testPhones[0]) || ''
+      });
+    }
+  }, [commMode]);
+
   // Mutation to update communication mode
   const updateModeMutation = useMutation({
     mutationFn: async (mode: string) => {
-      return await apiRequest('/api/communications/mode', {
-        method: 'PUT',
-        body: JSON.stringify({ mode }),
-        headers: { 'Content-Type': 'application/json' },
-      });
+      const res = await apiRequest('PUT', '/api/communications/mode', { mode });
+      return await res.json();
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['/api/communications/mode'] });
@@ -92,6 +110,33 @@ export default function ActivityLogPage() {
     onError: (error: any) => {
       toast({
         title: "Failed to update mode",
+        description: error.message || "Please try again",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Mutation to update test contact information
+  const updateTestContactMutation = useMutation({
+    mutationFn: async (contact: { name: string; email: string; phone: string }) => {
+      const res = await apiRequest('PUT', '/api/communications/mode', {
+        mode: commMode?.mode || 'testing',
+        testContactName: contact.name,
+        testEmails: contact.email ? [contact.email] : [],
+        testPhones: contact.phone ? [contact.phone] : []
+      });
+      return await res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/communications/mode'] });
+      toast({
+        title: "Test contact updated",
+        description: "Test contact information saved successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to update test contact",
         description: error.message || "Please try again",
         variant: "destructive",
       });
@@ -285,11 +330,55 @@ export default function ActivityLogPage() {
               </div>
 
               {commMode?.mode === 'soft_live' && (
-                <div className="mt-4 p-3 bg-orange-50 border border-orange-200 rounded-lg">
-                  <p className="text-sm text-orange-800">
-                    <strong>Soft Live Mode:</strong> Communications only sent to test contacts. 
-                    Configure test emails and phones in tenant settings.
+                <div className="mt-4 p-4 bg-orange-50 border border-orange-200 rounded-lg">
+                  <p className="text-sm text-orange-800 font-semibold mb-3">
+                    <strong>Soft Live Mode:</strong> Communications only sent to test contacts
                   </p>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div>
+                      <label className="text-xs font-medium text-gray-700 mb-1 block">Name</label>
+                      <Input
+                        placeholder="Test Contact Name"
+                        value={testContact.name}
+                        onChange={(e) => setTestContact({ ...testContact, name: e.target.value })}
+                        className="bg-white/70 border-orange-200/50"
+                        data-testid="input-test-contact-name"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-gray-700 mb-1 block">Email</label>
+                      <Input
+                        type="email"
+                        placeholder="test@example.com"
+                        value={testContact.email}
+                        onChange={(e) => setTestContact({ ...testContact, email: e.target.value })}
+                        className="bg-white/70 border-orange-200/50"
+                        data-testid="input-test-contact-email"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-gray-700 mb-1 block">Phone</label>
+                      <Input
+                        type="tel"
+                        placeholder="+44 7700 900000"
+                        value={testContact.phone}
+                        onChange={(e) => setTestContact({ ...testContact, phone: e.target.value })}
+                        className="bg-white/70 border-orange-200/50"
+                        data-testid="input-test-contact-phone"
+                      />
+                    </div>
+                  </div>
+                  <div className="mt-3 flex justify-end">
+                    <Button
+                      size="sm"
+                      onClick={() => updateTestContactMutation.mutate(testContact)}
+                      disabled={updateTestContactMutation.isPending}
+                      className="bg-[#17B6C3] hover:bg-[#1396A1] text-white"
+                      data-testid="button-save-test-contact"
+                    >
+                      {updateTestContactMutation.isPending ? "Saving..." : "Save Test Contact"}
+                    </Button>
+                  </div>
                 </div>
               )}
 

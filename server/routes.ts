@@ -4921,6 +4921,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
 
       res.json({ 
         mode: tenant.communicationMode || 'testing',
+        testContactName: tenant.testContactName || '',
         testEmails: tenant.testEmails || [],
         testPhones: tenant.testPhones || []
       });
@@ -4937,7 +4938,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
 
-      const { mode, testEmails, testPhones } = req.body;
+      const { mode, testContactName, testEmails, testPhones } = req.body;
       
       // Validate mode
       const validModes = ['off', 'testing', 'soft_live', 'live'];
@@ -4950,12 +4951,14 @@ Payment required immediately to avoid collection action. Contact us NOW.`
       // Update tenant with new mode and test contacts
       await storage.updateTenant(user.tenantId, {
         communicationMode: mode,
+        ...(testContactName !== undefined && { testContactName }),
         ...(testEmails && { testEmails }),
         ...(testPhones && { testPhones })
       });
 
       res.json({ 
         mode, 
+        testContactName: testContactName || '',
         testEmails: testEmails || [],
         testPhones: testPhones || [],
         message: `Communication mode updated to ${mode}` 
