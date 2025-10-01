@@ -321,8 +321,8 @@ export class CollectionLearningService {
           continue;
         }
 
-        // Get customer learning profile
-        const profile = await this.getOrCreateCustomerProfile(action.contactId, action.invoiceId.split('-')[0]); // Assuming tenant ID pattern
+        // Get customer learning profile using the tenantId from action
+        const profile = await this.getOrCreateCustomerProfile(action.contactId, action.tenantId);
 
         if (profile.learningConfidence && parseFloat(profile.learningConfidence.toString()) > 0.6) {
           // Use learned preferences

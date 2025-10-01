@@ -6,6 +6,7 @@ import { CollectionLearningService, type OptimizedAction } from "./collectionLea
 export interface CollectionAction {
   invoiceId: string;
   contactId: string;
+  tenantId: string;  // Add tenantId for customer profile lookup
   invoiceNumber: string;
   contactName: string;
   daysOverdue: number;
@@ -128,6 +129,7 @@ export async function checkCollectionActions(tenantId: string): Promise<Collecti
         const action: CollectionAction = {
           invoiceId: invoice.id,
           contactId: contact.id,
+          tenantId: tenantId,  // Include tenantId for customer profile lookup
           invoiceNumber: invoice.invoiceNumber,
           contactName: contact.name || 'Unknown',
           daysOverdue,
@@ -324,6 +326,7 @@ export async function nudgeInvoiceToNextAction(invoiceId: string, tenantId: stri
     const nudgeAction: CollectionAction = {
       invoiceId: invoice.id,
       contactId: contact.id,
+      tenantId: invoice.tenantId,  // Include tenantId for customer profile lookup
       invoiceNumber: invoice.invoiceNumber,
       contactName: contact.name || 'Unknown',
       daysOverdue: Math.max(0, daysOverdue),

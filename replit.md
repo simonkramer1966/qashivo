@@ -57,13 +57,20 @@ AI-powered documentation automation that keeps technical docs synchronized with 
 - **Structured Storage**: JSON-based documentation with separation of auto-updatable vs. human-curated content
 - **CLI Tool**: Manual sync trigger via `tsx scripts/sync-docs.ts` with interactive or auto-apply modes
 - **Version History**: Audit log tracking all automated updates for rollback capability
+- **Security**: Git reference sanitization prevents command injection in diff operations
 
 Files:
-- `docs/documentation-manifest.json`: Maps code files/schemas to documentation sections
+- `docs/documentation-manifest.json`: Maps code files/schemas to documentation sections (validated file paths)
 - `docs/documentation-content.json`: Structured documentation content
-- `server/services/documentationSyncService.ts`: Core sync engine
+- `server/services/documentationSyncService.ts`: Core sync engine with security features
 - `server/routes/documentationRoutes.ts`: API endpoints
 - `scripts/sync-docs.ts`: CLI command for manual sync
+
+Recent fixes (Oct 2025):
+- Fixed command injection vulnerability in git diff execution with regex-based sanitization
+- Corrected manifest file path mismatches to point to existing files
+- Eliminated duplicate git diff calls by including detailedDiff in ChangeDetectionResult
+- Fixed tenant ID extraction in collections learning (was incorrectly parsing from invoice ID)
 
 ## External Dependencies
 
