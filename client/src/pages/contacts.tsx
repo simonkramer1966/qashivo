@@ -12,10 +12,13 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Search, Mail, Phone, Building, User, Users, ChevronUp, ChevronDown, Star, MoreHorizontal, Eye, MessageSquare, Calendar, AlertCircle, CheckCircle, Pause, TrendingUp, TrendingDown, Minus, Shield, X, ChevronLeft, ChevronRight, Filter } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Progress } from "@/components/ui/progress";
+import { Plus, Search, Mail, Phone, Building, User, Users, ChevronUp, ChevronDown, Star, MoreHorizontal, Eye, MessageSquare, Calendar, AlertCircle, CheckCircle, Pause, TrendingUp, TrendingDown, Minus, Shield, X, ChevronLeft, ChevronRight, Filter, Activity, Clock, Send } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { CommunicationPreviewDialog } from "@/components/ui/communication-preview-dialog";
+import { LineChart, Line, ResponsiveContainer } from 'recharts';
 
 export default function Customers() {
   const { toast } = useToast();
@@ -35,6 +38,12 @@ export default function Customers() {
   const [communicationDialog, setCommunicationDialog] = useState({
     isOpen: false,
     type: 'email' as 'email' | 'sms' | 'voice',
+    contactId: '',
+  });
+
+  // Customer detail dialog state
+  const [customerDetailDialog, setCustomerDetailDialog] = useState({
+    isOpen: false,
     contactId: '',
   });
 
@@ -523,6 +532,48 @@ export default function Customers() {
     });
   };
 
+  // Handle customer detail dialog opening
+  const openCustomerDetailDialog = (contactId: string) => {
+    setCustomerDetailDialog({
+      isOpen: true,
+      contactId,
+    });
+  };
+
+  // Handle customer detail dialog closing
+  const closeCustomerDetailDialog = () => {
+    setCustomerDetailDialog({
+      isOpen: false,
+      contactId: '',
+    });
+  };
+
+  // Fetch customer detail data
+  const { data: customerRating, isLoading: ratingLoading } = useQuery({
+    queryKey: [`/api/contacts/${customerDetailDialog.contactId}/rating`],
+    enabled: customerDetailDialog.isOpen && !!customerDetailDialog.contactId,
+  });
+
+  const { data: learningProfile, isLoading: learningLoading } = useQuery({
+    queryKey: [`/api/contacts/${customerDetailDialog.contactId}/learning-profile`],
+    enabled: customerDetailDialog.isOpen && !!customerDetailDialog.contactId,
+  });
+
+  const { data: paymentStats, isLoading: paymentLoading } = useQuery({
+    queryKey: [`/api/contacts/${customerDetailDialog.contactId}/payment-stats`],
+    enabled: customerDetailDialog.isOpen && !!customerDetailDialog.contactId,
+  });
+
+  const { data: customerActions = [], isLoading: actionsLoading } = useQuery({
+    queryKey: [`/api/contacts/${customerDetailDialog.contactId}/actions`],
+    enabled: customerDetailDialog.isOpen && !!customerDetailDialog.contactId,
+  });
+
+  const { data: customerContact, isLoading: contactLoading } = useQuery({
+    queryKey: [`/api/contacts/${customerDetailDialog.contactId}`],
+    enabled: customerDetailDialog.isOpen && !!customerDetailDialog.contactId,
+  });
+
   const filteredContacts = (contacts as any[]).filter((contact: any) => {
     const searchLower = search.toLowerCase();
     
@@ -836,6 +887,7 @@ export default function Customers() {
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end" className="bg-white border-gray-200 w-52">
                                   <DropdownMenuItem 
+                                    onClick={() => openCustomerDetailDialog(contact.id)}
                                     data-testid={`menu-view-customer-${contact.id}`}
                                   >
                                     <Eye className="mr-2 h-4 w-4" />
@@ -937,6 +989,365 @@ export default function Customers() {
         contextId={communicationDialog.contactId}
         onSend={handleSendCommunication}
       />
+
+      {/* Customer Detail Dialog */}
+      <Dialog open={customerDetailDialog.isOpen} onOpenChange={closeCustomerDetailDialog}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto bg-gradient-to-br from-slate-50 via-blue-50 to-teal-50">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold flex items-center justify-between">
+              <span>{customerContact?.name || 'Customer Details'}</span>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={closeCustomerDetailDialog}
+                className="h-8 w-8 p-0 hover:bg-white/50"
+                data-testid="button-close-customer-detail"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-6 mt-4">
+            {/* Shield Badge - Customer Rating */}
+            {ratingLoading ? (
+              <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
+                <CardContent className="p-6">
+                  <div className="animate-pulse flex items-center gap-3">
+                    <div className="h-12 w-12 bg-gray-200 rounded-lg"></div>
+                    <div className="flex-1">
+                      <div className="h-6 bg-gray-200 rounded w-1/3 mb-2"></div>
+                      <div className="h-4 bg-gray-200 rounded w-1/4"></div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ) : customerRating && (
+              <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-xl font-bold flex items-center gap-3">
+                    <div 
+                      className={`p-2 rounded-lg ${
+                        customerRating.color === 'green' 
+                          ? 'bg-green-100' 
+                          : customerRating.color === 'amber' 
+                          ? 'bg-amber-100' 
+                          : 'bg-red-100'
+                      }`}
+                    >
+                      <Shield 
+                        className={`h-8 w-8 ${
+                          customerRating.color === 'green' 
+                            ? 'text-green-600 fill-green-600' 
+                            : customerRating.color === 'amber' 
+                            ? 'text-amber-600 fill-amber-600' 
+                            : 'text-red-600 fill-red-600'
+                        }`}
+                        data-testid="icon-customer-rating"
+                      />
+                    </div>
+                    <div>
+                      <div className="text-lg font-bold" data-testid="text-customer-rating">
+                        {customerRating.rating} Customer
+                      </div>
+                      <div className="text-sm text-gray-500 font-normal">
+                        Overall Score: {customerRating.score}/100
+                      </div>
+                    </div>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <div className="text-gray-500">Payment Timing</div>
+                      <div className="font-medium" data-testid="text-payment-timing-score">
+                        {customerRating.breakdown.daysToPayScore}/100
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-gray-500">Payment Reliability</div>
+                      <div className="font-medium" data-testid="text-payment-reliability-score">
+                        {customerRating.breakdown.paymentReliabilityScore}/100
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-gray-500">Response Rate</div>
+                      <div className="font-medium" data-testid="text-response-rate-score">
+                        {customerRating.breakdown.responseRateScore}/100
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-gray-500">Dispute History</div>
+                      <div className="font-medium" data-testid="text-dispute-score">
+                        {customerRating.breakdown.disputeScore}/100
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Payment Performance Metrics */}
+            {paymentLoading ? (
+              <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
+                <CardContent className="p-6">
+                  <div className="animate-pulse space-y-4">
+                    <div className="h-6 bg-gray-200 rounded w-1/3 mb-4"></div>
+                    <div className="grid grid-cols-3 gap-4">
+                      <div className="h-24 bg-gray-200 rounded"></div>
+                      <div className="h-24 bg-gray-200 rounded"></div>
+                      <div className="h-24 bg-gray-200 rounded"></div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ) : paymentStats && (
+              <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
+                <CardHeader>
+                  <CardTitle className="text-xl font-bold flex items-center gap-2">
+                    <div className="p-2 bg-[#17B6C3]/10 rounded-lg">
+                      <TrendingUp className="h-5 w-5 text-[#17B6C3]" />
+                    </div>
+                    Payment Performance
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="bg-white/70 backdrop-blur-md border-0 shadow-xl rounded-lg p-4">
+                      <div className="text-sm text-gray-500">Avg Days to Pay</div>
+                      <div className="text-2xl font-bold mt-1" data-testid="text-avg-days-to-pay">
+                        {paymentStats.averageDaysToPay > 0 ? '+' : ''}{paymentStats.averageDaysToPay}
+                      </div>
+                    </div>
+                    <div className="bg-white/70 backdrop-blur-md border-0 shadow-xl rounded-lg p-4">
+                      <div className="text-sm text-gray-500">Payment Reliability</div>
+                      <div className="text-2xl font-bold mt-1" data-testid="text-payment-reliability">
+                        {paymentStats.paymentReliability}%
+                      </div>
+                    </div>
+                    <div className="bg-white/70 backdrop-blur-md border-0 shadow-xl rounded-lg p-4">
+                      <div className="text-sm text-gray-500">Trend</div>
+                      <div className="flex items-center gap-2 mt-1">
+                        {paymentStats.trend === 'improving' && (
+                          <TrendingUp className="h-6 w-6 text-green-600" data-testid="icon-trend-improving" />
+                        )}
+                        {paymentStats.trend === 'declining' && (
+                          <TrendingDown className="h-6 w-6 text-red-600" data-testid="icon-trend-declining" />
+                        )}
+                        {paymentStats.trend === 'stable' && (
+                          <Minus className="h-6 w-6 text-gray-600" data-testid="icon-trend-stable" />
+                        )}
+                        <span className="text-sm font-medium capitalize">{paymentStats.trend}</span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {paymentStats.paymentHistory && paymentStats.paymentHistory.length > 0 && (
+                    <div className="mt-4">
+                      <div className="text-sm text-gray-500 mb-2">Payment History (Last 10 Invoices)</div>
+                      <div className="h-16 w-full">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <LineChart data={paymentStats.paymentHistory.map((days: number, i: number) => ({ index: i, days }))}>
+                            <Line 
+                              type="monotone" 
+                              dataKey="days" 
+                              stroke="#17B6C3" 
+                              strokeWidth={2}
+                              dot={false}
+                            />
+                          </LineChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* AI Learning Profile */}
+            {learningLoading ? (
+              <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
+                <CardContent className="p-6">
+                  <div className="animate-pulse space-y-4">
+                    <div className="h-6 bg-gray-200 rounded w-1/3 mb-4"></div>
+                    <div className="space-y-3">
+                      <div className="h-10 bg-gray-200 rounded"></div>
+                      <div className="h-10 bg-gray-200 rounded"></div>
+                      <div className="h-10 bg-gray-200 rounded"></div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ) : learningProfile && (
+              <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
+                <CardHeader>
+                  <CardTitle className="text-xl font-bold flex items-center gap-2">
+                    <div className="p-2 bg-[#17B6C3]/10 rounded-lg">
+                      <Activity className="h-5 w-5 text-[#17B6C3]" />
+                    </div>
+                    AI Learning Profile
+                  </CardTitle>
+                  <CardDescription>
+                    Channel effectiveness and behavioral patterns
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-3">
+                    <div>
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-sm font-medium flex items-center gap-2">
+                          <Mail className="h-4 w-4" />
+                          Email Effectiveness
+                        </span>
+                        <span className="text-sm text-gray-500" data-testid="text-email-effectiveness">
+                          {Math.round(parseFloat(learningProfile.emailEffectiveness || '0') * 100)}%
+                        </span>
+                      </div>
+                      <Progress value={parseFloat(learningProfile.emailEffectiveness || '0') * 100} className="h-2" />
+                    </div>
+                    
+                    <div>
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-sm font-medium flex items-center gap-2">
+                          <MessageSquare className="h-4 w-4" />
+                          SMS Effectiveness
+                        </span>
+                        <span className="text-sm text-gray-500" data-testid="text-sms-effectiveness">
+                          {Math.round(parseFloat(learningProfile.smsEffectiveness || '0') * 100)}%
+                        </span>
+                      </div>
+                      <Progress value={parseFloat(learningProfile.smsEffectiveness || '0') * 100} className="h-2" />
+                    </div>
+                    
+                    <div>
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-sm font-medium flex items-center gap-2">
+                          <Phone className="h-4 w-4" />
+                          Voice Call Effectiveness
+                        </span>
+                        <span className="text-sm text-gray-500" data-testid="text-voice-effectiveness">
+                          {Math.round(parseFloat(learningProfile.voiceEffectiveness || '0') * 100)}%
+                        </span>
+                      </div>
+                      <Progress value={parseFloat(learningProfile.voiceEffectiveness || '0') * 100} className="h-2" />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4 mt-4 pt-4 border-t">
+                    <div>
+                      <div className="text-sm text-gray-500">Preferred Channel</div>
+                      {learningProfile.preferredChannel ? (
+                        <Badge className="mt-1 bg-[#17B6C3] text-white" data-testid="badge-preferred-channel">
+                          {learningProfile.preferredChannel}
+                        </Badge>
+                      ) : (
+                        <div className="text-sm text-gray-400 mt-1">Not determined yet</div>
+                      )}
+                    </div>
+                    <div>
+                      <div className="text-sm text-gray-500">Learning Confidence</div>
+                      <div className="text-lg font-bold mt-1" data-testid="text-learning-confidence">
+                        {Math.round(parseFloat(learningProfile.learningConfidence || '0') * 100)}%
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-sm text-gray-500">Total Interactions</div>
+                      <div className="text-lg font-bold mt-1" data-testid="text-total-interactions">
+                        {learningProfile.totalInteractions || 0}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-sm text-gray-500">Successful Actions</div>
+                      <div className="text-lg font-bold mt-1" data-testid="text-successful-actions">
+                        {learningProfile.successfulActions || 0}
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Action History Timeline */}
+            <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
+              <CardHeader>
+                <CardTitle className="text-xl font-bold flex items-center gap-2">
+                  <div className="p-2 bg-[#17B6C3]/10 rounded-lg">
+                    <Clock className="h-5 w-5 text-[#17B6C3]" />
+                  </div>
+                  Action History
+                </CardTitle>
+                <CardDescription>
+                  Complete communication and payment timeline
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {actionsLoading ? (
+                  <div className="animate-pulse space-y-3">
+                    <div className="h-16 bg-gray-200 rounded"></div>
+                    <div className="h-16 bg-gray-200 rounded"></div>
+                    <div className="h-16 bg-gray-200 rounded"></div>
+                  </div>
+                ) : customerActions && customerActions.length > 0 ? (
+                  <div className="space-y-3 max-h-96 overflow-y-auto">
+                    {customerActions.map((action: any, index: number) => (
+                      <div 
+                        key={action.id}
+                        className="flex items-start gap-3 p-3 rounded-lg bg-white/50 hover:bg-white/70 transition-colors"
+                        data-testid={`action-${action.id}`}
+                      >
+                        <div className={`p-2 rounded-lg mt-0.5 ${
+                          action.type.includes('email') ? 'bg-blue-100' :
+                          action.type.includes('sms') ? 'bg-green-100' :
+                          action.type.includes('voice') || action.type.includes('call') ? 'bg-purple-100' :
+                          action.type.includes('payment') ? 'bg-teal-100' :
+                          'bg-gray-100'
+                        }`}>
+                          {action.type.includes('email') && <Mail className="h-4 w-4 text-blue-600" />}
+                          {action.type.includes('sms') && <MessageSquare className="h-4 w-4 text-green-600" />}
+                          {(action.type.includes('voice') || action.type.includes('call')) && <Phone className="h-4 w-4 text-purple-600" />}
+                          {action.type.includes('payment') && <CheckCircle className="h-4 w-4 text-teal-600" />}
+                          {!action.type.includes('email') && !action.type.includes('sms') && !action.type.includes('voice') && !action.type.includes('call') && !action.type.includes('payment') && (
+                            <Send className="h-4 w-4 text-gray-600" />
+                          )}
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between">
+                            <div className="font-medium capitalize" data-testid={`text-action-type-${action.id}`}>
+                              {action.type.replace(/_/g, ' ')}
+                            </div>
+                            <div className="text-xs text-gray-500" data-testid={`text-action-date-${action.id}`}>
+                              {formatDate(action.createdAt)}
+                            </div>
+                          </div>
+                          {action.description && (
+                            <div className="text-sm text-gray-600 mt-1" data-testid={`text-action-description-${action.id}`}>
+                              {action.description}
+                            </div>
+                          )}
+                          {action.status && (
+                            <Badge 
+                              variant="outline" 
+                              className="mt-2 text-xs"
+                              data-testid={`badge-action-status-${action.id}`}
+                            >
+                              {action.status}
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    <Activity className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                    <p>No action history available yet</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

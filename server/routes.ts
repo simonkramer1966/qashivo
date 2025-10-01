@@ -1997,6 +1997,290 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Customer Detail: Get learning profile
+  app.get("/api/contacts/:contactId/learning-profile", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { contactId } = req.params;
+      
+      // Verify contact exists
+      const contact = await storage.getContact(contactId, user.tenantId);
+      if (!contact) {
+        return res.status(404).json({ message: "Contact not found" });
+      }
+
+      // Get learning profile
+      const profile = await db.query.customerLearningProfiles.findFirst({
+        where: and(
+          eq(customerLearningProfiles.contactId, contactId),
+          eq(customerLearningProfiles.tenantId, user.tenantId)
+        )
+      });
+
+      if (!profile) {
+        // Return default neutral profile if none exists
+        return res.json({
+          contactId,
+          emailEffectiveness: "0.50",
+          smsEffectiveness: "0.50",
+          voiceEffectiveness: "0.50",
+          totalInteractions: 0,
+          successfulActions: 0,
+          learningConfidence: "0.00",
+          preferredChannel: null,
+          averageResponseTime: null,
+          paymentReliability: "0.50",
+          averagePaymentDelay: null
+        });
+      }
+
+      res.json(profile);
+    } catch (error) {
+      console.error("Error fetching learning profile:", error);
+      res.status(500).json({ message: "Failed to fetch learning profile" });
+    }
+  });
+
+  // Customer Detail: Get payment statistics
+  app.get("/api/contacts/:contactId/payment-stats", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { contactId } = req.params;
+      
+      // Verify contact exists
+      const contact = await storage.getContact(contactId, user.tenantId);
+      if (!contact) {
+        return res.status(404).json({ message: "Contact not found" });
+      }
+
+      // Get all paid invoices for this contact
+      const allInvoices = await storage.getInvoices(user.tenantId);
+      const contactInvoices = allInvoices.filter(inv => 
+        inv.contactId === contactId && inv.status === 'paid'
+      );
+
+      // Calculate payment stats
+      let averageDaysToPay = 0;
+      let paymentTimes: number[] = [];
+      let paymentReliability = 0;
+
+      if (contactInvoices.length > 0) {
+        const totalInvoices = allInvoices.filter(inv => inv.contactId === contactId).length;
+        paymentReliability = (contactInvoices.length / totalInvoices) * 100;
+
+        // Calculate days to pay for each invoice
+        contactInvoices.forEach(invoice => {
+          const dueDate = new Date(invoice.dueDate);
+          const paidDate = invoice.paidAt ? new Date(invoice.paidAt) : new Date();
+          const daysToPay = Math.floor((paidDate.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
+          paymentTimes.push(daysToPay);
+        });
+
+        // Get last 10 payment times for sparkline
+        const last10Payments = paymentTimes.slice(-10);
+        
+        // Calculate average
+        averageDaysToPay = Math.round(paymentTimes.reduce((a, b) => a + b, 0) / paymentTimes.length);
+
+        // Calculate trend (compare recent vs historical)
+        let trend = 'stable';
+        if (last10Payments.length >= 5) {
+          const recentAvg = last10Payments.slice(-5).reduce((a, b) => a + b, 0) / 5;
+          const olderAvg = last10Payments.slice(0, 5).reduce((a, b) => a + b, 0) / 5;
+          
+          if (recentAvg < olderAvg - 2) trend = 'improving';
+          else if (recentAvg > olderAvg + 2) trend = 'declining';
+        }
+
+        res.json({
+          averageDaysToPay,
+          paymentReliability: Math.round(paymentReliability),
+          trend,
+          paymentHistory: last10Payments,
+          totalInvoices: contactInvoices.length
+        });
+      } else {
+        res.json({
+          averageDaysToPay: 0,
+          paymentReliability: 0,
+          trend: 'stable',
+          paymentHistory: [],
+          totalInvoices: 0
+        });
+      }
+    } catch (error) {
+      console.error("Error fetching payment stats:", error);
+      res.status(500).json({ message: "Failed to fetch payment stats" });
+    }
+  });
+
+  // Customer Detail: Get action history
+  app.get("/api/contacts/:contactId/actions", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { contactId } = req.params;
+      
+      // Verify contact exists
+      const contact = await storage.getContact(contactId, user.tenantId);
+      if (!contact) {
+        return res.status(404).json({ message: "Contact not found" });
+      }
+
+      // Get all actions for this contact
+      const contactActions = await db
+        .select()
+        .from(actions)
+        .where(and(
+          eq(actions.contactId, contactId),
+          eq(actions.tenantId, user.tenantId)
+        ))
+        .orderBy(desc(actions.createdAt))
+        .limit(50);
+
+      res.json(contactActions);
+    } catch (error) {
+      console.error("Error fetching contact actions:", error);
+      res.status(500).json({ message: "Failed to fetch contact actions" });
+    }
+  });
+
+  // Customer Detail: Get customer rating (Good/Average/Poor)
+  app.get("/api/contacts/:contactId/rating", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { contactId } = req.params;
+      
+      // Verify contact exists
+      const contact = await storage.getContact(contactId, user.tenantId);
+      if (!contact) {
+        return res.status(404).json({ message: "Contact not found" });
+      }
+
+      // Get all invoices and actions for this contact
+      const allInvoices = await storage.getInvoices(user.tenantId);
+      const contactInvoices = allInvoices.filter(inv => inv.contactId === contactId);
+      const contactActions = await db
+        .select()
+        .from(actions)
+        .where(and(
+          eq(actions.contactId, contactId),
+          eq(actions.tenantId, user.tenantId)
+        ));
+
+      // Initialize scores
+      let daysToPayScore = 0;
+      let paymentReliabilityScore = 0;
+      let responseRateScore = 0;
+      let disputeScore = 100; // Start at perfect, deduct for disputes
+
+      // 1. Calculate Days to Pay Score (35%) - Lower is better
+      const paidInvoices = contactInvoices.filter(inv => inv.status === 'paid');
+      if (paidInvoices.length > 0) {
+        const daysToPays = paidInvoices.map(invoice => {
+          const dueDate = new Date(invoice.dueDate);
+          const paidDate = invoice.paidAt ? new Date(invoice.paidAt) : new Date();
+          return Math.floor((paidDate.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
+        });
+        
+        const avgDaysToPay = daysToPays.reduce((a, b) => a + b, 0) / daysToPays.length;
+        
+        // Score: 100 if paid early/on-time, decreasing for late payments
+        if (avgDaysToPay <= 0) daysToPayScore = 100;
+        else if (avgDaysToPay <= 7) daysToPayScore = 85;
+        else if (avgDaysToPay <= 14) daysToPayScore = 70;
+        else if (avgDaysToPay <= 30) daysToPayScore = 50;
+        else if (avgDaysToPay <= 60) daysToPayScore = 25;
+        else daysToPayScore = 0;
+      } else if (contactInvoices.length === 0) {
+        daysToPayScore = 50; // Neutral for new customers
+      }
+
+      // 2. Calculate Payment Reliability Score (30%) - Paid vs Total
+      if (contactInvoices.length > 0) {
+        paymentReliabilityScore = (paidInvoices.length / contactInvoices.length) * 100;
+      } else {
+        paymentReliabilityScore = 50; // Neutral for new customers
+      }
+
+      // 3. Calculate Response Rate Score (20%)
+      const communicationActions = contactActions.filter(a => 
+        ['email_sent', 'sms_sent', 'voice_call'].includes(a.type)
+      );
+      const responseActions = contactActions.filter(a => 
+        ['email_opened', 'sms_replied', 'call_answered', 'payment_promise'].includes(a.type)
+      );
+      
+      if (communicationActions.length > 0) {
+        responseRateScore = (responseActions.length / communicationActions.length) * 100;
+      } else {
+        responseRateScore = 50; // Neutral if no communications yet
+      }
+
+      // 4. Calculate Dispute Score (15%) - Deduct for disputes
+      const disputes = contactActions.filter(a => a.type === 'dispute' || a.type === 'complaint');
+      const disputesPerInvoice = contactInvoices.length > 0 ? disputes.length / contactInvoices.length : 0;
+      
+      if (disputesPerInvoice === 0) disputeScore = 100;
+      else if (disputesPerInvoice < 0.1) disputeScore = 75;
+      else if (disputesPerInvoice < 0.25) disputeScore = 50;
+      else if (disputesPerInvoice < 0.5) disputeScore = 25;
+      else disputeScore = 0;
+
+      // Calculate weighted total
+      const totalScore = 
+        (daysToPayScore * 0.35) +
+        (paymentReliabilityScore * 0.30) +
+        (responseRateScore * 0.20) +
+        (disputeScore * 0.15);
+
+      // Determine rating
+      let rating: 'Good' | 'Average' | 'Poor';
+      let color: 'green' | 'amber' | 'red';
+      
+      if (totalScore >= 70) {
+        rating = 'Good';
+        color = 'green';
+      } else if (totalScore >= 40) {
+        rating = 'Average';
+        color = 'amber';
+      } else {
+        rating = 'Poor';
+        color = 'red';
+      }
+
+      res.json({
+        rating,
+        color,
+        score: Math.round(totalScore),
+        breakdown: {
+          daysToPayScore: Math.round(daysToPayScore),
+          paymentReliabilityScore: Math.round(paymentReliabilityScore),
+          responseRateScore: Math.round(responseRateScore),
+          disputeScore: Math.round(disputeScore)
+        }
+      });
+    } catch (error) {
+      console.error("Error calculating customer rating:", error);
+      res.status(500).json({ message: "Failed to calculate customer rating" });
+    }
+  });
+
   // Action routes
   app.get("/api/actions", isAuthenticated, async (req: any, res) => {
     try {
