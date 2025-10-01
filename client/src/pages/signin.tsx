@@ -1,10 +1,9 @@
 import { useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { useQuery } from '@tanstack/react-query';
-import { Building, Users, ArrowRight } from 'lucide-react';
 import { useLocation } from 'wouter';
+import nexusLogo from "@assets/Main Nexus Logo copy_1756923544828.png";
 
 // Get user type and redirect appropriately
 const getUserTypeAndRedirect = async () => {
@@ -53,7 +52,7 @@ export default function SignIn() {
   // Show loading state while checking auth or user type
   if (authLoading || (isAuthenticated && typeLoading)) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-teal-50 flex items-center justify-center">
+      <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center">
           <div className="w-8 h-8 border-4 border-[#17B6C3] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-slate-600">
@@ -67,7 +66,7 @@ export default function SignIn() {
   // If already authenticated, show a brief message while redirecting
   if (isAuthenticated) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-teal-50 flex items-center justify-center">
+      <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center">
           <div className="w-8 h-8 border-4 border-[#17B6C3] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-slate-600">Redirecting to your dashboard...</p>
@@ -77,112 +76,59 @@ export default function SignIn() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-teal-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-4xl">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-slate-900 mb-2">Welcome to Qashivo</h1>
-          <p className="text-lg text-slate-600">
-            Sign in to access your Qashivo automated credit control dashboard
-          </p>
+    <div className="min-h-screen bg-white flex items-center justify-center p-4">
+      <div className="w-full max-w-md">
+        {/* Logo */}
+        <div className="flex justify-center mb-8">
+          <img 
+            src={nexusLogo} 
+            alt="Qashivo" 
+            className="h-16 w-auto"
+          />
         </div>
 
-        {/* Account Type Benefits */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-          {/* Partner Account */}
-          <Card className="bg-white/70 backdrop-blur-md border-0 shadow-xl">
-            <CardContent className="p-6">
-              <div className="flex items-center mb-4">
-                <div className="p-2 bg-blue-500/10 rounded-lg mr-4">
-                  <Users className="h-8 w-8 text-blue-600" />
-                </div>
-                <div>
-                  <CardTitle className="text-xl text-slate-900">Partner Account</CardTitle>
-                  <CardDescription className="text-slate-600">
-                    Manage multiple client accounts
-                  </CardDescription>
-                </div>
-              </div>
-              <ul className="text-sm text-slate-600 space-y-2 mb-4">
-                <li>• Multi-client management dashboard</li>
-                <li>• White-label branding options</li>
-                <li>• Advanced reporting and analytics</li>
-              </ul>
-            </CardContent>
-          </Card>
-
-          {/* Client Account */}
-          <Card className="bg-white/70 backdrop-blur-md border-0 shadow-xl">
-            <CardContent className="p-6">
-              <div className="flex items-center mb-4">
-                <div className="p-2 bg-[#17B6C3]/10 rounded-lg mr-4">
-                  <Building className="h-8 w-8 text-[#17B6C3]" />
-                </div>
-                <div>
-                  <CardTitle className="text-xl text-slate-900">Client Account</CardTitle>
-                  <CardDescription className="text-slate-600">
-                    Direct access for your business
-                  </CardDescription>
-                </div>
-              </div>
-              <ul className="text-sm text-slate-600 space-y-2 mb-4">
-                <li>• Full-featured collection automation</li>
-                <li>• Direct support and onboarding</li>
-                <li>• All AI-powered features included</li>
-              </ul>
-            </CardContent>
-          </Card>
-        </div>
+        {/* Heading */}
+        <h1 className="text-2xl font-semibold text-center text-gray-900 mb-8">
+          Log in to Qashivo
+        </h1>
 
         {/* Sign In Card */}
-        <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-xl max-w-md mx-auto">
-          <CardHeader className="text-center pb-4">
-            <CardTitle className="text-xl font-bold">Sign In</CardTitle>
-            <CardDescription className="text-slate-600">
-              Access your account using Replit authentication
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="p-6">
-            <Button 
-              onClick={handleLogin}
-              className="w-full bg-[#17B6C3] hover:bg-[#1396A1] text-white font-semibold py-3 text-lg"
-              data-testid="button-signin"
+        <div className="bg-white border border-gray-200 rounded-lg shadow-sm p-8">
+          <Button 
+            onClick={handleLogin}
+            className="w-full bg-[#17B6C3] hover:bg-[#1396A1] text-white font-medium py-3"
+            data-testid="button-signin"
+          >
+            Log in
+          </Button>
+          
+          <div className="mt-6 text-center space-x-4">
+            <a 
+              href="/partner/register" 
+              className="text-sm text-[#17B6C3] hover:underline"
+              data-testid="link-partner-signup"
             >
-              Sign In with Replit
-              <ArrowRight className="ml-2 h-5 w-5" />
-            </Button>
-            
-            <div className="mt-6 pt-6 border-t border-slate-200/50">
-              <p className="text-center text-sm text-slate-500 mb-4">
-                Don't have an account yet?
-              </p>
-              <div className="flex flex-col sm:flex-row gap-3">
-                <Button 
-                  variant="outline"
-                  onClick={() => window.location.href = '/partner/register'}
-                  className="flex-1 border-blue-500/20 text-blue-600 hover:bg-blue-50"
-                  data-testid="button-partner-signup"
-                >
-                  Partner Signup
-                </Button>
-                <Button 
-                  variant="outline"
-                  onClick={() => window.location.href = '/client/register'}
-                  className="flex-1 border-[#17B6C3]/20 text-[#17B6C3] hover:bg-[#17B6C3]/5"
-                  data-testid="button-client-signup"
-                >
-                  Client Signup
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+              Partner sign up
+            </a>
+            <a 
+              href="/client/register" 
+              className="text-sm text-[#17B6C3] hover:underline"
+              data-testid="link-client-signup"
+            >
+              Client sign up
+            </a>
+          </div>
+        </div>
 
-        {/* Footer */}
-        <div className="text-center mt-6">
-          <p className="text-slate-500 text-sm">
-            Secure authentication powered by Replit
-          </p>
+        {/* Footer Links */}
+        <div className="mt-12 text-center">
+          <div className="flex justify-center items-center space-x-4 text-xs text-gray-500">
+            <a href="#" className="hover:underline">Terms of use</a>
+            <span>•</span>
+            <a href="#" className="hover:underline">Privacy</a>
+            <span>•</span>
+            <a href="#" className="hover:underline">Help Centre</a>
+          </div>
         </div>
       </div>
     </div>
