@@ -1,0 +1,321 @@
+{
+  "version": "1.0.0",
+  "last_updated": "2025-10-01T20:25:00Z",
+  "sections": {
+    "overview": {
+      "title": "System Overview",
+      "human_curated": {
+        "introduction": "Qashivo is an intelligent accounts receivable and debt recovery platform that automates your collections process using AI and machine learning. The system learns from every interaction to optimize communication strategies, improving cash flow and reducing days sales outstanding (DSO).",
+        "architecture": "The system is built on three key pillars: Data Integration Layer (connects to Xero), AI Decision Engine (analyzes customer behavior), and Communication Gateway (orchestrates multi-channel outreach)"
+      },
+      "auto_updatable": {
+        "core_features": [
+          {
+            "name": "Multi-Channel Communication",
+            "description": "Email, SMS, WhatsApp, and AI voice calls",
+            "icon": "Mail"
+          },
+          {
+            "name": "AI Learning Engine",
+            "description": "Learns optimal strategies per customer",
+            "icon": "Bot"
+          },
+          {
+            "name": "Automated Workflows",
+            "description": "Scheduled collection sequences",
+            "icon": "Workflow"
+          },
+          {
+            "name": "Real-time Analytics",
+            "description": "Track effectiveness and trends",
+            "icon": "TrendingUp"
+          }
+        ]
+      }
+    },
+    "customer-rating": {
+      "title": "Customer Rating System",
+      "human_curated": {
+        "introduction": "The customer rating system categorizes payment behavior to optimize collection strategies.",
+        "rationale": "The weighted approach prioritizes the factors that most accurately predict future payment behavior and cash flow impact."
+      },
+      "auto_updatable": {
+        "calculation_formula": "Total Score = (Payment Timing × 0.35) + (Payment Reliability × 0.30) + (Response Rate × 0.20) + (Dispute History × 0.15)",
+        "weighting_breakdown": [
+          {
+            "factor": "Payment Timing",
+            "weight": 0.35,
+            "description": "Average days to pay relative to due date",
+            "scoring_rules": {
+              "on_time": 100,
+              "1_7_days": 85,
+              "8_14_days": 70,
+              "15_30_days": 50,
+              "31_60_days": 25,
+              "over_60_days": 0
+            }
+          },
+          {
+            "factor": "Payment Reliability",
+            "weight": 0.30,
+            "description": "Percentage of invoices paid",
+            "formula": "(Paid Invoices / Total Invoices) × 100"
+          },
+          {
+            "factor": "Response Rate",
+            "weight": 0.20,
+            "description": "Communication engagement",
+            "formula": "(Response Actions / Communication Actions) × 100"
+          },
+          {
+            "factor": "Dispute History",
+            "weight": 0.15,
+            "description": "Frequency of disputes",
+            "scoring_rules": {
+              "no_disputes": 100,
+              "under_10_percent": 75,
+              "10_25_percent": 50,
+              "25_50_percent": 25,
+              "over_50_percent": 0
+            }
+          }
+        ],
+        "threshold_values": {
+          "good": 70,
+          "average": 40,
+          "poor": 0
+        }
+      }
+    },
+    "ai-learning": {
+      "title": "AI Learning System",
+      "human_curated": {
+        "introduction": "Every customer has an AI learning profile that tracks channel effectiveness and optimizes future communications.",
+        "rationale": "The 80/20 weighting prevents drastic changes from single events while allowing gradual adaptation to changing customer behavior."
+      },
+      "auto_updatable": {
+        "learning_formula": "New Score = (Current Score × 0.80) + (New Outcome × 0.20)",
+        "confidence_calculation": "Confidence = min(Total Interactions / 20, 1.0)",
+        "optimization_logic": {
+          "low_confidence": "0-5 interactions (0-25%) - AI uses defaults",
+          "medium_confidence": "6-10 interactions (30-50%) - AI begins optimization",
+          "high_confidence": "11-19 interactions (55-95%) - AI actively optimizes",
+          "max_confidence": "20+ interactions (100%) - Full AI optimization"
+        },
+        "channel_effectiveness_fields": [
+          "email_effectiveness",
+          "sms_effectiveness",
+          "voice_effectiveness",
+          "preferred_channel"
+        ]
+      }
+    },
+    "collections": {
+      "title": "Collections Automation",
+      "human_curated": {
+        "introduction": "Collection workflows are predefined sequences of actions that automatically execute based on invoice status and customer behavior."
+      },
+      "auto_updatable": {
+        "schedule_logic": [
+          "Check invoice status (overdue or pending with due date < current date)",
+          "Find customer's assigned schedule",
+          "Identify next action based on days overdue",
+          "Prevent duplicates (check minimum gap since last action)",
+          "Verify no payment received (via Xero sync or Stripe webhook)",
+          "Apply AI optimization if confidence >= 50%",
+          "Execute action via selected channel"
+        ],
+        "trigger_conditions": {
+          "invoice_check": "invoice.status == 'overdue' OR (invoice.status == 'pending' AND invoice.dueDate < currentDate)",
+          "duplicate_prevention": "lastAction.createdAt > (currentTime - actionMinimumGap)",
+          "ai_threshold": "confidence >= 0.5"
+        },
+        "payment_verification": [
+          "Xero Sync: Invoice status refreshed every 15 minutes",
+          "Stripe Webhook: Immediate notification on payment",
+          "Manual Marking: Users can mark invoices as paid",
+          "Partial Payments: System adjusts outstanding amount"
+        ]
+      }
+    },
+    "email": {
+      "title": "Email Communication",
+      "human_curated": {
+        "introduction": "Qashivo uses SendGrid for reliable email delivery with comprehensive tracking capabilities."
+      },
+      "auto_updatable": {
+        "provider_details": {
+          "name": "SendGrid",
+          "capabilities": ["Bounce handling", "Spam filtering", "Delivery optimization"]
+        },
+        "tracking_metrics": {
+          "delivery": ["Sent successfully", "Delivery confirmed", "Bounced (hard/soft)", "Spam reported"],
+          "engagement": ["Email opened", "Links clicked", "Time to open", "Device/location"]
+        },
+        "effectiveness_formula": "Email Effectiveness = (Successful Outcomes / Total Emails Sent) × 100",
+        "successful_outcomes": [
+          "Payment received within 7 days of email",
+          "Payment promise made",
+          "Customer contact initiated"
+        ]
+      }
+    },
+    "sms": {
+      "title": "SMS & WhatsApp Communication",
+      "human_curated": {
+        "introduction": "Text-based messaging for immediate customer engagement via Twilio."
+      },
+      "auto_updatable": {
+        "provider_details": {
+          "name": "Twilio",
+          "capabilities": ["Global reach", "High deliverability", "Both SMS and WhatsApp"]
+        },
+        "delivery_process": [
+          "Template Selection: AI selects optimal message template",
+          "Personalization: System populates dynamic fields",
+          "Twilio API Call: Message sent with delivery tracking",
+          "Response Tracking: Webhook captures delivery status and replies"
+        ],
+        "effectiveness_calculation": "SMS Effectiveness = (Payment Actions + Engagement Actions) / Total SMS Sent × 100",
+        "tracking_metrics": ["Delivery confirmation", "Read receipts (WhatsApp)", "Reply detection", "Link clicks"]
+      }
+    },
+    "voice": {
+      "title": "Voice & AI Calls",
+      "human_curated": {
+        "introduction": "AI-powered phone conversations for complex collection scenarios using Retell AI."
+      },
+      "auto_updatable": {
+        "platform_details": {
+          "name": "Retell AI",
+          "capabilities": ["Natural conversations", "Context-aware", "Payment negotiations", "Dispute resolution"]
+        },
+        "call_workflow": [
+          "Call Initiation: System dials using Retell API with customer context",
+          "Conversation Flow: AI explains purpose, handles objections, negotiates",
+          "Outcome Capture: Promise recorded, disputes logged, transcript saved"
+        ],
+        "outcome_measurement": "Call Effectiveness = (Successful Calls / Total Calls Made) × 100",
+        "successful_outcomes": [
+          "Payment promise obtained",
+          "Payment made immediately",
+          "Payment plan agreed",
+          "Dispute resolved",
+          "Contact details updated",
+          "Escalation to human agent"
+        ]
+      }
+    },
+    "comm-modes": {
+      "title": "Communication Modes",
+      "human_curated": {
+        "introduction": "Communication modes are safety controls that determine whether and how the system sends automated messages.",
+        "rollout_process": "Recommended: Comms Off (setup) → Testing (validation) → Soft Live (pilot) → Live (production)"
+      },
+      "auto_updatable": {
+        "mode_definitions": [
+          {
+            "name": "Comms Off",
+            "behavior": "No communications sent. Actions created but blocked.",
+            "use_case": "System setup, testing workflows, importing data"
+          },
+          {
+            "name": "Testing",
+            "behavior": "Communications generated but not sent. Actions logged as 'test'.",
+            "use_case": "Validating templates, checking triggers, reviewing AI decisions"
+          },
+          {
+            "name": "Soft Live",
+            "behavior": "Communications sent ONLY to test contacts. Real customers blocked.",
+            "use_case": "Final testing with real delivery before full launch"
+          },
+          {
+            "name": "Live",
+            "behavior": "Full system operation. All communications sent to customers.",
+            "use_case": "Production collections"
+          }
+        ],
+        "enforcement_rules": [
+          "TenantConfigCache retrieves current mode",
+          "CommunicationsGateway enforces mode rules",
+          "Recipient substitution in Soft Live mode",
+          "Full activity logging for all modes"
+        ]
+      }
+    },
+    "xero": {
+      "title": "Xero Integration",
+      "human_curated": {
+        "introduction": "Real-time data synchronization with your accounting platform via OAuth 2.0."
+      },
+      "auto_updatable": {
+        "oauth_flow": [
+          "User clicks 'Connect Xero' → redirected to Xero login",
+          "User authorizes Qashivo access",
+          "Xero redirects with authorization code",
+          "Code exchanged for access token",
+          "Tokens securely stored, encrypted at rest",
+          "Auto-refresh every 30 minutes"
+        ],
+        "sync_frequency": {
+          "initial_sync": "On Connection",
+          "invoice_updates": "Every 15 minutes",
+          "contact_updates": "Every 30 minutes",
+          "manual_sync": "On Demand"
+        },
+        "data_mapping": {
+          "invoices": ["Invoice number, date, due date", "Amount due, paid amount", "Status", "Line items"],
+          "contacts": ["Name, company", "Email addresses", "Phone numbers", "Billing address"],
+          "payments": ["Payment date and amount", "Payment method", "Applied invoice", "Bank details"],
+          "credit_notes": ["Credit note number, amount", "Applied invoice", "Remaining credit", "Date issued"]
+        }
+      }
+    },
+    "stripe": {
+      "title": "Payment Processing (Stripe)",
+      "human_curated": {
+        "introduction": "Secure online payment collection with Stripe Checkout and automated reconciliation.",
+        "security_details": "PCI DSS Level 1 certified. Qashivo never stores or sees card numbers. All data encrypted in transit (TLS 1.2+)."
+      },
+      "auto_updatable": {
+        "payment_flow": [
+          "Stripe Checkout Session created for invoice amount",
+          "Secure, time-limited URL generated (24 hour validity)",
+          "Link embedded as 'Pay Now' button in email/SMS",
+          "Customer redirected to Stripe-hosted checkout",
+          "Stripe processes payment with 3D Secure if needed",
+          "Success: customer redirected to confirmation page"
+        ],
+        "webhook_events": [
+          {
+            "event": "payment_intent.succeeded",
+            "actions": ["Invoice marked as paid", "Collections stopped", "Customer notified", "Synced to Xero"]
+          },
+          {
+            "event": "payment_intent.failed",
+            "actions": ["Customer notified", "Retry attempted", "Action logged", "Human follow-up flagged"]
+          },
+          {
+            "event": "invoice.payment_succeeded",
+            "actions": ["Payment plan updated", "Next installment scheduled", "Balance recalculated"]
+          },
+          {
+            "event": "charge.refunded",
+            "actions": ["Invoice reopened", "Collections may resume", "Xero notified"]
+          }
+        ],
+        "reconciliation_process": [
+          "Stripe webhook confirms payment",
+          "Invoice marked paid in database",
+          "Payment recorded in Xero via API",
+          "Payment matched to invoice",
+          "User and customer receive confirmation"
+        ]
+      }
+    }
+  },
+  "metadata": {
+    "auto_update_history": [],
+    "manual_overrides": {}
+  }
+}

@@ -1,0 +1,241 @@
+{
+  "version": "1.0.0",
+  "description": "Maps system components to documentation sections for automatic updates",
+  "mappings": [
+    {
+      "section_id": "customer-rating",
+      "section_name": "Customer Rating System",
+      "triggers": [
+        {
+          "type": "file",
+          "path": "server/services/collectionLearningService.ts",
+          "watch_for": ["rating", "score", "weight", "threshold"]
+        },
+        {
+          "type": "schema",
+          "table": "customer_learning_profiles",
+          "watch_for": ["rating", "score"]
+        }
+      ],
+      "auto_updatable_fields": [
+        "calculation_formula",
+        "weighting_breakdown",
+        "threshold_values"
+      ],
+      "human_curated_fields": [
+        "introduction",
+        "rationale",
+        "examples"
+      ]
+    },
+    {
+      "section_id": "email",
+      "section_name": "Email Communication",
+      "triggers": [
+        {
+          "type": "file",
+          "path": "server/services/emailService.ts",
+          "watch_for": ["send", "template", "sendgrid"]
+        },
+        {
+          "type": "file",
+          "path": "server/services/collectionsAutomation.ts",
+          "watch_for": ["email"]
+        },
+        {
+          "type": "integration",
+          "provider": "sendgrid"
+        }
+      ],
+      "auto_updatable_fields": [
+        "provider_details",
+        "tracking_metrics",
+        "effectiveness_formula"
+      ],
+      "human_curated_fields": [
+        "overview",
+        "best_practices"
+      ]
+    },
+    {
+      "section_id": "sms",
+      "section_name": "SMS & WhatsApp Communication",
+      "triggers": [
+        {
+          "type": "file",
+          "path": "server/services/smsService.ts",
+          "watch_for": ["sms", "whatsapp", "twilio"]
+        },
+        {
+          "type": "integration",
+          "provider": "twilio"
+        }
+      ],
+      "auto_updatable_fields": [
+        "provider_details",
+        "delivery_process",
+        "effectiveness_calculation"
+      ],
+      "human_curated_fields": [
+        "overview",
+        "comparison"
+      ]
+    },
+    {
+      "section_id": "voice",
+      "section_name": "Voice & AI Calls",
+      "triggers": [
+        {
+          "type": "file",
+          "path": "server/services/voiceService.ts",
+          "watch_for": ["call", "retell", "voice"]
+        },
+        {
+          "type": "integration",
+          "provider": "retell"
+        }
+      ],
+      "auto_updatable_fields": [
+        "platform_details",
+        "call_workflow",
+        "outcome_measurement"
+      ],
+      "human_curated_fields": [
+        "overview",
+        "conversation_examples"
+      ]
+    },
+    {
+      "section_id": "collections",
+      "section_name": "Collections Automation",
+      "triggers": [
+        {
+          "type": "file",
+          "path": "server/services/collectionsScheduler.ts",
+          "watch_for": ["schedule", "workflow", "action"]
+        },
+        {
+          "type": "file",
+          "path": "server/services/collectionsAutomation.ts",
+          "watch_for": ["schedule", "trigger", "payment"]
+        },
+        {
+          "type": "schema",
+          "table": "workflows",
+          "watch_for": ["schedule", "trigger"]
+        }
+      ],
+      "auto_updatable_fields": [
+        "schedule_logic",
+        "trigger_conditions",
+        "payment_verification"
+      ],
+      "human_curated_fields": [
+        "overview",
+        "workflow_examples"
+      ]
+    },
+    {
+      "section_id": "ai-learning",
+      "section_name": "AI Learning System",
+      "triggers": [
+        {
+          "type": "file",
+          "path": "server/services/collectionLearningService.ts",
+          "watch_for": ["learn", "optimize", "effectiveness", "confidence"]
+        },
+        {
+          "type": "schema",
+          "table": "customer_learning_profiles",
+          "watch_for": ["effectiveness", "confidence", "score"]
+        }
+      ],
+      "auto_updatable_fields": [
+        "learning_formula",
+        "confidence_calculation",
+        "optimization_logic"
+      ],
+      "human_curated_fields": [
+        "overview",
+        "rationale"
+      ]
+    },
+    {
+      "section_id": "comm-modes",
+      "section_name": "Communication Modes",
+      "triggers": [
+        {
+          "type": "file",
+          "path": "server/services/communicationsGateway.ts",
+          "watch_for": ["mode", "enforcement", "test"]
+        },
+        {
+          "type": "schema",
+          "table": "tenants",
+          "watch_for": ["communication_mode"]
+        }
+      ],
+      "auto_updatable_fields": [
+        "mode_definitions",
+        "enforcement_rules"
+      ],
+      "human_curated_fields": [
+        "overview",
+        "rollout_process"
+      ]
+    },
+    {
+      "section_id": "xero",
+      "section_name": "Xero Integration",
+      "triggers": [
+        {
+          "type": "file",
+          "path": "server/providers/xeroProvider.ts",
+          "watch_for": ["oauth", "sync", "token"]
+        },
+        {
+          "type": "file",
+          "path": "server/routes/xeroRoutes.ts",
+          "watch_for": ["sync", "callback", "refresh"]
+        },
+        {
+          "type": "integration",
+          "provider": "xero"
+        }
+      ],
+      "auto_updatable_fields": [
+        "oauth_flow",
+        "sync_frequency",
+        "data_mapping"
+      ],
+      "human_curated_fields": [
+        "overview",
+        "setup_guide"
+      ]
+    },
+    {
+      "section_id": "stripe",
+      "section_name": "Payment Processing (Stripe)",
+      "triggers": [
+        {
+          "type": "file",
+          "path": "server/services/stripeService.ts",
+          "watch_for": ["payment", "checkout", "webhook"]
+        },
+        {
+          "type": "integration",
+          "provider": "stripe"
+        }
+      ],
+      "auto_updatable_fields": [
+        "payment_flow",
+        "webhook_events",
+        "reconciliation_process"
+      ],
+      "human_curated_fields": [
+        "overview",
+        "security_details"
+      ]
+    }
+  ]
+}
