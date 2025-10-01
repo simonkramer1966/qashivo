@@ -651,7 +651,7 @@ export default function NewSidebar() {
                 
                 {/* Section Header */}
                 <div className="pl-7 pr-3 py-3 text-xs font-medium text-gray-500 bg-gray-50">
-                  Do more with Nexus
+                  Do more with Qashivo
                 </div>
                 
                 {/* Nexus-specific Items */}
