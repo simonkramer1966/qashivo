@@ -9,8 +9,7 @@ const config: EmailServiceConfig = {
   defaultFrom: {
     email: process.env.SENDGRID_FROM_EMAIL || 'noreply@example.com',
     name: process.env.SENDGRID_FROM_NAME || 'Nexus AR'
-  },
-  maxRetries: 3
+  }
 };
 
 const emailService = new SendGridEmailService(config);

@@ -213,13 +213,16 @@ import { subscriptionService } from "./services/subscriptionService";
 import { businessAnalyticsService } from "./services/businessAnalytics";
 import { clientPartnerService } from "./services/clientPartnerService";
 
-// Initialize Stripe
-if (!process.env.STRIPE_SECRET_KEY) {
-  throw new Error('Missing required Stripe secret: STRIPE_SECRET_KEY');
+// Initialize Stripe (lazy initialization - only fails when actually used)
+let stripe: Stripe | null = null;
+if (process.env.STRIPE_SECRET_KEY) {
+  stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+    apiVersion: "2025-08-27.basil",
+  });
+  console.log('✅ Stripe initialized successfully');
+} else {
+  console.warn('⚠️  Stripe not configured (missing STRIPE_SECRET_KEY)');
 }
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-  apiVersion: "2025-08-27.basil",
-});
 
 // Initialize Action Prioritization Service
 const actionPrioritizationService = new ActionPrioritizationService();
