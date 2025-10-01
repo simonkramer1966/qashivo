@@ -154,16 +154,16 @@ export default function ActivityLogPage() {
   });
 
   return (
-    <div className="flex min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-teal-50">
+    <div className="flex h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-teal-50">
       <NewSidebar />
       
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col overflow-hidden">
         <Header 
           title="Activity Log" 
           subtitle="Comprehensive audit trail of all system activities"
         />
         
-        <main className="flex-1 p-8 space-y-6">
+        <main className="flex-1 overflow-x-hidden overflow-y-auto p-8 space-y-6">
           {/* Stats Cards */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             <Card className="bg-white/70 backdrop-blur-md border-0 shadow-xl">
