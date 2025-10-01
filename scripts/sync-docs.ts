@@ -79,10 +79,10 @@ async function main() {
 
     // Step 2: Generate AI suggestions
     log.info('Generating AI-powered documentation updates...');
-    const { stdout: detailedDiff } = await execAsync(`git diff ${baseBranch}`);
+    // Use detailedDiff from changes result (already sanitized)
     const suggestions = await documentationSyncService.generateAIUpdates(
       changes.affectedSections,
-      detailedDiff
+      changes.detailedDiff
     );
 
     if (suggestions.length === 0) {

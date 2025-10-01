@@ -122,7 +122,7 @@ router.post('/sync', async (req: Request, res: Response) => {
   try {
     const { baseBranch = 'HEAD~1' } = req.body;
     
-    // Step 1: Detect changes
+    // Step 1: Detect changes (sanitization happens inside detectChanges)
     const changes = await documentationSyncService.detectChanges(baseBranch);
     
     if (changes.affectedSections.length === 0) {
@@ -133,15 +133,10 @@ router.post('/sync', async (req: Request, res: Response) => {
       });
     }
 
-    // Step 2: Generate AI updates (need to get detailed diff)
-    const { exec } = await import('child_process');
-    const { promisify } = await import('util');
-    const execAsync = promisify(exec);
-    const { stdout: detailedDiff } = await execAsync(`git diff ${baseBranch}`);
-    
+    // Step 2: Generate AI updates (use detailedDiff from changes result - already sanitized)
     const suggestions = await documentationSyncService.generateAIUpdates(
       changes.affectedSections,
-      detailedDiff
+      changes.detailedDiff
     );
     
     res.json({ 

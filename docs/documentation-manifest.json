@@ -34,8 +34,13 @@
       "triggers": [
         {
           "type": "file",
-          "path": "server/services/emailService.ts",
+          "path": "server/services/sendgrid.ts",
           "watch_for": ["send", "template", "sendgrid"]
+        },
+        {
+          "type": "file",
+          "path": "server/services/email/EmailService.ts",
+          "watch_for": ["send", "email"]
         },
         {
           "type": "file",
@@ -63,7 +68,7 @@
       "triggers": [
         {
           "type": "file",
-          "path": "server/services/smsService.ts",
+          "path": "server/services/twilio.ts",
           "watch_for": ["sms", "whatsapp", "twilio"]
         },
         {
@@ -85,11 +90,6 @@
       "section_id": "voice",
       "section_name": "Voice & AI Calls",
       "triggers": [
-        {
-          "type": "file",
-          "path": "server/services/voiceService.ts",
-          "watch_for": ["call", "retell", "voice"]
-        },
         {
           "type": "integration",
           "provider": "retell"

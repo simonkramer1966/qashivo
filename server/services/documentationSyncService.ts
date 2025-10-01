@@ -47,6 +47,7 @@ interface ChangeDetectionResult {
   }>;
   filesChanged: string[];
   summary: string;
+  detailedDiff: string;  // Include detailed diff for AI analysis
 }
 
 interface AIUpdateSuggestion {
@@ -74,24 +75,52 @@ export class DocumentationSyncService {
   }
 
   /**
+   * Sanitize git reference to prevent command injection
+   */
+  private sanitizeGitRef(ref: string): string {
+    // Only allow alphanumeric, hyphens, underscores, dots, slashes, tildes, and carets
+    // These are valid git reference characters
+    const sanitized = ref.replace(/[^a-zA-Z0-9\-_./~^]/g, '');
+    
+    // Validate it matches common git reference patterns
+    const validPatterns = [
+      /^HEAD(~\d+)?$/,           // HEAD, HEAD~1, HEAD~2, etc.
+      /^[a-f0-9]{7,40}$/,        // Git commit SHA (7-40 chars)
+      /^[\w\-./]+$/,             // Branch names, tags
+    ];
+    
+    const isValid = validPatterns.some(pattern => pattern.test(sanitized));
+    
+    if (!isValid || sanitized.length === 0) {
+      throw new Error(`Invalid git reference: ${ref}`);
+    }
+    
+    return sanitized;
+  }
+
+  /**
    * Detect changes from git diff
    */
   async detectChanges(baseBranch: string = 'HEAD~1'): Promise<ChangeDetectionResult> {
     try {
+      // Sanitize the base branch to prevent command injection
+      const safeBaseBranch = this.sanitizeGitRef(baseBranch);
+      
       // Get git diff
-      const { stdout: diffOutput } = await execAsync(`git diff ${baseBranch} --name-only`);
+      const { stdout: diffOutput } = await execAsync(`git diff ${safeBaseBranch} --name-only`);
       const filesChanged = diffOutput.trim().split('\n').filter(f => f.length > 0);
 
       if (filesChanged.length === 0) {
         return {
           affectedSections: [],
           filesChanged: [],
-          summary: 'No changes detected'
+          summary: 'No changes detected',
+          detailedDiff: ''
         };
       }
 
       // Get detailed diff for analysis
-      const { stdout: detailedDiff } = await execAsync(`git diff ${baseBranch}`);
+      const { stdout: detailedDiff } = await execAsync(`git diff ${safeBaseBranch}`);
 
       // Load manifest
       const manifest = await this.loadManifest();
@@ -102,7 +131,8 @@ export class DocumentationSyncService {
       return {
         affectedSections,
         filesChanged,
-        summary: `${filesChanged.length} files changed, ${affectedSections.length} documentation sections affected`
+        summary: `${filesChanged.length} files changed, ${affectedSections.length} documentation sections affected`,
+        detailedDiff
       };
 
     } catch (error) {
