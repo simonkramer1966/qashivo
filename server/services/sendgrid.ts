@@ -10,7 +10,6 @@ const config: EmailServiceConfig = {
     email: process.env.SENDGRID_FROM_EMAIL || 'noreply@example.com',
     name: process.env.SENDGRID_FROM_NAME || 'Nexus AR'
   },
-  enabled: true,
   maxRetries: 3
 };
 
