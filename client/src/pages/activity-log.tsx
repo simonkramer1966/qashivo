@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { 
   Activity, TrendingUp, 
   Filter, Search, RefreshCw, Clock, CheckCircle2, XCircle,
-  AlertCircle, Power, TestTube, FlaskConical, Rocket
+  AlertCircle, Power, TestTube, FlaskConical, Rocket, ChevronDown, ChevronUp
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { getActivityIconWithBackground, getActivityLabel, getAllActivityTypes, getPrimaryActivityTypes, getSecondaryActivityTypes } from "@/lib/activityIcons";
@@ -53,6 +53,7 @@ export default function ActivityLogPage() {
     result: "",
     search: "",
   });
+  const [isCommModeExpanded, setIsCommModeExpanded] = useState(true);
 
   // Fetch activity logs
   const { data: logs, isLoading: logsLoading, refetch } = useQuery<ActivityLog[]>({
@@ -183,11 +184,24 @@ export default function ActivityLogPage() {
         <main className="flex-1 overflow-x-hidden overflow-y-auto p-8 space-y-6">
           {/* Communication Mode Selector */}
           <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
-            <CardHeader>
-              <CardTitle className="text-lg font-bold">Communication Mode</CardTitle>
-              <CardDescription>Control how the system handles outbound communications</CardDescription>
+            <CardHeader 
+              className="cursor-pointer hover:bg-gray-50/50 transition-colors"
+              onClick={() => setIsCommModeExpanded(!isCommModeExpanded)}
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-lg font-bold">Communication Mode</CardTitle>
+                  <CardDescription>Control how the system handles outbound communications</CardDescription>
+                </div>
+                {isCommModeExpanded ? (
+                  <ChevronUp className="h-5 w-5 text-gray-500" />
+                ) : (
+                  <ChevronDown className="h-5 w-5 text-gray-500" />
+                )}
+              </div>
             </CardHeader>
-            <CardContent>
+            {isCommModeExpanded && (
+              <CardContent>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                 <Button
                   variant={commMode?.mode === 'off' ? 'default' : 'outline'}
@@ -286,7 +300,8 @@ export default function ActivityLogPage() {
                   </p>
                 </div>
               )}
-            </CardContent>
+              </CardContent>
+            )}
           </Card>
 
           {/* Stats Cards */}
