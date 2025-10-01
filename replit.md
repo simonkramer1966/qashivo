@@ -49,6 +49,22 @@ Provides a standardized interface for accounting software integrations, includin
 ### Workflow Engine
 Customizable workflow system for collection processes, offering pre-built templates and trackable communication actions.
 
+### Auto-Documentation System
+AI-powered documentation automation that keeps technical docs synchronized with code changes. The system:
+- **Change Detection**: Monitors git diffs and identifies affected documentation sections via manifest mapping
+- **AI Analysis**: Uses OpenAI to understand code changes and generate documentation updates
+- **Review & Approval**: Web UI at `/documentation-review` for reviewing and approving AI-generated updates
+- **Structured Storage**: JSON-based documentation with separation of auto-updatable vs. human-curated content
+- **CLI Tool**: Manual sync trigger via `tsx scripts/sync-docs.ts` with interactive or auto-apply modes
+- **Version History**: Audit log tracking all automated updates for rollback capability
+
+Files:
+- `docs/documentation-manifest.json`: Maps code files/schemas to documentation sections
+- `docs/documentation-content.json`: Structured documentation content
+- `server/services/documentationSyncService.ts`: Core sync engine
+- `server/routes/documentationRoutes.ts`: API endpoints
+- `scripts/sync-docs.ts`: CLI command for manual sync
+
 ## External Dependencies
 
 ### Third-Party Services
