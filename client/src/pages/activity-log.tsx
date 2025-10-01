@@ -157,7 +157,7 @@ export default function ActivityLogPage() {
     <div className="flex min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-teal-50">
       <NewSidebar />
       
-      <div className="flex-1 flex flex-col ml-64">
+      <div className="flex-1 flex flex-col">
         <Header 
           title="Activity Log" 
           subtitle="Comprehensive audit trail of all system activities"
