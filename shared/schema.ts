@@ -57,6 +57,11 @@ export const tenants = pgTable("tenants", {
   xeroAutoSync: boolean("xero_auto_sync").default(true),
   collectionsAutomationEnabled: boolean("collections_automation_enabled").default(true),
   
+  // Communication Mode: off, testing, soft_live, live
+  communicationMode: varchar("communication_mode").default("testing"), // off, testing, soft_live, live
+  testEmails: text("test_emails").array(), // Test email addresses for soft_live mode
+  testPhones: text("test_phones").array(), // Test phone numbers for soft_live mode
+  
   // Onboarding-specific fields
   companyLogoUrl: varchar("company_logo_url"),
   brandPrimaryColor: varchar("brand_primary_color").default("#17B6C3"),

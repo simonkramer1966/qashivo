@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import NewSidebar from "@/components/layout/new-sidebar";
@@ -12,10 +12,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { 
   Activity, TrendingUp, 
   Filter, Search, RefreshCw, Clock, CheckCircle2, XCircle,
-  AlertCircle
+  AlertCircle, Power, TestTube, FlaskConical, Rocket
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { getActivityIconWithBackground, getActivityLabel, getAllActivityTypes, getPrimaryActivityTypes, getSecondaryActivityTypes } from "@/lib/activityIcons";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 
 interface ActivityLog {
   id: string;
@@ -63,6 +64,37 @@ export default function ActivityLogPage() {
   const { data: stats } = useQuery<ActivityLogStats>({
     queryKey: ['/api/activity-logs/stats'],
     enabled: isAuthenticated,
+  });
+
+  // Fetch communication mode
+  const { data: commMode } = useQuery<{ mode: string; testEmails: string[]; testPhones: string[] }>({
+    queryKey: ['/api/communications/mode'],
+    enabled: isAuthenticated,
+  });
+
+  // Mutation to update communication mode
+  const updateModeMutation = useMutation({
+    mutationFn: async (mode: string) => {
+      return await apiRequest('/api/communications/mode', {
+        method: 'PUT',
+        body: JSON.stringify({ mode }),
+        headers: { 'Content-Type': 'application/json' },
+      });
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/communications/mode'] });
+      toast({
+        title: "Communication mode updated",
+        description: `Now in ${data.mode} mode`,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to update mode",
+        description: error.message || "Please try again",
+        variant: "destructive",
+      });
+    },
   });
 
   // Auto-refresh every 10 seconds
@@ -149,6 +181,114 @@ export default function ActivityLogPage() {
         />
         
         <main className="flex-1 overflow-x-hidden overflow-y-auto p-8 space-y-6">
+          {/* Communication Mode Selector */}
+          <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
+            <CardHeader>
+              <CardTitle className="text-lg font-bold">Communication Mode</CardTitle>
+              <CardDescription>Control how the system handles outbound communications</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                <Button
+                  variant={commMode?.mode === 'off' ? 'default' : 'outline'}
+                  className={`h-auto flex-col items-start p-4 ${
+                    commMode?.mode === 'off' 
+                      ? 'bg-gray-600 hover:bg-gray-700 text-white' 
+                      : 'hover:bg-gray-50'
+                  }`}
+                  onClick={() => updateModeMutation.mutate('off')}
+                  disabled={updateModeMutation.isPending}
+                  data-testid="button-mode-off"
+                >
+                  <div className="flex items-center space-x-2 mb-2">
+                    <Power className="h-5 w-5" />
+                    <span className="font-semibold">Comms Off</span>
+                  </div>
+                  <p className="text-xs text-left opacity-80">
+                    No actions recorded, no communications sent
+                  </p>
+                </Button>
+
+                <Button
+                  variant={commMode?.mode === 'testing' ? 'default' : 'outline'}
+                  className={`h-auto flex-col items-start p-4 ${
+                    commMode?.mode === 'testing' 
+                      ? 'bg-blue-600 hover:bg-blue-700 text-white' 
+                      : 'hover:bg-blue-50'
+                  }`}
+                  onClick={() => updateModeMutation.mutate('testing')}
+                  disabled={updateModeMutation.isPending}
+                  data-testid="button-mode-testing"
+                >
+                  <div className="flex items-center space-x-2 mb-2">
+                    <TestTube className="h-5 w-5" />
+                    <span className="font-semibold">Testing</span>
+                  </div>
+                  <p className="text-xs text-left opacity-80">
+                    Actions recorded, no actual sends
+                  </p>
+                </Button>
+
+                <Button
+                  variant={commMode?.mode === 'soft_live' ? 'default' : 'outline'}
+                  className={`h-auto flex-col items-start p-4 ${
+                    commMode?.mode === 'soft_live' 
+                      ? 'bg-orange-600 hover:bg-orange-700 text-white' 
+                      : 'hover:bg-orange-50'
+                  }`}
+                  onClick={() => updateModeMutation.mutate('soft_live')}
+                  disabled={updateModeMutation.isPending}
+                  data-testid="button-mode-soft-live"
+                >
+                  <div className="flex items-center space-x-2 mb-2">
+                    <FlaskConical className="h-5 w-5" />
+                    <span className="font-semibold">Soft Live</span>
+                  </div>
+                  <p className="text-xs text-left opacity-80">
+                    Only sends to test contacts
+                  </p>
+                </Button>
+
+                <Button
+                  variant={commMode?.mode === 'live' ? 'default' : 'outline'}
+                  className={`h-auto flex-col items-start p-4 ${
+                    commMode?.mode === 'live' 
+                      ? 'bg-[#17B6C3] hover:bg-[#1396A1] text-white' 
+                      : 'hover:bg-teal-50'
+                  }`}
+                  onClick={() => updateModeMutation.mutate('live')}
+                  disabled={updateModeMutation.isPending}
+                  data-testid="button-mode-live"
+                >
+                  <div className="flex items-center space-x-2 mb-2">
+                    <Rocket className="h-5 w-5" />
+                    <span className="font-semibold">Live</span>
+                  </div>
+                  <p className="text-xs text-left opacity-80">
+                    Full production mode
+                  </p>
+                </Button>
+              </div>
+
+              {commMode?.mode === 'soft_live' && (
+                <div className="mt-4 p-3 bg-orange-50 border border-orange-200 rounded-lg">
+                  <p className="text-sm text-orange-800">
+                    <strong>Soft Live Mode:</strong> Communications only sent to test contacts. 
+                    Configure test emails and phones in tenant settings.
+                  </p>
+                </div>
+              )}
+
+              {commMode?.mode === 'live' && (
+                <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <p className="text-sm text-red-800">
+                    <strong>⚠️ Live Mode Active:</strong> Real communications will be sent to actual customers.
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
           {/* Stats Cards */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             <Card className="bg-white/70 backdrop-blur-md border-0 shadow-xl">

@@ -4906,6 +4906,66 @@ Payment required immediately to avoid collection action. Contact us NOW.`
     }
   });
 
+  // Communication Mode Management
+  app.get("/api/communications/mode", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const tenant = await storage.getTenant(user.tenantId);
+      if (!tenant) {
+        return res.status(404).json({ message: "Tenant not found" });
+      }
+
+      res.json({ 
+        mode: tenant.communicationMode || 'testing',
+        testEmails: tenant.testEmails || [],
+        testPhones: tenant.testPhones || []
+      });
+    } catch (error) {
+      console.error("Error getting communication mode:", error);
+      res.status(500).json({ message: "Failed to get communication mode" });
+    }
+  });
+
+  app.put("/api/communications/mode", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { mode, testEmails, testPhones } = req.body;
+      
+      // Validate mode
+      const validModes = ['off', 'testing', 'soft_live', 'live'];
+      if (!validModes.includes(mode)) {
+        return res.status(400).json({ 
+          message: "Invalid mode - must be one of: off, testing, soft_live, live" 
+        });
+      }
+
+      // Update tenant with new mode and test contacts
+      await storage.updateTenant(user.tenantId, {
+        communicationMode: mode,
+        ...(testEmails && { testEmails }),
+        ...(testPhones && { testPhones })
+      });
+
+      res.json({ 
+        mode, 
+        testEmails: testEmails || [],
+        testPhones: testPhones || [],
+        message: `Communication mode updated to ${mode}` 
+      });
+    } catch (error) {
+      console.error("Error updating communication mode:", error);
+      res.status(500).json({ message: "Failed to update communication mode" });
+    }
+  });
+
   // Nudge invoice to next action (legacy endpoint with invoiceId as path parameter)
   app.post("/api/collections/nudge/:invoiceId", isAuthenticated, async (req: any, res) => {
     try {
