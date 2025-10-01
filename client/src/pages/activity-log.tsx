@@ -10,11 +10,12 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { 
-  Mail, MessageSquare, Phone, Bot, Activity, TrendingUp, 
+  Activity, TrendingUp, 
   Filter, Search, RefreshCw, Clock, CheckCircle2, XCircle,
-  AlertCircle, Database, Zap, Brain, Settings
+  AlertCircle
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+import { getActivityIconWithBackground, getActivityLabel, getAllActivityTypes, getPrimaryActivityTypes, getSecondaryActivityTypes } from "@/lib/activityIcons";
 
 interface ActivityLog {
   id: string;
@@ -92,22 +93,6 @@ export default function ActivityLogPage() {
   if (isLoading || !isAuthenticated) {
     return <div className="min-h-screen bg-background" />;
   }
-
-  const getActivityIcon = (activityType: string) => {
-    const icons: Record<string, any> = {
-      email: Mail,
-      sms: MessageSquare,
-      whatsapp: MessageSquare,
-      voice: Phone,
-      ai_learning: Brain,
-      ml_prediction: TrendingUp,
-      automation: Zap,
-      workflow: Settings,
-      system: Database,
-    };
-    const Icon = icons[activityType] || Activity;
-    return <Icon className="h-4 w-4" />;
-  };
 
   const getResultBadge = (result: string) => {
     const variants: Record<string, any> = {
@@ -274,14 +259,28 @@ export default function ActivityLogPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Types</SelectItem>
-                    <SelectItem value="email">Email</SelectItem>
-                    <SelectItem value="sms">SMS</SelectItem>
-                    <SelectItem value="whatsapp">WhatsApp</SelectItem>
-                    <SelectItem value="voice">Voice</SelectItem>
-                    <SelectItem value="ai_learning">AI Learning</SelectItem>
-                    <SelectItem value="ml_prediction">ML Prediction</SelectItem>
-                    <SelectItem value="automation">Automation</SelectItem>
-                    <SelectItem value="workflow">Workflow</SelectItem>
+                    <optgroup label="Communication">
+                      <SelectItem value="note">Note</SelectItem>
+                      <SelectItem value="email">Email</SelectItem>
+                      <SelectItem value="sms">SMS</SelectItem>
+                      <SelectItem value="whatsapp">WhatsApp</SelectItem>
+                      <SelectItem value="voice_message">Voice Message</SelectItem>
+                      <SelectItem value="human_call">Human Call</SelectItem>
+                      <SelectItem value="ai_call">AI Call</SelectItem>
+                    </optgroup>
+                    <optgroup label="Account Actions">
+                      <SelectItem value="payment_received">Payment Received</SelectItem>
+                      <SelectItem value="promise_to_pay">Promise to Pay</SelectItem>
+                      <SelectItem value="dispute_filed">Dispute Filed</SelectItem>
+                      <SelectItem value="payment_plan_created">Payment Plan Created</SelectItem>
+                      <SelectItem value="automated_reminder">Automated Reminder</SelectItem>
+                      <SelectItem value="letter_post">Letter/Post</SelectItem>
+                      <SelectItem value="portal_message">Portal Message</SelectItem>
+                      <SelectItem value="status_change">Status Change</SelectItem>
+                      <SelectItem value="invoice_adjusted">Invoice Adjusted</SelectItem>
+                      <SelectItem value="credit_note">Credit Note</SelectItem>
+                      <SelectItem value="legal_action">Legal Action</SelectItem>
+                    </optgroup>
                   </SelectContent>
                 </Select>
 
@@ -344,8 +343,8 @@ export default function ActivityLogPage() {
                       <CardContent className="p-4">
                         <div className="flex items-start justify-between">
                           <div className="flex items-start space-x-3 flex-1">
-                            <div className="p-2 bg-gray-100 rounded-lg mt-1">
-                              {getActivityIcon(log.activityType)}
+                            <div className="mt-1">
+                              {getActivityIconWithBackground(log.activityType, "md")}
                             </div>
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center space-x-2 mb-1">
@@ -353,7 +352,7 @@ export default function ActivityLogPage() {
                                   {log.category}
                                 </Badge>
                                 <Badge variant="outline" className="bg-gray-100 text-gray-600 border-gray-200">
-                                  {log.activityType}
+                                  {getActivityLabel(log.activityType)}
                                 </Badge>
                                 {getResultBadge(log.result)}
                                 {log.duration && (
