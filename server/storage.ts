@@ -129,6 +129,9 @@ import {
   type InsertTenantInvitation,
   type TenantMetadata,
   type InsertTenantMetadata,
+  activityLogs,
+  type ActivityLog,
+  type InsertActivityLog,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, sql, count, sum, ne, isNotNull, gte, lte, lt, or, ilike, inArray } from "drizzle-orm";
@@ -452,6 +455,25 @@ export interface IStorage {
   getAccessibleTenantsByPartner(partnerUserId: string): Promise<(Tenant & { relationship: PartnerClientRelationship })[]>;
   canPartnerAccessTenant(partnerUserId: string, clientTenantId: string): Promise<boolean>;
   updatePartnerLastAccess(partnerUserId: string, clientTenantId: string): Promise<void>;
+
+  // Activity Log operations
+  getActivityLogs(tenantId: string, filters?: {
+    activityType?: string;
+    category?: string;
+    result?: string;
+    entityType?: string;
+    entityId?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<ActivityLog[]>;
+  createActivityLog(log: InsertActivityLog): Promise<ActivityLog>;
+  getActivityLogStats(tenantId: string): Promise<{
+    totalActivities: number;
+    successCount: number;
+    failureCount: number;
+    byType: Record<string, number>;
+    byCategory: Record<string, number>;
+  }>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -4040,6 +4062,68 @@ export class DatabaseStorage implements IStorage {
         eq(partnerClientRelationships.partnerUserId, partnerUserId),
         eq(partnerClientRelationships.clientTenantId, clientTenantId)
       ));
+  }
+
+  // Activity Log operations implementation
+  async getActivityLogs(tenantId: string, filters?: {
+    activityType?: string;
+    category?: string;
+    result?: string;
+    entityType?: string;
+    entityId?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<ActivityLog[]> {
+    const conditions = [eq(activityLogs.tenantId, tenantId)];
+    
+    if (filters?.activityType) conditions.push(eq(activityLogs.activityType, filters.activityType));
+    if (filters?.category) conditions.push(eq(activityLogs.category, filters.category));
+    if (filters?.result) conditions.push(eq(activityLogs.result, filters.result));
+    if (filters?.entityType) conditions.push(eq(activityLogs.entityType, filters.entityType));
+    if (filters?.entityId) conditions.push(eq(activityLogs.entityId, filters.entityId));
+
+    const logs = await db
+      .select()
+      .from(activityLogs)
+      .where(and(...conditions))
+      .orderBy(desc(activityLogs.createdAt))
+      .limit(filters?.limit || 100)
+      .offset(filters?.offset || 0);
+
+    return logs;
+  }
+
+  async createActivityLog(logData: InsertActivityLog): Promise<ActivityLog> {
+    const [log] = await db.insert(activityLogs).values(logData).returning();
+    return log;
+  }
+
+  async getActivityLogStats(tenantId: string): Promise<{
+    totalActivities: number;
+    successCount: number;
+    failureCount: number;
+    byType: Record<string, number>;
+    byCategory: Record<string, number>;
+  }> {
+    const logs = await db
+      .select()
+      .from(activityLogs)
+      .where(eq(activityLogs.tenantId, tenantId));
+
+    const stats = {
+      totalActivities: logs.length,
+      successCount: logs.filter(log => log.result === 'success').length,
+      failureCount: logs.filter(log => log.result === 'failure').length,
+      byType: {} as Record<string, number>,
+      byCategory: {} as Record<string, number>,
+    };
+
+    logs.forEach(log => {
+      stats.byType[log.activityType] = (stats.byType[log.activityType] || 0) + 1;
+      stats.byCategory[log.category] = (stats.byCategory[log.category] || 0) + 1;
+    });
+
+    return stats;
   }
 }
 

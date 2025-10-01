@@ -3339,6 +3339,76 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Activity Log API endpoints
+  app.get("/api/activity-logs", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { activityType, category, result, entityType, entityId, limit, offset } = req.query;
+
+      const logs = await storage.getActivityLogs(user.tenantId, {
+        activityType: activityType as string | undefined,
+        category: category as string | undefined,
+        result: result as string | undefined,
+        entityType: entityType as string | undefined,
+        entityId: entityId as string | undefined,
+        limit: limit ? parseInt(limit as string) : 100,
+        offset: offset ? parseInt(offset as string) : 0,
+      });
+
+      res.json(logs);
+    } catch (error) {
+      console.error("Error fetching activity logs:", error);
+      res.status(500).json({ message: "Failed to fetch activity logs" });
+    }
+  });
+
+  app.get("/api/activity-logs/stats", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const stats = await storage.getActivityLogStats(user.tenantId);
+      res.json(stats);
+    } catch (error) {
+      console.error("Error fetching activity log stats:", error);
+      res.status(500).json({ message: "Failed to fetch activity log stats" });
+    }
+  });
+
+  app.post("/api/activity-logs", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      // Validate request body
+      const { insertActivityLogSchema } = await import("@shared/schema");
+      const validatedData = insertActivityLogSchema.omit({ tenantId: true, userId: true }).parse(req.body);
+
+      const logData = {
+        ...validatedData,
+        tenantId: user.tenantId,
+        userId: user.id,
+      };
+
+      const log = await storage.createActivityLog(logData);
+      res.json(log);
+    } catch (error) {
+      console.error("Error creating activity log:", error);
+      if (error instanceof Error && error.name === 'ZodError') {
+        return res.status(400).json({ message: "Invalid activity log data", error: error.message });
+      }
+      res.status(500).json({ message: "Failed to create activity log" });
+    }
+  });
+
   // Bulk Operations
   app.post("/api/action-items/bulk/complete", isAuthenticated, async (req: any, res) => {
     try {

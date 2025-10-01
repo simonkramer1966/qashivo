@@ -58,6 +58,7 @@ const navigationItems = [
   { name: "Reports", href: "/reports", icon: BarChart },
   { name: "Call Logs", href: "/call-logs", icon: Phone },
   { name: "Payment Plans", href: "/payment-plans", icon: CreditCard },
+  { name: "Activity Log", href: "/activity-log", icon: Activity },
 ];
 
 // Partner-specific navigation items

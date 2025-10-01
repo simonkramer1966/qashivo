@@ -2971,6 +2971,48 @@ export const tenantMetadata = pgTable("tenant_metadata", {
   index("idx_tenant_metadata_status").on(table.subscriptionStatus),
 ]);
 
+// Activity Logs table - Comprehensive audit trail for all system activities
+export const activityLogs = pgTable("activity_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  
+  // Activity classification
+  activityType: varchar("activity_type").notNull(), // email, sms, whatsapp, voice, ai_learning, ml_prediction, automation, workflow
+  category: varchar("category").notNull(), // communication, learning, automation, system
+  
+  // Entity references
+  entityType: varchar("entity_type"), // invoice, contact, action, workflow
+  entityId: varchar("entity_id"), // ID of the related entity
+  
+  // Activity details
+  action: varchar("action").notNull(), // sent, received, analyzed, predicted, optimized, executed
+  description: text("description").notNull(), // User-friendly description
+  result: varchar("result").notNull(), // success, failure, pending, skipped
+  
+  // Rich metadata (JSON)
+  metadata: jsonb("metadata").default("{}"), // Additional context (recipients, scores, reasoning, etc.)
+  
+  // Error tracking
+  errorMessage: text("error_message"),
+  errorCode: varchar("error_code"),
+  
+  // Performance tracking
+  duration: integer("duration"), // milliseconds
+  
+  // User context (if applicable)
+  userId: varchar("user_id").references(() => users.id),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  // Performance indexes for filtering and search
+  index("idx_activity_logs_tenant").on(table.tenantId),
+  index("idx_activity_logs_type").on(table.activityType),
+  index("idx_activity_logs_category").on(table.category),
+  index("idx_activity_logs_entity").on(table.entityType, table.entityId),
+  index("idx_activity_logs_result").on(table.result),
+  index("idx_activity_logs_created_at").on(table.createdAt),
+]);
+
 // Relations for partner system
 export const subscriptionPlansRelations = relations(subscriptionPlans, ({ many }) => ({
   tenantMetadata: many(tenantMetadata),
@@ -3058,3 +3100,12 @@ export type InsertTenantInvitation = z.infer<typeof insertTenantInvitationSchema
 
 export type TenantMetadata = typeof tenantMetadata.$inferSelect;
 export type InsertTenantMetadata = z.infer<typeof insertTenantMetadataSchema>;
+
+// Activity Logs schema and types
+export const insertActivityLogSchema = createInsertSchema(activityLogs).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type ActivityLog = typeof activityLogs.$inferSelect;
+export type InsertActivityLog = z.infer<typeof insertActivityLogSchema>;
