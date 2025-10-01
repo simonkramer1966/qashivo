@@ -193,7 +193,7 @@ export default function ActivityLogPage() {
                   variant={commMode?.mode === 'off' ? 'default' : 'outline'}
                   className={`h-auto flex-col items-start p-4 ${
                     commMode?.mode === 'off' 
-                      ? 'bg-gray-600 hover:bg-gray-700 text-white' 
+                      ? 'bg-[#17B6C3] hover:bg-[#1396A1] text-white' 
                       : 'hover:bg-gray-50'
                   }`}
                   onClick={() => updateModeMutation.mutate('off')}
@@ -213,8 +213,8 @@ export default function ActivityLogPage() {
                   variant={commMode?.mode === 'testing' ? 'default' : 'outline'}
                   className={`h-auto flex-col items-start p-4 ${
                     commMode?.mode === 'testing' 
-                      ? 'bg-purple-600 hover:bg-purple-700 text-white' 
-                      : 'hover:bg-purple-50'
+                      ? 'bg-[#17B6C3] hover:bg-[#1396A1] text-white' 
+                      : 'hover:bg-teal-50'
                   }`}
                   onClick={() => updateModeMutation.mutate('testing')}
                   disabled={updateModeMutation.isPending}
@@ -233,8 +233,8 @@ export default function ActivityLogPage() {
                   variant={commMode?.mode === 'soft_live' ? 'default' : 'outline'}
                   className={`h-auto flex-col items-start p-4 ${
                     commMode?.mode === 'soft_live' 
-                      ? 'bg-orange-600 hover:bg-orange-700 text-white' 
-                      : 'hover:bg-orange-50'
+                      ? 'bg-[#17B6C3] hover:bg-[#1396A1] text-white' 
+                      : 'hover:bg-teal-50'
                   }`}
                   onClick={() => updateModeMutation.mutate('soft_live')}
                   disabled={updateModeMutation.isPending}
