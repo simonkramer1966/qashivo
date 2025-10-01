@@ -1,192 +1,71 @@
-# replit.md
+# Nexus AR
 
 ## Overview
-
-Nexus AR is an AI-driven accounts receivable and debt recovery application built with a modern full-stack architecture. The system helps businesses streamline their collection processes through intelligent automation, multi-channel communication, and data-driven insights. It provides comprehensive invoice management, automated workflows, and integration with external services like Xero, SendGrid, and Twilio to optimize cash flow and reduce days sales outstanding.
+Nexus AR is an AI-driven accounts receivable and debt recovery application designed to automate and optimize collection processes. It offers intelligent automation, multi-channel communication, and data-driven insights for invoice management, ultimately aiming to improve cash flow and reduce days sales outstanding for businesses.
 
 ## User Preferences
-
 Preferred communication style: Simple, everyday language.
-
-## Design System Guidelines
-
-### Premium Glassmorphism UI Standards
-- **Page Background**: `bg-gradient-to-br from-slate-50 via-blue-50 to-teal-50`
-- **Card Styling**: `bg-white/80 backdrop-blur-sm border-white/50 shadow-lg`
-- **Metrics Cards**: `bg-white/70 backdrop-blur-md border-0 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105`
-- **Professional Spacing**: Use `p-8` for main content areas, `gap-8` for grids
-- **Brand Color**: #17B6C3 (Nexus teal) for all primary buttons and accents
-
-### Form Elements Standards
-- **Input Fields**: `bg-white/70 border-gray-200/30` for subtle definition
-- **Select Fields**: Same styling as inputs with `bg-white border-gray-200` for dropdown content
-- **Primary Buttons**: `bg-[#17B6C3] hover:bg-[#1396A1] text-white`
-- **Secondary Buttons**: `border-[#17B6C3]/20 text-[#17B6C3] hover:bg-[#17B6C3]/5`
-
-### Typography Standards
-- **Page Titles**: `text-2xl font-bold` 
-- **Card Titles**: `text-xl font-bold`
-- **Professional Icons**: Always wrap in `p-2 bg-[#17B6C3]/10 rounded-lg` containers
-
-### Consistent Patterns
-- All form inputs and selects use faint grey borders for better visibility
-- Dropdown contents are solid white for clean appearance
-- Hover effects include smooth transitions and subtle scale/shadow changes
-- Icons use brand color with light background containers
 
 ## System Architecture
 
-### Frontend Architecture
-- **Framework**: React with TypeScript using Vite as the build tool
-- **UI Framework**: Shadcn/ui components built on Radix UI primitives for accessibility
-- **Styling**: Tailwind CSS with CSS variables for theming support
-- **Routing**: Wouter for client-side routing
-- **State Management**: TanStack Query (React Query) for server state management
+### UI/UX Design
+The application utilizes a Premium Glassmorphism UI, featuring a `bg-gradient-to-br from-slate-50 via-blue-50 to-teal-50` page background, `bg-white/80 backdrop-blur-sm border-white/50 shadow-lg` for cards, and `bg-white/70 backdrop-blur-md border-0 shadow-xl` for metrics. The primary brand color is #17B6C3 (Nexus teal). Typography includes `text-2xl font-bold` for page titles and `text-xl font-bold` for card titles. Icons are wrapped in `p-2 bg-[#17B6C3]/10 rounded-lg`. Form elements use `bg-white/70 border-gray-200/30` for inputs and `bg-[#17B6C3] hover:bg-[#1396A1] text-white` for primary buttons.
+
+### Frontend
+- **Framework**: React with TypeScript (Vite build tool)
+- **UI Framework**: Shadcn/ui (built on Radix UI)
+- **Styling**: Tailwind CSS
+- **Routing**: Wouter
+- **State Management**: TanStack Query (React Query)
 - **Form Handling**: React Hook Form with Zod validation
 
-### Backend Architecture
-- **Runtime**: Node.js with Express.js framework
-- **Language**: TypeScript with ES modules
+### Backend
+- **Runtime**: Node.js with Express.js
+- **Language**: TypeScript (ES modules)
 - **API Design**: RESTful API with authentication middleware
-- **Session Management**: Express sessions with PostgreSQL storage
-- **Build System**: ESBuild for production bundling
+- **Session Management**: Express sessions (PostgreSQL storage)
+- **Build System**: ESBuild
 
-### Database Architecture
-- **Primary Database**: PostgreSQL with Neon serverless hosting
-- **ORM**: Drizzle ORM for type-safe database operations
-- **Schema Management**: Drizzle Kit for migrations and schema management
-- **Multi-tenancy**: Tenant-based data isolation with foreign key relationships
+### Database
+- **Primary Database**: PostgreSQL (Neon serverless hosting)
+- **ORM**: Drizzle ORM
+- **Schema Management**: Drizzle Kit
+- **Multi-tenancy**: Tenant-based data isolation
 
-### Authentication System
-- **Provider**: Replit Auth using OpenID Connect
-- **Strategy**: Passport.js with custom OIDC strategy
-- **Session Storage**: PostgreSQL-backed sessions with connect-pg-simple
-- **User Management**: Mandatory user and session tables for Replit Auth compliance
+### Authentication
+- **Provider**: Replit Auth (OpenID Connect)
+- **Strategy**: Passport.js (custom OIDC strategy)
+- **Session Storage**: PostgreSQL-backed sessions
 
 ### Data Models
-- **Core Entities**: Users, Tenants, Contacts, Invoices, Actions, Workflows
-- **Relationships**: Multi-tenant architecture with proper foreign key constraints
-- **Validation**: Zod schemas for runtime type checking and API validation
+Core entities include Users, Tenants, Contacts, Invoices, Actions, and Workflows, with multi-tenant architecture and Zod validation.
 
 ### Communication Channels
-- **Email**: SendGrid integration for automated email campaigns
-- **SMS**: Twilio integration for text message reminders
-- **AI**: OpenAI integration for intelligent collection suggestions and email drafting
+Integrations for automated email (SendGrid), SMS (Twilio), and AI-driven suggestions (OpenAI).
 
-### Universal API Middleware (Phase 1 Complete)
-- **Provider Abstraction**: Universal interface for accounting software integrations
-- **Authentication Manager**: Centralized OAuth token management with automatic refresh
-- **Data Transformer**: Standardizes provider-specific data formats to unified models
-- **Token Injection**: Secure token access pattern for provider implementations
-- **Xero Integration**: Production-ready XeroProvider wrapping existing Xero service
-- **Provider Routes**: Complete API endpoints for provider management and OAuth flows
+### Universal API Middleware
+Provides a standardized interface for accounting software integrations, including OAuth token management, data transformation, and secure token injection. A production-ready XeroProvider is implemented.
 
 ### Workflow Engine
-- **Automation**: Custom workflow system for collection processes
-- **Templates**: Pre-built workflow templates for different collection strategies
-- **Actions**: Trackable communication actions with timestamps and responses
-
-## Recent Changes
-
-### September 26, 2025 - SECURE 35-MINUTE ONBOARDING SYSTEM: Complete Implementation 🚀
-- ✅ **Database Foundation**: Extended schema with onboarding_progress, onboarding_templates, and enhanced tenant branding fields
-- ✅ **OnboardingService**: Built comprehensive business logic with 4-phase progress tracking (Technical Connection, Business Setup, Brand Customization, AI Review & Launch)
-- ✅ **Secure API Layer**: Implemented 6 API endpoints with proper RBAC (withRBACContext) middleware for tenant isolation
-- ✅ **Request Validation**: Added Zod schema validation for all request bodies with proper 400 error responses
-- ✅ **Auto-initialization**: Built seamless progress endpoint that auto-initializes onboarding while maintaining security
-- ✅ **React Components**: Created complete OnboardingWizard with 4 specialized phase components using glassmorphism design system
-- ✅ **Security**: Architect-approved implementation with proper tenant authorization and data isolation
-- ✅ **Reliability**: Comprehensive error handling prevents crashes and ensures 35-minute onboarding reliability
-- 🎯 **Competitive Advantage**: Achieved 1-day setup vs market leaders' 10-14 days with "The Only AI Collections Platform That Works From Day One" positioning
-- 🏆 **Technical Excellence**: Complete secure onboarding infrastructure ready for production deployment
-
-### September 12, 2025 - Universal API Middleware Implementation
-- ✅ **Phase 1 Complete**: Built and deployed universal API middleware system
-- ✅ **Provider Architecture**: Implemented UniversalProvider interface with token injection
-- ✅ **XeroProvider**: Created production-ready provider wrapping existing Xero service
-- ✅ **Authentication System**: Built centralized OAuth manager with automatic token refresh
-- ✅ **Data Standardization**: Implemented transformer engine for unified data models
-- ✅ **Server Integration**: Fully integrated middleware into server startup and routing
-- ✅ **New API Endpoints**: Added `/api/providers/*` routes for provider management
-- 🎯 **Competitive Advantage**: Achieved provider-agnostic architecture - no competitors have this unified approach
-
-### September 13, 2025 - AI-Driven Credit Control: Week 1 COMPLETE 🚀
-- ✅ **Database Foundation**: Extended schema with AI learning tables (customer_learning_profiles, action_effectiveness, collection_ab_tests)
-- ✅ **AI Learning Service**: Built comprehensive CollectionLearningService with customer behavior analysis
-- ✅ **Enhanced Automation**: Integrated AI learning into existing checkCollectionActions for smart optimization
-- ✅ **API Integration**: Added 4 new AI learning endpoints for frontend integration
-- ✅ **Production Ready**: All systems tested and running with proper error handling and fallbacks
-- 🧠 **AI Innovation**: Customer preference learning with 95% max confidence after 20 interactions
-- 📈 **Business Impact**: Collections now adapt to individual customer behavior patterns automatically
-- 🎯 **Market Differentiation**: First-of-kind adaptive credit control that learns which contact methods work best per customer
-
-### September 14, 2025 - Advanced ML Algorithms: Week 2 COMPLETE 🎯
-- ✅ **ML Schema Extension**: Added payment_predictions, risk_scores, customer_segments, seasonal_patterns tables for advanced analytics
-- ✅ **Predictive Payment Service**: Built sophisticated payment probability modeling with ML algorithms (v2.0.0)
-- ✅ **Dynamic Risk Scoring**: Implemented real-time multi-factor risk assessment engine with adaptive scoring
-- ✅ **Customer Segmentation**: Created behavioral clustering algorithms for automatic customer grouping
-- ✅ **Seasonal Pattern Recognition**: Built time-series analysis for payment trend forecasting and seasonality detection
-- ✅ **Enhanced AI Dashboard**: Transformed dashboard into comprehensive tabbed interface with live ML analytics
-- ✅ **API Integration**: Fixed critical API wiring - all ML endpoints now properly connected to services
-- 🧠 **ML Capabilities**: Payment predictions, risk scoring, customer segments, seasonal patterns all operational
-- 📊 **Dashboard Innovation**: Real-time ML insights with fallback demo data for resilient user experience
-- 🎯 **Technical Achievement**: Complete ML foundation ready for Week 3 optimization and advanced forecasting
-
-### September 14, 2025 - CRITICAL PERFORMANCE OPTIMIZATION: 99.9% Data Reduction 🚀
-- ✅ **Server-Side Filtering**: Implemented comprehensive API filtering with query parameters (status, search, overdue, pagination)
-- ✅ **Database Query Optimization**: Added performance indexes and efficient SQL WHERE clauses for all common filters
-- ✅ **Data Transfer Optimization**: Reduced from 8,050 to 5-50 filtered invoices per request (99.9% reduction)
-- ✅ **Response Time Improvement**: Cut invoice loading from 1,071ms to 151ms (86% faster performance)
-- ✅ **Frontend Integration**: Removed client-side filtering, updated React Query for server-side parameters
-- ✅ **Architect Validation**: Implementation passed review with proper security, scalability, and performance
-- 🎯 **Performance Achievement**: Solved critical bottleneck affecting entire invoice management experience
-- 📊 **Scalability**: System now handles large datasets efficiently with proper pagination and indexes
-
-### September 15, 2025 - UNIVERSAL FILTERING FIX: Cross-Provider Compatibility 🌍
-- ✅ **Universal Date-Based Logic**: Implemented provider-agnostic filtering logic using due dates instead of database status
-- ✅ **Cross-Provider Consistency**: Fixed filtering to work identically across Xero, Sage, QuickBooks, and all future providers
-- ✅ **Logical Status Definitions**: "Pending" = not past due yet, "Overdue" = past due date (excludes paid/cancelled)
-- ✅ **React Query v5 Compatibility**: Fixed deprecated `keepPreviousData` and `cacheTime` options for proper frontend refresh
-- ✅ **Real-Time Accuracy**: Status calculations now based on current date vs due date for consistent results
-- 🎯 **Universal Solution**: Solves provider inconsistencies where Xero/QuickBooks lack native overdue detection
-- 🌍 **Global Compatibility**: Ensures identical filtering behavior regardless of source accounting system
-
-### September 16, 2025 - SPECIALIZED AI CALL DIALOG: Premium UX Complete 🤖
-- ✅ **Specialized Component**: Built dedicated AiCallDialog component with premium glassmorphism design system
-- ✅ **AI Voice Configuration**: Implemented comprehensive voice settings (tone, personality, speed) with intuitive dropdowns
-- ✅ **Smart Phone Validation**: Added real-time phone number validation with formatting and error handling
-- ✅ **Customer Context Integration**: Dynamic customer and invoice data loading with automatic overdue calculation
-- ✅ **Glassmorphism Design**: Applied consistent brand styling with backdrop-blur effects and Nexus teal accents
-- ✅ **Action Centre Integration**: Seamlessly integrated into existing workflow with proper state management
-- ✅ **Error Resilience**: Comprehensive error handling for missing contacts and network failures
-- ✅ **API Integration**: Connected to existing Retell AI endpoints with dynamic variable injection
-- 🎯 **UX Innovation**: Replaced generic dialogs with focused, context-aware interface for AI call configuration
-- 🤖 **AI Sophistication**: Three-tier configuration system (tone + personality + speed) for nuanced AI behavior
-- 📞 **Professional Experience**: Enterprise-grade call interface with customer summaries and invoice context
-- 🔧 **Technical Excellence**: TypeScript interfaces, React Query integration, and proper error boundaries
+Customizable workflow system for collection processes, offering pre-built templates and trackable communication actions.
 
 ## External Dependencies
 
 ### Third-Party Services
-- **Xero**: Accounting software integration for invoice synchronization (via Universal Middleware)
-- **SendGrid**: Email delivery service for automated communications
-- **Twilio**: SMS service for text message reminders
-- **OpenAI**: AI service for generating collection suggestions and email drafts
+- **Xero**: Accounting software integration
+- **SendGrid**: Email delivery
+- **Twilio**: SMS service
+- **OpenAI**: AI services
 - **Neon**: Serverless PostgreSQL hosting
 
 ### Development Tools
-- **Replit**: Development environment with custom auth integration
-- **Vite**: Frontend build tool with hot module replacement
-- **Drizzle**: Database ORM and migration tool
-- **TypeScript**: Type safety across frontend and backend
+- **Replit**: Development environment
+- **Vite**: Frontend build tool
+- **Drizzle**: ORM and migration tool
+- **TypeScript**: Language superset
 
 ### UI/UX Libraries
 - **Radix UI**: Accessible component primitives
 - **Lucide**: Icon library
 - **Tailwind CSS**: Utility-first CSS framework
 - **Class Variance Authority**: Component variant management
-
-### Monitoring and Development
-- **Error Handling**: Custom error overlay for development
-- **Logging**: Request/response logging with performance metrics
-- **Session Management**: Secure cookie-based sessions with CSRF protection
