@@ -207,6 +207,7 @@ import { createRetellClient } from "./mcp/client";
 import { normalizeDynamicVariables, logVariableTransformation } from "./utils/retellVariableNormalizer";
 import Stripe from "stripe";
 import { registerSyncRoutes } from "./routes/syncRoutes";
+import documentationRoutes from "./routes/documentationRoutes";
 import { webhookHandler } from "./services/webhookHandler";
 import { ForecastEngine, type ForecastConfig, type ForecastScenario } from "../shared/forecast";
 import { subscriptionService } from "./services/subscriptionService";
@@ -11474,6 +11475,10 @@ ${tenant.name}
   // ==================== SYNC ROUTES ====================
   registerSyncRoutes(app);
   // ==================== END SYNC ROUTES ====================
+
+  // ==================== DOCUMENTATION ROUTES ====================
+  app.use('/api/documentation', isAuthenticated, documentationRoutes);
+  // ==================== END DOCUMENTATION ROUTES ====================
 
   // ==================== WEBHOOK ROUTES ====================
   // Critical: These routes MUST use raw body middleware for proper HMAC verification
