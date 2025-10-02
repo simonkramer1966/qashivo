@@ -435,7 +435,7 @@ export default function NewSidebar() {
               <DropdownMenuTrigger asChild>
                 <Button
                   variant="outline"
-                  className="w-full justify-between px-4 py-3 glass-card-light hover:glass-card-strong border-white/30 transition-all duration-200"
+                  className="w-full justify-between px-4 py-3 glass-card-light hover:glass-card-strong border-gray-300 transition-all duration-200"
                   disabled={switchTenantMutation.isPending}
                   data-testid="button-organization-dropdown"
                 >
