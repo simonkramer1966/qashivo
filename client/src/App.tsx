@@ -9,6 +9,7 @@ import NotFound from "@/pages/not-found";
 import Cashboard from "@/pages/cashboard";
 import Invoices from "@/pages/invoices";
 import Contacts from "@/pages/contacts";
+import Onboarding from "@/pages/onboarding";
 import ActionCentre from "@/pages/action-centre";
 import Workflows from "@/pages/workflows";
 import ActivityLog from "@/pages/activity-log";
@@ -52,6 +53,7 @@ function Router() {
     <Switch>
       <Route path="/partner" component={PartnerDashboard} />
       <Route path="/contacts" component={Contacts} />
+      <Route path="/onboarding" component={Onboarding} />
       <Route path="/invoices" component={Invoices} />
       <Route path="/action-centre" component={ActionCentre} />
       <Route path="/workflows" component={Workflows} />
