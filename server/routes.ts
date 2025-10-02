@@ -1762,16 +1762,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log(`📊 Paginated Contacts API - Tenant: ${user.tenantId}, Filters: search="${search}", sortBy=${sortBy}, sortDir=${sortDir}, page=${page}, limit=${limit}`);
       
-      // Use fallback pagination (TODO: implement getContactsFiltered method)
+      // Use fallback pagination with invoice data
       {
-        // Fallback: get all contacts and implement pagination in memory
+        // Get all contacts and invoices
         const allContacts = await storage.getContacts(user.tenantId);
+        const allInvoices = await storage.getInvoices(user.tenantId, 10000); // Get all invoices
+        
+        // Calculate outstanding amounts and invoice counts for each contact
+        const contactsWithData = allContacts.map(contact => {
+          const contactInvoices = allInvoices.filter(inv => inv.contactId === contact.id);
+          const unpaidInvoices = contactInvoices.filter(inv => inv.status !== 'paid' && inv.status !== 'cancelled');
+          
+          // Calculate outstanding amount
+          const outstandingAmount = unpaidInvoices.reduce((sum, inv) => {
+            const amount = Number(inv.amount) || 0;
+            const amountPaid = Number(inv.amountPaid) || 0;
+            return sum + (amount - amountPaid);
+          }, 0);
+          
+          // Calculate risk score based on overdue invoices
+          let riskScore = 0;
+          const today = new Date();
+          unpaidInvoices.forEach(inv => {
+            if (inv.dueDate) {
+              const dueDate = new Date(inv.dueDate);
+              const daysOverdue = Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
+              if (daysOverdue > 90) riskScore += 30;
+              else if (daysOverdue > 60) riskScore += 20;
+              else if (daysOverdue > 30) riskScore += 15;
+              else if (daysOverdue > 0) riskScore += 10;
+            }
+          });
+          riskScore = Math.min(riskScore, 100); // Cap at 100
+          
+          return {
+            ...contact,
+            outstandingAmount,
+            invoiceCount: contactInvoices.length,
+            riskScore
+          };
+        });
         
         // Filter contacts based on search
-        let filteredContacts = allContacts;
+        let filteredContacts = contactsWithData;
         if (search && search.trim()) {
           const searchLower = search.toLowerCase();
-          filteredContacts = allContacts.filter(contact => 
+          filteredContacts = contactsWithData.filter(contact => 
             contact.name?.toLowerCase().includes(searchLower) ||
             contact.email?.toLowerCase().includes(searchLower) ||
             contact.companyName?.toLowerCase().includes(searchLower) ||
@@ -1781,8 +1817,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         // Sort contacts
         filteredContacts.sort((a, b) => {
-          let aValue = '';
-          let bValue = '';
+          let aValue: any = '';
+          let bValue: any = '';
           
           switch (sortBy) {
             case 'name':
@@ -1797,15 +1833,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
               aValue = a.email?.toLowerCase() || '';
               bValue = b.email?.toLowerCase() || '';
               break;
+            case 'outstanding':
+              aValue = a.outstandingAmount;
+              bValue = b.outstandingAmount;
+              break;
             default:
               aValue = a.name?.toLowerCase() || '';
               bValue = b.name?.toLowerCase() || '';
           }
           
           if (sortDir === 'desc') {
-            return bValue.localeCompare(aValue);
+            return typeof aValue === 'string' ? bValue.localeCompare(aValue) : bValue - aValue;
           }
-          return aValue.localeCompare(bValue);
+          return typeof aValue === 'string' ? aValue.localeCompare(bValue) : aValue - bValue;
         });
 
         // Implement pagination
