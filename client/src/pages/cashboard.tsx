@@ -98,8 +98,8 @@ export default function Cashboard() {
                   {metricsLoading ? (
                     <div className="h-8 w-32 bg-slate-200 animate-pulse rounded"></div>
                   ) : (
-                    <h3 className="text-2xl sm:text-3xl font-bold text-slate-900">
-                      {formatCurrency(totalOutstanding)} <span className="text-slate-500">(0)</span>
+                    <h3 className="text-xl sm:text-2xl font-bold text-slate-900">
+                      {formatCurrency(totalOutstanding)} <span className="text-sm text-slate-500">(0)</span>
                     </h3>
                   )}
                 </div>
@@ -117,8 +117,8 @@ export default function Cashboard() {
                   {metricsLoading ? (
                     <div className="h-8 w-32 bg-slate-200 animate-pulse rounded"></div>
                   ) : (
-                    <h3 className="text-2xl sm:text-3xl font-bold text-slate-900">
-                      {formatCurrency(0)} <span className="text-slate-500">({overdueCount})</span>
+                    <h3 className="text-xl sm:text-2xl font-bold text-slate-900">
+                      {formatCurrency(0)} <span className="text-sm text-slate-500">({overdueCount})</span>
                     </h3>
                   )}
                 </div>
@@ -136,7 +136,7 @@ export default function Cashboard() {
                   {metricsLoading ? (
                     <div className="h-8 w-20 bg-slate-200 animate-pulse rounded"></div>
                   ) : (
-                    <h3 className="text-2xl sm:text-3xl font-bold text-slate-900">
+                    <h3 className="text-xl sm:text-2xl font-bold text-slate-900">
                       {collectionRate.toFixed(0)}%
                     </h3>
                   )}
@@ -155,7 +155,7 @@ export default function Cashboard() {
                   {metricsLoading ? (
                     <div className="h-8 w-16 bg-slate-200 animate-pulse rounded"></div>
                   ) : (
-                    <h3 className="text-2xl sm:text-3xl font-bold text-slate-900">
+                    <h3 className="text-xl sm:text-2xl font-bold text-slate-900">
                       {avgDaysToPay.toFixed(0)}
                     </h3>
                   )}
@@ -174,8 +174,8 @@ export default function Cashboard() {
                   {metricsLoading ? (
                     <div className="h-8 w-32 bg-slate-200 animate-pulse rounded"></div>
                   ) : (
-                    <h3 className="text-2xl sm:text-3xl font-bold text-slate-900">
-                      {formatCurrency(0)} <span className="text-slate-500">(0)</span>
+                    <h3 className="text-xl sm:text-2xl font-bold text-slate-900">
+                      {formatCurrency(0)} <span className="text-sm text-slate-500">(0)</span>
                     </h3>
                   )}
                 </div>
@@ -193,8 +193,8 @@ export default function Cashboard() {
                   {metricsLoading ? (
                     <div className="h-8 w-32 bg-slate-200 animate-pulse rounded"></div>
                   ) : (
-                    <h3 className="text-2xl sm:text-3xl font-bold text-slate-900">
-                      {formatCurrency(0)} <span className="text-slate-500">(0)</span>
+                    <h3 className="text-xl sm:text-2xl font-bold text-slate-900">
+                      {formatCurrency(0)} <span className="text-sm text-slate-500">(0)</span>
                     </h3>
                   )}
                 </div>
@@ -212,8 +212,8 @@ export default function Cashboard() {
                   {metricsLoading ? (
                     <div className="h-8 w-32 bg-slate-200 animate-pulse rounded"></div>
                   ) : (
-                    <h3 className="text-2xl sm:text-3xl font-bold text-slate-900">
-                      {formatCurrency(0)} <span className="text-slate-500">(0)</span>
+                    <h3 className="text-xl sm:text-2xl font-bold text-slate-900">
+                      {formatCurrency(0)} <span className="text-sm text-slate-500">(0)</span>
                     </h3>
                   )}
                 </div>
@@ -231,8 +231,8 @@ export default function Cashboard() {
                   {metricsLoading ? (
                     <div className="h-8 w-32 bg-slate-200 animate-pulse rounded"></div>
                   ) : (
-                    <h3 className="text-2xl sm:text-3xl font-bold text-slate-900">
-                      {formatCurrency(0)} <span className="text-slate-500">(0)</span>
+                    <h3 className="text-xl sm:text-2xl font-bold text-slate-900">
+                      {formatCurrency(0)} <span className="text-sm text-slate-500">(0)</span>
                     </h3>
                   )}
                 </div>
