@@ -96,10 +96,10 @@ export default function Cashboard() {
                 <div>
                   <p className="text-sm text-slate-600 mb-1">Total Outstanding</p>
                   {metricsLoading ? (
-                    <div className="h-8 w-24 bg-slate-200 animate-pulse rounded"></div>
+                    <div className="h-8 w-32 bg-slate-200 animate-pulse rounded"></div>
                   ) : (
                     <h3 className="text-2xl sm:text-3xl font-bold text-slate-900">
-                      {formatCurrency(totalOutstanding)}
+                      {formatCurrency(totalOutstanding)} <span className="text-slate-500">(0)</span>
                     </h3>
                   )}
                 </div>
@@ -115,10 +115,10 @@ export default function Cashboard() {
                 <div>
                   <p className="text-sm text-slate-600 mb-1">Overdue Invoices</p>
                   {metricsLoading ? (
-                    <div className="h-8 w-16 bg-slate-200 animate-pulse rounded"></div>
+                    <div className="h-8 w-32 bg-slate-200 animate-pulse rounded"></div>
                   ) : (
                     <h3 className="text-2xl sm:text-3xl font-bold text-slate-900">
-                      {overdueCount}
+                      {formatCurrency(0)} <span className="text-slate-500">({overdueCount})</span>
                     </h3>
                   )}
                 </div>
