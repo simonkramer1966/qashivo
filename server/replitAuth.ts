@@ -209,14 +209,28 @@ const createDemoUserSession = async (req: any) => {
     });
     console.log("✅ Created demo tenant for development mode");
   } catch (error) {
-    console.log("🔧 Demo tenant already exists, using it");
-    // For development, find any existing tenant to use as fallback
+    console.log("🔧 Demo tenant already exists, fetching it");
+    // Try to find existing demo tenant by subdomain
     try {
-      // For development fallback, just use the main tenant ID from logs
-      const fallbackTenantId = "9ffa8e58-af89-4f6a-adee-7fe09d956295"; // Nexus AR tenant from logs
-      demoTenant = await storage.getTenant(fallbackTenantId);
+      const { db } = await import("./db");
+      const { tenants } = await import("@shared/schema");
+      const { eq } = await import("drizzle-orm");
+      
+      // Try to find demo tenant by subdomain
+      const [existingDemoTenant] = await db.select().from(tenants).where(eq(tenants.subdomain, 'demo')).limit(1);
+      
+      if (existingDemoTenant) {
+        demoTenant = existingDemoTenant;
+      } else {
+        // Use first available tenant as fallback
+        const [firstTenant] = await db.select().from(tenants).limit(1);
+        if (firstTenant) {
+          demoTenant = firstTenant;
+          console.log(`🔧 Using fallback tenant: ${demoTenant.name}`);
+        }
+      }
     } catch (fallbackError) {
-      console.error("Failed to find fallback tenant:", fallbackError);
+      console.error("Failed to find existing tenant:", fallbackError);
       throw new Error("Could not create or find demo tenant for development");
     }
   }
