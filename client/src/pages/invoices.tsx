@@ -38,17 +38,31 @@ export default function Invoices() {
   const [, setLocation] = useLocation();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState('all');
+  const [page, setPage] = useState(1);
+  const limit = 20;
 
   const { data: invoicesData, isLoading } = useQuery<{
     invoices: Invoice[];
     aggregates: { totalOutstanding: number; overdueCount: number; pendingCount: number; paidCount: number; totalInvoices: number };
     pagination: { total: number; page: number; limit: number; totalPages: number };
   }>({
-    queryKey: ['/api/invoices', { status: statusFilter, search, page: 1, limit: 50 }],
+    queryKey: ['/api/invoices', { status: statusFilter, search, page, limit }],
   });
 
   const invoices = invoicesData?.invoices || [];
   const aggregates = invoicesData?.aggregates || { totalOutstanding: 0, overdueCount: 0, pendingCount: 0, paidCount: 0, totalInvoices: 0 };
+  const pagination = invoicesData?.pagination || { total: 0, page: 1, limit: 20, totalPages: 1 };
+
+  // Reset to page 1 when search or filter changes
+  const handleSearchChange = (value: string) => {
+    setSearch(value);
+    setPage(1);
+  };
+
+  const handleStatusFilterChange = (value: string) => {
+    setStatusFilter(value);
+    setPage(1);
+  };
 
   const getDaysOverdue = (dueDate: string) => {
     const due = new Date(dueDate);
@@ -105,13 +119,13 @@ export default function Invoices() {
                 type="text"
                 placeholder="Search invoices..."
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                onChange={(e) => handleSearchChange(e.target.value)}
                 className="input-apple pl-10"
                 data-testid="input-search-invoices"
               />
             </div>
             
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <Select value={statusFilter} onValueChange={handleStatusFilterChange}>
               <SelectTrigger className="w-full sm:w-[180px] input-apple" data-testid="select-status-filter">
                 <div className="flex items-center gap-2">
                   <Filter className="h-4 w-4 text-slate-500" />
@@ -237,6 +251,70 @@ export default function Invoices() {
               })
             )}
           </div>
+
+          {/* Pagination Controls */}
+          {!isLoading && invoices.length > 0 && pagination.totalPages > 1 && (
+            <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4 pb-4">
+              <p className="text-sm text-slate-600">
+                Showing {((pagination.page - 1) * pagination.limit) + 1} to {Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total} invoices
+              </p>
+              
+              <div className="flex gap-2">
+                <Button
+                  onClick={() => setPage(Math.max(1, page - 1))}
+                  disabled={page === 1}
+                  variant="outline"
+                  size="sm"
+                  className="touch-target"
+                  data-testid="button-previous-page"
+                >
+                  Previous
+                </Button>
+                
+                {/* Page Numbers - Show 3 on mobile, more on desktop */}
+                <div className="flex gap-1">
+                  {Array.from({ length: pagination.totalPages }, (_, i) => i + 1)
+                    .filter(pageNum => {
+                      // On mobile (assume < 640px), show current, prev, and next
+                      const isMobile = window.innerWidth < 640;
+                      if (isMobile) {
+                        return Math.abs(pageNum - page) <= 1;
+                      }
+                      // On desktop, show more pages
+                      return Math.abs(pageNum - page) <= 2 || pageNum === 1 || pageNum === pagination.totalPages;
+                    })
+                    .map((pageNum, idx, arr) => (
+                      <>
+                        {idx > 0 && arr[idx - 1] !== pageNum - 1 && (
+                          <span key={`ellipsis-${pageNum}`} className="px-2 py-1 text-slate-400">...</span>
+                        )}
+                        <Button
+                          key={pageNum}
+                          onClick={() => setPage(pageNum)}
+                          variant={page === pageNum ? "default" : "outline"}
+                          size="sm"
+                          className="touch-target min-w-[40px]"
+                          data-testid={`button-page-${pageNum}`}
+                        >
+                          {pageNum}
+                        </Button>
+                      </>
+                    ))}
+                </div>
+                
+                <Button
+                  onClick={() => setPage(Math.min(pagination.totalPages, page + 1))}
+                  disabled={page === pagination.totalPages}
+                  variant="outline"
+                  size="sm"
+                  className="touch-target"
+                  data-testid="button-next-page"
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       </main>
 
