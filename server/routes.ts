@@ -8135,45 +8135,69 @@ Payment required immediately to avoid collection action. Contact us NOW.`
     console.log("Full URL:", req.url);
     
     try {
-      const { code, state: tenantId } = req.query;
+      const { code, state, error, error_description } = req.query;
       
-      if (!code || !tenantId) {
+      // Check for authorization errors
+      if (error) {
+        console.error(`Xero authorization error: ${error} - ${error_description}`);
         return res.status(400).send(`
           <html>
             <body style="font-family: system-ui; text-align: center; padding: 2rem;">
               <h1>❌ Authorization Failed</h1>
-              <p>Missing authorization code or tenant ID</p>
-              <a href="/" style="background: #17B6C3; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px;">Return to Dashboard</a>
+              <p>${error_description || error}</p>
+              <a href="/settings" style="background: #17B6C3; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px;">Back to Settings</a>
+            </body>
+          </html>
+        `);
+      }
+      
+      if (!code || !state) {
+        return res.status(400).send(`
+          <html>
+            <body style="font-family: system-ui; text-align: center; padding: 2rem;">
+              <h1>❌ Authorization Failed</h1>
+              <p>Missing authorization code or state parameter</p>
+              <a href="/settings" style="background: #17B6C3; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px;">Back to Settings</a>
             </body>
           </html>
         `);
       }
 
-      const tokens = await xeroService.exchangeCodeForTokens(code as string);
-      if (!tokens) {
+      // Use APIMiddleware to complete the OAuth flow
+      const result = await apiMiddleware.completeConnection('xero', code as string, state as string);
+      
+      if (!result.success || !result.tokens || !result.appTenantId) {
+        console.error('Xero callback failed:', result.error);
         return res.status(400).send(`
           <html>
             <body style="font-family: system-ui; text-align: center; padding: 2rem;">
-              <h1>❌ Authorization Failed</h1>
-              <p>Failed to exchange authorization code with Xero</p>
-              <a href="/" style="background: #17B6C3; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px;">Return to Dashboard</a>
+              <h1>❌ Connection Failed</h1>
+              <p>${result.error || 'Failed to complete Xero authorization'}</p>
+              <a href="/settings" style="background: #17B6C3; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px;">Back to Settings</a>
             </body>
           </html>
         `);
       }
 
-      // Store tokens in tenant record
-      await storage.updateTenant(tenantId as string, {
+      // Extract tenant IDs and tokens from the result
+      const appTenantId = result.appTenantId; // Our app's tenant ID
+      const xeroTenantId = result.tokens.tenantId; // Xero's tenant ID
+      const tokens = result.tokens;
+      
+      // Save tokens to database
+      await storage.updateTenant(appTenantId, {
         xeroAccessToken: tokens.accessToken,
-        xeroRefreshToken: tokens.refreshToken,
-        xeroTenantId: tokens.tenantId,
-        xeroExpiresAt: tokens.expiresAt,
+        xeroRefreshToken: tokens.refreshToken || null,
+        xeroTenantId: xeroTenantId || null,
+        xeroExpiresAt: tokens.expiresAt || null,
       });
+      
+      console.log(`✅ Xero connected successfully for app tenant: ${appTenantId}, Xero tenant: ${xeroTenantId}`);
 
       // Trigger automatic comprehensive sync after successful connection
-      console.log(`🚀 Triggering automatic initial Xero sync for tenant: ${tenantId}`);
+      console.log(`🚀 Triggering automatic initial Xero sync for tenant: ${appTenantId}`);
       const syncService = new XeroSyncService();
-      syncService.syncAllDataForTenant(tenantId as string)
+      syncService.syncAllDataForTenant(appTenantId)
         .then(result => {
           if (result.success) {
             console.log(`✅ Initial Xero sync completed successfully:`, result);

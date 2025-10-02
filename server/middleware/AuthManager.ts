@@ -82,15 +82,20 @@ export class AuthManager {
         accessToken: tokenData.access_token,
         refreshToken: tokenData.refresh_token,
         expiresAt: new Date(Date.now() + (tokenData.expires_in * 1000)),
-        tenantId: additionalData?.tenantId,
+        tenantId: additionalData?.tenantId, // Provider's tenant ID (e.g., Xero tenant ID)
         scope: tokenData.scope,
       };
 
-      // Cache tokens
+      // Cache tokens with app tenant ID
       const cacheKey = `${providerName}:${stateData.tenantId || 'default'}`;
       this.tokenCache.set(cacheKey, tokens);
 
-      return { success: true, tokens };
+      // Return both app tenant ID and tokens (which contain provider tenant ID)
+      return { 
+        success: true, 
+        tokens,
+        appTenantId: stateData.tenantId // Our app's tenant ID
+      };
     } catch (error) {
       console.error(`Token exchange failed for ${providerName}:`, error);
       return { success: false, error: error instanceof Error ? error.message : 'Token exchange failed' };
