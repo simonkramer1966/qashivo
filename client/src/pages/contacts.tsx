@@ -33,12 +33,14 @@ export default function Customers() {
 
   const { data: contactsResponse, isLoading } = useQuery<{
     contacts: Contact[];
+    aggregates: { totalOutstanding: number; highRiskCount: number; totalContacts: number };
     pagination: { total: number; page: number; limit: number; totalPages: number };
   }>({
     queryKey: ["/api/contacts", { search, page: 1, limit: 50 }],
   });
 
   const contacts = contactsResponse?.contacts || [];
+  const aggregates = contactsResponse?.aggregates || { totalOutstanding: 0, highRiskCount: 0, totalContacts: 0 };
 
   const getRiskBadge = (riskScore: number) => {
     if (riskScore >= 70) {
@@ -91,19 +93,19 @@ export default function Customers() {
             <div className="card-apple p-3 sm:p-4">
               <p className="text-xs sm:text-sm text-slate-600 mb-1">Total</p>
               <p className="text-xl sm:text-2xl font-bold text-slate-900">
-                {contacts.length}
+                {aggregates.totalContacts}
               </p>
             </div>
             <div className="card-apple p-3 sm:p-4">
               <p className="text-xs sm:text-sm text-slate-600 mb-1">High Risk</p>
               <p className="text-xl sm:text-2xl font-bold text-red-600">
-                {contacts.filter(c => c.riskScore >= 70).length}
+                {aggregates.highRiskCount}
               </p>
             </div>
             <div className="card-apple p-3 sm:p-4 col-span-2 sm:col-span-1">
               <p className="text-xs sm:text-sm text-slate-600 mb-1">Outstanding</p>
               <p className="text-xl sm:text-2xl font-bold text-slate-900">
-                {formatCurrency(contacts.reduce((sum, c) => sum + c.outstandingAmount, 0))}
+                {formatCurrency(aggregates.totalOutstanding)}
               </p>
             </div>
           </div>

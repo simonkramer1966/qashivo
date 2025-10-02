@@ -1602,9 +1602,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`📊 Server-side filtered results: ${invoicesWithCategories.length}/${result.total} invoices (filtered from ${systemTotal} total)`);
       
+      // Get all filtered invoices to calculate aggregates (not just current page)
+      const allFilteredResult = await storage.getInvoicesFiltered(user.tenantId, {
+        status,
+        search,
+        overdueCategory: overdue,
+        contactId,
+        page: 1,
+        limit: 10000 // Get all
+      });
+
+      // Calculate aggregates across ALL filtered invoices
+      const aggregates = {
+        totalOutstanding: allFilteredResult.invoices.reduce((sum, inv) => {
+          if (inv.status !== 'paid' && inv.status !== 'cancelled') {
+            const amount = Number(inv.amount) || 0;
+            const amountPaid = Number(inv.amountPaid) || 0;
+            return sum + (amount - amountPaid);
+          }
+          return sum;
+        }, 0),
+        overdueCount: allFilteredResult.invoices.filter(inv => inv.status === 'overdue').length,
+        pendingCount: allFilteredResult.invoices.filter(inv => inv.status === 'pending').length,
+        paidCount: allFilteredResult.invoices.filter(inv => inv.status === 'paid').length,
+        totalInvoices: allFilteredResult.total
+      };
+      
       // Return paginated results with enhanced metadata
       res.json({
         invoices: invoicesWithCategories,
+        aggregates,
         pagination: {
           page,
           limit,
@@ -1854,8 +1881,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const offset = (page - 1) * limit;
         const paginatedContacts = filteredContacts.slice(offset, offset + limit);
 
+        // Calculate aggregates across ALL filtered contacts (not just current page)
+        const aggregates = {
+          totalOutstanding: filteredContacts.reduce((sum, c) => sum + c.outstandingAmount, 0),
+          highRiskCount: filteredContacts.filter(c => c.riskScore >= 70).length,
+          totalContacts: filteredContacts.length
+        };
+
         const result = {
           contacts: paginatedContacts,
+          aggregates,
           pagination: {
             page,
             limit,

@@ -41,12 +41,14 @@ export default function Invoices() {
 
   const { data: invoicesData, isLoading } = useQuery<{
     invoices: Invoice[];
+    aggregates: { totalOutstanding: number; overdueCount: number; pendingCount: number; paidCount: number; totalInvoices: number };
     pagination: { total: number; page: number; limit: number; totalPages: number };
   }>({
     queryKey: ['/api/invoices', { status: statusFilter, search, page: 1, limit: 50 }],
   });
 
   const invoices = invoicesData?.invoices || [];
+  const aggregates = invoicesData?.aggregates || { totalOutstanding: 0, overdueCount: 0, pendingCount: 0, paidCount: 0, totalInvoices: 0 };
 
   const getDaysOverdue = (dueDate: string) => {
     const due = new Date(dueDate);
@@ -130,29 +132,25 @@ export default function Invoices() {
             <div className="card-apple p-3 sm:p-4">
               <p className="text-xs sm:text-sm text-slate-600 mb-1">Total</p>
               <p className="text-lg sm:text-xl font-bold text-slate-900">
-                {invoices.length}
+                {aggregates.totalInvoices}
               </p>
             </div>
             <div className="card-apple p-3 sm:p-4">
               <p className="text-xs sm:text-sm text-slate-600 mb-1">Overdue</p>
               <p className="text-lg sm:text-xl font-bold text-amber-600">
-                {invoices.filter(inv => getDaysOverdue(inv.dueDate) > 0 && inv.status !== 'paid').length}
+                {aggregates.overdueCount}
               </p>
             </div>
             <div className="card-apple p-3 sm:p-4">
               <p className="text-xs sm:text-sm text-slate-600 mb-1">Paid</p>
               <p className="text-lg sm:text-xl font-bold text-emerald-600">
-                {invoices.filter(inv => inv.status === 'paid').length}
+                {aggregates.paidCount}
               </p>
             </div>
             <div className="card-apple p-3 sm:p-4">
               <p className="text-xs sm:text-sm text-slate-600 mb-1">Outstanding</p>
               <p className="text-lg sm:text-xl font-bold text-slate-900">
-                {formatCurrency(
-                  invoices
-                    .filter(inv => inv.status !== 'paid')
-                    .reduce((sum, inv) => sum + (inv.amount - inv.amountPaid), 0)
-                )}
+                {formatCurrency(aggregates.totalOutstanding)}
               </p>
             </div>
           </div>
