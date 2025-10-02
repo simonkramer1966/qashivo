@@ -1,5 +1,5 @@
 import { db } from "../db";
-import { tenants, cachedXeroInvoices, bills, contacts, bankAccounts, bankTransactions } from "@shared/schema";
+import { tenants, cachedXeroInvoices, bills, contacts, bankAccounts, bankTransactions, invoices } from "@shared/schema";
 import { eq, and } from "drizzle-orm";
 import { xeroService } from "./xero";
 
