@@ -111,33 +111,49 @@ export class XeroSyncService {
 
           if (response.invoices && response.invoices.length > 0) {
             // Transform and insert invoices - map Xero API fields to database schema
-            const invoicesToInsert = response.invoices.map((invoice: any) => ({
-              tenantId,
-              xeroInvoiceId: invoice.InvoiceID,
-              invoiceNumber: invoice.InvoiceNumber,
-              amount: invoice.Total.toString(),
-              amountPaid: invoice.AmountPaid?.toString() || "0",
-              taxAmount: invoice.TotalTax?.toString() || "0",
-              status: this.mapXeroStatus(invoice.Status, { amountPaid: invoice.AmountPaid, totalAmount: invoice.Total }),
-              issueDate: new Date(invoice.DateString),
-              dueDate: new Date(invoice.DueDateString),
-              paidDate: invoice.Status === 'PAID' && invoice.AmountPaid ? new Date(invoice.DateString) : null,
-              description: `Invoice ${invoice.InvoiceNumber}` || null,
-              currency: invoice.CurrencyCode || "USD",
-              contact: invoice.Contact || null,
-              paymentDetails: {
-                amountPaid: invoice.AmountPaid || 0,
-                amountDue: invoice.AmountDue || 0,
-                totalAmount: invoice.Total || 0
-              },
-              metadata: {
-                xeroStatus: invoice.Status,
-                invoiceType: invoice.Type,
-                subTotal: invoice.SubTotal,
-                lineItems: invoice.LineItems || [],
-                branding: invoice.BrandingThemeID || null,
-              },
-            }));
+            const invoicesToInsert = response.invoices.map((invoice: any) => {
+              // Get actual payment date from payments map (not issue date!)
+              let actualPaidDate: Date | null = null;
+              if (invoice.Status === 'PAID' || (invoice.AmountPaid && invoice.AmountPaid > 0)) {
+                const payments = response.payments.get(invoice.InvoiceID);
+                if (payments && payments.length > 0) {
+                  // Get the most recent payment date as the paid date
+                  const sortedPayments = payments.sort((a: any, b: any) => 
+                    new Date(b.Date).getTime() - new Date(a.Date).getTime()
+                  );
+                  actualPaidDate = new Date(sortedPayments[0].Date);
+                }
+              }
+
+              return {
+                tenantId,
+                xeroInvoiceId: invoice.InvoiceID,
+                invoiceNumber: invoice.InvoiceNumber,
+                amount: invoice.Total.toString(),
+                amountPaid: invoice.AmountPaid?.toString() || "0",
+                taxAmount: invoice.TotalTax?.toString() || "0",
+                status: this.mapXeroStatus(invoice.Status, { amountPaid: invoice.AmountPaid, totalAmount: invoice.Total }),
+                issueDate: new Date(invoice.DateString),
+                dueDate: new Date(invoice.DueDateString),
+                paidDate: actualPaidDate, // Use actual payment date from payments, not issue date
+                description: `Invoice ${invoice.InvoiceNumber}` || null,
+                currency: invoice.CurrencyCode || "USD",
+                contact: invoice.Contact || null,
+                paymentDetails: {
+                  amountPaid: invoice.AmountPaid || 0,
+                  amountDue: invoice.AmountDue || 0,
+                  totalAmount: invoice.Total || 0,
+                  payments: response.payments.get(invoice.InvoiceID) || [] // Store payment history
+                },
+                metadata: {
+                  xeroStatus: invoice.Status,
+                  invoiceType: invoice.Type,
+                  subTotal: invoice.SubTotal,
+                  lineItems: invoice.LineItems || [],
+                  branding: invoice.BrandingThemeID || null,
+                },
+              };
+            });
 
             await db.insert(cachedXeroInvoices).values(invoicesToInsert);
             totalInvoicesCount += invoicesToInsert.length;
@@ -309,6 +325,202 @@ export class XeroSyncService {
     }
   }
 
+  async syncBankAccountsForTenant(tenantId: string): Promise<{
+    success: boolean;
+    accountsCount: number;
+    error?: string;
+  }> {
+    try {
+      console.log(`🏦 Starting Xero bank accounts sync for tenant: ${tenantId}`);
+
+      // Get tenant with Xero tokens
+      const [tenant] = await db
+        .select()
+        .from(tenants)
+        .where(eq(tenants.id, tenantId));
+
+      if (!tenant || !tenant.xeroAccessToken) {
+        throw new Error("Tenant not found or Xero access token missing");
+      }
+
+      // Fetch ALL bank accounts from Xero
+      const xeroAccounts = await xeroService.getBankAccounts(
+        {
+          accessToken: tenant.xeroAccessToken,
+          refreshToken: tenant.xeroRefreshToken!,
+          expiresAt: tenant.xeroExpiresAt || new Date(Date.now() + 30 * 60 * 1000),
+          tenantId: tenant.xeroTenantId!,
+        },
+        { activeOnly: false }, // Get all accounts including inactive
+        tenantId
+      );
+
+      // Clear existing bank accounts for this tenant
+      await db
+        .delete(bankAccounts)
+        .where(eq(bankAccounts.tenantId, tenantId));
+
+      if (xeroAccounts && xeroAccounts.length > 0) {
+        const accountsToInsert = xeroAccounts.map((account: any) => ({
+          tenantId,
+          xeroAccountId: account.AccountID,
+          name: account.Name,
+          accountNumber: account.BankAccountNumber || null,
+          accountType: this.mapBankAccountType(account.BankAccountType),
+          currency: account.CurrencyCode || "USD",
+          currentBalance: "0", // Xero doesn't provide real-time balance via API
+          isActive: account.Status === 'ACTIVE',
+          bankName: account.BankName || null,
+          description: account.Description || null,
+        }));
+
+        await db.insert(bankAccounts).values(accountsToInsert);
+        console.log(`✅ Bank accounts sync completed. Total accounts synced: ${accountsToInsert.length}`);
+
+        return {
+          success: true,
+          accountsCount: accountsToInsert.length,
+        };
+      }
+
+      console.log(`✅ Bank accounts sync completed. No accounts found.`);
+      return {
+        success: true,
+        accountsCount: 0,
+      };
+
+    } catch (error) {
+      console.error("Bank accounts sync failed:", error);
+      return {
+        success: false,
+        accountsCount: 0,
+        error: error instanceof Error ? error.message : "Unknown error",
+      };
+    }
+  }
+
+  async syncBankTransactionsForTenant(tenantId: string, dateFrom?: Date): Promise<{
+    success: boolean;
+    transactionsCount: number;
+    error?: string;
+  }> {
+    try {
+      console.log(`💰 Starting Xero bank transactions sync for tenant: ${tenantId}`);
+
+      // Get tenant with Xero tokens
+      const [tenant] = await db
+        .select()
+        .from(tenants)
+        .where(eq(tenants.id, tenantId));
+
+      if (!tenant || !tenant.xeroAccessToken) {
+        throw new Error("Tenant not found or Xero access token missing");
+      }
+
+      // Get all bank accounts for this tenant to fetch transactions per account
+      const accounts = await db
+        .select()
+        .from(bankAccounts)
+        .where(eq(bankAccounts.tenantId, tenantId));
+
+      let totalTransactionsCount = 0;
+
+      // Clear existing bank transactions for this tenant
+      await db
+        .delete(bankTransactions)
+        .where(eq(bankTransactions.tenantId, tenantId));
+
+      console.log(`Fetching transactions for ${accounts.length} bank accounts`);
+
+      // Fetch transactions for each bank account
+      for (const account of accounts) {
+        if (!account.xeroAccountId) continue;
+
+        let currentPage = 1;
+        let hasNextPage = true;
+
+        while (hasNextPage) {
+          try {
+            const xeroTransactions = await xeroService.getBankTransactions(
+              {
+                accessToken: tenant.xeroAccessToken,
+                refreshToken: tenant.xeroRefreshToken!,
+                expiresAt: tenant.xeroExpiresAt || new Date(Date.now() + 30 * 60 * 1000),
+                tenantId: tenant.xeroTenantId!,
+              },
+              {
+                bankAccountId: account.xeroAccountId,
+                dateFrom: dateFrom || new Date(Date.now() - 365 * 24 * 60 * 60 * 1000), // Last year by default
+                page: currentPage,
+              },
+              tenantId
+            );
+
+            if (xeroTransactions && xeroTransactions.length > 0) {
+              const transactionsToInsert = xeroTransactions.map((txn: any) => ({
+                tenantId,
+                bankAccountId: account.id,
+                xeroTransactionId: txn.BankTransactionID,
+                transactionDate: new Date(txn.DateString),
+                amount: txn.Total?.toString() || "0",
+                type: txn.Type === 'RECEIVE' ? 'credit' : 'debit',
+                description: txn.LineItems?.[0]?.Description || txn.Reference || null,
+                reference: txn.Reference || null,
+                category: txn.LineItems?.[0]?.AccountCode || null,
+                isReconciled: txn.IsReconciled || false,
+                reconciledAt: txn.IsReconciled ? new Date() : null,
+                metadata: {
+                  xeroType: txn.Type,
+                  status: txn.Status,
+                  lineItems: txn.LineItems || [],
+                },
+              }));
+
+              await db.insert(bankTransactions).values(transactionsToInsert);
+              totalTransactionsCount += transactionsToInsert.length;
+              console.log(`📊 Synced ${transactionsToInsert.length} transactions for account ${account.name} (page ${currentPage})`);
+            }
+
+            hasNextPage = xeroTransactions && xeroTransactions.length === 100;
+            currentPage++;
+
+          } catch (pageError) {
+            console.error(`Error fetching transactions for account ${account.name}, page ${currentPage}:`, pageError);
+            hasNextPage = false;
+          }
+        }
+      }
+
+      console.log(`✅ Bank transactions sync completed. Total transactions synced: ${totalTransactionsCount}`);
+
+      return {
+        success: true,
+        transactionsCount: totalTransactionsCount,
+      };
+
+    } catch (error) {
+      console.error("Bank transactions sync failed:", error);
+      return {
+        success: false,
+        transactionsCount: 0,
+        error: error instanceof Error ? error.message : "Unknown error",
+      };
+    }
+  }
+
+  private mapBankAccountType(xeroType: string): string {
+    switch (xeroType?.toUpperCase()) {
+      case 'BANK':
+        return 'checking';
+      case 'CREDITCARD':
+        return 'credit_card';
+      case 'PAYPAL':
+        return 'cash'; // Treat as cash equivalent
+      default:
+        return 'checking';
+    }
+  }
+
   private mapXeroStatus(xeroStatus: string, paymentDetails?: any): string {
     // Map Xero statuses to our internal status format
     switch (xeroStatus?.toUpperCase()) {
@@ -428,11 +640,14 @@ export class XeroSyncService {
     success: boolean;
     contactsCount: number;
     invoicesCount: number;
+    billsCount: number;
+    bankAccountsCount: number;
+    bankTransactionsCount: number;
     filteredCount: number;
     error?: string;
   }> {
     try {
-      console.log(`🚀 Starting complete filtered Xero sync for tenant: ${tenantId}`);
+      console.log(`🚀 Starting comprehensive Xero sync for tenant: ${tenantId}`);
 
       // Sync contacts first (with filtering)
       const contactResult = await this.syncContactsForTenant(tenantId);
@@ -440,18 +655,44 @@ export class XeroSyncService {
         throw new Error(`Contact sync failed: ${contactResult.error}`);
       }
 
-      // Then sync invoices (with filtering)
+      // Sync invoices (ALL - paid and unpaid)
       const invoiceResult = await this.syncInvoicesForTenant(tenantId);
       if (!invoiceResult.success) {
         throw new Error(`Invoice sync failed: ${invoiceResult.error}`);
       }
 
-      console.log(`🎉 Complete sync successful: ${contactResult.contactsCount} contacts, ${invoiceResult.invoicesCount} invoices (filtered from ~15,000+ total)`);
+      // Sync bills (ACCPAY invoices)
+      const billsResult = await this.syncBillsForTenant(tenantId);
+      if (!billsResult.success) {
+        console.warn(`Bills sync failed: ${billsResult.error}`); // Don't fail entire sync
+      }
+
+      // Sync bank accounts
+      const bankAccountsResult = await this.syncBankAccountsForTenant(tenantId);
+      if (!bankAccountsResult.success) {
+        console.warn(`Bank accounts sync failed: ${bankAccountsResult.error}`); // Don't fail entire sync
+      }
+
+      // Sync bank transactions (last year)
+      const bankTransactionsResult = await this.syncBankTransactionsForTenant(tenantId);
+      if (!bankTransactionsResult.success) {
+        console.warn(`Bank transactions sync failed: ${bankTransactionsResult.error}`); // Don't fail entire sync
+      }
+
+      console.log(`🎉 Comprehensive sync completed:
+        ✅ ${contactResult.contactsCount} contacts
+        ✅ ${invoiceResult.invoicesCount} invoices
+        ✅ ${billsResult.billsCount} bills
+        ✅ ${bankAccountsResult.accountsCount} bank accounts
+        ✅ ${bankTransactionsResult.transactionsCount} bank transactions`);
 
       return {
         success: true,
         contactsCount: contactResult.contactsCount,
         invoicesCount: invoiceResult.invoicesCount,
+        billsCount: billsResult.billsCount,
+        bankAccountsCount: bankAccountsResult.accountsCount,
+        bankTransactionsCount: bankTransactionsResult.transactionsCount,
         filteredCount: contactResult.filteredCount,
       };
 
@@ -461,6 +702,9 @@ export class XeroSyncService {
         success: false,
         contactsCount: 0,
         invoicesCount: 0,
+        billsCount: 0,
+        bankAccountsCount: 0,
+        bankTransactionsCount: 0,
         filteredCount: 0,
         error: error instanceof Error ? error.message : "Unknown error",
       };

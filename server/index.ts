@@ -196,6 +196,18 @@ app.use((req, res, next) => {
     }
   }
 
+  // Initialize Xero sync scheduler
+  if (process.env.NODE_ENV !== 'test') {
+    try {
+      console.log("🔄 Initializing Xero sync scheduler...");
+      const { syncScheduler } = await import("./services/syncScheduler");
+      syncScheduler.start();
+      console.log("✅ Xero sync scheduler started");
+    } catch (error) {
+      console.error("❌ Failed to initialize Xero sync scheduler:", error);
+    }
+  }
+
   // MVP CLEANUP: Payment predictions disabled for MVP (stub service available in API routes)
   /* if (process.env.NODE_ENV !== 'test') {
     try {

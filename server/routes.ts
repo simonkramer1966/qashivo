@@ -8170,6 +8170,21 @@ Payment required immediately to avoid collection action. Contact us NOW.`
         xeroExpiresAt: tokens.expiresAt,
       });
 
+      // Trigger automatic comprehensive sync after successful connection
+      console.log(`🚀 Triggering automatic initial Xero sync for tenant: ${tenantId}`);
+      const syncService = new XeroSyncService();
+      syncService.syncAllDataForTenant(tenantId as string)
+        .then(result => {
+          if (result.success) {
+            console.log(`✅ Initial Xero sync completed successfully:`, result);
+          } else {
+            console.error(`❌ Initial Xero sync failed:`, result.error);
+          }
+        })
+        .catch(error => {
+          console.error(`❌ Initial Xero sync error:`, error);
+        });
+
       // Success page with auto-redirect
       res.send(`
         <!DOCTYPE html>
