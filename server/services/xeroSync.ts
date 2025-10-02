@@ -1,5 +1,5 @@
 import { db } from "../db";
-import { tenants, cachedXeroInvoices } from "@shared/schema";
+import { tenants, cachedXeroInvoices, bills, contacts, bankAccounts, bankTransactions } from "@shared/schema";
 import { eq, and } from "drizzle-orm";
 import { xeroService } from "./xero";
 
@@ -79,7 +79,7 @@ export class XeroSyncService {
         throw new Error("Xero access token not found for tenant");
       }
 
-      // Fetch only collection-relevant invoices from Xero (filtering out unnecessary data)
+      // Fetch ALL invoices from Xero for comprehensive analysis (paid + unpaid)
       let totalInvoicesCount = 0;
 
       // Clear existing cached invoices for this tenant
@@ -88,10 +88,9 @@ export class XeroSyncService {
         .where(eq(cachedXeroInvoices.tenantId, tenantId));
 
       console.log("Cleared existing cached invoices");
-      console.log("🎯 Syncing only collection-relevant invoices (unpaid with outstanding balances)");
+      console.log("🎯 Syncing ALL invoices (paid and unpaid) for comprehensive cashflow analysis");
 
-      // Fetch unpaid invoices (AUTHORISED/SUBMITTED with outstanding balances)
-      // Use 'unpaid' status which maps to: Status==AUTHORISED AND AmountDue>0
+      // Fetch ALL invoices (no status filter - for cashflow forecasting and payment analysis)
       let currentPage = 1;
       let hasNextPage = true;
       
@@ -106,7 +105,7 @@ export class XeroSyncService {
             },
             currentPage,
             100, // pageSize  
-            'unpaid', // Maps to AUTHORISED invoices with AmountDue>0
+            'all', // Fetch ALL invoices for comprehensive analysis
             tenantId // Pass tenant ID for automatic token refresh and DB updates
           );
 
@@ -143,7 +142,7 @@ export class XeroSyncService {
             await db.insert(cachedXeroInvoices).values(invoicesToInsert);
             totalInvoicesCount += invoicesToInsert.length;
             
-            console.log(`📄 Cached ${invoicesToInsert.length} unpaid invoices from page ${currentPage}`);
+            console.log(`📄 Cached ${invoicesToInsert.length} invoices from page ${currentPage}`);
           }
 
           // Update pagination control
@@ -177,6 +176,134 @@ export class XeroSyncService {
       return {
         success: false,
         invoicesCount: 0,
+        error: error instanceof Error ? error.message : "Unknown error",
+      };
+    }
+  }
+
+  async syncBillsForTenant(tenantId: string): Promise<{
+    success: boolean;
+    billsCount: number;
+    error?: string;
+  }> {
+    try {
+      console.log(`🧾 Starting Xero bills sync for tenant: ${tenantId}`);
+
+      // Get tenant with Xero tokens
+      const [tenant] = await db
+        .select()
+        .from(tenants)
+        .where(eq(tenants.id, tenantId));
+
+      if (!tenant || !tenant.xeroAccessToken) {
+        throw new Error("Tenant not found or Xero access token missing");
+      }
+
+      // Fetch ALL bills from Xero for cashflow analysis
+      let totalBillsCount = 0;
+
+      // Clear existing bills for this tenant
+      await db
+        .delete(bills)
+        .where(eq(bills.tenantId, tenantId));
+
+      console.log("Cleared existing bills");
+      console.log("🎯 Syncing ALL bills (paid and unpaid) for cashflow forecasting");
+
+      // Fetch bills paginated
+      let currentPage = 1;
+      let hasNextPage = true;
+      
+      while (hasNextPage) {
+        try {
+          const xeroBills = await xeroService.getBills(
+            {
+              accessToken: tenant.xeroAccessToken,
+              refreshToken: tenant.xeroRefreshToken!,
+              expiresAt: tenant.xeroExpiresAt || new Date(Date.now() + 30 * 60 * 1000),
+              tenantId: tenant.xeroTenantId!,
+            },
+            { status: 'all', page: currentPage },
+            tenantId
+          );
+
+          if (xeroBills && xeroBills.length > 0) {
+            // Get or create vendor contacts
+            const billsToInsert = [];
+            
+            for (const bill of xeroBills) {
+              // Find or create contact for vendor
+              let [contact] = await db
+                .select()
+                .from(contacts)
+                .where(
+                  and(
+                    eq(contacts.tenantId, tenantId),
+                    eq(contacts.xeroContactId, bill.Contact.ContactID)
+                  )
+                );
+
+              if (!contact) {
+                // Create vendor contact
+                const [newContact] = await db
+                  .insert(contacts)
+                  .values({
+                    tenantId,
+                    xeroContactId: bill.Contact.ContactID,
+                    name: bill.Contact.Name,
+                    role: 'vendor',
+                  })
+                  .returning();
+                contact = newContact;
+              }
+
+              billsToInsert.push({
+                tenantId,
+                vendorId: contact.id,
+                xeroInvoiceId: bill.InvoiceID,
+                billNumber: bill.InvoiceNumber,
+                amount: bill.Total.toString(),
+                amountPaid: bill.AmountPaid?.toString() || "0",
+                taxAmount: bill.TotalTax?.toString() || "0",
+                status: this.mapXeroStatus(bill.Status, { amountPaid: bill.AmountPaid, totalAmount: bill.Total }),
+                issueDate: new Date(bill.DateString),
+                dueDate: new Date(bill.DueDateString),
+                paidDate: bill.Status === 'PAID' ? new Date(bill.DateString) : null,
+                description: `Bill ${bill.InvoiceNumber}`,
+                currency: bill.CurrencyCode || "USD",
+                reference: bill.InvoiceNumber,
+              });
+            }
+
+            if (billsToInsert.length > 0) {
+              await db.insert(bills).values(billsToInsert);
+              totalBillsCount += billsToInsert.length;
+              console.log(`📄 Synced ${billsToInsert.length} bills from page ${currentPage}`);
+            }
+          }
+
+          // Check if there are more pages
+          hasNextPage = xeroBills && xeroBills.length === 100; // Xero's default page size
+          currentPage++;
+          
+        } catch (pageError) {
+          console.error(`Error fetching bills page ${currentPage}:`, pageError);
+          hasNextPage = false;
+        }
+      }
+
+      console.log(`✅ Bills sync completed. Total bills synced: ${totalBillsCount}`);
+
+      return {
+        success: true,
+        billsCount: totalBillsCount,
+      };
+
+    } catch (error) {
+      console.error("Bills sync failed:", error);
+      return {
+        success: false,
+        billsCount: 0,
         error: error instanceof Error ? error.message : "Unknown error",
       };
     }
