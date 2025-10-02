@@ -32,7 +32,8 @@ import {
   Phone,
   CheckCircle,
   Users,
-  UserPlus
+  UserPlus,
+  RefreshCw
 } from "lucide-react";
 import { SiXero, SiSage, SiQuickbooks } from "react-icons/si";
 import { CURRENCIES, DEFAULT_CURRENCY } from "@shared/currencies";
@@ -788,6 +789,31 @@ export default function Settings() {
     },
   });
 
+  // Mutation to trigger manual Xero sync
+  const triggerSyncMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/xero/sync", {});
+      return response;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/xero/sync/settings'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/dashboard/metrics'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/contacts'] });
+      toast({
+        title: "Success",
+        description: "Xero sync started successfully! Data will be refreshed shortly.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error?.message || "Failed to start Xero sync.",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleSaveBranding = () => {
     updateTenantMutation.mutate({
       settings: {
@@ -1284,6 +1310,15 @@ export default function Settings() {
                           </div>
                         </div>
                         <div className="flex items-center space-x-2">
+                          <Button 
+                            onClick={() => triggerSyncMutation.mutate()}
+                            disabled={triggerSyncMutation.isPending}
+                            className="bg-[#17B6C3] hover:bg-[#1396A1] text-white"
+                            data-testid="button-sync-now"
+                          >
+                            <RefreshCw className={`h-4 w-4 mr-2 ${triggerSyncMutation.isPending ? 'animate-spin' : ''}`} />
+                            {triggerSyncMutation.isPending ? "Syncing..." : "Sync Now"}
+                          </Button>
                           <Button 
                             onClick={() => handleProviderConnect(
                               accountingStatus?.connectedProvider?.name || '', 
