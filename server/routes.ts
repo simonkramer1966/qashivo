@@ -1828,7 +1828,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             invoiceCount: contactInvoices.length,
             riskScore
           };
-        });
+        })
+        // Filter to only show customers with outstanding balances (collections focus)
+        .filter(contact => contact.outstandingAmount > 0);
         
         // Filter contacts based on search
         let filteredContacts = contactsWithData;
