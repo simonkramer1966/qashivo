@@ -63,11 +63,9 @@ export default {
         },
       },
       fontFamily: {
-        sans: ["Nunito", "system-ui", "sans-serif"],
-        nunito: ["Nunito", "sans-serif"],
-        archivo: ["Archivo", "sans-serif"],
-        serif: ["Georgia", "serif"],
-        mono: ["Geist Mono", "monospace"],
+        sans: ["Inter", "-apple-system", "BlinkMacSystemFont", "San Francisco", "Segoe UI", "system-ui", "sans-serif"],
+        display: ["Inter", "sans-serif"],
+        mono: ["SF Mono", "Menlo", "Monaco", "Courier New", "monospace"],
       },
       keyframes: {
         "accordion-down": {
