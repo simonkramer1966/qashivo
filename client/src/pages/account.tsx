@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LogOut, User, Mail, Shield } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import type { Tenant } from "@shared/schema";
+import BottomNav from "@/components/layout/bottom-nav";
 
 export default function Account() {
   const { user } = useAuth();
@@ -101,6 +102,9 @@ export default function Account() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Mobile Bottom Navigation */}
+      <BottomNav />
     </div>
   );
 }
