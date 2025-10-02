@@ -157,7 +157,7 @@ export default function Onboarding() {
           subtitle="Add new customers with AI-powered credit assessment"
         />
         
-        <main className="flex-1 overflow-y-auto bg-gradient-to-br from-slate-50 via-blue-50 to-teal-50 pb-20 lg:pb-8">
+        <main className="flex-1 overflow-y-auto bg-white pb-20 lg:pb-8">
           <div className="max-w-4xl mx-auto p-4 md:p-8">
             {/* Header */}
             <div className="mb-8">
