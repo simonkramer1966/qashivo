@@ -828,6 +828,7 @@ export default function Settings() {
       name: organizationName,
       settings: {
         ...tenant?.settings,
+        companyName: organizationName,
         currency: organizationCurrency,
         eomDay: eomDay,
       },
