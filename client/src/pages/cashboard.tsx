@@ -172,10 +172,10 @@ export default function Cashboard() {
                 <div>
                   <p className="text-sm text-slate-600 mb-1">Payment Plans</p>
                   {metricsLoading ? (
-                    <div className="h-8 w-16 bg-slate-200 animate-pulse rounded"></div>
+                    <div className="h-8 w-32 bg-slate-200 animate-pulse rounded"></div>
                   ) : (
                     <h3 className="text-2xl sm:text-3xl font-bold text-slate-900">
-                      0
+                      {formatCurrency(0)} <span className="text-slate-500">(0)</span>
                     </h3>
                   )}
                 </div>
@@ -191,10 +191,10 @@ export default function Cashboard() {
                 <div>
                   <p className="text-sm text-slate-600 mb-1">Disputes</p>
                   {metricsLoading ? (
-                    <div className="h-8 w-16 bg-slate-200 animate-pulse rounded"></div>
+                    <div className="h-8 w-32 bg-slate-200 animate-pulse rounded"></div>
                   ) : (
                     <h3 className="text-2xl sm:text-3xl font-bold text-slate-900">
-                      0
+                      {formatCurrency(0)} <span className="text-slate-500">(0)</span>
                     </h3>
                   )}
                 </div>
@@ -210,10 +210,10 @@ export default function Cashboard() {
                 <div>
                   <p className="text-sm text-slate-600 mb-1">Debt Recovery</p>
                   {metricsLoading ? (
-                    <div className="h-8 w-24 bg-slate-200 animate-pulse rounded"></div>
+                    <div className="h-8 w-32 bg-slate-200 animate-pulse rounded"></div>
                   ) : (
                     <h3 className="text-2xl sm:text-3xl font-bold text-slate-900">
-                      {formatCurrency(0)}
+                      {formatCurrency(0)} <span className="text-slate-500">(0)</span>
                     </h3>
                   )}
                 </div>
@@ -229,10 +229,10 @@ export default function Cashboard() {
                 <div>
                   <p className="text-sm text-slate-600 mb-1">Legal Cases</p>
                   {metricsLoading ? (
-                    <div className="h-8 w-16 bg-slate-200 animate-pulse rounded"></div>
+                    <div className="h-8 w-32 bg-slate-200 animate-pulse rounded"></div>
                   ) : (
                     <h3 className="text-2xl sm:text-3xl font-bold text-slate-900">
-                      0
+                      {formatCurrency(0)} <span className="text-slate-500">(0)</span>
                     </h3>
                   )}
                 </div>
