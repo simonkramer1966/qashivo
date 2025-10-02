@@ -1,1779 +1,249 @@
-import { useEffect, useState, useMemo } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useToast } from "@/hooks/use-toast";
-import { formatDate } from "../../../shared/utils/dateFormatter";
-import { useAuth } from "@/hooks/useAuth";
-import { usePaymentPlanValidation } from "@/hooks/usePaymentPlanValidation";
-import { isUnauthorizedError } from "@/lib/authUtils";
-import { apiRequest } from "@/lib/queryClient";
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
-import { 
-  getAllOverdueCategories, 
-  filterInvoicesByOverdueCategory, 
-  getOverdueCategoryFromDueDate,
-  type OverdueCategory,
-  type OverdueCategoryInfo 
-} from "../../../shared/utils/overdueUtils";
-import NewSidebar from "@/components/layout/new-sidebar";
-import Header from "@/components/layout/header";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Checkbox } from "@/components/ui/checkbox";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel } from "@/components/ui/dropdown-menu";
-import { Mail, Phone, Eye, Plus, Search, Filter, FileText, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, X, MessageSquare, Calendar, CheckCircle, AlertCircle, Clock, Users, User, Building, Star, Target, ArrowRight, MoreHorizontal, Pause, Zap, Home } from "lucide-react";
-import { CommunicationPreviewDialog } from "@/components/ui/communication-preview-dialog";
+import { 
+  Search, 
+  ChevronRight,
+  Mail,
+  Phone,
+  MessageSquare,
+  Filter
+} from "lucide-react";
+import NewSidebar from "@/components/layout/new-sidebar";
+import BottomNav from "@/components/layout/bottom-nav";
+import Header from "@/components/layout/header";
+import { formatCurrency } from "@/lib/utils";
+
+interface Invoice {
+  id: string;
+  invoiceNumber: string;
+  amount: number;
+  amountPaid: number;
+  status: string;
+  dueDate: string;
+  issueDate: string;
+  contact: {
+    name: string;
+    email: string;
+    phone: string;
+  };
+}
 
 export default function Invoices() {
-  const { toast } = useToast();
-  const { isAuthenticated, isLoading } = useAuth();
-  const queryClient = useQueryClient();
-  const [location] = useLocation();
-  
-  // Payment plan validation hook
-  const {
-    isChecking: isCheckingDuplicates,
-    duplicateResult,
-    checkForDuplicates,
-    clearDuplicateResult,
-    getFormattedDuplicateMessage,
-    hasDuplicates
-  } = usePaymentPlanValidation();
+  const [, setLocation] = useLocation();
   const [search, setSearch] = useState("");
-  
-  // Parse URL parameters to set initial filter
-  const getInitialFilter = () => {
-    const urlParams = new URLSearchParams(location.split('?')[1] || '');
-    const filter = urlParams.get('filter');
-    return filter === 'escalated' ? 'escalated' : filter === 'overdue' ? 'overdue' : 'overdue';
-  };
-  
-  const [statusFilter, setStatusFilter] = useState('pending');
-  const [overdueFilter, setOverdueFilter] = useState<OverdueCategory | 'all' | 'paid'>('all');
-  
-  // Smart filtering: Get available category options based on status
-  const getAvailableCategoryOptions = (status: string) => {
-    switch (status) {
-      case 'paid':
-        return [{ category: 'paid' as const, label: 'Paid' }];
-      case 'pending':
-        return getAllOverdueCategories().filter(cat => ['due'].includes(cat.category));
-      case 'overdue':
-        return getAllOverdueCategories().filter(cat => ['overdue', 'serious', 'escalation'].includes(cat.category));
-      case 'all':
-      default:
-        return [{ category: 'paid' as const, label: 'Paid' }, ...getAllOverdueCategories()];
-    }
-  };
-  
-  // Auto-reset category when status changes to prevent invalid combinations
-  const handleStatusChange = (newStatus: string) => {
-    setStatusFilter(newStatus);
-    // Reset category to 'all' when status changes
-    setOverdueFilter('all');
-  };
-  // Table sorting state
-  const [sortColumn, setSortColumn] = useState<string | null>(null);
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
-  const [selectedInvoice, setSelectedInvoice] = useState<any>(null);
-  const [showContactHistory, setShowContactHistory] = useState(false);
-  const [showViewInvoiceDialog, setShowViewInvoiceDialog] = useState(false);
-  const [showPaymentPlanDialog, setShowPaymentPlanDialog] = useState(false);
-  const [showDisputeDialog, setShowDisputeDialog] = useState(false);
-  const [paymentPlanInvoice, setPaymentPlanInvoice] = useState<any>(null);
-  const [disputeInvoice, setDisputeInvoice] = useState<any>(null);
-  
-  // Payment plan form state
-  const [initialPaymentAmount, setInitialPaymentAmount] = useState("");
-  const [initialPaymentDate, setInitialPaymentDate] = useState("");
-  const [numRemainingPayments, setNumRemainingPayments] = useState("3");
-  const [paymentFrequency, setPaymentFrequency] = useState("monthly");
-  const [paymentPlanNotes, setPaymentPlanNotes] = useState("");
-  const [viewInvoice, setViewInvoice] = useState<any>(null);
+  const [statusFilter, setStatusFilter] = useState('all');
 
-  // Hook for fetching outstanding invoices for a contact
-  const useOutstandingInvoices = (contactId: string | null) => {
-    return useQuery({
-      queryKey: ["/api/invoices/outstanding", contactId],
-      queryFn: async () => {
-        if (!contactId) return [];
-        const response = await fetch(`/api/invoices/outstanding/${contactId}`, {
-          credentials: "include"
-        });
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        return response.json();
-      },
-      enabled: !!contactId,
-      staleTime: 5 * 60 * 1000, // 5 minutes
-    });
-  };
-
-  // State for outstanding invoices selection in payment plan
-  const [selectedPaymentInvoices, setSelectedPaymentInvoices] = useState<Map<string, any>>(new Map());
-  const [planStartDate, setPlanStartDate] = useState("");
-  
-  // Fetch outstanding invoices when dialog opens
-  const { data: outstandingInvoices = [], isLoading: outstandingLoading } = useOutstandingInvoices(
-    paymentPlanInvoice?.contactId || null
-  );
-
-  // Calculate total from selected payment invoices
-  const totalSelectedAmount = useMemo(() => {
-    let total = 0;
-    Array.from(selectedPaymentInvoices.values()).forEach(invoice => {
-      total += Number(invoice.amount || 0);
-    });
-    return total;
-  }, [selectedPaymentInvoices]);
-
-  // Helper functions for payment plan calculations
-  const calculatePaymentDates = (startDate: string, frequency: string, numPayments: number) => {
-    if (!startDate) return [];
-    
-    const dates = [];
-    const start = new Date(startDate);
-    
-    for (let i = 0; i < numPayments; i++) {
-      const paymentDate = new Date(start);
-      
-      switch (frequency) {
-        case 'weekly':
-          paymentDate.setDate(start.getDate() + (i * 7));
-          break;
-        case 'monthly':
-          paymentDate.setMonth(start.getMonth() + i);
-          break;
-        case 'quarterly':
-          paymentDate.setMonth(start.getMonth() + (i * 3));
-          break;
-        default:
-          paymentDate.setMonth(start.getMonth() + i);
-      }
-      
-      dates.push(paymentDate.toISOString().split('T')[0]);
-    }
-    
-    return dates;
-  };
-
-  const formatDateForDisplay = (dateString: string) => {
-    if (!dateString) return '';
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-GB', { 
-      day: 'numeric', 
-      month: 'short', 
-      year: 'numeric' 
-    });
-  };
-
-  // Form validation
-  const validateForm = () => {
-    const errors: string[] = [];
-    
-    // Check if any invoices are selected
-    if (selectedPaymentInvoices.size === 0) {
-      errors.push("Please select at least one invoice");
-    }
-    
-    // Check if plan start date is provided
-    if (!planStartDate) {
-      errors.push("Please provide a plan start date");
-    }
-    
-    // Check if initial payment date is after plan start date
-    if (initialPaymentDate && planStartDate && initialPaymentDate > planStartDate) {
-      errors.push("Initial payment date cannot be after the plan start date");
-    }
-    
-    // Check if initial payment amount exceeds total
-    if (Number(initialPaymentAmount || 0) > totalSelectedAmount) {
-      errors.push("Initial payment amount cannot exceed total invoice amount");
-    }
-    
-    return errors;
-  };
-
-  const validationErrors = validateForm();
-
-  // Payment Plan Creation Mutation
-  const createPaymentPlanMutation = useMutation({
-    mutationFn: async (paymentPlanData: any) => {
-      const response = await apiRequest("POST", "/api/payment-plans", paymentPlanData);
-      return await response.json();
-    },
-    onSuccess: (data) => {
-      toast({
-        title: "Payment Plan Created",
-        description: `Successfully created payment plan with ${data.paymentPlan?.installments?.length || 0} installments for ${data.paymentPlan?.invoiceIds?.length || 1} invoice${data.paymentPlan?.invoiceIds?.length !== 1 ? 's' : ''}.`
-      });
-      
-      // Reset form and close dialog
-      setSelectedPaymentInvoices(new Map());
-      setInitialPaymentAmount("");
-      setInitialPaymentDate("");
-      setPlanStartDate("");
-      setPaymentFrequency("monthly");
-      setNumRemainingPayments("3");
-      setPaymentPlanNotes("");
-      setShowPaymentPlanDialog(false);
-      
-      // Invalidate and refetch invoices to show updated status
-      queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
-    },
-    onError: (error: any) => {
-      console.error("Payment plan creation error:", error);
-      toast({
-        variant: "destructive",
-        title: "Payment Plan Creation Failed",
-        description: error.message || "Unable to create payment plan. Please try again."
-      });
-    }
+  const { data: invoicesData, isLoading } = useQuery<{
+    invoices: Invoice[];
+    pagination: { total: number; page: number; limit: number; totalPages: number };
+  }>({
+    queryKey: ['/api/invoices', { status: statusFilter, search, page: 1, limit: 50 }],
   });
 
-  const handleCreatePaymentPlan = async () => {
-    if (validationErrors.length > 0) return;
-    
-    const selectedInvoiceIds = Array.from(selectedPaymentInvoices.keys());
-    
-    // Check for duplicate payment plans
-    try {
-      const duplicateCheck = await checkForDuplicates(selectedInvoiceIds);
-      
-      if (duplicateCheck.hasDuplicates) {
-        const message = getFormattedDuplicateMessage();
-        const confirmMessage = `${message}. Do you want to create a new payment plan anyway? This will result in multiple active payment plans for the same invoices.`;
-        
-        const userConfirmed = window.confirm(confirmMessage);
-        if (!userConfirmed) {
-          return; // User cancelled
-        }
-      }
-    } catch (error) {
-      console.error('Error checking for duplicates:', error);
-      // Proceed with creation if duplicate check fails
-    }
-    
-    const paymentPlanData = {
-      invoiceIds: selectedInvoiceIds,
-      totalAmount: totalSelectedAmount.toString(),
-      initialPaymentAmount: initialPaymentAmount || "0",
-      initialPaymentDate: initialPaymentDate ? new Date(initialPaymentDate).toISOString() : null,
-      planStartDate: planStartDate ? new Date(planStartDate).toISOString() : null,
-      paymentFrequency,
-      numberOfPayments: parseInt(numRemainingPayments || "3"),
-      notes: paymentPlanNotes || ""
-    };
-    
-    createPaymentPlanMutation.mutate(paymentPlanData);
+  const invoices = invoicesData?.invoices || [];
+
+  const getDaysOverdue = (dueDate: string) => {
+    const due = new Date(dueDate);
+    const today = new Date();
+    const diff = Math.floor((today.getTime() - due.getTime()) / (1000 * 60 * 60 * 24));
+    return diff > 0 ? diff : 0;
   };
 
-  const calculatePaymentSchedule = () => {
-    const initialAmount = Number(initialPaymentAmount || 0);
-    const remainingBalance = totalSelectedAmount - initialAmount;
-    const numPayments = parseInt(numRemainingPayments || "1");
+  const getStatusBadge = (invoice: Invoice) => {
+    const daysOverdue = getDaysOverdue(invoice.dueDate);
     
-    const schedule = [];
-    
-    // Add initial payment if specified
-    if (initialAmount > 0 && initialPaymentDate) {
-      schedule.push({
-        label: "Initial Payment",
-        amount: initialAmount,
-        date: initialPaymentDate
-      });
-    }
-    
-    // Add remaining payments using plan start date
-    if (remainingBalance > 0 && numPayments > 0 && planStartDate) {
-      const paymentAmount = remainingBalance / numPayments;
-      const paymentDates = calculatePaymentDates(planStartDate, paymentFrequency, numPayments);
-      
-      paymentDates.forEach((date, index) => {
-        schedule.push({
-          label: `Payment ${index + 1}`,
-          amount: index === numPayments - 1 ? 
-            (remainingBalance - (paymentAmount * (numPayments - 1))) : // Last payment gets remainder
-            paymentAmount,
-          date
-        });
-      });
-    }
-    
-    return schedule;
-  };
-
-  // Effect to pre-select the triggering invoice when dialog opens
-  useEffect(() => {
-    if (showPaymentPlanDialog && paymentPlanInvoice) {
-      // Pre-select the triggering invoice
-      const newSelection = new Map();
-      newSelection.set(paymentPlanInvoice.id, paymentPlanInvoice);
-      setSelectedPaymentInvoices(newSelection);
-      
-      // Set default plan start date to tomorrow
-      const tomorrow = new Date();
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      setPlanStartDate(tomorrow.toISOString().split('T')[0]);
-    } else if (!showPaymentPlanDialog) {
-      // Reset state when dialog closes
-      setSelectedPaymentInvoices(new Map());
-      setInitialPaymentAmount("");
-      setInitialPaymentDate("");
-      setNumRemainingPayments("3");
-      setPaymentFrequency("monthly");
-      setPlanStartDate("");
-    }
-  }, [showPaymentPlanDialog, paymentPlanInvoice]);
-  
-  // Pagination state for invoices
-  const [invoicesCurrentPage, setInvoicesCurrentPage] = useState(1);
-  const [invoicesItemsPerPage, setInvoicesItemsPerPage] = useState(50);
-
-  // Selection state for bulk actions
-  const [selectedInvoices, setSelectedInvoices] = useState<Set<string>>(new Set());
-  const [showBulkActions, setShowBulkActions] = useState(false);
-
-  // Communication preview dialog state
-  const [showCommunicationDialog, setShowCommunicationDialog] = useState(false);
-  const [communicationType, setCommunicationType] = useState<'email' | 'sms' | 'voice'>('email');
-  const [selectedInvoiceForComm, setSelectedInvoiceForComm] = useState<any>(null);
-
-  // Admin tools state
-  const [isBackfillRunning, setIsBackfillRunning] = useState(false);
-  const [backfillResult, setBackfillResult] = useState<string | null>(null);
-
-  // Redirect to home if not authenticated
-  useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      toast({
-        title: "Unauthorized",
-        description: "You are logged out. Logging in again...",
-        variant: "destructive",
-      });
-      setTimeout(() => {
-        window.location.href = "/api/login";
-      }, 500);
-      return;
-    }
-  }, [isAuthenticated, isLoading, toast]);
-
-  // Server-side filtered invoices with pagination
-  const { data: invoicesResponse, isLoading: invoicesLoading, error } = useQuery({
-    queryKey: ["/api/invoices", { status: statusFilter, search, overdue: overdueFilter, page: invoicesCurrentPage, limit: invoicesItemsPerPage }],
-    queryFn: async () => {
-      const params = new URLSearchParams({
-        status: statusFilter,
-        overdue: overdueFilter,
-        page: invoicesCurrentPage.toString(),
-        limit: invoicesItemsPerPage.toString()
-      });
-      
-      // Only add search parameter if it has a value
-      if (search && search.trim()) {
-        params.append('search', search.trim());
-      }
-      
-      const response = await fetch(`/api/invoices?${params.toString()}`);
-      if (!response.ok) throw new Error('Failed to fetch invoices');
-      return response.json();
-    },
-    enabled: isAuthenticated,
-    // Remove placeholderData to prevent stale invoice/prediction data mismatch
-  });
-
-  // Extract invoices and pagination from the response
-  const invoices = invoicesResponse?.invoices || [];
-  const pagination = invoicesResponse?.pagination || { page: 1, limit: 50, total: 0, totalPages: 1, systemTotal: 0 };
-
-  // Fetch payment predictions with filter-aware caching
-  const { data: allPaymentPredictions = {}, isLoading: predictionsLoading } = useQuery({
-    queryKey: ["/api/ml/payment-predictions/bulk", { status: statusFilter, search, overdue: overdueFilter, page: invoicesCurrentPage, limit: invoicesItemsPerPage }],
-    queryFn: async () => {
-      // Pass the same filter parameters to the predictions endpoint
-      const params = new URLSearchParams({
-        status: statusFilter,
-        overdue: overdueFilter,
-        page: invoicesCurrentPage.toString(),
-        limit: invoicesItemsPerPage.toString()
-      });
-      
-      // Only add search parameter if it has a value
-      if (search && search.trim()) {
-        params.append('search', search.trim());
-      }
-      
-      const response = await fetch(`/api/ml/payment-predictions/bulk/invoices?${params.toString()}`);
-      if (!response.ok) throw new Error('Failed to fetch predictions');
-      return response.json();
-    },
-    enabled: isAuthenticated,
-    staleTime: 0, // Always refetch when cache key changes
-    gcTime: 1 * 60 * 1000, // 1 minute - shorter cache for dynamic content
-    refetchOnWindowFocus: false, // Don't refetch when window regains focus
-  });
-
-  // Use predictions directly from backend (server-side filtering already applied)
-  const paymentPredictions = allPaymentPredictions || {};
-
-  // Fetch collection schedules for assignment
-  const { data: collectionSchedules = [] } = useQuery({
-    queryKey: ['/api/collections/schedules'],
-    enabled: isAuthenticated,
-  });
-
-  // Fetch customer schedule assignments
-  const { data: customerAssignments = [] } = useQuery({
-    queryKey: ['/api/collections/customer-assignments'],
-    enabled: isAuthenticated,
-  });
-
-  // Fetch contact history for selected invoice
-  const { data: contactHistory = [], isLoading: historyLoading } = useQuery({
-    queryKey: [`/api/invoices/${selectedInvoice?.id}/contact-history`],
-    enabled: !!selectedInvoice?.id,
-  });
-
-  // Communication sending mutations
-  const sendCommunicationMutation = useMutation({
-    mutationFn: async (data: { type: 'email' | 'sms' | 'voice'; invoiceId: string; subject?: string; content: string; recipient: string; templateId?: string }) => {
-      const endpoint = `/api/communications/send-${data.type}`;
-      const payload = {
-        invoiceId: data.invoiceId,
-        subject: data.subject,
-        content: data.content,
-        recipient: data.recipient,
-        templateId: data.templateId,
-      };
-      const response = await apiRequest("POST", endpoint, payload);
-      return response.json();
-    },
-    onSuccess: (data, variables) => {
-      const typeLabel = variables.type === 'email' ? 'Email' : variables.type === 'sms' ? 'SMS' : 'Voice call';
-      toast({
-        title: `${typeLabel} Sent`,
-        description: `${typeLabel} has been sent successfully.`,
-      });
-      queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
-      setShowCommunicationDialog(false);
-      setSelectedInvoiceForComm(null);
-    },
-    onError: (error, variables) => {
-      const typeLabel = variables.type === 'email' ? 'email' : variables.type === 'sms' ? 'SMS' : 'voice call';
-      toast({
-        title: "Error",
-        description: `Failed to send ${typeLabel}. Please try again.`,
-        variant: "destructive",
-      });
-    },
-  });
-
-  // Nudge mutation
-  const nudgeMutation = useMutation({
-    mutationFn: async (invoiceId: string) => {
-      const response = await apiRequest("POST", "/api/collections/nudge", { invoiceId });
-      return response.json();
-    },
-    onSuccess: (data, invoiceId) => {
-      toast({
-        title: "Nudge Sent",
-        description: "Next action has been triggered successfully.",
-      });
-      queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
-    },
-    onError: (error) => {
-      toast({
-        title: "Error",
-        description: "Failed to send nudge. Please try again.",
-        variant: "destructive",
-      });
-    },
-  });
-
-  // Helper functions to open communication dialog
-  const openCommunicationDialog = (invoice: any, type: 'email' | 'sms' | 'voice') => {
-    setSelectedInvoiceForComm(invoice);
-    setCommunicationType(type);
-    setShowCommunicationDialog(true);
-  };
-
-  // Helper function to format payment probability with color coding
-  const formatPaymentProbability = (probability: number) => {
-    const percentage = Math.round(probability * 100);
-    
-    let colorClass = "";
-    let bgClass = "";
-    let icon = null;
-    
-    if (percentage >= 80) {
-      colorClass = "text-green-700";
-      bgClass = "bg-green-100";
-      icon = <CheckCircle className="h-3 w-3" />;
-    } else if (percentage >= 60) {
-      colorClass = "text-amber-700";
-      bgClass = "bg-amber-100";
-      icon = <Clock className="h-3 w-3" />;
+    if (invoice.status === 'paid') {
+      return <Badge className="badge-success">Paid</Badge>;
+    } else if (daysOverdue === 0) {
+      return <Badge className="badge-info">Due Today</Badge>;
+    } else if (daysOverdue < 7) {
+      return <Badge className="badge-success">Due</Badge>;
+    } else if (daysOverdue < 30) {
+      return <Badge className="badge-warning">Overdue</Badge>;
     } else {
-      colorClass = "text-red-700";
-      bgClass = "bg-red-100";
-      icon = <AlertCircle className="h-3 w-3" />;
-    }
-
-    return (
-      <div className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium ${colorClass} ${bgClass}`}>
-        {icon}
-        {percentage}%
-      </div>
-    );
-  };
-
-  // Helper function to format expected payment date
-  const formatExpectedPayment = (predictedDate: string, confidence: number, dueDate: string) => {
-    if (!predictedDate) return <span className="text-gray-400 text-xs">No prediction</span>;
-    
-    const paymentDate = new Date(predictedDate);
-    const invoiceDueDate = new Date(dueDate);
-    const diffDays = Math.ceil((paymentDate.getTime() - invoiceDueDate.getTime()) / (1000 * 60 * 60 * 24));
-    
-    let daysText = "";
-    if (diffDays > 0) {
-      daysText = `+${diffDays} days late`;
-    } else if (diffDays < 0) {
-      daysText = `${Math.abs(diffDays)} days early`;
-    } else {
-      daysText = "On time";
-    }
-    
-    const confidenceLevel = confidence >= 0.8 ? "High" : confidence >= 0.6 ? "Med" : "Low";
-    const confidenceColor = confidence >= 0.8 ? "text-green-600" : confidence >= 0.6 ? "text-amber-600" : "text-red-600";
-    
-    return (
-      <div className="text-sm">
-        <div className="font-medium text-foreground">{formatDate(predictedDate)}</div>
-        <div className="flex items-center gap-1 text-xs text-muted-foreground">
-          <span>{daysText}</span>
-          <span className={`font-medium ${confidenceColor}`}>({confidenceLevel})</span>
-        </div>
-      </div>
-    );
-  };
-
-  // Helper function to get action icon and text based on nextAction
-  const getActionIcon = (action: string | null) => {
-    switch (action?.toLowerCase()) {
-      case 'email':
-        return { icon: <Mail className="h-3 w-3" />, text: 'Email' };
-      case 'sms':
-        return { icon: <MessageSquare className="h-3 w-3" />, text: 'SMS' };
-      case 'call':
-      case 'phone':
-        return { icon: <Phone className="h-3 w-3" />, text: 'Call' };
-      case 'visit':
-        return { icon: <Home className="h-3 w-3" />, text: 'Visit' };
-      default:
-        return { icon: <Clock className="h-3 w-3" />, text: 'No action' };
+      return <Badge className="badge-error">Critical</Badge>;
     }
   };
 
-  // Helper function to format readable date for next action
-  const formatNextActionDate = (dateString: string | null) => {
-    if (!dateString) return null;
+  const getStatusColor = (invoice: Invoice) => {
+    const daysOverdue = getDaysOverdue(invoice.dueDate);
     
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-GB', { 
-      weekday: 'short', 
-      day: 'numeric', 
-      month: 'short' 
-    });
-  };
-
-  // Handle communication send from preview dialog
-  const handleCommunicationSend = (content: { subject?: string; content: string; recipient: string; templateId?: string }) => {
-    if (!selectedInvoiceForComm) return;
-    
-    sendCommunicationMutation.mutate({
-      type: communicationType,
-      invoiceId: selectedInvoiceForComm.id,
-      subject: content.subject,
-      content: content.content,
-      recipient: content.recipient,
-      templateId: content.templateId,
-    });
-  };
-
-  useEffect(() => {
-    if (error && isUnauthorizedError(error as Error)) {
-      toast({
-        title: "Unauthorized",
-        description: "You are logged out. Logging in again...",
-        variant: "destructive",
-      });
-      setTimeout(() => {
-        window.location.href = "/api/login";
-      }, 500);
-    }
-  }, [error, toast]);
-
-  if (isLoading || !isAuthenticated) {
-    return <div className="min-h-screen bg-background" />;
-  }
-
-  // Server-side filtering replaces client-side filtering
-  // Invoices are already filtered by the server based on statusFilter, search, and overdueFilter
-
-  // Handle column sort with dual-function for amount/due date and category/prob
-  const handleSort = (column: string) => {
-    if (column === 'amountDueDate') {
-      // Dual-function sorting: Amount ASC → Due Date ASC → Due Date DESC → Amount DESC → No sort
-      if (sortColumn === 'amount' && sortDirection === 'asc') {
-        setSortColumn('dueDate');
-        setSortDirection('asc');
-      } else if (sortColumn === 'dueDate' && sortDirection === 'asc') {
-        setSortColumn('dueDate');
-        setSortDirection('desc');
-      } else if (sortColumn === 'dueDate' && sortDirection === 'desc') {
-        setSortColumn('amount');
-        setSortDirection('desc');
-      } else {
-        // Start with amount ascending or reset
-        setSortColumn('amount');
-        setSortDirection('asc');
-      }
-    } else if (column === 'categoryProb') {
-      // Dual-function sorting: Category ASC → Category DESC → No sort (Prob % not sortable)
-      if (sortColumn === 'status' && sortDirection === 'asc') {
-        setSortColumn('status');
-        setSortDirection('desc');
-      } else {
-        // Start with category ascending or reset
-        setSortColumn('status');
-        setSortDirection('asc');
-      }
-    } else {
-      // Regular single-column sorting
-      if (sortColumn === column) {
-        // Toggle direction or reset if already desc
-        if (sortDirection === 'asc') {
-          setSortDirection('desc');
-        } else {
-          setSortColumn(null);
-          setSortDirection('asc');
-        }
-      } else {
-        setSortColumn(column);
-        setSortDirection('asc');
-      }
-    }
-  };
-
-  // Client-side sorting only (server already filters)
-  const sortedInvoices = [...invoices].sort((a: any, b: any) => {
-    if (!sortColumn) return 0;
-    
-    let aValue: any, bValue: any;
-    
-    switch (sortColumn) {
-      case 'invoice':
-        aValue = new Date(a.issueDate || a.createdAt);
-        bValue = new Date(b.issueDate || b.createdAt);
-        break;
-      case 'company':
-        aValue = (a.contact?.companyName || '').toLowerCase();
-        bValue = (b.contact?.companyName || '').toLowerCase();
-        break;
-      case 'amount':
-        aValue = Number(a.amount || 0);
-        bValue = Number(b.amount || 0);
-        break;
-      case 'dueDate':
-        aValue = new Date(a.dueDate);
-        bValue = new Date(b.dueDate);
-        break;
-      case 'status':
-        // Sort by displayed category value (paid, soon, current, recent, overdue, serious, escalation)
-        const getCategoryValue = (invoice: any) => {
-          if (invoice.status === 'paid') return 'paid';
-          // Use existing category or calculate it
-          return invoice.overdueCategory || getOverdueCategoryFromDueDate(invoice.dueDate).category;
-        };
-        
-        // Custom category order for business logic
-        const categoryOrder = { 
-          'paid': 1, 
-          'soon': 2, 
-          'current': 3, 
-          'recent': 4, 
-          'overdue': 5, 
-          'serious': 6, 
-          'escalation': 7,
-          'cancelled': 8 
-        };
-        
-        aValue = categoryOrder[getCategoryValue(a) as keyof typeof categoryOrder] || 9;
-        bValue = categoryOrder[getCategoryValue(b) as keyof typeof categoryOrder] || 9;
-        break;
-      default:
-        return 0;
-    }
-    
-    // Handle different data types
-    if (aValue instanceof Date && bValue instanceof Date) {
-      return sortDirection === 'asc' 
-        ? aValue.getTime() - bValue.getTime()
-        : bValue.getTime() - aValue.getTime();
-    }
-    
-    if (typeof aValue === 'number' && typeof bValue === 'number') {
-      return sortDirection === 'asc' ? aValue - bValue : bValue - aValue;
-    }
-    
-    // String comparison
-    const aStr = String(aValue);
-    const bStr = String(bValue);
-    
-    return sortDirection === 'asc' 
-      ? aStr.localeCompare(bStr)
-      : bStr.localeCompare(aStr);
-  });
-
-  // Helper function to render sort indicator with dual-function support
-  const getSortIcon = (column: string) => {
-    if (column === 'amountDueDate') {
-      // Special handling for dual-function sort
-      if (sortColumn === 'amount') {
-        return (
-          <div className="ml-1 flex flex-col items-center">
-            {sortDirection === 'asc' 
-              ? <ChevronUp className="h-3 w-3 text-[#17B6C3]" />
-              : <ChevronDown className="h-3 w-3 text-[#17B6C3]" />
-            }
-            <span className="text-[10px] text-[#17B6C3] leading-none">£</span>
-          </div>
-        );
-      } else if (sortColumn === 'dueDate') {
-        return (
-          <div className="ml-1 flex flex-col items-center">
-            {sortDirection === 'asc' 
-              ? <ChevronUp className="h-3 w-3 text-[#17B6C3]" />
-              : <ChevronDown className="h-3 w-3 text-[#17B6C3]" />
-            }
-            <span className="text-[10px] text-[#17B6C3] leading-none">📅</span>
-          </div>
-        );
-      } else {
-        return <ChevronUp className="ml-1 h-4 w-4 opacity-0 group-hover:opacity-50" />;
-      }
-    } else if (column === 'categoryProb') {
-      // Special handling for category/prob dual-function sort (category only)
-      if (sortColumn === 'status') {
-        return (
-          <div className="ml-1 flex flex-col items-center">
-            {sortDirection === 'asc' 
-              ? <ChevronUp className="h-3 w-3 text-[#17B6C3]" />
-              : <ChevronDown className="h-3 w-3 text-[#17B6C3]" />
-            }
-            <span className="text-[10px] text-[#17B6C3] leading-none">🏷️</span>
-          </div>
-        );
-      } else {
-        return <ChevronUp className="ml-1 h-4 w-4 opacity-0 group-hover:opacity-50" />;
-      }
-    } else {
-      // Regular single-column sort icon
-      if (sortColumn !== column) {
-        return <ChevronUp className="ml-1 h-4 w-4 opacity-0 group-hover:opacity-50" />;
-      }
-      return sortDirection === 'asc' 
-        ? <ChevronUp className="ml-1 h-4 w-4 text-[#17B6C3]" />
-        : <ChevronDown className="ml-1 h-4 w-4 text-[#17B6C3]" />;
-    }
-  };
-
-  // Use server-side pagination (no client-side slicing needed)
-  const paginatedInvoices = sortedInvoices; // Server already handles pagination
-  const invoicesTotalPages = pagination.totalPages;
-
-  // Reset page to 1 when search or filters change
-  useEffect(() => {
-    setInvoicesCurrentPage(1);
-    // Force refresh of payment predictions when filters change
-    queryClient.invalidateQueries({ 
-      queryKey: ["/api/ml/payment-predictions/bulk"] 
-    });
-  }, [search, statusFilter, overdueFilter, queryClient]);
-
-  useEffect(() => {
-    setInvoicesCurrentPage(1);
-  }, [invoicesItemsPerPage]);
-
-  // Helper function for status badges
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'paid':
-        return <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Paid</Badge>;
-      case 'overdue':
-        return <Badge className="bg-red-100 text-red-800 hover:bg-red-100">Overdue</Badge>;
-      case 'pending':
-        return <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">Pending</Badge>;
-      case 'cancelled':
-        return <Badge className="bg-gray-100 text-gray-800 hover:bg-gray-100">Cancelled</Badge>;
-      default:
-        return <Badge variant="outline">{status}</Badge>;
-    }
-  };
-
-  // Helper function for overdue category badges
-  const getOverdueCategoryBadge = (invoice: any) => {
-    // Use overdue category info from the backend, or calculate if not available
-    const categoryInfo = invoice.overdueCategoryInfo || getOverdueCategoryFromDueDate(invoice.dueDate);
-    
-    return (
-      <Badge className={`${categoryInfo.bgColor} ${categoryInfo.color} hover:${categoryInfo.bgColor}`}>
-        {categoryInfo.label}
-      </Badge>
-    );
-  };
-
-  const openContactHistory = (invoice: any) => {
-    setSelectedInvoice(invoice);
-    setShowContactHistory(true);
-  };
-
-  const openViewInvoice = (invoice: any) => {
-    setViewInvoice(invoice);
-    setShowViewInvoiceDialog(true);
+    if (invoice.status === 'paid') return 'border-l-emerald-500';
+    if (daysOverdue < 7) return 'border-l-blue-500';
+    if (daysOverdue < 30) return 'border-l-amber-500';
+    return 'border-l-red-500';
   };
 
   return (
-    <div className="flex h-screen page-gradient">
-      <NewSidebar />
-      <main className="flex-1 overflow-y-auto">
+    <div className="flex h-screen bg-white">
+      {/* Desktop Sidebar */}
+      <div className="hidden lg:block">
+        <NewSidebar />
+      </div>
+
+      {/* Main Content */}
+      <main className="flex-1 overflow-y-auto main-with-bottom-nav">
         <Header 
           title="Invoices" 
-          subtitle="Manage your invoices and payments"
+          subtitle="Manage your receivables"
         />
         
-        <div className="p-8 space-y-8">
-          {/* Search/Filter Fields for Invoices */}
-          <div className="mb-6">
-            <div className="flex flex-col sm:flex-row gap-4">
-              <div className="flex-1">
-                <div className="relative">
-                  <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input 
-                    placeholder="Search invoices or contacts..."
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    className="pl-9 bg-white/70 border-gray-200/30"
-                    data-testid="input-search"
-                  />
-                </div>
-              </div>
-              <Select value={statusFilter} onValueChange={handleStatusChange}>
-                <SelectTrigger className="w-[180px] bg-white/70 border-gray-200/30" data-testid="select-status-filter">
-                  <Filter className="mr-2 h-4 w-4" />
-                  <SelectValue placeholder="All Status" />
-                </SelectTrigger>
-                <SelectContent className="bg-white border-gray-200">
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="paid">Paid</SelectItem>
-                  <SelectItem value="overdue">Overdue</SelectItem>
-                  <SelectItem value="cancelled">Cancelled</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={overdueFilter} onValueChange={(value) => setOverdueFilter(value as OverdueCategory | 'all')}>
-                <SelectTrigger className="w-[180px] bg-white/70 border-gray-200/30" data-testid="select-overdue-filter">
-                  <AlertCircle className="mr-2 h-4 w-4" />
-                  <SelectValue placeholder="All Categories" />
-                </SelectTrigger>
-                <SelectContent className="bg-white border-gray-200">
-                  <SelectItem value="all">All Categories</SelectItem>
-                  {getAvailableCategoryOptions(statusFilter).map((category) => (
-                    <SelectItem key={category.category} value={category.category}>
-                      {category.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select value={invoicesItemsPerPage.toString()} onValueChange={(value) => setInvoicesItemsPerPage(Number(value))}>
-                <SelectTrigger className="w-[120px] bg-white/70 border-gray-200/30" data-testid="select-invoices-per-page">
-                  <SelectValue placeholder="Per page" />
-                </SelectTrigger>
-                <SelectContent className="bg-white border-gray-200">
-                  <SelectItem value="25">25 per page</SelectItem>
-                  <SelectItem value="50">50 per page</SelectItem>
-                  <SelectItem value="100">100 per page</SelectItem>
-                  <SelectItem value="200">200 per page</SelectItem>
-                </SelectContent>
-              </Select>
-              <div className="flex items-center gap-2">
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={() => setInvoicesCurrentPage(prev => Math.max(1, prev - 1))}
-                  disabled={invoicesCurrentPage === 1}
-                  className="px-2 bg-white/70 border-gray-200/30"
-                  data-testid="button-invoices-prev-page"
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-                
-                <span className="text-sm text-slate-600 min-w-[80px] text-center" data-testid="text-invoices-page-info">
-                  Page {invoicesCurrentPage} of {invoicesTotalPages || 1}
-                </span>
-                
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={() => setInvoicesCurrentPage(prev => Math.min(invoicesTotalPages, prev + 1))}
-                  disabled={invoicesCurrentPage >= invoicesTotalPages}
-                  className="px-2 bg-white/70 border-gray-200/30"
-                  data-testid="button-invoices-next-page"
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          </div>
-
-          {/* Professional Invoices Table */}
-          <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
-            <CardHeader className="pb-4">
-              <CardTitle className="text-xl font-bold flex items-center">
-                <div className="p-2 bg-[#17B6C3]/10 rounded-lg mr-3">
-                  <FileText className="h-5 w-5 text-[#17B6C3]" />
-                </div>
-                All Invoices ({invoices.length} / {(pagination.total || 0).toLocaleString()} / {(pagination.systemTotal || 0).toLocaleString()})
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="pt-0">
-              {invoicesLoading ? (
-                <div className="text-center py-8">
-                  <p className="text-muted-foreground">Loading invoices...</p>
-                </div>
-              ) : sortedInvoices.length === 0 ? (
-                <div className="text-center py-8">
-                  <div className="w-16 h-16 bg-[#17B6C3]/10 rounded-full flex items-center justify-center mx-auto mb-6">
-                    <FileText className="h-8 w-8 text-[#17B6C3]" />
-                  </div>
-                  <p className="text-lg font-semibold text-slate-900 mb-2">No invoices found</p>
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full table-fixed">
-                    <colgroup>
-                      <col className="w-[150px]" />
-                      <col className="w-[200px]" />
-                      <col className="w-1/5" />
-                      <col className="w-1/5" />
-                      <col className="w-1/5" />
-                      <col className="w-1/5" />
-                      <col className="w-auto" />
-                    </colgroup>
-                    <thead>
-                      <tr className="border-b border-gray-200">
-                        <th 
-                          className="text-left py-3 text-sm font-medium text-muted-foreground cursor-pointer select-none group hover:text-[#17B6C3] transition-colors"
-                          onClick={() => handleSort('invoice')}
-                          data-testid="header-invoice"
-                        >
-                          <div className="flex items-center">
-                            Invoice
-                            {getSortIcon('invoice')}
-                          </div>
-                        </th>
-                        <th 
-                          className="text-left py-3 text-sm font-medium text-muted-foreground cursor-pointer select-none group hover:text-[#17B6C3] transition-colors"
-                          onClick={() => handleSort('company')}
-                          data-testid="header-company"
-                        >
-                          <div className="flex items-center">
-                            Company Name
-                            {getSortIcon('company')}
-                          </div>
-                        </th>
-                        <th 
-                          className="text-left py-3 text-sm font-medium text-muted-foreground cursor-pointer select-none group hover:text-[#17B6C3] transition-colors w-1/5"
-                          onClick={() => handleSort('amountDueDate')}
-                          data-testid="header-amount-due-date"
-                        >
-                          <div className="flex items-center">
-                            Amount / Due Date
-                            {getSortIcon('amountDueDate')}
-                          </div>
-                        </th>
-                        <th 
-                          className="text-left py-3 text-sm font-medium text-muted-foreground cursor-pointer select-none group hover:text-[#17B6C3] transition-colors w-1/5"
-                          onClick={() => handleSort('categoryProb')}
-                          data-testid="header-category-prob"
-                        >
-                          <div className="flex items-center">
-                            Category / Prob %
-                            {getSortIcon('categoryProb')}
-                          </div>
-                        </th>
-                        <th 
-                          className="text-left py-3 text-sm font-medium text-muted-foreground w-1/5"
-                          data-testid="header-next-action"
-                        >
-                          <div className="flex items-center">
-                            Next Action
-                          </div>
-                        </th>
-                        <th 
-                          className="text-left py-3 text-sm font-medium text-muted-foreground w-1/5"
-                          data-testid="header-expected-payment"
-                        >
-                          <div className="flex items-center">
-                            Exp. Pymt
-                          </div>
-                        </th>
-                        <th className="text-right py-3 text-sm font-medium text-muted-foreground">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-200">
-                      {paginatedInvoices.map((invoice: any) => (
-                        <tr key={invoice.id} className="hover:bg-gray-50/50" data-testid={`row-invoice-${invoice.id}`}>
-                          <td className="py-4">
-                            <div className="font-medium text-foreground" data-testid={`text-invoice-number-${invoice.id}`}>
-                              {invoice.invoiceNumber}
-                            </div>
-                            <div className="text-xs text-muted-foreground" data-testid={`text-issue-date-${invoice.id}`}>
-                              {formatDate(invoice.issueDate)}
-                            </div>
-                          </td>
-                          <td className="py-4">
-                            <div className="font-medium text-foreground" data-testid={`text-company-name-${invoice.id}`}>
-                              {invoice.contact?.companyName || 'Unknown Company'}
-                            </div>
-                            <div className="text-xs text-muted-foreground" data-testid={`text-contact-name-${invoice.id}`}>
-                              {invoice.contact?.name || 'No contact name'}
-                            </div>
-                          </td>
-                          <td className="py-4" data-testid={`cell-amount-due-date-${invoice.id}`}>
-                            <div className="font-medium text-foreground flex items-center gap-2" data-testid={`text-amount-${invoice.id}`}>
-                              £{Number(invoice.amount).toLocaleString()}
-                              {(invoice.paymentPlanId || invoice.status === 'payment_plan') && (
-                                <Calendar className="h-4 w-4 text-green-600" data-testid={`icon-payment-plan-${invoice.id}`} />
-                              )}
-                            </div>
-                            <div className="text-xs text-muted-foreground" data-testid={`text-due-date-${invoice.id}`}>
-                              {formatDate(invoice.dueDate)}
-                            </div>
-                            {(() => {
-                              const daysOverdue = Math.floor((Date.now() - new Date(invoice.dueDate).getTime()) / (1000 * 60 * 60 * 24));
-                              return daysOverdue > 0 ? (
-                                <div className="text-xs text-red-600 font-medium" data-testid={`text-days-overdue-${invoice.id}`}>
-                                  {daysOverdue} days overdue
-                                </div>
-                              ) : null;
-                            })()}
-                          </td>
-                          <td className="py-4" data-testid={`cell-category-prob-${invoice.id}`}>
-                            <div>{getOverdueCategoryBadge(invoice)}</div>
-                            <div className="text-xs text-muted-foreground mt-1">
-                              {(() => {
-                                const prediction = paymentPredictions[invoice.id];
-                                
-                                // Show loading state when either query is loading
-                                if (predictionsLoading || invoicesLoading) {
-                                  return (
-                                    <div className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium text-gray-500 bg-gray-100">
-                                      <Target className="h-3 w-3" />
-                                      Calculating...
-                                    </div>
-                                  );
-                                }
-                                
-                                // If predictions are loaded but no entry exists, show "No prediction"
-                                if (!prediction) {
-                                  return (
-                                    <div className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium text-gray-400 bg-gray-50">
-                                      <Target className="h-3 w-3" />
-                                      No prediction
-                                    </div>
-                                  );
-                                }
-                                
-                                return formatPaymentProbability(prediction.paymentProbability);
-                              })()}
-                            </div>
-                          </td>
-                          <td className="py-4" data-testid={`cell-next-action-${invoice.id}`}>
-                            <div className="flex items-center gap-2">
-                              {(() => {
-                                const action = getActionIcon(invoice.nextAction);
-                                return (
-                                  <div className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium text-[#17B6C3] bg-[#17B6C3]/10">
-                                    {action.icon}
-                                    {action.text}
-                                  </div>
-                                );
-                              })()}
-                              {invoice.nextAction && (
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={() => nudgeMutation.mutate(invoice.id)}
-                                  disabled={nudgeMutation.isPending}
-                                  className="h-6 w-6 p-0 hover:bg-[#17B6C3]/10 text-[#17B6C3]"
-                                  data-testid={`button-nudge-${invoice.id}`}
-                                >
-                                  <Zap className="h-3 w-3" />
-                                </Button>
-                              )}
-                            </div>
-                            <div className="text-xs text-muted-foreground mt-1" data-testid={`text-next-action-date-${invoice.id}`}>
-                              {formatNextActionDate(invoice.nextActionDate) || formatNextActionDate(invoice.dueDate) || 'No date set'}
-                            </div>
-                          </td>
-                          <td className="py-4" data-testid={`cell-expected-payment-${invoice.id}`}>
-                            {(() => {
-                              const prediction = paymentPredictions[invoice.id];
-                              
-                              // Show loading state when either query is loading
-                              if (predictionsLoading || invoicesLoading) {
-                                return <span className="text-gray-400 text-xs">Calculating...</span>;
-                              }
-                              
-                              // If predictions are loaded but no entry exists, show "No prediction"
-                              if (!prediction) {
-                                return <span className="text-gray-400 text-xs">No prediction</span>;
-                              }
-                              
-                              return formatExpectedPayment(
-                                prediction.predictedPaymentDate, 
-                                prediction.paymentConfidenceScore,
-                                invoice.dueDate
-                              );
-                            })()}
-                          </td>
-                          <td className="py-4">
-                            <div className="flex justify-end">
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button 
-                                    variant="ghost" 
-                                    size="sm" 
-                                    className="h-8 w-8 p-0 hover:bg-[#17B6C3]/10"
-                                    data-testid={`button-menu-${invoice.id}`}
-                                  >
-                                    <MoreHorizontal className="h-4 w-4 text-[#17B6C3]" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end" className="bg-white border-gray-200 w-52">
-                                  <DropdownMenuItem 
-                                    onClick={() => openViewInvoice(invoice)}
-                                    data-testid={`menu-view-invoice-${invoice.id}`}
-                                  >
-                                    <Eye className="mr-2 h-4 w-4" />
-                                    View Invoice
-                                  </DropdownMenuItem>
-                                  
-                                  <DropdownMenuSeparator />
-                                  <DropdownMenuLabel className="text-xs font-medium text-gray-500 uppercase tracking-wide">
-                                    Communication
-                                  </DropdownMenuLabel>
-                                  <DropdownMenuItem 
-                                    onClick={() => openCommunicationDialog(invoice, 'email')}
-                                    disabled={!invoice.contact?.email}
-                                    data-testid={`menu-send-email-${invoice.id}`}
-                                  >
-                                    <Mail className="mr-2 h-4 w-4" />
-                                    Send Email
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem 
-                                    onClick={() => openCommunicationDialog(invoice, 'sms')}
-                                    disabled={!invoice.contact?.phone}
-                                    data-testid={`menu-send-sms-${invoice.id}`}
-                                  >
-                                    <MessageSquare className="mr-2 h-4 w-4" />
-                                    Send SMS
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem 
-                                    onClick={() => openCommunicationDialog(invoice, 'voice')}
-                                    disabled={!invoice.contact?.phone}
-                                    data-testid={`menu-call-customer-${invoice.id}`}
-                                  >
-                                    <Phone className="mr-2 h-4 w-4" />
-                                    Call Customer
-                                  </DropdownMenuItem>
-                                  
-                                  <DropdownMenuSeparator />
-                                  <DropdownMenuLabel className="text-xs font-medium text-gray-500 uppercase tracking-wide">
-                                    Account Management
-                                  </DropdownMenuLabel>
-                                  <DropdownMenuItem 
-                                    onClick={() => {
-                                      setPaymentPlanInvoice(invoice);
-                                      setShowPaymentPlanDialog(true);
-                                    }}
-                                    data-testid={`menu-payment-plan-${invoice.id}`}
-                                  >
-                                    <Calendar className="mr-2 h-4 w-4" />
-                                    Create Payment Plan
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem 
-                                    onClick={() => {
-                                      setDisputeInvoice(invoice);
-                                      setShowDisputeDialog(true);
-                                    }}
-                                    data-testid={`menu-create-dispute-${invoice.id}`}
-                                  >
-                                    <AlertCircle className="mr-2 h-4 w-4" />
-                                    Create Dispute
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem 
-                                    onClick={() => openContactHistory(invoice)}
-                                    data-testid={`menu-view-history-${invoice.id}`}
-                                  >
-                                    <Eye className="mr-2 h-4 w-4" />
-                                    View Comms History
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem 
-                                    data-testid={`menu-mark-paid-${invoice.id}`}
-                                  >
-                                    <CheckCircle className="mr-2 h-4 w-4" />
-                                    Mark as Paid
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-      </main>
-
-      {/* View Invoice Dialog */}
-      <Dialog open={showViewInvoiceDialog} onOpenChange={setShowViewInvoiceDialog}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-white border-0 shadow-2xl">
-          <DialogHeader className="border-b border-gray-100 pb-4">
-            <DialogTitle className="text-xl font-bold">Invoice Preview</DialogTitle>
-            <DialogDescription>
-              Invoice {viewInvoice?.invoiceNumber} - {viewInvoice?.contact?.name}
-            </DialogDescription>
-          </DialogHeader>
-          
-          {viewInvoice && (
-            <div className="bg-white p-8 space-y-8">
-              {/* Invoice Header */}
-              <div className="flex justify-between items-start border-b border-gray-200 pb-6">
-                <div>
-                  <h1 className="text-2xl font-bold text-[#17B6C3] mb-2">Qashivo</h1>
-                  <p className="text-gray-600 text-sm">Professional Accounts Receivable</p>
-                  <p className="text-gray-600 text-sm">London, UK</p>
-                  <p className="text-gray-600 text-sm">+44 20 1234 5678</p>
-                </div>
-                <div className="text-right">
-                  <h2 className="text-3xl font-bold text-gray-800 mb-2">INVOICE</h2>
-                  <p className="text-lg text-gray-600 mb-1">{viewInvoice.invoiceNumber}</p>
-                  <div className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${
-                    viewInvoice.status === 'paid' ? 'bg-green-100 text-green-800' :
-                    viewInvoice.status === 'overdue' ? 'bg-red-100 text-red-800' :
-                    viewInvoice.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                    'bg-gray-100 text-gray-800'
-                  }`}>
-                    {viewInvoice.status?.toUpperCase()}
-                  </div>
-                </div>
-              </div>
-
-              {/* Invoice Details */}
-              <div className="grid grid-cols-2 gap-8">
-                <div>
-                  <h3 className="font-semibold text-gray-800 mb-3">Bill To:</h3>
-                  <div className="space-y-1">
-                    <p className="font-medium">{viewInvoice.contact?.companyName || 'Company Name'}</p>
-                    <p className="text-gray-600">{viewInvoice.contact?.name}</p>
-                    <p className="text-gray-600">{viewInvoice.contact?.email}</p>
-                    {viewInvoice.contact?.phone && (
-                      <p className="text-gray-600">{viewInvoice.contact.phone}</p>
-                    )}
-                  </div>
-                </div>
-                <div>
-                  <h3 className="font-semibold text-gray-800 mb-3">Invoice Details:</h3>
-                  <div className="space-y-2">
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Issue Date:</span>
-                      <span>{formatDate(viewInvoice.issueDate)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Due Date:</span>
-                      <span className="font-medium">{formatDate(viewInvoice.dueDate)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Payment Terms:</span>
-                      <span>Net 30</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Invoice Items */}
-              <div className="border border-gray-200 rounded-lg overflow-hidden">
-                <table className="w-full">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-4 py-3 text-left text-sm font-medium text-gray-800">Description</th>
-                      <th className="px-4 py-3 text-right text-sm font-medium text-gray-800">Quantity</th>
-                      <th className="px-4 py-3 text-right text-sm font-medium text-gray-800">Unit Price</th>
-                      <th className="px-4 py-3 text-right text-sm font-medium text-gray-800">Total</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200">
-                    <tr>
-                      <td className="px-4 py-3 text-sm">{viewInvoice.description || 'Professional Services'}</td>
-                      <td className="px-4 py-3 text-sm text-right">1</td>
-                      <td className="px-4 py-3 text-sm text-right">£{Number(viewInvoice.amount).toLocaleString()}</td>
-                      <td className="px-4 py-3 text-sm text-right font-medium">£{Number(viewInvoice.amount).toLocaleString()}</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-
-              {/* Invoice Totals */}
-              <div className="flex justify-end">
-                <div className="w-80">
-                  <div className="space-y-2">
-                    <div className="flex justify-between border-t border-gray-200 pt-4">
-                      <span className="text-lg font-semibold">Total Due:</span>
-                      <span className="text-xl font-bold text-[#17B6C3]">£{Number(viewInvoice.amount).toLocaleString()}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Payment Information */}
-              <div className="bg-gray-50 p-6 rounded-lg">
-                <h3 className="font-semibold text-gray-800 mb-3">Payment Information</h3>
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <p className="text-gray-600 mb-1">Bank Name:</p>
-                    <p className="font-medium">Nexus Bank UK</p>
-                  </div>
-                  <div>
-                    <p className="text-gray-600 mb-1">Sort Code:</p>
-                    <p className="font-medium">12-34-56</p>
-                  </div>
-                  <div>
-                    <p className="text-gray-600 mb-1">Account Number:</p>
-                    <p className="font-medium">12345678</p>
-                  </div>
-                  <div>
-                    <p className="text-gray-600 mb-1">Reference:</p>
-                    <p className="font-medium">{viewInvoice.invoiceNumber}</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Terms and Conditions */}
-              <div className="text-xs text-gray-500 space-y-1">
-                <p><strong>Terms & Conditions:</strong></p>
-                <p>Payment is due within 30 days of invoice date. Late payment may incur charges.</p>
-                <p>Please include the invoice number in your payment reference.</p>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Contact History Dialog */}
-      <Dialog open={showContactHistory} onOpenChange={setShowContactHistory}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto bg-white">
-          <DialogHeader>
-            <DialogTitle>Contact History - {selectedInvoice?.contact?.name}</DialogTitle>
-            <DialogDescription>
-              Invoice: {selectedInvoice?.invoiceNumber} | Amount: £{Number(selectedInvoice?.amount || 0).toLocaleString()}
-            </DialogDescription>
-          </DialogHeader>
-          
-          {historyLoading ? (
-            <div className="text-center py-8">
-              <p className="text-muted-foreground">Loading contact history...</p>
-            </div>
-          ) : (contactHistory as any[]).length === 0 ? (
-            <div className="text-center py-8">
-              <MessageSquare className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <p className="text-muted-foreground">No contact history found for this invoice</p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {(contactHistory as any[]).map((entry: any, index: number) => (
-                <div key={index} className="border border-gray-200 rounded-lg p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      {entry.type === 'email' && <Mail className="h-4 w-4 text-blue-500" />}
-                      {entry.type === 'sms' && <Phone className="h-4 w-4 text-green-500" />}
-                      {entry.type === 'note' && <MessageSquare className="h-4 w-4 text-gray-500" />}
-                      <span className="font-medium capitalize">{entry.type}</span>
-                    </div>
-                    <span className="text-sm text-muted-foreground">
-                      {formatDate(entry.createdAt)}
-                    </span>
-                  </div>
-                  <p className="text-sm text-gray-700">{entry.content || entry.subject}</p>
-                  {entry.response && (
-                    <div className="mt-2 p-2 bg-gray-50 rounded">
-                      <p className="text-sm text-gray-600">Response: {entry.response}</p>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Payment Plan Dialog */}
-      <Dialog open={showPaymentPlanDialog} onOpenChange={setShowPaymentPlanDialog}>
-        <DialogContent className="max-w-4xl bg-white max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Setup Payment Plan</DialogTitle>
-            <DialogDescription>
-              Create a flexible payment plan with multiple invoices
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-6">
-            {/* Section 1: Invoice Selection */}
-            <div className="border-b border-gray-200 pb-6">
-              <h4 className="font-medium mb-4 text-gray-900">Select Invoices for Payment Plan</h4>
-              
-              {outstandingLoading ? (
-                <div className="text-center py-8">
-                  <div className="animate-pulse">
-                    <div className="h-4 bg-gray-200 rounded w-1/4 mx-auto mb-2"></div>
-                    <div className="h-4 bg-gray-200 rounded w-1/2 mx-auto"></div>
-                  </div>
-                  <p className="text-sm text-gray-500 mt-2">Loading outstanding invoices...</p>
-                </div>
-              ) : (
-                <>
-                  <div className="bg-blue-50 p-4 rounded-lg mb-4">
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <p className="text-sm text-gray-700">
-                          Customer: <span className="font-medium">{outstandingInvoices[0]?.contactName || "Unknown"}</span>
-                        </p>
-                        <p className="text-sm text-gray-600">
-                          {selectedPaymentInvoices.size} of {outstandingInvoices.length} invoices selected
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-sm text-gray-600">Selected Total</p>
-                        <p className="text-xl font-bold text-[#17B6C3]">
-                          £{totalSelectedAmount.toLocaleString()}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="border border-gray-200 rounded-lg overflow-hidden">
-                    <table className="w-full">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          <th className="text-left p-3 text-sm font-medium text-gray-700">Select</th>
-                          <th className="text-left p-3 text-sm font-medium text-gray-700">Invoice #</th>
-                          <th className="text-left p-3 text-sm font-medium text-gray-700">Amount</th>
-                          <th className="text-left p-3 text-sm font-medium text-gray-700">Due Date</th>
-                          <th className="text-left p-3 text-sm font-medium text-gray-700">Days Past Due</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {outstandingInvoices.map((invoice: any) => (
-                          <tr key={invoice.id} className="border-t border-gray-200 hover:bg-gray-50">
-                            <td className="p-3">
-                              <Checkbox
-                                checked={selectedPaymentInvoices.has(invoice.id)}
-                                onCheckedChange={(checked) => {
-                                  const newSelection = new Map(selectedPaymentInvoices);
-                                  if (checked) {
-                                    newSelection.set(invoice.id, invoice);
-                                  } else {
-                                    newSelection.delete(invoice.id);
-                                  }
-                                  setSelectedPaymentInvoices(newSelection);
-                                }}
-                              />
-                            </td>
-                            <td className="p-3 text-sm font-medium">{invoice.invoiceNumber}</td>
-                            <td className="p-3 text-sm">£{Number(invoice.amount).toLocaleString()}</td>
-                            <td className="p-3 text-sm">{formatDate(invoice.dueDate)}</td>
-                            <td className="p-3 text-sm">
-                              {invoice.daysPastDue > 0 ? (
-                                <span className="text-red-600">{invoice.daysPastDue} days</span>
-                              ) : (
-                                <span className="text-green-600">Current</span>
-                              )}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </>
-              )}
-            </div>
-
-            {/* Section 2: Initial Payment (Optional) */}
-            <div className="border-b border-gray-200 pb-6">
-              <h4 className="font-medium mb-4 text-gray-900">Initial Payment (Optional)</h4>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium">Initial Payment Amount (£)</label>
-                  <Input 
-                    type="number"
-                    placeholder="0.00"
-                    value={initialPaymentAmount}
-                    onChange={(e) => setInitialPaymentAmount(e.target.value)}
-                    className="bg-white/70 border-gray-200/30"
-                    min="0"
-                    max={totalSelectedAmount}
-                    step="0.01"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">
-                    Optional upfront payment (max: £{totalSelectedAmount.toLocaleString()})
-                  </p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium">Initial Payment Date</label>
-                  <Input 
-                    type="date" 
-                    value={initialPaymentDate}
-                    onChange={(e) => setInitialPaymentDate(e.target.value)}
-                    className="bg-white/70 border-gray-200/30" 
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Section 3: Installment Plan */}
-            <div className="border-b border-gray-200 pb-6">
-              <h4 className="font-medium mb-4 text-gray-900">Installment Plan</h4>
-              <div className="bg-blue-50 p-3 rounded-lg mb-4">
-                <div className="flex justify-between items-center text-sm">
-                  <span>Total Selected:</span>
-                  <span className="font-medium">£{totalSelectedAmount.toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between items-center text-sm">
-                  <span>Initial Payment:</span>
-                  <span className="font-medium">-£{Number(initialPaymentAmount || 0).toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between items-center text-sm font-medium pt-2 border-t border-blue-200 mt-2">
-                  <span>Remaining Balance:</span>
-                  <span>£{Math.max(0, totalSelectedAmount - Number(initialPaymentAmount || 0)).toLocaleString()}</span>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <label className="text-sm font-medium">Plan Start Date</label>
-                  <Input 
-                    type="date" 
-                    value={planStartDate}
-                    onChange={(e) => setPlanStartDate(e.target.value)}
-                    className="bg-white/70 border-gray-200/30" 
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-medium">Number of Payments</label>
-                  <Input 
-                    type="number"
-                    value={numRemainingPayments}
-                    onChange={(e) => setNumRemainingPayments(e.target.value)}
-                    className="bg-white/70 border-gray-200/30"
-                    min="1"
-                    placeholder="e.g. 3"
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-medium">Payment Frequency</label>
-                  <Select value={paymentFrequency} onValueChange={setPaymentFrequency}>
-                    <SelectTrigger className="bg-white border-gray-200">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="bg-white border-gray-200">
-                      <SelectItem value="weekly">Weekly</SelectItem>
-                      <SelectItem value="monthly">Monthly</SelectItem>
-                      <SelectItem value="quarterly">Quarterly</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              
-              {/* Notes field */}
-              <div className="mt-4">
-                <label className="text-sm font-medium">Notes (Optional)</label>
-                <textarea 
-                  value={paymentPlanNotes}
-                  onChange={(e) => setPaymentPlanNotes(e.target.value)}
-                  className="mt-1 w-full px-3 py-2 bg-white/70 border border-gray-200/30 rounded-md text-sm resize-none"
-                  rows={3}
-                  placeholder="Add any additional notes or special terms for this payment plan..."
-                  data-testid="textarea-payment-plan-notes"
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  These notes will be saved with the payment plan for future reference
-                </p>
-              </div>
-            </div>
-            
-            {/* Section 4: Payment Schedule Preview */}
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <h4 className="font-medium mb-3">Payment Schedule Preview</h4>
-              {(() => {
-                const schedule = calculatePaymentSchedule();
-                if (schedule.length === 0 || selectedPaymentInvoices.size === 0) {
-                  return (
-                    <div className="text-sm text-gray-500 text-center py-4">
-                      Select invoices and configure payment details to see schedule preview
-                    </div>
-                  );
-                }
-                
-                return (
-                  <div className="space-y-2 text-sm">
-                    {schedule.map((payment, index) => (
-                      <div key={index} className="flex justify-between items-center p-2 bg-white rounded border">
-                        <span className="flex items-center gap-2">
-                          <span className="font-medium">{payment.label}:</span>
-                          <span className="text-gray-600">
-                            {formatDateForDisplay(payment.date)}
-                          </span>
-                        </span>
-                        <span className="font-medium text-[#17B6C3]">
-                          £{payment.amount.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </span>
-                      </div>
-                    ))}
-                    <div className="border-t border-gray-300 pt-2 mt-3 bg-white p-2 rounded">
-                      <div className="flex justify-between items-center font-medium">
-                        <span>Total Payment Plan:</span>
-                        <span className="text-lg text-[#17B6C3]">£{schedule.reduce((sum, p) => sum + p.amount, 0).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })()}
-            </div>
-            
-            {/* Validation Errors */}
-            {validationErrors.length > 0 && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                <h4 className="text-sm font-medium text-red-800 mb-2">Please fix the following issues:</h4>
-                <ul className="text-sm text-red-700 space-y-1">
-                  {validationErrors.map((error, index) => (
-                    <li key={index} className="flex items-start gap-2">
-                      <span className="text-red-500 mt-0.5">•</span>
-                      <span>{error}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-            
-            <div className="flex justify-end gap-2 pt-4 border-t border-gray-200">
-              <Button variant="outline" onClick={() => setShowPaymentPlanDialog(false)}>
-                Cancel
-              </Button>
-              <Button 
-                className="bg-[#17B6C3] hover:bg-[#1396A1] text-white"
-                disabled={validationErrors.length > 0 || createPaymentPlanMutation.isPending}
-                onClick={handleCreatePaymentPlan}
-                data-testid="button-create-payment-plan"
-              >
-                {createPaymentPlanMutation.isPending ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                    Creating Plan...
-                  </>
-                ) : (
-                  `Create Payment Plan (${selectedPaymentInvoices.size} invoice${selectedPaymentInvoices.size !== 1 ? 's' : ''})`
-                )}
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Dispute Dialog */}
-      <Dialog open={showDisputeDialog} onOpenChange={setShowDisputeDialog}>
-        <DialogContent className="max-w-2xl bg-white">
-          <DialogHeader>
-            <DialogTitle>Mark Invoice as Disputed</DialogTitle>
-            <DialogDescription>
-              Mark invoice {disputeInvoice?.invoiceNumber} as disputed and add details
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-4">
-            <div>
-              <label className="text-sm font-medium">Dispute Reason</label>
-              <Select>
-                <SelectTrigger className="bg-white border-gray-200">
-                  <SelectValue placeholder="Select dispute reason" />
-                </SelectTrigger>
-                <SelectContent className="bg-white border-gray-200">
-                  <SelectItem value="service-quality">Service Quality Issue</SelectItem>
-                  <SelectItem value="billing-error">Billing Error</SelectItem>
-                  <SelectItem value="delivery-issue">Delivery Issue</SelectItem>
-                  <SelectItem value="unauthorized">Unauthorized Charge</SelectItem>
-                  <SelectItem value="other">Other</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div>
-              <label className="text-sm font-medium">Dispute Details</label>
-              <textarea 
-                className="w-full p-3 border border-gray-200 rounded-md resize-none bg-white" 
-                rows={4}
-                placeholder="Provide details about the dispute..."
+        <div className="container-apple py-4 sm:py-6 lg:py-8">
+          {/* Search and Filter Bar */}
+          <div className="flex flex-col sm:flex-row gap-3 mb-6">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" />
+              <Input
+                type="text"
+                placeholder="Search invoices..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="input-apple pl-10"
+                data-testid="input-search-invoices"
               />
             </div>
             
-            <div>
-              <label className="text-sm font-medium">Expected Resolution Date</label>
-              <Input type="date" className="bg-white border-gray-200" />
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-full sm:w-[180px] input-apple" data-testid="select-status-filter">
+                <div className="flex items-center gap-2">
+                  <Filter className="h-4 w-4 text-slate-500" />
+                  <SelectValue />
+                </div>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Invoices</SelectItem>
+                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="overdue">Overdue</SelectItem>
+                <SelectItem value="paid">Paid</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Summary Stats */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-6">
+            <div className="card-apple p-3 sm:p-4">
+              <p className="text-xs sm:text-sm text-slate-600 mb-1">Total</p>
+              <p className="text-lg sm:text-xl font-bold text-slate-900">
+                {invoices.length}
+              </p>
             </div>
-            
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setShowDisputeDialog(false)}>
-                Cancel
-              </Button>
-              <Button className="bg-red-500 hover:bg-red-600 text-white">
-                Mark as Disputed
-              </Button>
+            <div className="card-apple p-3 sm:p-4">
+              <p className="text-xs sm:text-sm text-slate-600 mb-1">Overdue</p>
+              <p className="text-lg sm:text-xl font-bold text-amber-600">
+                {invoices.filter(inv => getDaysOverdue(inv.dueDate) > 0 && inv.status !== 'paid').length}
+              </p>
+            </div>
+            <div className="card-apple p-3 sm:p-4">
+              <p className="text-xs sm:text-sm text-slate-600 mb-1">Paid</p>
+              <p className="text-lg sm:text-xl font-bold text-emerald-600">
+                {invoices.filter(inv => inv.status === 'paid').length}
+              </p>
+            </div>
+            <div className="card-apple p-3 sm:p-4">
+              <p className="text-xs sm:text-sm text-slate-600 mb-1">Outstanding</p>
+              <p className="text-lg sm:text-xl font-bold text-slate-900">
+                {formatCurrency(
+                  invoices
+                    .filter(inv => inv.status !== 'paid')
+                    .reduce((sum, inv) => sum + (inv.amount - inv.amountPaid), 0)
+                )}
+              </p>
             </div>
           </div>
-        </DialogContent>
-      </Dialog>
 
-      {/* Communication Preview Dialog */}
-      <CommunicationPreviewDialog
-        isOpen={showCommunicationDialog}
-        onClose={() => {
-          setShowCommunicationDialog(false);
-          setSelectedInvoiceForComm(null);
-        }}
-        type={communicationType}
-        context="invoice"
-        contextId={selectedInvoiceForComm?.id || ""}
-        onSend={handleCommunicationSend}
-      />
+          {/* Invoice List */}
+          <div className="space-y-3">
+            {isLoading ? (
+              [...Array(5)].map((_, i) => (
+                <div key={i} className="card-apple p-4">
+                  <div className="h-24 bg-slate-200 animate-pulse rounded"></div>
+                </div>
+              ))
+            ) : invoices.length === 0 ? (
+              <div className="card-apple p-8 text-center">
+                <p className="text-slate-600">No invoices found</p>
+              </div>
+            ) : (
+              invoices.map((invoice) => {
+                const outstanding = invoice.amount - invoice.amountPaid;
+                const daysOverdue = getDaysOverdue(invoice.dueDate);
+                
+                return (
+                  <div 
+                    key={invoice.id} 
+                    className={`card-apple-hover p-4 border-l-4 ${getStatusColor(invoice)} cursor-pointer`}
+                    onClick={() => setLocation(`/invoices/${invoice.id}`)}
+                    data-testid={`invoice-item-${invoice.id}`}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="flex-1">
+                            <h4 className="font-semibold text-slate-900 truncate">
+                              {invoice.contact?.name || 'Unknown Customer'}
+                            </h4>
+                            <p className="text-sm text-slate-600">
+                              {invoice.invoiceNumber}
+                            </p>
+                          </div>
+                          {getStatusBadge(invoice)}
+                        </div>
+                        
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-lg font-bold text-slate-900">
+                              {formatCurrency(outstanding)}
+                            </p>
+                            <p className="text-xs text-slate-500">
+                              {invoice.status !== 'paid' && daysOverdue > 0 
+                                ? `${daysOverdue} days overdue`
+                                : `Due ${new Date(invoice.dueDate).toLocaleDateString()}`
+                              }
+                            </p>
+                          </div>
+
+                          {/* Quick Actions - Hide on small mobile */}
+                          {invoice.status !== 'paid' && (
+                            <div className="hidden sm:flex gap-2">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                }}
+                                className="touch-target p-2 bg-blue-100 rounded-xl hover:bg-blue-200 transition-colors"
+                              >
+                                <Mail className="h-4 w-4 text-blue-600" />
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                }}
+                                className="touch-target p-2 bg-emerald-100 rounded-xl hover:bg-emerald-200 transition-colors"
+                              >
+                                <Phone className="h-4 w-4 text-emerald-600" />
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      
+                      <ChevronRight className="h-5 w-5 text-slate-400 flex-shrink-0 mt-1" />
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
+      </main>
+
+      {/* Mobile Bottom Navigation */}
+      <BottomNav />
     </div>
   );
 }
