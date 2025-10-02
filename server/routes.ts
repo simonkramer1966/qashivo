@@ -8360,20 +8360,23 @@ Payment required immediately to avoid collection action. Contact us NOW.`
         return res.status(400).json({ message: "Xero not connected" });
       }
 
-      const tokens = {
-        accessToken: tenant.xeroAccessToken,
-        refreshToken: tenant.xeroRefreshToken!,
-        expiresAt: tenant.xeroExpiresAt || new Date(Date.now() + 30 * 60 * 1000), // Use stored expiry or fallback
-        tenantId: tenant.xeroTenantId!,
-      };
+      // Use comprehensive sync service that includes invoice processing
+      const result = await xeroSyncService.syncAllDataForTenant(user.tenantId);
 
-      // Sync contacts first, then invoices
-      const contactResults = await xeroService.syncContactsToDatabase(tokens, user.tenantId);
-      const invoiceResults = await xeroService.syncInvoicesToDatabase(tokens, user.tenantId);
+      if (!result.success) {
+        return res.status(500).json({ 
+          message: "Sync failed", 
+          error: result.error 
+        });
+      }
 
       res.json({
-        contacts: contactResults,
-        invoices: invoiceResults,
+        success: true,
+        contactsCount: result.contactsCount,
+        invoicesCount: result.invoicesCount,
+        billsCount: result.billsCount,
+        bankAccountsCount: result.bankAccountsCount,
+        bankTransactionsCount: result.bankTransactionsCount,
       });
     } catch (error) {
       console.error("Error syncing with Xero:", error);

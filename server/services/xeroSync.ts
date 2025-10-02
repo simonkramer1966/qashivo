@@ -182,6 +182,10 @@ export class XeroSyncService {
 
       console.log(`✅ Invoice sync completed. Total collection-relevant invoices cached: ${totalInvoicesCount}`);
 
+      // Now process cached invoices and insert collection-relevant ones into main invoices table
+      const processedCount = await this.processCachedInvoices(tenantId);
+      console.log(`✅ Processed ${processedCount} collection-relevant invoices into main invoices table`);
+
       return {
         success: true,
         invoicesCount: totalInvoicesCount,
@@ -194,6 +198,104 @@ export class XeroSyncService {
         invoicesCount: 0,
         error: error instanceof Error ? error.message : "Unknown error",
       };
+    }
+  }
+
+  async processCachedInvoices(tenantId: string): Promise<number> {
+    try {
+      // Get all collection-relevant cached invoices (AUTHORISED status with amount due)
+      const cachedInvoices = await db
+        .select()
+        .from(cachedXeroInvoices)
+        .where(eq(cachedXeroInvoices.tenantId, tenantId));
+
+      console.log(`📊 Processing ${cachedInvoices.length} cached invoices...`);
+
+      // Filter for collection-relevant: AUTHORISED status with outstanding amount
+      const collectionRelevant = cachedInvoices.filter(inv => {
+        const xeroStatus = inv.metadata?.xeroStatus;
+        const amountDue = parseFloat(inv.amount) - parseFloat(inv.amountPaid || "0");
+        return xeroStatus === 'AUTHORISED' && amountDue > 0;
+      });
+
+      console.log(`🎯 Found ${collectionRelevant.length} collection-relevant invoices (AUTHORISED with amount due)`);
+
+      // Clear existing invoices for this tenant
+      await db
+        .delete(invoices)
+        .where(eq(invoices.tenantId, tenantId));
+
+      console.log(`🗑️  Cleared existing invoices`);
+
+      let processedCount = 0;
+
+      // Insert collection-relevant invoices into main table
+      for (const cachedInv of collectionRelevant) {
+        try {
+          // Find or create contact
+          const contactXeroId = cachedInv.contact?.ContactID;
+          const contactName = cachedInv.contact?.Name;
+
+          if (!contactXeroId) {
+            console.warn(`⚠️  Skipping invoice ${cachedInv.invoiceNumber} - no contact ID`);
+            continue;
+          }
+
+          let [contact] = await db
+            .select()
+            .from(contacts)
+            .where(
+              and(
+                eq(contacts.tenantId, tenantId),
+                eq(contacts.xeroContactId, contactXeroId)
+              )
+            );
+
+          if (!contact) {
+            // Create contact if it doesn't exist
+            const [newContact] = await db
+              .insert(contacts)
+              .values({
+                tenantId,
+                xeroContactId: contactXeroId,
+                name: contactName || 'Unknown',
+                role: 'customer',
+              })
+              .returning();
+            contact = newContact;
+          }
+
+          // Insert invoice
+          await db
+            .insert(invoices)
+            .values({
+              tenantId,
+              contactId: contact.id,
+              xeroInvoiceId: cachedInv.xeroInvoiceId,
+              invoiceNumber: cachedInv.invoiceNumber,
+              amount: cachedInv.amount,
+              amountPaid: cachedInv.amountPaid,
+              taxAmount: cachedInv.taxAmount,
+              status: cachedInv.status,
+              issueDate: cachedInv.issueDate,
+              dueDate: cachedInv.dueDate,
+              paidDate: cachedInv.paidDate,
+              description: cachedInv.description,
+              currency: cachedInv.currency,
+            });
+
+          processedCount++;
+        } catch (error) {
+          console.error(`Error processing invoice ${cachedInv.invoiceNumber}:`, error);
+        }
+      }
+
+      console.log(`✅ Successfully processed ${processedCount} invoices into main table`);
+      return processedCount;
+
+    } catch (error) {
+      console.error("Error processing cached invoices:", error);
+      return 0;
     }
   }
 
