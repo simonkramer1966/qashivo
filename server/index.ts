@@ -45,8 +45,10 @@ app.use((req, res, next) => {
       console.log("🔌 Initializing API middleware system...");
       const { apiMiddleware } = await import("./middleware");
       
-      // Import provider classes (MVP only: Xero, SendGrid, Retell)
+      // Import provider classes
       const { XeroProvider } = await import("./middleware/providers/XeroProvider");
+      const { QuickBooksProvider } = await import("./middleware/providers/QuickBooksProvider");
+      const { SageProvider } = await import("./middleware/providers/SageProvider");
       const { SendGridProvider } = await import("./middleware/providers/SendGridProvider");
       const { RetellProvider } = await import("./middleware/providers/RetellProvider");
       
@@ -74,9 +76,12 @@ app.use((req, res, next) => {
         console.log("⚠️  Xero provider not configured (missing XERO_CLIENT_ID or XERO_CLIENT_SECRET)");
       }
 
-      // MVP CLEANUP: Sage provider disabled for MVP
       // Configure and register Sage provider
-      /* if (process.env.SAGE_CLIENT_ID && process.env.SAGE_CLIENT_SECRET) {
+      if (process.env.SAGE_CLIENT_ID && process.env.SAGE_CLIENT_SECRET) {
+        const domain = process.env.REPLIT_DOMAINS?.split(',')[0] || 'localhost:5000';
+        const protocol = domain.includes('localhost') ? 'http' : 'https';
+        const baseUrl = `${protocol}://${domain}`;
+        
         const sageProvider = new SageProvider({
           name: 'sage',
           type: 'accounting',
@@ -84,7 +89,7 @@ app.use((req, res, next) => {
           clientSecret: process.env.SAGE_CLIENT_SECRET,
           baseUrl: 'https://api.accounting.sage.com/v3.1',
           scopes: ['full_access'],
-          redirectUri: `${process.env.BASE_URL || 'http://localhost:5000'}/api/auth/sage/callback`,
+          redirectUri: `${baseUrl}/api/providers/callback/sage`,
           environment: process.env.NODE_ENV === 'production' ? 'production' : 'sandbox'
         });
         
@@ -92,10 +97,14 @@ app.use((req, res, next) => {
         console.log("✅ Sage provider registered successfully");
       } else {
         console.log("⚠️  Sage provider not configured (missing SAGE_CLIENT_ID or SAGE_CLIENT_SECRET)");
-      } */
+      }
 
-      // MVP CLEANUP: QuickBooks provider disabled for MVP
-      /* if (process.env.QB_CLIENT_ID && process.env.QB_CLIENT_SECRET) {
+      // Configure and register QuickBooks provider
+      if (process.env.QB_CLIENT_ID && process.env.QB_CLIENT_SECRET) {
+        const domain = process.env.REPLIT_DOMAINS?.split(',')[0] || 'localhost:5000';
+        const protocol = domain.includes('localhost') ? 'http' : 'https';
+        const baseUrl = `${protocol}://${domain}`;
+        
         const quickBooksProvider = new QuickBooksProvider({
           name: 'quickbooks',
           type: 'accounting',
@@ -103,7 +112,7 @@ app.use((req, res, next) => {
           clientSecret: process.env.QB_CLIENT_SECRET,
           baseUrl: process.env.NODE_ENV === 'production' ? 'https://quickbooks.api.intuit.com' : 'https://sandbox-quickbooks.api.intuit.com',
           scopes: ['com.intuit.quickbooks.accounting'],
-          redirectUri: `${process.env.BASE_URL || 'http://localhost:5000'}/api/auth/quickbooks/callback`,
+          redirectUri: `${baseUrl}/api/providers/callback/quickbooks`,
           environment: process.env.NODE_ENV === 'production' ? 'production' : 'sandbox'
         });
         
@@ -111,7 +120,7 @@ app.use((req, res, next) => {
         console.log("✅ QuickBooks provider registered successfully");
       } else {
         console.log("⚠️  QuickBooks provider not configured (missing QB_CLIENT_ID or QB_CLIENT_SECRET)");
-      } */
+      }
 
       // Configure and register SendGrid provider
       if (process.env.SENDGRID_API_KEY) {
