@@ -151,21 +151,45 @@ export default function Header({ title, subtitle, action, noBorder = true, title
 
   return (
     <header className="glass-card px-4 sm:px-6 py-4 sm:py-6 border-0 rounded-none shadow-glass">
-      <div className="flex items-center justify-between">
-        {/* Logo and Name - Mobile Only */}
-        <div className="flex lg:hidden items-center space-x-3">
-          <div className="w-10 h-10 flex items-center justify-center">
-            <img src={nexusLogo} alt="Qashivo" className="w-full h-full object-contain" />
-          </div>
-          <div>
-            <h1 className="text-lg font-semibold text-gray-900">
+      {/* Mobile View - Logo, Name, and Page Title */}
+      <div className="lg:hidden">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center space-x-2">
+            <div className="w-8 h-8 flex items-center justify-center">
+              <img src={nexusLogo} alt="Qashivo" className="w-full h-full object-contain" />
+            </div>
+            <h1 className="text-base font-semibold text-gray-900">
               Qashivo
             </h1>
           </div>
+          {/* Sync Button on Mobile */}
+          {tenant?.xeroAccessToken && (
+            <Button
+              onClick={() => syncMutation.mutate()}
+              disabled={syncMutation.isPending}
+              variant="ghost"
+              size="sm"
+              className="h-9 px-3 bg-[#17B6C3]/10 hover:bg-[#17B6C3]/20 text-[#17B6C3] border border-[#17B6C3]/20"
+              data-testid="button-sync-now"
+            >
+              {syncMutation.isPending ? (
+                <div className="w-4 h-4 border-2 border-[#17B6C3] border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <AlertCircle className="h-4 w-4" />
+              )}
+            </Button>
+          )}
         </div>
-        
-        {/* Page Title - Desktop Only */}
-        <div className="hidden lg:block">
+        <div>
+          <h2 className="text-xl font-semibold text-foreground" data-testid="text-page-title">
+            {title}
+          </h2>
+        </div>
+      </div>
+
+      {/* Desktop View - Page Title and Actions */}
+      <div className="hidden lg:flex items-center justify-between">
+        <div>
           <h2 className={`${titleSize} font-semibold text-foreground`} data-testid="text-page-title">
             {title}
           </h2>
@@ -173,7 +197,7 @@ export default function Header({ title, subtitle, action, noBorder = true, title
             {subtitle}
           </p>
         </div>
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center space-x-2 sm:space-x-4">
           {/* Sync Button - Only show if Xero is connected */}
           {tenant?.xeroAccessToken && (
             <TooltipProvider>
