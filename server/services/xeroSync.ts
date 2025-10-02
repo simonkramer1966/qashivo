@@ -265,6 +265,14 @@ export class XeroSyncService {
             contact = newContact;
           }
 
+          // Map status correctly: unpaid → pending or overdue based on due date
+          let mappedStatus = cachedInv.status;
+          if (cachedInv.status === 'unpaid') {
+            const now = new Date();
+            const dueDate = new Date(cachedInv.dueDate);
+            mappedStatus = dueDate < now ? 'overdue' : 'pending';
+          }
+
           // Insert invoice
           await db
             .insert(invoices)
@@ -276,7 +284,7 @@ export class XeroSyncService {
               amount: cachedInv.amount,
               amountPaid: cachedInv.amountPaid,
               taxAmount: cachedInv.taxAmount,
-              status: cachedInv.status,
+              status: mappedStatus,
               issueDate: cachedInv.issueDate,
               dueDate: cachedInv.dueDate,
               paidDate: cachedInv.paidDate,
