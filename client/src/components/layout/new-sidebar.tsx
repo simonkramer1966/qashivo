@@ -391,7 +391,7 @@ export default function NewSidebar() {
   return (
     <>
     <aside className={cn(
-      "glass-card-strong border-0 border-r border-white/30 flex flex-col h-full transition-all duration-300 rounded-none",
+      "hidden lg:flex glass-card-strong border-0 border-r border-white/30 flex-col h-full transition-all duration-300 rounded-none",
       isCollapsed ? "w-16" : "w-64"
     )}>
       {/* Header */}
