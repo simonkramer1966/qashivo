@@ -63,8 +63,8 @@ export default {
         },
       },
       fontFamily: {
-        sans: ["Inter", "-apple-system", "BlinkMacSystemFont", "San Francisco", "Segoe UI", "system-ui", "sans-serif"],
-        display: ["Inter", "sans-serif"],
+        sans: ["DM Sans", "-apple-system", "BlinkMacSystemFont", "San Francisco", "Segoe UI", "system-ui", "sans-serif"],
+        display: ["DM Sans", "sans-serif"],
         mono: ["SF Mono", "Menlo", "Monaco", "Courier New", "monospace"],
       },
       keyframes: {
