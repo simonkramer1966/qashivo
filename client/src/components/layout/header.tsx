@@ -189,7 +189,7 @@ export default function Header({ title, subtitle, action, noBorder = true, title
 
           {/* User Profile */}
           <DropdownMenu>
-            <DropdownMenuTrigger className="flex items-center space-x-3 hover:bg-accent hover:text-accent-foreground rounded-lg px-3 py-2 transition-colors" data-testid="button-user-menu">
+            <DropdownMenuTrigger className="hidden lg:flex items-center space-x-3 hover:bg-accent hover:text-accent-foreground rounded-lg px-3 py-2 transition-colors" data-testid="button-user-menu">
               <div className="text-right">
                 <p className="text-sm font-medium text-foreground" data-testid="text-user-name">
                   {getDisplayName()}
