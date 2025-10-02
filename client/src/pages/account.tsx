@@ -2,19 +2,21 @@ import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { LogOut, User, Mail, Shield, Link2, Unlink } from "lucide-react";
+import { LogOut, User, Mail, Shield, Link2, Unlink, Plug } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
 import type { Tenant } from "@shared/schema";
 import BottomNav from "@/components/layout/bottom-nav";
-import { SiXero } from "react-icons/si";
+import { SiXero, SiQuickbooks, SiSage } from "react-icons/si";
 
 export default function Account() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [isConnecting, setIsConnecting] = useState(false);
   const [isDisconnecting, setIsDisconnecting] = useState(false);
+  const [selectedIntegration, setSelectedIntegration] = useState<string>("xero");
 
   const { data: tenant, isLoading: tenantLoading, isError: tenantError } = useQuery<Tenant>({
     queryKey: ["/api/tenant"],
@@ -24,22 +26,38 @@ export default function Account() {
     window.location.href = "/api/logout";
   };
 
-  const handleXeroConnect = async () => {
+  const integrationOptions = [
+    { value: "xero", label: "Xero", icon: SiXero, color: "#13B5EA" },
+    { value: "quickbooks", label: "QuickBooks Online", icon: SiQuickbooks, color: "#2CA01C" },
+    { value: "sage", label: "Sage", icon: SiSage, color: "#00DC06" },
+  ];
+
+  const getConnectedIntegration = () => {
+    if (tenant?.xeroTenantId) return "xero";
+    return null;
+  };
+
+  const connectedIntegration = getConnectedIntegration();
+  const selectedIntegrationData = integrationOptions.find(opt => opt.value === selectedIntegration);
+
+  const handleConnect = async () => {
     setIsConnecting(true);
+    const integration = integrationOptions.find(opt => opt.value === selectedIntegration);
+    
     try {
-      const response = await fetch('/api/providers/connect/xero');
+      const response = await fetch(`/api/providers/connect/${selectedIntegration}`);
       const data = await response.json();
       
       if (response.ok && data.success && data.authUrl) {
         window.location.href = data.authUrl;
       } else {
-        const errorMessage = data.message || 'Failed to initiate Xero connection';
+        const errorMessage = data.message || `Failed to initiate ${integration?.label} connection`;
         const isConfigError = errorMessage.toLowerCase().includes('not configured') || response.status === 400;
         
         toast({
           title: isConfigError ? "Configuration Required" : "Connection Error",
           description: isConfigError 
-            ? "Xero API credentials need to be configured. Please contact support to enable this integration."
+            ? `${integration?.label} API credentials need to be configured. Please contact support to enable this integration.`
             : errorMessage,
           variant: "destructive",
         });
@@ -47,7 +65,7 @@ export default function Account() {
     } catch (error) {
       toast({
         title: "Connection Error",
-        description: "Failed to connect to Xero. Please try again.",
+        description: `Failed to connect to ${integration?.label}. Please try again.`,
         variant: "destructive",
       });
     } finally {
@@ -55,10 +73,14 @@ export default function Account() {
     }
   };
 
-  const handleXeroDisconnect = async () => {
+  const handleDisconnect = async () => {
+    if (!connectedIntegration) return;
+    
     setIsDisconnecting(true);
+    const integration = integrationOptions.find(opt => opt.value === connectedIntegration);
+    
     try {
-      const response = await fetch('/api/providers/disconnect/xero', {
+      const response = await fetch(`/api/providers/disconnect/${connectedIntegration}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -67,7 +89,7 @@ export default function Account() {
       
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to disconnect from Xero');
+        throw new Error(errorData.message || `Failed to disconnect from ${integration?.label}`);
       }
       
       const result = await response.json();
@@ -79,13 +101,13 @@ export default function Account() {
       
       toast({
         title: "Disconnected",
-        description: result.message || "Successfully disconnected from Xero",
+        description: result.message || `Successfully disconnected from ${integration?.label}`,
         variant: "default",
       });
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to disconnect from Xero. Please try again.",
+        description: `Failed to disconnect from ${integration?.label}. Please try again.`,
         variant: "destructive",
       });
     } finally {
@@ -138,53 +160,45 @@ export default function Account() {
           </CardContent>
         </Card>
 
-        {/* Organization Card */}
+        {/* Integration Card */}
         <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
           <CardHeader>
             <CardTitle className="text-xl font-bold flex items-center">
               <div className="p-2 bg-[#17B6C3]/10 rounded-lg mr-3">
-                <Shield className="h-5 w-5 text-[#17B6C3]" />
+                <Plug className="h-5 w-5 text-[#17B6C3]" />
               </div>
-              Organization
+              Integration
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {tenantLoading ? (
-              <div className="h-6 w-48 bg-slate-200 animate-pulse rounded"></div>
-            ) : tenantError ? (
-              <p className="text-sm text-gray-500">Unable to load organization</p>
-            ) : tenant ? (
-              <p className="font-semibold text-lg">
-                {tenant.settings?.companyName || tenant.name}
-              </p>
-            ) : (
-              <p className="text-sm text-gray-500">No organization</p>
-            )}
-            
-            {/* Xero Connection Status & Actions */}
-            <div className="pt-3 border-t border-gray-200">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center space-x-2">
-                  <SiXero className="h-5 w-5 text-[#13B5EA]" />
-                  <span className="font-medium text-sm">Xero</span>
-                </div>
-                {tenant?.xeroTenantId && (
+            {connectedIntegration ? (
+              <>
+                {/* Connected Status */}
+                <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg border border-green-200">
+                  <div className="flex items-center space-x-2">
+                    {selectedIntegrationData && (
+                      <selectedIntegrationData.icon 
+                        className="h-5 w-5" 
+                        style={{ color: selectedIntegrationData.color }}
+                      />
+                    )}
+                    <span className="font-medium text-sm">
+                      {integrationOptions.find(opt => opt.value === connectedIntegration)?.label}
+                    </span>
+                  </div>
                   <div className="flex items-center space-x-2">
                     <div className="h-2 w-2 bg-green-500 rounded-full" />
                     <span className="text-xs text-green-600 font-medium">Connected</span>
                   </div>
-                )}
-              </div>
-              
-              {tenantLoading ? (
-                <div className="h-10 bg-slate-200 animate-pulse rounded"></div>
-              ) : tenant?.xeroTenantId ? (
+                </div>
+                
+                {/* Disconnect Button */}
                 <Button
-                  onClick={handleXeroDisconnect}
+                  onClick={handleDisconnect}
                   disabled={isDisconnecting}
                   variant="outline"
                   className="w-full border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 hover:border-red-300"
-                  data-testid="button-disconnect-xero"
+                  data-testid="button-disconnect-integration"
                 >
                   {isDisconnecting ? (
                     <>
@@ -194,16 +208,42 @@ export default function Account() {
                   ) : (
                     <>
                       <Unlink className="mr-2 h-4 w-4" />
-                      Disconnect Xero
+                      Disconnect
                     </>
                   )}
                 </Button>
-              ) : (
+              </>
+            ) : (
+              <>
+                {/* Integration Selector */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">Select Integration</label>
+                  <Select value={selectedIntegration} onValueChange={setSelectedIntegration}>
+                    <SelectTrigger className="bg-white/70 border-gray-200/30" data-testid="select-integration">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {integrationOptions.map((option) => {
+                        const Icon = option.icon;
+                        return (
+                          <SelectItem key={option.value} value={option.value}>
+                            <div className="flex items-center space-x-2">
+                              <Icon className="h-4 w-4" style={{ color: option.color }} />
+                              <span>{option.label}</span>
+                            </div>
+                          </SelectItem>
+                        );
+                      })}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                {/* Connect Button */}
                 <Button
-                  onClick={handleXeroConnect}
+                  onClick={handleConnect}
                   disabled={isConnecting || tenantLoading}
                   className="w-full bg-[#17B6C3] hover:bg-[#1396A1] text-white"
-                  data-testid="button-connect-xero"
+                  data-testid="button-connect-integration"
                 >
                   {isConnecting ? (
                     <>
@@ -213,12 +253,12 @@ export default function Account() {
                   ) : (
                     <>
                       <Link2 className="mr-2 h-4 w-4" />
-                      Connect to Xero
+                      Connect to {selectedIntegrationData?.label}
                     </>
                   )}
                 </Button>
-              )}
-            </div>
+              </>
+            )}
           </CardContent>
         </Card>
 
