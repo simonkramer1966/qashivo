@@ -211,14 +211,14 @@ export class XeroSyncService {
 
       console.log(`📊 Processing ${cachedInvoices.length} cached invoices...`);
 
-      // Filter for collection-relevant: AUTHORISED status with outstanding amount
+      // Filter for collection-relevant: unpaid or partial invoices with outstanding amount
       const collectionRelevant = cachedInvoices.filter(inv => {
-        const xeroStatus = inv.metadata?.xeroStatus;
         const amountDue = parseFloat(inv.amount) - parseFloat(inv.amountPaid || "0");
-        return xeroStatus === 'AUTHORISED' && amountDue > 0;
+        const isCollectionRelevant = (inv.status === 'unpaid' || inv.status === 'partial') && amountDue > 0;
+        return isCollectionRelevant;
       });
 
-      console.log(`🎯 Found ${collectionRelevant.length} collection-relevant invoices (AUTHORISED with amount due)`);
+      console.log(`🎯 Found ${collectionRelevant.length} collection-relevant invoices (unpaid/partial with amount due)`);
 
       // Clear existing invoices for this tenant
       await db
@@ -265,9 +265,9 @@ export class XeroSyncService {
             contact = newContact;
           }
 
-          // Map status correctly: unpaid → pending or overdue based on due date
+          // Map status correctly: unpaid/partial → pending or overdue based on due date
           let mappedStatus = cachedInv.status;
-          if (cachedInv.status === 'unpaid') {
+          if (cachedInv.status === 'unpaid' || cachedInv.status === 'partial') {
             const now = new Date();
             const dueDate = new Date(cachedInv.dueDate);
             mappedStatus = dueDate < now ? 'overdue' : 'pending';
