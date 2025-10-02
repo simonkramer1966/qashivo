@@ -11,7 +11,11 @@ import {
   Clock,
   Target,
   ArrowRight,
-  ChevronRight
+  ChevronRight,
+  FileText,
+  MessageSquare,
+  Scale,
+  Gavel
 } from "lucide-react";
 import NewSidebar from "@/components/layout/new-sidebar";
 import BottomNav from "@/components/layout/bottom-nav";
@@ -158,6 +162,82 @@ export default function Cashboard() {
                 </div>
                 <div className="p-2 bg-slate-100 rounded-xl">
                   <Clock className="h-5 w-5 text-slate-600" />
+                </div>
+              </div>
+            </div>
+
+            {/* Payment Plans */}
+            <div className="card-apple p-4 sm:p-6" data-testid="card-payment-plans">
+              <div className="flex items-start justify-between mb-3">
+                <div>
+                  <p className="text-sm text-slate-600 mb-1">Payment Plans</p>
+                  {metricsLoading ? (
+                    <div className="h-8 w-16 bg-slate-200 animate-pulse rounded"></div>
+                  ) : (
+                    <h3 className="text-2xl sm:text-3xl font-bold text-slate-900">
+                      0
+                    </h3>
+                  )}
+                </div>
+                <div className="p-2 bg-purple-100 rounded-xl">
+                  <FileText className="h-5 w-5 text-purple-600" />
+                </div>
+              </div>
+            </div>
+
+            {/* Disputes */}
+            <div className="card-apple p-4 sm:p-6" data-testid="card-disputes">
+              <div className="flex items-start justify-between mb-3">
+                <div>
+                  <p className="text-sm text-slate-600 mb-1">Disputes</p>
+                  {metricsLoading ? (
+                    <div className="h-8 w-16 bg-slate-200 animate-pulse rounded"></div>
+                  ) : (
+                    <h3 className="text-2xl sm:text-3xl font-bold text-slate-900">
+                      0
+                    </h3>
+                  )}
+                </div>
+                <div className="p-2 bg-orange-100 rounded-xl">
+                  <MessageSquare className="h-5 w-5 text-orange-600" />
+                </div>
+              </div>
+            </div>
+
+            {/* Debt Recovery */}
+            <div className="card-apple p-4 sm:p-6" data-testid="card-debt-recovery">
+              <div className="flex items-start justify-between mb-3">
+                <div>
+                  <p className="text-sm text-slate-600 mb-1">Debt Recovery</p>
+                  {metricsLoading ? (
+                    <div className="h-8 w-24 bg-slate-200 animate-pulse rounded"></div>
+                  ) : (
+                    <h3 className="text-2xl sm:text-3xl font-bold text-slate-900">
+                      {formatCurrency(0)}
+                    </h3>
+                  )}
+                </div>
+                <div className="p-2 bg-indigo-100 rounded-xl">
+                  <Scale className="h-5 w-5 text-indigo-600" />
+                </div>
+              </div>
+            </div>
+
+            {/* Legal */}
+            <div className="card-apple p-4 sm:p-6" data-testid="card-legal">
+              <div className="flex items-start justify-between mb-3">
+                <div>
+                  <p className="text-sm text-slate-600 mb-1">Legal Cases</p>
+                  {metricsLoading ? (
+                    <div className="h-8 w-16 bg-slate-200 animate-pulse rounded"></div>
+                  ) : (
+                    <h3 className="text-2xl sm:text-3xl font-bold text-slate-900">
+                      0
+                    </h3>
+                  )}
+                </div>
+                <div className="p-2 bg-red-100 rounded-xl">
+                  <Gavel className="h-5 w-5 text-red-600" />
                 </div>
               </div>
             </div>
