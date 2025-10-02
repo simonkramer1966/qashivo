@@ -150,7 +150,7 @@ export default function Header({ title, subtitle, action, noBorder = true, title
   };
 
   return (
-    <header className="sticky top-0 z-40 glass-card px-4 sm:px-6 py-4 sm:py-6 border-0 rounded-none shadow-glass">
+    <header className="sticky top-0 z-40 bg-white glass-card px-4 sm:px-6 py-4 sm:py-6 border-0 rounded-none shadow-glass">
       {/* Mobile View - Logo, Name, and Page Title */}
       <div className="lg:hidden">
         <div className="flex items-center justify-between mb-3">
