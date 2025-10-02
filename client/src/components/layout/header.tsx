@@ -9,6 +9,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Switch } from "@/components/ui/switch";
+import nexusLogo from "@assets/Main Nexus Logo copy_1756923544828.png";
 
 interface HeaderProps {
   title: string;
@@ -149,9 +150,22 @@ export default function Header({ title, subtitle, action, noBorder = true, title
   };
 
   return (
-    <header className="glass-card px-6 py-6 border-0 rounded-none shadow-glass">
+    <header className="glass-card px-4 sm:px-6 py-4 sm:py-6 border-0 rounded-none shadow-glass">
       <div className="flex items-center justify-between">
-        <div>
+        {/* Logo and Name - Mobile Only */}
+        <div className="flex lg:hidden items-center space-x-3">
+          <div className="w-10 h-10 flex items-center justify-center">
+            <img src={nexusLogo} alt="Qashivo" className="w-full h-full object-contain" />
+          </div>
+          <div>
+            <h1 className="text-lg font-semibold text-gray-900">
+              Qashivo
+            </h1>
+          </div>
+        </div>
+        
+        {/* Page Title - Desktop Only */}
+        <div className="hidden lg:block">
           <h2 className={`${titleSize} font-semibold text-foreground`} data-testid="text-page-title">
             {title}
           </h2>
