@@ -10,6 +10,9 @@ import { Loader2, UserPlus, Building2, Mail, Phone, MapPin, CreditCard, CheckCir
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import NewSidebar from "@/components/layout/new-sidebar";
+import BottomNav from "@/components/layout/bottom-nav";
+import Header from "@/components/layout/header";
 
 type CreditCheckResult = {
   score: number;
@@ -141,29 +144,39 @@ export default function Onboarding() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-teal-50 p-4 md:p-8">
-      <div className="max-w-4xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2 flex items-center gap-2">
-            <UserPlus className="w-8 h-8 text-[#17B6C3]" />
-            Customer Onboarding
-          </h1>
-          <p className="text-gray-600">Add new customers with AI-powered credit assessment</p>
-          
-          {/* Progress bar */}
-          <div className="mt-4">
-            <Progress value={getStepProgress()} className="h-2" />
-            <div className="flex justify-between mt-2 text-sm text-gray-600">
-              <span className={currentStep === "details" ? "font-semibold text-[#17B6C3]" : ""}>Customer Details</span>
-              <span className={currentStep === "credit-check" ? "font-semibold text-[#17B6C3]" : ""}>Credit Check</span>
-              <span className={currentStep === "complete" ? "font-semibold text-[#17B6C3]" : ""}>Complete</span>
-            </div>
-          </div>
-        </div>
+    <div className="flex h-screen bg-white">
+      {/* Desktop Sidebar */}
+      <div className="hidden lg:block">
+        <NewSidebar />
+      </div>
 
-        {/* Step 1: Customer Details */}
-        {currentStep === "details" && (
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col min-h-screen overflow-hidden">
+        <Header />
+        
+        <main className="flex-1 overflow-y-auto bg-gradient-to-br from-slate-50 via-blue-50 to-teal-50 pb-20 lg:pb-8">
+          <div className="max-w-4xl mx-auto p-4 md:p-8">
+            {/* Header */}
+            <div className="mb-8">
+              <h1 className="text-3xl font-bold text-gray-900 mb-2 flex items-center gap-2">
+                <UserPlus className="w-8 h-8 text-[#17B6C3]" />
+                Customer Onboarding
+              </h1>
+              <p className="text-gray-600">Add new customers with AI-powered credit assessment</p>
+              
+              {/* Progress bar */}
+              <div className="mt-4">
+                <Progress value={getStepProgress()} className="h-2" />
+                <div className="flex justify-between mt-2 text-sm text-gray-600">
+                  <span className={currentStep === "details" ? "font-semibold text-[#17B6C3]" : ""}>Customer Details</span>
+                  <span className={currentStep === "credit-check" ? "font-semibold text-[#17B6C3]" : ""}>Credit Check</span>
+                  <span className={currentStep === "complete" ? "font-semibold text-[#17B6C3]" : ""}>Complete</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Step 1: Customer Details */}
+            {currentStep === "details" && (
           <Card className="glass-card-light">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -316,9 +329,9 @@ export default function Onboarding() {
           </Card>
         )}
 
-        {/* Step 2: Credit Check Results */}
-        {currentStep === "credit-check" && creditCheckResult && (
-          <div className="space-y-6">
+            {/* Step 2: Credit Check Results */}
+            {currentStep === "credit-check" && creditCheckResult && (
+              <div className="space-y-6">
             <Card className="glass-card-light">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -407,12 +420,12 @@ export default function Onboarding() {
                 </div>
               </CardContent>
             </Card>
-          </div>
-        )}
+              </div>
+            )}
 
-        {/* Step 3: Complete */}
-        {currentStep === "complete" && (
-          <Card className="glass-card-light text-center">
+            {/* Step 3: Complete */}
+            {currentStep === "complete" && (
+              <Card className="glass-card-light text-center">
             <CardContent className="py-12">
               <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <CheckCircle2 className="w-8 h-8 text-green-600" />
@@ -438,8 +451,15 @@ export default function Onboarding() {
                 </Button>
               </div>
             </CardContent>
-          </Card>
-        )}
+              </Card>
+            )}
+          </div>
+        </main>
+      </div>
+
+      {/* Mobile Bottom Nav */}
+      <div className="lg:hidden">
+        <BottomNav />
       </div>
     </div>
   );
