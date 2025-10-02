@@ -1,15 +1,20 @@
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import NewSidebar from "@/components/layout/new-sidebar";
 import Header from "@/components/layout/header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { BookOpen, Mail, MessageSquare, Phone, Bot, Settings, TrendingUp, Shield, Workflow, Zap, Database, Lock, FileText, Code, Activity } from "lucide-react";
+import { BookOpen, Mail, MessageSquare, Phone, Bot, Settings, TrendingUp, Shield, Workflow, Zap, Database, Lock, FileText, Code, Activity, RefreshCw } from "lucide-react";
 
 export default function Documentation() {
   const { isAuthenticated } = useAuth();
   const [activeSection, setActiveSection] = useState("overview");
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const sections = [
     { id: "overview", name: "System Overview", icon: BookOpen },
@@ -23,6 +28,38 @@ export default function Documentation() {
     { id: "xero", name: "Xero Integration", icon: Database },
     { id: "stripe", name: "Payment Processing", icon: Lock },
   ];
+
+  const syncDocsMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest('POST', '/api/documentation/sync', { baseBranch: 'HEAD~1' });
+      return await response.json();
+    },
+    onSuccess: (data: any) => {
+      if (data.suggestions && data.suggestions.length > 0) {
+        toast({
+          title: "Documentation Sync Complete",
+          description: `${data.suggestions.length} updates suggested. Review them in the Documentation Review page.`,
+        });
+      } else {
+        toast({
+          title: "No Updates Needed",
+          description: data.message || "Documentation is already up to date with recent code changes.",
+        });
+      }
+      queryClient.invalidateQueries({ queryKey: ['/api/documentation/content'] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Sync Failed",
+        description: error.message || "Failed to sync documentation. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleUpdateDocs = () => {
+    syncDocsMutation.mutate();
+  };
 
   const scrollToSection = (sectionId: string) => {
     setActiveSection(sectionId);
@@ -41,11 +78,22 @@ export default function Documentation() {
         
         <div className="container mx-auto px-6 py-6 max-w-7xl">
           {/* Page Header */}
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">System Documentation</h1>
-            <p className="text-gray-600">
-              Complete guide to understanding how Qashivo's AI-driven collections platform works
-            </p>
+          <div className="mb-8 flex items-start justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">System Documentation</h1>
+              <p className="text-gray-600">
+                Complete guide to understanding how Qashivo's AI-driven collections platform works
+              </p>
+            </div>
+            <Button
+              onClick={handleUpdateDocs}
+              disabled={syncDocsMutation.isPending}
+              className="bg-white/70 hover:bg-white/90 backdrop-blur-md border border-gray-200/30 shadow-lg text-[#17B6C3] hover:text-[#1396A1] font-medium transition-all"
+              data-testid="button-update-docs"
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${syncDocsMutation.isPending ? 'animate-spin' : ''}`} />
+              {syncDocsMutation.isPending ? 'Updating...' : 'Update Documentation'}
+            </Button>
           </div>
 
           <div className="grid grid-cols-12 gap-6">
