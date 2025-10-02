@@ -1,13 +1,20 @@
+import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { LogOut, User, Mail, Shield } from "lucide-react";
+import { LogOut, User, Mail, Shield, Link2, Unlink } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
+import { queryClient } from "@/lib/queryClient";
 import type { Tenant } from "@shared/schema";
 import BottomNav from "@/components/layout/bottom-nav";
+import { SiXero } from "react-icons/si";
 
 export default function Account() {
   const { user } = useAuth();
+  const { toast } = useToast();
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [isDisconnecting, setIsDisconnecting] = useState(false);
 
   const { data: tenant } = useQuery<Tenant>({
     queryKey: ["/api/tenant"],
@@ -15,6 +22,75 @@ export default function Account() {
 
   const handleLogout = () => {
     window.location.href = "/api/logout";
+  };
+
+  const handleXeroConnect = async () => {
+    setIsConnecting(true);
+    try {
+      const response = await fetch('/api/providers/connect/xero');
+      const data = await response.json();
+      
+      if (response.ok && data.success && data.authUrl) {
+        window.location.href = data.authUrl;
+      } else {
+        const errorMessage = data.message || 'Failed to initiate Xero connection';
+        const isConfigError = errorMessage.toLowerCase().includes('not configured') || response.status === 400;
+        
+        toast({
+          title: isConfigError ? "Configuration Required" : "Connection Error",
+          description: isConfigError 
+            ? "Xero API credentials need to be configured. Please contact support to enable this integration."
+            : errorMessage,
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Connection Error",
+        description: "Failed to connect to Xero. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsConnecting(false);
+    }
+  };
+
+  const handleXeroDisconnect = async () => {
+    setIsDisconnecting(true);
+    try {
+      const response = await fetch('/api/providers/disconnect/xero', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to disconnect from Xero');
+      }
+      
+      const result = await response.json();
+      
+      // Invalidate relevant queries to refresh the connection status
+      queryClient.invalidateQueries({ queryKey: ['/api/tenant'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/accounting/status'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/xero/sync/settings'] });
+      
+      toast({
+        title: "Disconnected",
+        description: result.message || "Successfully disconnected from Xero",
+        variant: "default",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to disconnect from Xero. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDisconnecting(false);
+    }
   };
 
   return (
@@ -73,16 +149,67 @@ export default function Account() {
                 Organization
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-4">
               <p className="font-semibold text-lg">
                 {tenant.settings?.companyName || tenant.name}
               </p>
-              {tenant.xeroTenantId && (
-                <div className="mt-2 flex items-center space-x-2">
-                  <div className="h-2 w-2 bg-green-500 rounded-full" />
-                  <span className="text-sm text-gray-600">Xero Connected</span>
+              
+              {/* Xero Connection Status & Actions */}
+              <div className="pt-3 border-t border-gray-200">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center space-x-2">
+                    <SiXero className="h-5 w-5 text-[#13B5EA]" />
+                    <span className="font-medium text-sm">Xero</span>
+                  </div>
+                  {tenant.xeroTenantId && (
+                    <div className="flex items-center space-x-2">
+                      <div className="h-2 w-2 bg-green-500 rounded-full" />
+                      <span className="text-xs text-green-600 font-medium">Connected</span>
+                    </div>
+                  )}
                 </div>
-              )}
+                
+                {tenant.xeroTenantId ? (
+                  <Button
+                    onClick={handleXeroDisconnect}
+                    disabled={isDisconnecting}
+                    variant="outline"
+                    className="w-full border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 hover:border-red-300"
+                    data-testid="button-disconnect-xero"
+                  >
+                    {isDisconnecting ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-red-600 border-t-transparent rounded-full animate-spin mr-2" />
+                        Disconnecting...
+                      </>
+                    ) : (
+                      <>
+                        <Unlink className="mr-2 h-4 w-4" />
+                        Disconnect Xero
+                      </>
+                    )}
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={handleXeroConnect}
+                    disabled={isConnecting}
+                    className="w-full bg-[#17B6C3] hover:bg-[#1396A1] text-white"
+                    data-testid="button-connect-xero"
+                  >
+                    {isConnecting ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                        Connecting...
+                      </>
+                    ) : (
+                      <>
+                        <Link2 className="mr-2 h-4 w-4" />
+                        Connect to Xero
+                      </>
+                    )}
+                  </Button>
+                )}
+              </div>
             </CardContent>
           </Card>
         )}
