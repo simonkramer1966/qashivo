@@ -32,7 +32,7 @@ export class XeroSyncService {
         {
           accessToken: tenant.xeroAccessToken,
           refreshToken: tenant.xeroRefreshToken!,
-          expiresAt: new Date(Date.now() + 3600000),
+          expiresAt: tenant.xeroExpiresAt || new Date(Date.now() + 30 * 60 * 1000), // Use stored expiry or fallback
           tenantId: tenant.xeroTenantId!,
         },
         tenantId
@@ -101,7 +101,7 @@ export class XeroSyncService {
             {
               accessToken: tenant.xeroAccessToken,
               refreshToken: tenant.xeroRefreshToken!,
-              expiresAt: new Date(Date.now() + 3600000),
+              expiresAt: tenant.xeroExpiresAt || new Date(Date.now() + 30 * 60 * 1000), // Use stored expiry or fallback
               tenantId: tenant.xeroTenantId!,
             },
             currentPage,

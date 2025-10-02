@@ -1261,7 +1261,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         accessToken: tenant.xeroAccessToken || '',
         refreshToken: tenant.xeroRefreshToken || '',
         tenantId: tenant.xeroTenantId,
-        expiresAt: new Date(Date.now() + 30 * 60 * 1000) // 30 minutes
+        expiresAt: tenant.xeroExpiresAt || new Date(Date.now() + 30 * 60 * 1000) // Use stored expiry or fallback
       };
       
       // Import data using XeroOnboardingService
@@ -8167,6 +8167,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
         xeroAccessToken: tokens.accessToken,
         xeroRefreshToken: tokens.refreshToken,
         xeroTenantId: tokens.tenantId,
+        xeroExpiresAt: tokens.expiresAt,
       });
 
       // Success page with auto-redirect
@@ -8283,7 +8284,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
       const tokens = {
         accessToken: tenant.xeroAccessToken,
         refreshToken: tenant.xeroRefreshToken!,
-        expiresAt: new Date(Date.now() + 3600000), // Assume 1 hour
+        expiresAt: tenant.xeroExpiresAt || new Date(Date.now() + 30 * 60 * 1000), // Use stored expiry or fallback
         tenantId: tenant.xeroTenantId!,
       };
 
@@ -8321,7 +8322,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
       const tokens = {
         accessToken: tenant.xeroAccessToken,
         refreshToken: tenant.xeroRefreshToken!,
-        expiresAt: new Date(Date.now() + 3600000), // Assume 1 hour
+        expiresAt: tenant.xeroExpiresAt || new Date(Date.now() + 30 * 60 * 1000), // Use stored expiry or fallback
         tenantId: tenant.xeroTenantId!,
       };
 

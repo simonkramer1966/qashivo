@@ -184,6 +184,12 @@ class XeroService {
     console.log(`Xero Config: Client ID present: ${!!process.env.XERO_CLIENT_ID}, Redirect URI: ${this.config.redirectUri}`);
   }
 
+  private isTokenExpired(expiresAt: Date): boolean {
+    // Consider token expired if it expires within the next 2 minutes (buffer for safety)
+    const bufferMs = 2 * 60 * 1000; // 2 minutes
+    return new Date(expiresAt).getTime() - bufferMs < Date.now();
+  }
+
   private async makeAuthenticatedRequest(
     tokens: XeroTokens,
     endpoint: string,
@@ -195,6 +201,34 @@ class XeroService {
     if (this.config.clientId === "default_client_id") {
       console.log(`Xero API not configured, mocking request to ${endpoint}`);
       throw new Error("Xero API not configured. Please set XERO_CLIENT_ID and XERO_CLIENT_SECRET environment variables.");
+    }
+
+    // PROACTIVE TOKEN REFRESH: Check if token is expired before making request
+    if (tokens.expiresAt && this.isTokenExpired(tokens.expiresAt)) {
+      console.log('🔄 Xero token expired or expiring soon, proactively refreshing...');
+      
+      try {
+        const refreshedTokens = await this.refreshAccessToken(tokens.refreshToken, tokens.tenantId);
+        
+        if (!refreshedTokens) {
+          throw new Error('Failed to refresh Xero access token');
+        }
+        
+        console.log('✅ Xero token refreshed proactively (expires:', refreshedTokens.expiresAt, ')');
+        
+        // Update the database with new tokens if tenant ID provided
+        if (tenantIdForDbUpdate) {
+          await this.updateTenantTokens(tenantIdForDbUpdate, refreshedTokens);
+        }
+        
+        // Update the tokens object for this request
+        tokens.accessToken = refreshedTokens.accessToken;
+        tokens.refreshToken = refreshedTokens.refreshToken;
+        tokens.expiresAt = refreshedTokens.expiresAt;
+      } catch (refreshError) {
+        console.error('❌ Proactive token refresh failed:', refreshError);
+        // Continue anyway - if it fails, the reactive refresh (on 401) will catch it
+      }
     }
 
     const makeRequest = async (accessToken: string): Promise<any> => {
@@ -287,10 +321,11 @@ class XeroService {
         .set({
           xeroAccessToken: tokens.accessToken,
           xeroRefreshToken: tokens.refreshToken,
+          xeroExpiresAt: tokens.expiresAt,
         })
         .where(eq(tenants.id, tenantId));
         
-      console.log('✅ Updated tenant Xero tokens in database');
+      console.log('✅ Updated tenant Xero tokens in database (expires:', tokens.expiresAt, ')');
     } catch (dbError) {
       console.error('❌ Failed to update tenant tokens in database:', dbError);
       // Don't throw here - we still want the API request to succeed even if DB update fails
