@@ -13,6 +13,7 @@ import ActionCentre from "@/pages/action-centre";
 import Workflows from "@/pages/workflows";
 import ActivityLog from "@/pages/activity-log";
 import Settings from "@/pages/settings";
+import Account from "@/pages/account";
 import PartnerDashboard from "@/pages/partner";
 import Documentation from "@/pages/documentation";
 import DocumentationReview from "@/pages/documentation-review";
@@ -58,6 +59,7 @@ function Router() {
       <Route path="/documentation" component={Documentation} />
       <Route path="/documentation-review" component={DocumentationReview} />
       <Route path="/settings" component={Settings} />
+      <Route path="/account" component={Account} />
       <Route path="/" component={Cashboard} />
       <Route path="/:rest*" component={NotFound} />
     </Switch>

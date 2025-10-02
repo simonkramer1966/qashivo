@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { LayoutDashboard, Target, Users, FileText } from "lucide-react";
+import { LayoutDashboard, Target, Users, FileText, UserCircle } from "lucide-react";
 
 export default function BottomNav() {
   const [location] = useLocation();
@@ -25,6 +25,11 @@ export default function BottomNav() {
       label: "Invoices",
       icon: FileText,
     },
+    {
+      path: "/account",
+      label: "Account",
+      icon: UserCircle,
+    },
   ];
 
   const isActive = (path: string) => {
@@ -36,7 +41,7 @@ export default function BottomNav() {
 
   return (
     <nav className="bottom-nav" data-testid="bottom-nav">
-      <div className="grid grid-cols-4 h-full">
+      <div className="grid grid-cols-5 h-full">
         {navItems.map((item) => {
           const Icon = item.icon;
           const active = isActive(item.path);
