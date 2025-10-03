@@ -1122,21 +1122,21 @@ export class DatabaseStorage implements IStorage {
   }> {
     const outstandingResult = await db
       .select({
-        total: sql<number>`SUM(${invoices.amount} - ${invoices.amountPaid})`,
+        total: sql<number>`SUM(amount - amount_paid)`,
         count: count()
       })
       .from(invoices)
       .where(
         and(
           eq(invoices.tenantId, tenantId),
-          sql`${invoices.status} IN ('pending', 'overdue')`
+          sql`status IN ('pending', 'overdue')`
         )
       );
 
     const overdueResult = await db
       .select({ 
         count: count(),
-        total: sql<number>`SUM(${invoices.amount} - ${invoices.amountPaid})`,
+        total: sql<number>`SUM(amount - amount_paid)`,
         avgDaysOverdue: sql<number>`AVG(EXTRACT(DAY FROM (CURRENT_DATE - due_date::date)))`
       })
       .from(invoices)
@@ -1167,7 +1167,7 @@ export class DatabaseStorage implements IStorage {
       .where(
         and(
           eq(invoices.tenantId, tenantId),
-          sql`${invoices.createdAt} >= NOW() - INTERVAL '90 days'`
+          sql`created_at >= NOW() - INTERVAL '90 days'`
         )
       );
 
