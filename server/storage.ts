@@ -13,6 +13,7 @@ import {
   workflowTemplates,
   retellConfigurations,
   voiceCalls,
+  smsMessages,
   voiceWorkflows,
   voiceWorkflowStates,
   voiceStateTransitions,
@@ -63,6 +64,8 @@ import {
   type InsertRetellConfiguration,
   type VoiceCall,
   type InsertVoiceCall,
+  type SmsMessage,
+  type InsertSmsMessage,
   type VoiceWorkflow,
   type InsertVoiceWorkflow,
   type VoiceWorkflowState,
@@ -253,6 +256,12 @@ export interface IStorage {
   getVoiceCall(id: string, tenantId: string): Promise<(VoiceCall & { contact: Contact; invoice?: Invoice }) | undefined>;
   createVoiceCall(voiceCall: InsertVoiceCall): Promise<VoiceCall>;
   updateVoiceCall(id: string, tenantId: string, updates: Partial<InsertVoiceCall>): Promise<VoiceCall>;
+
+  // SMS Message operations
+  getSmsMessages(tenantId: string, filters?: { contactId?: string; direction?: string; limit?: number }): Promise<(SmsMessage & { contact?: Contact })[]>;
+  getSmsMessage(id: string, tenantId: string): Promise<(SmsMessage & { contact?: Contact }) | undefined>;
+  createSmsMessage(smsMessage: InsertSmsMessage): Promise<SmsMessage>;
+  updateSmsMessage(id: string, tenantId: string, updates: Partial<InsertSmsMessage>): Promise<SmsMessage>;
 
   // Voice Workflow operations
   getVoiceWorkflows(tenantId: string, filters?: { category?: string; isActive?: boolean }): Promise<(VoiceWorkflow & { states: VoiceWorkflowState[]; transitions: VoiceStateTransition[] })[]>;
@@ -2124,6 +2133,118 @@ export class DatabaseStorage implements IStorage {
       .where(and(eq(voiceCalls.id, id), eq(voiceCalls.tenantId, tenantId)))
       .returning();
     return call;
+  }
+
+  // SMS Message operations
+  async getSmsMessages(tenantId: string, filters?: { contactId?: string; direction?: string; limit?: number }): Promise<(SmsMessage & { contact?: Contact })[]> {
+    let query = db
+      .select({
+        id: smsMessages.id,
+        tenantId: smsMessages.tenantId,
+        contactId: smsMessages.contactId,
+        invoiceId: smsMessages.invoiceId,
+        twilioMessageSid: smsMessages.twilioMessageSid,
+        fromNumber: smsMessages.fromNumber,
+        toNumber: smsMessages.toNumber,
+        direction: smsMessages.direction,
+        status: smsMessages.status,
+        body: smsMessages.body,
+        numSegments: smsMessages.numSegments,
+        cost: smsMessages.cost,
+        errorCode: smsMessages.errorCode,
+        errorMessage: smsMessages.errorMessage,
+        intent: smsMessages.intent,
+        sentiment: smsMessages.sentiment,
+        requiresResponse: smsMessages.requiresResponse,
+        respondedAt: smsMessages.respondedAt,
+        sentAt: smsMessages.sentAt,
+        deliveredAt: smsMessages.deliveredAt,
+        createdAt: smsMessages.createdAt,
+        updatedAt: smsMessages.updatedAt,
+        contact: contacts,
+      })
+      .from(smsMessages)
+      .leftJoin(contacts, eq(smsMessages.contactId, contacts.id));
+
+    const conditions = [eq(smsMessages.tenantId, tenantId)];
+
+    if (filters?.contactId) {
+      conditions.push(eq(smsMessages.contactId, filters.contactId));
+    }
+
+    if (filters?.direction) {
+      conditions.push(eq(smsMessages.direction, filters.direction));
+    }
+
+    let results = await query.where(and(...conditions)).orderBy(desc(smsMessages.createdAt));
+
+    if (filters?.limit) {
+      results = results.slice(0, filters.limit);
+    }
+
+    return results.map(result => ({
+      ...result,
+      contact: result.contact || undefined,
+    })) as (SmsMessage & { contact?: Contact })[];
+  }
+
+  async getSmsMessage(id: string, tenantId: string): Promise<(SmsMessage & { contact?: Contact }) | undefined> {
+    const [result] = await db
+      .select({
+        id: smsMessages.id,
+        tenantId: smsMessages.tenantId,
+        contactId: smsMessages.contactId,
+        invoiceId: smsMessages.invoiceId,
+        twilioMessageSid: smsMessages.twilioMessageSid,
+        fromNumber: smsMessages.fromNumber,
+        toNumber: smsMessages.toNumber,
+        direction: smsMessages.direction,
+        status: smsMessages.status,
+        body: smsMessages.body,
+        numSegments: smsMessages.numSegments,
+        cost: smsMessages.cost,
+        errorCode: smsMessages.errorCode,
+        errorMessage: smsMessages.errorMessage,
+        intent: smsMessages.intent,
+        sentiment: smsMessages.sentiment,
+        requiresResponse: smsMessages.requiresResponse,
+        respondedAt: smsMessages.respondedAt,
+        sentAt: smsMessages.sentAt,
+        deliveredAt: smsMessages.deliveredAt,
+        createdAt: smsMessages.createdAt,
+        updatedAt: smsMessages.updatedAt,
+        contact: contacts,
+      })
+      .from(smsMessages)
+      .leftJoin(contacts, eq(smsMessages.contactId, contacts.id))
+      .where(and(eq(smsMessages.id, id), eq(smsMessages.tenantId, tenantId)));
+
+    if (!result) return undefined;
+
+    return {
+      ...result,
+      contact: result.contact || undefined,
+    } as SmsMessage & { contact?: Contact };
+  }
+
+  async createSmsMessage(smsMessage: InsertSmsMessage): Promise<SmsMessage> {
+    const [message] = await db
+      .insert(smsMessages)
+      .values(smsMessage)
+      .returning();
+    return message;
+  }
+
+  async updateSmsMessage(id: string, tenantId: string, updates: Partial<InsertSmsMessage>): Promise<SmsMessage> {
+    const [message] = await db
+      .update(smsMessages)
+      .set({
+        ...updates,
+        updatedAt: new Date(),
+      })
+      .where(and(eq(smsMessages.id, id), eq(smsMessages.tenantId, tenantId)))
+      .returning();
+    return message;
   }
 
   // Voice Workflow operations

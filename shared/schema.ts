@@ -1632,6 +1632,12 @@ export const insertVoiceCallSchema = createInsertSchema(voiceCalls).omit({
   updatedAt: true,
 });
 
+export const insertSmsMessageSchema = createInsertSchema(smsMessages).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export const insertVoiceWorkflowSchema = createInsertSchema(voiceWorkflows).omit({
   id: true,
   createdAt: true,
@@ -1753,6 +1759,8 @@ export type InsertRetellConfiguration = z.infer<typeof insertRetellConfiguration
 export type RetellConfiguration = typeof retellConfigurations.$inferSelect;
 export type InsertVoiceCall = z.infer<typeof insertVoiceCallSchema>;
 export type VoiceCall = typeof voiceCalls.$inferSelect;
+export type InsertSmsMessage = z.infer<typeof insertSmsMessageSchema>;
+export type SmsMessage = typeof smsMessages.$inferSelect;
 export type InsertVoiceWorkflow = z.infer<typeof insertVoiceWorkflowSchema>;
 export type VoiceWorkflow = typeof voiceWorkflows.$inferSelect;
 export type InsertVoiceWorkflowState = z.infer<typeof insertVoiceWorkflowStateSchema>;

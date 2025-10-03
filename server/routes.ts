@@ -7578,6 +7578,80 @@ Payment required immediately to avoid collection action. Contact us NOW.`
     }
   });
 
+  // Twilio SMS webhook for inbound messages
+  app.post("/api/twilio/sms-webhook", async (req, res) => {
+    try {
+      console.log("📨 Twilio SMS webhook received:", JSON.stringify(req.body, null, 2));
+
+      const {
+        MessageSid,
+        From,
+        To,
+        Body,
+        NumSegments,
+        SmsStatus,
+        ErrorCode,
+        ErrorMessage,
+      } = req.body;
+
+      if (!MessageSid || !From || !To || !Body) {
+        return res.status(400).send("Missing required fields");
+      }
+
+      // Try to match contact by phone number
+      const fromPhone = From.replace(/\D/g, '');
+      const toPhone = To.replace(/\D/g, '');
+      
+      // Get all tenants and search for contact
+      const allTenants = await storage.getTenants();
+      let matchedContact: any = null;
+      let matchedTenantId: string | null = null;
+
+      for (const tenant of allTenants) {
+        const contacts = await storage.getContacts(tenant.id);
+        const contact = contacts.find(c => 
+          c.phone && c.phone.replace(/\D/g, '') === fromPhone
+        );
+        if (contact) {
+          matchedContact = contact;
+          matchedTenantId = tenant.id;
+          break;
+        }
+      }
+
+      if (!matchedContact || !matchedTenantId) {
+        console.warn("No matching contact found for phone:", From);
+        return res.status(200).send("OK - No matching contact");
+      }
+
+      // Save SMS to database
+      const smsData: any = {
+        tenantId: matchedTenantId,
+        contactId: matchedContact.id,
+        twilioMessageSid: MessageSid,
+        fromNumber: From,
+        toNumber: To,
+        direction: 'inbound',
+        status: 'received',
+        body: Body,
+        numSegments: parseInt(NumSegments || '1'),
+        errorCode: ErrorCode || null,
+        errorMessage: ErrorMessage || null,
+        sentAt: new Date(),
+      };
+
+      const savedSms = await storage.createSmsMessage(smsData);
+      console.log("✅ Inbound SMS saved to database:", savedSms.id);
+
+      // Send TwiML response
+      res.type('text/xml');
+      res.send('<?xml version="1.0" encoding="UTF-8"?><Response></Response>');
+    } catch (error) {
+      console.error("❌ Error processing SMS webhook:", error);
+      res.status(500).send("Error processing webhook");
+    }
+  });
+
   // Voice Workflow API Routes
   
   // Get all voice workflows for a tenant
