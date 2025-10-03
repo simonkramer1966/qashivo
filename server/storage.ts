@@ -1137,7 +1137,7 @@ export class DatabaseStorage implements IStorage {
       .select({ 
         count: count(),
         total: sql<number>`SUM(${invoices.amount} - ${invoices.amountPaid})`,
-        avgDaysOverdue: sql<number>`AVG(EXTRACT(DAY FROM (CURRENT_DATE - ${invoices.dueDate}::date)))`
+        avgDaysOverdue: sql<number>`AVG(EXTRACT(DAY FROM (CURRENT_DATE - due_date::date)))`
       })
       .from(invoices)
       .where(
@@ -1150,14 +1150,14 @@ export class DatabaseStorage implements IStorage {
     const paidInvoicesResult = await db
       .select({ 
         count: count(),
-        avgDays: sql<number>`AVG(EXTRACT(DAY FROM (${invoices.paidDate} - ${invoices.issueDate})))`
+        avgDays: sql<number>`AVG(EXTRACT(DAY FROM (paid_date - issue_date)))`
       })
       .from(invoices)
       .where(
         and(
           eq(invoices.tenantId, tenantId),
           eq(invoices.status, "paid"),
-          sql`${invoices.paidDate} >= NOW() - INTERVAL '90 days'`
+          sql`paid_date >= NOW() - INTERVAL '90 days'`
         )
       );
 
@@ -1175,7 +1175,7 @@ export class DatabaseStorage implements IStorage {
     const withinTermsResult = await db
       .select({
         totalPaidInvoices: count(),
-        paidWithinTerms: sql<number>`COUNT(CASE WHEN EXTRACT(DAY FROM (${invoices.paidDate} - ${invoices.dueDate})) <= 0 THEN 1 END)`
+        paidWithinTerms: sql<number>`COUNT(CASE WHEN EXTRACT(DAY FROM (paid_date - due_date)) <= 0 THEN 1 END)`
       })
       .from(invoices)
       .innerJoin(contacts, eq(invoices.contactId, contacts.id))
@@ -1183,21 +1183,21 @@ export class DatabaseStorage implements IStorage {
         and(
           eq(invoices.tenantId, tenantId),
           eq(invoices.status, "paid"),
-          sql`${invoices.paidDate} IS NOT NULL`
+          sql`paid_date IS NOT NULL`
         )
       );
 
     // Calculate DSO (Days Sales Outstanding) - average time from invoice issue to payment
     const dsoResult = await db
       .select({
-        avgDSO: sql<number>`AVG(EXTRACT(DAY FROM (${invoices.paidDate} - ${invoices.issueDate})))`
+        avgDSO: sql<number>`AVG(EXTRACT(DAY FROM (paid_date - issue_date)))`
       })
       .from(invoices)
       .where(
         and(
           eq(invoices.tenantId, tenantId),
           eq(invoices.status, "paid"),
-          sql`${invoices.paidDate} IS NOT NULL`
+          sql`paid_date IS NOT NULL`
         )
       );
 
