@@ -3,10 +3,19 @@ import twilio from 'twilio';
 const accountSid = process.env.TWILIO_ACCOUNT_SID || process.env.TWILIO_ACCOUNT_SID_ENV_VAR || "default_sid";
 const authToken = process.env.TWILIO_AUTH_TOKEN || process.env.TWILIO_AUTH_TOKEN_ENV_VAR || "default_token";
 const fromNumber = process.env.TWILIO_FROM_NUMBER || process.env.TWILIO_FROM_NUMBER_ENV_VAR || "+1234567890";
+const messagingServiceSid = process.env.TWILIO_MESSAGING_SERVICE_SID || process.env.TWILIO_MESSAGING_SERVICE_SID_ENV_VAR;
 
 const client = (accountSid !== "default_sid" && authToken !== "default_token") 
   ? twilio(accountSid, authToken) 
   : null;
+
+console.log('📱 Twilio Configuration:');
+console.log('  Account SID:', accountSid !== "default_sid" ? 'configured' : 'not set');
+console.log('  From Number:', fromNumber !== "+1234567890" ? fromNumber : 'not set');
+console.log('  Messaging Service SID:', messagingServiceSid || 'not set');
+if (messagingServiceSid) {
+  console.log('  ✅ Using Messaging Service for SMS');
+}
 
 interface SMSParams {
   to: string;
@@ -25,16 +34,26 @@ export async function sendSMS(params: SMSParams): Promise<{
       return { success: true, messageId: 'mock-id' };
     }
 
-    const message = await client.messages.create({
+    const messagePayload: any = {
       body: params.message,
-      from: params.from || fromNumber,
       to: params.to,
-    });
+    };
 
-    console.log(`SMS sent successfully to ${params.to}, ID: ${message.sid}`);
+    if (messagingServiceSid) {
+      messagePayload.messagingServiceSid = messagingServiceSid;
+      console.log(`📤 Sending SMS via Messaging Service (${messagingServiceSid}) to ${params.to}`);
+    } else {
+      messagePayload.from = params.from || fromNumber;
+      console.log(`📤 Sending SMS from ${messagePayload.from} to ${params.to}`);
+    }
+
+    const message = await client.messages.create(messagePayload);
+
+    console.log(`✅ SMS sent successfully! SID: ${message.sid}, Status: ${message.status}`);
     return { success: true, messageId: message.sid };
   } catch (error: any) {
-    console.error('Twilio SMS error:', error);
+    console.error('❌ Twilio SMS error:', error.message);
+    if (error.code) console.error('   Error code:', error.code);
     return { 
       success: false, 
       error: error.message || 'Failed to send SMS' 
