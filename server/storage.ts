@@ -1137,7 +1137,7 @@ export class DatabaseStorage implements IStorage {
       .select({ 
         count: count(),
         total: sql<number>`SUM(${invoices.amount} - ${invoices.amountPaid})`,
-        avgDaysOverdue: sql<number>`AVG(EXTRACT(DAY FROM (CURRENT_DATE - DATE(${invoices.dueDate}))))`
+        avgDaysOverdue: sql<number>`AVG(EXTRACT(DAY FROM (CURRENT_DATE - ${invoices.dueDate}::date)))`
       })
       .from(invoices)
       .where(
