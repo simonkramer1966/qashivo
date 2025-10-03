@@ -7495,7 +7495,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
 
   app.post("/api/retell/webhook", async (req, res) => {
     try {
-      console.log("Retell webhook received:", req.body);
+      console.log("Retell webhook received:", JSON.stringify(req.body, null, 2));
 
       const webhookData = req.body;
       const retellCallId = webhookData.call_id;
@@ -7504,7 +7504,73 @@ Payment required immediately to avoid collection action. Contact us NOW.`
         return res.status(400).json({ message: "Missing call_id in webhook" });
       }
 
-      res.json({ success: true, message: "Webhook processed successfully" });
+      // Process webhook data using RetellService helper
+      const callData = retellService.processWebhookData(webhookData);
+      console.log("Processed call data:", callData);
+
+      // Extract metadata to find tenant and contact
+      const metadata = webhookData.metadata || {};
+      const tenantId = metadata.tenantId || metadata.tenant_id;
+      const contactId = metadata.contactId || metadata.contact_id;
+      const invoiceId = metadata.invoiceId || metadata.invoice_id;
+
+      // Try to match contact by phone number if no contactId in metadata
+      let finalContactId = contactId;
+      let finalTenantId = tenantId;
+
+      if (!finalContactId && callData.toNumber && tenantId) {
+        // Get all contacts for tenant and find by phone
+        const contacts = await storage.getContacts(tenantId);
+        const matchedContact = contacts.find(c => 
+          c.phone && c.phone.replace(/\D/g, '') === callData.toNumber?.replace(/\D/g, '')
+        );
+        if (matchedContact) {
+          finalContactId = matchedContact.id;
+        }
+      }
+
+      // Only save if we have required fields
+      if (finalTenantId && finalContactId) {
+        const voiceCallData: InsertVoiceCall = {
+          tenantId: finalTenantId,
+          contactId: finalContactId,
+          invoiceId: invoiceId || null,
+          retellCallId: callData.retellCallId!,
+          retellAgentId: callData.retellAgentId!,
+          fromNumber: callData.fromNumber!,
+          toNumber: callData.toNumber!,
+          direction: callData.direction!,
+          status: callData.status || 'completed',
+          duration: callData.duration,
+          transcript: callData.transcript,
+          recordingUrl: callData.recordingUrl,
+          callAnalysis: callData.callAnalysis,
+          userSentiment: callData.userSentiment,
+          callSuccessful: callData.callSuccessful,
+          disconnectionReason: callData.disconnectionReason,
+          startedAt: callData.startedAt,
+          endedAt: callData.endedAt,
+        };
+
+        const savedCall = await storage.createVoiceCall(voiceCallData);
+        console.log("Voice call saved to database:", savedCall.id);
+
+        return res.json({ 
+          success: true, 
+          message: "Webhook processed and call saved", 
+          callId: savedCall.id 
+        });
+      } else {
+        console.warn("Missing tenantId or contactId, cannot save call:", {
+          tenantId: finalTenantId,
+          contactId: finalContactId,
+          metadata
+        });
+        return res.json({ 
+          success: true, 
+          message: "Webhook processed but not saved (missing tenant/contact info)" 
+        });
+      }
     } catch (error) {
       console.error("Error processing Retell webhook:", error);
       res.status(500).json({ message: "Failed to process webhook" });
