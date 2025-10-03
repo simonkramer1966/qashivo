@@ -17,6 +17,7 @@ import {
   insertWorkflowTemplateSchema,
   insertRetellConfigurationSchema,
   insertVoiceCallSchema,
+  type InsertVoiceCall,
   insertVoiceWorkflowSchema,
   insertVoiceWorkflowStateSchema,
   insertVoiceStateTransitionSchema,
