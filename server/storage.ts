@@ -1109,7 +1109,7 @@ export class DatabaseStorage implements IStorage {
     });
   }
 
-  async getInvoiceMetrics(tenantId: string): Promise<{
+  async getInvoiceMetricsV2(tenantId: string): Promise<{
     totalOutstanding: number;
     totalInvoiceCount: number;
     overdueCount: number;
@@ -1120,115 +1120,102 @@ export class DatabaseStorage implements IStorage {
     collectionsWithinTerms: number;
     dso: number;
   }> {
-    const outstandingResult = await db
-      .select({
-        total: sql<number>`SUM(amount - amount_paid)`,
-        count: count()
-      })
-      .from(invoices)
-      .where(
-        and(
-          eq(invoices.tenantId, tenantId),
-          sql`status IN ('pending', 'overdue')`
-        )
-      );
+    // Use direct SQL to avoid Drizzle ORM column reference issues
+    const result = await db.execute(sql`
+      WITH outstanding AS (
+        SELECT 
+          COALESCE(SUM(amount - amount_paid), 0) as total,
+          COUNT(*) as count
+        FROM invoices
+        WHERE tenant_id = ${tenantId}
+          AND status IN ('pending', 'overdue')
+      ),
+      overdue_stats AS (
+        SELECT 
+          COUNT(*) as count,
+          COALESCE(SUM(amount - amount_paid), 0) as total,
+          COALESCE(AVG(EXTRACT(DAY FROM (CURRENT_DATE - due_date::date))), 0) as avg_days
+        FROM invoices
+        WHERE tenant_id = ${tenantId}
+          AND status = 'overdue'
+      ),
+      paid_stats AS (
+        SELECT 
+          COUNT(*) as count,
+          COALESCE(AVG(EXTRACT(DAY FROM (paid_date - issue_date))), 0) as avg_days
+        FROM invoices
+        WHERE tenant_id = ${tenantId}
+          AND status = 'paid'
+          AND paid_date >= NOW() - INTERVAL '90 days'
+      ),
+      total_invoices AS (
+        SELECT COUNT(*) as count
+        FROM invoices
+        WHERE tenant_id = ${tenantId}
+          AND created_at >= NOW() - INTERVAL '90 days'
+      ),
+      within_terms AS (
+        SELECT 
+          COUNT(*) as total_paid,
+          COUNT(CASE WHEN EXTRACT(DAY FROM (paid_date - due_date)) <= 0 THEN 1 END) as within_terms
+        FROM invoices
+        WHERE tenant_id = ${tenantId}
+          AND status = 'paid'
+          AND paid_date IS NOT NULL
+      ),
+      dso_calc AS (
+        SELECT COALESCE(AVG(EXTRACT(DAY FROM (paid_date - issue_date))), 0) as avg_dso
+        FROM invoices
+        WHERE tenant_id = ${tenantId}
+          AND status = 'paid'
+          AND paid_date IS NOT NULL
+      )
+      SELECT 
+        o.total as total_outstanding,
+        o.count as total_invoice_count,
+        os.count as overdue_count,
+        os.total as overdue_amount,
+        os.avg_days as avg_days_overdue,
+        ps.count as paid_count,
+        ti.count as total_count,
+        ps.avg_days as avg_days_to_pay,
+        wt.total_paid,
+        wt.within_terms,
+        d.avg_dso
+      FROM outstanding o
+      CROSS JOIN overdue_stats os
+      CROSS JOIN paid_stats ps
+      CROSS JOIN total_invoices ti
+      CROSS JOIN within_terms wt
+      CROSS JOIN dso_calc d
+    `);
 
-    const overdueResult = await db
-      .select({ 
-        count: count(),
-        total: sql<number>`SUM(amount - amount_paid)`,
-        avgDaysOverdue: sql<number>`AVG(EXTRACT(DAY FROM (CURRENT_DATE - due_date::date)))`
-      })
-      .from(invoices)
-      .where(
-        and(
-          eq(invoices.tenantId, tenantId),
-          eq(invoices.status, "overdue")
-        )
-      );
+    const row = result.rows[0] as any;
+    const totalOutstanding = Number(row.total_outstanding) || 0;
+    const totalInvoiceCount = Number(row.total_invoice_count) || 0;
+    const overdueCount = Number(row.overdue_count) || 0;
+    const overdueAmount = Number(row.overdue_amount) || 0;
+    const avgDaysOverdue = Number(row.avg_days_overdue) || 0;
+    const paidCount = Number(row.paid_count) || 0;
+    const totalCount = Math.max(Number(row.total_count) || 1, 1);
+    const avgDaysToPay = Number(row.avg_days_to_pay) || 0;
+    const totalPaid = Math.max(Number(row.total_paid) || 1, 1);
+    const withinTerms = Number(row.within_terms) || 0;
+    const dso = Number(row.avg_dso) || 0;
 
-    const paidInvoicesResult = await db
-      .select({ 
-        count: count(),
-        avgDays: sql<number>`AVG(EXTRACT(DAY FROM (paid_date - issue_date)))`
-      })
-      .from(invoices)
-      .where(
-        and(
-          eq(invoices.tenantId, tenantId),
-          eq(invoices.status, "paid"),
-          sql`paid_date >= NOW() - INTERVAL '90 days'`
-        )
-      );
-
-    const totalInvoicesResult = await db
-      .select({ count: count() })
-      .from(invoices)
-      .where(
-        and(
-          eq(invoices.tenantId, tenantId),
-          sql`created_at >= NOW() - INTERVAL '90 days'`
-        )
-      );
-
-    // Calculate Collections within Terms (paid invoices within their payment terms)
-    const withinTermsResult = await db
-      .select({
-        totalPaidInvoices: count(),
-        paidWithinTerms: sql<number>`COUNT(CASE WHEN EXTRACT(DAY FROM (paid_date - due_date)) <= 0 THEN 1 END)`
-      })
-      .from(invoices)
-      .innerJoin(contacts, eq(invoices.contactId, contacts.id))
-      .where(
-        and(
-          eq(invoices.tenantId, tenantId),
-          eq(invoices.status, "paid"),
-          sql`paid_date IS NOT NULL`
-        )
-      );
-
-    // Calculate DSO (Days Sales Outstanding) - average time from invoice issue to payment
-    const dsoResult = await db
-      .select({
-        avgDSO: sql<number>`AVG(EXTRACT(DAY FROM (paid_date - issue_date)))`
-      })
-      .from(invoices)
-      .where(
-        and(
-          eq(invoices.tenantId, tenantId),
-          eq(invoices.status, "paid"),
-          sql`paid_date IS NOT NULL`
-        )
-      );
-
-    const totalOutstanding = outstandingResult[0]?.total || 0;
-    const totalInvoiceCount = outstandingResult[0]?.count || 0;
-    const overdueCount = overdueResult[0]?.count || 0;
-    const overdueAmount = overdueResult[0]?.total || 0;
-    const avgDaysOverdue = overdueResult[0]?.avgDaysOverdue || 0;
-    const paidCount = paidInvoicesResult[0]?.count || 0;
-    const totalCount = totalInvoicesResult[0]?.count || 1;
-    const avgDaysToPay = paidInvoicesResult[0]?.avgDays || 0;
     const collectionRate = (paidCount / totalCount) * 100;
-
-    // Calculate Collections within Terms percentage
-    const totalPaidInvoices = withinTermsResult[0]?.totalPaidInvoices || 1;
-    const paidWithinTerms = withinTermsResult[0]?.paidWithinTerms || 0;
-    const collectionsWithinTerms = (paidWithinTerms / totalPaidInvoices) * 100;
-
-    // Get DSO value
-    const dso = dsoResult[0]?.avgDSO || 0;
+    const collectionsWithinTerms = (withinTerms / totalPaid) * 100;
 
     return {
-      totalOutstanding: Number(totalOutstanding),
+      totalOutstanding,
       totalInvoiceCount,
       overdueCount,
-      overdueAmount: Number(overdueAmount),
+      overdueAmount,
       collectionRate: Number(collectionRate.toFixed(1)),
-      avgDaysToPay: Math.round(Number(avgDaysToPay)),
-      avgDaysOverdue: Math.round(Number(avgDaysOverdue)),
+      avgDaysToPay: Math.round(avgDaysToPay),
+      avgDaysOverdue: Math.round(avgDaysOverdue),
       collectionsWithinTerms: Number(collectionsWithinTerms.toFixed(1)),
-      dso: Math.round(Number(dso)),
+      dso: Math.round(dso),
     };
   }
 
