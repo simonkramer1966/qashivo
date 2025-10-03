@@ -25,9 +25,12 @@ import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip as Recharts
 
 interface CashMetrics {
   totalOutstanding: number;
+  totalInvoiceCount: number;
   overdueCount: number;
+  overdueAmount: number;
   collectionRate: number;
   avgDaysToPay: number;
+  avgDaysOverdue: number;
   collectionsWithinTerms: number;
   dso: number;
   escalatedCount: number;
@@ -61,9 +64,12 @@ export default function Cashboard() {
   });
 
   const totalOutstanding = metrics?.totalOutstanding || 0;
+  const totalInvoiceCount = metrics?.totalInvoiceCount || 0;
   const overdueCount = metrics?.overdueCount || 0;
+  const overdueAmount = metrics?.overdueAmount || 0;
   const collectionRate = metrics?.collectionRate || 0;
   const avgDaysToPay = metrics?.avgDaysToPay || 0;
+  const avgDaysOverdue = metrics?.avgDaysOverdue || 0;
 
   const formatChartData = () => {
     if (!cashflowData?.forecast) return [];
@@ -99,7 +105,7 @@ export default function Cashboard() {
                     <div className="h-8 w-32 bg-slate-200 animate-pulse rounded"></div>
                   ) : (
                     <h3 className="text-xl sm:text-2xl font-bold text-slate-900">
-                      {formatCurrency(totalOutstanding)} <span className="text-sm text-slate-500">(0)</span>
+                      {formatCurrency(totalOutstanding)} <span className="text-sm text-slate-500">({totalInvoiceCount})</span>
                     </h3>
                   )}
                 </div>
@@ -118,7 +124,7 @@ export default function Cashboard() {
                     <div className="h-8 w-32 bg-slate-200 animate-pulse rounded"></div>
                   ) : (
                     <h3 className="text-xl sm:text-2xl font-bold text-slate-900">
-                      {formatCurrency(0)} <span className="text-sm text-slate-500">({overdueCount})</span>
+                      {formatCurrency(overdueAmount)} <span className="text-sm text-slate-500">({overdueCount})</span>
                     </h3>
                   )}
                 </div>
@@ -147,7 +153,7 @@ export default function Cashboard() {
               </div>
             </div>
 
-            {/* Avg Days to Pay */}
+            {/* Avg Days Late */}
             <div className="card-apple p-4 sm:p-6" data-testid="card-avg-days">
               <div className="flex items-start justify-between mb-3">
                 <div>
@@ -156,7 +162,7 @@ export default function Cashboard() {
                     <div className="h-8 w-16 bg-slate-200 animate-pulse rounded"></div>
                   ) : (
                     <h3 className="text-xl sm:text-2xl font-bold text-slate-900">
-                      {avgDaysToPay.toFixed(0)}
+                      {avgDaysOverdue.toFixed(0)}
                     </h3>
                   )}
                 </div>

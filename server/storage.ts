@@ -1111,15 +1111,19 @@ export class DatabaseStorage implements IStorage {
 
   async getInvoiceMetrics(tenantId: string): Promise<{
     totalOutstanding: number;
+    totalInvoiceCount: number;
     overdueCount: number;
+    overdueAmount: number;
     collectionRate: number;
     avgDaysToPay: number;
+    avgDaysOverdue: number;
     collectionsWithinTerms: number;
     dso: number;
   }> {
     const outstandingResult = await db
       .select({
         total: sql<number>`SUM(${invoices.amount} - ${invoices.amountPaid})`,
+        count: count()
       })
       .from(invoices)
       .where(
@@ -1130,13 +1134,16 @@ export class DatabaseStorage implements IStorage {
       );
 
     const overdueResult = await db
-      .select({ count: count() })
+      .select({ 
+        count: count(),
+        total: sql<number>`SUM(${invoices.amount} - ${invoices.amountPaid})`,
+        avgDaysOverdue: sql<number>`AVG(EXTRACT(DAY FROM (CURRENT_DATE - DATE(${invoices.dueDate}))))`
+      })
       .from(invoices)
       .where(
         and(
           eq(invoices.tenantId, tenantId),
-          sql`DATE(${invoices.dueDate}) < CURRENT_DATE`,
-          eq(invoices.status, "pending")
+          eq(invoices.status, "overdue")
         )
       );
 
@@ -1195,7 +1202,10 @@ export class DatabaseStorage implements IStorage {
       );
 
     const totalOutstanding = outstandingResult[0]?.total || 0;
+    const totalInvoiceCount = outstandingResult[0]?.count || 0;
     const overdueCount = overdueResult[0]?.count || 0;
+    const overdueAmount = overdueResult[0]?.total || 0;
+    const avgDaysOverdue = overdueResult[0]?.avgDaysOverdue || 0;
     const paidCount = paidInvoicesResult[0]?.count || 0;
     const totalCount = totalInvoicesResult[0]?.count || 1;
     const avgDaysToPay = paidInvoicesResult[0]?.avgDays || 0;
@@ -1211,9 +1221,12 @@ export class DatabaseStorage implements IStorage {
 
     return {
       totalOutstanding: Number(totalOutstanding),
+      totalInvoiceCount,
       overdueCount,
+      overdueAmount: Number(overdueAmount),
       collectionRate: Number(collectionRate.toFixed(1)),
       avgDaysToPay: Math.round(Number(avgDaysToPay)),
+      avgDaysOverdue: Math.round(Number(avgDaysOverdue)),
       collectionsWithinTerms: Number(collectionsWithinTerms.toFixed(1)),
       dso: Math.round(Number(dso)),
     };
