@@ -6,6 +6,31 @@ Nexus AR is an AI-driven accounts receivable and debt recovery application desig
 ## User Preferences
 Preferred communication style: Simple, everyday language.
 
+## Investor MVP Development Plan
+**Deadline: Thursday, October 10, 2025 | Demo: Friday, October 11, 2025**
+
+### Critical Requirements
+MUST have working by Thursday for Friday team demo:
+1. Automatic outbound email workflow
+2. Inbound email processing with transcript and intent capture
+3. Inbound and outbound AI voice calls with transcript logging
+4. Intent detection for: payment plans, disputes, promises to pay, general queries
+5. SMS bidirectional communication
+6. WhatsApp bidirectional communication
+
+### Demo Tenant
+**Tenant:** Investor Demo Ltd (ID: `6feb7f4d-ba6f-4a67-936e-9cff78f49c59`)
+**Customer:** Tech Startups Ltd (David Richardson)
+**Invoice Portfolio:**
+- 3 paid invoices (£27,500 total - showing payment history)
+- 2 current invoices (£25,000 - not yet due)
+- 2 recently overdue (£13,125 - 7-14 days)
+- 2 seriously overdue (£19,375 - 30-60 days)  
+- 1 very old overdue (£18,750 - 120 days)
+- **Total Outstanding: £76,250**
+
+All data formatted to match Xero's exact structure and field formats.
+
 ## System Architecture
 
 ### UI/UX Design
