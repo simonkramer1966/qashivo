@@ -1109,7 +1109,7 @@ export class DatabaseStorage implements IStorage {
     });
   }
 
-  async getInvoiceMetricsV2(tenantId: string): Promise<{
+  async getInvoiceMetrics(tenantId: string): Promise<{
     totalOutstanding: number;
     totalInvoiceCount: number;
     overdueCount: number;
@@ -1134,7 +1134,7 @@ export class DatabaseStorage implements IStorage {
         SELECT 
           COUNT(*) as count,
           COALESCE(SUM(amount - amount_paid), 0) as total,
-          COALESCE(AVG(EXTRACT(DAY FROM (CURRENT_DATE - due_date::date))), 0) as avg_days
+          COALESCE(AVG(EXTRACT(DAY FROM AGE(CURRENT_DATE, due_date))), 0) as avg_days
         FROM invoices
         WHERE tenant_id = ${tenantId}
           AND status = 'overdue'
@@ -1142,7 +1142,7 @@ export class DatabaseStorage implements IStorage {
       paid_stats AS (
         SELECT 
           COUNT(*) as count,
-          COALESCE(AVG(EXTRACT(DAY FROM (paid_date - issue_date))), 0) as avg_days
+          COALESCE(AVG(EXTRACT(DAY FROM AGE(paid_date, issue_date))), 0) as avg_days
         FROM invoices
         WHERE tenant_id = ${tenantId}
           AND status = 'paid'
@@ -1157,14 +1157,14 @@ export class DatabaseStorage implements IStorage {
       within_terms AS (
         SELECT 
           COUNT(*) as total_paid,
-          COUNT(CASE WHEN EXTRACT(DAY FROM (paid_date - due_date)) <= 0 THEN 1 END) as within_terms
+          COUNT(CASE WHEN EXTRACT(DAY FROM AGE(paid_date, due_date)) <= 0 THEN 1 END) as within_terms
         FROM invoices
         WHERE tenant_id = ${tenantId}
           AND status = 'paid'
           AND paid_date IS NOT NULL
       ),
       dso_calc AS (
-        SELECT COALESCE(AVG(EXTRACT(DAY FROM (paid_date - issue_date))), 0) as avg_dso
+        SELECT COALESCE(AVG(EXTRACT(DAY FROM AGE(paid_date, issue_date))), 0) as avg_dso
         FROM invoices
         WHERE tenant_id = ${tenantId}
           AND status = 'paid'

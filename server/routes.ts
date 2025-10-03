@@ -1511,7 +1511,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const [metrics, debtRecoveryMetrics] = await Promise.all([
-        storage.getInvoiceMetricsV2(user.tenantId),
+        storage.getInvoiceMetrics(user.tenantId),
         storage.getDebtRecoveryMetrics(user.tenantId)
       ]);
       
@@ -9682,7 +9682,7 @@ ${tenant.name}
       // Get current AR context for the user (get ALL invoices for complete visibility)
       console.log(`🔍 AI CFO Debug: About to fetch invoices for tenant: ${user.tenantId}`);
       const [invoiceMetrics, allInvoices] = await Promise.all([
-        storage.getInvoiceMetricsV2(user.tenantId),
+        storage.getInvoiceMetrics(user.tenantId),
         storage.getInvoices(user.tenantId) // No limit - get all invoices like the invoices page
       ]);
 
@@ -12576,7 +12576,7 @@ ${tenant.name}
       const { period = 90 } = req.query; // Default to 90 days
 
       // Get invoice metrics
-      const invoiceMetrics = await storage.getInvoiceMetricsV2(user.tenantId);
+      const invoiceMetrics = await storage.getInvoiceMetrics(user.tenantId);
 
       // Get bank account data
       const bankAccounts = await storage.getBankAccounts(user.tenantId);
