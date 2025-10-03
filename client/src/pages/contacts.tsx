@@ -145,7 +145,7 @@ export default function Customers() {
                       <div className="flex items-start justify-between mb-2">
                         <div className="flex-1">
                           <h4 className="font-semibold text-slate-900 truncate">
-                            {contact.name}
+                            {contact.companyName || contact.name}
                           </h4>
                           {contact.email && (
                             <p className="text-sm text-slate-600 truncate">
