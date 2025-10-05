@@ -477,7 +477,7 @@ export default function Invoices() {
                           {getStatusBadge(invoice)}
                         </div>
                         
-                        <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center justify-between">
                           <div>
                             <p className="text-lg font-bold text-slate-900">
                               {formatCurrency(outstanding)}
@@ -490,25 +490,25 @@ export default function Invoices() {
                             </p>
                           </div>
                         </div>
-
-                        {invoice.status !== 'paid' && (
-                          <div className="flex flex-wrap gap-2">
-                            <InsuranceWidget 
-                              invoiceAmount={outstanding}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setSelectedInvoiceForInsurance(invoice);
-                              }}
-                            />
-                            <FinanceButton 
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setSelectedInvoiceForFinance(invoice);
-                              }}
-                            />
-                          </div>
-                        )}
                       </div>
+                      
+                      {invoice.status !== 'paid' && (
+                        <div className="flex flex-col gap-2 mr-2">
+                          <InsuranceWidget 
+                            invoiceAmount={outstanding}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedInvoiceForInsurance(invoice);
+                            }}
+                          />
+                          <FinanceButton 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedInvoiceForFinance(invoice);
+                            }}
+                          />
+                        </div>
+                      )}
                       
                       <ChevronRight className="h-5 w-5 text-slate-400 flex-shrink-0 mt-1" />
                     </div>
