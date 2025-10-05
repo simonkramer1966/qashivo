@@ -1808,9 +1808,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
             return sum + (amount - amountPaid);
           }, 0);
           
+          // Calculate overdue invoices and amounts
+          const today = new Date();
+          const overdueInvoices = unpaidInvoices.filter(inv => {
+            if (inv.dueDate) {
+              const dueDate = new Date(inv.dueDate);
+              return dueDate < today;
+            }
+            return false;
+          });
+          
+          const overdueAmount = overdueInvoices.reduce((sum, inv) => {
+            const amount = Number(inv.amount) || 0;
+            const amountPaid = Number(inv.amountPaid) || 0;
+            return sum + (amount - amountPaid);
+          }, 0);
+          
+          const overdueCount = overdueInvoices.length;
+          
           // Calculate risk score based on overdue invoices
           let riskScore = 0;
-          const today = new Date();
           unpaidInvoices.forEach(inv => {
             if (inv.dueDate) {
               const dueDate = new Date(inv.dueDate);
@@ -1827,6 +1844,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             ...contact,
             outstandingAmount,
             invoiceCount: contactInvoices.length,
+            overdueAmount,
+            overdueCount,
             riskScore
           };
         })
