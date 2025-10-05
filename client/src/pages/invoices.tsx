@@ -464,41 +464,86 @@ export default function Invoices() {
                     onClick={() => setLocation(`/invoices/${invoice.id}`)}
                     data-testid={`invoice-item-${invoice.id}`}
                   >
-                    {/* Desktop: horizontal layout with buttons on right */}
-                    {/* Mobile: stacked layout with full-width buttons below */}
-                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-start justify-between mb-2">
-                          <div className="flex-1">
-                            <h4 className="font-semibold text-slate-900 truncate">
-                              {invoice.contact?.companyName || invoice.contact?.name || 'Unknown Customer'}
-                            </h4>
-                            <p className="text-sm text-slate-600">
-                              {invoice.invoiceNumber}
-                            </p>
-                          </div>
-                          {getStatusBadge(invoice)}
+                    {/* Mobile Layout - Stacked */}
+                    <div className="sm:hidden">
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="flex-1">
+                          <h4 className="font-semibold text-slate-900 truncate">
+                            {invoice.contact?.companyName || invoice.contact?.name || 'Unknown Customer'}
+                          </h4>
+                          <p className="text-sm text-slate-600">
+                            {invoice.invoiceNumber}
+                          </p>
                         </div>
-                        
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-lg font-bold text-slate-900">
+                        {getStatusBadge(invoice)}
+                      </div>
+                      
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-lg font-bold text-slate-900">
+                            {formatCurrency(outstanding)}
+                          </p>
+                          <p className="text-xs text-slate-500">
+                            {invoice.status !== 'paid' && daysOverdue > 0 
+                              ? `${daysOverdue} days overdue`
+                              : `Due ${new Date(invoice.dueDate).toLocaleDateString()}`
+                            }
+                          </p>
+                        </div>
+                        <ChevronRight className="h-5 w-5 text-slate-400 flex-shrink-0" />
+                      </div>
+                      
+                      {invoice.status !== 'paid' && (
+                        <div className="flex gap-2 mt-3">
+                          <InsuranceWidget 
+                            invoiceAmount={outstanding}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedInvoiceForInsurance(invoice);
+                            }}
+                          />
+                          <FinanceButton 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedInvoiceForFinance(invoice);
+                            }}
+                          />
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Desktop Layout - Horizontal with amount aligned to company name */}
+                    <div className="hidden sm:flex sm:items-start sm:justify-between sm:gap-3">
+                      <div className="flex-1 min-w-0">
+                        {/* Line 1: Company name | Amount | Status */}
+                        <div className="flex items-start justify-between mb-1">
+                          <h4 className="font-semibold text-slate-900 truncate flex-1">
+                            {invoice.contact?.companyName || invoice.contact?.name || 'Unknown Customer'}
+                          </h4>
+                          <div className="flex items-center gap-4 ml-4">
+                            <p className="text-lg font-bold text-slate-900 whitespace-nowrap">
                               {formatCurrency(outstanding)}
                             </p>
-                            <p className="text-xs text-slate-500">
-                              {invoice.status !== 'paid' && daysOverdue > 0 
-                                ? `${daysOverdue} days overdue`
-                                : `Due ${new Date(invoice.dueDate).toLocaleDateString()}`
-                              }
-                            </p>
+                            {getStatusBadge(invoice)}
                           </div>
-                          {/* Chevron on mobile - inline with amount */}
-                          <ChevronRight className="h-5 w-5 text-slate-400 flex-shrink-0 sm:hidden" />
+                        </div>
+                        
+                        {/* Line 2: Invoice number | Days overdue */}
+                        <div className="flex items-center justify-between">
+                          <p className="text-sm text-slate-600">
+                            {invoice.invoiceNumber}
+                          </p>
+                          <p className="text-xs text-slate-500 ml-4">
+                            {invoice.status !== 'paid' && daysOverdue > 0 
+                              ? `${daysOverdue} days overdue`
+                              : `Due ${new Date(invoice.dueDate).toLocaleDateString()}`
+                            }
+                          </p>
                         </div>
                       </div>
                       
                       {invoice.status !== 'paid' && (
-                        <div className="flex flex-row sm:flex-col gap-2 sm:mr-2">
+                        <div className="flex flex-col gap-2 mr-2">
                           <InsuranceWidget 
                             invoiceAmount={outstanding}
                             onClick={(e) => {
@@ -515,8 +560,7 @@ export default function Invoices() {
                         </div>
                       )}
                       
-                      {/* Chevron on desktop - at far right */}
-                      <ChevronRight className="hidden sm:block h-5 w-5 text-slate-400 flex-shrink-0 mt-1" />
+                      <ChevronRight className="h-5 w-5 text-slate-400 flex-shrink-0 mt-1" />
                     </div>
                   </div>
                 );
