@@ -31,7 +31,8 @@ import {
   CreditCard,
   BookOpen,
   Calculator,
-  UserPlus
+  UserPlus,
+  Wallet
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -49,6 +50,7 @@ import nexusLogo from "@assets/Main Nexus Logo copy_1756923544828.png";
 
 const navigationItems = [
   { name: "Cashboard", href: "/", icon: Gauge },
+  { name: "Wallet", href: "/wallet", icon: Wallet },
   { name: "Action Centre", href: "/action-centre", icon: Target },
   { name: "Onboarding", href: "/onboarding", icon: UserPlus },
   { name: "Customers", href: "/contacts", icon: Users },
