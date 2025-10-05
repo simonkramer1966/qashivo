@@ -185,33 +185,40 @@ export default function Customers() {
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between mb-2">
-                        <div className="flex-1">
-                          <h4 className="font-semibold text-slate-900 flex items-center gap-1.5">
-                            <span className="truncate">{contact.companyName || contact.name}</span>
-                            {contact.riskBand ? (
-                              <ShieldCheck className="h-4 w-4 text-emerald-600 flex-shrink-0" data-testid={`shield-checked-${contact.id}`} />
-                            ) : (
-                              <Shield className="h-4 w-4 text-amber-500 flex-shrink-0" data-testid={`shield-unchecked-${contact.id}`} />
-                            )}
-                          </h4>
-                          {contact.email && (
-                            <p className="text-sm text-slate-600 truncate">
-                              {contact.email}
-                            </p>
-                          )}
-                          {contact.creditLimit && (
-                            <p className="text-xs text-slate-500 mt-1">
-                              Credit Limit: {formatCurrency(contact.creditLimit)}
-                            </p>
-                          )}
+                      {/* Header Row - Company Name + Financial Info (desktop) */}
+                      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between mb-2 gap-2 sm:gap-4">
+                        {/* Left Side - Company Info */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex-1 min-w-0">
+                              <h4 className="font-semibold text-slate-900 flex items-center gap-1.5">
+                                <span className="truncate">{contact.companyName || contact.name}</span>
+                                {contact.riskBand ? (
+                                  <ShieldCheck className="h-4 w-4 text-emerald-600 flex-shrink-0" data-testid={`shield-checked-${contact.id}`} />
+                                ) : (
+                                  <Shield className="h-4 w-4 text-amber-500 flex-shrink-0" data-testid={`shield-unchecked-${contact.id}`} />
+                                )}
+                              </h4>
+                              {contact.email && (
+                                <p className="text-sm text-slate-600 truncate">
+                                  {contact.email}
+                                </p>
+                              )}
+                              {contact.creditLimit && (
+                                <p className="text-xs text-slate-500 mt-1">
+                                  Credit Limit: {formatCurrency(contact.creditLimit)}
+                                </p>
+                              )}
+                            </div>
+                            {/* Risk badge - show only on mobile */}
+                            <div className="sm:hidden">
+                              {getRiskBandBadge(contact.riskBand)}
+                            </div>
+                          </div>
                         </div>
-                        {getRiskBandBadge(contact.riskBand)}
-                      </div>
-                      
-                      {/* Financial Info - Side by side layout */}
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex gap-6">
+
+                        {/* Right Side - Financial Info (inline on desktop) */}
+                        <div className="flex items-center gap-4 sm:gap-6">
                           {/* Outstanding Amount */}
                           <div>
                             <p className="text-xs text-slate-500 mb-0.5">Outstanding</p>
@@ -235,31 +242,36 @@ export default function Customers() {
                               </p>
                             </div>
                           )}
-                        </div>
 
-                        {/* Quick Actions - Hide on small mobile */}
-                        <div className="hidden sm:flex gap-2 flex-shrink-0">
-                          {contact.email && (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                              }}
-                              className="touch-target p-2 bg-blue-100 rounded-xl hover:bg-blue-200 transition-colors"
-                            >
-                              <Mail className="h-4 w-4 text-blue-600" />
-                            </button>
-                          )}
-                          {contact.phone && (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                              }}
-                              className="touch-target p-2 bg-emerald-100 rounded-xl hover:bg-emerald-200 transition-colors"
-                            >
-                              <Phone className="h-4 w-4 text-emerald-600" />
-                            </button>
-                          )}
+                          {/* Risk badge - show only on desktop */}
+                          <div className="hidden sm:block">
+                            {getRiskBandBadge(contact.riskBand)}
+                          </div>
                         </div>
+                      </div>
+
+                      {/* Quick Actions - Desktop only */}
+                      <div className="hidden sm:flex gap-2 justify-end">
+                        {contact.email && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                            }}
+                            className="touch-target p-2 bg-blue-100 rounded-xl hover:bg-blue-200 transition-colors"
+                          >
+                            <Mail className="h-4 w-4 text-blue-600" />
+                          </button>
+                        )}
+                        {contact.phone && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                            }}
+                            className="touch-target p-2 bg-emerald-100 rounded-xl hover:bg-emerald-200 transition-colors"
+                          >
+                            <Phone className="h-4 w-4 text-emerald-600" />
+                          </button>
+                        )}
                       </div>
                     </div>
                     
