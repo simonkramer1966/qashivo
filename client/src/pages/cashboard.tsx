@@ -174,7 +174,7 @@ export default function Cashboard() {
             </div>
 
             {/* Payment Plans */}
-            <div className="card-apple p-4 sm:p-6 border-2 border-slate-300" data-testid="card-payment-plans">
+            <div className="card-apple p-4 sm:p-6 border-red-700" data-testid="card-payment-plans">
               <div className="flex items-start justify-between mb-3">
                 <div>
                   <p className="text-sm text-slate-600 mb-1">Payment Plans</p>
@@ -193,7 +193,7 @@ export default function Cashboard() {
             </div>
 
             {/* Disputes */}
-            <div className="card-apple p-4 sm:p-6 border-2 border-slate-300" data-testid="card-disputes">
+            <div className="card-apple p-4 sm:p-6 border-red-700" data-testid="card-disputes">
               <div className="flex items-start justify-between mb-3">
                 <div>
                   <p className="text-sm text-slate-600 mb-1">Disputes</p>
@@ -212,7 +212,7 @@ export default function Cashboard() {
             </div>
 
             {/* Debt Recovery */}
-            <div className="card-apple p-4 sm:p-6 border-2 border-slate-300" data-testid="card-debt-recovery">
+            <div className="card-apple p-4 sm:p-6 border-red-700" data-testid="card-debt-recovery">
               <div className="flex items-start justify-between mb-3">
                 <div>
                   <p className="text-sm text-slate-600 mb-1">Debt Recovery</p>
@@ -231,7 +231,7 @@ export default function Cashboard() {
             </div>
 
             {/* Legal */}
-            <div className="card-apple p-4 sm:p-6 border-2 border-slate-300" data-testid="card-legal">
+            <div className="card-apple p-4 sm:p-6 border-red-700" data-testid="card-legal">
               <div className="flex items-start justify-between mb-3">
                 <div>
                   <p className="text-sm text-slate-600 mb-1">Legal Cases</p>
