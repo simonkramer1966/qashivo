@@ -51,9 +51,9 @@ export default function ActionCentre() {
   };
 
   const getStatusColor = (daysOverdue: number) => {
-    if (daysOverdue < 7) return 'border-l-emerald-500';
-    if (daysOverdue < 30) return 'border-l-amber-500';
-    return 'border-l-red-500';
+    if (daysOverdue < 7) return 'border-l-[#4FAD80]';
+    if (daysOverdue < 30) return 'border-l-[#E8A23B]';
+    return 'border-l-[#C75C5C]';
   };
 
   const filteredActions = actions.filter(action => 
@@ -99,7 +99,7 @@ export default function ActionCentre() {
             </div>
             <div className="card-apple p-3 sm:p-4">
               <p className="text-xs sm:text-sm text-slate-600 mb-1">Critical</p>
-              <p className="text-xl sm:text-2xl font-bold text-red-600">
+              <p className="text-xl sm:text-2xl font-bold text-[#C75C5C]">
                 {actions.filter(a => a.daysOverdue >= 30).length}
               </p>
             </div>
@@ -141,7 +141,7 @@ export default function ActionCentre() {
                           <h4 className="font-semibold text-slate-900 truncate">
                             {action.contactName}
                           </h4>
-                          <p className="text-sm text-slate-600">
+                          <p className="text-sm font-normal text-slate-500">
                             {action.invoiceNumber}
                           </p>
                         </div>
@@ -176,10 +176,10 @@ export default function ActionCentre() {
                               e.stopPropagation();
                               // Handle call action
                             }}
-                            className="touch-target p-2 bg-emerald-100 rounded-xl hover:bg-emerald-200 transition-colors"
+                            className="touch-target p-2 bg-[#4FAD80]/10 rounded-xl hover:bg-[#4FAD80]/20 transition-colors"
                             data-testid={`button-call-${action.id}`}
                           >
-                            <Phone className="h-4 w-4 text-emerald-600" />
+                            <Phone className="h-4 w-4 text-[#4FAD80]" />
                           </button>
                           <button
                             onClick={(e) => {

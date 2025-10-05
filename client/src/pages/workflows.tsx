@@ -154,12 +154,12 @@ export default function Workflows() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Success Rate</p>
-                <p className="text-3xl font-bold text-green-600" data-testid="text-success-rate">
+                <p className="text-3xl font-bold text-[#4FAD80]" data-testid="text-success-rate">
                   73%
                 </p>
               </div>
-              <div className="p-2 bg-green-500/10 rounded-lg">
-                <TrendingUp className="h-6 w-6 text-green-600" />
+              <div className="p-2 bg-[#4FAD80]/10 rounded-lg">
+                <TrendingUp className="h-6 w-6 text-[#4FAD80]" />
               </div>
             </div>
           </CardContent>

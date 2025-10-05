@@ -230,26 +230,26 @@ export default function Documentation() {
                     <div>
                       <h3 className="font-semibold text-lg mb-3">Rating Categories</h3>
                       <div className="grid grid-cols-3 gap-3 mb-4">
-                        <div className="p-4 bg-green-50 border-2 border-green-200 rounded-lg">
+                        <div className="p-4 bg-[#4FAD80]/10 border-2 border-[#4FAD80]/30 rounded-lg">
                           <div className="flex items-center gap-2 mb-2">
-                            <Shield className="h-5 w-5 text-green-600 fill-green-600" />
-                            <span className="font-bold text-green-700">Good</span>
+                            <Shield className="h-5 w-5 text-[#4FAD80] fill-[#4FAD80]" />
+                            <span className="font-bold text-[#4FAD80]">Good</span>
                           </div>
                           <p className="text-sm text-gray-600">Score: 70-100</p>
                           <p className="text-xs text-gray-500 mt-1">Pays on time, reliable, responsive</p>
                         </div>
-                        <div className="p-4 bg-amber-50 border-2 border-amber-200 rounded-lg">
+                        <div className="p-4 bg-[#E8A23B]/10 border-2 border-[#E8A23B]/30 rounded-lg">
                           <div className="flex items-center gap-2 mb-2">
-                            <Shield className="h-5 w-5 text-amber-600 fill-amber-600" />
-                            <span className="font-bold text-amber-700">Average</span>
+                            <Shield className="h-5 w-5 text-[#E8A23B] fill-[#E8A23B]" />
+                            <span className="font-bold text-[#E8A23B]">Average</span>
                           </div>
                           <p className="text-sm text-gray-600">Score: 40-69</p>
                           <p className="text-xs text-gray-500 mt-1">Occasional delays, needs reminders</p>
                         </div>
-                        <div className="p-4 bg-red-50 border-2 border-red-200 rounded-lg">
+                        <div className="p-4 bg-[#C75C5C]/10 border-2 border-[#C75C5C]/30 rounded-lg">
                           <div className="flex items-center gap-2 mb-2">
-                            <Shield className="h-5 w-5 text-red-600 fill-red-600" />
-                            <span className="font-bold text-red-700">Poor</span>
+                            <Shield className="h-5 w-5 text-[#C75C5C] fill-[#C75C5C]" />
+                            <span className="font-bold text-[#C75C5C]">Poor</span>
                           </div>
                           <p className="text-sm text-gray-600">Score: 0-39</p>
                           <p className="text-xs text-gray-500 mt-1">Frequent delays, disputes, or non-payment</p>

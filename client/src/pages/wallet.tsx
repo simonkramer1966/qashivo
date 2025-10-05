@@ -121,11 +121,11 @@ export default function WalletPage() {
                     {formatCurrency(balance?.currentBalance || 0)}
                   </div>
                   <div className="flex items-center gap-4 text-sm">
-                    <span className="text-green-600 flex items-center gap-1" data-testid="text-pending-incoming">
+                    <span className="text-[#4FAD80] flex items-center gap-1" data-testid="text-pending-incoming">
                       <ArrowDownCircle className="h-4 w-4" />
                       {formatCurrency(balance?.pendingIncoming || 0)} incoming
                     </span>
-                    <span className="text-orange-600 flex items-center gap-1" data-testid="text-pending-outgoing">
+                    <span className="text-[#E8A23B] flex items-center gap-1" data-testid="text-pending-outgoing">
                       <ArrowUpCircle className="h-4 w-4" />
                       {formatCurrency(balance?.pendingOutgoing || 0)} outgoing
                     </span>
@@ -189,10 +189,10 @@ export default function WalletPage() {
                 <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg" data-testid="card-customer-payments">
                   <CardContent className="p-6">
                     <div className="flex items-center justify-between mb-4">
-                      <div className="p-2 bg-green-500/10 rounded-lg">
-                        <DollarSign className="h-5 w-5 text-green-600" />
+                      <div className="p-2 bg-[#4FAD80]/10 rounded-lg">
+                        <DollarSign className="h-5 w-5 text-[#4FAD80]" />
                       </div>
-                      <TrendingUp className="h-4 w-4 text-green-600" />
+                      <TrendingUp className="h-4 w-4 text-[#4FAD80]" />
                     </div>
                     <p className="text-sm text-gray-600 mb-1" data-testid="text-label-customer-payments">Customer Payments</p>
                     <p className="text-2xl font-bold text-gray-900" data-testid="text-value-customer-payments">
@@ -232,8 +232,8 @@ export default function WalletPage() {
                 <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg" data-testid="card-premiums-paid">
                   <CardContent className="p-6">
                     <div className="flex items-center justify-between mb-4">
-                      <div className="p-2 bg-orange-500/10 rounded-lg">
-                        <CreditCard className="h-5 w-5 text-orange-600" />
+                      <div className="p-2 bg-[#E8A23B]/10 rounded-lg">
+                        <CreditCard className="h-5 w-5 text-[#E8A23B]" />
                       </div>
                     </div>
                     <p className="text-sm text-gray-600 mb-1" data-testid="text-label-premiums-paid">Premiums Paid</p>
