@@ -135,6 +135,9 @@ import {
   activityLogs,
   type ActivityLog,
   type InsertActivityLog,
+  walletTransactions,
+  type WalletTransaction,
+  type InsertWalletTransaction,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, sql, count, sum, ne, isNotNull, gte, lte, lt, or, ilike, inArray } from "drizzle-orm";
@@ -482,6 +485,30 @@ export interface IStorage {
     failureCount: number;
     byType: Record<string, number>;
     byCategory: Record<string, number>;
+  }>;
+
+  // Wallet operations
+  getWalletTransactions(tenantId: string, filters?: {
+    transactionType?: string;
+    source?: string;
+    startDate?: string;
+    endDate?: string;
+    limit?: number;
+  }): Promise<(WalletTransaction & { contact?: Contact; invoice?: Invoice })[]>;
+  getWalletTransaction(id: string, tenantId: string): Promise<(WalletTransaction & { contact?: Contact; invoice?: Invoice }) | undefined>;
+  createWalletTransaction(transaction: InsertWalletTransaction): Promise<WalletTransaction>;
+  updateWalletTransaction(id: string, tenantId: string, updates: Partial<InsertWalletTransaction>): Promise<WalletTransaction>;
+  getWalletBalance(tenantId: string): Promise<{
+    currentBalance: number;
+    pendingIncoming: number;
+    pendingOutgoing: number;
+    availableBalance: number;
+  }>;
+  getWalletSummary(tenantId: string): Promise<{
+    customerPayments: number;
+    insurancePayouts: number;
+    financeAdvances: number;
+    premiumsPaid: number;
   }>;
 }
 
@@ -4245,6 +4272,187 @@ export class DatabaseStorage implements IStorage {
     });
 
     return stats;
+  }
+
+  // Wallet operations implementation
+  async getWalletTransactions(tenantId: string, filters?: {
+    transactionType?: string;
+    source?: string;
+    startDate?: string;
+    endDate?: string;
+    limit?: number;
+  }): Promise<(WalletTransaction & { contact?: Contact; invoice?: Invoice })[]> {
+    const conditions = [eq(walletTransactions.tenantId, tenantId)];
+    
+    if (filters?.transactionType) conditions.push(eq(walletTransactions.transactionType, filters.transactionType));
+    if (filters?.source) conditions.push(eq(walletTransactions.source, filters.source));
+    if (filters?.startDate) conditions.push(gte(walletTransactions.transactionDate, new Date(filters.startDate)));
+    if (filters?.endDate) conditions.push(lte(walletTransactions.transactionDate, new Date(filters.endDate)));
+
+    const results = await db
+      .select({
+        transaction: walletTransactions,
+        contact: contacts,
+        invoice: invoices,
+      })
+      .from(walletTransactions)
+      .leftJoin(contacts, eq(walletTransactions.contactId, contacts.id))
+      .leftJoin(invoices, eq(walletTransactions.invoiceId, invoices.id))
+      .where(and(...conditions))
+      .orderBy(desc(walletTransactions.transactionDate))
+      .limit(filters?.limit || 100);
+
+    return results.map(result => ({
+      ...result.transaction,
+      contact: result.contact || undefined,
+      invoice: result.invoice || undefined,
+    }));
+  }
+
+  async getWalletTransaction(id: string, tenantId: string): Promise<(WalletTransaction & { contact?: Contact; invoice?: Invoice }) | undefined> {
+    const [result] = await db
+      .select({
+        transaction: walletTransactions,
+        contact: contacts,
+        invoice: invoices,
+      })
+      .from(walletTransactions)
+      .leftJoin(contacts, eq(walletTransactions.contactId, contacts.id))
+      .leftJoin(invoices, eq(walletTransactions.invoiceId, invoices.id))
+      .where(and(
+        eq(walletTransactions.id, id),
+        eq(walletTransactions.tenantId, tenantId)
+      ));
+
+    if (!result) return undefined;
+
+    return {
+      ...result.transaction,
+      contact: result.contact || undefined,
+      invoice: result.invoice || undefined,
+    };
+  }
+
+  async createWalletTransaction(transactionData: InsertWalletTransaction): Promise<WalletTransaction> {
+    // Calculate running balance
+    const lastTransaction = await db
+      .select()
+      .from(walletTransactions)
+      .where(eq(walletTransactions.tenantId, transactionData.tenantId))
+      .orderBy(desc(walletTransactions.transactionDate))
+      .limit(1);
+
+    const lastBalance = lastTransaction[0]?.runningBalance || "0";
+    const amount = parseFloat(transactionData.amount);
+    const currentBalance = parseFloat(lastBalance);
+    
+    const newBalance = transactionData.transactionType === 'incoming' 
+      ? currentBalance + amount 
+      : currentBalance - amount;
+
+    const [transaction] = await db
+      .insert(walletTransactions)
+      .values({
+        ...transactionData,
+        runningBalance: newBalance.toFixed(2),
+      })
+      .returning();
+    
+    return transaction;
+  }
+
+  async updateWalletTransaction(id: string, tenantId: string, updates: Partial<InsertWalletTransaction>): Promise<WalletTransaction> {
+    const [transaction] = await db
+      .update(walletTransactions)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(and(
+        eq(walletTransactions.id, id),
+        eq(walletTransactions.tenantId, tenantId)
+      ))
+      .returning();
+    
+    return transaction;
+  }
+
+  async getWalletBalance(tenantId: string): Promise<{
+    currentBalance: number;
+    pendingIncoming: number;
+    pendingOutgoing: number;
+    availableBalance: number;
+  }> {
+    // Get current balance from the most recent transaction
+    const [lastTransaction] = await db
+      .select()
+      .from(walletTransactions)
+      .where(eq(walletTransactions.tenantId, tenantId))
+      .orderBy(desc(walletTransactions.transactionDate))
+      .limit(1);
+
+    const currentBalance = parseFloat(lastTransaction?.runningBalance || "0");
+
+    // Get pending transactions
+    const pendingTransactions = await db
+      .select()
+      .from(walletTransactions)
+      .where(and(
+        eq(walletTransactions.tenantId, tenantId),
+        eq(walletTransactions.status, 'pending')
+      ));
+
+    const pendingIncoming = pendingTransactions
+      .filter(t => t.transactionType === 'incoming')
+      .reduce((sum, t) => sum + parseFloat(t.amount), 0);
+
+    const pendingOutgoing = pendingTransactions
+      .filter(t => t.transactionType === 'outgoing')
+      .reduce((sum, t) => sum + parseFloat(t.amount), 0);
+
+    const availableBalance = currentBalance + pendingIncoming - pendingOutgoing;
+
+    return {
+      currentBalance,
+      pendingIncoming,
+      pendingOutgoing,
+      availableBalance,
+    };
+  }
+
+  async getWalletSummary(tenantId: string): Promise<{
+    customerPayments: number;
+    insurancePayouts: number;
+    financeAdvances: number;
+    premiumsPaid: number;
+  }> {
+    const transactions = await db
+      .select()
+      .from(walletTransactions)
+      .where(and(
+        eq(walletTransactions.tenantId, tenantId),
+        eq(walletTransactions.status, 'completed')
+      ));
+
+    const customerPayments = transactions
+      .filter(t => t.source === 'customer_payment')
+      .reduce((sum, t) => sum + parseFloat(t.amount), 0);
+
+    const insurancePayouts = transactions
+      .filter(t => t.source === 'insurance_payout')
+      .reduce((sum, t) => sum + parseFloat(t.amount), 0);
+
+    const financeAdvances = transactions
+      .filter(t => t.source === 'finance_advance')
+      .reduce((sum, t) => sum + parseFloat(t.amount), 0);
+
+    const premiumsPaid = transactions
+      .filter(t => t.source === 'premium_payment')
+      .reduce((sum, t) => sum + parseFloat(t.amount), 0);
+
+    return {
+      customerPayments,
+      insurancePayouts,
+      financeAdvances,
+      premiumsPaid,
+    };
   }
 }
 

@@ -3772,6 +3772,106 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Wallet API endpoints
+  app.get("/api/wallet/transactions", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { transactionType, source, startDate, endDate, limit } = req.query;
+
+      const transactions = await storage.getWalletTransactions(user.tenantId, {
+        transactionType: transactionType as string | undefined,
+        source: source as string | undefined,
+        startDate: startDate as string | undefined,
+        endDate: endDate as string | undefined,
+        limit: limit ? parseInt(limit as string) : 100,
+      });
+
+      res.json(transactions);
+    } catch (error) {
+      console.error("Error fetching wallet transactions:", error);
+      res.status(500).json({ message: "Failed to fetch wallet transactions" });
+    }
+  });
+
+  app.get("/api/wallet/transactions/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const transaction = await storage.getWalletTransaction(req.params.id, user.tenantId);
+      if (!transaction) {
+        return res.status(404).json({ message: "Transaction not found" });
+      }
+
+      res.json(transaction);
+    } catch (error) {
+      console.error("Error fetching wallet transaction:", error);
+      res.status(500).json({ message: "Failed to fetch wallet transaction" });
+    }
+  });
+
+  app.post("/api/wallet/transactions", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { insertWalletTransactionSchema } = await import("@shared/schema");
+      const validatedData = insertWalletTransactionSchema.omit({ tenantId: true }).parse(req.body);
+
+      const transactionData = {
+        ...validatedData,
+        tenantId: user.tenantId,
+      };
+
+      const transaction = await storage.createWalletTransaction(transactionData);
+      res.json(transaction);
+    } catch (error) {
+      console.error("Error creating wallet transaction:", error);
+      if (error instanceof Error && error.name === 'ZodError') {
+        return res.status(400).json({ message: "Invalid transaction data", error: error.message });
+      }
+      res.status(500).json({ message: "Failed to create wallet transaction" });
+    }
+  });
+
+  app.get("/api/wallet/balance", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const balance = await storage.getWalletBalance(user.tenantId);
+      res.json(balance);
+    } catch (error) {
+      console.error("Error fetching wallet balance:", error);
+      res.status(500).json({ message: "Failed to fetch wallet balance" });
+    }
+  });
+
+  app.get("/api/wallet/summary", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const summary = await storage.getWalletSummary(user.tenantId);
+      res.json(summary);
+    } catch (error) {
+      console.error("Error fetching wallet summary:", error);
+      res.status(500).json({ message: "Failed to fetch wallet summary" });
+    }
+  });
+
   // Bulk Operations
   app.post("/api/action-items/bulk/complete", isAuthenticated, async (req: any, res) => {
     try {
