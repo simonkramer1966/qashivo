@@ -127,6 +127,24 @@
     @apply transition-all duration-200 hover:shadow-md active:scale-[0.99];
   }
   
+  /* ========== GLASSMORPHISM CARD SYSTEM ========== */
+  
+  .glass-card {
+    @apply bg-white/90 backdrop-blur-md rounded-2xl shadow-lg border border-white/50;
+    @apply transition-all duration-200;
+  }
+  
+  .glass-card-light {
+    @apply bg-white/70 backdrop-blur-sm rounded-2xl shadow-sm border border-white/40;
+    @apply transition-all duration-200;
+  }
+  
+  .glass-card-strong {
+    background: linear-gradient(135deg, #009FC2 0%, #007A9A 100%);
+    @apply backdrop-blur-lg rounded-2xl shadow-xl border border-white/30;
+    @apply transition-all duration-200;
+  }
+  
   /* ========== BUTTON SYSTEM ========== */
   
   /* Primary button - full width on mobile */
