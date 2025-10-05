@@ -4,6 +4,7 @@ import { useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useState, useEffect, useMemo } from "react";
+import { useSplash } from "@/contexts/SplashContext";
 import { 
   BarChart3, 
   FileText, 
@@ -114,6 +115,7 @@ export default function NewSidebar() {
   const [orgSearchQuery, setOrgSearchQuery] = useState("");
   const [recentOrgIds, setRecentOrgIds] = useState<string[]>([]);
   const queryClient = useQueryClient();
+  const { triggerSplash } = useSplash();
 
   // Load recent organizations from localStorage on mount
   useEffect(() => {
@@ -402,10 +404,15 @@ export default function NewSidebar() {
         "flex items-center justify-between p-4",
         isCollapsed ? "flex-col space-y-2" : "space-x-3"
       )}>
-        <div className={cn(
-          "flex items-center",
-          isCollapsed ? "flex-col space-y-2" : "space-x-3"
-        )}>
+        <button
+          onClick={triggerSplash}
+          className={cn(
+            "flex items-center hover:opacity-80 transition-opacity cursor-pointer",
+            isCollapsed ? "flex-col space-y-2" : "space-x-3"
+          )}
+          title="Click to lock screen"
+          data-testid="button-logo-splash"
+        >
           <div className="w-10 h-10 rounded-lg flex items-center justify-center">
             <img src={nexusLogo} alt="Qashivo" className="w-full h-full object-contain" />
           </div>
@@ -419,7 +426,7 @@ export default function NewSidebar() {
               </p>
             </div>
           )}
-        </div>
+        </button>
         <Button
           variant="ghost"
           size="sm"
