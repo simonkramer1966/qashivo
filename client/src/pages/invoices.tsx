@@ -134,7 +134,7 @@ function FinanceOfferDialog({ isOpen, onClose, invoice }: FinanceOfferDialogProp
             <div className="p-2 bg-blue-100 rounded-lg">
               <Banknote className="h-5 w-5 text-blue-600" />
             </div>
-            Instant Invoice Finance
+            Qashivo Wallet
           </DialogTitle>
           <DialogDescription>
             Get paid today for invoice {invoice.invoiceNumber}
