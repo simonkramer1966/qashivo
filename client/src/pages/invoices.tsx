@@ -513,60 +513,56 @@ export default function Invoices() {
                     </div>
 
                     {/* Desktop Layout - Grid aligned with top metrics */}
-                    <div className="hidden sm:flex sm:items-start sm:gap-3">
-                      <div className="flex-1 grid grid-cols-4 gap-4">
-                        {/* Column 1 - Company Info (aligns with Total) */}
-                        <div className="min-w-0">
-                          <h4 className="font-semibold text-slate-900 truncate">
-                            {invoice.contact?.companyName || invoice.contact?.name || 'Unknown Customer'}
-                          </h4>
-                          <p className="text-sm text-slate-600 truncate">
-                            {invoice.invoiceNumber}
-                          </p>
-                        </div>
-
-                        {/* Column 2 - Invoice Amount + Days Overdue stacked (aligns with Overdue metric) */}
-                        <div>
-                          <p className="text-lg font-bold text-slate-900 whitespace-nowrap">
-                            {formatCurrency(outstanding)}
-                          </p>
-                          <p className="text-xs text-slate-500">
-                            {invoice.status !== 'paid' && daysOverdue > 0 
-                              ? `${daysOverdue} days overdue`
-                              : `Due ${new Date(invoice.dueDate).toLocaleDateString()}`
-                            }
-                          </p>
-                        </div>
-
-                        {/* Column 3 - Empty (aligns with Paid) */}
-                        <div>
-                        </div>
-
-                        {/* Column 4 - Status Badge (aligns with Outstanding) */}
-                        <div className="flex justify-start">
-                          {getStatusBadge(invoice)}
-                        </div>
+                    <div className="hidden sm:grid sm:grid-cols-4 sm:gap-4">
+                      {/* Column 1 - Company Info (aligns with Total) */}
+                      <div className="min-w-0">
+                        <h4 className="font-semibold text-slate-900 truncate">
+                          {invoice.contact?.companyName || invoice.contact?.name || 'Unknown Customer'}
+                        </h4>
+                        <p className="text-sm text-slate-600 truncate">
+                          {invoice.invoiceNumber}
+                        </p>
                       </div>
-                      
-                      {invoice.status !== 'paid' && (
-                        <div className="flex flex-col gap-2 mr-2 flex-shrink-0">
-                          <InsuranceWidget 
-                            invoiceAmount={outstanding}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectedInvoiceForInsurance(invoice);
-                            }}
-                          />
-                          <FinanceButton 
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectedInvoiceForFinance(invoice);
-                            }}
-                          />
-                        </div>
-                      )}
-                      
-                      <ChevronRight className="h-5 w-5 text-slate-400 flex-shrink-0 mt-1" />
+
+                      {/* Column 2 - Invoice Amount + Days Overdue stacked (aligns with Overdue metric) */}
+                      <div>
+                        <p className="text-lg font-bold text-slate-900 whitespace-nowrap">
+                          {formatCurrency(outstanding)}
+                        </p>
+                        <p className="text-xs text-slate-500">
+                          {invoice.status !== 'paid' && daysOverdue > 0 
+                            ? `${daysOverdue} days overdue`
+                            : `Due ${new Date(invoice.dueDate).toLocaleDateString()}`
+                          }
+                        </p>
+                      </div>
+
+                      {/* Column 3 - Buttons (aligns with Paid) */}
+                      <div className="flex gap-2">
+                        {invoice.status !== 'paid' && (
+                          <>
+                            <InsuranceWidget 
+                              invoiceAmount={outstanding}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedInvoiceForInsurance(invoice);
+                              }}
+                            />
+                            <FinanceButton 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedInvoiceForFinance(invoice);
+                              }}
+                            />
+                          </>
+                        )}
+                      </div>
+
+                      {/* Column 4 - Status Badge + Chevron (aligns with Outstanding) */}
+                      <div className="flex items-center gap-3">
+                        {getStatusBadge(invoice)}
+                        <ChevronRight className="h-5 w-5 text-slate-400 flex-shrink-0" />
+                      </div>
                     </div>
                   </div>
                 );
