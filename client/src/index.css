@@ -44,10 +44,11 @@
     /* Border radius - Apple style */
     --radius: 1rem; /* 16px - rounded-2xl by default */
     
-    /* Status colors */
-    --success: 142 76% 36%;
-    --warning: 38 92% 50%;
-    --error: 0 84% 60%;
+    /* Status colors - Desaturated Fintech Palette */
+    --success: 156 38% 50%; /* #4FAD80 - muted teal green */
+    --warning: 38 75% 57%; /* #E8A23B - softer amber */
+    --error: 0 48% 58%; /* #C75C5C - muted red */
+    --critical: 0 48% 58%; /* #C75C5C - same as error for critical status */
   }
 
   .dark {
@@ -79,7 +80,7 @@
   }
   
   body {
-    @apply bg-white text-foreground font-sans antialiased;
+    @apply bg-[#FAFAFA] text-foreground font-sans antialiased;
     font-feature-settings: "cv11", "ss01";
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -163,26 +164,26 @@
     @apply min-h-[44px];
   }
   
-  /* ========== BADGE SYSTEM ========== */
+  /* ========== BADGE SYSTEM - Desaturated Fintech Palette ========== */
   
   .badge-success {
     @apply inline-flex items-center px-2.5 py-1 rounded-full;
-    @apply bg-emerald-100 text-emerald-700 text-sm font-medium;
+    @apply bg-[#4FAD80]/10 text-[#4FAD80] text-sm font-medium;
   }
   
   .badge-warning {
     @apply inline-flex items-center px-2.5 py-1 rounded-full;
-    @apply bg-amber-100 text-amber-700 text-sm font-medium;
+    @apply bg-[#E8A23B]/10 text-[#E8A23B] text-sm font-medium;
   }
   
   .badge-error {
     @apply inline-flex items-center px-2.5 py-1 rounded-full;
-    @apply bg-red-100 text-red-700 text-sm font-medium;
+    @apply bg-[#C75C5C]/10 text-[#C75C5C] text-sm font-medium;
   }
   
   .badge-info {
     @apply inline-flex items-center px-2.5 py-1 rounded-full;
-    @apply bg-blue-100 text-blue-700 text-sm font-medium;
+    @apply bg-blue-500/10 text-blue-600 text-sm font-medium;
   }
   
   /* ========== MOBILE NAVIGATION ========== */
@@ -224,18 +225,18 @@
     @apply pb-20 lg:pb-0;
   }
   
-  /* ========== STATUS INDICATORS ========== */
+  /* ========== STATUS INDICATORS - Desaturated Fintech Palette ========== */
   
   .status-dot-success {
-    @apply w-2 h-2 rounded-full bg-emerald-500;
+    @apply w-2 h-2 rounded-full bg-[#4FAD80];
   }
   
   .status-dot-warning {
-    @apply w-2 h-2 rounded-full bg-amber-500;
+    @apply w-2 h-2 rounded-full bg-[#E8A23B];
   }
   
   .status-dot-error {
-    @apply w-2 h-2 rounded-full bg-red-500;
+    @apply w-2 h-2 rounded-full bg-[#C75C5C];
   }
   
   /* ========== SHADOWS - Apple style ========== */
@@ -268,15 +269,15 @@
   }
   
   .swipe-action-success {
-    @apply bg-emerald-500;
+    @apply bg-[#4FAD80];
   }
   
   .swipe-action-warning {
-    @apply bg-amber-500;
+    @apply bg-[#E8A23B];
   }
   
   .swipe-action-error {
-    @apply bg-red-500;
+    @apply bg-[#C75C5C];
   }
 }
 
