@@ -185,41 +185,34 @@ export default function Customers() {
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex-1 min-w-0">
-                      {/* Header Row - Company Name + Financial Info (desktop) */}
-                      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between mb-2 gap-2 sm:gap-4">
-                        {/* Left Side - Company Info */}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="flex-1 min-w-0">
-                              <h4 className="font-semibold text-slate-900 flex items-center gap-1.5">
-                                <span className="truncate">{contact.companyName || contact.name}</span>
-                                {contact.riskBand ? (
-                                  <ShieldCheck className="h-4 w-4 text-emerald-600 flex-shrink-0" data-testid={`shield-checked-${contact.id}`} />
-                                ) : (
-                                  <Shield className="h-4 w-4 text-amber-500 flex-shrink-0" data-testid={`shield-unchecked-${contact.id}`} />
-                                )}
-                              </h4>
-                              {contact.email && (
-                                <p className="text-sm text-slate-600 truncate">
-                                  {contact.email}
-                                </p>
+                      {/* Mobile Layout - Stacked */}
+                      <div className="sm:hidden">
+                        <div className="flex items-start justify-between gap-2 mb-2">
+                          <div className="flex-1 min-w-0">
+                            <h4 className="font-semibold text-slate-900 flex items-center gap-1.5">
+                              <span className="truncate">{contact.companyName || contact.name}</span>
+                              {contact.riskBand ? (
+                                <ShieldCheck className="h-4 w-4 text-emerald-600 flex-shrink-0" data-testid={`shield-checked-${contact.id}`} />
+                              ) : (
+                                <Shield className="h-4 w-4 text-amber-500 flex-shrink-0" data-testid={`shield-unchecked-${contact.id}`} />
                               )}
-                              {contact.creditLimit && (
-                                <p className="text-xs text-slate-500 mt-1">
-                                  Credit Limit: {formatCurrency(contact.creditLimit)}
-                                </p>
-                              )}
-                            </div>
-                            {/* Risk badge - show only on mobile */}
-                            <div className="sm:hidden">
-                              {getRiskBandBadge(contact.riskBand)}
-                            </div>
+                            </h4>
+                            {contact.email && (
+                              <p className="text-sm text-slate-600 truncate">
+                                {contact.email}
+                              </p>
+                            )}
+                            {contact.creditLimit && (
+                              <p className="text-xs text-slate-500 mt-1">
+                                Credit Limit: {formatCurrency(contact.creditLimit)}
+                              </p>
+                            )}
                           </div>
+                          {getRiskBandBadge(contact.riskBand)}
                         </div>
-
-                        {/* Right Side - Financial Info (inline on desktop) */}
-                        <div className="flex items-center gap-4 sm:gap-6">
-                          {/* Outstanding Amount */}
+                        
+                        {/* Financial Info - Stacked on mobile */}
+                        <div className="flex items-center gap-4">
                           <div>
                             <p className="text-xs text-slate-500 mb-0.5">Outstanding</p>
                             <p className="text-lg font-bold text-slate-900">
@@ -229,8 +222,6 @@ export default function Customers() {
                               {contact.invoiceCount} invoice{contact.invoiceCount !== 1 ? 's' : ''}
                             </p>
                           </div>
-
-                          {/* Overdue Amount */}
                           {contact.overdueAmount > 0 && (
                             <div>
                               <p className="text-xs text-red-600 mb-0.5 font-medium">Overdue</p>
@@ -242,9 +233,58 @@ export default function Customers() {
                               </p>
                             </div>
                           )}
+                        </div>
+                      </div>
 
-                          {/* Risk badge - show only on desktop */}
-                          <div className="hidden sm:block">
+                      {/* Desktop Layout - Grid aligned with top metrics */}
+                      <div className="hidden sm:grid sm:grid-cols-3 sm:gap-4 mb-2">
+                        {/* Column 1 - Company Info (aligns with Total) */}
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-semibold text-slate-900 flex items-center gap-1.5">
+                            <span className="truncate">{contact.companyName || contact.name}</span>
+                            {contact.riskBand ? (
+                              <ShieldCheck className="h-4 w-4 text-emerald-600 flex-shrink-0" data-testid={`shield-checked-${contact.id}`} />
+                            ) : (
+                              <Shield className="h-4 w-4 text-amber-500 flex-shrink-0" data-testid={`shield-unchecked-${contact.id}`} />
+                            )}
+                          </h4>
+                          {contact.email && (
+                            <p className="text-sm text-slate-600 truncate">
+                              {contact.email}
+                            </p>
+                          )}
+                          {contact.creditLimit && (
+                            <p className="text-xs text-slate-500 mt-1">
+                              Credit Limit: {formatCurrency(contact.creditLimit)}
+                            </p>
+                          )}
+                        </div>
+
+                        {/* Column 2 - Outstanding (aligns with High Risk) */}
+                        <div>
+                          <p className="text-xs text-slate-500 mb-0.5">Outstanding</p>
+                          <p className="text-lg font-bold text-slate-900">
+                            {formatCurrency(contact.outstandingAmount)}
+                          </p>
+                          <p className="text-xs text-slate-500">
+                            {contact.invoiceCount} invoice{contact.invoiceCount !== 1 ? 's' : ''}
+                          </p>
+                        </div>
+
+                        {/* Column 3 - Overdue + Risk Badge (aligns with Outstanding metric) */}
+                        <div className="flex items-start gap-4">
+                          {contact.overdueAmount > 0 && (
+                            <div className="flex-1">
+                              <p className="text-xs text-red-600 mb-0.5 font-medium">Overdue</p>
+                              <p className="text-lg font-bold text-red-600">
+                                {formatCurrency(contact.overdueAmount)}
+                              </p>
+                              <p className="text-xs text-red-600">
+                                {contact.overdueCount} invoice{contact.overdueCount !== 1 ? 's' : ''}
+                              </p>
+                            </div>
+                          )}
+                          <div className="flex-shrink-0">
                             {getRiskBandBadge(contact.riskBand)}
                           </div>
                         </div>
