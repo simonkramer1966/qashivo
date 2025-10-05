@@ -468,7 +468,7 @@ export default function Invoices() {
                         <div className="flex items-start justify-between mb-2">
                           <div className="flex-1">
                             <h4 className="font-semibold text-slate-900 truncate">
-                              {invoice.contact?.companyName || invoice.contact?.name || 'Unknown Customer'}
+                              {invoice.contact?.name || 'Unknown Customer'}
                             </h4>
                             <p className="text-sm text-slate-600">
                               {invoice.invoiceNumber}
