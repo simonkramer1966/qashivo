@@ -228,10 +228,10 @@ function InsuranceDialog({ isOpen, onClose, invoice }: InsuranceDialogProps) {
             <div className="p-2 bg-emerald-100 rounded-lg">
               <Shield className="h-5 w-5 text-emerald-600" />
             </div>
-            Insurance Coverage
+            Qashivo Insure
           </DialogTitle>
           <DialogDescription>
-            Protection for invoice {invoice.invoiceNumber}
+            Underwritten by Allianz Trade
           </DialogDescription>
         </DialogHeader>
         
