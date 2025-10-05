@@ -104,6 +104,12 @@ export const contacts = pgTable("contacts", {
   taxNumber: varchar("tax_number"), // For vendors
   accountNumber: varchar("account_number"), // Vendor account number
   notes: text("notes"),
+  
+  // Credit assessment fields
+  riskScore: integer("risk_score"), // 0-100
+  riskBand: varchar("risk_band", { length: 1 }), // A, B, C, D, E
+  creditAssessment: jsonb("credit_assessment"), // Full assessment data: tradingProfile, signals, decision, policyChecks, xero, audit
+  
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => [
