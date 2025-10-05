@@ -1,0 +1,504 @@
+Alright, let’s build Qashivo’s customer credit-check + risk-profiling so it feels world-class, is fast on mobile, and pushes cleanly into Xero.
+
+1) Objectives (what “great” looks like)
+
+One smooth flow to add a customer, assess risk, set a credit limit and payment terms, then sync to Xero.
+
+Modular scoring (data + heuristics + machine learning later) with explainable decisions.
+
+Auditable (who approved what, when, why) with quick re-assess and version history.
+
+Friction-aware UX: defaults + auto-fill + progressive disclosure so it’s 2–4 minutes for a typical SME.
+
+2) End-to-end Flow (screens & logic)
+A. Entry points
+
+Add Customer (from Customers tab)
+
+Convert Prospect → Customer (after quote accepted)
+
+Triggered Re-check (limits review, overdue issues, annual refresh)
+
+B. Steps (mobile-first wizard; desktop shows left-nav steps)
+Step 1 — Business lookup & basics
+
+Goal: identify the entity and prefill everything we can.
+
+Fields/behaviour
+
+Country (default from org) → changes registries used.
+
+Company name (typeahead) / registration number (if known).
+
+Auto-lookup sources (e.g., national registry, business credit bureau, VAT checker).
+
+Prefill: legal name, trading name, registration no., VAT/tax no., address, website, phone, sector (SIC/NAF), company age.
+
+UX copy
+
+Title: “Who are we trading with?”
+
+Hint: “Search by name or number. We’ll fetch public records to save time.”
+
+CTA: Continue →
+
+Edge cases
+
+Not found → allow Manual entry with light warning: “Manual entries may reduce score confidence.”
+
+Step 2 — Trading profile
+
+Goal: capture commercial context to calibrate limit.
+
+Fields
+
+Estimated monthly sales with this customer (slider + currency).
+
+Average invoice value (currency).
+
+Expected max outstanding at any time (currency).
+
+Payment method preference (bank transfer, card, DD).
+
+Contact emails (billing, disputes), phone.
+
+Buyer type (end-customer / reseller / agency / other).
+
+Notes (free text).
+
+UX
+
+Microcopy under monthly sales: “Used to size an initial limit; we’ll never set limit above your policy cap.”
+
+Step 3 — Credit signals (auto + manual)
+
+Goal: bring in risk signals and let the user add context.
+
+Auto-signals (read-only)
+
+Company age, filing health (on-time filings Y/N), CCJs/Legal flags.
+
+Director count & changes in last 12m.
+
+Sector default risk (benchmark band).
+
+Bureau/registry score (0–100) with PD (%) if available.
+
+Trade payment behaviour (if available) – average days beyond terms.
+
+Manual/context
+
+Referee/trade references (optional short form).
+
+Internal history (if re-check): prior late payments, disputes, returns.
+
+UX
+
+Show each signal with status chips (Good / Caution / Risk).
+
+“Why this matters” tooltips.
+
+Step 4 — Risk score & recommendation (explainable)
+
+Goal: show a single score & the reasoning, then allow override with guardrails.
+
+Display
+
+Qashivo Risk Score: 0–100 with band (A/B/C/D/E).
+
+Explain panel with top 3 drivers (e.g., “Young company (+5)”, “No adverse filings (+12)”, “Sector risk: High (-8)”).
+
+Recommended Credit Limit (currency).
+
+Recommended Payment Terms (e.g., Due on receipt / 7 / 14 / 30).
+
+Conditions if any (e.g., upfront deposit 25%, DD mandate required, personal guarantee for >£X).
+
+Actions
+
+Accept recommendation (default)
+
+Request override (requires reason + approval path if outside policy)
+
+Simulate (change one input to see new recommendation without saving)
+
+Step 5 — Policy & compliance checks (auto)
+
+Goal: enforce your internal rules before approval.
+
+Examples (toggle on/off in admin policy):
+
+Max limit by customer tenure.
+
+Sector exclusions / caps.
+
+Country restrictions (sanctions).
+
+Limit → payment-terms matrix (e.g., higher limits demand shorter terms initially).
+
+Insurance eligibility check (if invoice insurance partner connected).
+
+Finance eligibility precheck (for single-invoice financing).
+
+UX
+
+“Policy checks passed ✅” or list blockers with fix suggestions.
+
+Step 6 — Decision & approval
+
+Outcome types
+
+Approved (with limit + terms)
+
+Approved with conditions (deposit/DD/PG)
+
+Manual review required (route to approver)
+
+Declined (state reason + appeal path)
+
+Approval workflow
+
+Assign approver (auto by policy thresholds).
+
+Approver sees the single-page summary + Compare (recommendation vs. requested override) + Audit.
+
+UX microcopy
+
+“Your decision is logged. You can re-assess anytime from the customer page.”
+
+Step 7 — Push to Xero (sync)
+
+What we push
+
+Contact: legal/trading name, primary email/phone, billing & postal addresses, tax/VAT number, website, default currency.
+
+Payment terms:
+
+If your Xero plan supports contact-level default terms, set them.
+
+If not, store terms in Qashivo and apply at invoice creation via API.
+
+Tags/Groups (if you use them): e.g., “Risk_A”, “Risk_B”, “Qashivo”.
+
+Notes: A compact text note with “Risk Band, Limit, Conditions, Reviewed on YYYY-MM-DD”.
+(If notes aren’t supported in your setup, attach a lightweight PDF summary from Qashivo.)
+
+Edge cases
+
+Contact already exists in Xero → Merge dialog (choose Xero as source of truth for billing fields or Qashivo; show diff).
+
+API failure → graceful retry + “Fix & Retry” button.
+
+3) Risk Scoring Model (starter, transparent & tunable)
+
+Score = sum(weights × features), capped 0–100
+
+Feature	Rule	Points (example)
+Company age	≥3y +10; 1–3y +4; <1y 0	
+Filings on time	Yes +8; No -6	
+Legal/adverse (CCJs)	None +8; Minor (<=1, paid) 0; Active -20	
+Bureau score (0–100)	Normalize to 0–30 points	
+Director churn (12m)	0–1 changes +4; ≥2 changes -6	
+Sector risk (benchmark PD)	Low +6; Medium 0; High -8	
+Trade pay. behaviour (DBT)	Early/On time +10; 1–10 DBT +4; >10 DBT -8	
+Internal payment history	None 0; 1–2 late -4; >2 late -10	
+
+Bands
+
+A (80–100): Very low risk → generous limit, NET30 ok
+
+B (65–79): Low risk → moderate limit, NET14–30
+
+C (50–64): Medium → modest limit, NET7–14 or upfront % deposit
+
+D (35–49): High → low limit, Due on Receipt or DD required
+
+E (<35): Very high → prepaid only or decline
+
+Credit Limit formula (starter)
+
+BaseLimit = min( 1.5 × AvgMonthlySales , PolicyCap )
+Multiplier by band:  A 1.2×, B 1.0×, C 0.6×, D 0.3×, E 0×
+FinalLimit = round_to_nearest_100( BaseLimit × Multiplier )
+Hard clamps: if adverse active → max(£1,000 or 10% of BaseLimit)
+
+
+Payment Terms by band
+
+A: NET30 (or org default)
+
+B: NET14–30
+
+C: NET7–14 (+ consider 20% deposit)
+
+D: Due on receipt or NET7 with DD mandate
+
+E: Prepaid only
+
+Conditions engine (examples)
+
+If Band C and AvgInvoice > £10k → 25% deposit.
+
+If Band D and DBT > 15 → DD required + limit ≤ £2k.
+
+If any legal adverse open → manual review.
+
+4) Data Model (minimal JSON you can store)
+{
+  "customerId": "uuid",
+  "legalName": "ABC Ltd",
+  "tradingName": "ABC",
+  "registrationNumber": "12345678",
+  "vatNumber": "GB123456789",
+  "country": "GB",
+  "addresses": {
+    "registered": { "line1": "", "city": "", "postcode": "", "country": "GB" },
+    "billing": { "line1": "", "city": "", "postcode": "", "country": "GB" }
+  },
+  "contacts": {
+    "billingEmail": "ap@abc.com",
+    "disputesEmail": "creditcontrol@abc.com",
+    "phone": "+44..."
+  },
+  "tradingProfile": {
+    "estimatedMonthlySales": 20000,
+    "avgInvoiceValue": 3500,
+    "peakExposure": 15000,
+    "paymentMethodPref": "bank_transfer",
+    "buyerType": "reseller"
+  },
+  "signals": {
+    "companyAgeMonths": 48,
+    "filingsOnTime": true,
+    "adverseCount": 0,
+    "directorChanges12m": 1,
+    "sectorRisk": "low",
+    "bureauScore": 72,
+    "dbtDays": 4,
+    "internalLateCount12m": 0
+  },
+  "score": {
+    "value": 82,
+    "band": "A",
+    "explain": [
+      "No adverse filings",
+      "Good bureau score",
+      "Low sector risk"
+    ]
+  },
+  "decision": {
+    "status": "approved",
+    "creditLimit": 24000,
+    "paymentTerms": "NET30",
+    "conditions": ["None"],
+    "approvedBy": "userId",
+    "approvedAt": "2025-10-05T09:30:00Z",
+    "override": { "used": false, "reason": null }
+  },
+  "policyChecks": {
+    "passed": true,
+    "messages": []
+  },
+  "xero": {
+    "contactId": null,
+    "syncStatus": "pending",
+    "syncNotes": "Will set default terms or enforce at invoice creation."
+  },
+  "audit": [
+    {
+      "at": "2025-10-05T09:29:00Z",
+      "by": "userId",
+      "action": "scoreCalculated",
+      "details": { "version": "v1.0" }
+    }
+  ]
+}
+
+5) Dialog & Microcopy (ready to drop in)
+Dialog: Merge with existing Xero contact
+
+Title: “We found a matching contact in Xero”
+
+Body:
+“Qashivo: ‘ABC Ltd’ (billing email ap@abc.com
+)
+Xero: ‘ABC Limited’ (billing email accounts@abc.com
+)
+Choose which details to keep for each field below.”
+
+Options:
+
+Field-by-field radio (Keep Qashivo / Keep Xero)
+
+Checkbox “Apply this choice to all empty fields”
+
+Footer CTAs: Merge & Continue, Cancel
+
+Dialog: Override recommendation
+
+Title: “Request an override”
+
+Body:
+“Recommended limit £24,000 NET30.
+Your request: £40,000 NET30.”
+“Tell us why (this will go to an approver).”
+
+Textarea placeholder: “e.g., confirmed framework PO for £250k; parent guarantee provided.”
+
+Footer CTAs: Send for approval, Back
+
+Dialog: Policy blocker
+
+Title: “Policy rules prevent approval”
+
+Body list:
+
+“Open adverse filing detected.”
+
+“Requested limit exceeds cap for sector ‘Construction’ by £10,000.”
+
+Help text: “You can lower the limit or request a senior override.”
+
+CTAs: Adjust request, Request senior override
+
+Toasts/inline
+
+Success: “Customer approved and synced to Xero ✅”
+
+Retry: “Couldn’t reach Xero. Check your credentials or try again.”
+
+6) Xero sync details (safe, flexible approach)
+
+Create/Update Contact with: name(s), email(s), phones, addresses, tax number, website, default currency.
+
+Payment terms:
+
+If your Xero setup supports contact-level defaults, set them via the Contacts API.
+
+If not, store the terms in Qashivo and whenever you create a Xero invoice via API, apply those terms on the invoice so the due date is correct.
+
+Risk tags:
+
+Use Contact Groups like Risk_A, Risk_B, etc. If groups aren’t used in your org, prefix in the Account Number field (e.g., QA-RiskA-CL24000) or add a small PDF summary as an attachment.
+
+Idempotency: store Xero ContactID after first creation to avoid duplicates.
+
+Merges: if Xero has a near-match, show the merge dialog above rather than creating a new contact.
+
+7) Admin: Policy configuration (no-code sliders & toggles)
+
+Caps by sector, country, customer age, band.
+
+Enable/disable conditions (deposit %, DD mandate).
+
+Approval tiers (who approves overrides >£X or Bands C–E).
+
+Data providers toggles (which registries/bureaus to call).
+
+Auto-review cadence (e.g., 6 months or on “Two late payments in 60 days”).
+
+8) Re-assessment triggers (automatic)
+
+2+ late payments in 60 days
+
+Exposure > 90% of limit for 14 days
+
+New adverse filing
+
+Annual policy refresh date
+
+9) “Plain English” Prompt for Replit (paste this as-is)
+
+Project: Qashivo — Customer Credit Checking & Risk Profiling
+Goal: Build a mobile-first, desktop-responsive flow to add a customer, fetch credit/risk signals, calculate an explainable score, recommend a credit limit and payment terms, route overrides for approval, and sync the approved customer into Xero Contacts.
+
+What to build now (MVP UI & logic):
+
+A 6-step wizard (React + Tailwind, router-guarded):
+
+Step 1: Business Lookup (country, search by name/registration no., manual entry fallback).
+
+Step 2: Trading Profile (estimated monthly sales, avg invoice, peak exposure, contacts, notes).
+
+Step 3: Credit Signals (read-only auto signals + manual references; show status chips).
+
+Step 4: Risk & Recommendation (score 0–100 with band A–E, top-3 reasons, recommended limit & terms, conditions; buttons to Accept, Request Override, Simulate).
+
+Step 5: Policy Checks (list pass/fail reasons).
+
+Step 6: Decision & Sync (approve/approve-with-conditions/manual review/decline) then push to Xero.
+
+Components:
+
+SignalCard (label, value, status chip, tooltip).
+
+ExplainList (ranked reason chips).
+
+PolicyList (passes + blockers).
+
+MergeDialog, OverrideDialog, ApiErrorBanner, Toast.
+
+State & Data:
+
+Implement the JSON shape shown below (customer, tradingProfile, signals, score, decision, policyChecks, xero, audit).
+
+Provide stub functions for: lookupCompany(), fetchSignals(), calculateScore(), applyPolicy(), pushToXero().
+
+Hardcode mock responses for now; keep functions async and idempotent.
+
+Scoring & Policy:
+
+Implement the provided scoring table and band thresholds.
+
+Limit formula and terms mapping exactly as specified.
+
+Show “why” explanations (top 3 weighted contributors).
+
+Xero integration (stub for demo):
+
+On approval, call pushToXero(customer) which simulates: create/update contact, set contact-level payment terms if supported, else store terms in Qashivo and ensure invoices created via API apply those terms.
+
+Simulate merge flow when a name/email match is detected.
+
+UX polish (mobile-first):
+
+Sticky bottom Continue CTA on mobile.
+
+Skeletons for loading, empty states, and error toasts.
+
+Accessibility: labels, aria-live for toasts, keyboard nav.
+
+Persistence:
+
+Use a simple in-memory store or localStorage for demo. Wire to API later.
+
+JSON model to use (copy/paste):
+(Use the “Data Model” JSON from the spec above verbatim.)
+
+Success criteria for the demo:
+
+Adding a customer from scratch takes < 3 minutes on mobile.
+
+Score, band, limit, terms, and top-3 explanations are visible and consistent with inputs.
+
+Override request triggers the approval dialog and logs to an audit array.
+
+“Approve & Sync” shows a successful Xero sync toast and displays a “View in Xero” placeholder link.
+
+Re-assessment badge appears if I change inputs to trigger a policy rule.
+
+Stretch (optional if time):
+
+Export a 1-page PDF “Credit Decision Summary” (risk band, limit, terms, conditions, approver, timestamp).
+
+Contact Groups preview (Risk_A, Risk_B, etc.) to mirror in Xero.
+
+10) What you’ll have at the end
+
+A crisp, investor-ready flow that looks production.
+
+Explainable, auditable credit decisions with smart defaults.
+
+Clean handoff to Xero that won’t create duplicate contacts or broken terms.
+
+Space to plug in live data providers (registries/bureaus/insurance/finance) later without rewriting the UI.
