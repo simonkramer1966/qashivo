@@ -79,13 +79,13 @@ function InsuranceWidget({ invoiceAmount, onClick }: InsuranceWidgetProps) {
   return (
     <button
       onClick={onClick}
-      className="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-colors border border-emerald-200"
+      className="flex items-center justify-center sm:justify-start gap-2 px-3 py-3 sm:py-1.5 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-colors border border-emerald-200 flex-1 sm:flex-none min-h-[44px] sm:min-h-0"
       data-testid="button-insurance-coverage"
     >
       {needsUpgrade ? (
-        <Shield className="h-4 w-4 text-emerald-600" />
+        <Shield className="h-4 w-4 text-emerald-600 flex-shrink-0" />
       ) : (
-        <ShieldCheck className="h-4 w-4 text-emerald-600" />
+        <ShieldCheck className="h-4 w-4 text-emerald-600 flex-shrink-0" />
       )}
       <div className="text-left">
         <p className="text-xs font-semibold text-emerald-700">{coveragePercentage}% Covered</p>
@@ -105,10 +105,10 @@ function FinanceButton({ onClick }: FinanceButtonProps) {
   return (
     <button
       onClick={onClick}
-      className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors border border-blue-200"
+      className="flex items-center justify-center sm:justify-start gap-2 px-3 py-3 sm:py-1.5 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors border border-blue-200 flex-1 sm:flex-none min-h-[44px] sm:min-h-0"
       data-testid="button-get-paid-now"
     >
-      <Banknote className="h-4 w-4 text-blue-600" />
+      <Banknote className="h-4 w-4 text-blue-600 flex-shrink-0" />
       <p className="text-xs font-semibold text-blue-700">Get Paid Now</p>
     </button>
   );
@@ -463,7 +463,9 @@ export default function Invoices() {
                     onClick={() => setLocation(`/invoices/${invoice.id}`)}
                     data-testid={`invoice-item-${invoice.id}`}
                   >
-                    <div className="flex items-start justify-between gap-3">
+                    {/* Desktop: horizontal layout with buttons on right */}
+                    {/* Mobile: stacked layout with full-width buttons below */}
+                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between mb-2">
                           <div className="flex-1">
@@ -489,11 +491,13 @@ export default function Invoices() {
                               }
                             </p>
                           </div>
+                          {/* Chevron on mobile - inline with amount */}
+                          <ChevronRight className="h-5 w-5 text-slate-400 flex-shrink-0 sm:hidden" />
                         </div>
                       </div>
                       
                       {invoice.status !== 'paid' && (
-                        <div className="flex flex-col gap-2 mr-2">
+                        <div className="flex flex-row sm:flex-col gap-2 sm:mr-2">
                           <InsuranceWidget 
                             invoiceAmount={outstanding}
                             onClick={(e) => {
@@ -510,7 +514,8 @@ export default function Invoices() {
                         </div>
                       )}
                       
-                      <ChevronRight className="h-5 w-5 text-slate-400 flex-shrink-0 mt-1" />
+                      {/* Chevron on desktop - at far right */}
+                      <ChevronRight className="hidden sm:block h-5 w-5 text-slate-400 flex-shrink-0 mt-1" />
                     </div>
                   </div>
                 );
