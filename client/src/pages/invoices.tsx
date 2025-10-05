@@ -247,7 +247,7 @@ function InsuranceDialog({ isOpen, onClose, invoice }: InsuranceDialogProps) {
           
           <div className="space-y-3">
             <div className="flex justify-between items-center">
-              <span className="text-sm text-slate-600">Invoice Amount</span>
+              <span className="text-sm text-slate-600">Invoice Amount ({invoice.invoiceNumber})</span>
               <span className="text-sm font-semibold text-slate-900">{formatCurrency(outstanding)}</span>
             </div>
             <div className="flex justify-between items-center">
