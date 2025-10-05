@@ -80,6 +80,17 @@ export default function Cashboard() {
     }));
   };
 
+  const formatCompactCurrency = (value: number) => {
+    const currencySymbol = formatCurrency(0).replace(/[0-9.,]/g, '').trim();
+    
+    if (value >= 1000000) {
+      return `${currencySymbol}${(value / 1000000).toFixed(1).replace(/\.0$/, '')}m`;
+    } else if (value >= 1000) {
+      return `${currencySymbol}${(value / 1000).toFixed(0)}k`;
+    }
+    return formatCurrency(value);
+  };
+
   return (
     <div className="flex h-screen bg-white">
       {/* Desktop Sidebar */}
@@ -273,7 +284,7 @@ export default function Cashboard() {
                       tick={{ fontSize: 12 }}
                       tickLine={false}
                       axisLine={false}
-                      tickFormatter={(value) => formatCurrency(value).replace(/\.00$/, '')}
+                      tickFormatter={(value) => formatCompactCurrency(value)}
                     />
                     <RechartsTooltip
                       formatter={(value: any) => [formatCurrency(value), 'Expected']}
