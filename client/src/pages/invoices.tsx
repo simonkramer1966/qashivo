@@ -315,7 +315,7 @@ export default function Invoices() {
   const [, setLocation] = useLocation();
   const { formatCurrency } = useCurrency();
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('overdue');
   const [page, setPage] = useState(1);
   const [selectedInvoiceForInsurance, setSelectedInvoiceForInsurance] = useState<Invoice | null>(null);
   const [selectedInvoiceForFinance, setSelectedInvoiceForFinance] = useState<Invoice | null>(null);
