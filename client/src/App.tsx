@@ -11,6 +11,7 @@ import Invoices from "@/pages/invoices";
 import Contacts from "@/pages/contacts";
 import Onboarding from "@/pages/onboarding";
 import ActionCentre from "@/pages/action-centre";
+import Wallet from "@/pages/wallet";
 import Workflows from "@/pages/workflows";
 import ActivityLog from "@/pages/activity-log";
 import Settings from "@/pages/settings";
@@ -56,6 +57,7 @@ function Router() {
       <Route path="/onboarding" component={Onboarding} />
       <Route path="/invoices" component={Invoices} />
       <Route path="/action-centre" component={ActionCentre} />
+      <Route path="/wallet" component={Wallet} />
       <Route path="/workflows" component={Workflows} />
       <Route path="/activity-log" component={ActivityLog} />
       <Route path="/documentation" component={Documentation} />
