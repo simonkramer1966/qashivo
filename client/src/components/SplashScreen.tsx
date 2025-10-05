@@ -55,7 +55,7 @@ export default function SplashScreen({ onEnter }: SplashScreenProps) {
           <Button
             onClick={onEnter}
             size="lg"
-            className="bg-white text-[#17B6C3] hover:bg-white/90 hover:scale-105 transition-all duration-200 shadow-2xl px-12 py-6 text-lg font-semibold rounded-xl"
+            className="bg-white/10 backdrop-blur-md border border-white/20 text-white hover:bg-white/20 hover:scale-105 transition-all duration-200 shadow-2xl px-12 py-6 text-lg font-semibold rounded-2xl"
             data-testid="button-enter"
           >
             Enter
