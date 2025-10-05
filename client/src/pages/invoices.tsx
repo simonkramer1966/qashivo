@@ -137,7 +137,7 @@ function FinanceOfferDialog({ isOpen, onClose, invoice }: FinanceOfferDialogProp
             Qashivo Wallet
           </DialogTitle>
           <DialogDescription>
-            Get paid today for invoice {invoice.invoiceNumber}
+            Financed by Kriya
           </DialogDescription>
         </DialogHeader>
         
