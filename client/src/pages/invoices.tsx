@@ -512,38 +512,44 @@ export default function Invoices() {
                       )}
                     </div>
 
-                    {/* Desktop Layout - Horizontal with amount aligned to company name */}
-                    <div className="hidden sm:flex sm:items-start sm:justify-between sm:gap-3">
-                      <div className="flex-1 min-w-0">
-                        {/* Line 1: Company name | Amount | Status */}
-                        <div className="flex items-start justify-between mb-1">
-                          <h4 className="font-semibold text-slate-900 truncate flex-1">
+                    {/* Desktop Layout - Grid aligned with top metrics */}
+                    <div className="hidden sm:flex sm:items-start sm:gap-3">
+                      <div className="flex-1 grid grid-cols-4 gap-4">
+                        {/* Column 1 - Company Info (aligns with Total) */}
+                        <div className="min-w-0">
+                          <h4 className="font-semibold text-slate-900 truncate">
                             {invoice.contact?.companyName || invoice.contact?.name || 'Unknown Customer'}
                           </h4>
-                          <div className="flex items-center gap-4 ml-4">
-                            <p className="text-lg font-bold text-slate-900 whitespace-nowrap">
-                              {formatCurrency(outstanding)}
-                            </p>
-                            {getStatusBadge(invoice)}
-                          </div>
-                        </div>
-                        
-                        {/* Line 2: Invoice number | Days overdue */}
-                        <div className="flex items-center justify-between">
-                          <p className="text-sm text-slate-600">
+                          <p className="text-sm text-slate-600 truncate">
                             {invoice.invoiceNumber}
                           </p>
-                          <p className="text-xs text-slate-500 ml-4">
+                        </div>
+
+                        {/* Column 2 - Invoice Amount (aligns with Overdue) */}
+                        <div>
+                          <p className="text-lg font-bold text-slate-900 whitespace-nowrap">
+                            {formatCurrency(outstanding)}
+                          </p>
+                        </div>
+
+                        {/* Column 3 - Days Overdue (aligns with Paid) */}
+                        <div>
+                          <p className="text-xs text-slate-500">
                             {invoice.status !== 'paid' && daysOverdue > 0 
                               ? `${daysOverdue} days overdue`
                               : `Due ${new Date(invoice.dueDate).toLocaleDateString()}`
                             }
                           </p>
                         </div>
+
+                        {/* Column 4 - Status Badge (aligns with Outstanding) */}
+                        <div className="flex justify-start">
+                          {getStatusBadge(invoice)}
+                        </div>
                       </div>
                       
                       {invoice.status !== 'paid' && (
-                        <div className="flex flex-col gap-2 mr-2">
+                        <div className="flex flex-col gap-2 mr-2 flex-shrink-0">
                           <InsuranceWidget 
                             invoiceAmount={outstanding}
                             onClick={(e) => {
