@@ -153,7 +153,7 @@ export default function Header({ title, subtitle, action, noBorder = true, title
     <header className="sticky top-0 z-40 bg-white glass-card px-4 sm:px-6 py-4 sm:py-6 border-0 rounded-none shadow-glass">
       {/* Mobile View - Logo, Name, and Page Title */}
       <div className="lg:hidden">
-        <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center justify-between mb-2">
           <div className="flex items-center space-x-2">
             <div className="w-8 h-8 flex items-center justify-center">
               <img src={nexusLogo} alt="Qashivo" className="w-full h-full object-contain" />
@@ -180,6 +180,13 @@ export default function Header({ title, subtitle, action, noBorder = true, title
             </Button>
           )}
         </div>
+        {tenant?.name && (
+          <div className="mb-3 pl-10">
+            <p className="text-sm text-slate-600" data-testid="text-tenant-name">
+              {tenant.name}
+            </p>
+          </div>
+        )}
         <div>
           <h2 className="text-xl font-semibold text-foreground" data-testid="text-page-title">
             {title}
