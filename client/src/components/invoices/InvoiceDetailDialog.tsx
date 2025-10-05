@@ -315,7 +315,7 @@ export function InvoiceDetailDialog({ invoice, open, onOpenChange }: InvoiceDeta
             </div>
 
             {/* Footer Actions */}
-            <div className="sticky bottom-0 bg-white pt-4 border-t">
+            <div className="sticky bottom-0 bg-white pt-8 border-t">
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
                 <Button variant="outline" size="sm" className="touch-target">
                   <Phone className="h-4 w-4 mr-2" />
