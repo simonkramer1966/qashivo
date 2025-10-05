@@ -30,6 +30,8 @@ interface Contact {
   overdueAmount: number;
   overdueCount: number;
   riskScore: number;
+  riskBand?: string | null;
+  creditLimit?: number | null;
 }
 
 export default function Customers() {
@@ -58,20 +60,33 @@ export default function Customers() {
     setPage(1);
   };
 
-  const getRiskBadge = (riskScore: number) => {
-    if (riskScore >= 70) {
-      return <Badge className="badge-error">High Risk</Badge>;
-    } else if (riskScore >= 40) {
-      return <Badge className="badge-warning">Medium</Badge>;
-    } else {
-      return <Badge className="badge-success">Low Risk</Badge>;
-    }
+  const getRiskBandBadge = (riskBand?: string | null) => {
+    if (!riskBand) return null;
+    
+    const bandStyles: Record<string, string> = {
+      'A': 'bg-emerald-100 text-emerald-700 border-emerald-300',
+      'B': 'bg-blue-100 text-blue-700 border-blue-300',
+      'C': 'bg-amber-100 text-amber-700 border-amber-300',
+      'D': 'bg-orange-100 text-orange-700 border-orange-300',
+      'E': 'bg-red-100 text-red-700 border-red-300',
+    };
+    
+    return (
+      <Badge className={`${bandStyles[riskBand] || 'bg-slate-100 text-slate-700'} border`}>
+        Risk {riskBand}
+      </Badge>
+    );
   };
 
-  const getRiskColor = (riskScore: number) => {
-    if (riskScore >= 70) return 'border-l-red-500';
-    if (riskScore >= 40) return 'border-l-amber-500';
-    return 'border-l-emerald-500';
+  const getRiskColor = (riskBand?: string | null) => {
+    const colors: Record<string, string> = {
+      'A': 'border-l-emerald-500',
+      'B': 'border-l-blue-500',
+      'C': 'border-l-amber-500',
+      'D': 'border-l-orange-500',
+      'E': 'border-l-red-500',
+    };
+    return riskBand ? colors[riskBand] || 'border-l-slate-300' : 'border-l-slate-300';
   };
 
   return (
@@ -152,7 +167,7 @@ export default function Customers() {
               contacts.map((contact) => (
                 <div 
                   key={contact.id} 
-                  className={`card-apple-hover p-4 border-l-4 ${getRiskColor(contact.riskScore)} cursor-pointer`}
+                  className={`card-apple-hover p-4 border-l-4 ${getRiskColor(contact.riskBand)} cursor-pointer`}
                   onClick={() => setLocation(`/contacts/${contact.id}`)}
                   data-testid={`customer-item-${contact.id}`}
                 >
@@ -168,8 +183,13 @@ export default function Customers() {
                               {contact.email}
                             </p>
                           )}
+                          {contact.creditLimit && (
+                            <p className="text-xs text-slate-500 mt-1">
+                              Credit Limit: {formatCurrency(contact.creditLimit)}
+                            </p>
+                          )}
                         </div>
-                        {getRiskBadge(contact.riskScore)}
+                        {getRiskBandBadge(contact.riskBand)}
                       </div>
                       
                       {/* Financial Info - Side by side layout */}
