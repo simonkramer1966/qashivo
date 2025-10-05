@@ -45,14 +45,14 @@ export default function Invoices() {
 
   const { data: invoicesData, isLoading } = useQuery<{
     invoices: Invoice[];
-    aggregates: { totalOutstanding: number; overdueCount: number; pendingCount: number; paidCount: number; totalInvoices: number };
+    aggregates: { totalOutstanding: number; overdueCount: number; pendingCount: number; criticalCount: number; totalInvoices: number };
     pagination: { total: number; page: number; limit: number; totalPages: number };
   }>({
     queryKey: ['/api/invoices', { status: statusFilter, search, page, limit }],
   });
 
   const invoices = invoicesData?.invoices || [];
-  const aggregates = invoicesData?.aggregates || { totalOutstanding: 0, overdueCount: 0, pendingCount: 0, paidCount: 0, totalInvoices: 0 };
+  const aggregates = invoicesData?.aggregates || { totalOutstanding: 0, overdueCount: 0, pendingCount: 0, criticalCount: 0, totalInvoices: 0 };
   const pagination = invoicesData?.pagination || { total: 0, page: 1, limit: 20, totalPages: 1 };
 
   const handleSearchChange = (value: string) => {
@@ -143,19 +143,19 @@ export default function Invoices() {
               <p className="text-2xl font-bold text-slate-900">{formatCurrency(aggregates.totalOutstanding)}</p>
             </Card>
             
+            <Card className="card-apple p-4 border-l-4 border-l-red-500">
+              <p className="text-sm text-slate-600 mb-1">Critical</p>
+              <p className="text-2xl font-bold text-red-600">{aggregates.criticalCount}</p>
+            </Card>
+            
             <Card className="card-apple p-4 border-l-4 border-l-amber-500">
               <p className="text-sm text-slate-600 mb-1">Overdue</p>
               <p className="text-2xl font-bold text-amber-600">{aggregates.overdueCount}</p>
             </Card>
             
             <Card className="card-apple p-4 border-l-4 border-l-blue-500">
-              <p className="text-sm text-slate-600 mb-1">Pending</p>
+              <p className="text-sm text-slate-600 mb-1">Due</p>
               <p className="text-2xl font-bold text-blue-600">{aggregates.pendingCount}</p>
-            </Card>
-            
-            <Card className="card-apple p-4 border-l-4 border-l-emerald-500">
-              <p className="text-sm text-slate-600 mb-1">Paid</p>
-              <p className="text-2xl font-bold text-emerald-600">{aggregates.paidCount}</p>
             </Card>
           </div>
 
@@ -166,19 +166,19 @@ export default function Invoices() {
               <p className="text-lg font-bold text-slate-900">{formatCurrency(aggregates.totalOutstanding)}</p>
             </Card>
             
+            <Card className="card-apple p-3 border-l-4 border-l-red-500">
+              <p className="text-xs text-slate-600 mb-1">Critical</p>
+              <p className="text-lg font-bold text-red-600">{aggregates.criticalCount}</p>
+            </Card>
+            
             <Card className="card-apple p-3 border-l-4 border-l-amber-500">
               <p className="text-xs text-slate-600 mb-1">Overdue</p>
               <p className="text-lg font-bold text-amber-600">{aggregates.overdueCount}</p>
             </Card>
             
             <Card className="card-apple p-3 border-l-4 border-l-blue-500">
-              <p className="text-xs text-slate-600 mb-1">Pending</p>
+              <p className="text-xs text-slate-600 mb-1">Due</p>
               <p className="text-lg font-bold text-blue-600">{aggregates.pendingCount}</p>
-            </Card>
-            
-            <Card className="card-apple p-3 border-l-4 border-l-emerald-500">
-              <p className="text-xs text-slate-600 mb-1">Paid</p>
-              <p className="text-lg font-bold text-emerald-600">{aggregates.paidCount}</p>
             </Card>
           </div>
 

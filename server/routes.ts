@@ -1652,7 +1652,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }, 0),
         overdueCount: allFilteredResult.invoices.filter(inv => inv.status === 'overdue').length,
         pendingCount: allFilteredResult.invoices.filter(inv => inv.status === 'pending').length,
-        paidCount: allFilteredResult.invoices.filter(inv => inv.status === 'paid').length,
+        criticalCount: allFilteredResult.invoices.filter(inv => {
+          if (inv.status === 'paid' || inv.status === 'cancelled') return false;
+          const dueDate = new Date(inv.dueDate);
+          const today = new Date();
+          const daysOverdue = Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
+          return daysOverdue >= 30;
+        }).length,
         totalInvoices: allFilteredResult.total
       };
       
