@@ -10,12 +10,14 @@ import {
   Mail,
   Phone,
   Building,
-  User
+  User,
+  Plus
 } from "lucide-react";
 import NewSidebar from "@/components/layout/new-sidebar";
 import BottomNav from "@/components/layout/bottom-nav";
 import Header from "@/components/layout/header";
 import { useCurrency } from "@/hooks/useCurrency";
+import AddCustomerDialog from "@/components/credit/AddCustomerDialog";
 
 interface Contact {
   id: string;
@@ -36,6 +38,7 @@ export default function Customers() {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const limit = 20;
+  const [showAddCustomerDialog, setShowAddCustomerDialog] = useState(false);
 
   const { data: contactsResponse, isLoading } = useQuery<{
     contacts: Contact[];
@@ -86,9 +89,9 @@ export default function Customers() {
         />
         
         <div className="container-apple py-4 sm:py-6 lg:py-8">
-          {/* Search Bar */}
-          <div className="mb-6">
-            <div className="relative">
+          {/* Search Bar & Add Button */}
+          <div className="mb-6 flex gap-3">
+            <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" />
               <Input
                 type="text"
@@ -99,6 +102,15 @@ export default function Customers() {
                 data-testid="input-search-customers"
               />
             </div>
+            <Button
+              onClick={() => setShowAddCustomerDialog(true)}
+              className="bg-[#17B6C3] hover:bg-[#1396A1] flex-shrink-0"
+              data-testid="button-add-customer"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              <span className="hidden sm:inline">Add Customer</span>
+              <span className="sm:hidden">Add</span>
+            </Button>
           </div>
 
           {/* Summary Stats */}
@@ -289,6 +301,15 @@ export default function Customers() {
 
       {/* Mobile Bottom Navigation */}
       <BottomNav />
+
+      {/* Add Customer Dialog */}
+      <AddCustomerDialog
+        open={showAddCustomerDialog}
+        onOpenChange={setShowAddCustomerDialog}
+        onSuccess={() => {
+          setShowAddCustomerDialog(false);
+        }}
+      />
     </div>
   );
 }
