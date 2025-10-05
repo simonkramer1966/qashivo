@@ -76,11 +76,11 @@ export default function Customers() {
     if (!riskBand) return null;
     
     const bandStyles: Record<string, string> = {
-      'A': 'bg-emerald-100 text-emerald-700 border-emerald-300',
+      'A': 'bg-[#4FAD80]/10 text-[#4FAD80] border-[#4FAD80]/30',
       'B': 'bg-blue-100 text-blue-700 border-blue-300',
       'C': 'bg-amber-100 text-amber-700 border-amber-300',
-      'D': 'bg-orange-100 text-orange-700 border-orange-300',
-      'E': 'bg-red-100 text-red-700 border-red-300',
+      'D': 'bg-[#E8A23B]/10 text-[#E8A23B] border-[#E8A23B]/30',
+      'E': 'bg-[#C75C5C]/10 text-[#C75C5C] border-[#C75C5C]/30',
     };
     
     return (
@@ -92,11 +92,11 @@ export default function Customers() {
 
   const getRiskColor = (riskBand?: string | null) => {
     const colors: Record<string, string> = {
-      'A': 'border-l-emerald-500',
+      'A': 'border-l-[#4FAD80]',
       'B': 'border-l-blue-500',
       'C': 'border-l-amber-500',
-      'D': 'border-l-orange-500',
-      'E': 'border-l-red-500',
+      'D': 'border-l-[#E8A23B]',
+      'E': 'border-l-[#C75C5C]',
     };
     return riskBand ? colors[riskBand] || 'border-l-slate-300' : 'border-l-slate-300';
   };
@@ -150,7 +150,7 @@ export default function Customers() {
             </div>
             <div className="card-apple p-3 sm:p-4">
               <p className="text-xs sm:text-sm text-slate-600 mb-1">High Risk</p>
-              <p className="text-xl sm:text-2xl font-bold text-red-600">
+              <p className="text-xl sm:text-2xl font-bold text-[#C75C5C]">
                 {aggregates.highRiskCount}
               </p>
             </div>
@@ -192,18 +192,18 @@ export default function Customers() {
                             <h4 className="font-semibold text-slate-900 flex items-center gap-1.5">
                               <span className="truncate">{contact.companyName || contact.name}</span>
                               {contact.riskBand ? (
-                                <ShieldCheck className="h-4 w-4 text-emerald-600 flex-shrink-0" data-testid={`shield-checked-${contact.id}`} />
+                                <ShieldCheck className="h-4 w-4 text-[#4FAD80] flex-shrink-0" data-testid={`shield-checked-${contact.id}`} />
                               ) : (
-                                <Shield className="h-4 w-4 text-amber-500 flex-shrink-0" data-testid={`shield-unchecked-${contact.id}`} />
+                                <Shield className="h-4 w-4 text-[#E8A23B] flex-shrink-0" data-testid={`shield-unchecked-${contact.id}`} />
                               )}
                             </h4>
                             {contact.email && (
-                              <p className="text-sm text-slate-600 truncate">
+                              <p className="text-sm font-normal text-slate-500 truncate">
                                 {contact.email}
                               </p>
                             )}
                             {contact.creditLimit && (
-                              <p className="text-xs text-slate-500 mt-1">
+                              <p className="text-xs font-normal text-slate-500 mt-1">
                                 Credit Limit: {formatCurrency(contact.creditLimit)}
                               </p>
                             )}
@@ -224,11 +224,11 @@ export default function Customers() {
                           </div>
                           {contact.overdueAmount > 0 && (
                             <div>
-                              <p className="text-xs text-red-600 mb-0.5 font-medium">Overdue</p>
-                              <p className="text-lg font-bold text-red-600">
+                              <p className="text-xs text-[#C75C5C] mb-0.5 font-medium">Overdue</p>
+                              <p className="text-lg font-bold text-[#C75C5C]">
                                 {formatCurrency(contact.overdueAmount)}
                               </p>
-                              <p className="text-xs text-red-600">
+                              <p className="text-xs text-[#C75C5C]">
                                 {contact.overdueCount} invoice{contact.overdueCount !== 1 ? 's' : ''}
                               </p>
                             </div>
@@ -243,18 +243,18 @@ export default function Customers() {
                           <h4 className="font-semibold text-slate-900 flex items-center gap-1.5">
                             <span className="truncate">{contact.companyName || contact.name}</span>
                             {contact.riskBand ? (
-                              <ShieldCheck className="h-4 w-4 text-emerald-600 flex-shrink-0" data-testid={`shield-checked-${contact.id}`} />
+                              <ShieldCheck className="h-4 w-4 text-[#4FAD80] flex-shrink-0" data-testid={`shield-checked-${contact.id}`} />
                             ) : (
-                              <Shield className="h-4 w-4 text-amber-500 flex-shrink-0" data-testid={`shield-unchecked-${contact.id}`} />
+                              <Shield className="h-4 w-4 text-[#E8A23B] flex-shrink-0" data-testid={`shield-unchecked-${contact.id}`} />
                             )}
                           </h4>
                           {contact.email && (
-                            <p className="text-sm text-slate-600 truncate">
+                            <p className="text-sm font-normal text-slate-500 truncate">
                               {contact.email}
                             </p>
                           )}
                           {contact.creditLimit && (
-                            <p className="text-xs text-slate-500 mt-1">
+                            <p className="text-xs font-normal text-slate-500 mt-1">
                               Credit Limit: {formatCurrency(contact.creditLimit)}
                             </p>
                           )}
@@ -275,11 +275,11 @@ export default function Customers() {
                         <div className="flex items-start gap-4">
                           {contact.overdueAmount > 0 && (
                             <div className="flex-1">
-                              <p className="text-xs text-red-600 mb-0.5 font-medium">Overdue</p>
-                              <p className="text-lg font-bold text-red-600">
+                              <p className="text-xs text-[#C75C5C] mb-0.5 font-medium">Overdue</p>
+                              <p className="text-lg font-bold text-[#C75C5C]">
                                 {formatCurrency(contact.overdueAmount)}
                               </p>
-                              <p className="text-xs text-red-600">
+                              <p className="text-xs text-[#C75C5C]">
                                 {contact.overdueCount} invoice{contact.overdueCount !== 1 ? 's' : ''}
                               </p>
                             </div>
