@@ -11,7 +11,9 @@ import {
   Phone,
   Building,
   User,
-  Plus
+  Plus,
+  ShieldCheck,
+  Shield
 } from "lucide-react";
 import NewSidebar from "@/components/layout/new-sidebar";
 import BottomNav from "@/components/layout/bottom-nav";
@@ -175,8 +177,13 @@ export default function Customers() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between mb-2">
                         <div className="flex-1">
-                          <h4 className="font-semibold text-slate-900 truncate">
-                            {contact.companyName || contact.name}
+                          <h4 className="font-semibold text-slate-900 flex items-center gap-1.5">
+                            <span className="truncate">{contact.companyName || contact.name}</span>
+                            {contact.riskBand ? (
+                              <ShieldCheck className="h-4 w-4 text-emerald-600 flex-shrink-0" data-testid={`shield-checked-${contact.id}`} />
+                            ) : (
+                              <Shield className="h-4 w-4 text-amber-500 flex-shrink-0" data-testid={`shield-unchecked-${contact.id}`} />
+                            )}
                           </h4>
                           {contact.email && (
                             <p className="text-sm text-slate-600 truncate">
