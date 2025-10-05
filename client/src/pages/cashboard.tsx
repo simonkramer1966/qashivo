@@ -273,10 +273,10 @@ export default function Cashboard() {
                       tick={{ fontSize: 12 }}
                       tickLine={false}
                       axisLine={false}
-                      tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`}
+                      tickFormatter={(value) => formatCurrency(value).replace(/\.00$/, '')}
                     />
                     <RechartsTooltip
-                      formatter={(value: any) => [`$${value.toLocaleString()}`, 'Expected']}
+                      formatter={(value: any) => [formatCurrency(value), 'Expected']}
                       contentStyle={{
                         backgroundColor: 'white',
                         border: '1px solid #e2e8f0',
