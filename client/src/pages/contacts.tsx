@@ -20,10 +20,13 @@ import { formatCurrency } from "@/lib/utils";
 interface Contact {
   id: string;
   name: string;
+  companyName?: string;
   email: string;
   phone: string;
   outstandingAmount: number;
   invoiceCount: number;
+  overdueAmount: number;
+  overdueCount: number;
   riskScore: number;
 }
 
@@ -156,8 +159,11 @@ export default function Customers() {
                         {getRiskBadge(contact.riskScore)}
                       </div>
                       
-                      <div className="flex items-center justify-between">
-                        <div>
+                      {/* Financial Info - Mobile-first stacked layout */}
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+                        {/* Outstanding Amount */}
+                        <div className="flex-1">
+                          <p className="text-xs text-slate-500 mb-0.5">Total Outstanding</p>
                           <p className="text-lg font-bold text-slate-900">
                             {formatCurrency(contact.outstandingAmount)}
                           </p>
@@ -166,8 +172,21 @@ export default function Customers() {
                           </p>
                         </div>
 
+                        {/* Overdue Amount */}
+                        {contact.overdueAmount > 0 && (
+                          <div className="flex-1 p-2.5 bg-amber-50 rounded-lg border border-amber-200">
+                            <p className="text-xs text-amber-700 mb-0.5 font-medium">Overdue</p>
+                            <p className="text-lg font-bold text-amber-900">
+                              {formatCurrency(contact.overdueAmount)}
+                            </p>
+                            <p className="text-xs text-amber-700">
+                              {contact.overdueCount} invoice{contact.overdueCount !== 1 ? 's' : ''}
+                            </p>
+                          </div>
+                        )}
+
                         {/* Quick Actions - Hide on small mobile */}
-                        <div className="hidden sm:flex gap-2">
+                        <div className="hidden sm:flex gap-2 flex-shrink-0">
                           {contact.email && (
                             <button
                               onClick={(e) => {
