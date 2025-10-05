@@ -163,7 +163,7 @@ export default function Customers() {
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
                         {/* Outstanding Amount */}
                         <div className="flex-1">
-                          <p className="text-xs text-slate-500 mb-0.5">Total Outstanding</p>
+                          <p className="text-xs text-slate-500 mb-0.5">Outstanding</p>
                           <p className="text-lg font-bold text-slate-900">
                             {formatCurrency(contact.outstandingAmount)}
                           </p>
