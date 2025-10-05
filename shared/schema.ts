@@ -1440,6 +1440,50 @@ export const onboardingTemplates = pgTable("onboarding_templates", {
   index("idx_onboarding_templates_industry_type").on(table.industry, table.businessType, table.templateType)
 ]);
 
+// Wallet transactions table - unified financial hub for Qashivo
+export const walletTransactions = pgTable("wallet_transactions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  
+  // Transaction details
+  transactionDate: timestamp("transaction_date").notNull().defaultNow(),
+  transactionType: varchar("transaction_type").notNull(), // incoming, outgoing
+  source: varchar("source").notNull(), // customer_payment, insurance_payout, finance_advance, premium_payment, finance_repayment, withdrawal, transfer, adjustment
+  amount: decimal("amount", { precision: 12, scale: 2 }).notNull(),
+  currency: varchar("currency").default("GBP"),
+  runningBalance: decimal("running_balance", { precision: 12, scale: 2 }), // Balance after this transaction
+  
+  // Descriptive information
+  description: text("description").notNull(),
+  reference: varchar("reference"), // External reference number
+  
+  // Related records
+  invoiceId: varchar("invoice_id").references(() => invoices.id),
+  contactId: varchar("contact_id").references(() => contacts.id),
+  
+  // Insurance-related
+  insuranceProvider: varchar("insurance_provider"), // allianz, atradius, etc.
+  insurancePolicyId: varchar("insurance_policy_id"),
+  
+  // Finance-related
+  financeProvider: varchar("finance_provider"), // kriya, funding_circle, etc.
+  financeAdvanceId: varchar("finance_advance_id"),
+  
+  // Status and metadata
+  status: varchar("status").notNull().default("completed"), // pending, completed, failed, cancelled
+  metadata: jsonb("metadata"), // Additional provider-specific data
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_wallet_transactions_tenant").on(table.tenantId),
+  index("idx_wallet_transactions_date").on(table.transactionDate),
+  index("idx_wallet_transactions_type").on(table.transactionType),
+  index("idx_wallet_transactions_source").on(table.source),
+  index("idx_wallet_transactions_invoice").on(table.invoiceId),
+  index("idx_wallet_transactions_contact").on(table.contactId),
+]);
+
 // AI learning relations
 export const customerLearningProfilesRelations = relations(customerLearningProfiles, ({ one }) => ({
   tenant: one(tenants, {
@@ -1479,6 +1523,22 @@ export const onboardingProgressRelations = relations(onboardingProgress, ({ one 
   tenant: one(tenants, {
     fields: [onboardingProgress.tenantId],
     references: [tenants.id],
+  }),
+}));
+
+// Wallet transactions relations
+export const walletTransactionsRelations = relations(walletTransactions, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [walletTransactions.tenantId],
+    references: [tenants.id],
+  }),
+  invoice: one(invoices, {
+    fields: [walletTransactions.invoiceId],
+    references: [invoices.id],
+  }),
+  contact: one(contacts, {
+    fields: [walletTransactions.contactId],
+    references: [contacts.id],
   }),
 }));
 
@@ -1695,6 +1755,19 @@ export const insertTemplatePerformanceSchema = createInsertSchema(templatePerfor
   id: true,
   createdAt: true,
 });
+
+// Wallet transactions insert schemas
+export const insertWalletTransactionSchema = createInsertSchema(walletTransactions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  amount: z.string().min(1, "Amount is required"),
+  description: z.string().min(1, "Description is required"),
+});
+
+export type WalletTransaction = typeof walletTransactions.$inferSelect;
+export type InsertWalletTransaction = z.infer<typeof insertWalletTransactionSchema>;
 
 // AI Learning insert schemas
 export const insertCustomerLearningProfileSchema = createInsertSchema(customerLearningProfiles).omit({

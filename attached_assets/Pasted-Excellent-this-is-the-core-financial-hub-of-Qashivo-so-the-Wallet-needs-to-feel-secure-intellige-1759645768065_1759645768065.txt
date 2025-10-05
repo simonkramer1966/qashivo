@@ -1,0 +1,243 @@
+Excellent — this is the core financial hub of Qashivo, so the Wallet needs to feel secure, intelligent, and frictionless, like the Apple Wallet meets Stripe Dashboard. Below is a complete design specification for the Qashivo Wallet page, written as a blueprint for your Replit (or Figma) design and developer handoff.
+
+💠 QASHIVO WALLET — UI / UX DESIGN SPEC
+🎯 Core Purpose
+
+A unified financial dashboard that lets users:
+
+Receive incoming payments (customer, insurer, lender).
+
+View and manage their current wallet balance and transactions.
+
+Make outgoing payments (insurance premiums, supplier payouts, transfers).
+
+Control invoice-related flows (finance drawdown, insurance coverage, repayment).
+
+Integrate seamlessly with accounting systems (e.g., Xero).
+
+🧩 PAGE STRUCTURE
+1. Header / Summary Bar (Sticky Top)
+
+Purpose: Give instant visibility to available funds and recent activity.
+Layout:
+
+Wallet Balance: Prominent, large font (“Available Balance £12,450.22”)
+
+Pending Funds: Subtext (“£1,200 incoming | £300 outgoing”)
+
+CTA Buttons:
+
+➕ Top Up / Deposit
+
+🔄 Withdraw / Transfer
+
+⚙️ Settings
+
+Micro-interaction: Animate balance updates with subtle pulse or slide-in when funds change.
+
+2. Tabbed Navigation
+
+Below header:
+
+[ Overview ] [ Transactions ] [ Invoices ] [ Insurance ] [ Finance ]
+
+
+Each tab filters or expands the view based on purpose.
+
+🧭 TAB DETAILS
+🟢 Overview Tab
+
+Purpose: Snapshot of all activity in one glance.
+
+Sections:
+
+Balance Graph (Line or Area Chart):
+
+Shows Wallet balance over time.
+
+Hover reveals transaction events (payments, premiums, drawdowns).
+
+Activity Feed (Chronological Timeline):
+
+Example entries:
+
+✅ “£3,200 received from Client ABC — Invoice #1045 (Paid in full)”
+
+💸 “£85 insurance premium paid to Allianz — Invoice #1047 (Fully insured)”
+
+🏦 “£5,000 finance advance credited by Funding Circle”
+
+Filter: Today | 7 days | 30 days | Custom
+
+Summary Cards (Grid, 2x2):
+
+Customer Payments (YTD): £54,000
+
+Insurance Payouts: £2,700
+
+Financing Advances: £8,500
+
+Premiums Paid: £430
+
+Quick Actions Panel:
+
+“Finance a New Invoice”
+
+“Insure a New Invoice”
+
+“Withdraw to Bank”
+
+“Export Statement”
+
+🧾 Transactions Tab
+
+Purpose: Full ledger of all wallet inflows and outflows.
+
+Columns:
+
+Date	Type	Source/Destination	Description	Amount	Balance
+05 Oct	Incoming	Client ABC	Invoice #1045 Paid	+£3,200	£12,450
+05 Oct	Outgoing	Allianz	Insurance Premium	-£85	£9,250
+04 Oct	Incoming	Funding Partner	Invoice #1044 Advance	+£5,000	£9,335
+
+Filters:
+
+Type: Incoming / Outgoing
+
+Source: Customer / Insurer / Finance / Premium
+
+Date range
+
+Search bar (by invoice, client, or ID)
+
+Export: CSV / PDF button in top-right.
+
+🧾 Invoices Tab (Linked View)
+
+Purpose: Show how wallet activity ties to invoices.
+
+Columns:
+
+Invoice #	Client	Status	Paid Into Wallet	Financed?	Insured?	Actions
+1045	Client ABC	Paid	✅ £3,200	❌	✅	View
+1046	Client XYZ	Overdue	❌	❌	✅	Insurer Claim
+1047	Client DEF	Financed	✅ £2,800	✅	✅	View
+
+Click → Invoice Detail Drawer:
+
+Displays invoice timeline: Issued → Financed → Insured → Paid → Settled.
+
+Buttons:
+
+Apply for Insurance
+
+Request Financing
+
+Settle / Repay Advance
+
+🛡️ Insurance Tab
+
+Purpose: Manage coverage and premiums.
+
+Sections:
+
+Active Policies Table:
+
+Invoice #	Provider	Coverage	Premium	Status	Renewal
+1047	Allianz	90%	£85	Active	Auto-renew
+
+Claims Section:
+
+Show status (Submitted / In Review / Paid).
+
+Claim Payout auto-credit → Wallet (with green highlight animation).
+
+Quick Action: “Insure Another Invoice” → Opens Invoice Selection Modal.
+
+💸 Finance Tab
+
+Purpose: Manage invoice financing and repayments.
+
+Sections:
+
+Current Advances:
+
+Invoice #	Advance Amount	Fee	Due Date	Status
+1044	£5,000	£85	20 Oct	Active
+
+Drawdown / Repay Panel:
+
+“Draw down available funds”
+
+“Repay financed invoice early”
+
+Progress bar for repayment status
+
+Finance Partner Info:
+
+Partner name/logo (e.g., Funding Circle, Satago)
+
+Contract terms & API connection status
+
+⚙️ Settings Drawer (Modal)
+
+Accessible via ⚙️ icon on header.
+
+Linked Bank Accounts (add / edit)
+
+Default Payout Account
+
+Connected Partners:
+
+[✓] Xero
+
+[✓] Allianz API
+
+[✓] Funding Circle
+
+Notification Preferences:
+
+Email / SMS / Push for wallet changes
+
+Security:
+
+2FA toggle
+
+API Key management
+
+🧠 SMART AI FEATURES
+
+Predictive Balance Assistant
+
+“Based on current invoices and finance activity, your available balance will be £15,200 by Oct 15.”
+
+Anomaly Alerts
+
+Flags irregular incoming or missing payments.
+
+AI Reconciliation
+
+Matches wallet transactions to Xero invoice records automatically.
+
+Voice Notes Integration
+
+“Add a note” → record short memo via Retell to attach to a transaction.
+
+📱 MOBILE UX (Essential)
+
+Use cards and drawers instead of tables.
+
+Bottom nav bar with icons:
+🏠 Home | 💳 Wallet | 📄 Invoices | 🛡️ Insurance | ⚙️
+
+Tap a transaction → slide-up detail panel.
+
+Large, thumb-friendly CTAs:
+
+“Receive Payment”
+
+“Finance Invoice”
+
+“Pay Premium”
+
+“Withdraw Funds”
