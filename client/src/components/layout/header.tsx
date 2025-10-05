@@ -187,7 +187,7 @@ export default function Header({ title, subtitle, action, noBorder = true, title
             </p>
           </div>
         )}
-        <div>
+        <div className="text-center">
           <h2 className="text-xl font-semibold text-foreground" data-testid="text-page-title">
             {title}
           </h2>
