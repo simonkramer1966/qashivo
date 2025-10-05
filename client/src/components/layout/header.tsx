@@ -158,7 +158,7 @@ export default function Header({ title, subtitle, action, noBorder = true, title
             <div className="w-8 h-8 flex items-center justify-center">
               <img src={nexusLogo} alt="Qashivo" className="w-full h-full object-contain" />
             </div>
-            <h2 className="text-base font-semibold text-gray-900">
+            <h2 className="text-xl font-semibold text-gray-900">
               Qashivo
             </h2>
           </div>
