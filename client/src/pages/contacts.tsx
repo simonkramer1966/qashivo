@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -43,6 +44,15 @@ export default function Customers() {
   const [page, setPage] = useState(1);
   const limit = 20;
   const [showAddCustomerDialog, setShowAddCustomerDialog] = useState(false);
+
+  // Seed payment behavior customers (test button)
+  const seedMutation = useMutation({
+    mutationFn: () => apiRequest("/api/mock-data/seed-payment-behavior", "POST"),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/contacts"] });
+      alert("Payment behavior customers seeded successfully!");
+    }
+  });
 
   const { data: contactsResponse, isLoading } = useQuery<{
     contacts: Contact[];
@@ -323,6 +333,19 @@ export default function Customers() {
               </div>
             </div>
           )}
+
+          {/* Test Button - Seed Payment Behavior Customers */}
+          <div className="mt-6 text-center pb-4">
+            <Button
+              onClick={() => seedMutation.mutate()}
+              disabled={seedMutation.isPending}
+              variant="outline"
+              size="sm"
+              data-testid="button-seed-customers"
+            >
+              {seedMutation.isPending ? "Seeding..." : "🧪 Seed Test Customers"}
+            </Button>
+          </div>
         </div>
       </main>
 
