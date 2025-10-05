@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import NewSidebar from "@/components/layout/new-sidebar";
+import BottomNav from "@/components/layout/bottom-nav";
 import Header from "@/components/layout/header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -47,15 +49,22 @@ export default function WalletPage() {
   });
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-teal-50">
-      <Header 
-        title="Qashivo Wallet"
-        subtitle="Your unified financial hub"
-        titleSize="text-2xl"
-        subtitleSize="text-sm"
-      />
+    <div className="flex h-screen bg-white">
+      {/* Desktop Sidebar */}
+      <div className="hidden lg:block">
+        <NewSidebar />
+      </div>
 
-      <main className="container mx-auto p-4 sm:p-6 space-y-6">
+      {/* Main Content */}
+      <main className="flex-1 overflow-y-auto main-with-bottom-nav bg-gradient-to-br from-slate-50 via-blue-50 to-teal-50">
+        <Header 
+          title="Qashivo Wallet"
+          subtitle="Your unified financial hub"
+          titleSize="text-2xl"
+          subtitleSize="text-sm"
+        />
+
+        <div className="container mx-auto p-4 sm:p-6 space-y-6">
         {/* Wallet Balance Header - Sticky on mobile */}
         <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-xl sticky top-0 z-10 sm:static" data-testid="card-wallet-balance">
           <CardHeader className="pb-3">
@@ -314,7 +323,11 @@ export default function WalletPage() {
             </Card>
           </TabsContent>
         </Tabs>
+        </div>
       </main>
+
+      {/* Mobile Bottom Navigation */}
+      <BottomNav />
     </div>
   );
 }
