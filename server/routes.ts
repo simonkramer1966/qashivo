@@ -791,6 +791,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Seed payment behavior customers (good payer vs bad payer)
+  app.post('/api/mock-data/seed-payment-behavior', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      console.log('🎯 Seeding payment behavior customers for tenant:', user.tenantId);
+      const { seedPaymentBehaviorCustomers } = await import("./mock-data");
+      await seedPaymentBehaviorCustomers(user.tenantId);
+      
+      res.json({ 
+        success: true, 
+        message: "Payment behavior customers seeded successfully! 2 customers with 60 invoices created."
+      });
+    } catch (error) {
+      console.error("Error seeding payment behavior customers:", error);
+      res.status(500).json({ message: "Failed to seed payment behavior customers" });
+    }
+  });
+
   // Clean up contacts endpoint - remove old Xero contacts and keep only 80 mock clients
   app.post('/api/contacts/cleanup', isAuthenticated, async (req: any, res) => {
     try {
