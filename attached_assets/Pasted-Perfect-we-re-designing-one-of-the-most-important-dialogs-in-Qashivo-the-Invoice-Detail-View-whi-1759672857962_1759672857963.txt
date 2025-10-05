@@ -1,0 +1,182 @@
+Perfect — we’re designing one of the most important dialogs in Qashivo: the Invoice Detail View, which acts as a command centre for each invoice.
+Here’s a world-class, investor-impressing UI/UX design concept that works beautifully across mobile and desktop.
+
+🧾 QASHIVO — INVOICE DETAIL DIALOG
+🧠 Design Philosophy
+
+Clean, modular, and responsive — inspired by Apple’s card-based hierarchy.
+Every key action should be available in two taps or less.
+On mobile: vertical scroll with collapsible sections.
+On desktop: two-column layout with action buttons pinned to the right.
+
+💡 STRUCTURE OVERVIEW
+1️⃣ Header: Core Invoice Summary (Always Visible)
+
+Layout: Fixed bar at top (or sticky card on scroll)
+
+Element	Example
+Customer Name	Acme Design Ltd
+Invoice No.	INV-002134
+Amount	£12,400.00
+Status	🔴 Overdue 14 days
+Due Date	20 Sept 2025
+Issued Date	20 Aug 2025
+Days Overdue	14 days
+
+UX Notes:
+
+Status pill (🟢 Paid / 🟠 Pending / 🔴 Overdue)
+
+Days overdue shown in red badge if >0
+
+Quick “Mark Paid” or “View in Xero” icon buttons
+
+2️⃣ Contact & Client Info Card
+
+Layout: Collapsible section (tap to expand on mobile)
+
+Content:
+
+Contact Name: Sarah Jones
+
+Email: sarah@acmedesign.com
+ 📧 (tap to email)
+
+Phone: +44 7712 345678 📞 (tap to call)
+
+Address: Pulled from Xero Contact
+
+Credit Limit: £20,000 | Risk Rating: Medium Risk
+
+UX Notes:
+
+Small credit-risk badge (Low / Medium / High)
+
+Tooltip icon with “Last credit check: 14 days ago”
+
+3️⃣ Automation & Schedule Status
+
+Title: “Current Schedule: Standard Reminder Flow”
+
+Content:
+
+Stage: Voice Reminder Scheduled (Day 21)
+
+Next Action: AI Voice Call on Oct 6 @ 10:00 AM
+
+Progress Bar: (Email → SMS → Call → Escalation)
+
+Buttons:
+
+▶ Trigger SMS Now
+
+🎙 Start AI Voice Call
+
+UX Notes:
+
+Each step shows checkmarks or progress indicators
+
+“Pause Schedule” toggle for manual control
+
+4️⃣ Insurance Card
+
+Title: “Invoice Insurance Options”
+
+Feature	Value
+Free Cover Available:	£6,200 (50%)
+Upgrade to Full Cover:	+£12.50
+Provider: Qashivo Insurance Partners	
+
+Buttons:
+
+💼 Upgrade Cover (modal shows cost breakdown)
+
+Tooltip: “Covers against customer default up to 90 days”
+
+5️⃣ Finance Card
+
+Title: “Finance Available”
+
+Feature	Value
+Advance Available:	£10,000 (80%)
+Fee:	2.5% per 30 days
+Repayment Term:	60 days
+Repayment Due:	£10,250
+
+Buttons:
+
+💷 Apply for Advance
+
+Tooltip: “Funds released to Qashivo Wallet instantly”
+
+6️⃣ Activity Feed / Notes
+
+Title: “Activity & Comms”
+
+Feed Example:
+
+🗓 Today — AI sent SMS reminder
+
+📞 2 Oct — Voice call scheduled (no answer)
+
+✉️ 25 Sept — Invoice reminder email sent
+
+Button:
+
+📝 Add Note
+(modal with text + optional attachment)
+
+UX Notes:
+
+Filter options: All / AI / Manual / Notes
+
+Time-stamped entries
+
+7️⃣ Footer Actions (Pinned)
+
+📞 Call Contact
+
+💬 Send SMS
+
+🎙 Trigger AI Voice Call
+
+📤 Send to Collections
+
+🔗 View in Xero
+
+Mobile: Floating action button (FAB) for “Communicate” opens mini-menu (SMS, Call, Voice).
+Desktop: Aligned right, fixed to bottom of the viewport.
+
+🎨 VISUAL DESIGN NOTES
+
+Primary Colour: Qashivo Blue (trust, clarity)
+
+Accent: Gradient green for insurance / finance cards
+
+Typography: Inter or SF Pro — crisp and modern
+
+Icons: Lucide or Feather icons — minimal, consistent
+
+Tone: Confident, financial clarity + tech intelligence
+
+⚙️ REPLIT PROMPT (Plain English)
+
+🧾 Prompt for Replit UI Agent
+
+“Create a responsive Qashivo Invoice Detail Dialog for both desktop and mobile.
+The layout should include:
+
+Sticky header with invoice summary (number, customer, amount, due date, status, days overdue).
+
+Contact info section (contact name, email, phone, address, credit limit, risk rating).
+
+Automation schedule progress showing current stage, next AI action, and control buttons for SMS and Voice Call.
+
+Insurance card showing free cover available, upgrade cost, and upgrade button.
+
+Finance card showing finance available, cost, and ‘Apply for Advance’ button.
+
+Activity feed for all AI and manual communications.
+
+Footer with action buttons: Send SMS, Call Contact, Trigger AI Voice Call, Send to Collections, View in Xero.
+Design should be clean, mobile-first, and Apple-style, using Tailwind and Lucide icons. Include subtle animations and tooltips for clarity.”
