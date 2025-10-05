@@ -89,7 +89,7 @@ export default function Cashboard() {
       {/* Main Content */}
       <main className="flex-1 overflow-y-auto main-with-bottom-nav">
         <Header 
-          title="Dashboard" 
+          title="Cashboard" 
           subtitle="Real-time cashflow and receivables overview"
         />
         
