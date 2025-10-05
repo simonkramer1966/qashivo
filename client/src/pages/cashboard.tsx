@@ -106,7 +106,7 @@ export default function Cashboard() {
                     <div className="h-8 w-32 bg-slate-200 animate-pulse rounded"></div>
                   ) : (
                     <h3 className="text-xl sm:text-2xl font-bold text-slate-900">
-                      {formatCurrency(totalOutstanding)} <span className="text-sm text-slate-500">({totalInvoiceCount})</span>
+                      {formatCurrency(totalOutstanding)} <span className="text-sm font-normal text-slate-500">({totalInvoiceCount})</span>
                     </h3>
                   )}
                 </div>
@@ -125,12 +125,12 @@ export default function Cashboard() {
                     <div className="h-8 w-32 bg-slate-200 animate-pulse rounded"></div>
                   ) : (
                     <h3 className="text-xl sm:text-2xl font-bold text-slate-900">
-                      {formatCurrency(overdueAmount)} <span className="text-sm text-slate-500">({overdueCount})</span>
+                      {formatCurrency(overdueAmount)} <span className="text-sm font-normal text-slate-500">({overdueCount})</span>
                     </h3>
                   )}
                 </div>
-                <div className="p-2 bg-amber-100 rounded-xl">
-                  <AlertTriangle className="h-5 w-5 text-amber-600" />
+                <div className="p-2 bg-[#E8A23B]/10 rounded-xl">
+                  <AlertTriangle className="h-5 w-5 text-[#E8A23B]" />
                 </div>
               </div>
             </div>
@@ -148,8 +148,8 @@ export default function Cashboard() {
                     </h3>
                   )}
                 </div>
-                <div className="p-2 bg-emerald-100 rounded-xl">
-                  <TrendingUp className="h-5 w-5 text-emerald-600" />
+                <div className="p-2 bg-[#4FAD80]/10 rounded-xl">
+                  <TrendingUp className="h-5 w-5 text-[#4FAD80]" />
                 </div>
               </div>
             </div>
@@ -182,7 +182,7 @@ export default function Cashboard() {
                     <div className="h-8 w-32 bg-slate-200 animate-pulse rounded"></div>
                   ) : (
                     <h3 className="text-xl sm:text-2xl font-bold text-slate-900">
-                      {formatCurrency(0)} <span className="text-sm text-slate-500">(0)</span>
+                      {formatCurrency(0)} <span className="text-sm font-normal text-slate-500">(0)</span>
                     </h3>
                   )}
                 </div>
@@ -201,7 +201,7 @@ export default function Cashboard() {
                     <div className="h-8 w-32 bg-slate-200 animate-pulse rounded"></div>
                   ) : (
                     <h3 className="text-xl sm:text-2xl font-bold text-slate-900">
-                      {formatCurrency(0)} <span className="text-sm text-slate-500">(0)</span>
+                      {formatCurrency(0)} <span className="text-sm font-normal text-slate-500">(0)</span>
                     </h3>
                   )}
                 </div>
@@ -220,7 +220,7 @@ export default function Cashboard() {
                     <div className="h-8 w-32 bg-slate-200 animate-pulse rounded"></div>
                   ) : (
                     <h3 className="text-xl sm:text-2xl font-bold text-slate-900">
-                      {formatCurrency(0)} <span className="text-sm text-slate-500">(0)</span>
+                      {formatCurrency(0)} <span className="text-sm font-normal text-slate-500">(0)</span>
                     </h3>
                   )}
                 </div>
@@ -239,12 +239,12 @@ export default function Cashboard() {
                     <div className="h-8 w-32 bg-slate-200 animate-pulse rounded"></div>
                   ) : (
                     <h3 className="text-xl sm:text-2xl font-bold text-slate-900">
-                      {formatCurrency(0)} <span className="text-sm text-slate-500">(0)</span>
+                      {formatCurrency(0)} <span className="text-sm font-normal text-slate-500">(0)</span>
                     </h3>
                   )}
                 </div>
-                <div className="p-2 bg-red-100 rounded-xl">
-                  <Gavel className="h-5 w-5 text-red-600" />
+                <div className="p-2 bg-[#C75C5C]/10 rounded-xl">
+                  <Gavel className="h-5 w-5 text-[#C75C5C]" />
                 </div>
               </div>
             </div>
@@ -323,8 +323,8 @@ export default function Cashboard() {
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="p-2 bg-amber-100 rounded-xl">
-                        <AlertTriangle className="h-5 w-5 text-amber-600" />
+                      <div className="p-2 bg-[#E8A23B]/10 rounded-xl">
+                        <AlertTriangle className="h-5 w-5 text-[#E8A23B]" />
                       </div>
                       <div>
                         <h4 className="font-semibold text-slate-900">
@@ -347,8 +347,8 @@ export default function Cashboard() {
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="p-2 bg-red-100 rounded-xl">
-                        <Target className="h-5 w-5 text-red-600" />
+                      <div className="p-2 bg-[#C75C5C]/10 rounded-xl">
+                        <Target className="h-5 w-5 text-[#C75C5C]" />
                       </div>
                       <div>
                         <h4 className="font-semibold text-slate-900">
