@@ -10,7 +10,6 @@ import Cashboard from "@/pages/cashboard";
 import Cashflow from "@/pages/cashflow";
 import Invoices from "@/pages/invoices";
 import Contacts from "@/pages/contacts";
-import Onboarding from "@/pages/onboarding";
 import ActionCentre from "@/pages/action-centre";
 import Wallet from "@/pages/wallet";
 import Workflows from "@/pages/workflows";
@@ -72,7 +71,6 @@ function Router() {
           <Route path="/partner" component={PartnerDashboard} />
           <Route path="/cashflow" component={Cashflow} />
           <Route path="/contacts" component={Contacts} />
-          <Route path="/onboarding" component={Onboarding} />
           <Route path="/invoices" component={Invoices} />
           <Route path="/action-centre" component={ActionCentre} />
           <Route path="/wallet" component={Wallet} />
