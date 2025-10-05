@@ -1,0 +1,234 @@
+🧭 Qashivo End-to-End Workflow (Customer First → Accounting Sync)
+🧩 Core Principle
+
+All customers (debtors) are first onboarded and risk-checked inside Qashivo.
+Only approved and insured clients are pushed into the accounting system for invoicing.
+This ensures credit discipline, insurance compliance, and finance eligibility from day one.
+
+1️⃣ Add New Customer in Qashivo
+
+User clicks “Add Client”.
+
+Inputs company name, registration/VAT number, email, and payment terms.
+
+Qashivo instantly calls Credit Check / Insurance Partner API.
+
+Credit Partner Response
+
+Returns:
+
+Credit Rating (A–E)
+
+Suggested Credit Limit (£)
+
+Free Base Cover Limit (£ per invoice)
+
+Optional Full Cover Premium (£)
+
+Initial Insurance Policy ID
+
+🧠 Example:
+
+“Client: ACME Ltd — Credit Rating B — Credit Limit £5,000 — Free Cover £2,500 — Optional Full Cover £19.80.”
+
+✅ Action:
+Qashivo stores this as a new Customer Record with:
+
+Credit score + cover level
+
+Behavioural risk placeholder (no history yet)
+
+Approval status = Pending
+
+2️⃣ User Reviews & Approves Customer
+
+User sees a summary card:
+
+Risk Level (Low / Medium / High)
+
+Credit Limit
+
+Free Base Cover
+
+Upgrade Option
+
+One click “Approve & Sync to Xero” button.
+
+Behind the Scenes
+
+Qashivo calls Xero (or Sage/QuickBooks) API → creates new Customer Contact.
+
+Injects:
+
+Credit Limit
+
+Insurance Reference
+
+Risk Score metadata (custom field)
+
+✅ Action:
+Customer now live in both systems, ready for invoice creation in Xero.
+Qashivo keeps the master risk data.
+
+3️⃣ Invoice Created in Xero
+
+User (or their normal process) raises an invoice to that client in Xero.
+
+Qashivo’s connector listens via webhook for new invoice events.
+
+✅ Action:
+Invoice imported automatically into Qashivo with:
+
+Client ID
+
+Amount / Due Date
+
+Payment Terms
+
+Insurance metadata attached (from stored profile)
+
+4️⃣ Automatic Insurance Activation
+
+Qashivo immediately attaches base insurance cover (e.g. £2,500 free).
+
+If invoice exceeds limit, user sees:
+
+“Extend to 100% cover for £19.80.”
+
+Full cover premium adjusts dynamically based on live risk model.
+
+🛡️ Status Examples:
+
+Invoice	Amount	Free Cover	Full Cover	Status
+INV-1043	£2,000	£2,000	£0	Fully Covered (Free)
+INV-1044	£5,000	£2,500	£19.80	Partial – Upgrade Available
+5️⃣ AI Credit-Control Automation
+
+Once active, invoice enters AI communications cycle (email, SMS, voice).
+
+System tracks sentiment and behaviour: tone, response time, disputes.
+
+Payment behaviour data updates client’s Q-Score weekly.
+
+Insurer and lender APIs receive anonymised updates for dynamic pricing.
+
+6️⃣ Invoice Finance Option
+
+Any active, insured invoice shows “Get Paid Now” button.
+
+Clicking triggers Finance Partner API offer (e.g., 95 % advance, £40 fee).
+
+If accepted:
+
+Funds credited into Qashivo Wallet (not bank).
+
+Invoice tagged Financed.
+
+💬 Voice Agent Example:
+
+“We can advance £4,750 today directly into your Qashivo Wallet.
+When your customer pays, we’ll settle it automatically.”
+
+7️⃣ Payment & Wallet Auto-Offset
+
+Debtor pays invoice into Qashivo Wallet virtual account.
+
+System auto-reconciles:
+
+Deducts advance + finance fee.
+
+Releases residual balance to user’s bank.
+
+If insured invoice defaults → insurer payout lands in Wallet and clears balance.
+
+🧾 Wallet Ledger Example
+
+Date	Event	Debit	Credit	Balance
+03 Oct	Advance (INV-1044)		£4,750	£4,750
+12 Oct	Customer Payment	£4,790		£0
+12 Oct	Finance Fee	£40		£0
+12 Oct	Settlement			£0 (Closed)
+8️⃣ Feedback Loop & Dynamic Adjustment
+
+Payment timeliness updates Q-Score.
+
+Insurer adjusts base-cover limit & full-cover premium.
+
+Finance partner refines lending rate.
+
+Qashivo dashboard updates with:
+
+Credit-checked clients %
+
+Insured invoice value
+
+Financed invoice value
+
+Behavioural improvement trend
+
+🧠 Architecture Overview
+(1) Client setup in Qashivo  →  (2) Credit/Insurance API Check
+          ↓                               ↓
+   (3) Sync Approved Client → Accounting System (Xero)
+          ↓                               ↓
+     (4) Invoice Created → Auto-import into Qashivo
+          ↓
+   (5) Insurance & AI Comms
+          ↓
+   (6) Optional Finance → Funds into Qashivo Wallet
+          ↓
+   (7) Payment/Offset → Feedback Loop → Adjust Risk
+
+💎 Benefits
+Stakeholder	Value
+User	Seamless process, risk-screened clients, guaranteed cover, instant cash-flow.
+Insurer Partner	Fresh behavioural data + pre-vetted SME base.
+Lender Partner	Lower default risk = higher velocity lending.
+Qashivo	Owns the data layer + monetises every transaction (insurance, finance, wallet spread).
+
+Would you like me to now produce the Replit JSON / conversational flow that matches this end-to-end architecture — so your AI agent can walk through:
+1️⃣ new-client credit check →
+2️⃣ approval & sync to Xero →
+3️⃣ insurance assignment →
+4️⃣ finance / wallet offer →
+5️⃣ payment close-out?
+
+You said:
+How is different to factoring that’s available now?
+ChatGPT said:
+
+Excellent — and a very important question, Simon. 💡
+
+This is exactly the kind of investor-level clarity you’ll want when you pitch Qashivo. On the surface, it looks like factoring — but structurally, commercially, and technologically, it’s fundamentally different.
+
+Here’s the clean breakdown 👇
+
+⚖️ How Qashivo Differs from Traditional Factoring
+Aspect	Traditional Factoring	Qashivo Embedded Finance Model
+Ownership Model	The factor buys the receivable — they legally own it until payment.	The SME retains ownership; Qashivo simply finances and insures the cash flow via partners.
+Customer Experience	Opaque, high-friction onboarding. Credit checks, legal assignments, debtor notifications.	Seamless: invoice stays in Xero; credit check + insurance handled in-app. No legal reassignment.
+Integration	Separate platform; manual upload of invoices or CSV imports.	Native, API-driven sync with Xero/Sage/QuickBooks. Instant eligibility decisions.
+Risk Model	Blanket facility: fixed fees, tied to all invoices.	Dynamic, invoice-by-invoice risk pricing. Free base cover + optional full cover.
+Insurance	Often bundled; hidden in factoring fee (2–4%).	Transparent: free insurance base tier, smart upgrade option; insurer brand visible.
+Flexibility	You must sell all invoices in a facility.	Finance only those you choose. Full control at invoice level.
+Funding Flow	Factor pays into your bank; holds control over debtor payments.	Funds route through Qashivo Wallet. Automatic offset when paid; no change to customer payment process.
+Customer Relationship	Debtor often notified of assignment — can strain client relationships.	Debtor still pays your existing account; no “third party collection” stigma.
+Data Intelligence	Static underwriting, based on financials.	AI-driven, dynamic risk scores based on behavioural payment patterns and sentiment.
+Target Market	Mid-market, creditworthy firms with consistent turnover (£1M+).	SMEs (£100K–£5M) who want selective, tech-driven protection and cash-flow access.
+Exit Value	Low-multiple, commoditised lending.	High-multiple SaaS + embedded finance platform (IP + recurring income).
+💎 In Short
+
+Qashivo isn’t a factor — it’s an AI Receivables Layer that connects credit control, insurance, and finance into one dynamic ecosystem.
+
+Factoring = “We buy your invoices.”
+
+Qashivo = “We protect and accelerate your invoices.”
+
+That’s the philosophical difference investors love — it’s software-first, not balance-sheet-first.
+
+🧠 What This Means Strategically
+Feature	What Investors Hear	What Users Feel
+Base Free Cover	“Freemium insurance funnel.”	“I’m protected for free.”
+Optional Full Cover	“Recurring revenue per invoice.”	“I choose what to insure.”
+Wallet Financing	“Embedded lending without credit facility lock-in.”	“I get cash fast without a contract.”
+Dynamic Q-Score	“Unique data asset.”	“I’m rewarded for good payment behaviour.”
