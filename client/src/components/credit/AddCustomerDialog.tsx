@@ -192,23 +192,21 @@ export default function AddCustomerDialog({
 
   const approveMutation = useMutation({
     mutationFn: async () => {
-      const approveRes = await apiRequest("POST", "/api/contacts/approve-credit", {
-        businessData: state.businessData,
-        tradingProfile: state.tradingProfile,
-        recommendation: state.recommendation,
-      });
-      const approveData = await approveRes.json();
+      // Dummy response for now - will implement real API calls later
+      await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate API delay
       
-      await apiRequest("POST", "/api/contacts/sync-to-xero", { contactId: approveData.contactId });
-      
-      return approveData;
+      return {
+        contactId: `contact-${Date.now()}`,
+        success: true,
+        message: "Customer approved (demo mode)",
+      };
     },
     onSuccess: (data: any) => {
       setState((prev) => ({ ...prev, contactId: data.contactId }));
       setApprovalSuccess(true);
       toast({
         title: "Success",
-        description: "Customer approved and synced to Xero",
+        description: "Customer approved (demo mode - no API calls made)",
       });
       setTimeout(() => {
         onSuccess?.();
