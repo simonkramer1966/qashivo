@@ -685,3 +685,221 @@ export async function generateComprehensiveDataset(
   });
   console.log(`   • Perfect for ML training and investor demos! 🚀`);
 }
+
+// ==================== TARGETED CUSTOMER SEEDING ====================
+
+/**
+ * Seed 2 specific customers with realistic payment behavior:
+ * - Good Payer: Always pays on time or early, A risk band
+ * - Bad Payer: Chronic late payer, needs chasing, D risk band
+ */
+export async function seedPaymentBehaviorCustomers(tenantId: string): Promise<void> {
+  console.log('🎯 Starting payment behavior customer seeding...');
+  
+  const now = new Date();
+  let invoiceSequence = 9000; // Start from high number to avoid collisions
+  
+  // ==================== GOOD PAYER ====================
+  console.log('✅ Creating Good Payer customer...');
+  
+  const goodPayerData: InsertContact = {
+    tenantId,
+    name: "Michael Stevens",
+    email: "accounts@promptpayments.co.uk",
+    phone: "020 7946 0958",
+    companyName: "Prompt Payments Ltd",
+    paymentTerms: 30,
+    preferredContactMethod: "email",
+    isActive: true
+  };
+  
+  const goodPayer = await storage.createContact(goodPayerData);
+  
+  // Update with credit assessment
+  await storage.updateContact(goodPayer.id, tenantId, {
+    riskScore: 85,
+    riskBand: "A",
+    creditLimit: "5000000", // £50,000
+    creditAssessment: {
+      decision: {
+        recommendation: "APPROVE",
+        creditLimit: 50000,
+        paymentTerms: 30,
+        requiresGuarantee: false
+      },
+      signals: {
+        companyAge: 8,
+        recentFilings: true,
+        ccjCount: 0,
+        creditBureauScore: 95
+      },
+      tradingProfile: {
+        companyName: "Prompt Payments Ltd",
+        registrationNumber: "12345678",
+        industry: "Professional Services",
+        annualRevenue: 2500000
+      },
+      audit: {
+        assessedBy: "System",
+        assessedAt: now.toISOString()
+      }
+    }
+  });
+  
+  console.log(`  ✅ Created ${goodPayerData.companyName} (A risk band, £50k limit)`);
+  
+  // Generate 30 invoices for good payer (15 paid early/on-time, 15 current/upcoming)
+  console.log('  💰 Generating 30 invoices for good payer...');
+  
+  for (let i = 0; i < 30; i++) {
+    const isPaid = i < 15; // First 15 are paid
+    const monthsAgo = isPaid ? 6 - Math.floor(i / 3) : 0; // Spread paid invoices over 6 months
+    
+    const projectType = projectTypes[i % projectTypes.length];
+    const amount = getRandomAmount(projectType.minAmount, projectType.maxAmount);
+    
+    let issueDate: Date, dueDate: Date, paidDate: Date | undefined, status: string;
+    
+    if (isPaid) {
+      // Paid invoices: issued 2-6 months ago, paid 3-5 days BEFORE due date
+      issueDate = new Date(now.getTime() - (monthsAgo * 30 + Math.floor(Math.random() * 10)) * 24 * 60 * 60 * 1000);
+      dueDate = new Date(issueDate.getTime() + 30 * 24 * 60 * 60 * 1000);
+      // Paid 3-5 days early
+      paidDate = new Date(dueDate.getTime() - (Math.floor(Math.random() * 3) + 3) * 24 * 60 * 60 * 1000);
+      status = "paid";
+    } else {
+      // Current invoices: not yet due
+      dueDate = new Date(now.getTime() + (Math.floor(Math.random() * 20) + 5) * 24 * 60 * 60 * 1000);
+      issueDate = new Date(dueDate.getTime() - 30 * 24 * 60 * 60 * 1000);
+      paidDate = undefined;
+      status = "pending";
+    }
+    
+    const invoiceData: InsertInvoice = {
+      tenantId,
+      contactId: goodPayer.id,
+      invoiceNumber: generateInvoiceNumber(issueDate, invoiceSequence++),
+      amount: amount.toString(),
+      amountPaid: isPaid ? amount.toString() : "0",
+      taxAmount: Math.floor(amount * 0.2).toString(),
+      status,
+      issueDate,
+      dueDate,
+      paidDate,
+      description: projectType.name,
+      currency: "GBP"
+    };
+    
+    await storage.createInvoice(invoiceData);
+  }
+  
+  console.log('  ✅ Generated 30 invoices (15 paid early, 15 current)');
+  
+  // ==================== BAD PAYER ====================
+  console.log('❌ Creating Bad Payer customer...');
+  
+  const badPayerData: InsertContact = {
+    tenantId,
+    name: "Sarah Johnson",
+    email: "finance@latepayers.co.uk",
+    phone: "0161 496 0345",
+    companyName: "Late Payers Co",
+    paymentTerms: 30,
+    preferredContactMethod: "phone",
+    isActive: true
+  };
+  
+  const badPayer = await storage.createContact(badPayerData);
+  
+  // Update with credit assessment
+  await storage.updateContact(badPayer.id, tenantId, {
+    riskScore: 35,
+    riskBand: "D",
+    creditLimit: "1500000", // £15,000
+    creditAssessment: {
+      decision: {
+        recommendation: "APPROVE_WITH_CONDITIONS",
+        creditLimit: 15000,
+        paymentTerms: 14, // Shorter terms due to risk
+        requiresGuarantee: true
+      },
+      signals: {
+        companyAge: 3,
+        recentFilings: true,
+        ccjCount: 2,
+        creditBureauScore: 45
+      },
+      tradingProfile: {
+        companyName: "Late Payers Co",
+        registrationNumber: "87654321",
+        industry: "Retail",
+        annualRevenue: 800000
+      },
+      audit: {
+        assessedBy: "System",
+        assessedAt: now.toISOString()
+      }
+    }
+  });
+  
+  console.log(`  ✅ Created ${badPayerData.companyName} (D risk band, £15k limit)`);
+  
+  // Generate 30 invoices for bad payer (15 paid late, 15 overdue)
+  console.log('  💰 Generating 30 invoices for bad payer...');
+  
+  for (let i = 0; i < 30; i++) {
+    const isPaid = i < 15; // First 15 are paid (but late)
+    const monthsAgo = isPaid ? 6 - Math.floor(i / 3) : 0;
+    
+    const projectType = projectTypes[i % projectTypes.length];
+    const amount = getRandomAmount(projectType.minAmount, projectType.maxAmount);
+    
+    let issueDate: Date, dueDate: Date, paidDate: Date | undefined, status: string, reminderCount: number;
+    
+    if (isPaid) {
+      // Paid invoices: paid 30-75 days AFTER due date
+      issueDate = new Date(now.getTime() - (monthsAgo * 30 + Math.floor(Math.random() * 10) + 90) * 24 * 60 * 60 * 1000);
+      dueDate = new Date(issueDate.getTime() + 30 * 24 * 60 * 60 * 1000);
+      // Paid 30-75 days late
+      const daysLate = Math.floor(Math.random() * 46) + 30; // 30-75 days
+      paidDate = new Date(dueDate.getTime() + daysLate * 24 * 60 * 60 * 1000);
+      status = "paid";
+      reminderCount = Math.floor(daysLate / 15) + 2; // 3-6 reminders
+    } else {
+      // Overdue invoices: various stages of overdue
+      const daysOverdue = Math.floor(Math.random() * 60) + 7; // 7-67 days overdue
+      dueDate = new Date(now.getTime() - daysOverdue * 24 * 60 * 60 * 1000);
+      issueDate = new Date(dueDate.getTime() - 30 * 24 * 60 * 60 * 1000);
+      paidDate = undefined;
+      status = "overdue";
+      reminderCount = Math.floor(daysOverdue / 10) + 1; // 1-7 reminders
+    }
+    
+    const invoiceData: InsertInvoice = {
+      tenantId,
+      contactId: badPayer.id,
+      invoiceNumber: generateInvoiceNumber(issueDate, invoiceSequence++),
+      amount: amount.toString(),
+      amountPaid: isPaid ? amount.toString() : "0",
+      taxAmount: Math.floor(amount * 0.2).toString(),
+      status,
+      issueDate,
+      dueDate,
+      paidDate,
+      description: projectType.name,
+      currency: "GBP",
+      reminderCount: reminderCount || 0,
+      collectionStage: isPaid ? "initial" : (reminderCount! > 3 ? "formal_notice" : "reminder_2")
+    };
+    
+    await storage.createInvoice(invoiceData);
+  }
+  
+  console.log('  ✅ Generated 30 invoices (15 paid late, 15 overdue)');
+  
+  console.log('🎉 Payment behavior customer seeding complete!');
+  console.log('📊 Summary:');
+  console.log('   • Prompt Payments Ltd: A risk band, £50k limit, always pays early');
+  console.log('   • Late Payers Co: D risk band, £15k limit, chronic late payer');
+  console.log('   • 60 total invoices generated (30 per customer)');
+}
