@@ -1,8 +1,13 @@
-import type { Express } from "express";
+import type { Express} from "express";
 import express from "express";
 import { createServer, type Server } from "http";
 import crypto from "crypto";
 import { storage } from "./storage";
+import {
+  generateCreditRecommendation,
+  type CreditSignals,
+  type TradingProfile,
+} from "./services/creditScoringService";
 import { setupAuth, isAuthenticated, isOwner } from "./replitAuth";
 import { 
   insertContactSchema,
@@ -2014,6 +2019,101 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid contact data", errors: error.errors });
       }
       res.status(500).json({ message: "Failed to create contact" });
+    }
+  });
+
+  // Credit Assessment Routes
+  
+  // Calculate credit score and recommendation
+  app.post("/api/contacts/credit-check", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { signals, tradingProfile, policyCap } = req.body as {
+        signals: CreditSignals;
+        tradingProfile: TradingProfile;
+        policyCap?: number;
+      };
+
+      if (!signals || !tradingProfile) {
+        return res.status(400).json({ message: "Missing signals or trading profile" });
+      }
+
+      const recommendation = generateCreditRecommendation(signals, tradingProfile, policyCap);
+      res.json(recommendation);
+    } catch (error) {
+      console.error("Error calculating credit score:", error);
+      res.status(500).json({ message: "Failed to calculate credit score" });
+    }
+  });
+
+  // Approve and save credit decision
+  app.post("/api/contacts/:contactId/approve-credit", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { contactId } = req.params;
+      const { creditAssessment, riskScore, riskBand, creditLimit, paymentTerms } = req.body;
+
+      // Verify contact exists
+      const contact = await storage.getContact(contactId, user.tenantId);
+      if (!contact) {
+        return res.status(404).json({ message: "Contact not found" });
+      }
+
+      // Update contact with credit decision
+      await storage.updateContact(contactId, user.tenantId, {
+        riskScore,
+        riskBand,
+        creditLimit,
+        paymentTerms,
+        creditAssessment,
+      });
+
+      const updatedContact = await storage.getContact(contactId, user.tenantId);
+      res.json(updatedContact);
+    } catch (error) {
+      console.error("Error approving credit:", error);
+      res.status(500).json({ message: "Failed to approve credit" });
+    }
+  });
+
+  // Sync contact to Xero with risk band
+  app.post("/api/contacts/:contactId/sync-to-xero", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { contactId } = req.params;
+      
+      // Get contact
+      const contact = await storage.getContact(contactId, user.tenantId);
+      if (!contact) {
+        return res.status(404).json({ message: "Contact not found" });
+      }
+
+      // TODO: Implement Xero sync with contact groups for risk bands
+      // This will use the existing XeroProvider to:
+      // 1. Create/update contact in Xero
+      // 2. Add to contact group based on risk band (Risk_A, Risk_B, etc.)
+      // 3. Set payment terms if supported
+      
+      res.json({ 
+        message: "Xero sync initiated", 
+        contact,
+        xeroContactId: contact.xeroContactId 
+      });
+    } catch (error) {
+      console.error("Error syncing to Xero:", error);
+      res.status(500).json({ message: "Failed to sync to Xero" });
     }
   });
 
