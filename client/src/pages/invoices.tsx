@@ -76,25 +76,25 @@ export default function Invoices() {
     const daysOverdue = getDaysOverdue(invoice.dueDate);
     
     if (invoice.status === 'paid') {
-      return <Badge className="bg-emerald-500 text-white hover:bg-emerald-600">Paid</Badge>;
+      return <Badge className="bg-[#4FAD80] text-white hover:bg-[#3D8A66]">Paid</Badge>;
     } else if (daysOverdue === 0) {
       return <Badge className="bg-blue-500 text-white hover:bg-blue-600">Due Today</Badge>;
     } else if (daysOverdue < 7) {
       return <Badge className="bg-blue-500 text-white hover:bg-blue-600">Due</Badge>;
     } else if (daysOverdue < 30) {
-      return <Badge className="bg-amber-500 text-white hover:bg-amber-600">Overdue</Badge>;
+      return <Badge className="bg-[#E8A23B] text-white hover:bg-[#D49230]">Overdue</Badge>;
     } else {
-      return <Badge className="bg-red-500 text-white hover:bg-red-600">Critical</Badge>;
+      return <Badge className="bg-[#C75C5C] text-white hover:bg-[#B04949]">Critical</Badge>;
     }
   };
 
   const getStatusColor = (invoice: Invoice) => {
     const daysOverdue = getDaysOverdue(invoice.dueDate);
     
-    if (invoice.status === 'paid') return 'border-l-emerald-500';
+    if (invoice.status === 'paid') return 'border-l-[#4FAD80]';
     if (daysOverdue < 7) return 'border-l-blue-500';
-    if (daysOverdue < 30) return 'border-l-amber-500';
-    return 'border-l-red-500';
+    if (daysOverdue < 30) return 'border-l-[#E8A23B]';
+    return 'border-l-[#C75C5C]';
   };
 
   return (
@@ -143,14 +143,14 @@ export default function Invoices() {
               <p className="text-2xl font-bold text-slate-900">{formatCurrency(aggregates.totalOutstanding)}</p>
             </Card>
             
-            <Card className="card-apple p-4 border-l-4 border-l-red-500">
+            <Card className="card-apple p-4 border-l-4 border-l-[#C75C5C]">
               <p className="text-sm text-slate-600 mb-1">Critical</p>
-              <p className="text-2xl font-bold text-red-600">{aggregates.criticalCount}</p>
+              <p className="text-2xl font-bold text-[#C75C5C]">{aggregates.criticalCount}</p>
             </Card>
             
-            <Card className="card-apple p-4 border-l-4 border-l-amber-500">
+            <Card className="card-apple p-4 border-l-4 border-l-[#E8A23B]">
               <p className="text-sm text-slate-600 mb-1">Overdue</p>
-              <p className="text-2xl font-bold text-amber-600">{aggregates.overdueCount}</p>
+              <p className="text-2xl font-bold text-[#E8A23B]">{aggregates.overdueCount}</p>
             </Card>
             
             <Card className="card-apple p-4 border-l-4 border-l-blue-500">
@@ -166,14 +166,14 @@ export default function Invoices() {
               <p className="text-lg font-bold text-slate-900">{formatCurrency(aggregates.totalOutstanding)}</p>
             </Card>
             
-            <Card className="card-apple p-3 border-l-4 border-l-red-500">
+            <Card className="card-apple p-3 border-l-4 border-l-[#C75C5C]">
               <p className="text-xs text-slate-600 mb-1">Critical</p>
-              <p className="text-lg font-bold text-red-600">{aggregates.criticalCount}</p>
+              <p className="text-lg font-bold text-[#C75C5C]">{aggregates.criticalCount}</p>
             </Card>
             
-            <Card className="card-apple p-3 border-l-4 border-l-amber-500">
+            <Card className="card-apple p-3 border-l-4 border-l-[#E8A23B]">
               <p className="text-xs text-slate-600 mb-1">Overdue</p>
-              <p className="text-lg font-bold text-amber-600">{aggregates.overdueCount}</p>
+              <p className="text-lg font-bold text-[#E8A23B]">{aggregates.overdueCount}</p>
             </Card>
             
             <Card className="card-apple p-3 border-l-4 border-l-blue-500">
@@ -220,7 +220,7 @@ export default function Invoices() {
                           <h4 className="font-semibold text-slate-900 truncate">
                             {invoice.contact?.companyName || invoice.contact?.name || 'Unknown Customer'}
                           </h4>
-                          <p className="text-sm text-slate-600">
+                          <p className="text-sm font-normal text-slate-500">
                             {invoice.invoiceNumber}
                           </p>
                         </div>
@@ -237,7 +237,7 @@ export default function Invoices() {
                               <Banknote className="h-4 w-4 text-[#17B6C3]" />
                             )}
                           </div>
-                          <p className="text-xs text-slate-500">
+                          <p className="text-xs font-normal text-slate-500">
                             {invoice.status !== 'paid' && daysOverdue > 0 
                               ? `${daysOverdue} days overdue`
                               : `Due ${new Date(invoice.dueDate).toLocaleDateString()}`
@@ -255,7 +255,7 @@ export default function Invoices() {
                         <h4 className="font-semibold text-slate-900 truncate">
                           {invoice.contact?.companyName || invoice.contact?.name || 'Unknown Customer'}
                         </h4>
-                        <p className="text-sm text-slate-600 truncate">
+                        <p className="text-sm font-normal text-slate-500 truncate">
                           {invoice.invoiceNumber}
                         </p>
                       </div>
@@ -270,7 +270,7 @@ export default function Invoices() {
                             <Banknote className="h-4 w-4 text-[#17B6C3]" />
                           )}
                         </div>
-                        <p className="text-xs text-slate-500">
+                        <p className="text-xs font-normal text-slate-500">
                           {invoice.status !== 'paid' && daysOverdue > 0 
                             ? `${daysOverdue} days overdue`
                             : `Due ${new Date(invoice.dueDate).toLocaleDateString()}`
