@@ -77,6 +77,9 @@ export const tenants = pgTable("tenants", {
   onboardingCompleted: boolean("onboarding_completed").default(false),
   onboardingCompletedAt: timestamp("onboarding_completed_at"),
   
+  // Currency setting
+  currency: varchar("currency").default("GBP"),
+  
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
