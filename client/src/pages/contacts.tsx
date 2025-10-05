@@ -159,31 +159,33 @@ export default function Customers() {
                         {getRiskBadge(contact.riskScore)}
                       </div>
                       
-                      {/* Financial Info - Mobile-first stacked layout */}
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
-                        {/* Outstanding Amount */}
-                        <div className="flex-1">
-                          <p className="text-xs text-slate-500 mb-0.5">Outstanding</p>
-                          <p className="text-lg font-bold text-slate-900">
-                            {formatCurrency(contact.outstandingAmount)}
-                          </p>
-                          <p className="text-xs text-slate-500">
-                            {contact.invoiceCount} invoice{contact.invoiceCount !== 1 ? 's' : ''}
-                          </p>
-                        </div>
-
-                        {/* Overdue Amount */}
-                        {contact.overdueAmount > 0 && (
-                          <div className="flex-1 p-2.5 bg-amber-50 rounded-lg border border-amber-200">
-                            <p className="text-xs text-amber-700 mb-0.5 font-medium">Overdue</p>
-                            <p className="text-lg font-bold text-amber-900">
-                              {formatCurrency(contact.overdueAmount)}
+                      {/* Financial Info - Side by side layout */}
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex gap-6">
+                          {/* Outstanding Amount */}
+                          <div>
+                            <p className="text-xs text-slate-500 mb-0.5">Outstanding</p>
+                            <p className="text-lg font-bold text-slate-900">
+                              {formatCurrency(contact.outstandingAmount)}
                             </p>
-                            <p className="text-xs text-amber-700">
-                              {contact.overdueCount} invoice{contact.overdueCount !== 1 ? 's' : ''}
+                            <p className="text-xs text-slate-500">
+                              {contact.invoiceCount} invoice{contact.invoiceCount !== 1 ? 's' : ''}
                             </p>
                           </div>
-                        )}
+
+                          {/* Overdue Amount */}
+                          {contact.overdueAmount > 0 && (
+                            <div>
+                              <p className="text-xs text-red-600 mb-0.5 font-medium">Overdue</p>
+                              <p className="text-lg font-bold text-red-600">
+                                {formatCurrency(contact.overdueAmount)}
+                              </p>
+                              <p className="text-xs text-red-600">
+                                {contact.overdueCount} invoice{contact.overdueCount !== 1 ? 's' : ''}
+                              </p>
+                            </div>
+                          )}
+                        </div>
 
                         {/* Quick Actions - Hide on small mobile */}
                         <div className="hidden sm:flex gap-2 flex-shrink-0">
