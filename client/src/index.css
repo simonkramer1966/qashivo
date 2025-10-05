@@ -140,7 +140,7 @@
   }
   
   .glass-card-strong {
-    background: linear-gradient(135deg, #009FC2 0%, #007A9A 100%);
+    background: linear-gradient(135deg, #F0F4F5 0%, #E5ECEE 100%);
     @apply backdrop-blur-lg rounded-2xl shadow-xl border border-white/30;
     @apply transition-all duration-200;
   }
