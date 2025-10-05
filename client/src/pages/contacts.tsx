@@ -47,7 +47,7 @@ export default function Customers() {
 
   // Seed payment behavior customers (test button)
   const seedMutation = useMutation({
-    mutationFn: () => apiRequest("/api/mock-data/seed-payment-behavior", "POST"),
+    mutationFn: () => apiRequest("POST", "/api/mock-data/seed-payment-behavior"),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/contacts"] });
       alert("Payment behavior customers seeded successfully!");
