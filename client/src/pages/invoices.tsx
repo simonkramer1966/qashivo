@@ -354,15 +354,15 @@ export default function Invoices() {
     const daysOverdue = getDaysOverdue(invoice.dueDate);
     
     if (invoice.status === 'paid') {
-      return <Badge className="badge-success">Paid</Badge>;
+      return <Badge className="bg-emerald-500 text-white hover:bg-emerald-600">Paid</Badge>;
     } else if (daysOverdue === 0) {
-      return <Badge className="badge-info">Due Today</Badge>;
+      return <Badge className="bg-blue-500 text-white hover:bg-blue-600">Due Today</Badge>;
     } else if (daysOverdue < 7) {
-      return <Badge className="badge-success">Due</Badge>;
+      return <Badge className="bg-blue-500 text-white hover:bg-blue-600">Due</Badge>;
     } else if (daysOverdue < 30) {
-      return <Badge className="badge-warning">Overdue</Badge>;
+      return <Badge className="bg-amber-500 text-white hover:bg-amber-600">Overdue</Badge>;
     } else {
-      return <Badge className="badge-error">Critical</Badge>;
+      return <Badge className="bg-red-500 text-white hover:bg-red-600">Critical</Badge>;
     }
   };
 
@@ -559,7 +559,7 @@ export default function Invoices() {
                       </div>
 
                       {/* Column 4 - Status Badge + Chevron (aligns with Outstanding) */}
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center justify-end gap-3">
                         {getStatusBadge(invoice)}
                         <ChevronRight className="h-5 w-5 text-slate-400 flex-shrink-0" />
                       </div>
