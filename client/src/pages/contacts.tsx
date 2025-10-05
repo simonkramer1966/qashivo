@@ -15,7 +15,7 @@ import {
 import NewSidebar from "@/components/layout/new-sidebar";
 import BottomNav from "@/components/layout/bottom-nav";
 import Header from "@/components/layout/header";
-import { formatCurrency } from "@/lib/utils";
+import { useCurrency } from "@/hooks/useCurrency";
 
 interface Contact {
   id: string;
@@ -32,6 +32,7 @@ interface Contact {
 
 export default function Customers() {
   const [, setLocation] = useLocation();
+  const { formatCurrency } = useCurrency();
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const limit = 20;

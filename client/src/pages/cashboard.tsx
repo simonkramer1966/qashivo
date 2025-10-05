@@ -20,7 +20,7 @@ import {
 import NewSidebar from "@/components/layout/new-sidebar";
 import BottomNav from "@/components/layout/bottom-nav";
 import Header from "@/components/layout/header";
-import { formatCurrency } from "@/lib/utils";
+import { useCurrency } from "@/hooks/useCurrency";
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip as RechartsTooltip } from 'recharts';
 
 interface CashMetrics {
@@ -54,6 +54,7 @@ interface CashFlowData {
 
 export default function Cashboard() {
   const [, setLocation] = useLocation();
+  const { formatCurrency } = useCurrency();
 
   const { data: metrics, isLoading: metricsLoading } = useQuery<CashMetrics>({
     queryKey: ["/api/dashboard/metrics"],

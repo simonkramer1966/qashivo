@@ -19,7 +19,7 @@ import {
   Upload,
   Settings
 } from "lucide-react";
-import { formatCurrency } from "@/lib/utils";
+import { useCurrency } from "@/hooks/useCurrency";
 
 interface WalletBalance {
   currentBalance: number;
@@ -37,6 +37,7 @@ interface WalletSummary {
 
 export default function WalletPage() {
   const [activeTab, setActiveTab] = useState("overview");
+  const { formatCurrency } = useCurrency();
 
   // Fetch wallet balance
   const { data: balance, isLoading: balanceLoading } = useQuery<WalletBalance>({

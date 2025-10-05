@@ -22,7 +22,7 @@ import {
 import NewSidebar from "@/components/layout/new-sidebar";
 import BottomNav from "@/components/layout/bottom-nav";
 import Header from "@/components/layout/header";
-import { formatCurrency } from "@/lib/utils";
+import { useCurrency } from "@/hooks/useCurrency";
 
 interface Invoice {
   id: string;
@@ -313,6 +313,7 @@ function InsuranceDialog({ isOpen, onClose, invoice }: InsuranceDialogProps) {
 
 export default function Invoices() {
   const [, setLocation] = useLocation();
+  const { formatCurrency } = useCurrency();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState('all');
   const [page, setPage] = useState(1);
