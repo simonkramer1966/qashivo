@@ -46,7 +46,11 @@ export default function SplashScreen({ onEnter }: SplashScreenProps) {
         {/* Tagline */}
         <div className="animate-fade-in-delay-2">
           <p className="text-sm sm:text-base text-white/70 max-w-md px-4">
-            Intelligent AI driven accounts receivable, cashflow forecasting and debtor financing platform for modern businesses
+            Intelligent AI driven accounts receivable,
+            <br />
+            cashflow forecasting and debtor financing platform
+            <br />
+            for modern businesses
           </p>
         </div>
 
