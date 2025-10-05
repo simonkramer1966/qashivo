@@ -525,21 +525,21 @@ export default function Invoices() {
                           </p>
                         </div>
 
-                        {/* Column 2 - Invoice Amount (aligns with Overdue) */}
+                        {/* Column 2 - Invoice Amount + Days Overdue stacked (aligns with Overdue metric) */}
                         <div>
                           <p className="text-lg font-bold text-slate-900 whitespace-nowrap">
                             {formatCurrency(outstanding)}
                           </p>
-                        </div>
-
-                        {/* Column 3 - Days Overdue (aligns with Paid) */}
-                        <div>
                           <p className="text-xs text-slate-500">
                             {invoice.status !== 'paid' && daysOverdue > 0 
                               ? `${daysOverdue} days overdue`
                               : `Due ${new Date(invoice.dueDate).toLocaleDateString()}`
                             }
                           </p>
+                        </div>
+
+                        {/* Column 3 - Empty (aligns with Paid) */}
+                        <div>
                         </div>
 
                         {/* Column 4 - Status Badge (aligns with Outstanding) */}
