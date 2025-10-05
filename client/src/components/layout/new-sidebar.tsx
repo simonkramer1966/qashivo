@@ -50,14 +50,20 @@ import { cn } from "@/lib/utils";
 import nexusLogo from "@assets/Main Nexus Logo copy_1756923544828.png";
 
 const navigationItems = [
+  // Section 1: Dashboard
   { name: "Cashboard", href: "/", icon: Gauge },
-  { name: "Wallet", href: "/wallet", icon: Wallet },
-  { name: "Action Centre", href: "/action-centre", icon: Target },
+  { name: "Cashflow", href: "/cashflow", icon: TrendingUp },
+  { name: "divider", href: "#", icon: null },
+  
+  // Section 2: Core Operations
   { name: "Onboarding", href: "/onboarding", icon: UserPlus },
   { name: "Customers", href: "/contacts", icon: Users },
   { name: "Invoices", href: "/invoices", icon: FileText },
-  // { name: "Invoice Health", href: "/health-dashboard", icon: Activity },
-  // { name: "Invoices - Xero", href: "/invoices-xero", icon: ExternalLink },
+  { name: "Action Centre", href: "/action-centre", icon: Target },
+  { name: "Wallet", href: "/wallet", icon: Wallet },
+  { name: "divider", href: "#", icon: null },
+  
+  // Section 3: Management
   { name: "Workflows", href: "/workflows", icon: Workflow },
   { name: "Reports", href: "/reports", icon: BarChart },
 ];
@@ -723,7 +729,16 @@ export default function NewSidebar() {
       {/* Navigation */}
       <nav className={cn("flex-1 mt-2.5", isCollapsed ? "px-2" : "px-4")}>
         <ul className="space-y-1">
-          {getAllNavigationItems().map((item) => {
+          {getAllNavigationItems().map((item, index) => {
+            // Render divider
+            if (item.name === "divider") {
+              return (
+                <li key={`divider-${index}`} className="my-3">
+                  <div className="h-px bg-gray-300" />
+                </li>
+              );
+            }
+            
             const isActive = isActivePath(item.href);
             const Icon = item.icon;
             
@@ -742,7 +757,7 @@ export default function NewSidebar() {
                   data-testid={`nav-${item.name.toLowerCase().replace(/\s+/g, '-')}`}
                   title={isCollapsed ? item.name : undefined}
                 >
-                  <Icon className="w-5 h-5" />
+                  {Icon && <Icon className="w-5 h-5" />}
                   {!isCollapsed && (
                     <>
                       <span>{item.name}</span>

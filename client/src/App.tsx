@@ -7,6 +7,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 // Core application pages
 import Cashboard from "@/pages/cashboard";
+import Cashflow from "@/pages/cashflow";
 import Invoices from "@/pages/invoices";
 import Contacts from "@/pages/contacts";
 import Onboarding from "@/pages/onboarding";
@@ -69,6 +70,7 @@ function Router() {
         // Authenticated routes - main application
         <Switch>
           <Route path="/partner" component={PartnerDashboard} />
+          <Route path="/cashflow" component={Cashflow} />
           <Route path="/contacts" component={Contacts} />
           <Route path="/onboarding" component={Onboarding} />
           <Route path="/invoices" component={Invoices} />
