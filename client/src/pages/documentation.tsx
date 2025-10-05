@@ -302,12 +302,12 @@ export default function Documentation() {
                           </div>
                         </div>
 
-                        <div className="border-l-4 border-green-500 pl-4">
+                        <div className="border-l-4 border-[#4FAD80] pl-4">
                           <h4 className="font-semibold mb-2">3. Response Rate (20% weight)</h4>
                           <p className="text-sm text-gray-600 mb-2">
                             How often the customer responds to collection communications.
                           </p>
-                          <div className="bg-green-50 p-3 rounded text-sm">
+                          <div className="bg-[#4FAD80]/10 p-3 rounded text-sm">
                             <p className="font-medium mb-1">Formula:</p>
                             <code className="text-gray-700">(Response Actions / Communication Actions) × 100</code>
                             <p className="text-gray-600 mt-2">
@@ -316,12 +316,12 @@ export default function Documentation() {
                           </div>
                         </div>
 
-                        <div className="border-l-4 border-amber-500 pl-4">
+                        <div className="border-l-4 border-[#E8A23B] pl-4">
                           <h4 className="font-semibold mb-2">4. Dispute History (15% weight)</h4>
                           <p className="text-sm text-gray-600 mb-2">
                             Frequency of disputes or complaints relative to invoices.
                           </p>
-                          <div className="bg-amber-50 p-3 rounded text-sm">
+                          <div className="bg-[#E8A23B]/10 p-3 rounded text-sm">
                             <p className="font-medium mb-1">Scoring:</p>
                             <ul className="space-y-1 text-gray-600">
                               <li>• No disputes: 100 points</li>
@@ -350,11 +350,11 @@ export default function Documentation() {
                           <span><strong>Payment Reliability</strong> indicates overall creditworthiness and willingness to pay</span>
                         </li>
                         <li className="flex items-start gap-2">
-                          <Badge className="bg-green-500 text-white mt-0.5">20%</Badge>
+                          <Badge className="bg-[#4FAD80] text-white mt-0.5">20%</Badge>
                           <span><strong>Response Rate</strong> shows engagement level and likelihood of successful collection</span>
                         </li>
                         <li className="flex items-start gap-2">
-                          <Badge className="bg-amber-500 text-white mt-0.5">15%</Badge>
+                          <Badge className="bg-[#E8A23B] text-white mt-0.5">15%</Badge>
                           <span><strong>Dispute History</strong> identifies problematic relationships requiring special handling</span>
                         </li>
                       </ul>
