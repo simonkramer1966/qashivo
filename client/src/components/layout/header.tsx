@@ -181,7 +181,7 @@ export default function Header({ title, subtitle, action, noBorder = true, title
           )}
         </div>
         {tenant?.name && (
-          <div className="mb-3 pl-10">
+          <div className="mb-3">
             <p className="text-sm text-slate-600" data-testid="text-tenant-name">
               {tenant.name}
             </p>
