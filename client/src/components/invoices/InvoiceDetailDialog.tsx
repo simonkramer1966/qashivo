@@ -96,47 +96,48 @@ export function InvoiceDetailDialog({ invoice, open, onOpenChange }: InvoiceDeta
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] p-0 flex flex-col">
+        {/* Header - Invoice Summary - Fixed at top */}
+        <div className="bg-white px-6 pt-6 pb-4 border-b rounded-t-lg">
+          <DialogHeader>
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex-1">
+                <DialogTitle className="text-2xl font-bold mb-2">
+                  {invoice.contact?.companyName || invoice.contact?.name || 'Unknown Customer'}
+                </DialogTitle>
+                <div className="flex flex-wrap items-center gap-3 text-sm text-slate-600">
+                  <span className="font-medium">{invoice.invoiceNumber}</span>
+                  <span>•</span>
+                  <span>Issued {new Date(invoice.issueDate).toLocaleDateString()}</span>
+                  <span>•</span>
+                  <span>Due {new Date(invoice.dueDate).toLocaleDateString()}</span>
+                </div>
+              </div>
+              {getStatusBadge()}
+            </div>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4">
+              <div>
+                <p className="text-sm text-slate-600">Amount</p>
+                <p className="text-2xl font-bold text-slate-900">{formatCurrency(outstanding)}</p>
+              </div>
+              {daysOverdue > 0 && (
+                <div>
+                  <p className="text-sm text-slate-600">Days Overdue</p>
+                  <p className="text-2xl font-bold text-red-500">{daysOverdue}</p>
+                </div>
+              )}
+              {invoice.status === 'paid' && (
+                <div>
+                  <p className="text-sm text-slate-600">Paid Amount</p>
+                  <p className="text-2xl font-bold text-emerald-500">{formatCurrency(invoice.amountPaid)}</p>
+                </div>
+              )}
+            </div>
+          </DialogHeader>
+        </div>
+
         <ScrollArea className="flex-1 overflow-auto">
           <div className="p-6">
-            {/* Header - Invoice Summary */}
-            <div className="sticky top-0 bg-white pt-6 pb-4 mb-4 border-b">
-              <DialogHeader>
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1">
-                    <DialogTitle className="text-2xl font-bold mb-2">
-                      {invoice.contact?.companyName || invoice.contact?.name || 'Unknown Customer'}
-                    </DialogTitle>
-                    <div className="flex flex-wrap items-center gap-3 text-sm text-slate-600">
-                      <span className="font-medium">{invoice.invoiceNumber}</span>
-                      <span>•</span>
-                      <span>Issued {new Date(invoice.issueDate).toLocaleDateString()}</span>
-                      <span>•</span>
-                      <span>Due {new Date(invoice.dueDate).toLocaleDateString()}</span>
-                    </div>
-                  </div>
-                  {getStatusBadge()}
-                </div>
-                
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4">
-                  <div>
-                    <p className="text-sm text-slate-600">Amount</p>
-                    <p className="text-2xl font-bold text-slate-900">{formatCurrency(outstanding)}</p>
-                  </div>
-                  {daysOverdue > 0 && (
-                    <div>
-                      <p className="text-sm text-slate-600">Days Overdue</p>
-                      <p className="text-2xl font-bold text-red-500">{daysOverdue}</p>
-                    </div>
-                  )}
-                  {invoice.status === 'paid' && (
-                    <div>
-                      <p className="text-sm text-slate-600">Paid Amount</p>
-                      <p className="text-2xl font-bold text-emerald-500">{formatCurrency(invoice.amountPaid)}</p>
-                    </div>
-                  )}
-                </div>
-              </DialogHeader>
-            </div>
 
             {/* Contact Info Card */}
             <Collapsible open={contactInfoOpen} onOpenChange={setContactInfoOpen} className="mb-4">
