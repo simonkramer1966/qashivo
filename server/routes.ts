@@ -7973,7 +7973,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
       const toPhone = To.replace(/\D/g, '');
       
       // Get all tenants and search for contact
-      const allTenants = await storage.getTenants();
+      const allTenants = await storage.getAllTenants();
       let matchedContact: any = null;
       let matchedTenantId: string | null = null;
 
@@ -8096,7 +8096,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
       const toPhone = to.replace(/\D/g, '');
       
       // Get all tenants and search for contact
-      const allTenants = await storage.getTenants();
+      const allTenants = await storage.getAllTenants();
       let matchedContact: any = null;
       let matchedTenantId: string | null = null;
 
