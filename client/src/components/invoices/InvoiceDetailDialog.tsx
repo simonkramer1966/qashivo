@@ -142,7 +142,7 @@ export function InvoiceDetailDialog({ invoice, open, onOpenChange }: InvoiceDeta
             {/* Contact Info Card */}
             <Collapsible open={contactInfoOpen} onOpenChange={setContactInfoOpen} className="mb-4">
               <CollapsibleTrigger className="w-full">
-                <div className="flex items-center justify-between p-4 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors">
+                <div className={`flex items-center justify-between p-4 bg-slate-50 hover:bg-slate-100 transition-colors ${contactInfoOpen ? 'rounded-t-lg' : 'rounded-lg'}`}>
                   <h3 className="font-semibold text-slate-900">Contact & Client Info</h3>
                   <ChevronDown className={`h-5 w-5 transition-transform ${contactInfoOpen ? 'rotate-180' : ''}`} />
                 </div>
