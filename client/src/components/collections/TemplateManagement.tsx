@@ -52,6 +52,7 @@ import {
 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { TemplateVariableHelper } from "@/components/workflows/TemplateVariableHelper";
 import type { 
   CommunicationTemplate, 
   InsertCommunicationTemplate
@@ -610,9 +611,38 @@ export default function TemplateManagement({ className }: TemplateManagementProp
                         placeholder="Write your template content here..."
                         className="min-h-[120px]"
                         data-testid="textarea-template-content"
+                        id="template-content-textarea"
                       />
                     </FormControl>
                     <FormMessage />
+                    
+                    {/* Variable Helper for SMS and Email */}
+                    <div className="mt-4">
+                      <TemplateVariableHelper
+                        value={field.value || ""}
+                        onChange={field.onChange}
+                        onInsertVariable={(variable) => {
+                          const textarea = document.getElementById("template-content-textarea") as HTMLTextAreaElement;
+                          if (textarea) {
+                            const start = textarea.selectionStart;
+                            const end = textarea.selectionEnd;
+                            const currentValue = field.value || "";
+                            const newValue = currentValue.substring(0, start) + variable + currentValue.substring(end);
+                            field.onChange(newValue);
+                            
+                            // Set cursor position after inserted variable
+                            setTimeout(() => {
+                              textarea.focus();
+                              textarea.setSelectionRange(start + variable.length, start + variable.length);
+                            }, 0);
+                          } else {
+                            // Fallback: append to end
+                            field.onChange((field.value || "") + variable);
+                          }
+                        }}
+                        showPreview={true}
+                      />
+                    </div>
                   </FormItem>
                 )}
               />
