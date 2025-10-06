@@ -489,6 +489,15 @@ export const actions = pgTable("actions", {
   metadata: jsonb("metadata"), // Additional data like email ID, SMS ID, etc.
   workflowStepId: varchar("workflow_step_id"),
   aiGenerated: boolean("ai_generated").default(false),
+  
+  // Intent detection fields (for inbound SMS/voice)
+  intentType: varchar("intent_type"), // payment_plan, dispute, promise_to_pay, general_query
+  intentConfidence: decimal("intent_confidence", { precision: 3, scale: 2 }), // 0.00 to 1.00
+  sentiment: varchar("sentiment"), // positive, neutral, negative
+  
+  // Response tracking (for outbound communications)
+  hasResponse: boolean("has_response").default(false),
+  
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
