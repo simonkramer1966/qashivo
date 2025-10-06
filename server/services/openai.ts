@@ -197,6 +197,91 @@ export async function analyzePaymentPatterns(
   }
 }
 
+export async function detectSmsIntent(
+  smsMessage: string,
+  context?: {
+    customerName?: string;
+    invoiceNumber?: string;
+    amount?: number;
+    daysPastDue?: number;
+  }
+): Promise<{
+  intentType: 'payment_plan' | 'dispute' | 'promise_to_pay' | 'general_query';
+  intentConfidence: number;
+  sentiment: 'positive' | 'neutral' | 'negative';
+  summary: string;
+}> {
+  try {
+    const contextInfo = context ? `
+    Context:
+    - Customer: ${context.customerName || 'Unknown'}
+    - Invoice: ${context.invoiceNumber || 'N/A'}
+    - Amount: ${context.amount ? `$${context.amount}` : 'N/A'}
+    - Days Past Due: ${context.daysPastDue || 0}
+    ` : '';
+
+    const prompt = `
+    Analyze this SMS message from a customer regarding an invoice payment:
+    
+    Message: "${smsMessage}"
+    ${contextInfo}
+    
+    Classify the customer's intent into ONE of these categories:
+    - "payment_plan": Customer wants to set up installments or payment arrangement
+    - "dispute": Customer is questioning/disputing the invoice or amount
+    - "promise_to_pay": Customer commits to pay by a specific date
+    - "general_query": General questions or other communications
+    
+    Also determine:
+    - Sentiment: positive, neutral, or negative
+    - Confidence: 0.0 to 1.0 (how confident you are in the classification)
+    - Summary: Brief 1-sentence summary of the message
+    
+    Respond in JSON format:
+    {
+      "intentType": "payment_plan|dispute|promise_to_pay|general_query",
+      "intentConfidence": 0.85,
+      "sentiment": "positive|neutral|negative",
+      "summary": "Brief summary of the message"
+    }
+    `;
+
+    const response = await openai.chat.completions.create({
+      model: "gpt-5",
+      messages: [
+        {
+          role: "system",
+          content: "You are an expert at analyzing customer communications in debt collection. Accurately classify customer intent and sentiment."
+        },
+        {
+          role: "user",
+          content: prompt
+        }
+      ],
+      response_format: { type: "json_object" },
+      temperature: 0.3, // Lower temperature for more consistent classifications
+    });
+
+    const result = JSON.parse(response.choices[0].message.content || '{}');
+    
+    return {
+      intentType: result.intentType || 'general_query',
+      intentConfidence: parseFloat(result.intentConfidence) || 0.5,
+      sentiment: result.sentiment || 'neutral',
+      summary: result.summary || smsMessage.substring(0, 100)
+    };
+  } catch (error) {
+    console.error("Error detecting SMS intent:", error);
+    // Return default values if AI fails
+    return {
+      intentType: 'general_query',
+      intentConfidence: 0.3,
+      sentiment: 'neutral',
+      summary: smsMessage.substring(0, 100)
+    };
+  }
+}
+
 export async function generateAiCfoResponse(
   userMessage: string,
   conversationHistory: Array<{ role: 'user' | 'assistant'; content: string }>,
