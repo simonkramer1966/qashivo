@@ -76,9 +76,12 @@ function getSmartTimestamp(date: string): string {
 export default function ActionCentre() {
   const [, setLocation] = useLocation();
   const [searchQuery, setSearchQuery] = useState("");
-  const [intentFilter, setIntentFilter] = useState<string>("all");
-  const [typeFilter, setTypeFilter] = useState<string>("all");
-  const [viewFilter, setViewFilter] = useState<string>("all");
+  
+  // Multi-select toggle filters
+  const [directionFilters, setDirectionFilters] = useState<string[]>([]);
+  const [channelFilters, setChannelFilters] = useState<string[]>([]);
+  const [intentFilters, setIntentFilters] = useState<string[]>([]);
+  const [statusFilters, setStatusFilters] = useState<string[]>([]);
 
   const { data: actions = [], isLoading } = useQuery<Action[]>({
     queryKey: ['/api/actions'],
@@ -156,23 +159,43 @@ export default function ActionCentre() {
     }
   };
 
+  // Toggle helper
+  const toggleFilter = (filters: string[], value: string, setFilters: (filters: string[]) => void) => {
+    if (filters.includes(value)) {
+      setFilters(filters.filter(f => f !== value));
+    } else {
+      setFilters([...filters, value]);
+    }
+  };
+
   const filteredActions = useMemo(() => {
     return actions.filter(action => {
       const matchesSearch = !searchQuery || 
         action.subject?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         action.content?.toLowerCase().includes(searchQuery.toLowerCase());
       
-      const matchesIntent = intentFilter === 'all' || action.intentType === intentFilter;
-      const matchesType = typeFilter === 'all' || action.type === typeFilter;
-      
-      // "Needs Action" filter: inbound + has intent + not resolved
+      // Direction filter
       const isInbound = action.metadata?.direction === 'inbound';
-      const needsAction = isInbound && action.intentType && action.status !== 'resolved';
-      const matchesView = viewFilter === 'all' || (viewFilter === 'needs_action' && needsAction);
+      const matchesDirection = directionFilters.length === 0 || 
+        directionFilters.includes(isInbound ? 'inbound' : 'outbound');
       
-      return matchesSearch && matchesIntent && matchesType && matchesView;
+      // Channel filter
+      const matchesChannel = channelFilters.length === 0 || channelFilters.includes(action.type);
+      
+      // Intent filter
+      const matchesIntent = intentFilters.length === 0 || 
+        (action.intentType && intentFilters.includes(action.intentType));
+      
+      // Status filter
+      const needsAction = isInbound && action.intentType && action.status !== 'resolved';
+      const isResolved = action.status === 'resolved';
+      const matchesStatus = statusFilters.length === 0 || 
+        (statusFilters.includes('needs_action') && needsAction) ||
+        (statusFilters.includes('resolved') && isResolved);
+      
+      return matchesSearch && matchesDirection && matchesChannel && matchesIntent && matchesStatus;
     });
-  }, [actions, searchQuery, intentFilter, typeFilter, viewFilter]);
+  }, [actions, searchQuery, directionFilters, channelFilters, intentFilters, statusFilters]);
 
   // Count "Needs Action" items
   const needsActionCount = actions.filter(a => 
@@ -209,44 +232,207 @@ export default function ActionCentre() {
             </div>
           </div>
 
-          {/* Filters */}
-          <div className="flex gap-3 mb-6 flex-wrap">
-            <Select value={viewFilter} onValueChange={setViewFilter}>
-              <SelectTrigger className="w-[180px]" data-testid="select-view-filter">
-                <SelectValue placeholder="All Activity" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Activity</SelectItem>
-                <SelectItem value="needs_action">
+          {/* Toggle Filter Bar */}
+          <div className="card-apple p-4 mb-6 space-y-4">
+            {/* Direction Filter */}
+            <div>
+              <p className="text-xs font-medium text-slate-600 mb-2">Direction</p>
+              <div className="flex gap-2 flex-wrap">
+                <Button
+                  variant={directionFilters.includes('inbound') ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => toggleFilter(directionFilters, 'inbound', setDirectionFilters)}
+                  className={`${
+                    directionFilters.includes('inbound')
+                      ? 'bg-[#17B6C3] hover:bg-[#1396A1] text-white'
+                      : 'bg-white hover:bg-slate-50 text-slate-700'
+                  }`}
+                  data-testid="filter-inbound"
+                >
+                  <ArrowDown className="h-4 w-4 mr-1" />
+                  Inbound
+                </Button>
+                <Button
+                  variant={directionFilters.includes('outbound') ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => toggleFilter(directionFilters, 'outbound', setDirectionFilters)}
+                  className={`${
+                    directionFilters.includes('outbound')
+                      ? 'bg-[#17B6C3] hover:bg-[#1396A1] text-white'
+                      : 'bg-white hover:bg-slate-50 text-slate-700'
+                  }`}
+                  data-testid="filter-outbound"
+                >
+                  <ArrowUp className="h-4 w-4 mr-1" />
+                  Outbound
+                </Button>
+              </div>
+            </div>
+
+            {/* Channel Filter */}
+            <div>
+              <p className="text-xs font-medium text-slate-600 mb-2">Channel</p>
+              <div className="flex gap-2 flex-wrap">
+                <Button
+                  variant={channelFilters.includes('sms') ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => toggleFilter(channelFilters, 'sms', setChannelFilters)}
+                  className={`${
+                    channelFilters.includes('sms')
+                      ? 'bg-blue-500 hover:bg-blue-600 text-white'
+                      : 'bg-white hover:bg-slate-50 text-slate-700'
+                  }`}
+                  data-testid="filter-sms"
+                >
+                  <MessageSquare className="h-4 w-4 mr-1" />
+                  SMS
+                </Button>
+                <Button
+                  variant={channelFilters.includes('email') ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => toggleFilter(channelFilters, 'email', setChannelFilters)}
+                  className={`${
+                    channelFilters.includes('email')
+                      ? 'bg-orange-500 hover:bg-orange-600 text-white'
+                      : 'bg-white hover:bg-slate-50 text-slate-700'
+                  }`}
+                  data-testid="filter-email"
+                >
+                  <Mail className="h-4 w-4 mr-1" />
+                  Email
+                </Button>
+                <Button
+                  variant={channelFilters.includes('call') ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => toggleFilter(channelFilters, 'call', setChannelFilters)}
+                  className={`${
+                    channelFilters.includes('call')
+                      ? 'bg-green-500 hover:bg-green-600 text-white'
+                      : 'bg-white hover:bg-slate-50 text-slate-700'
+                  }`}
+                  data-testid="filter-call"
+                >
+                  <Phone className="h-4 w-4 mr-1" />
+                  Voice
+                </Button>
+              </div>
+            </div>
+
+            {/* Intent Filter */}
+            <div>
+              <p className="text-xs font-medium text-slate-600 mb-2">Intent</p>
+              <div className="flex gap-2 flex-wrap">
+                <Button
+                  variant={intentFilters.includes('payment_plan') ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => toggleFilter(intentFilters, 'payment_plan', setIntentFilters)}
+                  className={`${
+                    intentFilters.includes('payment_plan')
+                      ? 'bg-[#17B6C3] hover:bg-[#1396A1] text-white'
+                      : 'bg-white hover:bg-slate-50 text-slate-700'
+                  }`}
+                  data-testid="filter-payment-plan"
+                >
+                  <DollarSign className="h-4 w-4 mr-1" />
+                  Payment Plans
+                </Button>
+                <Button
+                  variant={intentFilters.includes('dispute') ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => toggleFilter(intentFilters, 'dispute', setIntentFilters)}
+                  className={`${
+                    intentFilters.includes('dispute')
+                      ? 'bg-[#17B6C3] hover:bg-[#1396A1] text-white'
+                      : 'bg-white hover:bg-slate-50 text-slate-700'
+                  }`}
+                  data-testid="filter-dispute"
+                >
+                  <AlertCircle className="h-4 w-4 mr-1" />
+                  Disputes
+                </Button>
+                <Button
+                  variant={intentFilters.includes('promise_to_pay') ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => toggleFilter(intentFilters, 'promise_to_pay', setIntentFilters)}
+                  className={`${
+                    intentFilters.includes('promise_to_pay')
+                      ? 'bg-[#17B6C3] hover:bg-[#1396A1] text-white'
+                      : 'bg-white hover:bg-slate-50 text-slate-700'
+                  }`}
+                  data-testid="filter-promise"
+                >
+                  <CheckCircle2 className="h-4 w-4 mr-1" />
+                  Promises
+                </Button>
+                <Button
+                  variant={intentFilters.includes('general_query') ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => toggleFilter(intentFilters, 'general_query', setIntentFilters)}
+                  className={`${
+                    intentFilters.includes('general_query')
+                      ? 'bg-[#17B6C3] hover:bg-[#1396A1] text-white'
+                      : 'bg-white hover:bg-slate-50 text-slate-700'
+                  }`}
+                  data-testid="filter-query"
+                >
+                  <HelpCircle className="h-4 w-4 mr-1" />
+                  Queries
+                </Button>
+              </div>
+            </div>
+
+            {/* Status Filter */}
+            <div>
+              <p className="text-xs font-medium text-slate-600 mb-2">Status</p>
+              <div className="flex gap-2 flex-wrap">
+                <Button
+                  variant={statusFilters.includes('needs_action') ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => toggleFilter(statusFilters, 'needs_action', setStatusFilters)}
+                  className={`${
+                    statusFilters.includes('needs_action')
+                      ? 'bg-[#17B6C3] hover:bg-[#1396A1] text-white'
+                      : 'bg-white hover:bg-slate-50 text-slate-700'
+                  }`}
+                  data-testid="filter-needs-action"
+                >
+                  <Clock className="h-4 w-4 mr-1" />
                   Needs Action {needsActionCount > 0 && `(${needsActionCount})`}
-                </SelectItem>
-              </SelectContent>
-            </Select>
+                </Button>
+                <Button
+                  variant={statusFilters.includes('resolved') ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => toggleFilter(statusFilters, 'resolved', setStatusFilters)}
+                  className={`${
+                    statusFilters.includes('resolved')
+                      ? 'bg-[#17B6C3] hover:bg-[#1396A1] text-white'
+                      : 'bg-white hover:bg-slate-50 text-slate-700'
+                  }`}
+                  data-testid="filter-resolved"
+                >
+                  <CheckCircle2 className="h-4 w-4 mr-1" />
+                  Resolved
+                </Button>
+              </div>
+            </div>
 
-            <Select value={typeFilter} onValueChange={setTypeFilter}>
-              <SelectTrigger className="w-[180px]" data-testid="select-type-filter">
-                <SelectValue placeholder="All Types" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Types</SelectItem>
-                <SelectItem value="sms">SMS</SelectItem>
-                <SelectItem value="email">Email</SelectItem>
-                <SelectItem value="call">Call</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Select value={intentFilter} onValueChange={setIntentFilter}>
-              <SelectTrigger className="w-[200px]" data-testid="select-intent-filter">
-                <SelectValue placeholder="All Intents" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Intents</SelectItem>
-                <SelectItem value="payment_plan">Payment Plan</SelectItem>
-                <SelectItem value="dispute">Dispute</SelectItem>
-                <SelectItem value="promise_to_pay">Promise to Pay</SelectItem>
-                <SelectItem value="general_query">General Query</SelectItem>
-              </SelectContent>
-            </Select>
+            {/* Clear All Filters */}
+            {(directionFilters.length > 0 || channelFilters.length > 0 || intentFilters.length > 0 || statusFilters.length > 0) && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setDirectionFilters([]);
+                  setChannelFilters([]);
+                  setIntentFilters([]);
+                  setStatusFilters([]);
+                }}
+                className="text-slate-600 hover:text-slate-900"
+                data-testid="button-clear-filters"
+              >
+                Clear All Filters
+              </Button>
+            )}
           </div>
 
           {/* Stats Overview */}
