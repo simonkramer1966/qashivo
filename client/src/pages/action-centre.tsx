@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,54 +12,130 @@ import {
   AlertTriangle,
   Clock,
   ChevronRight,
-  MessageSquare
+  MessageSquare,
+  CheckCircle2,
+  XCircle,
+  DollarSign,
+  AlertCircle,
+  HelpCircle
 } from "lucide-react";
 import NewSidebar from "@/components/layout/new-sidebar";
 import BottomNav from "@/components/layout/bottom-nav";
 import Header from "@/components/layout/header";
 import { formatCurrency } from "@/lib/utils";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
-interface ActionItem {
+interface Action {
   id: string;
-  invoiceId: string;
-  invoiceNumber: string;
-  contactId: string;
-  contactName: string;
-  amount: number;
-  daysOverdue: number;
+  tenantId: string;
+  invoiceId: string | null;
+  contactId: string | null;
+  userId: string | null;
   type: string;
-  priority: string;
   status: string;
+  subject: string | null;
+  content: string | null;
+  scheduledFor: string | null;
+  completedAt: string | null;
+  metadata: any;
+  intentType: string | null;
+  intentConfidence: string | null;
+  sentiment: string | null;
+  hasResponse: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export default function ActionCentre() {
   const [, setLocation] = useLocation();
   const [searchQuery, setSearchQuery] = useState("");
+  const [intentFilter, setIntentFilter] = useState<string>("all");
+  const [typeFilter, setTypeFilter] = useState<string>("all");
 
-  const { data: actions = [], isLoading } = useQuery<ActionItem[]>({
-    queryKey: ['/api/collections/actions'],
+  const { data: actions = [], isLoading } = useQuery<Action[]>({
+    queryKey: ['/api/actions'],
   });
 
-  const getStatusBadge = (daysOverdue: number) => {
-    if (daysOverdue < 7) {
-      return <Badge className="badge-success">Due Soon</Badge>;
-    } else if (daysOverdue < 30) {
-      return <Badge className="badge-warning">Overdue</Badge>;
-    } else {
-      return <Badge className="badge-error">Critical</Badge>;
+  const getIntentBadge = (intentType: string | null) => {
+    if (!intentType) return null;
+    
+    const intentConfig = {
+      payment_plan: { 
+        label: "Payment Plan", 
+        icon: DollarSign, 
+        className: "bg-blue-100 text-blue-800 border-blue-200" 
+      },
+      dispute: { 
+        label: "Dispute", 
+        icon: AlertCircle, 
+        className: "bg-red-100 text-red-800 border-red-200" 
+      },
+      promise_to_pay: { 
+        label: "Promise to Pay", 
+        icon: CheckCircle2, 
+        className: "bg-green-100 text-green-800 border-green-200" 
+      },
+      general_query: { 
+        label: "Query", 
+        icon: HelpCircle, 
+        className: "bg-gray-100 text-gray-800 border-gray-200" 
+      },
+    };
+
+    const config = intentConfig[intentType as keyof typeof intentConfig];
+    if (!config) return null;
+
+    const Icon = config.icon;
+    return (
+      <Badge className={`${config.className} flex items-center gap-1 text-xs`}>
+        <Icon className="h-3 w-3" />
+        {config.label}
+      </Badge>
+    );
+  };
+
+  const getSentimentBadge = (sentiment: string | null) => {
+    if (!sentiment) return null;
+    
+    const sentimentConfig = {
+      positive: { label: "😊 Positive", className: "bg-green-50 text-green-700 border-green-200" },
+      neutral: { label: "😐 Neutral", className: "bg-gray-50 text-gray-700 border-gray-200" },
+      negative: { label: "😠 Negative", className: "bg-red-50 text-red-700 border-red-200" },
+    };
+
+    const config = sentimentConfig[sentiment as keyof typeof sentimentConfig];
+    if (!config) return null;
+
+    return <Badge variant="outline" className={config.className}>{config.label}</Badge>;
+  };
+
+  const getActionIcon = (type: string) => {
+    switch (type) {
+      case 'email': return <Mail className="h-4 w-4" />;
+      case 'sms': return <MessageSquare className="h-4 w-4" />;
+      case 'call': return <Phone className="h-4 w-4" />;
+      default: return <MessageSquare className="h-4 w-4" />;
     }
   };
 
-  const getStatusColor = (daysOverdue: number) => {
-    if (daysOverdue < 7) return 'border-l-[#4FAD80]';
-    if (daysOverdue < 30) return 'border-l-[#E8A23B]';
-    return 'border-l-[#C75C5C]';
-  };
-
-  const filteredActions = actions.filter(action => 
-    action.contactName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    action.invoiceNumber.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredActions = useMemo(() => {
+    return actions.filter(action => {
+      const matchesSearch = !searchQuery || 
+        action.subject?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        action.content?.toLowerCase().includes(searchQuery.toLowerCase());
+      
+      const matchesIntent = intentFilter === 'all' || action.intentType === intentFilter;
+      const matchesType = typeFilter === 'all' || action.type === typeFilter;
+      
+      return matchesSearch && matchesIntent && matchesType;
+    });
+  }, [actions, searchQuery, intentFilter, typeFilter]);
 
   return (
     <div className="flex h-screen bg-white">
@@ -91,22 +167,56 @@ export default function ActionCentre() {
             </div>
           </div>
 
+          {/* Filters */}
+          <div className="flex gap-3 mb-6">
+            <Select value={typeFilter} onValueChange={setTypeFilter}>
+              <SelectTrigger className="w-[180px]" data-testid="select-type-filter">
+                <SelectValue placeholder="All Types" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Types</SelectItem>
+                <SelectItem value="sms">SMS</SelectItem>
+                <SelectItem value="email">Email</SelectItem>
+                <SelectItem value="call">Call</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select value={intentFilter} onValueChange={setIntentFilter}>
+              <SelectTrigger className="w-[200px]" data-testid="select-intent-filter">
+                <SelectValue placeholder="All Intents" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Intents</SelectItem>
+                <SelectItem value="payment_plan">Payment Plan</SelectItem>
+                <SelectItem value="dispute">Dispute</SelectItem>
+                <SelectItem value="promise_to_pay">Promise to Pay</SelectItem>
+                <SelectItem value="general_query">General Query</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
           {/* Stats Overview */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 mb-6">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-6">
             <div className="card-apple p-3 sm:p-4">
               <p className="text-xs sm:text-sm text-slate-600 mb-1">Total Actions</p>
               <p className="text-xl sm:text-2xl font-bold text-slate-900">{actions.length}</p>
             </div>
             <div className="card-apple p-3 sm:p-4">
-              <p className="text-xs sm:text-sm text-slate-600 mb-1">Critical</p>
-              <p className="text-xl sm:text-2xl font-bold text-[#C75C5C]">
-                {actions.filter(a => a.daysOverdue >= 30).length}
+              <p className="text-xs sm:text-sm text-slate-600 mb-1">With Intent</p>
+              <p className="text-xl sm:text-2xl font-bold text-[#17B6C3]">
+                {actions.filter(a => a.intentType).length}
               </p>
             </div>
-            <div className="card-apple p-3 sm:p-4 col-span-2 sm:col-span-1">
-              <p className="text-xs sm:text-sm text-slate-600 mb-1">Total Value</p>
-              <p className="text-xl sm:text-2xl font-bold text-slate-900">
-                {formatCurrency(actions.reduce((sum, a) => sum + a.amount, 0))}
+            <div className="card-apple p-3 sm:p-4">
+              <p className="text-xs sm:text-sm text-slate-600 mb-1">Responded</p>
+              <p className="text-xl sm:text-2xl font-bold text-[#4FAD80]">
+                {actions.filter(a => a.hasResponse).length}
+              </p>
+            </div>
+            <div className="card-apple p-3 sm:p-4">
+              <p className="text-xs sm:text-sm text-slate-600 mb-1">Disputes</p>
+              <p className="text-xl sm:text-2xl font-bold text-[#C75C5C]">
+                {actions.filter(a => a.intentType === 'dispute').length}
               </p>
             </div>
           </div>
@@ -129,69 +239,61 @@ export default function ActionCentre() {
               filteredActions.map((action) => (
                 <div 
                   key={action.id} 
-                  className={`card-apple-hover p-4 border-l-4 ${getStatusColor(action.daysOverdue)} cursor-pointer`}
-                  onClick={() => setLocation(`/invoices?filter=pending&invoice=${action.invoiceId}`)}
+                  className="card-apple-hover p-4 cursor-pointer"
+                  onClick={() => action.invoiceId && setLocation(`/invoices/${action.invoiceId}`)}
                   data-testid={`action-item-${action.id}`}
                 >
-                  {/* Mobile Layout */}
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between mb-2">
+                      {/* Header with icon and type */}
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className={`p-2 rounded-lg ${
+                          action.type === 'email' ? 'bg-blue-100' :
+                          action.type === 'sms' ? 'bg-purple-100' :
+                          'bg-green-100'
+                        }`}>
+                          {getActionIcon(action.type)}
+                        </div>
                         <div className="flex-1">
                           <h4 className="font-semibold text-slate-900 truncate">
-                            {action.contactName}
+                            {action.subject || 'No subject'}
                           </h4>
-                          <p className="text-sm font-normal text-slate-500">
-                            {action.invoiceNumber}
+                          <p className="text-xs text-slate-500">
+                            {new Date(action.createdAt).toLocaleDateString()} at {new Date(action.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                           </p>
                         </div>
-                        {getStatusBadge(action.daysOverdue)}
                       </div>
                       
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-lg font-bold text-slate-900">
-                            {formatCurrency(action.amount)}
-                          </p>
-                          <p className="text-xs text-slate-500 flex items-center gap-1">
-                            <Clock className="h-3 w-3" />
-                            {action.daysOverdue} days overdue
-                          </p>
-                        </div>
-
-                        {/* Action Buttons - Stack on mobile */}
-                        <div className="flex gap-2 sm:gap-3">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              // Handle email action
-                            }}
-                            className="touch-target p-2 bg-blue-100 rounded-xl hover:bg-blue-200 transition-colors"
-                            data-testid={`button-email-${action.id}`}
-                          >
-                            <Mail className="h-4 w-4 text-blue-600" />
-                          </button>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              // Handle call action
-                            }}
-                            className="touch-target p-2 bg-[#4FAD80]/10 rounded-xl hover:bg-[#4FAD80]/20 transition-colors"
-                            data-testid={`button-call-${action.id}`}
-                          >
-                            <Phone className="h-4 w-4 text-[#4FAD80]" />
-                          </button>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              // Handle SMS action
-                            }}
-                            className="touch-target p-2 bg-purple-100 rounded-xl hover:bg-purple-200 transition-colors"
-                            data-testid={`button-sms-${action.id}`}
-                          >
-                            <MessageSquare className="h-4 w-4 text-purple-600" />
-                          </button>
-                        </div>
+                      {/* Content preview */}
+                      {action.content && (
+                        <p className="text-sm text-slate-600 mb-3 line-clamp-2">
+                          {action.content}
+                        </p>
+                      )}
+                      
+                      {/* Badges */}
+                      <div className="flex flex-wrap gap-2">
+                        <Badge variant="outline" className="text-xs">
+                          {action.type.toUpperCase()}
+                        </Badge>
+                        
+                        {action.intentType && getIntentBadge(action.intentType)}
+                        {action.sentiment && getSentimentBadge(action.sentiment)}
+                        
+                        {/* Response indicator */}
+                        {action.metadata?.direction !== 'inbound' && (
+                          action.hasResponse ? (
+                            <Badge className="bg-green-100 text-green-800 border-green-200 flex items-center gap-1">
+                              <CheckCircle2 className="h-3 w-3" />
+                              Responded
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-slate-500 flex items-center gap-1">
+                              <XCircle className="h-3 w-3" />
+                              No Response
+                            </Badge>
+                          )
+                        )}
                       </div>
                     </div>
                     
