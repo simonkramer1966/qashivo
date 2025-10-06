@@ -201,7 +201,7 @@ const commissionsQuerySchema = z.object({
 });
 import { generateCollectionSuggestions, generateEmailDraft, generateAiCfoResponse } from "./services/openai";
 import { sendReminderEmail, DEFAULT_FROM, DEFAULT_FROM_EMAIL } from "./services/sendgrid";
-import { sendPaymentReminderSMS } from "./services/twilio";
+import { sendPaymentReminderSMS } from "./services/vonage";
 import { ActionPrioritizationService } from "./services/actionPrioritizationService";
 import { formatDate } from "../shared/utils/dateFormatter";
 import { xeroService } from "./services/xero";
