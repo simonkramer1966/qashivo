@@ -263,7 +263,7 @@ export default function ActionCentre() {
                 data-testid="filter-outbound"
               >
                 <ArrowUp className="h-4 w-4 mr-1" />
-                Outbound
+                OUT
               </Button>
               
               <div className="h-6 w-px bg-slate-200 mx-1"></div>
