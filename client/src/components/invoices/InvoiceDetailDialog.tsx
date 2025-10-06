@@ -190,28 +190,114 @@ export function InvoiceDetailDialog({ invoice, open, onOpenChange }: InvoiceDeta
               </CollapsibleTrigger>
               <CollapsibleContent>
                 <div className="p-4 border border-slate-200 rounded-b-lg">
+                  {/* Schedule Header */}
                   <div className="mb-4">
-                    <p className="text-sm text-slate-600 mb-1">Current Schedule</p>
-                    <p className="font-semibold">Standard Reminder Flow</p>
+                    <div className="flex items-center justify-between mb-3">
+                      <div>
+                        <p className="text-sm text-slate-600">Current Schedule</p>
+                        <p className="font-semibold">Standard Reminder Flow</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-xs text-slate-500">Progress</p>
+                        <p className="text-sm font-semibold text-[#17B6C3]">Step 3 of 5</p>
+                      </div>
+                    </div>
+                    
+                    {/* Progress Bar */}
+                    <div className="w-full bg-slate-200 rounded-full h-2">
+                      <div className="bg-[#17B6C3] h-2 rounded-full" style={{ width: '60%' }}></div>
+                    </div>
                   </div>
                   
-                  <div className="mb-4">
-                    <p className="text-sm text-slate-600 mb-2">Progress</p>
-                    <div className="flex items-center gap-2 mb-2">
-                      <CheckCircle2 className="h-5 w-5 text-emerald-500" />
-                      <span className="text-sm">Email Sent</span>
+                  {/* Timeline */}
+                  <div className="space-y-3 mb-4">
+                    {/* Step 1 - Completed */}
+                    <div className="flex gap-3">
+                      <div className="flex flex-col items-center">
+                        <div className="p-1.5 bg-emerald-100 rounded-full">
+                          <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                        </div>
+                        <div className="w-0.5 h-full bg-emerald-200 mt-1"></div>
+                      </div>
+                      <div className="flex-1 pb-3">
+                        <div className="flex items-center justify-between">
+                          <p className="text-sm font-medium text-slate-900">Email Reminder</p>
+                          <p className="text-xs text-slate-500">25 Sept @ 8:00 AM</p>
+                        </div>
+                        <p className="text-xs text-emerald-600 mt-1">✓ Completed</p>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2 mb-2">
-                      <CheckCircle2 className="h-5 w-5 text-emerald-500" />
-                      <span className="text-sm">SMS Reminder</span>
+
+                    {/* Step 2 - Completed */}
+                    <div className="flex gap-3">
+                      <div className="flex flex-col items-center">
+                        <div className="p-1.5 bg-emerald-100 rounded-full">
+                          <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                        </div>
+                        <div className="w-0.5 h-full bg-emerald-200 mt-1"></div>
+                      </div>
+                      <div className="flex-1 pb-3">
+                        <div className="flex items-center justify-between">
+                          <p className="text-sm font-medium text-slate-900">SMS Reminder</p>
+                          <p className="text-xs text-slate-500">2 Oct @ 2:30 PM</p>
+                        </div>
+                        <p className="text-xs text-emerald-600 mt-1">✓ Completed</p>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2 mb-2">
-                      <Clock className="h-5 w-5 text-blue-500" />
-                      <span className="text-sm font-medium">Voice Call Scheduled (Oct 6 @ 10:00 AM)</span>
+
+                    {/* Step 3 - Current/Today */}
+                    <div className="flex gap-3">
+                      <div className="flex flex-col items-center">
+                        <div className="p-1.5 bg-blue-100 rounded-full">
+                          <Clock className="h-4 w-4 text-blue-600" />
+                        </div>
+                        <div className="w-0.5 h-full bg-slate-200 mt-1"></div>
+                      </div>
+                      <div className="flex-1 pb-3">
+                        <div className="flex items-center justify-between">
+                          <p className="text-sm font-medium text-slate-900">AI Voice Call</p>
+                          <p className="text-xs text-blue-600 font-medium">Today @ 10:00 AM</p>
+                        </div>
+                        <p className="text-xs text-blue-600 mt-1">⏰ Scheduled</p>
+                      </div>
+                    </div>
+
+                    {/* Step 4 - Upcoming */}
+                    <div className="flex gap-3">
+                      <div className="flex flex-col items-center">
+                        <div className="p-1.5 bg-slate-100 rounded-full">
+                          <Clock className="h-4 w-4 text-slate-400" />
+                        </div>
+                        <div className="w-0.5 h-full bg-slate-200 mt-1"></div>
+                      </div>
+                      <div className="flex-1 pb-3">
+                        <div className="flex items-center justify-between">
+                          <p className="text-sm font-medium text-slate-600">Follow-up Email</p>
+                          <p className="text-xs text-slate-500">9 Oct @ 9:00 AM</p>
+                        </div>
+                        <p className="text-xs text-slate-400 mt-1">📅 Scheduled</p>
+                      </div>
+                    </div>
+
+                    {/* Step 5 - Upcoming */}
+                    <div className="flex gap-3">
+                      <div className="flex flex-col items-center">
+                        <div className="p-1.5 bg-slate-100 rounded-full">
+                          <Clock className="h-4 w-4 text-slate-400" />
+                        </div>
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between">
+                          <p className="text-sm font-medium text-slate-600">Final Notice SMS</p>
+                          <p className="text-xs text-slate-500">12 Oct @ 10:00 AM</p>
+                        </div>
+                        <p className="text-xs text-slate-400 mt-1">📅 Scheduled</p>
+                      </div>
                     </div>
                   </div>
 
-                  <div className="flex gap-2">
+                  {/* Quick Actions */}
+                  <div className="flex gap-2 pt-3 border-t">
                     <Button variant="outline" size="sm" className="flex-1">
                       <MessageSquare className="h-4 w-4 mr-2" />
                       Trigger SMS Now
