@@ -1766,6 +1766,116 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Send SMS for invoice with template selection
+  app.post("/api/invoices/:id/send-sms", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { id: invoiceId } = req.params;
+      const { template } = req.body;
+
+      // Validate template selection
+      const validTemplates = ["friendly", "professional", "firm", "urgent"];
+      if (!template || !validTemplates.includes(template)) {
+        return res.status(400).json({ message: "Invalid SMS template selected" });
+      }
+
+      // Get invoice with contact details
+      const invoice = await storage.getInvoice(invoiceId, user.tenantId);
+      if (!invoice) {
+        return res.status(404).json({ message: "Invoice not found" });
+      }
+
+      if (!invoice.contact?.phone) {
+        return res.status(400).json({ message: "Contact phone number not available" });
+      }
+
+      // SMS template content
+      const smsTemplateContent: Record<string, string> = {
+        friendly: "Hi {customerName}! Just a friendly reminder that invoice #{invoiceNumber} for {amount} was due on {dueDate}. Thanks!",
+        professional: "Payment reminder: Invoice #{invoiceNumber} ({amount}) due {dueDate}. Please process payment. Questions? Reply HELP",
+        firm: "NOTICE: Invoice #{invoiceNumber} ({amount}) is past due. Payment required immediately. Contact us to avoid further action.",
+        urgent: "URGENT: Invoice #{invoiceNumber} overdue. {amount} payment required NOW to avoid collection action. Call immediately.",
+      };
+
+      // Replace template variables
+      const customerName = invoice.contact.name || invoice.contact.companyName || "Customer";
+      const amount = `£${Number(invoice.amount).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+      const dueDate = new Date(invoice.dueDate).toLocaleDateString('en-GB');
+
+      const message = smsTemplateContent[template]
+        .replace("{customerName}", customerName)
+        .replace("{invoiceNumber}", invoice.invoiceNumber)
+        .replace("{amount}", amount)
+        .replace("{dueDate}", dueDate);
+
+      // Send via Vonage
+      const vonageService = await import('./services/vonage.js');
+      const result = await vonageService.sendSMS({
+        to: invoice.contact.phone,
+        message: message,
+      });
+
+      if (result.success) {
+        // Save SMS to database
+        const smsData: any = {
+          tenantId: user.tenantId,
+          contactId: invoice.contactId,
+          invoiceId: invoice.id,
+          provider: 'vonage',
+          vonageMessageId: result.messageId,
+          fromNumber: process.env.VONAGE_PHONE_NUMBER || '',
+          toNumber: invoice.contact.phone,
+          direction: 'outbound',
+          status: 'sent',
+          body: message,
+          numSegments: Math.ceil(message.length / 160),
+          sentAt: new Date(),
+        };
+
+        await storage.createSmsMessage(smsData);
+        console.log("✅ SMS saved to database");
+
+        // Log the action
+        await storage.createAction({
+          tenantId: user.tenantId,
+          invoiceId: invoice.id,
+          contactId: invoice.contactId,
+          userId: user.id,
+          type: 'sms',
+          status: 'completed',
+          subject: `SMS Reminder (${template}) - Invoice ${invoice.invoiceNumber}`,
+          content: message,
+          completedAt: new Date(),
+          metadata: { messageId: result.messageId, template },
+        });
+
+        // Update invoice reminder tracking
+        await storage.updateInvoice(invoiceId, user.tenantId, {
+          lastReminderSent: new Date(),
+          reminderCount: (invoice.reminderCount || 0) + 1,
+        });
+
+        res.json({
+          success: true,
+          messageId: result.messageId,
+          message: "SMS sent successfully",
+        });
+      } else {
+        res.status(500).json({
+          success: false,
+          error: result.error || "Failed to send SMS",
+        });
+      }
+    } catch (error) {
+      console.error("Error sending SMS reminder:", error);
+      res.status(500).json({ message: "Failed to send SMS reminder" });
+    }
+  });
+
   // Get outstanding invoices for a specific contact (for payment plan creation)
   app.get("/api/invoices/outstanding/:contactId", isAuthenticated, async (req: any, res) => {
     try {
