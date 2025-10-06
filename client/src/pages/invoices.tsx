@@ -230,7 +230,7 @@ export default function Invoices() {
                       <div>
                         <div className="flex items-center gap-2">
                           <p className="text-lg font-bold text-slate-900">
-                            {formatCurrency(outstanding)}
+                            {formatCurrency(invoice.status === 'paid' ? invoice.amount : outstanding)}
                           </p>
                           {invoice.status !== 'paid' && outstanding >= 1000 && (
                             <Banknote className="h-4 w-4 text-[#17B6C3]" />
@@ -307,7 +307,9 @@ export default function Invoices() {
 
                       {/* Amount */}
                       <div className="col-span-2 flex items-center gap-2">
-                        <p className="font-bold text-slate-900">{formatCurrency(outstanding)}</p>
+                        <p className="font-bold text-slate-900">
+                          {formatCurrency(invoice.status === 'paid' ? invoice.amount : outstanding)}
+                        </p>
                         {invoice.status !== 'paid' && outstanding >= 1000 && (
                           <Banknote className="h-4 w-4 text-[#17B6C3]" />
                         )}
