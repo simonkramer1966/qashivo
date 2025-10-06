@@ -387,7 +387,7 @@ export default function ActionCentre() {
                 data-testid="filter-needs-action"
               >
                 <Clock className="h-4 w-4 mr-1" />
-                Needs Action {needsActionCount > 0 && `(${needsActionCount})`}
+                Action {needsActionCount > 0 && `(${needsActionCount})`}
               </Button>
               <Button
                 variant={statusFilters.includes('resolved') ? 'default' : 'outline'}
