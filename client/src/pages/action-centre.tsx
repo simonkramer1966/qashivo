@@ -77,6 +77,9 @@ export default function ActionCentre() {
   const [, setLocation] = useLocation();
   const [searchQuery, setSearchQuery] = useState("");
   
+  // Time-based filter (main tabs)
+  const [timeFilter, setTimeFilter] = useState<'today' | 'tomorrow' | 'upcoming' | 'history'>('today');
+  
   // Multi-select toggle filters
   const [directionFilters, setDirectionFilters] = useState<string[]>([]);
   const [channelFilters, setChannelFilters] = useState<string[]>([]);
@@ -168,11 +171,37 @@ export default function ActionCentre() {
     }
   };
 
+  // Helper functions for date comparison
+  const getDateCategory = (scheduledFor: string | null, completedAt: string | null) => {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const dayAfterTomorrow = new Date(today);
+    dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 2);
+
+    // Use completedAt if available (for history), otherwise scheduledFor
+    const actionDate = completedAt ? new Date(completedAt) : (scheduledFor ? new Date(scheduledFor) : null);
+    
+    if (!actionDate) return 'upcoming'; // Default for actions without dates
+    
+    const actionDay = new Date(actionDate.getFullYear(), actionDate.getMonth(), actionDate.getDate());
+    
+    if (actionDay < today) return 'history';
+    if (actionDay.getTime() === today.getTime()) return 'today';
+    if (actionDay.getTime() === tomorrow.getTime()) return 'tomorrow';
+    return 'upcoming';
+  };
+
   const filteredActions = useMemo(() => {
     return actions.filter(action => {
       const matchesSearch = !searchQuery || 
         action.subject?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         action.content?.toLowerCase().includes(searchQuery.toLowerCase());
+      
+      // Time-based filter
+      const category = getDateCategory(action.scheduledFor, action.completedAt);
+      const matchesTimeFilter = category === timeFilter;
       
       // Direction filter
       const isInbound = action.metadata?.direction === 'inbound';
@@ -193,9 +222,19 @@ export default function ActionCentre() {
         (statusFilters.includes('needs_action') && needsAction) ||
         (statusFilters.includes('resolved') && isResolved);
       
-      return matchesSearch && matchesDirection && matchesChannel && matchesIntent && matchesStatus;
+      return matchesSearch && matchesTimeFilter && matchesDirection && matchesChannel && matchesIntent && matchesStatus;
     });
-  }, [actions, searchQuery, directionFilters, channelFilters, intentFilters, statusFilters]);
+  }, [actions, searchQuery, timeFilter, directionFilters, channelFilters, intentFilters, statusFilters]);
+
+  // Count actions by time category
+  const timeCounts = useMemo(() => {
+    const counts = { today: 0, tomorrow: 0, upcoming: 0, history: 0 };
+    actions.forEach(action => {
+      const category = getDateCategory(action.scheduledFor, action.completedAt);
+      counts[category as keyof typeof counts]++;
+    });
+    return counts;
+  }, [actions]);
 
   // Count "Needs Action" items
   const needsActionCount = actions.filter(a => 
@@ -217,6 +256,87 @@ export default function ActionCentre() {
         />
         
         <div className="container-apple py-4 sm:py-6 lg:py-8">
+          {/* Time-Based Tabs */}
+          <div className="mb-6">
+            <div className="flex flex-wrap sm:flex-nowrap gap-2 p-1 bg-slate-100 rounded-lg">
+              <button
+                onClick={() => setTimeFilter('today')}
+                className={`flex-1 px-4 py-2.5 rounded-md text-sm font-medium transition-all ${
+                  timeFilter === 'today'
+                    ? 'bg-[#17B6C3] text-white shadow-sm'
+                    : 'bg-transparent text-slate-600 hover:bg-white/50'
+                }`}
+                data-testid="tab-today"
+              >
+                <span>Today</span>
+                {timeCounts.today > 0 && (
+                  <span className={`ml-2 px-2 py-0.5 rounded-full text-xs ${
+                    timeFilter === 'today' ? 'bg-white/20' : 'bg-slate-200'
+                  }`}>
+                    {timeCounts.today}
+                  </span>
+                )}
+              </button>
+              
+              <button
+                onClick={() => setTimeFilter('tomorrow')}
+                className={`flex-1 px-4 py-2.5 rounded-md text-sm font-medium transition-all ${
+                  timeFilter === 'tomorrow'
+                    ? 'bg-[#17B6C3] text-white shadow-sm'
+                    : 'bg-transparent text-slate-600 hover:bg-white/50'
+                }`}
+                data-testid="tab-tomorrow"
+              >
+                <span>Tomorrow</span>
+                {timeCounts.tomorrow > 0 && (
+                  <span className={`ml-2 px-2 py-0.5 rounded-full text-xs ${
+                    timeFilter === 'tomorrow' ? 'bg-white/20' : 'bg-slate-200'
+                  }`}>
+                    {timeCounts.tomorrow}
+                  </span>
+                )}
+              </button>
+              
+              <button
+                onClick={() => setTimeFilter('upcoming')}
+                className={`flex-1 px-4 py-2.5 rounded-md text-sm font-medium transition-all ${
+                  timeFilter === 'upcoming'
+                    ? 'bg-[#17B6C3] text-white shadow-sm'
+                    : 'bg-transparent text-slate-600 hover:bg-white/50'
+                }`}
+                data-testid="tab-upcoming"
+              >
+                <span>Upcoming</span>
+                {timeCounts.upcoming > 0 && (
+                  <span className={`ml-2 px-2 py-0.5 rounded-full text-xs ${
+                    timeFilter === 'upcoming' ? 'bg-white/20' : 'bg-slate-200'
+                  }`}>
+                    {timeCounts.upcoming}
+                  </span>
+                )}
+              </button>
+              
+              <button
+                onClick={() => setTimeFilter('history')}
+                className={`flex-1 px-4 py-2.5 rounded-md text-sm font-medium transition-all ${
+                  timeFilter === 'history'
+                    ? 'bg-[#17B6C3] text-white shadow-sm'
+                    : 'bg-transparent text-slate-600 hover:bg-white/50'
+                }`}
+                data-testid="tab-history"
+              >
+                <span>History</span>
+                {timeCounts.history > 0 && (
+                  <span className={`ml-2 px-2 py-0.5 rounded-full text-xs ${
+                    timeFilter === 'history' ? 'bg-white/20' : 'bg-slate-200'
+                  }`}>
+                    {timeCounts.history}
+                  </span>
+                )}
+              </button>
+            </div>
+          </div>
+
           {/* Search Bar */}
           <div className="mb-6">
             <div className="relative">
