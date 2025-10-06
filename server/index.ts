@@ -138,23 +138,6 @@ app.use((req, res, next) => {
         console.log("⚠️  SendGrid provider not configured (missing SENDGRID_API_KEY)");
       }
 
-      // MVP CLEANUP: Twilio provider disabled for MVP (using direct Twilio service instead)
-      /* if (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN) {
-        const twilioProvider = new TwilioProvider({
-          name: 'twilio',
-          type: 'sms',
-          clientId: process.env.TWILIO_ACCOUNT_SID,
-          clientSecret: process.env.TWILIO_AUTH_TOKEN,
-          baseUrl: 'https://api.twilio.com',
-          environment: process.env.NODE_ENV === 'production' ? 'production' : 'sandbox'
-        });
-        
-        await apiMiddleware.registerProvider(twilioProvider);
-        console.log("✅ Twilio provider registered successfully");
-      } else {
-        console.log("⚠️  Twilio provider not configured (missing TWILIO_ACCOUNT_SID or TWILIO_AUTH_TOKEN)");
-      } */
-
       // Configure and register Retell provider
       if (process.env.RETELL_API_KEY) {
         const retellProvider = new RetellProvider({
