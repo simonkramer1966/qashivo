@@ -327,7 +327,7 @@ export default function ActionCentre() {
                 data-testid="filter-payment-plan"
               >
                 <DollarSign className="h-4 w-4 mr-1" />
-                Payment Plans
+                Pymt Plans
               </Button>
               <Button
                 variant={intentFilters.includes('dispute') ? 'default' : 'outline'}
