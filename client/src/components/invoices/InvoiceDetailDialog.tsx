@@ -99,7 +99,7 @@ export function InvoiceDetailDialog({ invoice, open, onOpenChange }: InvoiceDeta
         {/* Header - Invoice Summary - Fixed at top */}
         <div className="bg-white px-6 pt-6 pb-4 border-b rounded-t-lg">
           <DialogHeader>
-            <div className="flex items-start justify-between gap-4">
+            <div className="flex items-start justify-between gap-4 pr-8">
               <div className="flex-1">
                 <DialogTitle className="text-2xl font-bold mb-2">
                   {invoice.contact?.companyName || invoice.contact?.name || 'Unknown Customer'}
