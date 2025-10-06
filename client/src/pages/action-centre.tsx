@@ -233,10 +233,10 @@ export default function ActionCentre() {
           </div>
 
           {/* Toggle Filter Bar */}
-          <div className="card-apple p-4 mb-6 space-y-4">
+          <div className="card-apple p-3 mb-4 space-y-2">
             {/* Direction Filter */}
-            <div>
-              <p className="text-xs font-medium text-slate-600 mb-2">Direction</p>
+            <div className="flex items-center gap-3">
+              <p className="text-xs font-medium text-slate-600 min-w-[70px]">Direction</p>
               <div className="flex gap-2 flex-wrap">
                 <Button
                   variant={directionFilters.includes('inbound') ? 'default' : 'outline'}
@@ -270,8 +270,8 @@ export default function ActionCentre() {
             </div>
 
             {/* Channel Filter */}
-            <div>
-              <p className="text-xs font-medium text-slate-600 mb-2">Channel</p>
+            <div className="flex items-center gap-3">
+              <p className="text-xs font-medium text-slate-600 min-w-[70px]">Channel</p>
               <div className="flex gap-2 flex-wrap">
                 <Button
                   variant={channelFilters.includes('sms') ? 'default' : 'outline'}
@@ -319,8 +319,8 @@ export default function ActionCentre() {
             </div>
 
             {/* Intent Filter */}
-            <div>
-              <p className="text-xs font-medium text-slate-600 mb-2">Intent</p>
+            <div className="flex items-center gap-3">
+              <p className="text-xs font-medium text-slate-600 min-w-[70px]">Intent</p>
               <div className="flex gap-2 flex-wrap">
                 <Button
                   variant={intentFilters.includes('payment_plan') ? 'default' : 'outline'}
@@ -382,8 +382,8 @@ export default function ActionCentre() {
             </div>
 
             {/* Status Filter */}
-            <div>
-              <p className="text-xs font-medium text-slate-600 mb-2">Status</p>
+            <div className="flex items-center gap-3">
+              <p className="text-xs font-medium text-slate-600 min-w-[70px]">Status</p>
               <div className="flex gap-2 flex-wrap">
                 <Button
                   variant={statusFilters.includes('needs_action') ? 'default' : 'outline'}
@@ -418,20 +418,23 @@ export default function ActionCentre() {
 
             {/* Clear All Filters */}
             {(directionFilters.length > 0 || channelFilters.length > 0 || intentFilters.length > 0 || statusFilters.length > 0) && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  setDirectionFilters([]);
-                  setChannelFilters([]);
-                  setIntentFilters([]);
-                  setStatusFilters([]);
-                }}
-                className="text-slate-600 hover:text-slate-900"
-                data-testid="button-clear-filters"
-              >
-                Clear All Filters
-              </Button>
+              <div className="flex items-center gap-3 pt-1 border-t border-slate-200">
+                <p className="text-xs font-medium text-slate-600 min-w-[70px]"></p>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setDirectionFilters([]);
+                    setChannelFilters([]);
+                    setIntentFilters([]);
+                    setStatusFilters([]);
+                  }}
+                  className="text-xs text-slate-600 hover:text-slate-900 h-7"
+                  data-testid="button-clear-filters"
+                >
+                  Clear All Filters
+                </Button>
+              </div>
             )}
           </div>
 
