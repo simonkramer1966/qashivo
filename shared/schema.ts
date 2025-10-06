@@ -1505,6 +1505,47 @@ export const walletTransactions = pgTable("wallet_transactions", {
   index("idx_wallet_transactions_contact").on(table.contactId),
 ]);
 
+// Finance Advances table - invoice financing/factoring
+export const financeAdvances = pgTable("finance_advances", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  invoiceId: varchar("invoice_id").notNull().references(() => invoices.id),
+  contactId: varchar("contact_id").notNull().references(() => contacts.id),
+  
+  // Financial details
+  invoiceAmount: decimal("invoice_amount", { precision: 10, scale: 2 }).notNull(),
+  advanceAmount: decimal("advance_amount", { precision: 10, scale: 2 }).notNull(), // Usually 80-90%
+  advancePercentage: decimal("advance_percentage", { precision: 5, scale: 2 }).notNull(), // e.g. 80.00
+  feeAmount: decimal("fee_amount", { precision: 10, scale: 2 }).notNull(),
+  feePercentage: decimal("fee_percentage", { precision: 5, scale: 2 }).notNull(), // e.g. 2.50
+  totalRepayment: decimal("total_repayment", { precision: 10, scale: 2 }).notNull(), // advance + fee
+  
+  // Terms
+  termDays: integer("term_days").notNull().default(60), // Repayment period in days
+  advanceDate: timestamp("advance_date").notNull().defaultNow(),
+  repaymentDueDate: timestamp("repayment_due_date").notNull(),
+  actualRepaymentDate: timestamp("actual_repayment_date"),
+  
+  // Status and provider
+  status: varchar("status").notNull().default("pending"), // pending, approved, funded, repaid, defaulted
+  provider: varchar("provider").default("qashivo"), // qashivo, kriya, funding_circle
+  
+  // References
+  walletTransactionId: varchar("wallet_transaction_id"), // Link to wallet credit transaction
+  
+  // Metadata
+  notes: text("notes"),
+  metadata: jsonb("metadata"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_finance_advances_tenant").on(table.tenantId),
+  index("idx_finance_advances_invoice").on(table.invoiceId),
+  index("idx_finance_advances_status").on(table.status),
+  index("idx_finance_advances_due_date").on(table.repaymentDueDate),
+]);
+
 // AI learning relations
 export const customerLearningProfilesRelations = relations(customerLearningProfiles, ({ one }) => ({
   tenant: one(tenants, {
@@ -1559,6 +1600,22 @@ export const walletTransactionsRelations = relations(walletTransactions, ({ one 
   }),
   contact: one(contacts, {
     fields: [walletTransactions.contactId],
+    references: [contacts.id],
+  }),
+}));
+
+// Finance advances relations
+export const financeAdvancesRelations = relations(financeAdvances, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [financeAdvances.tenantId],
+    references: [tenants.id],
+  }),
+  invoice: one(invoices, {
+    fields: [financeAdvances.invoiceId],
+    references: [invoices.id],
+  }),
+  contact: one(contacts, {
+    fields: [financeAdvances.contactId],
     references: [contacts.id],
   }),
 }));
@@ -1789,6 +1846,26 @@ export const insertWalletTransactionSchema = createInsertSchema(walletTransactio
 
 export type WalletTransaction = typeof walletTransactions.$inferSelect;
 export type InsertWalletTransaction = z.infer<typeof insertWalletTransactionSchema>;
+
+// Finance advances insert schema
+export const insertFinanceAdvanceSchema = createInsertSchema(financeAdvances).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  advanceDate: true,
+  actualRepaymentDate: true,
+  walletTransactionId: true,
+}).extend({
+  invoiceAmount: z.string().min(1, "Invoice amount is required"),
+  advanceAmount: z.string().min(1, "Advance amount is required"),
+  advancePercentage: z.string().min(1, "Advance percentage is required"),
+  feeAmount: z.string().min(1, "Fee amount is required"),
+  feePercentage: z.string().min(1, "Fee percentage is required"),
+  totalRepayment: z.string().min(1, "Total repayment is required"),
+});
+
+export type FinanceAdvance = typeof financeAdvances.$inferSelect;
+export type InsertFinanceAdvance = z.infer<typeof insertFinanceAdvanceSchema>;
 
 // AI Learning insert schemas
 export const insertCustomerLearningProfileSchema = createInsertSchema(customerLearningProfiles).omit({

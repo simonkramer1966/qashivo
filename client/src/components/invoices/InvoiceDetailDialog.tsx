@@ -28,6 +28,7 @@ import {
 import { useCurrency } from "@/hooks/useCurrency";
 import { useState } from "react";
 import { SendSMSDialog } from "./SendSMSDialog";
+import { ApplyAdvanceDialog } from "./ApplyAdvanceDialog";
 
 interface Contact {
   name: string;
@@ -59,6 +60,7 @@ export function InvoiceDetailDialog({ invoice, open, onOpenChange }: InvoiceDeta
   const [contactInfoOpen, setContactInfoOpen] = useState(true);
   const [automationOpen, setAutomationOpen] = useState(true);
   const [smsDialogOpen, setSmsDialogOpen] = useState(false);
+  const [advanceDialogOpen, setAdvanceDialogOpen] = useState(false);
   
   if (!invoice) return null;
 
@@ -365,7 +367,12 @@ export function InvoiceDetailDialog({ invoice, open, onOpenChange }: InvoiceDeta
                   </div>
                 </div>
 
-                <Button className="w-full bg-emerald-600 hover:bg-emerald-700 text-white" size="sm">
+                <Button 
+                  className="w-full bg-emerald-600 hover:bg-emerald-700 text-white" 
+                  size="sm"
+                  onClick={() => setAdvanceDialogOpen(true)}
+                  data-testid="button-apply-advance"
+                >
                   <Banknote className="h-4 w-4 mr-2" />
                   Apply for Advance
                 </Button>
@@ -445,6 +452,13 @@ export function InvoiceDetailDialog({ invoice, open, onOpenChange }: InvoiceDeta
         open={smsDialogOpen}
         onOpenChange={setSmsDialogOpen}
         daysOverdue={daysOverdue}
+      />
+
+      {/* Apply Advance Dialog */}
+      <ApplyAdvanceDialog
+        invoice={invoice}
+        open={advanceDialogOpen}
+        onOpenChange={setAdvanceDialogOpen}
       />
     </Dialog>
   );

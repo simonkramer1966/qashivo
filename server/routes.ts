@@ -1932,6 +1932,80 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Apply for invoice finance advance
+  app.post("/api/invoices/:invoiceId/apply-advance", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { invoiceId } = req.params;
+      const { advancePercentage = "80", feePercentage = "2.5", termDays = 60 } = req.body;
+
+      // Get invoice details
+      const invoice = await storage.getInvoice(invoiceId, user.tenantId);
+      if (!invoice) {
+        return res.status(404).json({ message: "Invoice not found" });
+      }
+
+      const outstanding = Number(invoice.amount) - Number(invoice.amountPaid);
+      const advanceAmount = (outstanding * Number(advancePercentage)) / 100;
+      const feeAmount = (advanceAmount * Number(feePercentage)) / 100;
+      const totalRepayment = advanceAmount + feeAmount;
+      
+      // Calculate repayment due date
+      const repaymentDueDate = new Date();
+      repaymentDueDate.setDate(repaymentDueDate.getDate() + termDays);
+
+      // Create finance advance record
+      const financeAdvance = await storage.createFinanceAdvance({
+        tenantId: user.tenantId,
+        invoiceId: invoice.id,
+        contactId: invoice.contactId,
+        invoiceAmount: outstanding.toString(),
+        advanceAmount: advanceAmount.toString(),
+        advancePercentage: advancePercentage.toString(),
+        feeAmount: feeAmount.toString(),
+        feePercentage: feePercentage.toString(),
+        totalRepayment: totalRepayment.toString(),
+        termDays,
+        repaymentDueDate,
+        status: "funded",
+        provider: "qashivo",
+      });
+
+      // Create wallet transaction to credit the advance
+      const walletTransaction = await storage.createWalletTransaction({
+        tenantId: user.tenantId,
+        transactionType: "credit",
+        transactionDate: new Date(),
+        amount: advanceAmount.toString(),
+        source: "finance_advance",
+        description: `Invoice advance: ${invoice.invoiceNumber}`,
+        invoiceId: invoice.id,
+        contactId: invoice.contactId,
+        financeProvider: "qashivo",
+        financeAdvanceId: financeAdvance.id,
+        status: "completed",
+      });
+
+      // Update finance advance with wallet transaction ID
+      await storage.updateFinanceAdvance(financeAdvance.id, user.tenantId, {
+        walletTransactionId: walletTransaction.id,
+      });
+
+      res.json({
+        success: true,
+        advance: financeAdvance,
+        walletTransaction,
+      });
+    } catch (error) {
+      console.error("Error applying for advance:", error);
+      res.status(500).json({ message: "Failed to apply for advance", error: error instanceof Error ? error.message : 'Unknown error' });
+    }
+  });
+
   // Contact routes
   app.get("/api/contacts", isAuthenticated, async (req: any, res) => {
     try {

@@ -138,6 +138,9 @@ import {
   walletTransactions,
   type WalletTransaction,
   type InsertWalletTransaction,
+  financeAdvances,
+  type FinanceAdvance,
+  type InsertFinanceAdvance,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, sql, count, sum, ne, isNotNull, gte, lte, lt, or, ilike, inArray } from "drizzle-orm";
@@ -510,6 +513,12 @@ export interface IStorage {
     financeAdvances: number;
     premiumsPaid: number;
   }>;
+
+  // Finance Advance operations
+  getFinanceAdvances(tenantId: string, filters?: { invoiceId?: string; status?: string }): Promise<FinanceAdvance[]>;
+  getFinanceAdvance(id: string, tenantId: string): Promise<FinanceAdvance | undefined>;
+  createFinanceAdvance(advance: InsertFinanceAdvance): Promise<FinanceAdvance>;
+  updateFinanceAdvance(id: string, tenantId: string, updates: Partial<InsertFinanceAdvance>): Promise<FinanceAdvance>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -4453,6 +4462,60 @@ export class DatabaseStorage implements IStorage {
       financeAdvances,
       premiumsPaid,
     };
+  }
+
+  // Finance Advance operations
+  async getFinanceAdvances(tenantId: string, filters?: { invoiceId?: string; status?: string }): Promise<FinanceAdvance[]> {
+    const conditions = [eq(financeAdvances.tenantId, tenantId)];
+    
+    if (filters?.invoiceId) {
+      conditions.push(eq(financeAdvances.invoiceId, filters.invoiceId));
+    }
+    if (filters?.status) {
+      conditions.push(eq(financeAdvances.status, filters.status));
+    }
+    
+    const advances = await db
+      .select()
+      .from(financeAdvances)
+      .where(and(...conditions))
+      .orderBy(desc(financeAdvances.createdAt));
+    
+    return advances;
+  }
+
+  async getFinanceAdvance(id: string, tenantId: string): Promise<FinanceAdvance | undefined> {
+    const [advance] = await db
+      .select()
+      .from(financeAdvances)
+      .where(and(
+        eq(financeAdvances.id, id),
+        eq(financeAdvances.tenantId, tenantId)
+      ));
+    
+    return advance;
+  }
+
+  async createFinanceAdvance(advanceData: InsertFinanceAdvance): Promise<FinanceAdvance> {
+    const [advance] = await db
+      .insert(financeAdvances)
+      .values(advanceData)
+      .returning();
+    
+    return advance;
+  }
+
+  async updateFinanceAdvance(id: string, tenantId: string, updates: Partial<InsertFinanceAdvance>): Promise<FinanceAdvance> {
+    const [advance] = await db
+      .update(financeAdvances)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(and(
+        eq(financeAdvances.id, id),
+        eq(financeAdvances.tenantId, tenantId)
+      ))
+      .returning();
+    
+    return advance;
   }
 }
 
