@@ -1803,14 +1803,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Replace template variables
       const customerName = invoice.contact.name || invoice.contact.companyName || "Customer";
+      const nameParts = (invoice.contact.name || "").split(' ');
+      const firstName = nameParts[0] || invoice.contact.name || "Customer";
+      const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : "";
+      const companyName = invoice.contact.companyName || "";
       const amount = `£${Number(invoice.amount).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
       const dueDate = new Date(invoice.dueDate).toLocaleDateString('en-GB');
+      const today = new Date();
+      const due = new Date(invoice.dueDate);
+      const daysOverdue = Math.max(0, Math.floor((today.getTime() - due.getTime()) / (1000 * 60 * 60 * 24)));
 
-      const message = smsTemplateContent[template]
-        .replace("{customerName}", customerName)
-        .replace("{invoiceNumber}", invoice.invoiceNumber)
-        .replace("{amount}", amount)
-        .replace("{dueDate}", dueDate);
+      let message = smsTemplateContent[template];
+      // Replace all variables (order matters - do specific ones first)
+      message = message
+        .replace(/{firstName}/g, firstName)
+        .replace(/{lastName}/g, lastName)
+        .replace(/{companyName}/g, companyName)
+        .replace(/{customerName}/g, customerName)
+        .replace(/{invoiceNumber}/g, invoice.invoiceNumber)
+        .replace(/{amount}/g, amount)
+        .replace(/{dueDate}/g, dueDate)
+        .replace(/{daysOverdue}/g, daysOverdue.toString());
 
       // Send via Vonage
       const vonageService = await import('./services/vonage.js');
