@@ -25,6 +25,7 @@ interface Invoice {
   status: string;
   dueDate: string;
   issueDate: string;
+  paidDate?: string;
   contact: {
     name: string;
     email: string;
@@ -237,7 +238,9 @@ export default function Invoices() {
                           )}
                         </div>
                         <p className="text-xs font-normal text-slate-500">
-                          {invoice.status !== 'paid' && daysOverdue > 0 
+                          {invoice.status === 'paid' && invoice.paidDate
+                            ? `Paid ${new Date(invoice.paidDate).toLocaleDateString()}`
+                            : invoice.status !== 'paid' && daysOverdue > 0 
                             ? `${daysOverdue} days overdue`
                             : `Due ${new Date(invoice.dueDate).toLocaleDateString()}`
                           }
@@ -275,7 +278,7 @@ export default function Invoices() {
                   <div className="col-span-3">Customer</div>
                   <div className="col-span-2">Invoice #</div>
                   <div className="col-span-2">Amount</div>
-                  <div className="col-span-2">Due Date</div>
+                  <div className="col-span-2">{statusFilter === 'paid' ? 'Paid Date' : 'Due Date'}</div>
                   <div className="col-span-2">Days Overdue</div>
                   <div className="col-span-1 text-right">Status</div>
                 </div>
@@ -315,10 +318,13 @@ export default function Invoices() {
                         )}
                       </div>
 
-                      {/* Due Date */}
+                      {/* Due Date / Paid Date */}
                       <div className="col-span-2 flex items-center">
                         <p className="text-sm text-slate-700">
-                          {new Date(invoice.dueDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                          {statusFilter === 'paid' && invoice.paidDate
+                            ? new Date(invoice.paidDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+                            : new Date(invoice.dueDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+                          }
                         </p>
                       </div>
 
