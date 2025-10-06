@@ -185,7 +185,7 @@ export default function Cashboard() {
             </div>
 
             {/* Payment Plans */}
-            <div className="card-apple p-4 sm:p-6 border-red-700" data-testid="card-payment-plans">
+            <div className="card-apple p-4 sm:p-6 bg-[#F9FAFB] border border-[#E6E8EA]" data-testid="card-payment-plans">
               <div className="flex items-start justify-between mb-3">
                 <div>
                   <p className="text-sm text-slate-600 mb-1">Payment Plans</p>
@@ -197,14 +197,14 @@ export default function Cashboard() {
                     </h3>
                   )}
                 </div>
-                <div className="p-2 bg-purple-100 rounded-xl">
-                  <FileText className="h-5 w-5 text-purple-600" />
+                <div className="p-2 bg-slate-200/50 rounded-xl">
+                  <FileText className="h-5 w-5 text-slate-500" />
                 </div>
               </div>
             </div>
 
             {/* Disputes */}
-            <div className="card-apple p-4 sm:p-6 border-red-700" data-testid="card-disputes">
+            <div className="card-apple p-4 sm:p-6 bg-[#FFF5F5] border border-[#E6E8EA]" data-testid="card-disputes">
               <div className="flex items-start justify-between mb-3">
                 <div>
                   <p className="text-sm text-slate-600 mb-1">Disputes</p>
@@ -216,14 +216,14 @@ export default function Cashboard() {
                     </h3>
                   )}
                 </div>
-                <div className="p-2 bg-orange-100 rounded-xl">
-                  <MessageSquare className="h-5 w-5 text-orange-600" />
+                <div className="p-2 bg-[#E8A23B]/10 rounded-xl">
+                  <MessageSquare className="h-5 w-5 text-[#E8A23B]" />
                 </div>
               </div>
             </div>
 
             {/* Debt Recovery */}
-            <div className="card-apple p-4 sm:p-6 border-red-700" data-testid="card-debt-recovery">
+            <div className="card-apple p-4 sm:p-6 bg-[#FFF5F5] border border-[#E6E8EA]" data-testid="card-debt-recovery">
               <div className="flex items-start justify-between mb-3">
                 <div>
                   <p className="text-sm text-slate-600 mb-1">Debt Recovery</p>
@@ -235,14 +235,14 @@ export default function Cashboard() {
                     </h3>
                   )}
                 </div>
-                <div className="p-2 bg-indigo-100 rounded-xl">
-                  <Scale className="h-5 w-5 text-indigo-600" />
+                <div className="p-2 bg-[#C75C5C]/10 rounded-xl">
+                  <Scale className="h-5 w-5 text-[#C75C5C]" />
                 </div>
               </div>
             </div>
 
             {/* Legal */}
-            <div className="card-apple p-4 sm:p-6 border-red-700" data-testid="card-legal">
+            <div className="card-apple p-4 sm:p-6 bg-[#FFF5F5] border border-[#E6E8EA]" data-testid="card-legal">
               <div className="flex items-start justify-between mb-3">
                 <div>
                   <p className="text-sm text-slate-600 mb-1">Legal Cases</p>
