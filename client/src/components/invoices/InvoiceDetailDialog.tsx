@@ -80,7 +80,7 @@ export function InvoiceDetailDialog({ invoice, open, onOpenChange }: InvoiceDeta
   }
 
   function getStatusBadge() {
-    if (invoice.status === 'paid') {
+    if (invoice?.status === 'paid') {
       return <Badge className="bg-emerald-500 text-white hover:bg-emerald-600">Paid</Badge>;
     } else if (daysOverdue === 0) {
       return <Badge className="bg-blue-500 text-white hover:bg-blue-600">Due Today</Badge>;
@@ -317,7 +317,7 @@ export function InvoiceDetailDialog({ invoice, open, onOpenChange }: InvoiceDeta
             </div>
 
             {/* Footer Actions */}
-            <div className="sticky bottom-0 bg-white pt-8 pb-6 border-t">
+            <div className="sticky bottom-0 bg-white pt-8 pb-6 border-t -mx-6 px-6">
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
                 <Button variant="outline" size="sm" className="touch-target">
                   <Phone className="h-4 w-4 mr-2" />
