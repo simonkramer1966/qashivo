@@ -115,11 +115,21 @@ export function SendSMSDialog({ invoice, open, onOpenChange, daysOverdue }: Send
   if (!invoice) return null;
 
   const replaceVariables = (content: string): string => {
+    const customerName = invoice.contact.name || invoice.contact.companyName || "Customer";
+    const nameParts = (invoice.contact.name || "").split(' ');
+    const firstName = nameParts[0] || invoice.contact.name || "Customer";
+    const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : "";
+    const companyName = invoice.contact.companyName || "";
+    
     return content
-      .replace("{customerName}", invoice.contact.name || invoice.contact.companyName || "Customer")
-      .replace("{invoiceNumber}", invoice.invoiceNumber)
-      .replace("{amount}", formatCurrency(invoice.amount))
-      .replace("{dueDate}", new Date(invoice.dueDate).toLocaleDateString());
+      .replace(/{firstName}/g, firstName)
+      .replace(/{lastName}/g, lastName)
+      .replace(/{companyName}/g, companyName)
+      .replace(/{customerName}/g, customerName)
+      .replace(/{invoiceNumber}/g, invoice.invoiceNumber)
+      .replace(/{amount}/g, formatCurrency(invoice.amount))
+      .replace(/{dueDate}/g, new Date(invoice.dueDate).toLocaleDateString())
+      .replace(/{daysOverdue}/g, daysOverdue.toString());
   };
 
   const previewMessage = replaceVariables(smsTemplates[selectedTemplate].content);
