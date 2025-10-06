@@ -163,17 +163,17 @@
     "sms": {
       "title": "SMS & WhatsApp Communication",
       "human_curated": {
-        "introduction": "Text-based messaging for immediate customer engagement via Twilio."
+        "introduction": "Text-based messaging for immediate customer engagement via Vonage."
       },
       "auto_updatable": {
         "provider_details": {
-          "name": "Twilio",
+          "name": "Vonage",
           "capabilities": ["Global reach", "High deliverability", "Both SMS and WhatsApp"]
         },
         "delivery_process": [
           "Template Selection: AI selects optimal message template",
           "Personalization: System populates dynamic fields",
-          "Twilio API Call: Message sent with delivery tracking",
+          "Vonage API Call: Message sent with delivery tracking",
           "Response Tracking: Webhook captures delivery status and replies"
         ],
         "effectiveness_calculation": "SMS Effectiveness = (Payment Actions + Engagement Actions) / Total SMS Sent × 100",

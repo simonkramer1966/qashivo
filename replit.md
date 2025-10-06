@@ -66,7 +66,7 @@ The application utilizes a Premium Glassmorphism UI, featuring a `bg-gradient-to
 Core entities include Users, Tenants, Contacts, Invoices, Actions, and Workflows, with multi-tenant architecture and Zod validation.
 
 ### Communication Channels
-Integrations for automated email (SendGrid), SMS (Twilio), and AI-driven suggestions (OpenAI).
+Integrations for automated email (SendGrid), SMS (Vonage), and AI-driven suggestions (OpenAI).
 
 ### Universal API Middleware
 Provides a standardized interface for accounting software integrations, including OAuth token management, data transformation, and secure token injection. A production-ready XeroProvider is implemented.
@@ -102,7 +102,7 @@ Recent fixes (Oct 2025):
 ### Third-Party Services
 - **Xero**: Accounting software integration
 - **SendGrid**: Email delivery
-- **Twilio**: SMS service
+- **Vonage**: SMS service
 - **OpenAI**: AI services
 - **Neon**: Serverless PostgreSQL hosting
 

@@ -234,8 +234,8 @@ export default function IntegrationsStatus() {
       description: "12 suggestions generated",
     },
     {
-      id: 'twilio',
-      name: "Twilio",
+      id: 'vonage',
+      name: "Vonage",
       status: "Connected",
       icon: MessageSquare,
       description: "8 SMS sent today",
