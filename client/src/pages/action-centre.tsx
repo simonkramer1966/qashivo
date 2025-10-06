@@ -269,13 +269,11 @@ export default function ActionCentre() {
                 data-testid="tab-today"
               >
                 <span>Today</span>
-                {timeCounts.today > 0 && (
-                  <span className={`ml-2 px-2 py-0.5 rounded-full text-xs ${
-                    timeFilter === 'today' ? 'bg-white/20' : 'bg-slate-200'
-                  }`}>
-                    {timeCounts.today}
-                  </span>
-                )}
+                <span className={`ml-2 px-2 py-0.5 rounded-full text-xs min-w-[24px] inline-block text-center ${
+                  timeFilter === 'today' ? 'bg-white/20' : 'bg-slate-200'
+                } ${timeCounts.today === 0 ? 'opacity-0' : ''}`}>
+                  {timeCounts.today || '0'}
+                </span>
               </button>
               
               <button
@@ -288,13 +286,11 @@ export default function ActionCentre() {
                 data-testid="tab-tomorrow"
               >
                 <span>Tomorrow</span>
-                {timeCounts.tomorrow > 0 && (
-                  <span className={`ml-2 px-2 py-0.5 rounded-full text-xs ${
-                    timeFilter === 'tomorrow' ? 'bg-white/20' : 'bg-slate-200'
-                  }`}>
-                    {timeCounts.tomorrow}
-                  </span>
-                )}
+                <span className={`ml-2 px-2 py-0.5 rounded-full text-xs min-w-[24px] inline-block text-center ${
+                  timeFilter === 'tomorrow' ? 'bg-white/20' : 'bg-slate-200'
+                } ${timeCounts.tomorrow === 0 ? 'opacity-0' : ''}`}>
+                  {timeCounts.tomorrow || '0'}
+                </span>
               </button>
               
               <button
@@ -307,13 +303,11 @@ export default function ActionCentre() {
                 data-testid="tab-upcoming"
               >
                 <span>Upcoming</span>
-                {timeCounts.upcoming > 0 && (
-                  <span className={`ml-2 px-2 py-0.5 rounded-full text-xs ${
-                    timeFilter === 'upcoming' ? 'bg-white/20' : 'bg-slate-200'
-                  }`}>
-                    {timeCounts.upcoming}
-                  </span>
-                )}
+                <span className={`ml-2 px-2 py-0.5 rounded-full text-xs min-w-[24px] inline-block text-center ${
+                  timeFilter === 'upcoming' ? 'bg-white/20' : 'bg-slate-200'
+                } ${timeCounts.upcoming === 0 ? 'opacity-0' : ''}`}>
+                  {timeCounts.upcoming || '0'}
+                </span>
               </button>
               
               <button
@@ -326,13 +320,11 @@ export default function ActionCentre() {
                 data-testid="tab-history"
               >
                 <span>History</span>
-                {timeCounts.history > 0 && (
-                  <span className={`ml-2 px-2 py-0.5 rounded-full text-xs ${
-                    timeFilter === 'history' ? 'bg-white/20' : 'bg-slate-200'
-                  }`}>
-                    {timeCounts.history}
-                  </span>
-                )}
+                <span className={`ml-2 px-2 py-0.5 rounded-full text-xs min-w-[24px] inline-block text-center ${
+                  timeFilter === 'history' ? 'bg-white/20' : 'bg-slate-200'
+                } ${timeCounts.history === 0 ? 'opacity-0' : ''}`}>
+                  {timeCounts.history || '0'}
+                </span>
               </button>
             </div>
           </div>
