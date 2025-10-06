@@ -474,7 +474,7 @@ export default function ActionCentre() {
               <div className="card-apple p-8 text-center">
                 <AlertTriangle className="h-12 w-12 mx-auto mb-3 text-slate-400" />
                 <p className="text-slate-600">
-                  {viewFilter === 'needs_action' 
+                  {statusFilters.includes('needs_action')
                     ? 'No actions need attention right now' 
                     : 'No actions found'}
                 </p>
