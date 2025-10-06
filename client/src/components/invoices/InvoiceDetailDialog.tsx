@@ -95,8 +95,8 @@ export function InvoiceDetailDialog({ invoice, open, onOpenChange }: InvoiceDeta
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] p-0">
-        <ScrollArea className="h-full max-h-[90vh]">
+      <DialogContent className="max-w-4xl max-h-[90vh] p-0 flex flex-col">
+        <ScrollArea className="flex-1 overflow-auto">
           <div className="p-6">
             {/* Header - Invoice Summary */}
             <div className="sticky top-0 bg-white pt-6 pb-4 mb-4 border-b">
@@ -315,41 +315,41 @@ export function InvoiceDetailDialog({ invoice, open, onOpenChange }: InvoiceDeta
                 </div>
               </div>
             </div>
-
-            {/* Footer Actions */}
-            <div className="sticky bottom-0 bg-white pt-8 pb-6 border-t rounded-b-lg">
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
-                <Button variant="outline" size="sm" className="touch-target">
-                  <Phone className="h-4 w-4 mr-2" />
-                  Call
-                </Button>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="touch-target"
-                  onClick={() => setSmsDialogOpen(true)}
-                  disabled={!invoice.contact?.phone}
-                  data-testid="button-open-sms-dialog"
-                >
-                  <MessageSquare className="h-4 w-4 mr-2" />
-                  SMS
-                </Button>
-                <Button variant="outline" size="sm" className="touch-target">
-                  <Mic className="h-4 w-4 mr-2" />
-                  AI Voice
-                </Button>
-                <Button variant="outline" size="sm" className="touch-target">
-                  <AlertCircle className="h-4 w-4 mr-2" />
-                  Collections
-                </Button>
-                <Button variant="outline" size="sm" className="touch-target col-span-2 sm:col-span-1">
-                  <ExternalLink className="h-4 w-4 mr-2" />
-                  View in Xero
-                </Button>
-              </div>
-            </div>
           </div>
         </ScrollArea>
+
+        {/* Footer Actions - Fixed outside ScrollArea */}
+        <div className="bg-white p-6 border-t">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+            <Button variant="outline" size="sm" className="touch-target">
+              <Phone className="h-4 w-4 mr-2" />
+              Call
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="touch-target"
+              onClick={() => setSmsDialogOpen(true)}
+              disabled={!invoice.contact?.phone}
+              data-testid="button-open-sms-dialog"
+            >
+              <MessageSquare className="h-4 w-4 mr-2" />
+              SMS
+            </Button>
+            <Button variant="outline" size="sm" className="touch-target">
+              <Mic className="h-4 w-4 mr-2" />
+              AI Voice
+            </Button>
+            <Button variant="outline" size="sm" className="touch-target">
+              <AlertCircle className="h-4 w-4 mr-2" />
+              Collections
+            </Button>
+            <Button variant="outline" size="sm" className="touch-target col-span-2 sm:col-span-1">
+              <ExternalLink className="h-4 w-4 mr-2" />
+              View in Xero
+            </Button>
+          </div>
+        </div>
       </DialogContent>
       
       {/* SMS Dialog */}
