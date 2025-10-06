@@ -750,7 +750,9 @@ export const smsMessages = pgTable("sms_messages", {
   tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
   contactId: varchar("contact_id").references(() => contacts.id),
   invoiceId: varchar("invoice_id").references(() => invoices.id),
-  twilioMessageSid: varchar("twilio_message_sid").notNull().unique(), // Twilio message SID
+  provider: varchar("provider").notNull().default("twilio"), // "twilio" or "vonage"
+  twilioMessageSid: varchar("twilio_message_sid").unique(), // Twilio message SID (nullable)
+  vonageMessageId: varchar("vonage_message_id").unique(), // Vonage message ID (nullable)
   fromNumber: varchar("from_number").notNull(), // E.164 format
   toNumber: varchar("to_number").notNull(), // E.164 format
   direction: varchar("direction").notNull(), // "inbound" or "outbound"
@@ -758,14 +760,14 @@ export const smsMessages = pgTable("sms_messages", {
   body: text("body").notNull(), // Message content
   numSegments: integer("num_segments").default(1), // Number of SMS segments
   cost: decimal("cost", { precision: 6, scale: 4 }), // Cost of the SMS
-  errorCode: varchar("error_code"), // Twilio error code if failed
+  errorCode: varchar("error_code"), // Provider error code if failed
   errorMessage: text("error_message"), // Error details if failed
   intent: varchar("intent"), // AI-detected intent: "payment_promise", "dispute", "query", "confirmation"
   sentiment: varchar("sentiment"), // "positive", "neutral", "negative"
   requiresResponse: boolean("requires_response").default(false),
   respondedAt: timestamp("responded_at"), // When we responded to an inbound message
   sentAt: timestamp("sent_at"), // When the message was sent/received
-  deliveredAt: timestamp("delivered_at"), // When Twilio confirmed delivery
+  deliveredAt: timestamp("delivered_at"), // When provider confirmed delivery
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => [
@@ -773,6 +775,7 @@ export const smsMessages = pgTable("sms_messages", {
   index("idx_sms_contact_id").on(table.contactId),
   index("idx_sms_direction").on(table.direction),
   index("idx_sms_status").on(table.status),
+  index("idx_sms_provider").on(table.provider),
 ]);
 
 // Voice workflows for conversational AI flows

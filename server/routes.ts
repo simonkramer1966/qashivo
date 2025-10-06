@@ -7899,6 +7899,129 @@ Payment required immediately to avoid collection action. Contact us NOW.`
     }
   });
 
+  // Vonage SMS Routes
+  
+  // Send SMS via Vonage
+  app.post("/api/vonage/send-sms", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { to, message, from } = req.body;
+
+      if (!to || !message) {
+        return res.status(400).json({ message: "Missing required fields: to, message" });
+      }
+
+      const vonageService = await import('./services/vonage.js');
+      const result = await vonageService.sendSMS({ to, message, from });
+
+      if (result.success) {
+        // Save SMS to database
+        const smsData: any = {
+          tenantId: user.tenantId,
+          contactId: req.body.contactId || null,
+          provider: 'vonage',
+          vonageMessageId: result.messageId,
+          fromNumber: from || process.env.VONAGE_PHONE_NUMBER,
+          toNumber: to,
+          direction: 'outbound',
+          status: 'sent',
+          body: message,
+          numSegments: 1,
+          errorCode: null,
+          errorMessage: null,
+          sentAt: new Date(),
+        };
+
+        await storage.createSmsMessage(smsData);
+        console.log("✅ Outbound Vonage SMS saved to database");
+
+        return res.json({ success: true, messageId: result.messageId });
+      } else {
+        return res.status(500).json({ success: false, error: result.error });
+      }
+    } catch (error: any) {
+      console.error("❌ Error sending Vonage SMS:", error);
+      res.status(500).json({ message: "Failed to send SMS", error: error.message });
+    }
+  });
+
+  // Vonage SMS webhook for inbound messages
+  app.post("/api/vonage/sms-webhook", async (req, res) => {
+    try {
+      console.log("📨 Vonage SMS webhook received:", JSON.stringify(req.body, null, 2));
+
+      const {
+        messageId,
+        'message-timestamp': messageTimestamp,
+        msisdn,
+        to,
+        text,
+        type,
+        'keyword': keyword,
+      } = req.body;
+
+      if (!messageId || !msisdn || !to || !text) {
+        return res.status(400).send("Missing required fields");
+      }
+
+      // Try to match contact by phone number
+      const fromPhone = msisdn.replace(/\D/g, '');
+      const toPhone = to.replace(/\D/g, '');
+      
+      // Get all tenants and search for contact
+      const allTenants = await storage.getTenants();
+      let matchedContact: any = null;
+      let matchedTenantId: string | null = null;
+
+      for (const tenant of allTenants) {
+        const contacts = await storage.getContacts(tenant.id);
+        const contact = contacts.find(c => 
+          c.phone && c.phone.replace(/\D/g, '') === fromPhone
+        );
+        if (contact) {
+          matchedContact = contact;
+          matchedTenantId = tenant.id;
+          break;
+        }
+      }
+
+      if (!matchedContact || !matchedTenantId) {
+        console.warn("No matching contact found for phone:", msisdn);
+        return res.status(200).send("OK - No matching contact");
+      }
+
+      // Save SMS to database
+      const smsData: any = {
+        tenantId: matchedTenantId,
+        contactId: matchedContact.id,
+        provider: 'vonage',
+        vonageMessageId: messageId,
+        fromNumber: msisdn,
+        toNumber: to,
+        direction: 'inbound',
+        status: 'received',
+        body: text,
+        numSegments: 1,
+        errorCode: null,
+        errorMessage: null,
+        sentAt: messageTimestamp ? new Date(messageTimestamp) : new Date(),
+      };
+
+      const savedSms = await storage.createSmsMessage(smsData);
+      console.log("✅ Inbound Vonage SMS saved to database:", savedSms.id);
+
+      // Send 200 OK response
+      res.status(200).send("OK");
+    } catch (error) {
+      console.error("❌ Error processing Vonage SMS webhook:", error);
+      res.status(500).send("Error processing webhook");
+    }
+  });
+
   // Voice Workflow API Routes
   
   // Get all voice workflows for a tenant
