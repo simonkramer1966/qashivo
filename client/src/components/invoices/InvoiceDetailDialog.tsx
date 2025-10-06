@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import { useCurrency } from "@/hooks/useCurrency";
 import { useState } from "react";
+import { SendSMSDialog } from "./SendSMSDialog";
 
 interface Contact {
   name: string;
@@ -57,6 +58,7 @@ export function InvoiceDetailDialog({ invoice, open, onOpenChange }: InvoiceDeta
   const { formatCurrency } = useCurrency();
   const [contactInfoOpen, setContactInfoOpen] = useState(true);
   const [automationOpen, setAutomationOpen] = useState(true);
+  const [smsDialogOpen, setSmsDialogOpen] = useState(false);
   
   if (!invoice) return null;
 
@@ -321,7 +323,14 @@ export function InvoiceDetailDialog({ invoice, open, onOpenChange }: InvoiceDeta
                   <Phone className="h-4 w-4 mr-2" />
                   Call
                 </Button>
-                <Button variant="outline" size="sm" className="touch-target">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="touch-target"
+                  onClick={() => setSmsDialogOpen(true)}
+                  disabled={!invoice.contact?.phone}
+                  data-testid="button-open-sms-dialog"
+                >
                   <MessageSquare className="h-4 w-4 mr-2" />
                   SMS
                 </Button>
@@ -342,6 +351,14 @@ export function InvoiceDetailDialog({ invoice, open, onOpenChange }: InvoiceDeta
           </div>
         </ScrollArea>
       </DialogContent>
+      
+      {/* SMS Dialog */}
+      <SendSMSDialog
+        invoice={invoice}
+        open={smsDialogOpen}
+        onOpenChange={setSmsDialogOpen}
+        daysOverdue={daysOverdue}
+      />
     </Dialog>
   );
 }
