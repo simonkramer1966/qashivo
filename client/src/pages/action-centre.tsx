@@ -235,7 +235,7 @@ export default function ActionCentre() {
           {/* Toggle Filter Bar - Compact Desktop Layout */}
           <div className="card-apple p-3 mb-4">
             {/* All filters in a single wrapped flex container */}
-            <div className="flex flex-wrap gap-2 items-center">
+            <div className="flex flex-wrap gap-1 items-center">
               {/* Direction */}
               <Button
                 variant={directionFilters.includes('inbound') ? 'default' : 'outline'}
@@ -266,7 +266,7 @@ export default function ActionCentre() {
                 OUT
               </Button>
               
-              <div className="h-6 w-px bg-slate-200 mx-1"></div>
+              <div className="h-6 w-px bg-slate-200 mx-0.5"></div>
               
               {/* Channel */}
               <Button
@@ -312,7 +312,7 @@ export default function ActionCentre() {
                 Voice
               </Button>
               
-              <div className="h-6 w-px bg-slate-200 mx-1"></div>
+              <div className="h-6 w-px bg-slate-200 mx-0.5"></div>
               
               {/* Intent */}
               <Button
@@ -372,7 +372,7 @@ export default function ActionCentre() {
                 Queries
               </Button>
               
-              <div className="h-6 w-px bg-slate-200 mx-1"></div>
+              <div className="h-6 w-px bg-slate-200 mx-0.5"></div>
               
               {/* Status */}
               <Button
@@ -407,7 +407,7 @@ export default function ActionCentre() {
               {/* Clear All Filters */}
               {(directionFilters.length > 0 || channelFilters.length > 0 || intentFilters.length > 0 || statusFilters.length > 0) && (
                 <>
-                  <div className="h-6 w-px bg-slate-200 mx-1"></div>
+                  <div className="h-6 w-px bg-slate-200 mx-0.5"></div>
                   <Button
                     variant="ghost"
                     size="sm"
