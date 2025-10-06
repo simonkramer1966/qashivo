@@ -1,0 +1,178 @@
+Perfect — this is a really strong starting point for a best-in-class “Action Centre” design, and you’re absolutely right that this should feel like the beating heart of Qashivo.
+Let’s design it so it does three things elegantly:
+
+Shows you everything that’s happening (outbound + inbound),
+
+Surfaces only what needs your attention,
+
+Works intuitively on mobile as well as desktop.
+
+Here’s a complete UI/UX redesign concept you can brief straight into Replit (and pitch to investors).
+
+🔷 1. Core UX Philosophy
+
+“Focus over noise.”
+The Action Centre should behave like a smart inbox — blending AI insight, automation, and intuitive triage.
+Think: Gmail Priority Inbox × Apple Messages × Notion clarity.
+
+🔹 2. Layout Overview
+💻 Desktop
+
+Split-screen layout:
+
+Left panel → Activity Feed (chronological timeline of inbound & outbound comms).
+
+Right panel → “Insight & Action” drawer (AI summaries, actions, and next steps).
+
+📱 Mobile
+
+Tab-based design:
+
+Tab 1: Needs Action (only inbound with intent).
+
+Tab 2: Activity Feed (everything).
+
+Tab 3: Insights (summaries, trends, and performance).
+
+This keeps it finger-friendly and mentally light on small screens.
+
+🔹 3. Activity Feed (Unified Timeline)
+
+Each card represents a communication event (SMS, Email, AI Voice, etc.) with:
+
+Channel icon (SMS / Email / Voice)
+
+Direction (⬆️ outbound / ⬇️ inbound)
+
+Sentiment indicator (😀 / 😐 / 😡)
+
+Intent badge (e.g. Payment, Query, Dispute, Delay)
+
+Response status (e.g. Awaiting reply, Resolved, Follow-up scheduled)
+
+Smart time stamp (e.g. “2h ago”, “Yesterday”, “Last Week”).
+
+🧠 AI Enhancement:
+Hover or tap → AI summary strip appears:
+
+“Sarah requested a payment plan. Suggest reply: Offer 3 monthly instalments of £500 starting 12 Oct.”
+Buttons: [Reply via SMS] [Send AI Voice] [Mark Resolved].
+
+🔹 4. Filters & Sorting
+
+Add dynamic filtering at top of feed:
+
+Channel: All / SMS / Email / Voice
+
+Direction: Inbound / Outbound
+
+Intent: Payment / Query / Dispute / None
+
+Status: Needs Action / Resolved / Auto-Handled
+
+Sort: By Intent → By Urgency → By Date
+
+💡 Default view: “Needs Action (Intent + No Response)” at the top.
+
+🔹 5. “Needs Action” View
+
+This is where your operators or users live.
+
+Each card shows:
+
+Customer name + contact details
+
+Extract of message (“Can someone call me...”)
+
+AI-detected intent (payment / query / dispute)
+
+Suggested next action with 1-click options.
+
+Example:
+
+Sarah Johnson (SMS – Inbound)
+“Can somebody call me to sort a payment plan please?”
+🧠 Detected intent: Payment plan request (high intent)
+Suggested next: [AI Voice Call] [Offer Plan Template] [Reply SMS] [Mark Resolved].
+
+🔹 6. Outbound Activity
+
+Outbound comms should appear visually distinct:
+
+Slightly dim background (e.g. grey/blue tone).
+
+Grouped under “Automated Schedule” with label e.g. “Step 3 of 5 – Friendly SMS sent.”
+
+Status pill: Delivered, Opened, Responded, Ignored.
+
+Clicking shows message body + response chain + performance (open rate, reply time).
+
+💡 On mobile: collapse outbound messages into a “Sent” group below inbound requiring attention.
+
+🔹 7. AI Summary Panel (Right Drawer / Pop-up on Mobile)
+
+When a user selects a message thread:
+
+Show summary of conversation.
+
+Highlight detected intent, sentiment, and urgency.
+
+Provide AI-generated next step options with quick action buttons:
+
+“Reply via same channel”
+
+“Escalate to AI Voice”
+
+“Offer Finance”
+
+“Flag as Dispute”
+
+“Mark Resolved”
+
+Bonus: include a “👁 Quick View in Invoice” button linking directly to that invoice.
+
+🔹 8. Visual Hierarchy & Aesthetics
+
+Use soft contrast for outbound, high contrast for inbound.
+
+Color-code channel icons:
+
+💬 SMS = blue
+
+✉️ Email = orange
+
+🎙 Voice = green
+
+Use badges for AI-detected attributes:
+
+Intent → violet
+
+Sentiment → emoji badge
+
+Priority → red dot
+
+Rounded cards, Apple-style shadows, generous whitespace.
+
+Avoid red borders (suggest using light colour pulses for high urgency).
+
+🔹 9. Smart Notifications
+
+On both desktop and mobile:
+
+Badge counter on Action Centre (only inbound needing attention).
+
+Optional “AI Assistant summary” daily:
+
+“3 new inbound messages with payment intent; 2 outbound reminders delivered; 1 customer responded positively.”
+
+🔹 10. Optional “Conversation View”
+
+Like WhatsApp or Intercom:
+
+Show full two-way chat history per customer across all channels.
+
+Include voice transcript previews with play button.
+
+AI highlights “intent points” inside transcript (auto-scrolling to key parts).
+
+This would make Qashivo feel alive — not like accounting software.

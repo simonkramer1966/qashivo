@@ -17,7 +17,9 @@ import {
   XCircle,
   DollarSign,
   AlertCircle,
-  HelpCircle
+  HelpCircle,
+  ArrowUp,
+  ArrowDown
 } from "lucide-react";
 import NewSidebar from "@/components/layout/new-sidebar";
 import BottomNav from "@/components/layout/bottom-nav";
@@ -52,11 +54,31 @@ interface Action {
   updatedAt: string;
 }
 
+// Smart timestamp helper
+function getSmartTimestamp(date: string): string {
+  const now = new Date();
+  const actionDate = new Date(date);
+  const diffMs = now.getTime() - actionDate.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+
+  if (diffMins < 1) return 'Just now';
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays === 1) return 'Yesterday';
+  if (diffDays < 7) return `${diffDays}d ago`;
+  if (diffDays < 30) return `${Math.floor(diffDays / 7)}w ago`;
+  
+  return actionDate.toLocaleDateString();
+}
+
 export default function ActionCentre() {
   const [, setLocation] = useLocation();
   const [searchQuery, setSearchQuery] = useState("");
   const [intentFilter, setIntentFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
+  const [viewFilter, setViewFilter] = useState<string>("all");
 
   const { data: actions = [], isLoading } = useQuery<Action[]>({
     queryKey: ['/api/actions'],
@@ -117,10 +139,20 @@ export default function ActionCentre() {
 
   const getActionIcon = (type: string) => {
     switch (type) {
-      case 'email': return <Mail className="h-4 w-4" />;
-      case 'sms': return <MessageSquare className="h-4 w-4" />;
-      case 'call': return <Phone className="h-4 w-4" />;
-      default: return <MessageSquare className="h-4 w-4" />;
+      case 'email': return <Mail className="h-4 w-4 text-white" />;
+      case 'sms': return <MessageSquare className="h-4 w-4 text-white" />;
+      case 'call': return <Phone className="h-4 w-4 text-white" />;
+      default: return <MessageSquare className="h-4 w-4 text-white" />;
+    }
+  };
+
+  // Channel color coding: SMS=Blue, Email=Orange, Voice=Green
+  const getChannelColor = (type: string) => {
+    switch (type) {
+      case 'email': return 'bg-orange-500';
+      case 'sms': return 'bg-blue-500';
+      case 'call': return 'bg-green-500';
+      default: return 'bg-blue-500';
     }
   };
 
@@ -133,9 +165,19 @@ export default function ActionCentre() {
       const matchesIntent = intentFilter === 'all' || action.intentType === intentFilter;
       const matchesType = typeFilter === 'all' || action.type === typeFilter;
       
-      return matchesSearch && matchesIntent && matchesType;
+      // "Needs Action" filter: inbound + has intent + not resolved
+      const isInbound = action.metadata?.direction === 'inbound';
+      const needsAction = isInbound && action.intentType && action.status !== 'resolved';
+      const matchesView = viewFilter === 'all' || (viewFilter === 'needs_action' && needsAction);
+      
+      return matchesSearch && matchesIntent && matchesType && matchesView;
     });
-  }, [actions, searchQuery, intentFilter, typeFilter]);
+  }, [actions, searchQuery, intentFilter, typeFilter, viewFilter]);
+
+  // Count "Needs Action" items
+  const needsActionCount = actions.filter(a => 
+    a.metadata?.direction === 'inbound' && a.intentType && a.status !== 'resolved'
+  ).length;
 
   return (
     <div className="flex h-screen bg-white">
@@ -148,7 +190,7 @@ export default function ActionCentre() {
       <main className="flex-1 overflow-y-auto main-with-bottom-nav">
         <Header 
           title="Action Centre" 
-          subtitle="Invoices requiring your attention"
+          subtitle="AI-powered communication hub"
         />
         
         <div className="container-apple py-4 sm:py-6 lg:py-8">
@@ -168,7 +210,19 @@ export default function ActionCentre() {
           </div>
 
           {/* Filters */}
-          <div className="flex gap-3 mb-6">
+          <div className="flex gap-3 mb-6 flex-wrap">
+            <Select value={viewFilter} onValueChange={setViewFilter}>
+              <SelectTrigger className="w-[180px]" data-testid="select-view-filter">
+                <SelectValue placeholder="All Activity" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Activity</SelectItem>
+                <SelectItem value="needs_action">
+                  Needs Action {needsActionCount > 0 && `(${needsActionCount})`}
+                </SelectItem>
+              </SelectContent>
+            </Select>
+
             <Select value={typeFilter} onValueChange={setTypeFilter}>
               <SelectTrigger className="w-[180px]" data-testid="select-type-filter">
                 <SelectValue placeholder="All Types" />
@@ -202,9 +256,9 @@ export default function ActionCentre() {
               <p className="text-xl sm:text-2xl font-bold text-slate-900">{actions.length}</p>
             </div>
             <div className="card-apple p-3 sm:p-4">
-              <p className="text-xs sm:text-sm text-slate-600 mb-1">With Intent</p>
+              <p className="text-xs sm:text-sm text-slate-600 mb-1">Needs Action</p>
               <p className="text-xl sm:text-2xl font-bold text-[#17B6C3]">
-                {actions.filter(a => a.intentType).length}
+                {needsActionCount}
               </p>
             </div>
             <div className="card-apple p-3 sm:p-4">
@@ -233,74 +287,91 @@ export default function ActionCentre() {
             ) : filteredActions.length === 0 ? (
               <div className="card-apple p-8 text-center">
                 <AlertTriangle className="h-12 w-12 mx-auto mb-3 text-slate-400" />
-                <p className="text-slate-600">No actions found</p>
+                <p className="text-slate-600">
+                  {viewFilter === 'needs_action' 
+                    ? 'No actions need attention right now' 
+                    : 'No actions found'}
+                </p>
               </div>
             ) : (
-              filteredActions.map((action) => (
-                <div 
-                  key={action.id} 
-                  className="card-apple-hover p-4 cursor-pointer"
-                  onClick={() => action.invoiceId && setLocation(`/invoices/${action.invoiceId}`)}
-                  data-testid={`action-item-${action.id}`}
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex-1 min-w-0">
-                      {/* Header with icon and type */}
-                      <div className="flex items-center gap-2 mb-2">
-                        <div className={`p-2 rounded-lg ${
-                          action.type === 'email' ? 'bg-blue-100' :
-                          action.type === 'sms' ? 'bg-purple-100' :
-                          'bg-green-100'
-                        }`}>
-                          {getActionIcon(action.type)}
+              filteredActions.map((action) => {
+                const isInbound = action.metadata?.direction === 'inbound';
+                
+                return (
+                  <div 
+                    key={action.id} 
+                    className={`card-apple-hover p-4 cursor-pointer transition-all ${
+                      isInbound ? 'border-l-4 border-l-[#17B6C3]' : 'bg-slate-50/50'
+                    }`}
+                    onClick={() => action.invoiceId && setLocation(`/invoices/${action.invoiceId}`)}
+                    data-testid={`action-item-${action.id}`}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        {/* Header with icon and type */}
+                        <div className="flex items-center gap-2 mb-2">
+                          {/* Channel icon with color coding */}
+                          <div className={`p-2 rounded-lg ${getChannelColor(action.type)}`}>
+                            {getActionIcon(action.type)}
+                          </div>
+                          
+                          {/* Direction indicator */}
+                          <div className={`p-1 rounded ${isInbound ? 'bg-[#17B6C3]' : 'bg-slate-400'}`}>
+                            {isInbound ? (
+                              <ArrowDown className="h-3 w-3 text-white" data-testid="icon-inbound" />
+                            ) : (
+                              <ArrowUp className="h-3 w-3 text-white" data-testid="icon-outbound" />
+                            )}
+                          </div>
+                          
+                          <div className="flex-1">
+                            <h4 className="font-semibold text-slate-900 truncate">
+                              {action.subject || 'No subject'}
+                            </h4>
+                            <p className="text-xs text-slate-500">
+                              {getSmartTimestamp(action.createdAt)}
+                            </p>
+                          </div>
                         </div>
-                        <div className="flex-1">
-                          <h4 className="font-semibold text-slate-900 truncate">
-                            {action.subject || 'No subject'}
-                          </h4>
-                          <p className="text-xs text-slate-500">
-                            {new Date(action.createdAt).toLocaleDateString()} at {new Date(action.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        
+                        {/* Content preview */}
+                        {action.content && (
+                          <p className="text-sm text-slate-600 mb-3 line-clamp-2">
+                            {action.content}
                           </p>
+                        )}
+                        
+                        {/* Badges */}
+                        <div className="flex flex-wrap gap-2">
+                          <Badge variant="outline" className="text-xs">
+                            {action.type.toUpperCase()}
+                          </Badge>
+                          
+                          {action.intentType && getIntentBadge(action.intentType)}
+                          {action.sentiment && getSentimentBadge(action.sentiment)}
+                          
+                          {/* Response indicator */}
+                          {!isInbound && (
+                            action.hasResponse ? (
+                              <Badge className="bg-green-100 text-green-800 border-green-200 flex items-center gap-1">
+                                <CheckCircle2 className="h-3 w-3" />
+                                Responded
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="text-slate-500 flex items-center gap-1">
+                                <XCircle className="h-3 w-3" />
+                                No Response
+                              </Badge>
+                            )
+                          )}
                         </div>
                       </div>
                       
-                      {/* Content preview */}
-                      {action.content && (
-                        <p className="text-sm text-slate-600 mb-3 line-clamp-2">
-                          {action.content}
-                        </p>
-                      )}
-                      
-                      {/* Badges */}
-                      <div className="flex flex-wrap gap-2">
-                        <Badge variant="outline" className="text-xs">
-                          {action.type.toUpperCase()}
-                        </Badge>
-                        
-                        {action.intentType && getIntentBadge(action.intentType)}
-                        {action.sentiment && getSentimentBadge(action.sentiment)}
-                        
-                        {/* Response indicator */}
-                        {action.metadata?.direction !== 'inbound' && (
-                          action.hasResponse ? (
-                            <Badge className="bg-green-100 text-green-800 border-green-200 flex items-center gap-1">
-                              <CheckCircle2 className="h-3 w-3" />
-                              Responded
-                            </Badge>
-                          ) : (
-                            <Badge variant="outline" className="text-slate-500 flex items-center gap-1">
-                              <XCircle className="h-3 w-3" />
-                              No Response
-                            </Badge>
-                          )
-                        )}
-                      </div>
+                      <ChevronRight className="h-5 w-5 text-slate-400 flex-shrink-0 mt-1" />
                     </div>
-                    
-                    <ChevronRight className="h-5 w-5 text-slate-400 flex-shrink-0 mt-1" />
                   </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         </div>
