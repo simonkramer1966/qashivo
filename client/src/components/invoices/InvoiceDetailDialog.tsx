@@ -99,7 +99,7 @@ export function InvoiceDetailDialog({ invoice, open, onOpenChange }: InvoiceDeta
         <ScrollArea className="h-full max-h-[90vh]">
           <div className="p-6">
             {/* Header - Invoice Summary */}
-            <div className="sticky top-0 bg-white pb-4 mb-4 border-b">
+            <div className="sticky top-0 bg-white pt-6 pb-4 mb-4 border-b">
               <DialogHeader>
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1">
