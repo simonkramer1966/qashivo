@@ -249,7 +249,7 @@ export default function ActionCentre() {
                 data-testid="filter-inbound"
               >
                 <ArrowDown className="h-4 w-4 mr-1" />
-                Inbound
+                IN
               </Button>
               <Button
                 variant={directionFilters.includes('outbound') ? 'default' : 'outline'}
