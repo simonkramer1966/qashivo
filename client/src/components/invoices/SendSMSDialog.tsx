@@ -88,12 +88,11 @@ export function SendSMSDialog({ invoice, open, onOpenChange, daysOverdue }: Send
     mutationFn: async () => {
       if (!invoice) return;
       
-      return await apiRequest(`/api/invoices/${invoice.id}/send-sms`, {
-        method: "POST",
-        body: JSON.stringify({
-          template: selectedTemplate,
-        }),
+      const res = await apiRequest("POST", `/api/invoices/${invoice.id}/send-sms`, {
+        template: selectedTemplate,
       });
+      
+      return await res.json();
     },
     onSuccess: () => {
       toast({
