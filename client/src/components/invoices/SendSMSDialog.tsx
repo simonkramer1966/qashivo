@@ -45,7 +45,7 @@ const smsTemplates: Record<SMSTemplate, { label: string; description: string; co
   friendly: {
     label: "Friendly Reminder",
     description: "Gentle, polite tone for early reminders",
-    content: "Hi {firstName}! Just a friendly reminder that invoice #{invoiceNumber} for {amount} was due on {dueDate}. Thanks!",
+    content: "Hi {firstName}, just a friendly reminder that invoice #{invoiceNumber} for {amount} was due on {dueDate}. Thanks!",
     color: "bg-blue-100 text-blue-800 border-blue-200",
   },
   professional: {
