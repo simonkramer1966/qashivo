@@ -259,7 +259,6 @@ export async function detectSmsIntent(
         }
       ],
       response_format: { type: "json_object" },
-      temperature: 0.3, // Lower temperature for more consistent classifications
     });
 
     const result = JSON.parse(response.choices[0].message.content || '{}');
