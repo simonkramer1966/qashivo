@@ -8137,6 +8137,69 @@ Payment required immediately to avoid collection action. Contact us NOW.`
       const savedSms = await storage.createSmsMessage(smsData);
       console.log("✅ Inbound Vonage SMS saved to database:", savedSms.id);
 
+      // Detect intent using AI
+      const openaiService = await import('./services/openai.js');
+      
+      // Get latest invoice for context (if any)
+      const invoices = await storage.getInvoices(matchedTenantId);
+      const contactInvoices = invoices.filter((inv: any) => inv.contactId === matchedContact.id);
+      const latestInvoice = contactInvoices.sort((a: any, b: any) => 
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      )[0];
+
+      const intentResult = await openaiService.detectSmsIntent(text, {
+        customerName: matchedContact.name,
+        invoiceNumber: latestInvoice?.invoiceNumber,
+        amount: latestInvoice?.amount,
+        daysPastDue: latestInvoice ? Math.floor((Date.now() - new Date(latestInvoice.dueDate).getTime()) / (1000 * 60 * 60 * 24)) : 0
+      });
+
+      console.log("🤖 SMS Intent detected:", intentResult);
+
+      // Create Action record for inbound SMS
+      await storage.createAction({
+        tenantId: matchedTenantId,
+        contactId: matchedContact.id,
+        invoiceId: latestInvoice?.id || null,
+        type: 'sms',
+        status: 'completed',
+        subject: `SMS from ${matchedContact.name}: ${intentResult.intentType}`,
+        content: text,
+        completedAt: new Date(),
+        intentType: intentResult.intentType,
+        intentConfidence: intentResult.intentConfidence.toString(),
+        sentiment: intentResult.sentiment,
+        metadata: {
+          direction: 'inbound',
+          messageId: messageId,
+          intent: intentResult.intentType,
+          confidence: intentResult.intentConfidence,
+          sentiment: intentResult.sentiment,
+          summary: intentResult.summary
+        }
+      });
+
+      console.log("✅ Inbound SMS Action created with intent");
+
+      // Mark most recent outbound SMS as responded
+      const allActions = await storage.getActions(matchedTenantId);
+      const outboundSmsActions = allActions
+        .filter((action: any) => 
+          action.contactId === matchedContact.id && 
+          action.type === 'sms' && 
+          action.metadata?.direction !== 'inbound' &&
+          !action.hasResponse
+        )
+        .sort((a: any, b: any) => 
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        );
+
+      if (outboundSmsActions.length > 0) {
+        const mostRecentOutbound = outboundSmsActions[0];
+        await storage.updateAction(mostRecentOutbound.id, matchedTenantId, { hasResponse: true });
+        console.log("✅ Marked outbound SMS as responded:", mostRecentOutbound.id);
+      }
+
       // Send 200 OK response
       res.status(200).send("OK");
     } catch (error) {
