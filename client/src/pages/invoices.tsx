@@ -190,7 +190,8 @@ export default function Invoices() {
             </div>
           </div>
 
-          <div className="space-y-3">
+          {/* Mobile: Card View */}
+          <div className="space-y-3 sm:hidden">
             {isLoading ? (
               [...Array(5)].map((_, i) => (
                 <div key={i} className="card-apple p-4">
@@ -213,57 +214,22 @@ export default function Invoices() {
                     onClick={() => setSelectedInvoice(invoice)}
                     data-testid={`invoice-item-${invoice.id}`}
                   >
-                    {/* Mobile Layout - Stacked */}
-                    <div className="sm:hidden">
-                      <div className="flex items-start justify-between mb-2">
-                        <div className="flex-1">
-                          <h4 className="font-semibold text-slate-900 truncate">
-                            {invoice.contact?.companyName || invoice.contact?.name || 'Unknown Customer'}
-                          </h4>
-                          <p className="text-sm font-normal text-slate-500">
-                            {invoice.invoiceNumber}
-                          </p>
-                        </div>
-                        {getStatusBadge(invoice)}
-                      </div>
-                      
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <p className="text-lg font-bold text-slate-900">
-                              {formatCurrency(outstanding)}
-                            </p>
-                            {invoice.status !== 'paid' && outstanding >= 1000 && (
-                              <Banknote className="h-4 w-4 text-[#17B6C3]" />
-                            )}
-                          </div>
-                          <p className="text-xs font-normal text-slate-500">
-                            {invoice.status !== 'paid' && daysOverdue > 0 
-                              ? `${daysOverdue} days overdue`
-                              : `Due ${new Date(invoice.dueDate).toLocaleDateString()}`
-                            }
-                          </p>
-                        </div>
-                        <ChevronRight className="h-5 w-5 text-slate-400 flex-shrink-0" />
-                      </div>
-                    </div>
-
-                    {/* Desktop Layout - Grid aligned with top metrics */}
-                    <div className="hidden sm:grid sm:grid-cols-4 sm:gap-4">
-                      {/* Column 1 - Company Info (aligns with Total) */}
-                      <div className="min-w-0">
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex-1">
                         <h4 className="font-semibold text-slate-900 truncate">
                           {invoice.contact?.companyName || invoice.contact?.name || 'Unknown Customer'}
                         </h4>
-                        <p className="text-sm font-normal text-slate-500 truncate">
+                        <p className="text-sm font-normal text-slate-500">
                           {invoice.invoiceNumber}
                         </p>
                       </div>
-
-                      {/* Column 2 - Invoice Amount + Days Overdue stacked (aligns with Overdue metric) */}
+                      {getStatusBadge(invoice)}
+                    </div>
+                    
+                    <div className="flex items-center justify-between">
                       <div>
                         <div className="flex items-center gap-2">
-                          <p className="text-lg font-bold text-slate-900 whitespace-nowrap">
+                          <p className="text-lg font-bold text-slate-900">
                             {formatCurrency(outstanding)}
                           </p>
                           {invoice.status !== 'paid' && outstanding >= 1000 && (
@@ -277,19 +243,104 @@ export default function Invoices() {
                           }
                         </p>
                       </div>
-
-                      {/* Column 3 - Empty placeholder for alignment */}
-                      <div></div>
-
-                      {/* Column 4 - Status Badge + Chevron (aligns with Outstanding) */}
-                      <div className="flex items-center justify-end gap-3">
-                        {getStatusBadge(invoice)}
-                        <ChevronRight className="h-5 w-5 text-slate-400 flex-shrink-0" />
-                      </div>
+                      <ChevronRight className="h-5 w-5 text-slate-400 flex-shrink-0" />
                     </div>
                   </div>
                 );
               })
+            )}
+          </div>
+
+          {/* Desktop: Table/List View */}
+          <div className="hidden sm:block">
+            {isLoading ? (
+              <div className="card-apple">
+                <div className="p-4 border-b">
+                  <div className="h-10 bg-slate-200 animate-pulse rounded"></div>
+                </div>
+                {[...Array(5)].map((_, i) => (
+                  <div key={i} className="p-4 border-b">
+                    <div className="h-16 bg-slate-200 animate-pulse rounded"></div>
+                  </div>
+                ))}
+              </div>
+            ) : invoices.length === 0 ? (
+              <div className="card-apple p-8 text-center">
+                <p className="text-slate-600">No invoices found</p>
+              </div>
+            ) : (
+              <div className="card-apple overflow-hidden">
+                {/* Table Header */}
+                <div className="grid grid-cols-12 gap-4 px-6 py-3 bg-slate-50 border-b border-slate-200 text-sm font-semibold text-slate-600">
+                  <div className="col-span-3">Customer</div>
+                  <div className="col-span-2">Invoice #</div>
+                  <div className="col-span-2">Amount</div>
+                  <div className="col-span-2">Due Date</div>
+                  <div className="col-span-2">Days Overdue</div>
+                  <div className="col-span-1 text-right">Status</div>
+                </div>
+
+                {/* Table Rows */}
+                {invoices.map((invoice) => {
+                  const outstanding = invoice.amount - invoice.amountPaid;
+                  const daysOverdue = getDaysOverdue(invoice.dueDate);
+                  
+                  return (
+                    <div
+                      key={invoice.id}
+                      className={`grid grid-cols-12 gap-4 px-6 py-4 border-l-4 ${getStatusColor(invoice)} border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors`}
+                      onClick={() => setSelectedInvoice(invoice)}
+                      data-testid={`invoice-item-${invoice.id}`}
+                    >
+                      {/* Customer */}
+                      <div className="col-span-3 min-w-0">
+                        <p className="font-semibold text-slate-900 truncate">
+                          {invoice.contact?.companyName || invoice.contact?.name || 'Unknown Customer'}
+                        </p>
+                        <p className="text-sm text-slate-500 truncate">{invoice.contact?.email}</p>
+                      </div>
+
+                      {/* Invoice Number */}
+                      <div className="col-span-2 flex items-center">
+                        <p className="text-sm font-medium text-slate-900">{invoice.invoiceNumber}</p>
+                      </div>
+
+                      {/* Amount */}
+                      <div className="col-span-2 flex items-center gap-2">
+                        <p className="font-bold text-slate-900">{formatCurrency(outstanding)}</p>
+                        {invoice.status !== 'paid' && outstanding >= 1000 && (
+                          <Banknote className="h-4 w-4 text-[#17B6C3]" />
+                        )}
+                      </div>
+
+                      {/* Due Date */}
+                      <div className="col-span-2 flex items-center">
+                        <p className="text-sm text-slate-700">
+                          {new Date(invoice.dueDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        </p>
+                      </div>
+
+                      {/* Days Overdue */}
+                      <div className="col-span-2 flex items-center">
+                        {invoice.status === 'paid' ? (
+                          <p className="text-sm text-slate-500">-</p>
+                        ) : daysOverdue > 0 ? (
+                          <p className={`text-sm font-semibold ${daysOverdue >= 30 ? 'text-[#C75C5C]' : daysOverdue >= 7 ? 'text-[#E8A23B]' : 'text-blue-600'}`}>
+                            {daysOverdue} days
+                          </p>
+                        ) : (
+                          <p className="text-sm text-slate-500">Current</p>
+                        )}
+                      </div>
+
+                      {/* Status */}
+                      <div className="col-span-1 flex items-center justify-end">
+                        {getStatusBadge(invoice)}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             )}
           </div>
 
