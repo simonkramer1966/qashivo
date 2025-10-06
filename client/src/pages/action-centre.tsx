@@ -249,7 +249,7 @@ export default function ActionCentre() {
       </div>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-y-auto main-with-bottom-nav">
+      <main className="flex-1 overflow-y-auto main-with-bottom-nav [scrollbar-gutter:stable]">
         <Header 
           title="Action Centre" 
           subtitle="AI-powered communication hub"
