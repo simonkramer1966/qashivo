@@ -319,7 +319,7 @@ export function InvoiceDetailDialog({ invoice, open, onOpenChange }: InvoiceDeta
         </ScrollArea>
 
         {/* Footer Actions - Fixed outside ScrollArea */}
-        <div className="bg-white p-6 border-t">
+        <div className="bg-white px-6 py-4 border-t rounded-b-lg">
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
             <Button variant="outline" size="sm" className="touch-target">
               <Phone className="h-4 w-4 mr-2" />
