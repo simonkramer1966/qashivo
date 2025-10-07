@@ -410,7 +410,7 @@ export function InvoiceDetailDialog({ invoice, open, onOpenChange }: InvoiceDeta
                 </div>
                 <Separator />
                 <div className="flex gap-3">
-                  <PhoneCall className="h-5 w-5 text-amber-500 mt-0.5" />
+                  <Phone className="h-5 w-5 text-amber-500 mt-0.5" />
                   <div className="flex-1">
                     <p className="text-sm font-medium">Voice call scheduled (no answer)</p>
                     <p className="text-xs text-slate-500">2 Oct at 10:00 AM</p>
