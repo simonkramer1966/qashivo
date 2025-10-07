@@ -138,8 +138,8 @@ export function SendSMSDialog({ invoice, open, onOpenChange, daysOverdue }: Send
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
+      <DialogContent className="max-w-2xl max-h-[85vh] sm:max-h-[90vh] flex flex-col">
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <MessageSquare className="h-5 w-5 text-[#17B6C3]" />
             Send SMS Payment Reminder
@@ -149,7 +149,7 @@ export function SendSMSDialog({ invoice, open, onOpenChange, daysOverdue }: Send
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="space-y-4 overflow-y-auto flex-1 pr-2">
           {/* Template Selection */}
           <div>
             <Label className="text-sm font-semibold mb-3 block">Select Message Template</Label>
@@ -226,7 +226,7 @@ export function SendSMSDialog({ invoice, open, onOpenChange, daysOverdue }: Send
           )}
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="flex-shrink-0 pt-4">
           <Button
             variant="outline"
             onClick={() => onOpenChange(false)}
