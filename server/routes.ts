@@ -8304,10 +8304,12 @@ Payment required immediately to avoid collection action. Contact us NOW.`
     try {
       console.log("Retell webhook received:", JSON.stringify(req.body, null, 2));
 
-      const webhookData = req.body;
+      // Retell sends data nested in a 'call' object
+      const webhookData = req.body.call || req.body;
       const retellCallId = webhookData.call_id;
 
       if (!retellCallId) {
+        console.error("Missing call_id in webhook. Payload:", JSON.stringify(req.body, null, 2));
         return res.status(400).json({ message: "Missing call_id in webhook" });
       }
 
@@ -8361,6 +8363,40 @@ Payment required immediately to avoid collection action. Contact us NOW.`
 
         const savedCall = await storage.createVoiceCall(voiceCallData);
         console.log("Voice call saved to database:", savedCall.id);
+
+        // Create inbound message for intent analysis if transcript exists
+        // Note: Even outbound calls have customer responses we want to analyze
+        if (callData.transcript) {
+          try {
+            const { intentAnalyst } = await import('./services/intentAnalyst.js');
+            const { db } = await import('./db/index.js');
+            const { inboundMessages } = await import('@shared/schema.js');
+            
+            const [message] = await db
+              .insert(inboundMessages)
+              .values({
+                tenantId: finalTenantId,
+                contactId: finalContactId,
+                invoiceId: invoiceId || null,
+                channel: 'voice',
+                from: callData.toNumber!, // Customer's number (they called us)
+                to: callData.fromNumber, // Our number
+                content: callData.transcript,
+                providerMessageId: retellCallId,
+                rawPayload: webhookData,
+              })
+              .returning();
+
+            console.log(`✅ Voice transcript stored for intent analysis: ${message.id}`);
+
+            // Trigger intent analysis
+            intentAnalyst.processInboundMessage(message.id).catch(err => 
+              console.error('❌ Intent analysis error:', err)
+            );
+          } catch (error) {
+            console.error('❌ Error creating inbound message:', error);
+          }
+        }
 
         return res.json({ 
           success: true, 

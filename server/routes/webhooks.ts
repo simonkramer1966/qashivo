@@ -231,6 +231,10 @@ export function registerWebhookRoutes(app: Express) {
   app.post("/api/webhooks/retell/transcript", async (req: Request, res: Response) => {
     try {
       console.log('🎙️  Received voice transcript webhook from Retell');
+      console.log('📦 Webhook payload:', JSON.stringify(req.body, null, 2));
+      
+      // Retell sends data nested in a 'call' object
+      const callData = req.body.call || req.body;
       
       const {
         call_id,
@@ -239,9 +243,10 @@ export function registerWebhookRoutes(app: Express) {
         transcript,
         call_analysis,
         metadata
-      } = req.body;
+      } = callData;
 
       if (!from_number || !transcript) {
+        console.error('❌ Missing required fields in Retell webhook:', { from_number, transcript, payload: req.body });
         return res.status(400).json({ error: 'Missing required fields' });
       }
 
@@ -260,6 +265,14 @@ export function registerWebhookRoutes(app: Express) {
         return res.status(200).json({ message: 'No matching contact' });
       }
 
+      // Extract transcript text (handle both string and array formats)
+      let transcriptText = transcript;
+      if (typeof transcript === 'object' && Array.isArray(transcript)) {
+        transcriptText = transcript.map((t: any) => t.content || '').join('\n');
+      } else if (typeof transcript === 'object' && !Array.isArray(transcript)) {
+        transcriptText = JSON.stringify(transcript);
+      }
+
       // Store inbound message with transcript
       const [message] = await db
         .insert(inboundMessages)
@@ -269,7 +282,7 @@ export function registerWebhookRoutes(app: Express) {
           channel: 'voice',
           from: fromPhone,
           to: to_number,
-          content: transcript,
+          content: transcriptText,
           providerMessageId: call_id,
           rawPayload: {
             call_id,
