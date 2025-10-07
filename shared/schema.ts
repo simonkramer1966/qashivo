@@ -503,6 +503,44 @@ export const actions = pgTable("actions", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Inbound Messages table for intent analysis
+export const inboundMessages = pgTable("inbound_messages", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  contactId: varchar("contact_id").references(() => contacts.id),
+  invoiceId: varchar("invoice_id").references(() => invoices.id),
+  
+  // Message details
+  channel: varchar("channel").notNull(), // email, sms, whatsapp, voice
+  from: varchar("from").notNull(), // Email or phone number
+  to: varchar("to"), // Recipient (our system)
+  subject: varchar("subject"), // For emails
+  content: text("content").notNull(), // Message body or transcript
+  rawPayload: jsonb("raw_payload"), // Original webhook payload
+  
+  // Intent analysis results
+  intentAnalyzed: boolean("intent_analyzed").default(false),
+  intentType: varchar("intent_type"), // payment_plan, dispute, promise_to_pay, general_query
+  intentConfidence: decimal("intent_confidence", { precision: 3, scale: 2 }), // 0.00 to 1.00
+  sentiment: varchar("sentiment"), // positive, neutral, negative
+  extractedEntities: jsonb("extracted_entities"), // Amounts, dates, promises
+  
+  // Action tracking
+  actionCreated: boolean("action_created").default(false),
+  actionId: varchar("action_id").references(() => actions.id),
+  
+  // Provider metadata
+  providerMessageId: varchar("provider_message_id"), // External message ID
+  providerStatus: varchar("provider_status"), // delivered, read, etc.
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_inbound_tenant").on(table.tenantId),
+  index("idx_inbound_contact").on(table.contactId),
+  index("idx_inbound_analyzed").on(table.intentAnalyzed),
+]);
+
 // Workflows table for collection processes
 export const workflows = pgTable("workflows", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -1714,6 +1752,12 @@ export const insertActionSchema = createInsertSchema(actions).omit({
   updatedAt: true,
 });
 
+export const insertInboundMessageSchema = createInsertSchema(inboundMessages).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export const insertWorkflowSchema = createInsertSchema(workflows).omit({
   id: true,
   createdAt: true,
@@ -1911,6 +1955,8 @@ export type InsertCachedXeroInvoice = z.infer<typeof insertCachedXeroInvoiceSche
 export type CachedXeroInvoice = typeof cachedXeroInvoices.$inferSelect;
 export type InsertAction = z.infer<typeof insertActionSchema>;
 export type Action = typeof actions.$inferSelect;
+export type InsertInboundMessage = z.infer<typeof insertInboundMessageSchema>;
+export type InboundMessage = typeof inboundMessages.$inferSelect;
 export type InsertWorkflow = z.infer<typeof insertWorkflowSchema>;
 export type Workflow = typeof workflows.$inferSelect;
 export type InsertWorkflowNode = z.infer<typeof insertWorkflowNodeSchema>;
