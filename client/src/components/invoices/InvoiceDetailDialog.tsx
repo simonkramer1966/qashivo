@@ -32,6 +32,7 @@ import { useState } from "react";
 import { SendSMSDialog } from "./SendSMSDialog";
 import { ApplyAdvanceDialog } from "./ApplyAdvanceDialog";
 import { AIVoiceDialog } from "./AIVoiceDialog";
+import { InsuranceUpgradeDialog } from "./InsuranceUpgradeDialog";
 
 interface Contact {
   name: string;
@@ -66,6 +67,7 @@ export function InvoiceDetailDialog({ invoice, open, onOpenChange }: InvoiceDeta
   const [smsDialogOpen, setSmsDialogOpen] = useState(false);
   const [advanceDialogOpen, setAdvanceDialogOpen] = useState(false);
   const [voiceDialogOpen, setVoiceDialogOpen] = useState(false);
+  const [insuranceDialogOpen, setInsuranceDialogOpen] = useState(false);
   
   // Fetch tenant information for organization name
   const { data: tenant } = useQuery<{ id: string; name: string }>({
@@ -345,7 +347,12 @@ export function InvoiceDetailDialog({ invoice, open, onOpenChange }: InvoiceDeta
                   <p className="text-xs text-slate-500">Provider: Qashivo Insurance Partners</p>
                 </div>
 
-                <Button className="w-full bg-[#17B6C3] hover:bg-[#1396A1]" size="sm">
+                <Button 
+                  className="w-full bg-[#17B6C3] hover:bg-[#1396A1]" 
+                  size="sm"
+                  onClick={() => setInsuranceDialogOpen(true)}
+                  data-testid="button-upgrade-insurance"
+                >
                   <Shield className="h-4 w-4 mr-2" />
                   Upgrade Cover
                 </Button>
@@ -487,6 +494,13 @@ export function InvoiceDetailDialog({ invoice, open, onOpenChange }: InvoiceDeta
         onOpenChange={setVoiceDialogOpen}
         daysOverdue={daysOverdue}
         tenantName={tenant?.name || "Qashivo"}
+      />
+
+      {/* Insurance Upgrade Dialog */}
+      <InsuranceUpgradeDialog
+        invoice={invoice}
+        open={insuranceDialogOpen}
+        onOpenChange={setInsuranceDialogOpen}
       />
     </Dialog>
   );
