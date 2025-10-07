@@ -18,7 +18,6 @@ import Header from "@/components/layout/header";
 import { useCurrency } from "@/hooks/useCurrency";
 import { InvoiceDetailDialog } from "@/components/invoices/InvoiceDetailDialog";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
 
 interface Invoice {
   id: string;
@@ -50,11 +49,16 @@ export default function Invoices() {
 
   const demoCompressionMutation = useMutation({
     mutationFn: async (invoiceId: string) => {
-      return await apiRequest(`/api/demo/compress-schedule`, {
+      const response = await fetch(`/api/demo/compress-schedule`, {
         method: 'POST',
         body: JSON.stringify({ invoiceId }),
         headers: { 'Content-Type': 'application/json' }
       });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to start demo');
+      }
+      return response.json();
     },
     onSuccess: (data: any) => {
       toast({
