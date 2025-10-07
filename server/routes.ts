@@ -2157,6 +2157,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Accept insurance coverage for an invoice
+  app.post("/api/invoices/:invoiceId/accept-insurance", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { invoiceId } = req.params;
+      const { coverageAmount, monthlyPremium, annualPremium, policyTerm } = req.body;
+
+      // Get invoice details
+      const invoice = await storage.getInvoice(invoiceId, user.tenantId);
+      if (!invoice) {
+        return res.status(404).json({ message: "Invoice not found" });
+      }
+
+      // Create an action to record the insurance upgrade
+      const action = await storage.createAction({
+        tenantId: user.tenantId,
+        contactId: invoice.contactId,
+        invoiceId: invoice.id,
+        type: "system",
+        subject: `Insurance Upgraded: ${invoice.invoiceNumber}`,
+        content: `Full coverage insurance activated. Coverage: ${coverageAmount}, Monthly Premium: ${monthlyPremium}, Annual Premium: ${annualPremium}, Term: ${policyTerm}`,
+        status: "completed",
+        scheduledFor: null,
+        completedAt: new Date(),
+        metadata: {
+          insuranceActivated: true,
+          coverageAmount,
+          monthlyPremium,
+          annualPremium,
+          policyTerm,
+          provider: "Qashivo Insurance Partners",
+          activatedAt: new Date().toISOString(),
+        },
+      });
+
+      res.json({
+        success: true,
+        message: "Insurance coverage activated successfully",
+        action,
+      });
+    } catch (error) {
+      console.error("Error activating insurance:", error);
+      res.status(500).json({ message: "Failed to activate insurance", error: error instanceof Error ? error.message : 'Unknown error' });
+    }
+  });
+
   // Contact routes
   app.get("/api/contacts", isAuthenticated, async (req: any, res) => {
     try {
