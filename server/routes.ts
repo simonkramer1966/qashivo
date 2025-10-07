@@ -1893,6 +1893,129 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Initiate AI voice call for invoice
+  app.post("/api/invoices/:id/initiate-voice-call", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { id: invoiceId } = req.params;
+      const { scriptType } = req.body;
+
+      // Validate script type
+      const validScripts = ["soft", "professional", "firm", "final"];
+      if (!scriptType || !validScripts.includes(scriptType)) {
+        return res.status(400).json({ message: "Invalid voice script selected" });
+      }
+
+      // Get invoice with contact details
+      const invoice = await storage.getInvoice(invoiceId, user.tenantId);
+      if (!invoice) {
+        return res.status(404).json({ message: "Invoice not found" });
+      }
+
+      if (!invoice.contact?.phone) {
+        return res.status(400).json({ message: "Contact phone number not available" });
+      }
+
+      // Get tenant details for organization name
+      const tenant = await storage.getTenant(user.tenantId);
+      if (!tenant) {
+        return res.status(400).json({ message: "Tenant not found" });
+      }
+
+      // Calculate days overdue
+      const today = new Date();
+      const due = new Date(invoice.dueDate);
+      const daysOverdue = Math.max(0, Math.floor((today.getTime() - due.getTime()) / (1000 * 60 * 60 * 24)));
+
+      // Prepare dynamic variables for Retell AI
+      const customerName = invoice.contact.name || invoice.contact.companyName || "Customer";
+      const nameParts = (invoice.contact.name || "").split(' ');
+      const firstName = nameParts[0] || invoice.contact.name || "Customer";
+      const amount = `£${Number(invoice.amount).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+      const dueDate = new Date(invoice.dueDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+
+      const dynamicVariables = {
+        customer_name: customerName,
+        first_name: firstName,
+        organisation_name: tenant.name,
+        invoice_number: invoice.invoiceNumber,
+        invoice_amount: amount,
+        due_date: dueDate,
+        days_overdue: daysOverdue.toString(),
+        script_type: scriptType,
+        total_outstanding: amount,
+      };
+
+      // Get Retell agent ID from environment
+      const agentId = process.env.RETELL_AGENT_ID;
+      if (!agentId) {
+        return res.status(500).json({ message: "Retell agent not configured" });
+      }
+
+      // Import and use RetellService
+      const RetellService = (await import('./retell-service.js')).default;
+      const retellService = new RetellService();
+
+      // Initiate call
+      const callResult = await retellService.createCall({
+        fromNumber: process.env.VONAGE_PHONE_NUMBER || '',
+        toNumber: invoice.contact.phone,
+        agentId: agentId,
+        dynamicVariables,
+        metadata: {
+          tenantId: user.tenantId,
+          invoiceId: invoice.id,
+          contactId: invoice.contactId,
+          scriptType,
+          daysOverdue: daysOverdue.toString(),
+        },
+      });
+
+      console.log(`📞 AI voice call initiated: ${callResult.callId} to ${invoice.contact.phone}`);
+
+      // Log the action
+      await storage.createAction({
+        tenantId: user.tenantId,
+        invoiceId: invoice.id,
+        contactId: invoice.contactId,
+        userId: user.id,
+        type: 'ai_voice',
+        status: 'scheduled',
+        subject: `AI Voice Call (${scriptType}) - Invoice ${invoice.invoiceNumber}`,
+        content: `Automated collection call initiated to ${customerName}`,
+        scheduledFor: new Date(),
+        metadata: {
+          callId: callResult.callId,
+          scriptType,
+          agentId: callResult.agentId,
+          daysOverdue,
+        },
+      });
+
+      // Update invoice reminder tracking
+      await storage.updateInvoice(invoiceId, user.tenantId, {
+        lastReminderSent: new Date(),
+        reminderCount: (invoice.reminderCount || 0) + 1,
+      });
+
+      res.json({
+        success: true,
+        callId: callResult.callId,
+        message: `AI voice call initiated to ${customerName}`,
+        toNumber: invoice.contact.phone,
+      });
+    } catch (error: any) {
+      console.error("Error initiating AI voice call:", error);
+      res.status(500).json({ 
+        message: error.message || "Failed to initiate AI voice call" 
+      });
+    }
+  });
+
   // Get outstanding invoices for a specific contact (for payment plan creation)
   app.get("/api/invoices/outstanding/:contactId", isAuthenticated, async (req: any, res) => {
     try {
