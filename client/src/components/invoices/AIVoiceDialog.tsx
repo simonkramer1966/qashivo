@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -93,6 +93,13 @@ export function AIVoiceDialog({ invoice, open, onOpenChange, daysOverdue, tenant
 
   const [selectedScript, setSelectedScript] = useState<VoiceScript>(getDefaultScript());
 
+  // Reset script selection when invoice or daysOverdue changes
+  useEffect(() => {
+    if (open && invoice) {
+      setSelectedScript(getDefaultScript());
+    }
+  }, [invoice?.id, daysOverdue, open]);
+
   const initiateCallMutation = useMutation({
     mutationFn: async () => {
       if (!invoice) return;
@@ -136,11 +143,12 @@ export function AIVoiceDialog({ invoice, open, onOpenChange, daysOverdue, tenant
     const customerName = invoice.contact.name || invoice.contact.companyName || "Customer";
     const nameParts = (invoice.contact.name || "").split(' ');
     const firstName = nameParts[0] || invoice.contact.name || "Customer";
+    const safeTenantName = tenantName || "your organization";
     
     return content
       .replace(/{customerName}/g, customerName)
       .replace(/{firstName}/g, firstName)
-      .replace(/{organisationName}/g, tenantName)
+      .replace(/{organisationName}/g, safeTenantName)
       .replace(/{invoiceNumber}/g, invoice.invoiceNumber)
       .replace(/{amount}/g, formatCurrency(invoice.amount))
       .replace(/{dueDate}/g, new Date(invoice.dueDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }))
