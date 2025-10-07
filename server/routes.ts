@@ -2776,6 +2776,76 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Schedule manual action with specific time
+  app.post("/api/actions/schedule", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { 
+        invoiceId, 
+        contactId, 
+        actionType, 
+        scheduledFor, 
+        subject, 
+        content 
+      } = req.body;
+
+      // Validate required fields
+      if (!contactId || !actionType || !scheduledFor) {
+        return res.status(400).json({ 
+          message: "Missing required fields: contactId, actionType, scheduledFor" 
+        });
+      }
+
+      // Parse and validate scheduledFor datetime
+      const scheduledDate = new Date(scheduledFor);
+      if (isNaN(scheduledDate.getTime())) {
+        return res.status(400).json({ message: "Invalid scheduledFor date format" });
+      }
+
+      // Check if scheduled time is in the past
+      if (scheduledDate < new Date()) {
+        return res.status(400).json({ message: "Scheduled time must be in the future" });
+      }
+
+      // Create scheduled action
+      const actionData = {
+        tenantId: user.tenantId,
+        invoiceId: invoiceId || null,
+        contactId,
+        userId: user.id,
+        type: actionType,
+        status: 'scheduled',
+        subject: subject || null,
+        content: content || null,
+        scheduledFor: scheduledDate,
+        source: 'manual',
+        metadata: {
+          createdBy: user.id,
+          createdByName: `${user.firstName} ${user.lastName}`.trim(),
+        }
+      };
+
+      const action = await storage.createAction(actionData);
+      
+      console.log(`✅ Manual action scheduled: ${actionType} to ${contactId} at ${scheduledDate.toISOString()}`);
+      
+      res.status(201).json({
+        ...action,
+        message: `${actionType} scheduled for ${scheduledDate.toLocaleString('en-GB')}`
+      });
+    } catch (error) {
+      console.error("Error scheduling manual action:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid action data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to schedule action" });
+    }
+  });
+
   // AI suggestions
   app.post("/api/ai/suggestions", isAuthenticated, async (req: any, res) => {
     try {
