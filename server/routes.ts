@@ -235,6 +235,10 @@ if (process.env.STRIPE_SECRET_KEY) {
 const actionPrioritizationService = new ActionPrioritizationService();
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Webhook routes (must be before auth middleware)
+  const { registerWebhookRoutes } = await import("./routes/webhooks");
+  registerWebhookRoutes(app);
+  
   // Auth middleware
   await setupAuth(app);
 
