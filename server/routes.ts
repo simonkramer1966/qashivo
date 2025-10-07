@@ -1902,13 +1902,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const { id: invoiceId } = req.params;
-      const { scriptType } = req.body;
+      const { scriptType, agentTierId } = req.body;
 
       // Validate script type
       const validScripts = ["soft", "professional", "firm", "final"];
       if (!scriptType || !validScripts.includes(scriptType)) {
         return res.status(400).json({ message: "Invalid voice script selected" });
       }
+
+      // Import agent manager
+      const { getAgentManager } = await import('./services/agentManager.js');
+      const agentManager = getAgentManager();
 
       // Get invoice with contact details
       const invoice = await storage.getInvoice(invoiceId, user.tenantId);
@@ -1950,8 +1954,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         total_outstanding: amount,
       };
 
-      // Get Retell agent ID from environment
-      const agentId = process.env.RETELL_AGENT_ID;
+      // Determine which agent to use based on selection or days overdue
+      let selectedAgent;
+      if (agentTierId) {
+        // Use explicitly selected agent
+        selectedAgent = agentManager.getAgentByTierId(agentTierId);
+        if (!selectedAgent) {
+          return res.status(400).json({ message: "Invalid agent tier selected" });
+        }
+      } else {
+        // Auto-select based on days overdue
+        selectedAgent = agentManager.getAgentForInvoice(daysOverdue);
+      }
+
+      // Get or use fallback agent ID
+      const agentId = agentManager.getRetellAgentId(selectedAgent.id) || process.env.RETELL_AGENT_ID;
       if (!agentId) {
         return res.status(500).json({ message: "Retell agent not configured" });
       }
@@ -1985,13 +2002,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userId: user.id,
         type: 'ai_voice',
         status: 'scheduled',
-        subject: `AI Voice Call (${scriptType}) - Invoice ${invoice.invoiceNumber}`,
-        content: `Automated collection call initiated to ${customerName}`,
+        subject: `AI Voice Call (${selectedAgent.name}) - Invoice ${invoice.invoiceNumber}`,
+        content: `Automated collection call initiated to ${customerName} using ${selectedAgent.name}`,
         scheduledFor: new Date(),
         metadata: {
           callId: callResult.callId,
           scriptType,
           agentId: callResult.agentId,
+          agentTierId: selectedAgent.id,
+          agentName: selectedAgent.name,
           daysOverdue,
         },
       });
@@ -2005,8 +2024,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({
         success: true,
         callId: callResult.callId,
-        message: `AI voice call initiated to ${customerName}`,
+        message: `AI voice call initiated to ${customerName} using ${selectedAgent.name}`,
         toNumber: invoice.contact.phone,
+        agentUsed: {
+          id: selectedAgent.id,
+          name: selectedAgent.name,
+          tone: selectedAgent.tone,
+        },
       });
     } catch (error: any) {
       console.error("Error initiating AI voice call:", error);
@@ -8210,6 +8234,45 @@ Payment required immediately to avoid collection action. Contact us NOW.`
     } catch (error) {
       console.error("Error fetching voice calls:", error);
       res.status(500).json({ message: "Failed to fetch voice calls" });
+    }
+  });
+
+  // Get available agent tiers for multi-agent escalation
+  app.get("/api/retell/agent-tiers", isAuthenticated, async (req: any, res) => {
+    try {
+      const { getAgentManager } = await import('./services/agentManager.js');
+      const agentManager = getAgentManager();
+      
+      const { daysOverdue } = req.query;
+      
+      // Get all available agent tiers
+      const tiers = agentManager.getAllAgentTiers();
+      
+      // If days overdue provided, include recommendation
+      let recommendation = null;
+      if (daysOverdue) {
+        const days = parseInt(daysOverdue as string);
+        recommendation = agentManager.getRecommendedAgent(days);
+      }
+      
+      res.json({
+        tiers: tiers.map(tier => ({
+          id: tier.id,
+          name: tier.name,
+          description: tier.description,
+          daysOverdueMin: tier.daysOverdueMin,
+          daysOverdueMax: tier.daysOverdueMax,
+          tone: tier.tone,
+        })),
+        recommendation: recommendation ? {
+          tierId: recommendation.tier.id,
+          tierName: recommendation.tier.name,
+          recommended: recommendation.recommended,
+        } : null,
+      });
+    } catch (error) {
+      console.error("Error fetching agent tiers:", error);
+      res.status(500).json({ message: "Failed to fetch agent tiers" });
     }
   });
 

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Dialog,
   DialogContent,
@@ -12,8 +12,8 @@ import { Badge } from "@/components/ui/badge";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { Mic, Phone, AlertCircle } from "lucide-react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Mic, Phone, AlertCircle, Bot } from "lucide-react";
+import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { useCurrency } from "@/hooks/useCurrency";
 
@@ -40,6 +40,24 @@ interface AIVoiceDialogProps {
 }
 
 type VoiceScript = "soft" | "professional" | "firm" | "final";
+
+interface AgentTier {
+  id: string;
+  name: string;
+  description: string;
+  daysOverdueMin: number;
+  daysOverdueMax: number;
+  tone: string;
+}
+
+interface AgentTiersResponse {
+  tiers: AgentTier[];
+  recommendation: {
+    tierId: string;
+    tierName: string;
+    recommended: boolean;
+  } | null;
+}
 
 const voiceScripts: Record<VoiceScript, { 
   label: string; 
@@ -83,6 +101,12 @@ export function AIVoiceDialog({ invoice, open, onOpenChange, daysOverdue, tenant
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
+  // Fetch available agent tiers
+  const { data: agentTiersData } = useQuery<AgentTiersResponse>({
+    queryKey: ['/api/retell/agent-tiers', daysOverdue],
+    enabled: open,
+  });
+
   // Auto-select script based on days overdue
   const getDefaultScript = (): VoiceScript => {
     if (daysOverdue <= 14) return "soft";
@@ -92,6 +116,8 @@ export function AIVoiceDialog({ invoice, open, onOpenChange, daysOverdue, tenant
   };
 
   const [selectedScript, setSelectedScript] = useState<VoiceScript>(getDefaultScript());
+  const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
+  const hasInitializedAgentSelection = useRef(false);
 
   // Reset script selection when invoice or daysOverdue changes
   useEffect(() => {
@@ -99,6 +125,19 @@ export function AIVoiceDialog({ invoice, open, onOpenChange, daysOverdue, tenant
       setSelectedScript(getDefaultScript());
     }
   }, [invoice?.id, daysOverdue, open]);
+
+  // Auto-select recommended agent ONLY on initial load
+  useEffect(() => {
+    if (open && invoice && agentTiersData?.recommendation && !hasInitializedAgentSelection.current) {
+      setSelectedAgentId(agentTiersData.recommendation.tierId);
+      hasInitializedAgentSelection.current = true;
+    }
+    
+    // Reset the ref when dialog closes so next open will auto-select again
+    if (!open) {
+      hasInitializedAgentSelection.current = false;
+    }
+  }, [open, invoice, agentTiersData]);
 
   const initiateCallMutation = useMutation({
     mutationFn: async () => {
@@ -109,6 +148,7 @@ export function AIVoiceDialog({ invoice, open, onOpenChange, daysOverdue, tenant
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           scriptType: selectedScript,
+          agentTierId: selectedAgentId,
         }),
       });
 
@@ -173,6 +213,59 @@ export function AIVoiceDialog({ invoice, open, onOpenChange, daysOverdue, tenant
         </DialogHeader>
 
         <div className="space-y-4 overflow-y-auto flex-1 pr-2">
+          {/* Agent Selection */}
+          {agentTiersData && agentTiersData.tiers.length > 0 && (
+            <div>
+              <Label className="text-sm font-semibold mb-3 block flex items-center gap-2">
+                <Bot className="h-4 w-4 text-[#17B6C3]" />
+                AI Agent Personality
+              </Label>
+              <RadioGroup
+                value={selectedAgentId || ''}
+                onValueChange={setSelectedAgentId}
+                className="space-y-3"
+              >
+                {agentTiersData.tiers.map((agent) => {
+                  const isRecommended = agent.id === agentTiersData.recommendation?.tierId;
+                  
+                  return (
+                    <div
+                      key={agent.id}
+                      className={`relative flex items-start space-x-3 rounded-lg border p-4 cursor-pointer transition-colors ${
+                        selectedAgentId === agent.id
+                          ? "border-[#17B6C3] bg-[#17B6C3]/5"
+                          : "border-slate-200 hover:border-slate-300"
+                      }`}
+                    >
+                      <RadioGroupItem
+                        value={agent.id}
+                        id={`agent-${agent.id}`}
+                        className="mt-1"
+                        data-testid={`radio-agent-${agent.id}`}
+                      />
+                      <Label htmlFor={`agent-${agent.id}`} className="flex-1 cursor-pointer">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="font-medium">{agent.name}</span>
+                          {isRecommended && (
+                            <Badge variant="secondary" className="bg-[#17B6C3]/10 text-[#17B6C3] border-[#17B6C3]/20">
+                              Recommended ({agent.daysOverdueMin}-{agent.daysOverdueMax} days)
+                            </Badge>
+                          )}
+                          <Badge variant="outline" className="text-xs">
+                            {agent.tone}
+                          </Badge>
+                        </div>
+                        <p className="text-sm text-slate-600">{agent.description}</p>
+                      </Label>
+                    </div>
+                  );
+                })}
+              </RadioGroup>
+            </div>
+          )}
+
+          {agentTiersData && agentTiersData.tiers.length > 0 && <Separator />}
+
           {/* Script Selection */}
           <div>
             <Label className="text-sm font-semibold mb-3 block">Call Script</Label>

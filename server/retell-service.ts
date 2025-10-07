@@ -106,13 +106,15 @@ export class RetellService {
     voiceId?: string;
     instructions?: string;
     responseEngine?: any;
+    webhookUrl?: string;
+    agentName?: string;
   }): Promise<any> {
     try {
       // Create agent with proper Retell configuration
-      const agentConfig = {
-        agent_name: "Nexus AR Collections Agent",
+      const agentConfig: any = {
+        agent_name: config.agentName || "Nexus AR Collections Agent",
         voice_id: config.voiceId || "11labs-Adrian",
-        response_engine: {
+        response_engine: config.responseEngine || {
           type: "retell-llm" as const,
           llm_id: "gpt-4"
         },
@@ -184,6 +186,11 @@ export class RetellService {
         states: [],
         starting_state: "default"
       };
+
+      // Add webhook URL if provided
+      if (config.webhookUrl) {
+        agentConfig.webhook_url = config.webhookUrl;
+      }
 
       const retellClient = getRetellClient();
       return await retellClient.agent.create(agentConfig);
