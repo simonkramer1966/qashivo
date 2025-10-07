@@ -26,9 +26,12 @@ import {
   TrendingUp
 } from "lucide-react";
 import { useCurrency } from "@/hooks/useCurrency";
+import { useAuth } from "@/hooks/useAuth";
+import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { SendSMSDialog } from "./SendSMSDialog";
 import { ApplyAdvanceDialog } from "./ApplyAdvanceDialog";
+import { AIVoiceDialog } from "./AIVoiceDialog";
 
 interface Contact {
   name: string;
@@ -57,10 +60,19 @@ interface InvoiceDetailDialogProps {
 
 export function InvoiceDetailDialog({ invoice, open, onOpenChange }: InvoiceDetailDialogProps) {
   const { formatCurrency } = useCurrency();
+  const { user } = useAuth();
   const [contactInfoOpen, setContactInfoOpen] = useState(true);
   const [automationOpen, setAutomationOpen] = useState(true);
   const [smsDialogOpen, setSmsDialogOpen] = useState(false);
   const [advanceDialogOpen, setAdvanceDialogOpen] = useState(false);
+  const [voiceDialogOpen, setVoiceDialogOpen] = useState(false);
+  
+  // Fetch tenant information for organization name
+  const { data: tenant } = useQuery<{ id: string; name: string }>({
+    queryKey: ['/api/tenant'],
+    enabled: !!user,
+    staleTime: 15 * 60 * 1000,
+  });
   
   if (!invoice) return null;
 
@@ -430,7 +442,14 @@ export function InvoiceDetailDialog({ invoice, open, onOpenChange }: InvoiceDeta
               <MessageSquare className="h-4 w-4 mr-2" />
               SMS
             </Button>
-            <Button variant="outline" size="sm" className="touch-target">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="touch-target"
+              onClick={() => setVoiceDialogOpen(true)}
+              disabled={!invoice.contact?.phone}
+              data-testid="button-open-voice-dialog"
+            >
               <Mic className="h-4 w-4 mr-2" />
               AI Voice
             </Button>
@@ -459,6 +478,15 @@ export function InvoiceDetailDialog({ invoice, open, onOpenChange }: InvoiceDeta
         invoice={invoice}
         open={advanceDialogOpen}
         onOpenChange={setAdvanceDialogOpen}
+      />
+
+      {/* AI Voice Dialog */}
+      <AIVoiceDialog
+        invoice={invoice}
+        open={voiceDialogOpen}
+        onOpenChange={setVoiceDialogOpen}
+        daysOverdue={daysOverdue}
+        tenantName={tenant?.name || "Qashivo"}
       />
     </Dialog>
   );
