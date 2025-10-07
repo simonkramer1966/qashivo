@@ -2802,6 +2802,149 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Demo: Compress schedule into 5-minute window for investor demo
+  app.post("/api/demo/compress-schedule", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { invoiceId } = req.body;
+      if (!invoiceId) {
+        return res.status(400).json({ message: "Invoice ID required" });
+      }
+
+      // Get invoice with contact and schedule
+      const invoiceData = await db
+        .select({
+          invoice: invoices,
+          contact: contacts,
+          assignment: customerScheduleAssignments,
+          schedule: collectionSchedules,
+        })
+        .from(invoices)
+        .innerJoin(contacts, eq(invoices.contactId, contacts.id))
+        .leftJoin(
+          customerScheduleAssignments,
+          and(
+            eq(customerScheduleAssignments.contactId, contacts.id),
+            eq(customerScheduleAssignments.isActive, true)
+          )
+        )
+        .leftJoin(
+          collectionSchedules,
+          eq(collectionSchedules.id, customerScheduleAssignments.scheduleId)
+        )
+        .where(eq(invoices.id, invoiceId))
+        .limit(1);
+
+      if (!invoiceData.length) {
+        return res.status(404).json({ message: "Invoice not found" });
+      }
+
+      const { invoice, contact, schedule } = invoiceData[0];
+
+      if (!schedule) {
+        return res.status(400).json({ message: "No collection schedule assigned to this customer" });
+      }
+
+      // Parse schedule steps
+      const scheduleSteps = Array.isArray(schedule.scheduleSteps) 
+        ? schedule.scheduleSteps 
+        : [];
+
+      if (scheduleSteps.length === 0) {
+        return res.status(400).json({ message: "Schedule has no steps defined" });
+      }
+
+      // Generate demo session ID
+      const demoSessionId = `demo_${Date.now()}`;
+      const now = new Date();
+      const createdActions = [];
+
+      // Compress schedule steps into 5-minute window
+      for (let i = 0; i < scheduleSteps.length && i < 5; i++) {
+        const step = scheduleSteps[i];
+        const scheduledFor = new Date(now.getTime() + (i * 60 * 1000)); // Each step 1 minute apart
+
+        const actionData = {
+          tenantId: user.tenantId,
+          invoiceId: invoice.id,
+          contactId: contact.id,
+          userId: user.id,
+          type: step.actionType,
+          status: 'scheduled',
+          subject: step.subject,
+          content: step.content,
+          scheduledFor,
+          source: 'automated',
+          metadata: {
+            demoMode: true,
+            demoSessionId,
+            originalDaysTrigger: step.daysTrigger,
+            scheduleStepIndex: i,
+            scheduleName: schedule.name,
+          }
+        };
+
+        const action = await storage.createAction(actionData);
+        createdActions.push({
+          ...action,
+          minuteOffset: i,
+          originalDay: step.daysTrigger,
+        });
+      }
+
+      console.log(`🎬 Demo compression created ${createdActions.length} actions for invoice ${invoiceId} (session: ${demoSessionId})`);
+
+      res.json({
+        demoSessionId,
+        invoiceNumber: invoice.invoiceNumber,
+        contactName: contact.name,
+        scheduleName: schedule.name,
+        actionsCreated: createdActions.length,
+        actions: createdActions,
+        message: `Demo schedule compressed into ${createdActions.length} minutes. Actions will execute starting now.`
+      });
+    } catch (error) {
+      console.error("Error creating demo compression:", error);
+      res.status(500).json({ message: "Failed to create demo compression" });
+    }
+  });
+
+  // Demo: Cleanup demo actions
+  app.delete("/api/demo/cleanup/:sessionId", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { sessionId } = req.params;
+
+      // Delete all actions for this demo session
+      const result = await db
+        .delete(actions)
+        .where(
+          and(
+            eq(actions.tenantId, user.tenantId),
+            sql`${actions.metadata}->>'demoSessionId' = ${sessionId}`
+          )
+        );
+
+      console.log(`🧹 Demo cleanup: Removed demo session ${sessionId}`);
+
+      res.json({
+        message: "Demo session cleaned up successfully",
+        sessionId
+      });
+    } catch (error) {
+      console.error("Error cleaning up demo session:", error);
+      res.status(500).json({ message: "Failed to cleanup demo session" });
+    }
+  });
+
   // Schedule manual action with specific time
   app.post("/api/actions/schedule", isAuthenticated, async (req: any, res) => {
     try {
