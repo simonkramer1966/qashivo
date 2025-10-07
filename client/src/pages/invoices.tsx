@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,13 +9,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { 
   Search, 
   ChevronRight,
-  Banknote
+  Banknote,
+  PlayCircle
 } from "lucide-react";
 import NewSidebar from "@/components/layout/new-sidebar";
 import BottomNav from "@/components/layout/bottom-nav";
 import Header from "@/components/layout/header";
 import { useCurrency } from "@/hooks/useCurrency";
 import { InvoiceDetailDialog } from "@/components/invoices/InvoiceDetailDialog";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 
 interface Invoice {
   id: string;
@@ -38,11 +41,40 @@ interface Invoice {
 export default function Invoices() {
   const [, setLocation] = useLocation();
   const { formatCurrency } = useCurrency();
+  const { toast } = useToast();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState('overdue');
   const [page, setPage] = useState(1);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const limit = 20;
+
+  const demoCompressionMutation = useMutation({
+    mutationFn: async (invoiceId: string) => {
+      return await apiRequest(`/api/demo/compress-schedule`, {
+        method: 'POST',
+        body: JSON.stringify({ invoiceId }),
+        headers: { 'Content-Type': 'application/json' }
+      });
+    },
+    onSuccess: (data: any) => {
+      toast({
+        title: "Demo Started! 🎬",
+        description: data.message || `${data.actionsCreated} actions scheduled in ${data.actionsCreated}-minute window`,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        variant: "destructive",
+        title: "Demo Failed",
+        description: error.message || "Failed to start demo compression",
+      });
+    }
+  });
+
+  const handleDemoStart = (e: React.MouseEvent, invoiceId: string) => {
+    e.stopPropagation(); // Prevent invoice detail dialog from opening
+    demoCompressionMutation.mutate(invoiceId);
+  };
 
   const { data: invoicesData, isLoading } = useQuery<{
     invoices: Invoice[];
@@ -246,7 +278,21 @@ export default function Invoices() {
                           }
                         </p>
                       </div>
-                      <ChevronRight className="h-5 w-5 text-slate-400 flex-shrink-0" />
+                      <div className="flex items-center gap-2">
+                        {invoice.status !== 'paid' && daysOverdue > 0 && (
+                          <Button
+                            onClick={(e) => handleDemoStart(e, invoice.id)}
+                            variant="ghost"
+                            size="sm"
+                            className="h-9 px-2 text-[#17B6C3] hover:text-[#1396A1] hover:bg-[#17B6C3]/10"
+                            disabled={demoCompressionMutation.isPending}
+                            data-testid={`button-demo-mobile-${invoice.id}`}
+                          >
+                            <PlayCircle className="h-4 w-4" />
+                          </Button>
+                        )}
+                        <ChevronRight className="h-5 w-5 text-slate-400 flex-shrink-0" />
+                      </div>
                     </div>
                   </div>
                 );
@@ -279,8 +325,9 @@ export default function Invoices() {
                   <div className="col-span-2">Invoice #</div>
                   <div className="col-span-2">Amount</div>
                   <div className="col-span-2">{statusFilter === 'paid' ? 'Paid Date' : 'Due Date'}</div>
-                  <div className="col-span-2">Days Overdue</div>
+                  <div className="col-span-1">Days Overdue</div>
                   <div className="col-span-1 text-right">Status</div>
+                  <div className="col-span-1 text-right">Demo</div>
                 </div>
 
                 {/* Table Rows */}
@@ -329,7 +376,7 @@ export default function Invoices() {
                       </div>
 
                       {/* Days Overdue */}
-                      <div className="col-span-2 flex items-center">
+                      <div className="col-span-1 flex items-center">
                         {invoice.status === 'paid' ? (
                           <p className="text-sm text-slate-500">-</p>
                         ) : daysOverdue > 0 ? (
@@ -344,6 +391,22 @@ export default function Invoices() {
                       {/* Status */}
                       <div className="col-span-1 flex items-center justify-end">
                         {getStatusBadge(invoice)}
+                      </div>
+
+                      {/* Demo Button */}
+                      <div className="col-span-1 flex items-center justify-end">
+                        {invoice.status !== 'paid' && daysOverdue > 0 && (
+                          <Button
+                            onClick={(e) => handleDemoStart(e, invoice.id)}
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 px-2 text-[#17B6C3] hover:text-[#1396A1] hover:bg-[#17B6C3]/10"
+                            disabled={demoCompressionMutation.isPending}
+                            data-testid={`button-demo-${invoice.id}`}
+                          >
+                            <PlayCircle className="h-4 w-4" />
+                          </Button>
+                        )}
                       </div>
                     </div>
                   );
