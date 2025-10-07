@@ -480,8 +480,8 @@ export const actions = pgTable("actions", {
   invoiceId: varchar("invoice_id").references(() => invoices.id),
   contactId: varchar("contact_id").references(() => contacts.id),
   userId: varchar("user_id").references(() => users.id),
-  type: varchar("type").notNull(), // email, sms, call, payment, note, workflow_start, workflow_step
-  status: varchar("status").notNull().default("pending"), // pending, completed, failed, cancelled
+  type: varchar("type").notNull(), // email, sms, call, whatsapp, payment, note, workflow_start, workflow_step
+  status: varchar("status").notNull().default("pending"), // pending, scheduled, executing, completed, failed, cancelled
   subject: varchar("subject"),
   content: text("content"),
   scheduledFor: timestamp("scheduled_for"),
@@ -489,6 +489,7 @@ export const actions = pgTable("actions", {
   metadata: jsonb("metadata"), // Additional data like email ID, SMS ID, etc.
   workflowStepId: varchar("workflow_step_id"),
   aiGenerated: boolean("ai_generated").default(false),
+  source: varchar("source").default("automated"), // automated, manual
   
   // Intent detection fields (for inbound SMS/voice)
   intentType: varchar("intent_type"), // payment_plan, dispute, promise_to_pay, general_query
