@@ -93,7 +93,22 @@ The application utilizes a Premium Glassmorphism UI, featuring a `bg-gradient-to
 Core entities include Users, Tenants, Contacts, Invoices, Actions, and Workflows, with multi-tenant architecture and Zod validation.
 
 ### Communication Channels
-Integrations for automated email (SendGrid), SMS (Vonage), and AI-driven suggestions (OpenAI).
+Integrations for automated email (SendGrid), SMS (Vonage), WhatsApp (Vonage), and AI voice calls (Retell AI).
+
+**AI Voice Dialog (NEW - Oct 2025):**
+Intelligent voice call initiation with personalized scripts that adapt to overdue severity:
+- **4 Script Templates**: Soft Approach (≤14 days), Professional Follow-up (≤30 days), Firm Collection (≤60 days), Final Notice (>60 days)
+- **Auto-Selection**: Recommends script based on days overdue with visual badge
+- **Dynamic Variables**: Customer name, invoice details, organization name, amounts
+- **Compliance**: Identity verification, call recording disclosure
+- **Intent Capture**: Automatic transcript logging and sentiment analysis via Retell webhook
+- **Smart Reset**: Script selection resets per invoice to ensure appropriate tone
+- **Mobile-First**: Scrollable dialog with fixed headers (max-h-85vh)
+
+Implementation:
+- Frontend: `client/src/components/invoices/AIVoiceDialog.tsx`
+- Backend: `/api/invoices/:id/initiate-voice-call` endpoint in `server/routes.ts`
+- Service: Retell AI integration via `server/retell-service.ts`
 
 ### Universal API Middleware
 Provides a standardized interface for accounting software integrations, including OAuth token management, data transformation, and secure token injection. A production-ready XeroProvider is implemented.
