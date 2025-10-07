@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -73,6 +73,27 @@ function getSmartTimestamp(date: string): string {
   return actionDate.toLocaleDateString();
 }
 
+// Countdown timer helper
+function getCountdown(scheduledFor: string): string {
+  const now = new Date();
+  const scheduled = new Date(scheduledFor);
+  const diffMs = scheduled.getTime() - now.getTime();
+  
+  if (diffMs <= 0) return 'Executing...';
+  
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+  
+  if (diffMins < 1) return 'In < 1min';
+  if (diffMins < 60) return `In ${diffMins}min`;
+  if (diffHours < 24) {
+    const mins = diffMins % 60;
+    return `In ${diffHours}h ${mins}m`;
+  }
+  return `In ${diffDays}d ${diffHours % 24}h`;
+}
+
 export default function ActionCentre() {
   const [, setLocation] = useLocation();
   const [searchQuery, setSearchQuery] = useState("");
@@ -85,10 +106,21 @@ export default function ActionCentre() {
   const [channelFilters, setChannelFilters] = useState<string[]>([]);
   const [intentFilters, setIntentFilters] = useState<string[]>([]);
   const [statusFilters, setStatusFilters] = useState<string[]>([]);
+  
+  // Countdown refresh trigger
+  const [countdownTick, setCountdownTick] = useState(0);
 
   const { data: actions = [], isLoading } = useQuery<Action[]>({
     queryKey: ['/api/actions'],
   });
+  
+  // Update countdowns every minute
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCountdownTick(prev => prev + 1);
+    }, 60000); // 60 seconds
+    return () => clearInterval(interval);
+  }, []);
 
   const getIntentBadge = (intentType: string | null) => {
     if (!intentType) return null;
@@ -240,6 +272,13 @@ export default function ActionCentre() {
   const needsActionCount = actions.filter(a => 
     a.metadata?.direction === 'inbound' && a.intentType && a.status !== 'resolved'
   ).length;
+  
+  // Get scheduled actions (sorted by scheduled time)
+  const scheduledActions = useMemo(() => {
+    return actions
+      .filter(a => a.status === 'scheduled' && a.scheduledFor)
+      .sort((a, b) => new Date(a.scheduledFor!).getTime() - new Date(b.scheduledFor!).getTime());
+  }, [actions, countdownTick]); // Re-calculate when countdownTick changes
 
   return (
     <div className="flex h-screen bg-white">
@@ -564,6 +603,67 @@ export default function ActionCentre() {
               </p>
             </div>
           </div>
+
+          {/* Scheduled Queue */}
+          {scheduledActions.length > 0 && (
+            <div className="mb-6">
+              <div className="flex items-center gap-2 mb-3">
+                <Clock className="h-5 w-5 text-[#17B6C3]" />
+                <h3 className="text-lg font-bold text-slate-900">Scheduled Queue</h3>
+                <Badge className="bg-[#17B6C3]/10 text-[#17B6C3] border-[#17B6C3]/20">
+                  {scheduledActions.length}
+                </Badge>
+              </div>
+              <div className="grid gap-3">
+                {scheduledActions.slice(0, 5).map((action) => (
+                  <div 
+                    key={action.id} 
+                    className="card-apple p-4 border-l-4 border-l-[#17B6C3]"
+                    data-testid={`scheduled-action-${action.id}`}
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        {/* Channel Icon */}
+                        <div className={`p-2 rounded-lg ${getChannelColor(action.type)}`}>
+                          {getActionIcon(action.type)}
+                        </div>
+                        
+                        {/* Details */}
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-semibold text-slate-900 truncate">
+                            {action.subject || `${action.type} to contact`}
+                          </h4>
+                          <p className="text-sm text-slate-600">
+                            {new Date(action.scheduledFor!).toLocaleString('en-GB', {
+                              weekday: 'short',
+                              month: 'short',
+                              day: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </p>
+                        </div>
+                      </div>
+                      
+                      {/* Countdown Badge */}
+                      <Badge 
+                        className="bg-amber-100 text-amber-800 border-amber-200 font-mono"
+                        data-testid={`countdown-${action.id}`}
+                      >
+                        <Clock className="h-3 w-3 mr-1" />
+                        {getCountdown(action.scheduledFor!)}
+                      </Badge>
+                    </div>
+                  </div>
+                ))}
+                {scheduledActions.length > 5 && (
+                  <p className="text-sm text-slate-500 text-center">
+                    + {scheduledActions.length - 5} more scheduled
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Action List */}
           <div className="space-y-3">
