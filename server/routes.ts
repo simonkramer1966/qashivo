@@ -1962,7 +1962,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Initiate call
       const callResult = await retellService.createCall({
-        fromNumber: process.env.VONAGE_PHONE_NUMBER || '',
+        fromNumber: process.env.RETELL_PHONE_NUMBER || '',
         toNumber: invoice.contact.phone,
         agentId: agentId,
         dynamicVariables,
