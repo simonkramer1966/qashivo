@@ -2780,6 +2780,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get inbound messages with intent analysis
+  app.get("/api/inbound-messages", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const messages = await db
+        .select()
+        .from(inboundMessages)
+        .where(eq(inboundMessages.tenantId, user.tenantId))
+        .orderBy(sql`${inboundMessages.createdAt} DESC`)
+        .limit(100);
+
+      res.json(messages);
+    } catch (error) {
+      console.error("Error fetching inbound messages:", error);
+      res.status(500).json({ message: "Failed to fetch inbound messages" });
+    }
+  });
+
   // Schedule manual action with specific time
   app.post("/api/actions/schedule", isAuthenticated, async (req: any, res) => {
     try {

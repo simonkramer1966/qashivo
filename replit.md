@@ -33,6 +33,33 @@ All data formatted to match Xero's exact structure and field formats.
 
 ## System Architecture
 
+### Intent Analyst System (NEW - Oct 2025)
+AI-powered inbound communication analysis that automatically processes all incoming messages:
+
+**Three-Layer Architecture:**
+1. **Webhook Layer**: Captures inbound comms from SendGrid (email), Vonage (SMS/WhatsApp), Retell (voice)
+2. **AI Analysis Engine**: OpenAI-powered intent detection with confidence scoring
+3. **Action Generation**: Auto-creates actions for high-confidence intents (≥60%)
+
+**Intent Types Detected:**
+- `payment_plan`: Customer wants to negotiate payment terms
+- `dispute`: Customer disputes invoice or charges  
+- `promise_to_pay`: Customer commits to specific payment date
+- `general_query`: General questions about invoice/payment
+- `unknown`: Unclear intent (flagged for manual review)
+
+**Key Features:**
+- Extracts entities: amounts, dates, promises, reasons
+- Sentiment analysis: positive, neutral, negative
+- Low-confidence (<60%) items flagged for manual triage
+- Full transcript + analysis stored in action metadata
+
+**Webhooks:**
+- `/api/webhooks/sendgrid/inbound` - Email inbound parse
+- `/api/webhooks/vonage/sms` - SMS messages
+- `/api/webhooks/vonage/whatsapp` - WhatsApp messages  
+- `/api/webhooks/retell/transcript` - Voice call transcripts
+
 ### UI/UX Design
 The application utilizes a Premium Glassmorphism UI, featuring a `bg-gradient-to-br from-slate-50 via-blue-50 to-teal-50` page background, `bg-white/80 backdrop-blur-sm border-white/50 shadow-lg` for cards, and `bg-white/70 backdrop-blur-md border-0 shadow-xl` for metrics. The primary brand color is #17B6C3 (Nexus teal). Typography includes `text-2xl font-bold` for page titles and `text-xl font-bold` for card titles. Icons are wrapped in `p-2 bg-[#17B6C3]/10 rounded-lg`. Form elements use `bg-white/70 border-gray-200/30` for inputs and `bg-[#17B6C3] hover:bg-[#1396A1] text-white` for primary buttons.
 
