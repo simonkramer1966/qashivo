@@ -162,8 +162,8 @@ export default function Customers() {
             </div>
           </div>
 
-          {/* Customer List */}
-          <div className="space-y-3">
+          {/* Mobile View - Cards */}
+          <div className="space-y-3 sm:hidden">
             {isLoading ? (
               [...Array(5)].map((_, i) => (
                 <div key={i} className="card-apple p-4">
@@ -185,60 +185,7 @@ export default function Customers() {
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex-1 min-w-0">
-                      {/* Mobile Layout - Stacked */}
-                      <div className="sm:hidden">
-                        <div className="flex items-start justify-between gap-2 mb-2">
-                          <div className="flex-1 min-w-0">
-                            <h4 className="font-semibold text-slate-900 flex items-center gap-1.5">
-                              <span className="truncate">{contact.companyName || contact.name}</span>
-                              {contact.riskBand ? (
-                                <ShieldCheck className="h-4 w-4 text-[#4FAD80] flex-shrink-0" data-testid={`shield-checked-${contact.id}`} />
-                              ) : (
-                                <Shield className="h-4 w-4 text-[#E8A23B] flex-shrink-0" data-testid={`shield-unchecked-${contact.id}`} />
-                              )}
-                            </h4>
-                            {contact.email && (
-                              <p className="text-sm font-normal text-slate-500 truncate">
-                                {contact.email}
-                              </p>
-                            )}
-                            {contact.creditLimit && (
-                              <p className="text-xs font-normal text-slate-500 mt-1">
-                                Credit Limit: {formatCurrency(contact.creditLimit)}
-                              </p>
-                            )}
-                          </div>
-                          {getRiskBandBadge(contact.riskBand)}
-                        </div>
-                        
-                        {/* Financial Info - Stacked on mobile */}
-                        <div className="flex items-center gap-4">
-                          <div>
-                            <p className="text-xs text-slate-500 mb-0.5">Outstanding</p>
-                            <p className="text-lg font-bold text-slate-900">
-                              {formatCurrency(contact.outstandingAmount)}
-                            </p>
-                            <p className="text-xs text-slate-500">
-                              {contact.invoiceCount} invoice{contact.invoiceCount !== 1 ? 's' : ''}
-                            </p>
-                          </div>
-                          {contact.overdueAmount > 0 && (
-                            <div>
-                              <p className="text-xs text-[#C75C5C] mb-0.5 font-medium">Overdue</p>
-                              <p className="text-lg font-bold text-[#C75C5C]">
-                                {formatCurrency(contact.overdueAmount)}
-                              </p>
-                              <p className="text-xs text-[#C75C5C]">
-                                {contact.overdueCount} invoice{contact.overdueCount !== 1 ? 's' : ''}
-                              </p>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Desktop Layout - Grid aligned with top metrics */}
-                      <div className="hidden sm:grid sm:grid-cols-3 sm:gap-4 mb-2">
-                        {/* Column 1 - Company Info (aligns with Total) */}
+                      <div className="flex items-start justify-between gap-2 mb-2">
                         <div className="flex-1 min-w-0">
                           <h4 className="font-semibold text-slate-900 flex items-center gap-1.5">
                             <span className="truncate">{contact.companyName || contact.name}</span>
@@ -259,8 +206,11 @@ export default function Customers() {
                             </p>
                           )}
                         </div>
-
-                        {/* Column 2 - Outstanding (aligns with High Risk) */}
+                        {getRiskBandBadge(contact.riskBand)}
+                      </div>
+                      
+                      {/* Financial Info */}
+                      <div className="flex items-center gap-4">
                         <div>
                           <p className="text-xs text-slate-500 mb-0.5">Outstanding</p>
                           <p className="text-lg font-bold text-slate-900">
@@ -270,47 +220,16 @@ export default function Customers() {
                             {contact.invoiceCount} invoice{contact.invoiceCount !== 1 ? 's' : ''}
                           </p>
                         </div>
-
-                        {/* Column 3 - Overdue + Risk Badge (aligns with Outstanding metric) */}
-                        <div className="flex items-start gap-4">
-                          {contact.overdueAmount > 0 && (
-                            <div className="flex-1">
-                              <p className="text-xs text-[#C75C5C] mb-0.5 font-medium">Overdue</p>
-                              <p className="text-lg font-bold text-[#C75C5C]">
-                                {formatCurrency(contact.overdueAmount)}
-                              </p>
-                              <p className="text-xs text-[#C75C5C]">
-                                {contact.overdueCount} invoice{contact.overdueCount !== 1 ? 's' : ''}
-                              </p>
-                            </div>
-                          )}
-                          <div className="flex-shrink-0">
-                            {getRiskBandBadge(contact.riskBand)}
+                        {contact.overdueAmount > 0 && (
+                          <div>
+                            <p className="text-xs text-[#C75C5C] mb-0.5 font-medium">Overdue</p>
+                            <p className="text-lg font-bold text-[#C75C5C]">
+                              {formatCurrency(contact.overdueAmount)}
+                            </p>
+                            <p className="text-xs text-[#C75C5C]">
+                              {contact.overdueCount} invoice{contact.overdueCount !== 1 ? 's' : ''}
+                            </p>
                           </div>
-                        </div>
-                      </div>
-
-                      {/* Quick Actions - Desktop only */}
-                      <div className="hidden sm:flex gap-2 justify-end">
-                        {contact.email && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                            }}
-                            className="touch-target p-2 bg-blue-100 rounded-xl hover:bg-blue-200 transition-colors"
-                          >
-                            <Mail className="h-4 w-4 text-blue-600" />
-                          </button>
-                        )}
-                        {contact.phone && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                            }}
-                            className="touch-target p-2 bg-emerald-100 rounded-xl hover:bg-emerald-200 transition-colors"
-                          >
-                            <Phone className="h-4 w-4 text-emerald-600" />
-                          </button>
                         )}
                       </div>
                     </div>
@@ -319,6 +238,104 @@ export default function Customers() {
                   </div>
                 </div>
               ))
+            )}
+          </div>
+
+          {/* Desktop View - Table/Rows */}
+          <div className="hidden sm:block">
+            {isLoading ? (
+              <div className="card-apple">
+                <div className="p-4 border-b">
+                  <div className="h-10 bg-slate-200 animate-pulse rounded"></div>
+                </div>
+                {[...Array(5)].map((_, i) => (
+                  <div key={i} className="p-4 border-b">
+                    <div className="h-16 bg-slate-200 animate-pulse rounded"></div>
+                  </div>
+                ))}
+              </div>
+            ) : contacts.length === 0 ? (
+              <div className="card-apple p-8 text-center">
+                <User className="h-12 w-12 mx-auto mb-3 text-slate-400" />
+                <p className="text-slate-600">No customers found</p>
+              </div>
+            ) : (
+              <div className="card-apple overflow-hidden">
+                {/* Table Header */}
+                <div className="grid grid-cols-12 gap-4 px-6 py-3 bg-slate-50 border-b border-slate-200 text-sm font-semibold text-slate-600">
+                  <div className="col-span-3">Customer</div>
+                  <div className="col-span-2">Email</div>
+                  <div className="col-span-2">Credit Limit</div>
+                  <div className="col-span-2">Outstanding</div>
+                  <div className="col-span-2">Overdue</div>
+                  <div className="col-span-1 text-right">Risk</div>
+                </div>
+
+                {/* Table Rows */}
+                {contacts.map((contact) => (
+                  <div
+                    key={contact.id}
+                    className={`grid grid-cols-12 gap-4 px-6 py-4 border-l-4 ${getRiskColor(contact.riskBand)} border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors`}
+                    onClick={() => setLocation(`/contacts/${contact.id}`)}
+                    data-testid={`customer-item-${contact.id}`}
+                  >
+                    {/* Customer */}
+                    <div className="col-span-3 min-w-0">
+                      <p className="font-semibold text-slate-900 truncate flex items-center gap-1.5">
+                        <span className="truncate">{contact.companyName || contact.name}</span>
+                        {contact.riskBand ? (
+                          <ShieldCheck className="h-4 w-4 text-[#4FAD80] flex-shrink-0" data-testid={`shield-checked-${contact.id}`} />
+                        ) : (
+                          <Shield className="h-4 w-4 text-[#E8A23B] flex-shrink-0" data-testid={`shield-unchecked-${contact.id}`} />
+                        )}
+                      </p>
+                    </div>
+
+                    {/* Email */}
+                    <div className="col-span-2 min-w-0">
+                      <p className="text-sm text-slate-600 truncate">{contact.email || '-'}</p>
+                    </div>
+
+                    {/* Credit Limit */}
+                    <div className="col-span-2">
+                      <p className="text-sm text-slate-900">
+                        {contact.creditLimit ? formatCurrency(contact.creditLimit) : '-'}
+                      </p>
+                    </div>
+
+                    {/* Outstanding */}
+                    <div className="col-span-2">
+                      <p className="font-semibold text-slate-900">
+                        {formatCurrency(contact.outstandingAmount)}
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        {contact.invoiceCount} invoice{contact.invoiceCount !== 1 ? 's' : ''}
+                      </p>
+                    </div>
+
+                    {/* Overdue */}
+                    <div className="col-span-2">
+                      {contact.overdueAmount > 0 ? (
+                        <>
+                          <p className="font-semibold text-[#C75C5C]">
+                            {formatCurrency(contact.overdueAmount)}
+                          </p>
+                          <p className="text-xs text-[#C75C5C]">
+                            {contact.overdueCount} invoice{contact.overdueCount !== 1 ? 's' : ''}
+                          </p>
+                        </>
+                      ) : (
+                        <p className="text-sm text-slate-400">-</p>
+                      )}
+                    </div>
+
+                    {/* Risk Badge */}
+                    <div className="col-span-1 flex justify-end items-start">
+                      {getRiskBandBadge(contact.riskBand)}
+                    </div>
+                  </div>
+                ))}
+              </div>
             )}
           </div>
 
