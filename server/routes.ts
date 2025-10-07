@@ -1957,7 +1957,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Import and use RetellService
-      const RetellService = (await import('./retell-service.js')).default;
+      const { RetellService } = await import('./retell-service.js');
       const retellService = new RetellService();
 
       // Initiate call
