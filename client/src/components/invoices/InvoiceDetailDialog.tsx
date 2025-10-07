@@ -16,14 +16,12 @@ import {
   Shield, 
   Banknote, 
   ChevronDown,
-  ExternalLink,
   MessageSquare,
-  PhoneCall,
   Mic,
-  AlertCircle,
   CheckCircle2,
   Clock,
-  TrendingUp
+  TrendingUp,
+  FileText
 } from "lucide-react";
 import { useCurrency } from "@/hooks/useCurrency";
 import { useAuth } from "@/hooks/useAuth";
@@ -460,13 +458,24 @@ export function InvoiceDetailDialog({ invoice, open, onOpenChange }: InvoiceDeta
               <Mic className="h-4 w-4 mr-2" />
               AI Voice
             </Button>
-            <Button variant="outline" size="sm" className="touch-target">
-              <AlertCircle className="h-4 w-4 mr-2" />
-              Collections
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="touch-target"
+              disabled={!invoice.contact?.email}
+              data-testid="button-send-email"
+            >
+              <Mail className="h-4 w-4 mr-2" />
+              Email
             </Button>
-            <Button variant="outline" size="sm" className="touch-target col-span-2 sm:col-span-1">
-              <ExternalLink className="h-4 w-4 mr-2" />
-              View in Xero
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="touch-target"
+              data-testid="button-add-note"
+            >
+              <FileText className="h-4 w-4 mr-2" />
+              Note
             </Button>
           </div>
         </div>
