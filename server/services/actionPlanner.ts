@@ -123,6 +123,23 @@ export class ActionPlanner {
           continue;
         }
 
+        // Skip if invoice has active demo session
+        const demoCheck = await db
+          .select()
+          .from(actions)
+          .where(
+            and(
+              eq(actions.invoiceId, invoice.id),
+              sql`${actions.metadata}->>'demoMode' = 'true'`
+            )
+          )
+          .limit(1);
+
+        if (demoCheck.length > 0) {
+          console.log(`🎬 Skipping invoice ${invoice.invoiceNumber} - active demo session`);
+          continue;
+        }
+
         // Calculate days overdue
         const dueDate = new Date(invoice.dueDate);
         const daysOverdue = Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
