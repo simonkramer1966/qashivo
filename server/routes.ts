@@ -2385,6 +2385,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Update AR contact details (collections-specific overlay)
+  app.patch("/api/contacts/:id/ar-details", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { id } = req.params;
+      const { arContactName, arContactEmail, arContactPhone, arNotes } = req.body;
+
+      // Validate the contact exists and belongs to the tenant
+      const contacts = await storage.getContacts(user.tenantId);
+      const contact = contacts.find(c => c.id === id);
+      
+      if (!contact) {
+        return res.status(404).json({ message: "Contact not found" });
+      }
+
+      // Update AR overlay fields in database
+      await db.update(schema.contacts)
+        .set({
+          arContactName,
+          arContactEmail,
+          arContactPhone,
+          arNotes,
+          updatedAt: new Date()
+        })
+        .where(eq(schema.contacts.id, id));
+
+      // Fetch updated contact
+      const [updatedContact] = await db.select()
+        .from(schema.contacts)
+        .where(eq(schema.contacts.id, id))
+        .limit(1);
+
+      res.json(updatedContact);
+    } catch (error) {
+      console.error("Error updating AR contact details:", error);
+      res.status(500).json({ message: "Failed to update AR contact details" });
+    }
+  });
+
   // New endpoint for contacts with significantly overdue invoices (>30 days)
   app.get("/api/contacts/overdue", isAuthenticated, async (req: any, res) => {
     try {
