@@ -287,11 +287,11 @@ export default function ActionCentre() {
         
         <div className="container-apple py-4 sm:py-6 lg:py-8">
           {/* Workflow Tabs */}
-          <div className="mb-6 overflow-x-auto">
-            <div className="flex gap-2 p-1 bg-slate-100 rounded-lg min-w-max">
+          <div className="mb-6">
+            <div className="flex gap-2 p-1 bg-slate-100 rounded-lg">
               <button
                 onClick={() => setActiveTab('queries')}
-                className={`px-3 py-2 rounded-md text-xs sm:text-sm font-medium transition-all whitespace-nowrap ${
+                className={`flex-1 px-3 py-2 rounded-md text-xs sm:text-sm font-medium transition-all ${
                   activeTab === 'queries'
                     ? 'bg-blue-500 text-white shadow-sm'
                     : 'bg-transparent text-slate-600 hover:bg-white/50'
@@ -304,7 +304,7 @@ export default function ActionCentre() {
               
               <button
                 onClick={() => setActiveTab('overdue')}
-                className={`px-3 py-2 rounded-md text-xs sm:text-sm font-medium transition-all whitespace-nowrap ${
+                className={`flex-1 px-3 py-2 rounded-md text-xs sm:text-sm font-medium transition-all ${
                   activeTab === 'overdue'
                     ? 'bg-[#17B6C3] text-white shadow-sm'
                     : 'bg-transparent text-slate-600 hover:bg-white/50'
@@ -317,7 +317,7 @@ export default function ActionCentre() {
               
               <button
                 onClick={() => setActiveTab('upcomingPTP')}
-                className={`px-3 py-2 rounded-md text-xs sm:text-sm font-medium transition-all whitespace-nowrap ${
+                className={`flex-1 px-3 py-2 rounded-md text-xs sm:text-sm font-medium transition-all ${
                   activeTab === 'upcomingPTP'
                     ? 'bg-green-500 text-white shadow-sm'
                     : 'bg-transparent text-slate-600 hover:bg-white/50'
@@ -330,7 +330,7 @@ export default function ActionCentre() {
               
               <button
                 onClick={() => setActiveTab('brokenPromises')}
-                className={`px-3 py-2 rounded-md text-xs sm:text-sm font-medium transition-all whitespace-nowrap ${
+                className={`flex-1 px-3 py-2 rounded-md text-xs sm:text-sm font-medium transition-all ${
                   activeTab === 'brokenPromises'
                     ? 'bg-orange-500 text-white shadow-sm'
                     : 'bg-transparent text-slate-600 hover:bg-white/50'
@@ -343,7 +343,7 @@ export default function ActionCentre() {
               
               <button
                 onClick={() => setActiveTab('disputes')}
-                className={`px-3 py-2 rounded-md text-xs sm:text-sm font-medium transition-all whitespace-nowrap ${
+                className={`flex-1 px-3 py-2 rounded-md text-xs sm:text-sm font-medium transition-all ${
                   activeTab === 'disputes'
                     ? 'bg-red-500 text-white shadow-sm'
                     : 'bg-transparent text-slate-600 hover:bg-white/50'
@@ -356,7 +356,7 @@ export default function ActionCentre() {
               
               <button
                 onClick={() => setActiveTab('debtRecovery')}
-                className={`px-3 py-2 rounded-md text-xs sm:text-sm font-medium transition-all whitespace-nowrap ${
+                className={`flex-1 px-3 py-2 rounded-md text-xs sm:text-sm font-medium transition-all ${
                   activeTab === 'debtRecovery'
                     ? 'bg-red-600 text-white shadow-sm'
                     : 'bg-transparent text-slate-600 hover:bg-white/50'
@@ -369,7 +369,7 @@ export default function ActionCentre() {
               
               <button
                 onClick={() => setActiveTab('legal')}
-                className={`px-3 py-2 rounded-md text-xs sm:text-sm font-medium transition-all whitespace-nowrap ${
+                className={`flex-1 px-3 py-2 rounded-md text-xs sm:text-sm font-medium transition-all ${
                   activeTab === 'legal'
                     ? 'bg-red-800 text-white shadow-sm'
                     : 'bg-transparent text-slate-600 hover:bg-white/50'
