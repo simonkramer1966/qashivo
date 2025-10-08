@@ -60,8 +60,8 @@ interface InvoiceDetailDialogProps {
 export function InvoiceDetailDialog({ invoice, open, onOpenChange }: InvoiceDetailDialogProps) {
   const { formatCurrency } = useCurrency();
   const { user } = useAuth();
-  const [contactInfoOpen, setContactInfoOpen] = useState(true);
-  const [automationOpen, setAutomationOpen] = useState(true);
+  const [contactInfoOpen, setContactInfoOpen] = useState(false);
+  const [automationOpen, setAutomationOpen] = useState(false);
   const [smsDialogOpen, setSmsDialogOpen] = useState(false);
   const [advanceDialogOpen, setAdvanceDialogOpen] = useState(false);
   const [voiceDialogOpen, setVoiceDialogOpen] = useState(false);
