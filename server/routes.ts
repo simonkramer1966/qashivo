@@ -3063,6 +3063,93 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get categorized items for Action Centre tabs
+  app.get("/api/action-centre/tabs", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const tenantId = user.tenantId;
+      const today = new Date();
+      
+      // Get all actions and invoices
+      const allActions = await storage.getActions(tenantId);
+      const allInvoices = await storage.getInvoices(tenantId);
+      
+      // 1. QUERIES - actions with general_query intent
+      const queries = allActions.filter(a => a.intentType === 'general_query');
+      
+      // Helper function to enrich invoice with contact name
+      const enrichInvoice = async (inv: any) => {
+        let contactName = '';
+        try {
+          const contact = await storage.getContact(inv.contactId, tenantId);
+          if (contact) {
+            contactName = contact.name;
+          }
+        } catch (e) {
+          // Contact not found
+        }
+        return { ...inv, contactName };
+      };
+
+      // 2. OVERDUE INVOICES - overdue + not in other workflows
+      const overdueInvoicesRaw = allInvoices.filter(inv => {
+        const isOverdue = inv.status === 'overdue' && new Date(inv.dueDate) < today;
+        const isInWorkflow = inv.paymentPlanId || inv.escalationFlag || inv.legalFlag;
+        const hasDispute = allActions.some(a => a.invoiceId === inv.id && a.intentType === 'dispute');
+        const hasPTP = allActions.some(a => a.invoiceId === inv.id && a.intentType === 'promise_to_pay');
+        
+        return isOverdue && !isInWorkflow && !hasDispute && !hasPTP;
+      });
+      const overdueInvoices = await Promise.all(overdueInvoicesRaw.map(enrichInvoice));
+      
+      // 3. UPCOMING PTP - promise_to_pay with future dates
+      const upcomingPTP = allActions.filter(a => {
+        if (a.intentType !== 'promise_to_pay') return false;
+        const promisedDate = a.metadata?.analysis?.entities?.dates?.[0];
+        if (!promisedDate) return false;
+        return new Date(promisedDate) >= today;
+      });
+      
+      // 4. BROKEN PROMISES - PTP with past dates + invoice still unpaid
+      const brokenPromises = allActions.filter(a => {
+        if (a.intentType !== 'promise_to_pay' || !a.invoiceId) return false;
+        const promisedDate = a.metadata?.analysis?.entities?.dates?.[0];
+        if (!promisedDate || new Date(promisedDate) >= today) return false;
+        
+        const invoice = allInvoices.find(inv => inv.id === a.invoiceId);
+        return invoice && invoice.status === 'overdue';
+      });
+      
+      // 5. DISPUTES - actions with dispute intent
+      const disputes = allActions.filter(a => a.intentType === 'dispute');
+      
+      // 6. DEBT RECOVERY - invoices with escalation flag
+      const debtRecoveryRaw = allInvoices.filter(inv => inv.escalationFlag === true);
+      const debtRecovery = await Promise.all(debtRecoveryRaw.map(enrichInvoice));
+      
+      // 7. LEGAL - invoices with legal flag
+      const legalRaw = allInvoices.filter(inv => inv.legalFlag === true);
+      const legal = await Promise.all(legalRaw.map(enrichInvoice));
+      
+      res.json({
+        queries: { count: queries.length, items: queries },
+        overdueInvoices: { count: overdueInvoices.length, items: overdueInvoices },
+        upcomingPTP: { count: upcomingPTP.length, items: upcomingPTP },
+        brokenPromises: { count: brokenPromises.length, items: brokenPromises },
+        disputes: { count: disputes.length, items: disputes },
+        debtRecovery: { count: debtRecovery.length, items: debtRecovery },
+        legal: { count: legal.length, items: legal }
+      });
+    } catch (error) {
+      console.error("Error fetching action centre tabs:", error);
+      res.status(500).json({ message: "Failed to fetch action centre tabs" });
+    }
+  });
+
   // Get inbound messages with intent analysis
   app.get("/api/inbound-messages", isAuthenticated, async (req: any, res) => {
     try {

@@ -155,6 +155,8 @@ export const invoices = pgTable("invoices", {
   collectionStage: varchar("collection_stage").default("initial"), // initial, reminder_1, reminder_2, formal_notice, final_notice, escalated
   paymentPlanId: varchar("payment_plan_id").references(() => paymentPlans.id),
   isOnHold: boolean("is_on_hold").default(false), // whether invoice is on hold (excluded from collections workflow)
+  escalationFlag: boolean("escalation_flag").default(false), // flagged for debt recovery escalation
+  legalFlag: boolean("legal_flag").default(false), // flagged for legal action
   issueDate: timestamp("issue_date").notNull(),
   dueDate: timestamp("due_date").notNull(),
   paidDate: timestamp("paid_date"),
