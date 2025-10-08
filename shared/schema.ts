@@ -110,6 +110,12 @@ export const contacts = pgTable("contacts", {
   riskBand: varchar("risk_band", { length: 1 }), // A, B, C, D, E
   creditAssessment: jsonb("credit_assessment"), // Full assessment data: tradingProfile, signals, decision, policyChecks, xero, audit
   
+  // AR Overlay fields (collections-specific, not synced to accounting system)
+  arContactName: varchar("ar_contact_name"), // AR-specific contact person (overrides accounting contact)
+  arContactEmail: varchar("ar_contact_email"), // AR-specific email
+  arContactPhone: varchar("ar_contact_phone"), // AR-specific phone
+  arNotes: text("ar_notes"), // AR-specific notes (separate from general notes)
+  
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => [
