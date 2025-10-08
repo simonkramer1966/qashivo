@@ -29,8 +29,8 @@ interface Contact {
   phone?: string;
   companyName?: string;
   address?: string;
-  creditLimit?: string;
-  riskBand?: string;
+  creditLimit?: number | null;
+  riskBand?: string | null;
   paymentTerms?: number;
 }
 
@@ -73,7 +73,7 @@ export function CustomerDetailDialog({ contact, open, onOpenChange }: CustomerDe
     return diff > 0 ? diff : 0;
   }
 
-  function getRiskBadge(riskBand?: string) {
+  function getRiskBadge(riskBand?: string | null) {
     switch (riskBand) {
       case 'A':
         return <Badge className="bg-emerald-500 text-white">Low Risk</Badge>;

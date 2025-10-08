@@ -21,6 +21,7 @@ import BottomNav from "@/components/layout/bottom-nav";
 import Header from "@/components/layout/header";
 import { useCurrency } from "@/hooks/useCurrency";
 import AddCustomerDialog from "@/components/credit/AddCustomerDialog";
+import { CustomerDetailDialog } from "@/components/contacts/CustomerDetailDialog";
 
 interface Contact {
   id: string;
@@ -44,6 +45,8 @@ export default function Customers() {
   const [page, setPage] = useState(1);
   const limit = 20;
   const [showAddCustomerDialog, setShowAddCustomerDialog] = useState(false);
+  const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
+  const [showCustomerDetail, setShowCustomerDetail] = useState(false);
 
   // Seed payment behavior customers (test button)
   const seedMutation = useMutation({
@@ -180,7 +183,10 @@ export default function Customers() {
                 <div 
                   key={contact.id} 
                   className={`card-apple-hover p-4 border-l-4 ${getRiskColor(contact.riskBand)} cursor-pointer`}
-                  onClick={() => setLocation(`/contacts/${contact.id}`)}
+                  onClick={() => {
+                    setSelectedContact(contact);
+                    setShowCustomerDetail(true);
+                  }}
                   data-testid={`customer-item-${contact.id}`}
                 >
                   <div className="flex items-start justify-between gap-3">
@@ -276,7 +282,10 @@ export default function Customers() {
                   <div
                     key={contact.id}
                     className={`grid grid-cols-12 gap-4 px-6 py-4 border-l-4 ${getRiskColor(contact.riskBand)} border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors`}
-                    onClick={() => setLocation(`/contacts/${contact.id}`)}
+                    onClick={() => {
+                      setSelectedContact(contact);
+                      setShowCustomerDetail(true);
+                    }}
                     data-testid={`customer-item-${contact.id}`}
                   >
                     {/* Customer */}
@@ -428,6 +437,13 @@ export default function Customers() {
         onSuccess={() => {
           setShowAddCustomerDialog(false);
         }}
+      />
+
+      {/* Customer Detail Dialog */}
+      <CustomerDetailDialog
+        contact={selectedContact}
+        open={showCustomerDetail}
+        onOpenChange={setShowCustomerDetail}
       />
     </div>
   );
