@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { 
   Dialog, 
   DialogContent, 
@@ -17,10 +18,12 @@ import {
   FileText,
   Building2,
   User,
-  AlertCircle
+  AlertCircle,
+  Pencil
 } from "lucide-react";
 import { useCurrency } from "@/hooks/useCurrency";
 import { useQuery } from "@tanstack/react-query";
+import EditARContactDialog from "./EditARContactDialog";
 
 interface Contact {
   id: string;
@@ -32,6 +35,10 @@ interface Contact {
   creditLimit?: number | null;
   riskBand?: string | null;
   paymentTerms?: number;
+  arContactName?: string | null;
+  arContactEmail?: string | null;
+  arContactPhone?: string | null;
+  arNotes?: string | null;
 }
 
 interface Invoice {
@@ -51,6 +58,7 @@ interface CustomerDetailDialogProps {
 
 export function CustomerDetailDialog({ contact, open, onOpenChange }: CustomerDetailDialogProps) {
   const { formatCurrency } = useCurrency();
+  const [editAROpen, setEditAROpen] = useState(false);
 
   // Fetch invoices for this contact
   const { data: invoicesData } = useQuery<{ invoices: Invoice[] }>({
@@ -59,6 +67,11 @@ export function CustomerDetailDialog({ contact, open, onOpenChange }: CustomerDe
   });
 
   if (!contact) return null;
+
+  // Use AR overlay contact data if available, otherwise fall back to accounting system data
+  const arContactName = contact.arContactName || contact.name;
+  const arContactEmail = contact.arContactEmail || contact.email;
+  const arContactPhone = contact.arContactPhone || contact.phone;
 
   const invoices = invoicesData?.invoices || [];
   const outstandingInvoices = invoices.filter(inv => inv.status !== 'paid');
@@ -126,29 +139,44 @@ export function CustomerDetailDialog({ contact, open, onOpenChange }: CustomerDe
 
             {/* Contact Information */}
             <div className="mb-4 p-4 bg-slate-50 rounded-lg">
-              <h3 className="font-semibold text-slate-900 mb-3">Contact Details</h3>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-semibold text-slate-900">Contact Details</h3>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setEditAROpen(true)}
+                  className="gap-2"
+                  data-testid="button-edit-ar-contact"
+                >
+                  <Pencil className="h-3 w-3" />
+                  Edit AR Contact
+                </Button>
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {/* AR Contact */}
                 <div>
                   <div className="flex items-center gap-2 mb-2">
                     <User className="h-4 w-4 text-slate-400" />
                     <span className="text-sm font-medium text-slate-700">AR Contact</span>
+                    {contact.arContactName && (
+                      <Badge variant="secondary" className="text-xs">Custom</Badge>
+                    )}
                   </div>
                   <div className="space-y-2 ml-6">
-                    <p className="text-sm text-slate-900 font-medium">{contact.name}</p>
-                    {contact.email && (
+                    <p className="text-sm text-slate-900 font-medium">{arContactName}</p>
+                    {arContactEmail && (
                       <div className="flex items-center gap-2">
                         <Mail className="h-3 w-3 text-slate-400" />
-                        <a href={`mailto:${contact.email}`} className="text-sm text-[#17B6C3] hover:underline">
-                          {contact.email}
+                        <a href={`mailto:${arContactEmail}`} className="text-sm text-[#17B6C3] hover:underline">
+                          {arContactEmail}
                         </a>
                       </div>
                     )}
-                    {contact.phone && (
+                    {arContactPhone && (
                       <div className="flex items-center gap-2">
                         <Phone className="h-3 w-3 text-slate-400" />
-                        <a href={`tel:${contact.phone}`} className="text-sm text-[#17B6C3] hover:underline">
-                          {contact.phone}
+                        <a href={`tel:${arContactPhone}`} className="text-sm text-[#17B6C3] hover:underline">
+                          {arContactPhone}
                         </a>
                       </div>
                     )}
@@ -188,6 +216,17 @@ export function CustomerDetailDialog({ contact, open, onOpenChange }: CustomerDe
                 </div>
               </div>
             </div>
+
+            {/* AR Notes */}
+            {contact.arNotes && (
+              <div className="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                <div className="flex items-center gap-2 mb-2">
+                  <FileText className="h-4 w-4 text-amber-600" />
+                  <h3 className="font-semibold text-amber-900">Collections Notes</h3>
+                </div>
+                <p className="text-sm text-amber-800 whitespace-pre-wrap">{contact.arNotes}</p>
+              </div>
+            )}
 
             {/* Outstanding Invoices */}
             <div className="mb-4">
@@ -327,6 +366,13 @@ export function CustomerDetailDialog({ contact, open, onOpenChange }: CustomerDe
           </div>
         </div>
       </DialogContent>
+
+      {/* AR Contact Edit Dialog */}
+      <EditARContactDialog
+        open={editAROpen}
+        onOpenChange={setEditAROpen}
+        contact={contact}
+      />
     </Dialog>
   );
 }
