@@ -159,14 +159,15 @@ export async function createUnifiedRetellCall(options: RetellCallOptions): Promi
       from_number: cleanFromNumber,
       to_number: cleanToNumber,
       agent_id: agentId,
-      retell_llm_dynamic_variables: normalizedVariables
+      retell_llm_dynamic_variables: normalizedVariables,
+      metadata: metadata
     } as any);
     
     callId = (call as any).call_id || callId;
     callStatus = (call as any).call_status || callStatus;
     
     if (isDebugLoggingEnabled()) {
-      console.log(`✅ [${context}] Retell call created successfully:`, { callId, callStatus });
+      console.log(`✅ [${context}] Retell call created successfully:`, { callId, callStatus, metadata });
     }
   } catch (retellError: any) {
     console.error(`❌ [${context}] Retell API error:`, retellError);
