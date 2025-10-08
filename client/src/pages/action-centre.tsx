@@ -52,6 +52,9 @@ interface Action {
   hasResponse: boolean;
   createdAt: string;
   updatedAt: string;
+  contactName?: string | null;
+  invoiceNumber?: string | null;
+  invoiceAmount?: string | null;
 }
 
 // Smart timestamp helper
@@ -618,9 +621,27 @@ export default function ActionCentre() {
                             <h4 className="font-semibold text-slate-900 truncate">
                               {action.subject || 'No subject'}
                             </h4>
-                            <p className="text-xs text-slate-500">
-                              {getSmartTimestamp(action.createdAt)}
-                            </p>
+                            <div className="flex items-center gap-2 text-xs text-slate-500">
+                              <span>{getSmartTimestamp(action.createdAt)}</span>
+                              {action.contactName && (
+                                <>
+                                  <span>•</span>
+                                  <span className="font-medium text-slate-700">{action.contactName}</span>
+                                </>
+                              )}
+                              {action.invoiceNumber && (
+                                <>
+                                  <span>•</span>
+                                  <span className="text-[#17B6C3]">{action.invoiceNumber}</span>
+                                </>
+                              )}
+                              {action.invoiceAmount && (
+                                <>
+                                  <span>•</span>
+                                  <span className="font-medium">{formatCurrency(parseFloat(action.invoiceAmount))}</span>
+                                </>
+                              )}
+                            </div>
                           </div>
                         </div>
                         

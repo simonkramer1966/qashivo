@@ -2958,8 +2958,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const limit = req.query.limit ? parseInt(req.query.limit) : undefined;
-      const actions = await storage.getActions(user.tenantId, limit);
-      res.json(actions);
+      const actionsData = await storage.getActions(user.tenantId, limit);
+      
+      // Enrich actions with contact and invoice info
+      const enrichedActions = await Promise.all(
+        actionsData.map(async (action) => {
+          let contactName = null;
+          let invoiceNumber = null;
+          let invoiceAmount = null;
+          
+          // Get contact info
+          if (action.contactId) {
+            try {
+              const contact = await storage.getContact(action.contactId, user.tenantId);
+              if (contact) {
+                contactName = contact.name || contact.companyName || null;
+              }
+            } catch (e) {
+              // Contact not found, skip
+            }
+          }
+          
+          // Get invoice info
+          if (action.invoiceId) {
+            try {
+              const invoice = await storage.getInvoice(action.invoiceId, user.tenantId);
+              if (invoice) {
+                invoiceNumber = invoice.invoiceNumber;
+                invoiceAmount = invoice.amount;
+              }
+            } catch (e) {
+              // Invoice not found, skip
+            }
+          }
+          
+          return {
+            ...action,
+            contactName,
+            invoiceNumber,
+            invoiceAmount
+          };
+        })
+      );
+      
+      res.json(enrichedActions);
     } catch (error) {
       console.error("Error fetching actions:", error);
       res.status(500).json({ message: "Failed to fetch actions" });
