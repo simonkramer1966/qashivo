@@ -8558,7 +8558,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
         if (callData.transcript) {
           try {
             const { intentAnalyst } = await import('./services/intentAnalyst.js');
-            const { db } = await import('./db/index.js');
+            const { db } = await import('./db.js');
             const { inboundMessages } = await import('@shared/schema.js');
             
             const [message] = await db
