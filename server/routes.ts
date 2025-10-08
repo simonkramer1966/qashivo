@@ -211,6 +211,7 @@ import { generateMockData } from "./mock-data";
 import { retellService } from "./retell-service";
 import { createRetellClient } from "./mcp/client";
 import { normalizeDynamicVariables, logVariableTransformation } from "./utils/retellVariableNormalizer";
+import { Retell } from "retell-sdk";
 import Stripe from "stripe";
 import { registerSyncRoutes } from "./routes/syncRoutes";
 import documentationRoutes from "./routes/documentationRoutes";
@@ -8458,7 +8459,39 @@ Payment required immediately to avoid collection action. Contact us NOW.`
 
   app.post("/api/retell/webhook", async (req, res) => {
     try {
-      console.log("Retell webhook received:", JSON.stringify(req.body, null, 2));
+      console.log("🔔 Retell webhook received:", JSON.stringify(req.body, null, 2));
+
+      // Verify webhook signature
+      const signature = req.headers['x-retell-signature'] as string;
+      const apiKey = process.env.RETELL_API_KEY;
+
+      if (!apiKey) {
+        console.error("❌ RETELL_API_KEY not configured");
+        return res.status(500).json({ message: "Server configuration error" });
+      }
+
+      if (!signature) {
+        console.error("❌ Missing x-retell-signature header");
+        return res.status(401).json({ message: "Missing signature" });
+      }
+
+      try {
+        const isValid = Retell.verify(
+          JSON.stringify(req.body),
+          apiKey,
+          signature
+        );
+
+        if (!isValid) {
+          console.error("❌ Invalid Retell webhook signature");
+          return res.status(401).json({ message: "Invalid signature" });
+        }
+
+        console.log("✅ Retell webhook signature verified");
+      } catch (verifyError) {
+        console.error("❌ Signature verification error:", verifyError);
+        return res.status(401).json({ message: "Signature verification failed" });
+      }
 
       // Retell sends data nested in a 'call' object
       const webhookData = req.body.call || req.body;
