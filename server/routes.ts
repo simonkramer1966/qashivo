@@ -2405,7 +2405,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Update AR overlay fields in database
-      await db.update(schema.contacts)
+      await db.update(contacts)
         .set({
           arContactName,
           arContactEmail,
@@ -2413,12 +2413,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           arNotes,
           updatedAt: new Date()
         })
-        .where(eq(schema.contacts.id, id));
+        .where(eq(contacts.id, id));
 
       // Fetch updated contact
       const [updatedContact] = await db.select()
-        .from(schema.contacts)
-        .where(eq(schema.contacts.id, id))
+        .from(contacts)
+        .where(eq(contacts.id, id))
         .limit(1);
 
       res.json(updatedContact);
