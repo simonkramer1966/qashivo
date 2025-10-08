@@ -4,6 +4,8 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
 import { 
   DollarSign, 
   TrendingUp, 
@@ -55,6 +57,7 @@ interface CashFlowData {
 export default function Cashboard() {
   const [, setLocation] = useLocation();
   const { formatCurrency } = useCurrency();
+  const [forecastPeriod, setForecastPeriod] = useState<"1" | "3" | "6">("1");
 
   const { data: metrics, isLoading: metricsLoading } = useQuery<CashMetrics>({
     queryKey: ["/api/dashboard/metrics"],
@@ -74,10 +77,17 @@ export default function Cashboard() {
 
   const formatChartData = () => {
     if (!cashflowData?.forecast) return [];
-    return cashflowData.forecast.slice(0, 30).map(day => ({
+    const days = forecastPeriod === "1" ? 30 : forecastPeriod === "3" ? 90 : 180;
+    return cashflowData.forecast.slice(0, days).map(day => ({
       date: new Date(day.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
       amount: day.expectedInflow
     }));
+  };
+
+  const getForecastTitle = () => {
+    if (forecastPeriod === "1") return "Cash Inflow Forecast (1 Month)";
+    if (forecastPeriod === "3") return "Cash Inflow Forecast (3 Months)";
+    return "Cash Inflow Forecast (6 Months)";
   };
 
   const formatCompactCurrency = (value: number) => {
@@ -264,7 +274,28 @@ export default function Cashboard() {
           {/* Cashflow Chart */}
           <div className="card-apple p-4 sm:p-6 mb-6" data-testid="card-cashflow-chart">
             <CardHeader className="p-0 mb-4">
-              <CardTitle className="text-lg sm:text-xl">Cash Inflow Forecast (30 Days)</CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-lg sm:text-xl">{getForecastTitle()}</CardTitle>
+                <RadioGroup 
+                  value={forecastPeriod} 
+                  onValueChange={(value: string) => setForecastPeriod(value as "1" | "3" | "6")}
+                  className="flex gap-4"
+                  data-testid="radio-forecast-period"
+                >
+                  <div className="flex items-center gap-2">
+                    <RadioGroupItem value="1" id="period-1" data-testid="radio-period-1" />
+                    <Label htmlFor="period-1" className="text-sm cursor-pointer">1 Month</Label>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <RadioGroupItem value="3" id="period-3" data-testid="radio-period-3" />
+                    <Label htmlFor="period-3" className="text-sm cursor-pointer">3 Months</Label>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <RadioGroupItem value="6" id="period-6" data-testid="radio-period-6" />
+                    <Label htmlFor="period-6" className="text-sm cursor-pointer">6 Months</Label>
+                  </div>
+                </RadioGroup>
+              </div>
             </CardHeader>
             <CardContent className="p-0">
               {cashflowLoading ? (
