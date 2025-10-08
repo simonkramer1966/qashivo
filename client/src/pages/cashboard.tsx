@@ -330,6 +330,8 @@ export default function Cashboard() {
                       dataKey="amount" 
                       fill="#17B6C3" 
                       radius={[8, 8, 0, 0]}
+                      animationDuration={800}
+                      animationEasing="ease-out"
                     />
                   </BarChart>
                 </ResponsiveContainer>
