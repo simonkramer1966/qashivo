@@ -236,7 +236,7 @@ export function CustomerDetailDialog({ contact, open, onOpenChange }: CustomerDe
                   <p className="text-sm text-emerald-700">No outstanding invoices</p>
                 </div>
               ) : (
-                <div className="space-y-2">
+                <div className="space-y-2 max-h-[400px] overflow-y-auto">
                   {outstandingInvoices.map((invoice) => {
                     const daysOverdue = getDaysOverdue(invoice.dueDate);
                     const outstanding = invoice.amount - invoice.amountPaid;
