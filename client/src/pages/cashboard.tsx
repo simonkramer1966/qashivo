@@ -21,7 +21,7 @@ import NewSidebar from "@/components/layout/new-sidebar";
 import BottomNav from "@/components/layout/bottom-nav";
 import Header from "@/components/layout/header";
 import { useCurrency } from "@/hooks/useCurrency";
-import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip as RechartsTooltip } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip as RechartsTooltip } from 'recharts';
 
 interface CashMetrics {
   totalOutstanding: number;
@@ -273,7 +273,7 @@ export default function Cashboard() {
                 </div>
               ) : (
                 <ResponsiveContainer width="100%" height={250}>
-                  <LineChart data={formatChartData()}>
+                  <BarChart data={formatChartData()}>
                     <XAxis 
                       dataKey="date" 
                       tick={{ fontSize: 12 }}
@@ -295,14 +295,12 @@ export default function Cashboard() {
                         padding: '8px 12px'
                       }}
                     />
-                    <Line 
-                      type="monotone" 
+                    <Bar 
                       dataKey="amount" 
-                      stroke="#17B6C3" 
-                      strokeWidth={3}
-                      dot={false}
+                      fill="#17B6C3" 
+                      radius={[8, 8, 0, 0]}
                     />
-                  </LineChart>
+                  </BarChart>
                 </ResponsiveContainer>
               )}
             </CardContent>
