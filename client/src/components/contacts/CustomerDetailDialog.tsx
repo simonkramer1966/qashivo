@@ -127,7 +127,7 @@ export function CustomerDetailDialog({ contact, open, onOpenChange }: CustomerDe
             {/* Contact Information */}
             <div className="mb-4 p-4 bg-slate-50 rounded-lg">
               <h3 className="font-semibold text-slate-900 mb-3">Contact Details</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {/* AR Contact */}
                 <div>
                   <div className="flex items-center gap-2 mb-2">
@@ -163,17 +163,26 @@ export function CustomerDetailDialog({ contact, open, onOpenChange }: CustomerDe
                   </div>
                   <div className="space-y-2 ml-6">
                     <p className="text-sm text-slate-900 font-medium">{contact.companyName || contact.name}</p>
-                    {contact.address && (
-                      <div className="flex items-start gap-2">
-                        <MapPin className="h-3 w-3 text-slate-400 mt-0.5" />
-                        <p className="text-sm text-slate-600">{contact.address}</p>
-                      </div>
-                    )}
                     {contact.creditLimit && (
                       <div className="flex items-center gap-2">
                         <span className="text-xs text-slate-500">Credit Limit:</span>
                         <span className="text-sm font-semibold">{formatCurrency(Number(contact.creditLimit))}</span>
                       </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Address */}
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <MapPin className="h-4 w-4 text-slate-400" />
+                    <span className="text-sm font-medium text-slate-700">Address</span>
+                  </div>
+                  <div className="space-y-2 ml-6">
+                    {contact.address ? (
+                      <p className="text-sm text-slate-600">{contact.address}</p>
+                    ) : (
+                      <p className="text-sm text-slate-400 italic">No address on file</p>
                     )}
                   </div>
                 </div>
