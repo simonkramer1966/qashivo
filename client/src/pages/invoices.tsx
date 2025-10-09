@@ -88,9 +88,32 @@ export default function Invoices() {
     queryKey: ['/api/invoices', { status: statusFilter, search, page, limit }],
   });
 
+  const { data: interestData } = useQuery<{
+    summary: {
+      totalInterest: number;
+      totalPrincipal: number;
+      totalWithInterest: number;
+      combinedRate: number;
+      gracePeriod: number;
+    };
+    invoices: Array<{
+      invoiceId: string;
+      interestAmount: number;
+      daysAccruing: number;
+      gracePeriodRemaining: number;
+    }>;
+  }>({
+    queryKey: ['/api/invoices/interest-summary'],
+  });
+
   const invoices = invoicesData?.invoices || [];
   const aggregates = invoicesData?.aggregates || { totalOutstanding: 0, overdueCount: 0, pendingCount: 0, criticalCount: 0, totalInvoices: 0 };
   const pagination = invoicesData?.pagination || { total: 0, page: 1, limit: 20, totalPages: 1 };
+  
+  // Helper to get interest for a specific invoice
+  const getInvoiceInterest = (invoiceId: string) => {
+    return interestData?.invoices.find(i => i.invoiceId === invoiceId);
+  };
 
   const handleSearchChange = (value: string) => {
     setSearch(value);

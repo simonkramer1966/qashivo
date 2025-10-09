@@ -80,6 +80,11 @@ export const tenants = pgTable("tenants", {
   // Currency setting
   currency: varchar("currency").default("GBP"),
   
+  // Late payment interest settings
+  boeBaseRate: decimal("boe_base_rate", { precision: 5, scale: 2 }).default("5.00"), // Bank of England base rate %
+  interestMarkup: decimal("interest_markup", { precision: 5, scale: 2 }).default("8.00"), // Additional % on top of BoE rate
+  interestGracePeriod: integer("interest_grace_period").default(30), // Days before interest starts
+  
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

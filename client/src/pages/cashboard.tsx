@@ -17,7 +17,8 @@ import {
   FileText,
   MessageSquare,
   Scale,
-  Gavel
+  Gavel,
+  Percent
 } from "lucide-react";
 import NewSidebar from "@/components/layout/new-sidebar";
 import BottomNav from "@/components/layout/bottom-nav";
@@ -78,6 +79,13 @@ interface Leaderboard {
     outstanding: number;
     overdueCount: number;
   }>;
+  summary?: {
+    totalInterest: number;
+    totalPrincipal: number;
+    totalWithInterest: number;
+    combinedRate: number;
+    gracePeriod: number;
+  };
 }
 
 export default function Cashboard() {
@@ -296,6 +304,30 @@ export default function Cashboard() {
                 </div>
                 <div className="p-2 bg-[#C75C5C]/10 rounded-xl">
                   <Gavel className="h-5 w-5 text-[#C75C5C]" />
+                </div>
+              </div>
+            </div>
+
+            {/* Interest Accrued */}
+            <div className="card-apple p-4 sm:p-6 bg-[#F0F9FF] border border-[#E6E8EA]" data-testid="card-interest">
+              <div className="flex items-start justify-between mb-3">
+                <div>
+                  <p className="text-sm text-slate-600 mb-1">Interest Accrued</p>
+                  {leaderboardsLoading ? (
+                    <div className="h-8 w-32 bg-slate-200 animate-pulse rounded"></div>
+                  ) : (
+                    <h3 className="text-xl sm:text-2xl font-bold text-slate-900">
+                      {formatCurrency(leaderboards?.summary?.totalInterest || 0)}
+                    </h3>
+                  )}
+                  {!leaderboardsLoading && leaderboards?.summary && (
+                    <p className="text-xs text-slate-500 mt-1">
+                      BoE + 8% ({leaderboards.summary.combinedRate.toFixed(1)}% annual)
+                    </p>
+                  )}
+                </div>
+                <div className="p-2 bg-blue-500/10 rounded-xl">
+                  <Percent className="h-5 w-5 text-blue-600" />
                 </div>
               </div>
             </div>

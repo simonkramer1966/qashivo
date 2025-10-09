@@ -57,6 +57,7 @@ import {
   customerLearningProfiles
 } from "@shared/schema";
 import { getOverdueCategoryFromDueDate } from "@shared/utils/overdueUtils";
+import { calculateLatePaymentInterest } from "./utils/interestCalculator";
 import { eq, and, desc, sql, count, avg, gte, lte, inArray, or, isNull } from 'drizzle-orm';
 import { db } from './db';
 import { z } from "zod";
@@ -1667,14 +1668,117 @@ export async function registerRoutes(app: Express): Promise<Server> {
           overdueCount: c.overdueCount
         }));
 
+      // Calculate interest summary for the metrics card
+      const overdueInvoices = allInvoices.filter(inv => inv.status === 'overdue');
+      const tenant = await storage.getTenant(user.tenantId);
+      
+      let interestSummary = {
+        totalInterest: 0,
+        totalPrincipal: 0,
+        totalWithInterest: 0,
+        combinedRate: parseFloat(tenant?.boeBaseRate || '5.00') + parseFloat(tenant?.interestMarkup || '8.00'),
+        gracePeriod: tenant?.interestGracePeriod || 30
+      };
+
+      if (overdueInvoices.length > 0 && tenant) {
+        overdueInvoices.forEach(invoice => {
+          const principal = parseFloat(invoice.amount) - parseFloat(invoice.amountPaid || '0');
+          const result = calculateLatePaymentInterest({
+            principalAmount: principal,
+            dueDate: new Date(invoice.dueDate),
+            currentDate: new Date(),
+            boeBaseRate: parseFloat(tenant.boeBaseRate || '5.00'),
+            interestMarkup: parseFloat(tenant.interestMarkup || '8.00'),
+            gracePeriod: tenant.interestGracePeriod || 30
+          });
+          
+          interestSummary.totalInterest += result.interestAmount;
+          interestSummary.totalPrincipal += principal;
+          interestSummary.totalWithInterest += result.totalAmountDue;
+        });
+        
+        // Round to 2 decimal places
+        interestSummary.totalInterest = Math.round(interestSummary.totalInterest * 100) / 100;
+        interestSummary.totalPrincipal = Math.round(interestSummary.totalPrincipal * 100) / 100;
+        interestSummary.totalWithInterest = Math.round(interestSummary.totalWithInterest * 100) / 100;
+      }
+
       res.json({
         bestPayers,
         worstPayers,
-        topOutstanding
+        topOutstanding,
+        summary: interestSummary
       });
     } catch (error) {
       console.error("Error fetching dashboard leaderboards:", error);
       res.status(500).json({ message: "Failed to fetch leaderboards" });
+    }
+  });
+
+  // Interest calculation endpoint
+  app.get("/api/invoices/interest-summary", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const tenant = await storage.getTenant(user.tenantId);
+      if (!tenant) {
+        return res.status(404).json({ message: "Tenant not found" });
+      }
+
+      // Get all overdue invoices
+      const allInvoices = await storage.getInvoices(user.tenantId);
+      const overdueInvoices = allInvoices.filter(inv => inv.status === 'overdue');
+
+      // Calculate interest for each invoice
+      const invoicesWithInterest = overdueInvoices.map(invoice => {
+        const principal = parseFloat(invoice.amount) - parseFloat(invoice.amountPaid || '0');
+        const result = calculateLatePaymentInterest({
+          principalAmount: principal,
+          dueDate: new Date(invoice.dueDate),
+          currentDate: new Date(),
+          boeBaseRate: parseFloat(tenant.boeBaseRate || '5.00'),
+          interestMarkup: parseFloat(tenant.interestMarkup || '8.00'),
+          gracePeriod: tenant.interestGracePeriod || 30
+        });
+
+        return {
+          invoiceId: invoice.id,
+          invoiceNumber: invoice.invoiceNumber,
+          contactId: invoice.contactId,
+          principal,
+          daysOverdue: result.daysOverdue,
+          daysAccruing: result.daysAccruing,
+          interestAmount: result.interestAmount,
+          totalAmountDue: result.totalAmountDue,
+          gracePeriodRemaining: result.gracePeriodRemaining,
+          annualRate: result.annualRate
+        };
+      });
+
+      // Calculate totals
+      const totalInterest = invoicesWithInterest.reduce((sum, inv) => sum + inv.interestAmount, 0);
+      const totalPrincipal = invoicesWithInterest.reduce((sum, inv) => sum + inv.principal, 0);
+      const totalWithInterest = invoicesWithInterest.reduce((sum, inv) => sum + inv.totalAmountDue, 0);
+
+      res.json({
+        invoices: invoicesWithInterest,
+        summary: {
+          totalInvoices: invoicesWithInterest.length,
+          totalPrincipal: Math.round(totalPrincipal * 100) / 100,
+          totalInterest: Math.round(totalInterest * 100) / 100,
+          totalWithInterest: Math.round(totalWithInterest * 100) / 100,
+          boeBaseRate: parseFloat(tenant.boeBaseRate || '5.00'),
+          interestMarkup: parseFloat(tenant.interestMarkup || '8.00'),
+          combinedRate: parseFloat(tenant.boeBaseRate || '5.00') + parseFloat(tenant.interestMarkup || '8.00'),
+          gracePeriod: tenant.interestGracePeriod || 30
+        }
+      });
+    } catch (error) {
+      console.error("Error calculating interest:", error);
+      res.status(500).json({ message: "Failed to calculate interest" });
     }
   });
 
