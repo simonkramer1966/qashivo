@@ -745,6 +745,14 @@ export default function ActionCentre() {
                                 </h4>
                                 <span className="text-xs text-slate-500 flex-shrink-0">{getSmartTimestamp(item.createdAt)}</span>
                               </div>
+                              
+                              {/* Show message content for inbound actions */}
+                              {isInbound && item.content && (
+                                <div className="text-sm text-slate-600 italic mb-2 border-l-2 border-slate-300 pl-3">
+                                  "{item.content}"
+                                </div>
+                              )}
+                              
                               <div className="flex items-center gap-3 text-sm">
                                 {item.contactName && <span className="text-slate-700 truncate">{item.contactName}</span>}
                                 {item.invoiceNumber && <span className="text-[#17B6C3] flex-shrink-0">{item.invoiceNumber}</span>}
