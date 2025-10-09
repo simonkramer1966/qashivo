@@ -9247,8 +9247,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
       console.log("✅ Inbound message created for Intent Analyst:", inboundMsg.id);
 
       // Process with Intent Analyst (extracts dates properly)
-      const { IntentAnalyst: IntentAnalystClass } = await import('./services/intentAnalyst.js');
-      const intentAnalyst = new IntentAnalystClass();
+      const { intentAnalyst } = await import('./services/intentAnalyst.js');
 
       // Process the message (this will create the action with proper date extraction)
       await intentAnalyst.processInboundMessage(inboundMsg.id);
