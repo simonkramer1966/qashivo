@@ -2031,7 +2031,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         const thankYouMessage = `Thank you for your payment of ${amount} for invoice ${invoice.invoiceNumber}! We really appreciate your business.`;
 
-        const smsResult = await sendSMS({
+        const vonageService = await import('./services/vonage.js');
+        const smsResult = await vonageService.sendSMS({
           to: contact.phone,
           message: thankYouMessage,
         });
@@ -9219,47 +9220,63 @@ Payment required immediately to avoid collection action. Contact us NOW.`
       const savedSms = await storage.createSmsMessage(smsData);
       console.log("✅ Inbound Vonage SMS saved to database:", savedSms.id);
 
-      // Detect intent using AI
-      const openaiService = await import('./services/openai.js');
+      // Save as inbound message for Intent Analyst processing
+      const [inboundMsg] = await db.insert(inboundMessages).values({
+        tenantId: matchedTenantId,
+        contactId: matchedContact.id,
+        invoiceId: null, // Will be linked during processing if needed
+        channel: 'sms',
+        from: msisdn,
+        to: to,
+        subject: null,
+        content: text,
+        rawPayload: req.body,
+        intentAnalyzed: false,
+      }).returning();
+
+      console.log("✅ Inbound message created for Intent Analyst:", inboundMsg.id);
+
+      // Process with Intent Analyst (extracts dates properly)
+      const { IntentAnalyst: IntentAnalystClass } = await import('./services/intentAnalyst.js');
+      const intentAnalyst = new IntentAnalystClass();
       
-      // Get latest invoice for context (if any)
+      // Get latest invoice for context
       const invoices = await storage.getInvoices(matchedTenantId);
       const contactInvoices = invoices.filter((inv: any) => inv.contactId === matchedContact.id);
       const latestInvoice = contactInvoices.sort((a: any, b: any) => 
         new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       )[0];
 
-      const intentResult = await openaiService.detectSmsIntent(text, {
-        customerName: matchedContact.name,
-        invoiceNumber: latestInvoice?.invoiceNumber,
-        amount: latestInvoice?.amount,
-        daysPastDue: latestInvoice ? Math.floor((Date.now() - new Date(latestInvoice.dueDate).getTime()) / (1000 * 60 * 60 * 24)) : 0
-      });
+      // Update inbound message with invoice link
+      if (latestInvoice) {
+        await db.update(inboundMessages)
+          .set({ invoiceId: latestInvoice.id })
+          .where(eq(inboundMessages.id, inboundMsg.id));
+      }
 
-      console.log("🤖 SMS Intent detected:", intentResult);
+      // Process the message (this will create the action with proper date extraction)
+      await intentAnalyst.processInboundMessage(inboundMsg.id);
 
-      // Create Action record for inbound SMS
-      await storage.createAction({
-        tenantId: matchedTenantId,
-        contactId: matchedContact.id,
-        invoiceId: latestInvoice?.id || null,
-        type: 'sms',
-        status: 'completed',
-        subject: `SMS from ${matchedContact.name}: ${intentResult.intentType}`,
-        content: text,
-        completedAt: new Date(),
-        intentType: intentResult.intentType,
-        intentConfidence: intentResult.intentConfidence.toString(),
-        sentiment: intentResult.sentiment,
-        metadata: {
-          direction: 'inbound',
-          messageId: messageId,
-          intent: intentResult.intentType,
-          confidence: intentResult.intentConfidence,
-          sentiment: intentResult.sentiment,
-          summary: intentResult.summary
-        }
-      });
+      // Update action metadata to include SMS-specific fields
+      const createdAction = await db.select()
+        .from(actions)
+        .where(and(
+          eq(actions.tenantId, matchedTenantId),
+          eq(actions.type, 'sms')
+        ))
+        .orderBy(desc(actions.createdAt))
+        .limit(1);
+
+      if (createdAction.length > 0) {
+        await db.update(actions)
+          .set({
+            metadata: {
+              ...createdAction[0].metadata,
+              smsMessageId: messageId,
+            }
+          })
+          .where(eq(actions.id, createdAction[0].id));
+      }
 
       console.log("✅ Inbound SMS Action created with intent");
 
