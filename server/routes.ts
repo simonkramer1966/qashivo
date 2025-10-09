@@ -54,7 +54,8 @@ import {
   actions,
   bankTransactions,
   seasonalPatterns,
-  customerLearningProfiles
+  customerLearningProfiles,
+  inboundMessages
 } from "@shared/schema";
 import { getOverdueCategoryFromDueDate } from "@shared/utils/overdueUtils";
 import { calculateLatePaymentInterest } from "./utils/interestCalculator";
