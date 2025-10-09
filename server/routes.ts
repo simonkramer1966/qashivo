@@ -1995,6 +1995,74 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Mark invoice as paid and send thank you SMS
+  app.post("/api/invoices/:id/mark-paid", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { id: invoiceId } = req.params;
+
+      // Get invoice with contact details
+      const invoice = await storage.getInvoice(invoiceId, user.tenantId);
+      if (!invoice) {
+        return res.status(404).json({ message: "Invoice not found" });
+      }
+
+      // Get contact details
+      const contact = await storage.getContact(invoice.contactId, user.tenantId);
+      if (!contact) {
+        return res.status(404).json({ message: "Contact not found" });
+      }
+
+      // Mark invoice as paid
+      const updatedInvoice = await storage.updateInvoice(invoiceId, user.tenantId, {
+        status: 'paid',
+        paidDate: new Date(),
+        amountPaid: invoice.amount,
+      });
+
+      // Send thank you SMS if contact has a phone number
+      if (contact.phone) {
+        const customerName = contact.name || contact.companyName || "Customer";
+        const amount = `£${Number(invoice.amount).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        
+        const thankYouMessage = `Thank you for your payment of ${amount} for invoice ${invoice.invoiceNumber}! We really appreciate your business.`;
+
+        const smsResult = await sendSMS({
+          to: contact.phone,
+          message: thankYouMessage,
+        });
+
+        // Log the SMS action
+        if (smsResult.success) {
+          await storage.createAction({
+            tenantId: user.tenantId,
+            invoiceId: invoice.id,
+            contactId: contact.id,
+            type: 'sms',
+            status: 'completed',
+            subject: 'Payment Thank You SMS',
+            content: thankYouMessage,
+            completedAt: new Date(),
+            metadata: {
+              direction: 'outbound',
+              messageId: smsResult.messageId,
+              recipient: contact.phone,
+            },
+          });
+        }
+      }
+
+      res.json(updatedInvoice);
+    } catch (error) {
+      console.error("Error marking invoice as paid:", error);
+      res.status(500).json({ message: "Failed to mark invoice as paid" });
+    }
+  });
+
   // Send SMS for invoice with template selection
   app.post("/api/invoices/:id/send-sms", isAuthenticated, async (req: any, res) => {
     try {

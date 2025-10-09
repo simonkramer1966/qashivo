@@ -1,6 +1,8 @@
 import { useState, useMemo, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
+import { queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -79,6 +81,7 @@ function getSmartTimestamp(date: string): string {
 export default function ActionCentre() {
   const [, setLocation] = useLocation();
   const [searchQuery, setSearchQuery] = useState("");
+  const { toast } = useToast();
   
   // Workflow-based filter (main tabs)
   const [activeTab, setActiveTab] = useState<'queries' | 'overdue' | 'upcomingPTP' | 'brokenPromises' | 'disputes' | 'debtRecovery' | 'legal'>('overdue');
@@ -106,6 +109,38 @@ export default function ActionCentre() {
   }>({
     queryKey: ['/api/action-centre/tabs'],
     refetchInterval: 15000, // Auto-refresh every 15 seconds
+  });
+
+  // Mark invoice as paid mutation
+  const markPaidMutation = useMutation({
+    mutationFn: async (invoiceId: string) => {
+      const response = await fetch(`/api/invoices/${invoiceId}/mark-paid`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to mark invoice as paid');
+      }
+      return await response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Invoice marked as paid",
+        description: "Thank you SMS sent to customer",
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/actions'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/action-centre/tabs'] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to mark invoice as paid",
+        variant: "destructive",
+      });
+    },
   });
 
   const getIntentBadge = (intentType: string | null) => {
@@ -627,12 +662,14 @@ export default function ActionCentre() {
                     return (
                       <div 
                         key={item.id} 
-                        className="p-4 hover:bg-slate-50 cursor-pointer transition-colors border-l-4 border-l-red-500"
-                        onClick={() => setLocation(`/invoices/${item.id}`)}
+                        className="p-4 hover:bg-slate-50 transition-colors border-l-4 border-l-red-500"
                         data-testid={`invoice-item-${item.id}`}
                       >
                         <div className="flex items-center justify-between gap-4">
-                          <div className="flex items-center gap-3 flex-1 min-w-0">
+                          <div 
+                            className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer"
+                            onClick={() => setLocation(`/invoices/${item.id}`)}
+                          >
                             <div className="p-2 rounded-lg bg-red-100 flex-shrink-0">
                               <AlertTriangle className="h-5 w-5 text-red-600" />
                             </div>
@@ -658,7 +695,19 @@ export default function ActionCentre() {
                               </div>
                             </div>
                           </div>
-                          <ChevronRight className="h-5 w-5 text-slate-400 flex-shrink-0" />
+                          <Button
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              markPaidMutation.mutate(item.id);
+                            }}
+                            disabled={markPaidMutation.isPending}
+                            className="bg-green-600 hover:bg-green-700 text-white flex-shrink-0"
+                            data-testid={`button-mark-paid-${item.id}`}
+                          >
+                            <CheckCircle2 className="h-4 w-4 mr-1" />
+                            {markPaidMutation.isPending ? 'Processing...' : 'Paid'}
+                          </Button>
                         </div>
                       </div>
                     );
