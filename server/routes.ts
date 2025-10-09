@@ -1558,6 +1558,126 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Dashboard leaderboards - Best/Worst Payers and Top Outstanding
+  app.get("/api/dashboard/leaderboards", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      // Get all invoices for the tenant
+      const allInvoices = await storage.getInvoices(user.tenantId);
+      
+      // Calculate payment behavior per contact
+      const contactPaymentMap = new Map<string, {
+        contactId: string;
+        contactName: string;
+        totalPaid: number;
+        paidCount: number;
+        totalDaysToPay: number;
+        avgDaysToPay: number;
+        outstanding: number;
+        overdueCount: number;
+      }>();
+
+      for (const invoice of allInvoices) {
+        if (!contactPaymentMap.has(invoice.contactId)) {
+          const contact = await storage.getContact(invoice.contactId, user.tenantId);
+          contactPaymentMap.set(invoice.contactId, {
+            contactId: invoice.contactId,
+            contactName: contact?.name || 'Unknown',
+            totalPaid: 0,
+            paidCount: 0,
+            totalDaysToPay: 0,
+            avgDaysToPay: 0,
+            outstanding: 0,
+            overdueCount: 0
+          });
+        }
+
+        const contactData = contactPaymentMap.get(invoice.contactId)!;
+        
+        // Calculate for paid invoices
+        if (invoice.status === 'paid' && invoice.paidDate && invoice.issueDate) {
+          const daysToPay = Math.floor((new Date(invoice.paidDate).getTime() - new Date(invoice.issueDate).getTime()) / (1000 * 3600 * 24));
+          contactData.paidCount++;
+          contactData.totalDaysToPay += daysToPay;
+          contactData.totalPaid += parseFloat(invoice.amount);
+        }
+        
+        // Calculate outstanding
+        if (invoice.status === 'overdue' || invoice.status === 'pending') {
+          const outstanding = parseFloat(invoice.amount) - parseFloat(invoice.amountPaid || '0');
+          contactData.outstanding += outstanding;
+          
+          if (invoice.status === 'overdue') {
+            contactData.overdueCount++;
+          }
+        }
+      }
+
+      // Calculate average days to pay
+      contactPaymentMap.forEach(data => {
+        if (data.paidCount > 0) {
+          data.avgDaysToPay = Math.round(data.totalDaysToPay / data.paidCount);
+        }
+      });
+
+      // Filter contacts with at least one paid invoice
+      const contactsWithPayments = Array.from(contactPaymentMap.values())
+        .filter(c => c.paidCount > 0);
+
+      // Best payers (lowest avg days to pay)
+      const bestPayers = contactsWithPayments
+        .sort((a, b) => a.avgDaysToPay - b.avgDaysToPay)
+        .slice(0, 10)
+        .map((c, idx) => ({
+          rank: idx + 1,
+          contactId: c.contactId,
+          contactName: c.contactName,
+          avgDaysToPay: c.avgDaysToPay,
+          paidCount: c.paidCount,
+          totalPaid: c.totalPaid
+        }));
+
+      // Worst payers (highest avg days to pay)
+      const worstPayers = contactsWithPayments
+        .sort((a, b) => b.avgDaysToPay - a.avgDaysToPay)
+        .slice(0, 10)
+        .map((c, idx) => ({
+          rank: idx + 1,
+          contactId: c.contactId,
+          contactName: c.contactName,
+          avgDaysToPay: c.avgDaysToPay,
+          paidCount: c.paidCount,
+          totalPaid: c.totalPaid
+        }));
+
+      // Top outstanding (highest current outstanding balance)
+      const topOutstanding = Array.from(contactPaymentMap.values())
+        .filter(c => c.outstanding > 0)
+        .sort((a, b) => b.outstanding - a.outstanding)
+        .slice(0, 10)
+        .map((c, idx) => ({
+          rank: idx + 1,
+          contactId: c.contactId,
+          contactName: c.contactName,
+          outstanding: c.outstanding,
+          overdueCount: c.overdueCount
+        }));
+
+      res.json({
+        bestPayers,
+        worstPayers,
+        topOutstanding
+      });
+    } catch (error) {
+      console.error("Error fetching dashboard leaderboards:", error);
+      res.status(500).json({ message: "Failed to fetch leaderboards" });
+    }
+  });
+
   // Owner-only endpoints
   app.get("/api/owner/tenants", isOwner, async (req: any, res) => {
     try {

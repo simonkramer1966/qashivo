@@ -54,6 +54,32 @@ interface CashFlowData {
   };
 }
 
+interface Leaderboard {
+  bestPayers: Array<{
+    rank: number;
+    contactId: string;
+    contactName: string;
+    avgDaysToPay: number;
+    paidCount: number;
+    totalPaid: number;
+  }>;
+  worstPayers: Array<{
+    rank: number;
+    contactId: string;
+    contactName: string;
+    avgDaysToPay: number;
+    paidCount: number;
+    totalPaid: number;
+  }>;
+  topOutstanding: Array<{
+    rank: number;
+    contactId: string;
+    contactName: string;
+    outstanding: number;
+    overdueCount: number;
+  }>;
+}
+
 export default function Cashboard() {
   const [, setLocation] = useLocation();
   const { formatCurrency } = useCurrency();
@@ -65,6 +91,10 @@ export default function Cashboard() {
 
   const { data: cashflowData, isLoading: cashflowLoading } = useQuery<CashFlowData>({
     queryKey: ["/api/analytics/cashflow-forecast"],
+  });
+
+  const { data: leaderboards, isLoading: leaderboardsLoading } = useQuery<Leaderboard>({
+    queryKey: ["/api/dashboard/leaderboards"],
   });
 
   const totalOutstanding = metrics?.totalOutstanding || 0;
@@ -337,6 +367,129 @@ export default function Cashboard() {
                 </ResponsiveContainer>
               )}
             </CardContent>
+          </div>
+
+          {/* Leaderboards */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+            {/* Payment Behavior Leaderboard */}
+            <div className="card-apple p-4 sm:p-6" data-testid="card-payment-behavior">
+              <h3 className="text-lg sm:text-xl font-bold mb-4">Payment Behavior</h3>
+              
+              {leaderboardsLoading ? (
+                <div className="h-64 flex items-center justify-center">
+                  <div className="text-slate-400">Loading...</div>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {/* Best Payers */}
+                  <div>
+                    <h4 className="text-sm font-semibold text-green-600 mb-2 flex items-center gap-2">
+                      <div className="p-1 bg-green-100 rounded">
+                        <TrendingUp className="h-4 w-4" />
+                      </div>
+                      Best Payers
+                    </h4>
+                    <div className="space-y-2">
+                      {leaderboards?.bestPayers.slice(0, 5).map((payer) => (
+                        <div 
+                          key={payer.contactId}
+                          className="flex items-center justify-between p-2 rounded-lg hover:bg-slate-50 cursor-pointer"
+                          onClick={() => setLocation(`/contacts/${payer.contactId}`)}
+                        >
+                          <div className="flex items-center gap-3">
+                            <Badge variant="outline" className="w-8 h-8 flex items-center justify-center text-xs font-bold">
+                              {payer.rank}
+                            </Badge>
+                            <div>
+                              <p className="font-medium text-sm">{payer.contactName}</p>
+                              <p className="text-xs text-slate-500">{payer.paidCount} invoices paid</p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-semibold text-green-600">{payer.avgDaysToPay} days</p>
+                            <p className="text-xs text-slate-500">{formatCurrency(payer.totalPaid)}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Worst Payers */}
+                  <div>
+                    <h4 className="text-sm font-semibold text-red-600 mb-2 flex items-center gap-2">
+                      <div className="p-1 bg-red-100 rounded">
+                        <AlertTriangle className="h-4 w-4" />
+                      </div>
+                      Needs Attention
+                    </h4>
+                    <div className="space-y-2">
+                      {leaderboards?.worstPayers.slice(0, 5).map((payer) => (
+                        <div 
+                          key={payer.contactId}
+                          className="flex items-center justify-between p-2 rounded-lg hover:bg-slate-50 cursor-pointer"
+                          onClick={() => setLocation(`/contacts/${payer.contactId}`)}
+                        >
+                          <div className="flex items-center gap-3">
+                            <Badge variant="outline" className="w-8 h-8 flex items-center justify-center text-xs font-bold bg-red-50 border-red-200">
+                              {payer.rank}
+                            </Badge>
+                            <div>
+                              <p className="font-medium text-sm">{payer.contactName}</p>
+                              <p className="text-xs text-slate-500">{payer.paidCount} invoices paid</p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-semibold text-red-600">{payer.avgDaysToPay} days</p>
+                            <p className="text-xs text-slate-500">{formatCurrency(payer.totalPaid)}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Top Outstanding Value */}
+            <div className="card-apple p-4 sm:p-6" data-testid="card-top-outstanding">
+              <h3 className="text-lg sm:text-xl font-bold mb-4">Top Outstanding Value</h3>
+              
+              {leaderboardsLoading ? (
+                <div className="h-64 flex items-center justify-center">
+                  <div className="text-slate-400">Loading...</div>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {leaderboards?.topOutstanding.map((customer) => (
+                    <div 
+                      key={customer.contactId}
+                      className="flex items-center justify-between p-3 rounded-lg hover:bg-slate-50 cursor-pointer"
+                      onClick={() => setLocation(`/contacts/${customer.contactId}`)}
+                    >
+                      <div className="flex items-center gap-3">
+                        <Badge 
+                          variant="outline" 
+                          className={`w-8 h-8 flex items-center justify-center text-xs font-bold ${
+                            customer.rank <= 3 ? 'bg-[#E8A23B]/10 border-[#E8A23B] text-[#E8A23B]' : ''
+                          }`}
+                        >
+                          {customer.rank}
+                        </Badge>
+                        <div>
+                          <p className="font-medium text-sm">{customer.contactName}</p>
+                          <p className="text-xs text-slate-500">
+                            {customer.overdueCount} overdue invoice{customer.overdueCount !== 1 ? 's' : ''}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-semibold text-[#E8A23B]">{formatCurrency(customer.outstanding)}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Action Items */}
