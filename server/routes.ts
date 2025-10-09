@@ -9221,26 +9221,6 @@ Payment required immediately to avoid collection action. Contact us NOW.`
       const savedSms = await storage.createSmsMessage(smsData);
       console.log("✅ Inbound Vonage SMS saved to database:", savedSms.id);
 
-      // Save as inbound message for Intent Analyst processing
-      const [inboundMsg] = await db.insert(inboundMessages).values({
-        tenantId: matchedTenantId,
-        contactId: matchedContact.id,
-        invoiceId: null, // Will be linked during processing if needed
-        channel: 'sms',
-        from: msisdn,
-        to: to,
-        subject: null,
-        content: text,
-        rawPayload: req.body,
-        intentAnalyzed: false,
-      }).returning();
-
-      console.log("✅ Inbound message created for Intent Analyst:", inboundMsg.id);
-
-      // Process with Intent Analyst (extracts dates properly)
-      const { IntentAnalyst: IntentAnalystClass } = await import('./services/intentAnalyst.js');
-      const intentAnalyst = new IntentAnalystClass();
-      
       // Get latest invoice for context
       const invoices = await storage.getInvoices(matchedTenantId);
       const contactInvoices = invoices.filter((inv: any) => inv.contactId === matchedContact.id);
@@ -9248,12 +9228,27 @@ Payment required immediately to avoid collection action. Contact us NOW.`
         new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       )[0];
 
-      // Update inbound message with invoice link
-      if (latestInvoice) {
-        await db.update(inboundMessages)
-          .set({ invoiceId: latestInvoice.id })
-          .where(eq(inboundMessages.id, inboundMsg.id));
-      }
+      // Save as inbound message for Intent Analyst processing
+      const inboundMsgData = {
+        tenantId: matchedTenantId,
+        contactId: matchedContact.id,
+        invoiceId: latestInvoice?.id || null,
+        channel: 'sms' as const,
+        from: msisdn,
+        to: to,
+        subject: null,
+        content: text,
+        rawPayload: JSON.parse(JSON.stringify(req.body)), // Ensure proper JSON serialization
+        intentAnalyzed: false,
+      };
+      
+      const [inboundMsg] = await db.insert(inboundMessages).values(inboundMsgData).returning();
+
+      console.log("✅ Inbound message created for Intent Analyst:", inboundMsg.id);
+
+      // Process with Intent Analyst (extracts dates properly)
+      const { IntentAnalyst: IntentAnalystClass } = await import('./services/intentAnalyst.js');
+      const intentAnalyst = new IntentAnalystClass();
 
       // Process the message (this will create the action with proper date extraction)
       await intentAnalyst.processInboundMessage(inboundMsg.id);
