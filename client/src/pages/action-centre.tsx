@@ -594,32 +594,6 @@ export default function ActionCentre() {
             </div>
           </div>
 
-          {/* Stats Overview */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-6">
-            <div className="card-apple p-3 sm:p-4">
-              <p className="text-xs sm:text-sm text-slate-600 mb-1">Current Tab</p>
-              <p className="text-xl sm:text-2xl font-bold text-slate-900">{filteredActions.length}</p>
-            </div>
-            <div className="card-apple p-3 sm:p-4">
-              <p className="text-xs sm:text-sm text-slate-600 mb-1">Queries</p>
-              <p className="text-xl sm:text-2xl font-bold text-blue-500">
-                {tabData?.queries.count || 0}
-              </p>
-            </div>
-            <div className="card-apple p-3 sm:p-4">
-              <p className="text-xs sm:text-sm text-slate-600 mb-1">Broken Promises</p>
-              <p className="text-xl sm:text-2xl font-bold text-orange-500">
-                {tabData?.brokenPromises.count || 0}
-              </p>
-            </div>
-            <div className="card-apple p-3 sm:p-4">
-              <p className="text-xs sm:text-sm text-slate-600 mb-1">Disputes</p>
-              <p className="text-xl sm:text-2xl font-bold text-red-500">
-                {tabData?.disputes.count || 0}
-              </p>
-            </div>
-          </div>
-
           {/* Action List */}
           <div className="card-apple overflow-hidden">
             {isLoading ? (
