@@ -621,16 +621,18 @@ export default function ActionCentre() {
           </div>
 
           {/* Action List */}
-          <div className="space-y-3">
+          <div className="card-apple overflow-hidden">
             {isLoading ? (
               // Loading skeleton
-              [...Array(5)].map((_, i) => (
-                <div key={i} className="card-apple p-4">
-                  <div className="h-20 bg-slate-200 animate-pulse rounded"></div>
-                </div>
-              ))
+              <div className="divide-y divide-slate-100">
+                {[...Array(5)].map((_, i) => (
+                  <div key={i} className="p-4">
+                    <div className="h-16 bg-slate-200 animate-pulse rounded"></div>
+                  </div>
+                ))}
+              </div>
             ) : filteredActions.length === 0 ? (
-              <div className="card-apple p-8 text-center">
+              <div className="p-8 text-center">
                 <AlertTriangle className="h-12 w-12 mx-auto mb-3 text-slate-400" />
                 <p className="text-slate-600">
                   {statusFilters.includes('needs_action')
@@ -639,86 +641,73 @@ export default function ActionCentre() {
                 </p>
               </div>
             ) : (
-              filteredActions.map((item: any) => {
-                // Determine if this is an invoice or action
-                const isInvoice = isInvoiceTab || !item.type;
-                
-                if (isInvoice) {
-                  // Render invoice card
-                  const daysOverdue = Math.floor((new Date().getTime() - new Date(item.dueDate).getTime()) / (1000 * 3600 * 24));
+              <div className="divide-y divide-slate-100">
+                {filteredActions.map((item: any) => {
+                  // Determine if this is an invoice or action
+                  const isInvoice = isInvoiceTab || !item.type;
                   
-                  return (
-                    <div 
-                      key={item.id} 
-                      className="card-apple-hover p-4 cursor-pointer transition-all border-l-4 border-l-red-500"
-                      onClick={() => setLocation(`/invoices/${item.id}`)}
-                      data-testid={`invoice-item-${item.id}`}
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-3 mb-2">
-                            <div className="p-2 rounded-lg bg-red-100">
+                  if (isInvoice) {
+                    // Render invoice list item
+                    const daysOverdue = Math.floor((new Date().getTime() - new Date(item.dueDate).getTime()) / (1000 * 3600 * 24));
+                    
+                    return (
+                      <div 
+                        key={item.id} 
+                        className="p-4 hover:bg-slate-50 cursor-pointer transition-colors border-l-4 border-l-red-500"
+                        onClick={() => setLocation(`/invoices/${item.id}`)}
+                        data-testid={`invoice-item-${item.id}`}
+                      >
+                        <div className="flex items-center justify-between gap-4">
+                          <div className="flex items-center gap-3 flex-1 min-w-0">
+                            <div className="p-2 rounded-lg bg-red-100 flex-shrink-0">
                               <AlertTriangle className="h-5 w-5 text-red-600" />
                             </div>
-                            <div className="flex-1">
-                              <h4 className="font-semibold text-slate-900">
-                                {item.invoiceNumber || 'Unknown Invoice'}
-                              </h4>
-                              <div className="flex items-center gap-2 text-xs text-slate-500">
-                                <span className="font-medium text-red-600">{daysOverdue} days overdue</span>
-                                <span>•</span>
-                                <span className="font-medium">{formatCurrency(parseFloat(item.amount || 0))}</span>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-3 mb-1">
+                                <h4 className="font-semibold text-slate-900 truncate">
+                                  {item.invoiceNumber || 'Unknown Invoice'}
+                                </h4>
+                                <span className="text-sm font-medium text-red-600 flex-shrink-0">{daysOverdue} days overdue</span>
+                              </div>
+                              <div className="flex items-center gap-3 text-sm text-slate-600">
+                                {item.contactName && <span className="truncate">{item.contactName}</span>}
+                                <span className="font-medium text-slate-900 flex-shrink-0">{formatCurrency(parseFloat(item.amount || 0))}</span>
+                                <div className="flex items-center gap-2 flex-shrink-0">
+                                  <span className="text-xs text-slate-500">Due: {new Date(item.dueDate).toLocaleDateString()}</span>
+                                  {item.escalationFlag && (
+                                    <Badge className="bg-red-600 text-white text-xs">Escalated</Badge>
+                                  )}
+                                  {item.legalFlag && (
+                                    <Badge className="bg-red-800 text-white text-xs">Legal</Badge>
+                                  )}
+                                </div>
                               </div>
                             </div>
                           </div>
-                          
-                          {item.contactName && (
-                            <p className="text-sm text-slate-600 mb-2">
-                              Customer: {item.contactName}
-                            </p>
-                          )}
-                          
-                          <div className="flex flex-wrap gap-2">
-                            <Badge variant="outline" className="text-xs bg-slate-50">
-                              Due: {new Date(item.dueDate).toLocaleDateString()}
-                            </Badge>
-                            {item.escalationFlag && (
-                              <Badge className="bg-red-600 text-white text-xs">
-                                Escalated
-                              </Badge>
-                            )}
-                            {item.legalFlag && (
-                              <Badge className="bg-red-800 text-white text-xs">
-                                Legal
-                              </Badge>
-                            )}
-                          </div>
+                          <ChevronRight className="h-5 w-5 text-slate-400 flex-shrink-0" />
                         </div>
-                        <ChevronRight className="h-5 w-5 text-slate-400 flex-shrink-0 mt-1" />
                       </div>
-                    </div>
-                  );
-                } else {
-                  // Render action card
-                  const isInbound = item.metadata?.direction === 'inbound';
-                  
-                  return (
-                    <div 
-                      key={item.id} 
-                      className={`card-apple-hover p-4 cursor-pointer transition-all ${
-                        isInbound ? 'border-l-4 border-l-[#17B6C3]' : 'bg-slate-50/50'
-                      }`}
-                      onClick={() => item.invoiceId && setLocation(`/invoices/${item.invoiceId}`)}
-                      data-testid={`action-item-${item.id}`}
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-2">
-                            <div className={`p-2 rounded-lg ${getChannelColor(item.type)}`}>
+                    );
+                  } else {
+                    // Render action list item
+                    const isInbound = item.metadata?.direction === 'inbound';
+                    
+                    return (
+                      <div 
+                        key={item.id} 
+                        className={`p-4 hover:bg-slate-50 cursor-pointer transition-colors ${
+                          isInbound ? 'border-l-4 border-l-[#17B6C3]' : 'border-l-4 border-l-transparent'
+                        }`}
+                        onClick={() => item.invoiceId && setLocation(`/invoices/${item.invoiceId}`)}
+                        data-testid={`action-item-${item.id}`}
+                      >
+                        <div className="flex items-center justify-between gap-4">
+                          <div className="flex items-center gap-3 flex-1 min-w-0">
+                            <div className={`p-2 rounded-lg flex-shrink-0 ${getChannelColor(item.type)}`}>
                               {getActionIcon(item.type)}
                             </div>
                             
-                            <div className={`p-1 rounded ${isInbound ? 'bg-[#17B6C3]' : 'bg-slate-400'}`}>
+                            <div className={`p-1 rounded flex-shrink-0 ${isInbound ? 'bg-[#17B6C3]' : 'bg-slate-400'}`}>
                               {isInbound ? (
                                 <ArrowDown className="h-3 w-3 text-white" data-testid="icon-inbound" />
                               ) : (
@@ -726,70 +715,45 @@ export default function ActionCentre() {
                               )}
                             </div>
                             
-                            <div className="flex-1">
-                              <h4 className="font-semibold text-slate-900 truncate">
-                                {item.subject || 'No subject'}
-                              </h4>
-                              <div className="flex items-center gap-2 text-xs text-slate-500">
-                                <span>{getSmartTimestamp(item.createdAt)}</span>
-                                {item.contactName && (
-                                  <>
-                                    <span>•</span>
-                                    <span className="font-medium text-slate-700">{item.contactName}</span>
-                                  </>
-                                )}
-                                {item.invoiceNumber && (
-                                  <>
-                                    <span>•</span>
-                                    <span className="text-[#17B6C3]">{item.invoiceNumber}</span>
-                                  </>
-                                )}
-                                {item.invoiceAmount && (
-                                  <>
-                                    <span>•</span>
-                                    <span className="font-medium">{formatCurrency(parseFloat(item.invoiceAmount))}</span>
-                                  </>
-                                )}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-3 mb-1">
+                                <h4 className="font-semibold text-slate-900 truncate">
+                                  {item.subject || 'No subject'}
+                                </h4>
+                                <span className="text-xs text-slate-500 flex-shrink-0">{getSmartTimestamp(item.createdAt)}</span>
+                              </div>
+                              <div className="flex items-center gap-3 text-sm">
+                                {item.contactName && <span className="text-slate-700 truncate">{item.contactName}</span>}
+                                {item.invoiceNumber && <span className="text-[#17B6C3] flex-shrink-0">{item.invoiceNumber}</span>}
+                                {item.invoiceAmount && <span className="font-medium text-slate-900 flex-shrink-0">{formatCurrency(parseFloat(item.invoiceAmount))}</span>}
+                                <div className="flex items-center gap-2 flex-shrink-0">
+                                  {item.intentType && getIntentBadge(item.intentType)}
+                                  {item.sentiment && getSentimentBadge(item.sentiment)}
+                                  {!isInbound && (
+                                    item.hasResponse ? (
+                                      <Badge className="bg-green-100 text-green-800 border-green-200 flex items-center gap-1 text-xs">
+                                        <CheckCircle2 className="h-3 w-3" />
+                                        Responded
+                                      </Badge>
+                                    ) : (
+                                      <Badge variant="outline" className="text-slate-500 flex items-center gap-1 text-xs">
+                                        <XCircle className="h-3 w-3" />
+                                        No Response
+                                      </Badge>
+                                    )
+                                  )}
+                                </div>
                               </div>
                             </div>
                           </div>
                           
-                          {item.content && (
-                            <p className="text-sm text-slate-600 mb-3 line-clamp-2">
-                              {item.content}
-                            </p>
-                          )}
-                          
-                          <div className="flex flex-wrap gap-2">
-                            <Badge variant="outline" className="text-xs">
-                              {item.type.toUpperCase()}
-                            </Badge>
-                            
-                            {item.intentType && getIntentBadge(item.intentType)}
-                            {item.sentiment && getSentimentBadge(item.sentiment)}
-                            
-                            {!isInbound && (
-                              item.hasResponse ? (
-                                <Badge className="bg-green-100 text-green-800 border-green-200 flex items-center gap-1">
-                                  <CheckCircle2 className="h-3 w-3" />
-                                  Responded
-                                </Badge>
-                              ) : (
-                                <Badge variant="outline" className="text-slate-500 flex items-center gap-1">
-                                  <XCircle className="h-3 w-3" />
-                                  No Response
-                                </Badge>
-                              )
-                            )}
-                          </div>
+                          <ChevronRight className="h-5 w-5 text-slate-400 flex-shrink-0" />
                         </div>
-                        
-                        <ChevronRight className="h-5 w-5 text-slate-400 flex-shrink-0 mt-1" />
                       </div>
-                    </div>
-                  );
-                }
-              })
+                    );
+                  }
+                })}
+              </div>
             )}
           </div>
         </div>
