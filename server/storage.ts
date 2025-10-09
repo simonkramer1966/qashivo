@@ -1297,7 +1297,7 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(actions)
       .where(eq(actions.tenantId, tenantId))
-      .orderBy(desc(actions.createdAt))
+      .orderBy(desc(actions.updatedAt))
       .limit(limit);
   }
 
