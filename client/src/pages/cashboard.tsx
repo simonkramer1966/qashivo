@@ -194,25 +194,6 @@ export default function Cashboard() {
               </div>
             </div>
 
-            {/* Collection Rate */}
-            <div className="card-apple p-4 sm:p-6" data-testid="card-collection-rate">
-              <div className="flex items-start justify-between mb-3">
-                <div>
-                  <p className="text-sm text-slate-600 mb-1">Collection Rate</p>
-                  {metricsLoading ? (
-                    <div className="h-8 w-20 bg-slate-200 animate-pulse rounded"></div>
-                  ) : (
-                    <h3 className="text-xl sm:text-2xl font-bold text-slate-900">
-                      {collectionRate.toFixed(0)}%
-                    </h3>
-                  )}
-                </div>
-                <div className="p-2 bg-[#4FAD80]/10 rounded-xl">
-                  <TrendingUp className="h-5 w-5 text-[#4FAD80]" />
-                </div>
-              </div>
-            </div>
-
             {/* Avg Days Late */}
             <div className="card-apple p-4 sm:p-6" data-testid="card-avg-days">
               <div className="flex items-start justify-between mb-3">
@@ -228,6 +209,30 @@ export default function Cashboard() {
                 </div>
                 <div className="p-2 bg-slate-100 rounded-xl">
                   <Clock className="h-5 w-5 text-slate-600" />
+                </div>
+              </div>
+            </div>
+
+            {/* Interest Accrued */}
+            <div className="card-apple p-4 sm:p-6 bg-[#F0F9FF] border border-[#E6E8EA]" data-testid="card-interest">
+              <div className="flex items-start justify-between mb-3">
+                <div>
+                  <p className="text-sm text-slate-600 mb-1">Interest Accrued</p>
+                  {leaderboardsLoading ? (
+                    <div className="h-8 w-32 bg-slate-200 animate-pulse rounded"></div>
+                  ) : (
+                    <h3 className="text-xl sm:text-2xl font-bold text-slate-900">
+                      {formatCurrency(leaderboards?.summary?.totalInterest || 0)}
+                    </h3>
+                  )}
+                  {!leaderboardsLoading && leaderboards?.summary && (
+                    <p className="text-xs text-slate-500 mt-1">
+                      BoE + 8% ({leaderboards.summary.combinedRate.toFixed(1)}% annual)
+                    </p>
+                  )}
+                </div>
+                <div className="p-2 bg-blue-500/10 rounded-xl">
+                  <Percent className="h-5 w-5 text-blue-600" />
                 </div>
               </div>
             </div>
@@ -304,30 +309,6 @@ export default function Cashboard() {
                 </div>
                 <div className="p-2 bg-[#C75C5C]/10 rounded-xl">
                   <Gavel className="h-5 w-5 text-[#C75C5C]" />
-                </div>
-              </div>
-            </div>
-
-            {/* Interest Accrued */}
-            <div className="card-apple p-4 sm:p-6 bg-[#F0F9FF] border border-[#E6E8EA]" data-testid="card-interest">
-              <div className="flex items-start justify-between mb-3">
-                <div>
-                  <p className="text-sm text-slate-600 mb-1">Interest Accrued</p>
-                  {leaderboardsLoading ? (
-                    <div className="h-8 w-32 bg-slate-200 animate-pulse rounded"></div>
-                  ) : (
-                    <h3 className="text-xl sm:text-2xl font-bold text-slate-900">
-                      {formatCurrency(leaderboards?.summary?.totalInterest || 0)}
-                    </h3>
-                  )}
-                  {!leaderboardsLoading && leaderboards?.summary && (
-                    <p className="text-xs text-slate-500 mt-1">
-                      BoE + 8% ({leaderboards.summary.combinedRate.toFixed(1)}% annual)
-                    </p>
-                  )}
-                </div>
-                <div className="p-2 bg-blue-500/10 rounded-xl">
-                  <Percent className="h-5 w-5 text-blue-600" />
                 </div>
               </div>
             </div>
