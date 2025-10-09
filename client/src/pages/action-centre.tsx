@@ -91,6 +91,7 @@ export default function ActionCentre() {
 
   const { data: actions = [], isLoading } = useQuery<Action[]>({
     queryKey: ['/api/actions'],
+    refetchInterval: 15000, // Auto-refresh every 15 seconds
   });
 
   // Fetch categorized tab data
@@ -104,6 +105,7 @@ export default function ActionCentre() {
     legal: { count: number; items: any[] };
   }>({
     queryKey: ['/api/action-centre/tabs'],
+    refetchInterval: 15000, // Auto-refresh every 15 seconds
   });
 
   const getIntentBadge = (intentType: string | null) => {

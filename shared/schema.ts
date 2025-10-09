@@ -514,7 +514,14 @@ export const actions = pgTable("actions", {
   
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
+}, (table) => [
+  // Composite indexes for Action Centre performance
+  index("idx_actions_tenant_type_status").on(table.tenantId, table.type, table.status),
+  index("idx_actions_tenant_updated").on(table.tenantId, table.updatedAt),
+  index("idx_actions_tenant_scheduled").on(table.tenantId, table.scheduledFor),
+  index("idx_actions_contact").on(table.contactId),
+  index("idx_actions_invoice").on(table.invoiceId),
+]);
 
 // Inbound Messages table for intent analysis
 export const inboundMessages = pgTable("inbound_messages", {
