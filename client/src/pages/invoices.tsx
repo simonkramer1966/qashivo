@@ -183,32 +183,6 @@ export default function Invoices() {
         />
         
         <div className="container-apple py-4 sm:py-6 lg:py-8">
-          <div className="flex flex-col sm:flex-row gap-3 mb-6">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" />
-              <Input
-                type="text"
-                placeholder="Search invoices..."
-                value={search}
-                onChange={(e) => handleSearchChange(e.target.value)}
-                className="input-apple pl-10"
-                data-testid="input-search-invoices"
-              />
-            </div>
-            
-            <Select value={statusFilter} onValueChange={handleStatusFilterChange}>
-              <SelectTrigger className="w-full sm:w-[180px] input-apple" data-testid="select-status-filter">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Invoices</SelectItem>
-                <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="overdue">Overdue</SelectItem>
-                <SelectItem value="paid">Paid</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
           {/* Desktop: 4-column grid of metrics */}
           <div className="hidden sm:grid sm:grid-cols-4 gap-4 mb-6">
             <Card className="card-apple p-2.5 border-l-4 border-l-[#17B6C3]">
@@ -255,12 +229,66 @@ export default function Invoices() {
             </Card>
           </div>
 
-          <div className="mb-4">
-            <div className="flex items-center justify-between">
-              <p className="text-sm text-slate-600">
-                {pagination.total} invoice{pagination.total !== 1 ? 's' : ''}
-              </p>
+          {/* Search/Filter Row with Invoice Count - Desktop */}
+          <div className="hidden sm:flex items-center gap-3 mb-4">
+            <p className="text-sm text-slate-600 whitespace-nowrap">
+              {pagination.total} invoice{pagination.total !== 1 ? 's' : ''}
+            </p>
+            
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" />
+              <Input
+                type="text"
+                placeholder="Search invoices..."
+                value={search}
+                onChange={(e) => handleSearchChange(e.target.value)}
+                className="input-apple pl-10"
+                data-testid="input-search-invoices"
+              />
             </div>
+            
+            <Select value={statusFilter} onValueChange={handleStatusFilterChange}>
+              <SelectTrigger className="w-[180px] input-apple" data-testid="select-status-filter">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Invoices</SelectItem>
+                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="overdue">Overdue</SelectItem>
+                <SelectItem value="paid">Paid</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Mobile: Search/Filter stacked */}
+          <div className="sm:hidden space-y-3 mb-4">
+            <p className="text-sm text-slate-600">
+              {pagination.total} invoice{pagination.total !== 1 ? 's' : ''}
+            </p>
+            
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" />
+              <Input
+                type="text"
+                placeholder="Search invoices..."
+                value={search}
+                onChange={(e) => handleSearchChange(e.target.value)}
+                className="input-apple pl-10"
+                data-testid="input-search-invoices"
+              />
+            </div>
+            
+            <Select value={statusFilter} onValueChange={handleStatusFilterChange}>
+              <SelectTrigger className="w-full input-apple" data-testid="select-status-filter">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Invoices</SelectItem>
+                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="overdue">Overdue</SelectItem>
+                <SelectItem value="paid">Paid</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Mobile: Card View */}
