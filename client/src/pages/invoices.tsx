@@ -230,12 +230,12 @@ export default function Invoices() {
           </div>
 
           {/* Control Row: Invoice Count + Search + Filter + Pagination - Desktop */}
-          <div className="hidden sm:flex items-center gap-3 mb-4">
+          <div className="hidden sm:flex items-center gap-3 mb-4 flex-wrap">
             <p className="text-sm text-slate-600 whitespace-nowrap">
               {pagination.total} invoice{pagination.total !== 1 ? 's' : ''}
             </p>
             
-            <div className="relative flex-1">
+            <div className="relative w-[300px]">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" />
               <Input
                 type="text"
@@ -248,7 +248,7 @@ export default function Invoices() {
             </div>
             
             <Select value={statusFilter} onValueChange={handleStatusFilterChange}>
-              <SelectTrigger className="w-[180px] input-apple" data-testid="select-status-filter">
+              <SelectTrigger className="w-[160px] input-apple" data-testid="select-status-filter">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -261,7 +261,7 @@ export default function Invoices() {
 
             {/* Pagination Controls */}
             {pagination.totalPages > 1 && (
-              <div className="flex gap-2 items-center">
+              <div className="flex gap-2 items-center ml-auto">
                 <Button
                   onClick={() => setPage(Math.max(1, page - 1))}
                   disabled={page === 1}
