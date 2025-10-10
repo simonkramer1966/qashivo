@@ -266,9 +266,9 @@ export default function Customers() {
                 <p className="text-slate-600">No customers found</p>
               </div>
             ) : (
-              <div className="card-apple overflow-hidden">
+              <div className="card-apple overflow-hidden max-h-[calc(100vh-400px)] overflow-y-auto">
                 {/* Table Header */}
-                <div className="grid grid-cols-12 gap-4 px-6 py-3 bg-slate-50 border-b border-slate-200 text-sm font-semibold text-slate-600">
+                <div className="grid grid-cols-12 gap-4 px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10">
                   <div className="col-span-3">Customer</div>
                   <div className="col-span-2">Email</div>
                   <div className="col-span-2">Credit Limit</div>
@@ -281,7 +281,7 @@ export default function Customers() {
                 {contacts.map((contact) => (
                   <div
                     key={contact.id}
-                    className={`grid grid-cols-12 gap-4 px-6 py-4 border-l-4 ${getRiskColor(contact.riskBand)} border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors`}
+                    className={`grid grid-cols-12 gap-4 px-4 py-2 border-l-4 ${getRiskColor(contact.riskBand)} border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors`}
                     onClick={() => {
                       setSelectedContact(contact);
                       setShowCustomerDetail(true);
@@ -290,34 +290,34 @@ export default function Customers() {
                   >
                     {/* Customer */}
                     <div className="col-span-3 min-w-0">
-                      <p className="font-semibold text-slate-900 truncate flex items-center gap-1.5">
+                      <p className="font-semibold text-sm text-slate-900 truncate flex items-center gap-1.5">
                         <span className="truncate">{contact.companyName || contact.name}</span>
                         {contact.riskBand ? (
-                          <ShieldCheck className="h-4 w-4 text-[#4FAD80] flex-shrink-0" data-testid={`shield-checked-${contact.id}`} />
+                          <ShieldCheck className="h-3.5 w-3.5 text-[#4FAD80] flex-shrink-0" data-testid={`shield-checked-${contact.id}`} />
                         ) : (
-                          <Shield className="h-4 w-4 text-[#E8A23B] flex-shrink-0" data-testid={`shield-unchecked-${contact.id}`} />
+                          <Shield className="h-3.5 w-3.5 text-[#E8A23B] flex-shrink-0" data-testid={`shield-unchecked-${contact.id}`} />
                         )}
                       </p>
                     </div>
 
                     {/* Email */}
                     <div className="col-span-2 min-w-0">
-                      <p className="text-sm text-slate-600 truncate">{contact.email || '-'}</p>
+                      <p className="text-xs text-slate-600 truncate">{contact.email || '-'}</p>
                     </div>
 
                     {/* Credit Limit */}
                     <div className="col-span-2">
-                      <p className="text-sm text-slate-900">
+                      <p className="text-xs text-slate-900">
                         {contact.creditLimit ? formatCurrency(contact.creditLimit) : '-'}
                       </p>
                     </div>
 
                     {/* Outstanding */}
                     <div className="col-span-2">
-                      <p className="font-semibold text-slate-900">
+                      <p className="font-semibold text-sm text-slate-900">
                         {formatCurrency(contact.outstandingAmount)}
                       </p>
-                      <p className="text-xs text-slate-500">
+                      <p className="text-[10px] text-slate-500">
                         {contact.invoiceCount} invoice{contact.invoiceCount !== 1 ? 's' : ''}
                       </p>
                     </div>
@@ -326,15 +326,15 @@ export default function Customers() {
                     <div className="col-span-2">
                       {contact.overdueAmount > 0 ? (
                         <>
-                          <p className="font-semibold text-[#C75C5C]">
+                          <p className="font-semibold text-sm text-[#C75C5C]">
                             {formatCurrency(contact.overdueAmount)}
                           </p>
-                          <p className="text-xs text-[#C75C5C]">
+                          <p className="text-[10px] text-[#C75C5C]">
                             {contact.overdueCount} invoice{contact.overdueCount !== 1 ? 's' : ''}
                           </p>
                         </>
                       ) : (
-                        <p className="text-sm text-slate-400">-</p>
+                        <p className="text-xs text-slate-400">-</p>
                       )}
                     </div>
 
