@@ -55,13 +55,13 @@ const navigationItems = [
   // Section 1: Dashboard
   { name: "Cashboard", href: "/", icon: Gauge },
   { name: "Cashflow", href: "/cashflow", icon: TrendingUp },
+  { name: "Wallet", href: "/wallet", icon: Wallet },
   { name: "divider", href: "#", icon: null },
   
   // Section 2: Core Operations
   { name: "Customers", href: "/contacts", icon: Users },
   { name: "Invoices", href: "/invoices", icon: FileText },
   { name: "Workspace", href: "/action-centre", icon: Target },
-  { name: "Wallet", href: "/wallet", icon: Wallet },
   { name: "divider", href: "#", icon: null },
   
   // Section 3: Management
