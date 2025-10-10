@@ -358,8 +358,8 @@ export default function Invoices() {
                 <p className="text-slate-600">No invoices found</p>
               </div>
             ) : (
-              <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
-                <div className="max-h-[600px] overflow-y-auto" style={{ display: 'grid', gridTemplateColumns: '200px 8rem 7rem 8rem 7rem 6rem 1fr 3rem' }}>
+              <div className="bg-white border border-slate-200 rounded-lg overflow-hidden relative">
+                <div className="max-h-[600px] overflow-y-auto pb-16" style={{ display: 'grid', gridTemplateColumns: '200px 8rem 7rem 8rem 7rem 6rem 1fr 3rem' }}>
                 {/* Table Header */}
                 <div className="contents">
                   <div className="px-8 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10">Customer</div>
@@ -505,17 +505,15 @@ export default function Invoices() {
                   );
                 })}
                 </div>
-              </div>
-            )}
-          </div>
-
-          {!isLoading && invoices.length > 0 && pagination.totalPages > 1 && (
-            <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4 pb-4">
-              <p className="text-sm text-slate-600">
-                Showing {((pagination.page - 1) * pagination.limit) + 1} to {Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total} invoices
-              </p>
-              
-              <div className="flex gap-2">
+                
+                {/* Sticky Footer Pagination */}
+                {pagination.totalPages > 1 && (
+                  <div className="absolute bottom-0 left-0 right-0 bg-white border-t border-slate-200 px-4 py-3 flex flex-col sm:flex-row items-center justify-between gap-4 z-20">
+                    <p className="text-sm text-slate-600">
+                      Showing {((pagination.page - 1) * pagination.limit) + 1} to {Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total} invoices
+                    </p>
+                    
+                    <div className="flex gap-2">
                 <Button
                   onClick={() => setPage(Math.max(1, page - 1))}
                   disabled={page === 1}
@@ -555,19 +553,22 @@ export default function Invoices() {
                     ))}
                 </div>
                 
-                <Button
-                  onClick={() => setPage(Math.min(pagination.totalPages, page + 1))}
-                  disabled={page === pagination.totalPages}
-                  variant="outline"
-                  size="sm"
-                  className="touch-target"
-                  data-testid="button-next-page"
-                >
-                  Next
-                </Button>
+                      <Button
+                        onClick={() => setPage(Math.min(pagination.totalPages, page + 1))}
+                        disabled={page === pagination.totalPages}
+                        variant="outline"
+                        size="sm"
+                        className="touch-target"
+                        data-testid="button-next-page"
+                      >
+                        Next
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </main>
 
