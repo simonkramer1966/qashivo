@@ -315,7 +315,7 @@ export default function Customers() {
                     {/* Outstanding */}
                     <div className="col-span-2">
                       <p className="font-semibold text-sm text-slate-900">
-                        {formatCurrency(contact.outstandingAmount)} ({contact.invoiceCount})
+                        {formatCurrency(contact.outstandingAmount)} <span className="text-slate-400">({contact.invoiceCount})</span>
                       </p>
                     </div>
 
@@ -323,7 +323,7 @@ export default function Customers() {
                     <div className="col-span-2">
                       {contact.overdueAmount > 0 ? (
                         <p className="font-semibold text-sm text-[#C75C5C]">
-                          {formatCurrency(contact.overdueAmount)} ({contact.overdueCount})
+                          {formatCurrency(contact.overdueAmount)} <span className="text-slate-400">({contact.overdueCount})</span>
                         </p>
                       ) : (
                         <p className="text-xs text-slate-400">-</p>
