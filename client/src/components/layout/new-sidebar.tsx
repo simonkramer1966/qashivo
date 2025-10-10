@@ -781,17 +781,38 @@ export default function NewSidebar() {
           <DropdownMenu>
             <DropdownMenuTrigger className="w-full flex items-center space-x-3 hover:bg-accent hover:text-accent-foreground rounded-lg px-3 py-2 transition-colors" data-testid="button-user-menu">
               <Avatar className="h-10 w-10" data-testid="avatar-user">
-                <AvatarImage src={(user as any)?.profileImageUrl || ""} alt={(user as any)?.name || ""} />
+                <AvatarImage src={(user as any)?.profileImageUrl || ""} alt={(() => {
+                  const firstName = (user as any)?.firstName || "";
+                  const lastName = (user as any)?.lastName || "";
+                  return firstName && lastName ? `${firstName} ${lastName}` : (user as any)?.email || "";
+                })()} />
                 <AvatarFallback className="bg-[#17B6C3] text-white font-semibold">
                   {(() => {
-                    const name = (user as any)?.name || "";
-                    return name.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2);
+                    const firstName = (user as any)?.firstName || "";
+                    const lastName = (user as any)?.lastName || "";
+                    if (firstName && lastName) {
+                      return `${firstName.charAt(0)}${lastName.charAt(0)}`;
+                    }
+                    if ((user as any)?.email) {
+                      return (user as any).email.charAt(0).toUpperCase();
+                    }
+                    return "U";
                   })()}
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1 text-left">
                 <p className="text-sm font-medium text-foreground" data-testid="text-user-name">
-                  {(user as any)?.name || ""}
+                  {(() => {
+                    const firstName = (user as any)?.firstName;
+                    const lastName = (user as any)?.lastName;
+                    if (firstName && lastName) {
+                      return `${firstName} ${lastName}`;
+                    }
+                    if ((user as any)?.email) {
+                      return (user as any).email;
+                    }
+                    return "User";
+                  })()}
                 </p>
                 <p className="text-xs text-muted-foreground truncate" data-testid="text-user-email">
                   {(user as any)?.email || ""}
@@ -819,11 +840,22 @@ export default function NewSidebar() {
           <DropdownMenu>
             <DropdownMenuTrigger className="w-full flex items-center justify-center hover:bg-accent rounded-lg p-2 transition-colors" data-testid="button-user-menu-collapsed">
               <Avatar className="h-8 w-8" data-testid="avatar-user-collapsed">
-                <AvatarImage src={(user as any)?.profileImageUrl || ""} alt={(user as any)?.name || ""} />
+                <AvatarImage src={(user as any)?.profileImageUrl || ""} alt={(() => {
+                  const firstName = (user as any)?.firstName || "";
+                  const lastName = (user as any)?.lastName || "";
+                  return firstName && lastName ? `${firstName} ${lastName}` : (user as any)?.email || "";
+                })()} />
                 <AvatarFallback className="bg-[#17B6C3] text-white font-semibold text-xs">
                   {(() => {
-                    const name = (user as any)?.name || "";
-                    return name.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2);
+                    const firstName = (user as any)?.firstName || "";
+                    const lastName = (user as any)?.lastName || "";
+                    if (firstName && lastName) {
+                      return `${firstName.charAt(0)}${lastName.charAt(0)}`;
+                    }
+                    if ((user as any)?.email) {
+                      return (user as any).email.charAt(0).toUpperCase();
+                    }
+                    return "U";
                   })()}
                 </AvatarFallback>
               </Avatar>
