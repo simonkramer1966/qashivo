@@ -528,7 +528,7 @@ export default function ActionCentre() {
                           className="px-4 py-2 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center justify-end"
                           onClick={() => setSelectedCustomer(customer)}
                         >
-                          <p className="text-xs text-slate-700">
+                          <p className="text-sm text-slate-700">
                             {formatDateShort(customer.lastPaymentDate)}
                           </p>
                         </div>
@@ -538,7 +538,7 @@ export default function ActionCentre() {
                           className="px-4 py-2 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center justify-end"
                           onClick={() => setSelectedCustomer(customer)}
                         >
-                          <p className="text-xs text-slate-700">
+                          <p className="text-sm text-slate-700">
                             {formatDateShort(customer.lastContactDate)}
                           </p>
                         </div>
@@ -591,11 +591,11 @@ export default function ActionCentre() {
                           onClick={() => setSelectedCustomer(customer)}
                         >
                           {customer.assignedToUserName ? (
-                            <p className="text-xs text-slate-700 truncate">
+                            <p className="text-sm text-slate-700 truncate">
                               {customer.assignedToUserName}
                             </p>
                           ) : (
-                            <p className="text-xs text-slate-400">Unassigned</p>
+                            <p className="text-sm text-slate-400">Unassigned</p>
                           )}
                         </div>
                       </div>
