@@ -462,7 +462,7 @@ export default function ActionCentre() {
             <div className="flex items-center gap-3">
               {isCommsTab && commsData && (
                 <p className="text-sm text-slate-600 whitespace-nowrap">
-                  {commsData.total} communication{commsData.total !== 1 ? 's' : ''}
+                  {commsData.total} Comms
                 </p>
               )}
               
