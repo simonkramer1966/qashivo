@@ -717,8 +717,8 @@ export default function Workflows() {
               <TemplateManagement />
             </TabsContent>
 
-            <TabsContent value="schedules">
-              <CollectionScheduleBuilder />
+            <TabsContent value="schedules" className="-mx-8 -mb-8">
+              <CollectionScheduleBuilder className="px-4" />
             </TabsContent>
 
             <TabsContent value="senders">
