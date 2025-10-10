@@ -229,7 +229,7 @@ export default function Invoices() {
             </Card>
           </div>
 
-          {/* Search/Filter Row with Invoice Count - Desktop */}
+          {/* Control Row: Invoice Count + Search + Filter + Pagination - Desktop */}
           <div className="hidden sm:flex items-center gap-3 mb-4">
             <p className="text-sm text-slate-600 whitespace-nowrap">
               {pagination.total} invoice{pagination.total !== 1 ? 's' : ''}
@@ -258,6 +258,56 @@ export default function Invoices() {
                 <SelectItem value="paid">Paid</SelectItem>
               </SelectContent>
             </Select>
+
+            {/* Pagination Controls */}
+            {pagination.totalPages > 1 && (
+              <div className="flex gap-2 items-center">
+                <Button
+                  onClick={() => setPage(Math.max(1, page - 1))}
+                  disabled={page === 1}
+                  variant="outline"
+                  size="sm"
+                  className="h-9"
+                  data-testid="button-previous-page"
+                >
+                  Previous
+                </Button>
+                
+                <div className="flex gap-1">
+                  {Array.from({ length: pagination.totalPages }, (_, i) => i + 1)
+                    .filter(pageNum => {
+                      return Math.abs(pageNum - page) <= 1 || pageNum === 1 || pageNum === pagination.totalPages;
+                    })
+                    .map((pageNum, idx, arr) => (
+                      <div key={pageNum} className="flex gap-1 items-center">
+                        {idx > 0 && arr[idx - 1] !== pageNum - 1 && (
+                          <span className="px-2 py-1 text-slate-400 text-sm">...</span>
+                        )}
+                        <Button
+                          onClick={() => setPage(pageNum)}
+                          variant={page === pageNum ? "default" : "outline"}
+                          size="sm"
+                          className="h-9 min-w-[36px]"
+                          data-testid={`button-page-${pageNum}`}
+                        >
+                          {pageNum}
+                        </Button>
+                      </div>
+                    ))}
+                </div>
+                
+                <Button
+                  onClick={() => setPage(Math.min(pagination.totalPages, page + 1))}
+                  disabled={page === pagination.totalPages}
+                  variant="outline"
+                  size="sm"
+                  className="h-9"
+                  data-testid="button-next-page"
+                >
+                  Next
+                </Button>
+              </div>
+            )}
           </div>
 
           {/* Mobile: Search/Filter stacked */}
@@ -289,6 +339,56 @@ export default function Invoices() {
                 <SelectItem value="paid">Paid</SelectItem>
               </SelectContent>
             </Select>
+
+            {/* Mobile: Pagination Controls */}
+            {pagination.totalPages > 1 && (
+              <div className="flex gap-2 items-center justify-between">
+                <Button
+                  onClick={() => setPage(Math.max(1, page - 1))}
+                  disabled={page === 1}
+                  variant="outline"
+                  size="sm"
+                  className="h-9"
+                  data-testid="button-previous-page"
+                >
+                  Previous
+                </Button>
+                
+                <div className="flex gap-1">
+                  {Array.from({ length: pagination.totalPages }, (_, i) => i + 1)
+                    .filter(pageNum => {
+                      return Math.abs(pageNum - page) <= 1;
+                    })
+                    .map((pageNum, idx, arr) => (
+                      <div key={pageNum} className="flex gap-1 items-center">
+                        {idx > 0 && arr[idx - 1] !== pageNum - 1 && (
+                          <span className="px-2 py-1 text-slate-400 text-sm">...</span>
+                        )}
+                        <Button
+                          onClick={() => setPage(pageNum)}
+                          variant={page === pageNum ? "default" : "outline"}
+                          size="sm"
+                          className="h-9 min-w-[36px]"
+                          data-testid={`button-page-${pageNum}`}
+                        >
+                          {pageNum}
+                        </Button>
+                      </div>
+                    ))}
+                </div>
+                
+                <Button
+                  onClick={() => setPage(Math.min(pagination.totalPages, page + 1))}
+                  disabled={page === pagination.totalPages}
+                  variant="outline"
+                  size="sm"
+                  className="h-9"
+                  data-testid="button-next-page"
+                >
+                  Next
+                </Button>
+              </div>
+            )}
           </div>
 
           {/* Mobile: Card View */}
@@ -386,8 +486,8 @@ export default function Invoices() {
                 <p className="text-slate-600">No invoices found</p>
               </div>
             ) : (
-              <div className="bg-white border border-slate-200 rounded-lg overflow-hidden relative">
-                <div className="max-h-[600px] overflow-y-auto pb-28" style={{ display: 'grid', gridTemplateColumns: '200px 8rem 7rem 8rem 7rem 6rem 1fr 3rem' }}>
+              <div className="bg-white border-t border-b border-slate-200 overflow-hidden">
+                <div className="max-h-[600px] overflow-y-auto" style={{ display: 'grid', gridTemplateColumns: '200px 8rem 7rem 8rem 7rem 6rem 1fr 3rem' }}>
                 {/* Table Header */}
                 <div className="contents">
                   <div className="px-8 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10">Customer</div>
@@ -533,67 +633,6 @@ export default function Invoices() {
                   );
                 })}
                 </div>
-                
-                {/* Sticky Footer Pagination */}
-                {pagination.totalPages > 1 && (
-                  <div className="absolute bottom-6 left-0 right-0 bg-white border-t border-slate-200 px-4 py-3 flex flex-col sm:flex-row items-center justify-between gap-4 z-20">
-                    <p className="text-sm text-slate-600">
-                      Showing {((pagination.page - 1) * pagination.limit) + 1} to {Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total} invoices
-                    </p>
-                    
-                    <div className="flex gap-2">
-                <Button
-                  onClick={() => setPage(Math.max(1, page - 1))}
-                  disabled={page === 1}
-                  variant="outline"
-                  size="sm"
-                  className="touch-target"
-                  data-testid="button-previous-page"
-                >
-                  Previous
-                </Button>
-                
-                <div className="flex gap-1">
-                  {Array.from({ length: pagination.totalPages }, (_, i) => i + 1)
-                    .filter(pageNum => {
-                      const isMobile = window.innerWidth < 640;
-                      if (isMobile) {
-                        return Math.abs(pageNum - page) <= 1;
-                      }
-                      return Math.abs(pageNum - page) <= 2 || pageNum === 1 || pageNum === pagination.totalPages;
-                    })
-                    .map((pageNum, idx, arr) => (
-                      <>
-                        {idx > 0 && arr[idx - 1] !== pageNum - 1 && (
-                          <span key={`ellipsis-${pageNum}`} className="px-2 py-1 text-slate-400">...</span>
-                        )}
-                        <Button
-                          key={pageNum}
-                          onClick={() => setPage(pageNum)}
-                          variant={page === pageNum ? "default" : "outline"}
-                          size="sm"
-                          className="touch-target min-w-[40px]"
-                          data-testid={`button-page-${pageNum}`}
-                        >
-                          {pageNum}
-                        </Button>
-                      </>
-                    ))}
-                </div>
-                
-                      <Button
-                        onClick={() => setPage(Math.min(pagination.totalPages, page + 1))}
-                        disabled={page === pagination.totalPages}
-                        variant="outline"
-                        size="sm"
-                        className="touch-target"
-                        data-testid="button-next-page"
-                      >
-                        Next
-                      </Button>
-                    </div>
-                  </div>
-                )}
               </div>
             )}
           </div>
