@@ -231,37 +231,6 @@ export default function Header({ title, subtitle, action, noBorder = true, title
               </Tooltip>
             </TooltipProvider>
           )}
-
-          {/* User Profile */}
-          <DropdownMenu>
-            <DropdownMenuTrigger className="hidden lg:flex items-center space-x-3 hover:bg-accent hover:text-accent-foreground rounded-lg px-3 py-2 transition-colors" data-testid="button-user-menu">
-              <div className="text-right">
-                <p className="text-sm font-medium text-foreground" data-testid="text-user-name">
-                  {getDisplayName()}
-                </p>
-                <p className="text-xs text-muted-foreground" data-testid="text-user-email">
-                  {(user as any)?.email || ""}
-                </p>
-              </div>
-              <Avatar className="h-10 w-10" data-testid="avatar-user">
-                <AvatarImage src={(user as any)?.profileImageUrl || ""} alt={getDisplayName()} />
-                <AvatarFallback className="bg-[#17B6C3] text-white font-semibold">
-                  {getUserInitials()}
-                </AvatarFallback>
-              </Avatar>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56 bg-white border-gray-200">
-              <DropdownMenuItem onClick={handleProfileClick} className="cursor-pointer" data-testid="menu-item-profile">
-                <User className="mr-2 h-4 w-4" />
-                <span>Profile</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleLogout} className="cursor-pointer" data-testid="menu-item-logout">
-                <LogOut className="mr-2 h-4 w-4" />
-                <span>Log out</span>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-
           
           {action}
         </div>

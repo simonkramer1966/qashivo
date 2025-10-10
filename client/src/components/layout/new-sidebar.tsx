@@ -35,6 +35,7 @@ import {
   UserPlus,
   Wallet
 } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -773,6 +774,73 @@ export default function NewSidebar() {
           })}
         </ul>
       </nav>
+
+      {/* User Profile Section - Footer */}
+      {!isCollapsed && (
+        <div className="border-t border-gray-200 p-4 mt-auto">
+          <DropdownMenu>
+            <DropdownMenuTrigger className="w-full flex items-center space-x-3 hover:bg-accent hover:text-accent-foreground rounded-lg px-3 py-2 transition-colors" data-testid="button-user-menu">
+              <Avatar className="h-10 w-10" data-testid="avatar-user">
+                <AvatarImage src={(user as any)?.profileImageUrl || ""} alt={(user as any)?.name || ""} />
+                <AvatarFallback className="bg-[#17B6C3] text-white font-semibold">
+                  {(() => {
+                    const name = (user as any)?.name || "";
+                    return name.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2);
+                  })()}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex-1 text-left">
+                <p className="text-sm font-medium text-foreground" data-testid="text-user-name">
+                  {(user as any)?.name || ""}
+                </p>
+                <p className="text-xs text-muted-foreground truncate" data-testid="text-user-email">
+                  {(user as any)?.email || ""}
+                </p>
+              </div>
+              <ChevronDown className="h-4 w-4 text-gray-400" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56 bg-white border-gray-200">
+              <DropdownMenuItem onClick={() => setLocation('/profile')} className="cursor-pointer" data-testid="menu-item-profile">
+                <User className="mr-2 h-4 w-4" />
+                <span>Profile</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleLogout} className="cursor-pointer" data-testid="menu-item-logout">
+                <LogOut className="mr-2 h-4 w-4" />
+                <span>Log out</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      )}
+
+      {/* Collapsed State - Show User Avatar Only */}
+      {isCollapsed && (
+        <div className="border-t border-gray-200 p-2 mt-auto">
+          <DropdownMenu>
+            <DropdownMenuTrigger className="w-full flex items-center justify-center hover:bg-accent rounded-lg p-2 transition-colors" data-testid="button-user-menu-collapsed">
+              <Avatar className="h-8 w-8" data-testid="avatar-user-collapsed">
+                <AvatarImage src={(user as any)?.profileImageUrl || ""} alt={(user as any)?.name || ""} />
+                <AvatarFallback className="bg-[#17B6C3] text-white font-semibold text-xs">
+                  {(() => {
+                    const name = (user as any)?.name || "";
+                    return name.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2);
+                  })()}
+                </AvatarFallback>
+              </Avatar>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56 bg-white border-gray-200">
+              <DropdownMenuItem onClick={() => setLocation('/profile')} className="cursor-pointer" data-testid="menu-item-profile">
+                <User className="mr-2 h-4 w-4" />
+                <span>Profile</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleLogout} className="cursor-pointer" data-testid="menu-item-logout">
+                <LogOut className="mr-2 h-4 w-4" />
+                <span>Log out</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      )}
 
     </aside>
 
