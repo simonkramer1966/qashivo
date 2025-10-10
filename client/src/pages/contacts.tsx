@@ -515,20 +515,6 @@ export default function Customers() {
               </div>
             )}
           </div>
-
-
-          {/* Test Button - Seed Payment Behavior Customers */}
-          <div className="mt-6 text-center pb-4">
-            <Button
-              onClick={() => seedMutation.mutate()}
-              disabled={seedMutation.isPending}
-              variant="outline"
-              size="sm"
-              data-testid="button-seed-customers"
-            >
-              {seedMutation.isPending ? "Seeding..." : "🧪 Seed Test Customers"}
-            </Button>
-          </div>
         </div>
       </main>
 
