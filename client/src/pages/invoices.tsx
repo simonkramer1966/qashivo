@@ -328,7 +328,7 @@ export default function Invoices() {
           </div>
 
           {/* Desktop: Table/List View */}
-          <div className="hidden sm:block -mx-8">
+          <div className="hidden sm:block">
             {isLoading ? (
               <div className="card-apple">
                 <div className="p-4 border-b">
