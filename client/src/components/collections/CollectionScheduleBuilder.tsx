@@ -850,21 +850,6 @@ export default function CollectionScheduleBuilder({ className }: CollectionSched
         </>
       ) : (
         <div className="flex flex-col h-[calc(100vh-250px)]">
-          {/* Visual Builder Header */}
-          <div className="flex items-center justify-between mb-4 p-4 bg-white/80 backdrop-blur-sm border border-white/50 rounded-lg shadow-sm">
-            <h3 className="text-xl font-semibold text-gray-900">Visual Workflow Builder</h3>
-            <div className="flex items-center gap-3">
-              <Button
-                onClick={() => setViewMode('list')}
-                variant="outline"
-                data-testid="button-back-to-list"
-              >
-                <List className="h-4 w-4 mr-2" />
-                Back to List View
-              </Button>
-            </div>
-          </div>
-          
           {/* Visual Workflow Builder */}
           <div className="flex-1 min-h-0">
             <VisualWorkflowBuilder
