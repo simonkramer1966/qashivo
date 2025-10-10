@@ -136,15 +136,15 @@ export default function Invoices() {
     const daysOverdue = getDaysOverdue(invoice.dueDate);
     
     if (invoice.status === 'paid') {
-      return <Badge className="bg-[#4FAD80] text-white hover:bg-[#3D8A66] w-20 justify-center">Paid</Badge>;
+      return <Badge className="bg-[#4FAD80] text-white hover:bg-[#3D8A66] inline-flex items-center justify-center min-w-[75px]">Paid</Badge>;
     } else if (daysOverdue === 0) {
-      return <Badge className="bg-blue-500 text-white hover:bg-blue-600 w-20 justify-center">Due Today</Badge>;
+      return <Badge className="bg-blue-500 text-white hover:bg-blue-600 inline-flex items-center justify-center min-w-[75px]">Due Today</Badge>;
     } else if (daysOverdue < 7) {
-      return <Badge className="bg-blue-500 text-white hover:bg-blue-600 w-20 justify-center">Due</Badge>;
+      return <Badge className="bg-blue-500 text-white hover:bg-blue-600 inline-flex items-center justify-center min-w-[75px]">Due</Badge>;
     } else if (daysOverdue < 30) {
-      return <Badge className="bg-[#E8A23B] text-white hover:bg-[#D49230] w-20 justify-center">Overdue</Badge>;
+      return <Badge className="bg-[#E8A23B] text-white hover:bg-[#D49230] inline-flex items-center justify-center min-w-[75px]">Overdue</Badge>;
     } else {
-      return <Badge className="bg-[#C75C5C] text-white hover:bg-[#B04949] w-20 justify-center">Critical</Badge>;
+      return <Badge className="bg-[#C75C5C] text-white hover:bg-[#B04949] inline-flex items-center justify-center min-w-[75px]">Critical</Badge>;
     }
   };
 
