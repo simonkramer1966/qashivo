@@ -27,6 +27,7 @@ import NewSidebar from "@/components/layout/new-sidebar";
 import BottomNav from "@/components/layout/bottom-nav";
 import Header from "@/components/layout/header";
 import { formatCurrency } from "@/lib/utils";
+import { CustomerOverdueDialog } from "@/components/workspace/CustomerOverdueDialog";
 import {
   Select,
   SelectContent,
@@ -82,6 +83,7 @@ export default function ActionCentre() {
   const [, setLocation] = useLocation();
   const [searchQuery, setSearchQuery] = useState("");
   const { toast } = useToast();
+  const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
   
   // Workflow-based filter (main tabs)
   const [activeTab, setActiveTab] = useState<'queries' | 'overdue' | 'upcomingPTP' | 'brokenPromises' | 'disputes' | 'debtRecovery' | 'legal'>('overdue');
@@ -650,27 +652,25 @@ export default function ActionCentre() {
                 </p>
               </div>
             ) : isInvoiceTab ? (
-              // Invoice table format (matching invoice page)
+              // Customer table format (grouped by customer)
               <div className="bg-white border-t border-b border-slate-200 overflow-hidden">
-                <div className="max-h-[600px] overflow-y-auto" style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr 1fr 1fr 1fr auto' }}>
+                <div className="max-h-[600px] overflow-y-auto" style={{ display: 'grid', gridTemplateColumns: '2fr 1.5fr 1fr 1.5fr' }}>
                   {/* Table Header */}
                   <div className="contents">
                     <div className="px-8 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10">Customer</div>
-                    <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10">Invoice #</div>
-                    <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 text-right">Amount</div>
-                    <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 text-right">Days Overdue</div>
-                    <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 text-right">Due Date</div>
-                    <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10"></div>
+                    <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 text-right">Total Outstanding</div>
+                    <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 text-right"># Invoices</div>
+                    <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 text-right">Days Overdue (Oldest)</div>
                   </div>
 
                   {/* Table Rows */}
-                  {filteredActions.map((item: any) => {
-                    const daysOverdue = Math.floor((new Date().getTime() - new Date(item.dueDate).getTime()) / (1000 * 3600 * 24));
+                  {filteredActions.map((customer: any) => {
+                    const daysOverdue = Math.floor((new Date().getTime() - new Date(customer.oldestDueDate).getTime()) / (1000 * 3600 * 24));
                     
                     // Determine border color based on severity
                     const getBorderColor = () => {
-                      if (item.legalFlag) return 'border-l-red-800';
-                      if (item.escalationFlag) return 'border-l-red-600';
+                      if (customer.legalFlag) return 'border-l-red-800';
+                      if (customer.escalationFlag) return 'border-l-red-600';
                       if (daysOverdue > 60) return 'border-l-red-600';
                       if (daysOverdue > 30) return 'border-l-[#E8A23B]';
                       return 'border-l-red-500';
@@ -678,75 +678,48 @@ export default function ActionCentre() {
 
                     return (
                       <div
-                        key={item.id}
+                        key={customer.contactId}
                         className="contents"
-                        data-testid={`invoice-item-${item.id}`}
+                        data-testid={`customer-item-${customer.contactId}`}
                       >
                         {/* Customer */}
                         <div 
                           className={`px-8 py-2 border-l-4 ${getBorderColor()} border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center min-w-0`}
-                          onClick={() => setLocation(`/invoices/${item.id}`)}
+                          onClick={() => setSelectedCustomer(customer)}
                         >
                           <p className="font-semibold text-sm text-slate-900 truncate">
-                            {item.contactName || 'Unknown Customer'}
+                            {customer.contactName || 'Unknown Customer'}
                           </p>
                         </div>
 
-                        {/* Invoice Number */}
-                        <div 
-                          className="px-4 py-2 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center min-w-0"
-                          onClick={() => setLocation(`/invoices/${item.id}`)}
-                        >
-                          <p className="text-sm text-slate-900 truncate">
-                            {item.invoiceNumber || 'Unknown'}
-                          </p>
-                        </div>
-
-                        {/* Amount */}
+                        {/* Total Outstanding */}
                         <div 
                           className="px-4 py-2 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center justify-end"
-                          onClick={() => setLocation(`/invoices/${item.id}`)}
+                          onClick={() => setSelectedCustomer(customer)}
                         >
                           <p className="font-semibold text-sm text-slate-900">
-                            {formatCurrency(parseFloat(item.amount || 0))}
+                            {formatCurrency(customer.totalOutstanding)}
                           </p>
                         </div>
 
-                        {/* Days Overdue */}
+                        {/* # Invoices */}
                         <div 
                           className="px-4 py-2 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center justify-end"
-                          onClick={() => setLocation(`/invoices/${item.id}`)}
+                          onClick={() => setSelectedCustomer(customer)}
+                        >
+                          <p className="text-sm text-slate-900">
+                            {customer.invoiceCount}
+                          </p>
+                        </div>
+
+                        {/* Days Overdue (Oldest) */}
+                        <div 
+                          className="px-4 py-2 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center justify-end"
+                          onClick={() => setSelectedCustomer(customer)}
                         >
                           <p className="text-sm font-medium text-red-600">
                             {daysOverdue} days
                           </p>
-                        </div>
-
-                        {/* Due Date */}
-                        <div 
-                          className="px-4 py-2 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center justify-end"
-                          onClick={() => setLocation(`/invoices/${item.id}`)}
-                        >
-                          <p className="text-xs text-slate-600">
-                            {new Date(item.dueDate).toLocaleDateString()}
-                          </p>
-                        </div>
-
-                        {/* Action Button */}
-                        <div className="px-4 py-2 border-b border-slate-100 hover:bg-slate-50 transition-colors flex items-center justify-end">
-                          <Button
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              markPaidMutation.mutate(item.id);
-                            }}
-                            disabled={markPaidMutation.isPending}
-                            className="bg-green-600 hover:bg-green-700 text-white"
-                            data-testid={`button-mark-paid-${item.id}`}
-                          >
-                            <CheckCircle2 className="h-4 w-4 mr-1" />
-                            {markPaidMutation.isPending ? 'Processing...' : 'Paid'}
-                          </Button>
                         </div>
                       </div>
                     );
@@ -835,6 +808,13 @@ export default function ActionCentre() {
 
       {/* Mobile Bottom Navigation */}
       <BottomNav />
+      
+      {/* Customer Overdue Dialog */}
+      <CustomerOverdueDialog
+        customer={selectedCustomer}
+        open={!!selectedCustomer}
+        onOpenChange={(open) => !open && setSelectedCustomer(null)}
+      />
     </div>
   );
 }

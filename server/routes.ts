@@ -3389,7 +3389,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return { ...inv, contactName };
       };
 
-      // 2. OVERDUE INVOICES - overdue + not in other workflows
+      // 2. OVERDUE INVOICES - grouped by customer
       const overdueInvoicesRaw = allInvoices.filter(inv => {
         const isOverdue = inv.status === 'overdue' && new Date(inv.dueDate) < today;
         const isInWorkflow = inv.paymentPlanId || inv.escalationFlag || inv.legalFlag;
@@ -3398,7 +3398,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         return isOverdue && !isInWorkflow && !hasDispute && !hasPTP;
       });
-      const overdueInvoices = await Promise.all(overdueInvoicesRaw.map(enrichInvoice));
+      
+      // Group overdue invoices by customer
+      const customerGroups = new Map<string, any>();
+      
+      for (const invoice of overdueInvoicesRaw) {
+        const contactId = invoice.contactId;
+        
+        if (!customerGroups.has(contactId)) {
+          // Get contact info
+          let contactName = '';
+          let contact = null;
+          try {
+            contact = await storage.getContact(contactId, tenantId);
+            if (contact) {
+              contactName = contact.companyName || contact.name;
+            }
+          } catch (e) {
+            // Contact not found
+          }
+          
+          customerGroups.set(contactId, {
+            contactId,
+            contactName,
+            contact, // Include full contact for dialog
+            totalOutstanding: 0,
+            invoiceCount: 0,
+            invoices: [],
+            oldestDueDate: invoice.dueDate,
+            escalationFlag: false,
+            legalFlag: false,
+          });
+        }
+        
+        const group = customerGroups.get(contactId);
+        group.totalOutstanding += parseFloat(invoice.amount || '0');
+        group.invoiceCount += 1;
+        group.invoices.push(invoice);
+        
+        // Track oldest due date
+        if (new Date(invoice.dueDate) < new Date(group.oldestDueDate)) {
+          group.oldestDueDate = invoice.dueDate;
+        }
+        
+        // Inherit severity flags
+        if (invoice.escalationFlag) group.escalationFlag = true;
+        if (invoice.legalFlag) group.legalFlag = true;
+      }
+      
+      const overdueCustomers = Array.from(customerGroups.values());
       
       // 3. UPCOMING PTP - promise_to_pay with future dates
       const upcomingPTP = allActions.filter(a => {
@@ -3431,7 +3479,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.json({
         queries: { count: queries.length, items: queries },
-        overdueInvoices: { count: overdueInvoices.length, items: overdueInvoices },
+        overdueInvoices: { count: overdueCustomers.length, items: overdueCustomers },
         upcomingPTP: { count: upcomingPTP.length, items: upcomingPTP },
         brokenPromises: { count: brokenPromises.length, items: brokenPromises },
         disputes: { count: disputes.length, items: disputes },
