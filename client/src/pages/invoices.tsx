@@ -487,7 +487,7 @@ export default function Invoices() {
               </div>
             ) : (
               <div className="bg-white border-t border-b border-slate-200 overflow-hidden">
-                <div className="max-h-[600px] overflow-y-auto" style={{ display: 'grid', gridTemplateColumns: '200px 8rem 7rem 8rem 7rem 6rem 1fr 3rem' }}>
+                <div className="max-h-[600px] overflow-y-auto" style={{ display: 'grid', gridTemplateColumns: '1.8fr 1fr 1fr 1fr 1fr 1fr 0.5fr auto' }}>
                 {/* Table Header */}
                 <div className="contents">
                   <div className="px-8 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10">Customer</div>
