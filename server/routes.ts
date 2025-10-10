@@ -3460,6 +3460,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // Contact not found
           }
           
+          // Find last payment date (most recent paid invoice)
+          const contactInvoices = allInvoices.filter(inv => inv.contactId === contactId);
+          const paidInvoices = contactInvoices.filter(inv => inv.status === 'paid' && inv.paidDate);
+          let lastPaymentDate: string | null = null;
+          if (paidInvoices.length > 0) {
+            const sortedPaid = paidInvoices.sort((a, b) => 
+              new Date(b.paidDate!).getTime() - new Date(a.paidDate!).getTime()
+            );
+            lastPaymentDate = sortedPaid[0].paidDate!;
+          }
+          
+          // Find last contact date (most recent outbound action)
+          const contactActions = allActions.filter(action => 
+            action.contactId === contactId && 
+            action.metadata?.direction === 'outbound' &&
+            (action.type === 'email' || action.type === 'sms' || action.type === 'call')
+          );
+          let lastContactDate: string | null = null;
+          if (contactActions.length > 0) {
+            const sortedActions = contactActions.sort((a, b) => 
+              new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+            );
+            lastContactDate = sortedActions[0].createdAt;
+          }
+          
+          // Calculate payment trend (last 3 months)
+          const threeMonthsAgo = new Date();
+          threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+          const recentPaidInvoices = paidInvoices.filter(inv => 
+            inv.paidDate && new Date(inv.paidDate) >= threeMonthsAgo
+          );
+          const recentOverdueCount = contactInvoices.filter(inv => 
+            inv.status === 'overdue'
+          ).length;
+          
+          let paymentTrend: 'improving' | 'stable' | 'declining' = 'stable';
+          if (recentPaidInvoices.length >= 2 && recentOverdueCount === 0) {
+            paymentTrend = 'improving';
+          } else if (recentOverdueCount > 2 || (recentPaidInvoices.length === 0 && recentOverdueCount > 0)) {
+            paymentTrend = 'declining';
+          }
+          
+          // Determine next action based on last contact
+          let nextAction = 'Email';
+          const daysSinceLastContact = lastContactDate 
+            ? Math.floor((today.getTime() - new Date(lastContactDate).getTime()) / (1000 * 3600 * 24))
+            : 999;
+          
+          if (daysSinceLastContact > 14) {
+            nextAction = 'Call';
+          } else if (daysSinceLastContact > 7) {
+            nextAction = 'SMS';
+          }
+          
           customerGroups.set(contactId, {
             contactId,
             contactName,
@@ -3470,6 +3524,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
             oldestDueDate: invoice.dueDate,
             escalationFlag: false,
             legalFlag: false,
+            lastPaymentDate,
+            lastContactDate,
+            paymentTrend,
+            nextAction,
           });
         }
         

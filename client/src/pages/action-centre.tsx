@@ -79,6 +79,16 @@ function getSmartTimestamp(date: string): string {
   return actionDate.toLocaleDateString();
 }
 
+// Format date as dd/mm/yy
+function formatDateShort(dateStr: string | null): string {
+  if (!dateStr) return '-';
+  const date = new Date(dateStr);
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const year = String(date.getFullYear()).slice(-2);
+  return `${day}/${month}/${year}`;
+}
+
 export default function ActionCentre() {
   const [, setLocation] = useLocation();
   const [searchQuery, setSearchQuery] = useState("");
@@ -459,13 +469,17 @@ export default function ActionCentre() {
             ) : isInvoiceTab ? (
               // Customer table format (grouped by customer)
               <div className="bg-white border-t border-b border-slate-200 overflow-hidden">
-                <div className="max-h-[600px] overflow-y-auto" style={{ display: 'grid', gridTemplateColumns: '2fr 1.5fr 1fr 1.5fr' }}>
+                <div className="max-h-[600px] overflow-y-auto" style={{ display: 'grid', gridTemplateColumns: '2fr 1.5fr 0.8fr 1fr 1fr 1.2fr 1fr 1.2fr' }}>
                   {/* Table Header */}
                   <div className="contents">
                     <div className="px-8 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10">Customer</div>
                     <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 text-right">Total Outstanding</div>
                     <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 text-right"># Invoices</div>
-                    <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 text-right">Days Overdue (Oldest)</div>
+                    <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 text-right">Last Payment</div>
+                    <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 text-right">Last Contact</div>
+                    <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 text-center">Payment Trend</div>
+                    <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 text-center">Next Action</div>
+                    <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 text-right">Days Overdue</div>
                   </div>
 
                   {/* Table Rows */}
@@ -506,6 +520,58 @@ export default function ActionCentre() {
                           <p className="text-sm text-slate-900">
                             {customer.invoiceCount}
                           </p>
+                        </div>
+
+                        {/* Last Payment */}
+                        <div 
+                          className="px-4 py-2 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center justify-end"
+                          onClick={() => setSelectedCustomer(customer)}
+                        >
+                          <p className="text-xs text-slate-700">
+                            {formatDateShort(customer.lastPaymentDate)}
+                          </p>
+                        </div>
+
+                        {/* Last Contact */}
+                        <div 
+                          className="px-4 py-2 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center justify-end"
+                          onClick={() => setSelectedCustomer(customer)}
+                        >
+                          <p className="text-xs text-slate-700">
+                            {formatDateShort(customer.lastContactDate)}
+                          </p>
+                        </div>
+
+                        {/* Payment Trend */}
+                        <div 
+                          className="px-4 py-2 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center justify-center"
+                          onClick={() => setSelectedCustomer(customer)}
+                        >
+                          {customer.paymentTrend === 'improving' && (
+                            <Badge className="bg-green-100 text-green-800 border-green-200 text-xs">
+                              Improving
+                            </Badge>
+                          )}
+                          {customer.paymentTrend === 'stable' && (
+                            <Badge className="bg-blue-100 text-blue-800 border-blue-200 text-xs">
+                              Stable
+                            </Badge>
+                          )}
+                          {customer.paymentTrend === 'declining' && (
+                            <Badge className="bg-red-100 text-red-800 border-red-200 text-xs">
+                              Declining
+                            </Badge>
+                          )}
+                        </div>
+
+                        {/* Next Action */}
+                        <div 
+                          className="px-4 py-2 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center justify-center"
+                          onClick={() => setSelectedCustomer(customer)}
+                        >
+                          <Badge className="bg-[#17B6C3]/10 text-[#17B6C3] border-[#17B6C3]/20 text-xs">
+                            {customer.nextAction}
+                          </Badge>
                         </div>
 
                         {/* Days Overdue (Oldest) */}
