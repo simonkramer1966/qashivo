@@ -630,7 +630,7 @@ export default function ActionCentre() {
           </div>
 
           {/* Action List */}
-          <div className="card-apple overflow-hidden">
+          <div className={isInvoiceTab ? "" : "card-apple overflow-hidden"}>
             {isLoading ? (
               // Loading skeleton
               <div className="divide-y divide-slate-100">
@@ -649,52 +649,91 @@ export default function ActionCentre() {
                     : 'No actions found'}
                 </p>
               </div>
-            ) : (
-              <div className="divide-y divide-slate-100">
-                {filteredActions.map((item: any) => {
-                  // Determine if this is an invoice or action
-                  const isInvoice = isInvoiceTab || !item.type;
-                  
-                  if (isInvoice) {
-                    // Render invoice list item
+            ) : isInvoiceTab ? (
+              // Invoice table format (matching invoice page)
+              <div className="bg-white border-t border-b border-slate-200 overflow-hidden">
+                <div className="max-h-[600px] overflow-y-auto" style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr 1fr 1fr 1fr auto' }}>
+                  {/* Table Header */}
+                  <div className="contents">
+                    <div className="px-8 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10">Invoice #</div>
+                    <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10">Customer</div>
+                    <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 text-right">Amount</div>
+                    <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 text-right">Days Overdue</div>
+                    <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 text-right">Due Date</div>
+                    <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10"></div>
+                  </div>
+
+                  {/* Table Rows */}
+                  {filteredActions.map((item: any) => {
                     const daysOverdue = Math.floor((new Date().getTime() - new Date(item.dueDate).getTime()) / (1000 * 3600 * 24));
                     
+                    // Determine border color based on severity
+                    const getBorderColor = () => {
+                      if (item.legalFlag) return 'border-l-red-800';
+                      if (item.escalationFlag) return 'border-l-red-600';
+                      if (daysOverdue > 60) return 'border-l-red-600';
+                      if (daysOverdue > 30) return 'border-l-[#E8A23B]';
+                      return 'border-l-red-500';
+                    };
+
                     return (
-                      <div 
-                        key={item.id} 
-                        className="p-4 hover:bg-slate-50 transition-colors border-l-4 border-l-red-500"
+                      <div
+                        key={item.id}
+                        className="contents"
                         data-testid={`invoice-item-${item.id}`}
                       >
-                        <div className="flex items-center justify-between gap-4">
-                          <div 
-                            className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer"
-                            onClick={() => setLocation(`/invoices/${item.id}`)}
-                          >
-                            <div className="p-2 rounded-lg bg-red-100 flex-shrink-0">
-                              <AlertTriangle className="h-5 w-5 text-red-600" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-3 mb-1">
-                                <h4 className="font-semibold text-slate-900 truncate">
-                                  {item.invoiceNumber || 'Unknown Invoice'}
-                                </h4>
-                                <span className="text-sm font-medium text-red-600 flex-shrink-0">{daysOverdue} days overdue</span>
-                              </div>
-                              <div className="flex items-center gap-3 text-sm text-slate-600">
-                                {item.contactName && <span className="truncate">{item.contactName}</span>}
-                                <span className="font-medium text-slate-900 flex-shrink-0">{formatCurrency(parseFloat(item.amount || 0))}</span>
-                                <div className="flex items-center gap-2 flex-shrink-0">
-                                  <span className="text-xs text-slate-500">Due: {new Date(item.dueDate).toLocaleDateString()}</span>
-                                  {item.escalationFlag && (
-                                    <Badge className="bg-red-600 text-white text-xs">Escalated</Badge>
-                                  )}
-                                  {item.legalFlag && (
-                                    <Badge className="bg-red-800 text-white text-xs">Legal</Badge>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          </div>
+                        {/* Invoice Number */}
+                        <div 
+                          className={`px-8 py-2 border-l-4 ${getBorderColor()} border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center min-w-0`}
+                          onClick={() => setLocation(`/invoices/${item.id}`)}
+                        >
+                          <p className="font-semibold text-sm text-slate-900 truncate">
+                            {item.invoiceNumber || 'Unknown'}
+                          </p>
+                        </div>
+
+                        {/* Customer */}
+                        <div 
+                          className="px-4 py-2 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center min-w-0"
+                          onClick={() => setLocation(`/invoices/${item.id}`)}
+                        >
+                          <p className="text-sm text-slate-900 truncate">
+                            {item.contactName || 'Unknown Customer'}
+                          </p>
+                        </div>
+
+                        {/* Amount */}
+                        <div 
+                          className="px-4 py-2 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center justify-end"
+                          onClick={() => setLocation(`/invoices/${item.id}`)}
+                        >
+                          <p className="font-semibold text-sm text-slate-900">
+                            {formatCurrency(parseFloat(item.amount || 0))}
+                          </p>
+                        </div>
+
+                        {/* Days Overdue */}
+                        <div 
+                          className="px-4 py-2 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center justify-end"
+                          onClick={() => setLocation(`/invoices/${item.id}`)}
+                        >
+                          <p className="text-sm font-medium text-red-600">
+                            {daysOverdue} days
+                          </p>
+                        </div>
+
+                        {/* Due Date */}
+                        <div 
+                          className="px-4 py-2 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center justify-end"
+                          onClick={() => setLocation(`/invoices/${item.id}`)}
+                        >
+                          <p className="text-xs text-slate-600">
+                            {new Date(item.dueDate).toLocaleDateString()}
+                          </p>
+                        </div>
+
+                        {/* Action Button */}
+                        <div className="px-4 py-2 border-b border-slate-100 hover:bg-slate-50 transition-colors flex items-center justify-end">
                           <Button
                             size="sm"
                             onClick={(e) => {
@@ -702,7 +741,7 @@ export default function ActionCentre() {
                               markPaidMutation.mutate(item.id);
                             }}
                             disabled={markPaidMutation.isPending}
-                            className="bg-green-600 hover:bg-green-700 text-white flex-shrink-0"
+                            className="bg-green-600 hover:bg-green-700 text-white"
                             data-testid={`button-mark-paid-${item.id}`}
                           >
                             <CheckCircle2 className="h-4 w-4 mr-1" />
@@ -711,9 +750,14 @@ export default function ActionCentre() {
                         </div>
                       </div>
                     );
-                  } else {
-                    // Render action list item
-                    const isInbound = item.metadata?.direction === 'inbound';
+                  })}
+                </div>
+              </div>
+            ) : (
+              <div className="divide-y divide-slate-100">
+                {filteredActions.map((item: any) => {
+                  // Render action list item
+                  const isInbound = item.metadata?.direction === 'inbound';
                     
                     return (
                       <div 
@@ -782,7 +826,6 @@ export default function ActionCentre() {
                         </div>
                       </div>
                     );
-                  }
                 })}
               </div>
             )}
