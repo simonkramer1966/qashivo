@@ -317,7 +317,7 @@ export default function CollectionScheduleBuilder({ className }: CollectionSched
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Collection Schedule Builder</h2>
+          <h2 className="text-2xl font-bold text-gray-900">Workflow Builder</h2>
           <p className="text-gray-600">Create automated collection workflows with perfect timing</p>
         </div>
         <div className="flex items-center gap-3">
