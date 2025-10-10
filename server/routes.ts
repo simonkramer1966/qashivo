@@ -3266,7 +3266,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             try {
               const contact = await storage.getContact(action.contactId, user.tenantId);
               if (contact) {
-                contactName = contact.name || contact.companyName || null;
+                contactName = contact.companyName || contact.name || null;
               }
             } catch (e) {
               // Contact not found, skip
@@ -3375,13 +3375,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // 1. QUERIES - actions with general_query intent
       const queries = allActions.filter(a => a.intentType === 'general_query');
       
-      // Helper function to enrich invoice with contact name
+      // Helper function to enrich invoice with contact name (company name)
       const enrichInvoice = async (inv: any) => {
         let contactName = '';
         try {
           const contact = await storage.getContact(inv.contactId, tenantId);
           if (contact) {
-            contactName = contact.name;
+            contactName = contact.companyName || contact.name;
           }
         } catch (e) {
           // Contact not found

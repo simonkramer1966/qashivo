@@ -151,7 +151,7 @@ Respond with valid JSON only, no markdown formatting.`
           .from(contacts)
           .where(eq(contacts.id, message.contactId))
           .limit(1);
-        if (contact) context.contactName = contact.name;
+        if (contact) context.contactName = contact.companyName || contact.name;
       }
 
       if (message.invoiceId) {
