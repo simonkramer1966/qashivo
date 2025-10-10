@@ -427,7 +427,7 @@ export default function Customers() {
                     >
                       {/* Customer */}
                       <div 
-                        className={`px-8 py-2 border-l-4 ${getRiskColor(contact.riskBand)} border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center min-w-0`}
+                        className="px-8 py-2 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center min-w-0"
                         onClick={() => {
                           setSelectedContact(contact);
                           setShowCustomerDetail(true);
