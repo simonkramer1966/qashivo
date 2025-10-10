@@ -6,11 +6,18 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { 
   Search, 
   ChevronRight,
   Banknote,
-  PlayCircle
+  PlayCircle,
+  MoreVertical
 } from "lucide-react";
 import NewSidebar from "@/components/layout/new-sidebar";
 import BottomNav from "@/components/layout/bottom-nav";
@@ -75,9 +82,15 @@ export default function Invoices() {
     }
   });
 
-  const handleDemoStart = (e: React.MouseEvent, invoiceId: string) => {
-    e.stopPropagation(); // Prevent invoice detail dialog from opening
-    demoCompressionMutation.mutate(invoiceId);
+  const handleDemoStart = (eOrId: React.MouseEvent | string, invoiceId?: string) => {
+    // Handle both cases: (event, invoiceId) from table and (invoiceId) from dialog
+    const id = typeof eOrId === 'string' ? eOrId : invoiceId;
+    if (typeof eOrId !== 'string') {
+      eOrId.stopPropagation(); // Prevent invoice detail dialog from opening when clicked from table
+    }
+    if (id) {
+      demoCompressionMutation.mutate(id);
+    }
   };
 
   const { data: invoicesData, isLoading } = useQuery<{
@@ -345,18 +358,17 @@ export default function Invoices() {
                 <p className="text-slate-600">No invoices found</p>
               </div>
             ) : (
-              <div className="bg-white border-t border-b border-slate-200" style={{ display: 'grid', gridTemplateColumns: '200px 8rem 7rem 8rem 6rem 5rem 3rem' }}>
+              <div className="bg-white border-t border-b border-slate-200" style={{ display: 'grid', gridTemplateColumns: '200px 8rem 7rem 8rem 7rem 6rem 1fr 3rem' }}>
                 {/* Table Header */}
                 <div className="contents">
                   <div className="px-8 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10">Customer</div>
                   <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10">Invoice #</div>
                   <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10">Amount</div>
                   <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10">{statusFilter === 'paid' ? 'Paid Date' : 'Due Date'}</div>
-                  <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10">Overdue</div>
-                  <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 flex items-center justify-end">
-                    <span className="inline-flex items-center justify-center min-w-[75px]">Status</span>
-                  </div>
-                  <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 text-right">Demo</div>
+                  <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10">Exp. Date</div>
+                  <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10">Status</div>
+                  <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10"></div>
+                  <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10"></div>
                 </div>
 
                 {/* Table Rows */}
@@ -364,27 +376,48 @@ export default function Invoices() {
                   const outstanding = invoice.amount - invoice.amountPaid;
                   const daysOverdue = getDaysOverdue(invoice.dueDate);
                   
+                  // Helper function to format date as dd/mm/yy
+                  const formatDateShort = (dateStr: string) => {
+                    const date = new Date(dateStr);
+                    const day = String(date.getDate()).padStart(2, '0');
+                    const month = String(date.getMonth() + 1).padStart(2, '0');
+                    const year = String(date.getFullYear()).slice(-2);
+                    return `${day}/${month}/${year}`;
+                  };
+
+                  // Calculate expected payment date (30 days from due date)
+                  const expDate = new Date(invoice.dueDate);
+                  expDate.setDate(expDate.getDate() + 30);
+                  
                   return (
                     <div
                       key={invoice.id}
                       className="contents"
-                      onClick={() => setSelectedInvoice(invoice)}
                       data-testid={`invoice-item-${invoice.id}`}
                     >
                       {/* Customer */}
-                      <div className={`px-8 py-2 border-l-4 ${getStatusColor(invoice)} border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center min-w-0`}>
+                      <div 
+                        className={`px-8 py-2 border-l-4 ${getStatusColor(invoice)} border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center min-w-0`}
+                        onClick={() => setSelectedInvoice(invoice)}
+                      >
                         <p className="font-semibold text-sm text-slate-900 truncate">
                           {invoice.contact?.companyName || invoice.contact?.name || 'Unknown Customer'}
                         </p>
                       </div>
 
                       {/* Invoice Number */}
-                      <div className="px-4 py-2 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center">
+                      <div 
+                        className="px-4 py-2 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center"
+                        onClick={() => setSelectedInvoice(invoice)}
+                      >
                         <p className="text-xs font-medium text-slate-900">{invoice.invoiceNumber}</p>
                       </div>
 
                       {/* Amount */}
-                      <div className="px-4 py-2 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center gap-2">
+                      <div 
+                        className="px-4 py-2 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center gap-2"
+                        onClick={() => setSelectedInvoice(invoice)}
+                      >
                         <p className="font-bold text-sm text-slate-900">
                           {formatCurrency(invoice.status === 'paid' ? invoice.amount : outstanding)}
                         </p>
@@ -394,17 +427,33 @@ export default function Invoices() {
                       </div>
 
                       {/* Due Date / Paid Date */}
-                      <div className="px-4 py-2 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center">
+                      <div 
+                        className="px-4 py-2 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center"
+                        onClick={() => setSelectedInvoice(invoice)}
+                      >
                         <p className="text-xs text-slate-700">
                           {statusFilter === 'paid' && invoice.paidDate
-                            ? new Date(invoice.paidDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
-                            : new Date(invoice.dueDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+                            ? formatDateShort(invoice.paidDate)
+                            : formatDateShort(invoice.dueDate)
                           }
                         </p>
                       </div>
 
-                      {/* Days Overdue */}
-                      <div className="px-4 py-2 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center">
+                      {/* Exp. Date */}
+                      <div 
+                        className="px-4 py-2 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center"
+                        onClick={() => setSelectedInvoice(invoice)}
+                      >
+                        <p className="text-xs text-slate-700">
+                          {invoice.status !== 'paid' ? formatDateShort(expDate.toISOString()) : '-'}
+                        </p>
+                      </div>
+
+                      {/* Status */}
+                      <div 
+                        className="px-4 py-2 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center"
+                        onClick={() => setSelectedInvoice(invoice)}
+                      >
                         {invoice.status === 'paid' ? (
                           <p className="text-xs text-slate-500">-</p>
                         ) : daysOverdue > 0 ? (
@@ -416,25 +465,40 @@ export default function Invoices() {
                         )}
                       </div>
 
-                      {/* Status */}
-                      <div className="px-4 py-2 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center justify-end">
-                        {getStatusBadge(invoice)}
-                      </div>
+                      {/* Invisible expanding column */}
+                      <div className="px-4 py-2 border-b border-slate-100"></div>
 
-                      {/* Demo Button */}
-                      <div className="px-4 py-2 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center justify-end">
-                        {invoice.status !== 'paid' && daysOverdue > 0 && (
-                          <Button
-                            onClick={(e) => handleDemoStart(e, invoice.id)}
-                            variant="ghost"
-                            size="sm"
-                            className="h-7 px-2 text-[#17B6C3] hover:text-[#1396A1] hover:bg-[#17B6C3]/10"
-                            disabled={demoCompressionMutation.isPending}
-                            data-testid={`button-demo-${invoice.id}`}
-                          >
-                            <PlayCircle className="h-3.5 w-3.5" />
-                          </Button>
-                        )}
+                      {/* 3-dot menu */}
+                      <div className="px-4 py-2 border-b border-slate-100 hover:bg-slate-50 transition-colors flex items-center justify-center">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 w-7 p-0"
+                              data-testid={`button-menu-${invoice.id}`}
+                            >
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => setSelectedInvoice(invoice)}>
+                              View Details
+                            </DropdownMenuItem>
+                            {invoice.status !== 'paid' && daysOverdue > 0 && (
+                              <DropdownMenuItem 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDemoStart(e as any, invoice.id);
+                                }}
+                                disabled={demoCompressionMutation.isPending}
+                              >
+                                <PlayCircle className="h-4 w-4 mr-2" />
+                                Start Demo
+                              </DropdownMenuItem>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
                     </div>
                   );
@@ -513,6 +577,8 @@ export default function Invoices() {
         invoice={selectedInvoice}
         open={!!selectedInvoice}
         onOpenChange={(open) => !open && setSelectedInvoice(null)}
+        onDemoStart={handleDemoStart}
+        isDemoLoading={demoCompressionMutation.isPending}
       />
     </div>
   );

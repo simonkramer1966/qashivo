@@ -21,7 +21,8 @@ import {
   CheckCircle2,
   Clock,
   TrendingUp,
-  FileText
+  FileText,
+  PlayCircle
 } from "lucide-react";
 import { useCurrency } from "@/hooks/useCurrency";
 import { useAuth } from "@/hooks/useAuth";
@@ -55,9 +56,11 @@ interface InvoiceDetailDialogProps {
   invoice: Invoice | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onDemoStart?: (invoiceId: string) => void;
+  isDemoLoading?: boolean;
 }
 
-export function InvoiceDetailDialog({ invoice, open, onOpenChange }: InvoiceDetailDialogProps) {
+export function InvoiceDetailDialog({ invoice, open, onOpenChange, onDemoStart, isDemoLoading }: InvoiceDetailDialogProps) {
   const { formatCurrency } = useCurrency();
   const { user } = useAuth();
   const [contactInfoOpen, setContactInfoOpen] = useState(false);
@@ -431,7 +434,7 @@ export function InvoiceDetailDialog({ invoice, open, onOpenChange }: InvoiceDeta
 
         {/* Footer Actions - Fixed outside ScrollArea */}
         <div className="bg-white px-6 py-4 border-t rounded-b-lg">
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
             <Button variant="outline" size="sm" className="touch-target">
               <Phone className="h-4 w-4 mr-2" />
               Call
@@ -477,6 +480,19 @@ export function InvoiceDetailDialog({ invoice, open, onOpenChange }: InvoiceDeta
               <FileText className="h-4 w-4 mr-2" />
               Note
             </Button>
+            {invoice && invoice.status !== 'paid' && daysOverdue > 0 && onDemoStart && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="touch-target"
+                onClick={() => onDemoStart(invoice.id)}
+                disabled={isDemoLoading}
+                data-testid="button-demo-dialog"
+              >
+                <PlayCircle className="h-4 w-4 mr-2" />
+                Demo
+              </Button>
+            )}
           </div>
         </div>
       </DialogContent>
