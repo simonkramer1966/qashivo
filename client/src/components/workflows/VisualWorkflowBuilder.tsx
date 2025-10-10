@@ -208,9 +208,9 @@ export default function VisualWorkflowBuilder({ initialWorkflow, onSave }: Visua
 
       const { id, label, type } = JSON.parse(nodeData);
       const reactFlowBounds = reactFlowWrapper.current.getBoundingClientRect();
-      const position = reactFlowInstance.project({
-        x: event.clientX - reactFlowBounds.left,
-        y: event.clientY - reactFlowBounds.top,
+      const position = reactFlowInstance.screenToFlowPosition({
+        x: event.clientX,
+        y: event.clientY,
       });
 
       const newNode: Node<NodeData> = {
