@@ -270,7 +270,7 @@ export default function Invoices() {
                   className="h-9"
                   data-testid="button-previous-page"
                 >
-                  Previous
+                  Prev.
                 </Button>
                 
                 <div className="flex gap-1">
@@ -351,7 +351,7 @@ export default function Invoices() {
                   className="h-9"
                   data-testid="button-previous-page"
                 >
-                  Previous
+                  Prev.
                 </Button>
                 
                 <div className="flex gap-1">
