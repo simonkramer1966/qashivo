@@ -121,17 +121,17 @@ export default function Customers() {
         <div className="container-apple py-4 sm:py-6 lg:py-8">
           {/* Summary Stats - Desktop */}
           <div className="hidden sm:grid grid-cols-3 gap-4 mb-6">
-            <div className="bg-white/80 backdrop-blur-sm border border-white/50 shadow-lg rounded-xl p-4 border-l-4 border-l-slate-400">
-              <p className="text-sm text-slate-600 mb-1">Total</p>
-              <p className="text-2xl font-bold text-slate-900">{aggregates.totalContacts}</p>
+            <div className="bg-white/80 backdrop-blur-sm border border-white/50 shadow-lg rounded-xl p-2.5 border-l-4 border-l-slate-400">
+              <p className="text-sm text-slate-600 mb-0.5">Total</p>
+              <p className="text-xl font-bold text-slate-900">{aggregates.totalContacts}</p>
             </div>
-            <div className="bg-white/80 backdrop-blur-sm border border-white/50 shadow-lg rounded-xl p-4 border-l-4 border-l-[#C75C5C]">
-              <p className="text-sm text-slate-600 mb-1">High Risk</p>
-              <p className="text-2xl font-bold text-[#C75C5C]">{aggregates.highRiskCount}</p>
+            <div className="bg-white/80 backdrop-blur-sm border border-white/50 shadow-lg rounded-xl p-2.5 border-l-4 border-l-[#C75C5C]">
+              <p className="text-sm text-slate-600 mb-0.5">High Risk</p>
+              <p className="text-xl font-bold text-[#C75C5C]">{aggregates.highRiskCount}</p>
             </div>
-            <div className="bg-white/80 backdrop-blur-sm border border-white/50 shadow-lg rounded-xl p-4 border-l-4 border-l-[#17B6C3]">
-              <p className="text-sm text-slate-600 mb-1">Outstanding</p>
-              <p className="text-2xl font-bold text-slate-900">{formatCurrency(aggregates.totalOutstanding)}</p>
+            <div className="bg-white/80 backdrop-blur-sm border border-white/50 shadow-lg rounded-xl p-2.5 border-l-4 border-l-[#17B6C3]">
+              <p className="text-sm text-slate-600 mb-0.5">Outstanding</p>
+              <p className="text-xl font-bold text-slate-900">{formatCurrency(aggregates.totalOutstanding)}</p>
             </div>
           </div>
 
