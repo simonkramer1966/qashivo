@@ -3514,6 +3514,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
             nextAction = 'SMS';
           }
           
+          // Find assigned user (most recent action creator/assignee for this customer)
+          let assignedToUserId: string | null = null;
+          let assignedToUserName: string | null = null;
+          
+          const recentActions = contactActions.slice(0, 5); // Check last 5 actions
+          for (const action of recentActions) {
+            if (action.userId) {
+              assignedToUserId = action.userId;
+              try {
+                const user = await storage.getUser(assignedToUserId);
+                if (user) {
+                  assignedToUserName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email || 'Unknown';
+                }
+              } catch (e) {
+                // User not found
+              }
+              break; // Use the most recent action's user
+            }
+          }
+          
           customerGroups.set(contactId, {
             contactId,
             contactName,
@@ -3528,6 +3548,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             lastContactDate,
             paymentTrend,
             nextAction,
+            assignedToUserId,
+            assignedToUserName,
           });
         }
         
