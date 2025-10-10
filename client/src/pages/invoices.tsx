@@ -176,7 +176,7 @@ export default function Invoices() {
         <NewSidebar />
       </div>
 
-      <main className="flex-1 overflow-y-auto main-with-bottom-nav">
+      <main className="flex-1 overflow-hidden main-with-bottom-nav">
         <Header 
           title="Invoices" 
           subtitle="Manage your receivables"
@@ -508,7 +508,7 @@ export default function Invoices() {
                 
                 {/* Sticky Footer Pagination */}
                 {pagination.totalPages > 1 && (
-                  <div className="absolute bottom-0 left-0 right-0 bg-white border-t border-slate-200 px-4 py-3 flex flex-col sm:flex-row items-center justify-between gap-4 z-20">
+                  <div className="absolute bottom-6 left-0 right-0 bg-white border-t border-slate-200 px-4 py-3 flex flex-col sm:flex-row items-center justify-between gap-4 z-20">
                     <p className="text-sm text-slate-600">
                       Showing {((pagination.page - 1) * pagination.limit) + 1} to {Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total} invoices
                     </p>
