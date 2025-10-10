@@ -248,7 +248,7 @@ export default function Customers() {
           </div>
 
           {/* Desktop View - Table/Rows */}
-          <div className="hidden sm:block">
+          <div className="hidden sm:block -mx-8">
             {isLoading ? (
               <div className="card-apple">
                 <div className="p-4 border-b">
@@ -268,7 +268,7 @@ export default function Customers() {
             ) : (
               <div className="card-apple overflow-hidden max-h-[calc(100vh-400px)] overflow-y-auto">
                 {/* Table Header */}
-                <div className="grid grid-cols-12 gap-4 px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10">
+                <div className="grid grid-cols-12 gap-4 px-8 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10">
                   <div className="col-span-3">Customer</div>
                   <div className="col-span-2">Email</div>
                   <div className="col-span-2">Credit Limit</div>
@@ -281,7 +281,7 @@ export default function Customers() {
                 {contacts.map((contact) => (
                   <div
                     key={contact.id}
-                    className={`grid grid-cols-12 gap-4 px-4 py-2 border-l-4 ${getRiskColor(contact.riskBand)} border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors`}
+                    className={`grid grid-cols-12 gap-4 px-8 py-2 border-l-4 ${getRiskColor(contact.riskBand)} border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors`}
                     onClick={() => {
                       setSelectedContact(contact);
                       setShowCustomerDetail(true);
