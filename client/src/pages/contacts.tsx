@@ -34,6 +34,8 @@ interface Contact {
   overdueAmount: number;
   overdueCount: number;
   averageDaysPastDue: number;
+  lastPaymentDate: string | null;
+  lastContactDate: string | null;
   riskScore: number;
   riskBand?: string | null;
   creditLimit?: number | null;
@@ -48,6 +50,16 @@ export default function Customers() {
   const [showAddCustomerDialog, setShowAddCustomerDialog] = useState(false);
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
   const [showCustomerDetail, setShowCustomerDetail] = useState(false);
+
+  // Format date as dd/mm/yy
+  const formatDateShort = (dateStr: string | null) => {
+    if (!dateStr) return '-';
+    const date = new Date(dateStr);
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = String(date.getFullYear()).slice(-2);
+    return `${day}/${month}/${year}`;
+  };
 
   // Seed payment behavior customers (test button)
   const seedMutation = useMutation({
@@ -410,13 +422,15 @@ export default function Customers() {
               </div>
             ) : (
               <div className="bg-white border-t border-b border-slate-200 overflow-hidden">
-                <div className="max-h-[600px] overflow-y-auto" style={{ display: 'grid', gridTemplateColumns: '2fr 1.5fr 1.5fr 0.8fr 1fr' }}>
+                <div className="max-h-[600px] overflow-y-auto" style={{ display: 'grid', gridTemplateColumns: '2fr 1.5fr 1.5fr 0.8fr 1fr 1fr 1fr' }}>
                   {/* Table Header */}
                   <div className="contents">
                     <div className="px-8 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10">Customer</div>
                     <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 text-right">Outstanding</div>
                     <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 text-right">Overdue</div>
                     <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 text-right">ADPD</div>
+                    <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 text-right">Last Contact</div>
+                    <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 text-right">Last Payment</div>
                     <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 text-right">Risk</div>
                   </div>
 
@@ -490,6 +504,32 @@ export default function Customers() {
                         ) : (
                           <p className="text-xs text-slate-400">-</p>
                         )}
+                      </div>
+
+                      {/* Last Contact */}
+                      <div 
+                        className="px-4 py-2 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center justify-end"
+                        onClick={() => {
+                          setSelectedContact(contact);
+                          setShowCustomerDetail(true);
+                        }}
+                      >
+                        <p className="text-xs text-slate-700">
+                          {formatDateShort(contact.lastContactDate)}
+                        </p>
+                      </div>
+
+                      {/* Last Payment */}
+                      <div 
+                        className="px-4 py-2 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center justify-end"
+                        onClick={() => {
+                          setSelectedContact(contact);
+                          setShowCustomerDetail(true);
+                        }}
+                      >
+                        <p className="text-xs text-slate-700">
+                          {formatDateShort(contact.lastPaymentDate)}
+                        </p>
                       </div>
 
                       {/* Risk Badge */}

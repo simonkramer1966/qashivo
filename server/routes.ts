@@ -2518,9 +2518,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Use fallback pagination with invoice data
       {
-        // Get all contacts and invoices
+        // Get all contacts, invoices, and actions
         const allContacts = await storage.getContacts(user.tenantId);
         const allInvoices = await storage.getInvoices(user.tenantId, 10000); // Get all invoices
+        const allActions = await storage.getActions(user.tenantId);
         
         // Calculate outstanding amounts and invoice counts for each contact
         const contactsWithData = allContacts.map(contact => {
@@ -2580,6 +2581,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
           riskScore = Math.min(riskScore, 100); // Cap at 100
           
+          // Find last payment date (most recent paid invoice)
+          const paidInvoices = contactInvoices.filter(inv => inv.status === 'paid' && inv.paidDate);
+          let lastPaymentDate: string | null = null;
+          if (paidInvoices.length > 0) {
+            const sortedPaid = paidInvoices.sort((a, b) => 
+              new Date(b.paidDate!).getTime() - new Date(a.paidDate!).getTime()
+            );
+            lastPaymentDate = sortedPaid[0].paidDate!;
+          }
+          
+          // Find last contact date (most recent outbound action)
+          const contactActions = allActions.filter(action => 
+            action.contactId === contact.id && 
+            action.metadata?.direction === 'outbound' &&
+            (action.type === 'email' || action.type === 'sms' || action.type === 'call')
+          );
+          let lastContactDate: string | null = null;
+          if (contactActions.length > 0) {
+            const sortedActions = contactActions.sort((a, b) => 
+              new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+            );
+            lastContactDate = sortedActions[0].createdAt;
+          }
+          
           return {
             ...contact,
             outstandingAmount,
@@ -2587,6 +2612,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             overdueAmount,
             overdueCount,
             averageDaysPastDue,
+            lastPaymentDate,
+            lastContactDate,
             riskScore
           };
         })
