@@ -666,15 +666,6 @@ export default function ActionCentre() {
                   {/* Table Rows */}
                   {filteredActions.map((customer: any) => {
                     const daysOverdue = Math.floor((new Date().getTime() - new Date(customer.oldestDueDate).getTime()) / (1000 * 3600 * 24));
-                    
-                    // Determine border color based on severity
-                    const getBorderColor = () => {
-                      if (customer.legalFlag) return 'border-l-red-800';
-                      if (customer.escalationFlag) return 'border-l-red-600';
-                      if (daysOverdue > 60) return 'border-l-red-600';
-                      if (daysOverdue > 30) return 'border-l-[#E8A23B]';
-                      return 'border-l-red-500';
-                    };
 
                     return (
                       <div
@@ -684,7 +675,7 @@ export default function ActionCentre() {
                       >
                         {/* Customer */}
                         <div 
-                          className={`px-8 py-2 border-l-4 ${getBorderColor()} border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center min-w-0`}
+                          className="px-8 py-2 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center min-w-0"
                           onClick={() => setSelectedCustomer(customer)}
                         >
                           <p className="font-semibold text-sm text-slate-900 truncate">
