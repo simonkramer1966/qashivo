@@ -352,7 +352,7 @@ export default function Invoices() {
                   <div className="col-span-2">Invoice #</div>
                   <div className="col-span-2">Amount</div>
                   <div className="col-span-2">{statusFilter === 'paid' ? 'Paid Date' : 'Due Date'}</div>
-                  <div className="col-span-1">Days Overdue</div>
+                  <div className="col-span-1">Overdue</div>
                   <div className="col-span-1 text-right">Status</div>
                   <div className="col-span-1 text-right">Demo</div>
                 </div>
