@@ -345,7 +345,7 @@ export default function Invoices() {
                 <p className="text-slate-600">No invoices found</p>
               </div>
             ) : (
-              <div className="card-apple overflow-hidden max-h-[calc(100vh-420px)] overflow-y-auto">
+              <div className="card-apple overflow-hidden">
                 {/* Table Header */}
                 <div className="grid grid-cols-12 gap-4 px-8 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10">
                   <div className="col-span-3">Customer</div>
