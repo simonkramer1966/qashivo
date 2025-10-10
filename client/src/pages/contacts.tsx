@@ -409,12 +409,10 @@ export default function Customers() {
               </div>
             ) : (
               <div className="bg-white border-t border-b border-slate-200 overflow-hidden">
-                <div className="max-h-[600px] overflow-y-auto" style={{ display: 'grid', gridTemplateColumns: '2fr 1.5fr 1fr 1.2fr 1.2fr 0.8fr' }}>
+                <div className="max-h-[600px] overflow-y-auto" style={{ display: 'grid', gridTemplateColumns: '2fr 1.5fr 1.5fr 1fr' }}>
                   {/* Table Header */}
                   <div className="contents">
                     <div className="px-8 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10">Customer</div>
-                    <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10">Email</div>
-                    <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 text-right">Credit Limit</div>
                     <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 text-right">Outstanding</div>
                     <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 text-right">Overdue</div>
                     <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 text-right">Risk</div>
@@ -442,30 +440,6 @@ export default function Customers() {
                           ) : (
                             <Shield className="h-3.5 w-3.5 text-[#E8A23B] flex-shrink-0" data-testid={`shield-unchecked-${contact.id}`} />
                           )}
-                        </p>
-                      </div>
-
-                      {/* Email */}
-                      <div 
-                        className="px-4 py-2 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center min-w-0"
-                        onClick={() => {
-                          setSelectedContact(contact);
-                          setShowCustomerDetail(true);
-                        }}
-                      >
-                        <p className="text-xs text-slate-600 truncate">{contact.email || '-'}</p>
-                      </div>
-
-                      {/* Credit Limit */}
-                      <div 
-                        className="px-4 py-2 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center justify-end"
-                        onClick={() => {
-                          setSelectedContact(contact);
-                          setShowCustomerDetail(true);
-                        }}
-                      >
-                        <p className="text-xs text-slate-900">
-                          {contact.creditLimit ? formatCurrency(contact.creditLimit) : '-'}
                         </p>
                       </div>
 
