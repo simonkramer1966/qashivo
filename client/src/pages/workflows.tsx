@@ -693,7 +693,7 @@ export default function Workflows() {
               </TabsTrigger>
               <TabsTrigger value="schedules" className="data-[state=active]:bg-[#17B6C3] data-[state=active]:text-white">
                 <Target className="mr-2 h-4 w-4" />
-                Schedules
+                Workflows
               </TabsTrigger>
               <TabsTrigger value="senders" className="data-[state=active]:bg-[#17B6C3] data-[state=active]:text-white">
                 <Building2 className="mr-2 h-4 w-4" />
