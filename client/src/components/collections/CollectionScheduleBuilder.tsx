@@ -48,10 +48,13 @@ import {
   AlertCircle,
   Bot,
   Timer,
-  GripVertical
+  GripVertical,
+  Network,
+  List
 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import VisualWorkflowBuilder from '@/components/workflows/VisualWorkflowBuilder';
 import type { 
   CollectionSchedule, 
   InsertCollectionSchedule,
@@ -97,6 +100,7 @@ export default function CollectionScheduleBuilder({ className }: CollectionSched
   const [editingSchedule, setEditingSchedule] = useState<CollectionSchedule | null>(null);
   const [steps, setSteps] = useState<Step[]>([]);
   const [draggedStep, setDraggedStep] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<'list' | 'visual'>('list');
 
   const form = useForm<ScheduleFormData>({
     resolver: zodResolver(scheduleSchema),
@@ -316,19 +320,42 @@ export default function CollectionScheduleBuilder({ className }: CollectionSched
           <h2 className="text-2xl font-bold text-gray-900">Collection Schedule Builder</h2>
           <p className="text-gray-600">Create automated collection workflows with perfect timing</p>
         </div>
-        <Button
-          onClick={openCreateDialog}
-          className="bg-[#17B6C3] hover:bg-[#1396A1] text-white"
-          data-testid="button-create-schedule"
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Create Schedule
-        </Button>
+        <div className="flex items-center gap-3">
+          <Button
+            onClick={() => setViewMode(viewMode === 'list' ? 'visual' : 'list')}
+            className="bg-[#17B6C3] hover:bg-[#1396A1] text-white"
+            data-testid="button-toggle-view"
+          >
+            {viewMode === 'list' ? (
+              <>
+                <Network className="h-4 w-4 mr-2" />
+                Visual Builder
+              </>
+            ) : (
+              <>
+                <List className="h-4 w-4 mr-2" />
+                List View
+              </>
+            )}
+          </Button>
+          {viewMode === 'list' && (
+            <Button
+              onClick={openCreateDialog}
+              className="bg-[#17B6C3] hover:bg-[#1396A1] text-white"
+              data-testid="button-create-schedule"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Create Schedule
+            </Button>
+          )}
+        </div>
       </div>
 
-
-      {/* Schedules Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {/* Conditional Rendering based on viewMode */}
+      {viewMode === 'list' ? (
+        <>
+          {/* Schedules Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {(schedules as CollectionSchedule[]).map((schedule: CollectionSchedule) => (
           <Card key={schedule.id} className="card-glass">
             <CardHeader className="pb-3">
@@ -760,6 +787,38 @@ export default function CollectionScheduleBuilder({ className }: CollectionSched
           </Form>
         </DialogContent>
       </Dialog>
+        </>
+      ) : (
+        <div className="flex flex-col h-[calc(100vh-250px)]">
+          {/* Visual Builder Header */}
+          <div className="flex items-center justify-between mb-4 p-4 bg-white/80 backdrop-blur-sm border border-white/50 rounded-lg shadow-sm">
+            <h3 className="text-xl font-semibold text-gray-900">Visual Workflow Builder</h3>
+            <div className="flex items-center gap-3">
+              <Button
+                onClick={() => setViewMode('list')}
+                variant="outline"
+                data-testid="button-back-to-list"
+              >
+                <List className="h-4 w-4 mr-2" />
+                Back to List View
+              </Button>
+            </div>
+          </div>
+          
+          {/* Visual Workflow Builder */}
+          <div className="flex-1 min-h-0">
+            <VisualWorkflowBuilder
+              initialWorkflow={editingSchedule || undefined}
+              onSave={(workflow) => {
+                scheduleMutation.mutate({
+                  ...workflow,
+                  scheduleSteps: workflow.scheduleSteps || [],
+                } as ScheduleFormData);
+              }}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
