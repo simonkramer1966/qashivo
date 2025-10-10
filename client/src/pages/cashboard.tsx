@@ -155,61 +155,61 @@ export default function Cashboard() {
         />
         
         <div className="container-apple py-4 sm:py-6 lg:py-8">
-          {/* KPI Cards - Stack on mobile, grid on larger screens */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          {/* Desktop: KPI Cards - 4 column grid */}
+          <div className="hidden sm:grid sm:grid-cols-4 gap-4 mb-6">
             {/* Total Outstanding */}
-            <div className="card-apple p-4 sm:p-6" data-testid="card-total-outstanding">
-              <div className="flex items-start justify-between mb-3">
-                <div>
-                  <p className="text-sm text-slate-600 mb-1">Total Outstanding</p>
+            <div className="card-apple p-2.5" data-testid="card-total-outstanding">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-slate-600 mb-0.5">Total Outstanding</p>
                   {metricsLoading ? (
-                    <div className="h-8 w-32 bg-slate-200 animate-pulse rounded"></div>
+                    <div className="h-6 w-24 bg-slate-200 animate-pulse rounded"></div>
                   ) : (
-                    <h3 className="text-xl sm:text-2xl font-bold text-slate-900">
-                      {formatCurrency(totalOutstanding)} <span className="text-sm font-normal text-slate-500">({totalInvoiceCount})</span>
-                    </h3>
+                    <p className="text-xl font-bold text-slate-900">
+                      {formatCurrency(totalOutstanding)} <span className="text-xs font-normal text-slate-500">({totalInvoiceCount})</span>
+                    </p>
                   )}
                 </div>
-                <div className="p-2 bg-blue-100 rounded-xl">
-                  <DollarSign className="h-5 w-5 text-blue-600" />
+                <div className="p-1.5 bg-blue-100 rounded-lg flex-shrink-0 ml-2">
+                  <DollarSign className="h-4 w-4 text-blue-600" />
                 </div>
               </div>
             </div>
 
             {/* Overdue Invoices */}
-            <div className="card-apple p-4 sm:p-6" data-testid="card-overdue">
-              <div className="flex items-start justify-between mb-3">
-                <div>
-                  <p className="text-sm text-slate-600 mb-1">Overdue Invoices</p>
+            <div className="card-apple p-2.5" data-testid="card-overdue">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-slate-600 mb-0.5">Overdue Invoices</p>
                   {metricsLoading ? (
-                    <div className="h-8 w-32 bg-slate-200 animate-pulse rounded"></div>
+                    <div className="h-6 w-24 bg-slate-200 animate-pulse rounded"></div>
                   ) : (
-                    <h3 className="text-xl sm:text-2xl font-bold text-slate-900">
-                      {formatCurrency(overdueAmount)} <span className="text-sm font-normal text-slate-500">({overdueCount})</span>
-                    </h3>
+                    <p className="text-xl font-bold text-slate-900">
+                      {formatCurrency(overdueAmount)} <span className="text-xs font-normal text-slate-500">({overdueCount})</span>
+                    </p>
                   )}
                 </div>
-                <div className="p-2 bg-[#E8A23B]/10 rounded-xl">
-                  <AlertTriangle className="h-5 w-5 text-[#E8A23B]" />
+                <div className="p-1.5 bg-[#E8A23B]/10 rounded-lg flex-shrink-0 ml-2">
+                  <AlertTriangle className="h-4 w-4 text-[#E8A23B]" />
                 </div>
               </div>
             </div>
 
             {/* Avg Days Late */}
-            <div className="card-apple p-4 sm:p-6" data-testid="card-avg-days">
-              <div className="flex items-start justify-between mb-3">
-                <div>
-                  <p className="text-sm text-slate-600 mb-1">Avg Days Late</p>
+            <div className="card-apple p-2.5" data-testid="card-avg-days">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-slate-600 mb-0.5">Avg Days Late</p>
                   {metricsLoading ? (
-                    <div className="h-8 w-16 bg-slate-200 animate-pulse rounded"></div>
+                    <div className="h-6 w-16 bg-slate-200 animate-pulse rounded"></div>
                   ) : (
-                    <h3 className="text-xl sm:text-2xl font-bold text-slate-900">
+                    <p className="text-xl font-bold text-slate-900">
                       {avgDaysOverdue.toFixed(0)}
-                    </h3>
+                    </p>
                   )}
                 </div>
-                <div className="p-2 bg-slate-100 rounded-xl">
-                  <Clock className="h-5 w-5 text-slate-600" />
+                <div className="p-1.5 bg-slate-100 rounded-lg flex-shrink-0 ml-2">
+                  <Clock className="h-4 w-4 text-slate-600" />
                 </div>
               </div>
             </div>
@@ -218,20 +218,20 @@ export default function Cashboard() {
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <div className="card-apple p-4 sm:p-6 bg-[#F0F9FF] border border-[#E6E8EA] cursor-help" data-testid="card-interest">
-                    <div className="flex items-start justify-between mb-3">
-                      <div>
-                        <p className="text-sm text-slate-600 mb-1">Interest Accrued</p>
+                  <div className="card-apple p-2.5 bg-[#F0F9FF] border border-[#E6E8EA] cursor-help" data-testid="card-interest">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-slate-600 mb-0.5">Interest Accrued</p>
                         {leaderboardsLoading ? (
-                          <div className="h-8 w-32 bg-slate-200 animate-pulse rounded"></div>
+                          <div className="h-6 w-24 bg-slate-200 animate-pulse rounded"></div>
                         ) : (
-                          <h3 className="text-xl sm:text-2xl font-bold text-slate-900">
+                          <p className="text-xl font-bold text-slate-900">
                             {formatCurrency(leaderboards?.summary?.totalInterest || 0)}
-                          </h3>
+                          </p>
                         )}
                       </div>
-                      <div className="p-2 bg-blue-500/10 rounded-xl">
-                        <Percent className="h-5 w-5 text-blue-600" />
+                      <div className="p-1.5 bg-blue-500/10 rounded-lg flex-shrink-0 ml-2">
+                        <Percent className="h-4 w-4 text-blue-600" />
                       </div>
                     </div>
                   </div>
@@ -247,79 +247,146 @@ export default function Cashboard() {
             </TooltipProvider>
 
             {/* Payment Plans */}
-            <div className="card-apple p-4 sm:p-6 bg-[#F9FAFB] border border-[#E6E8EA]" data-testid="card-payment-plans">
-              <div className="flex items-start justify-between mb-3">
-                <div>
-                  <p className="text-sm text-slate-600 mb-1">Payment Plans</p>
+            <div className="card-apple p-2.5 bg-[#F9FAFB] border border-[#E6E8EA]" data-testid="card-payment-plans">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-slate-600 mb-0.5">Payment Plans</p>
                   {metricsLoading ? (
-                    <div className="h-8 w-32 bg-slate-200 animate-pulse rounded"></div>
+                    <div className="h-6 w-24 bg-slate-200 animate-pulse rounded"></div>
                   ) : (
-                    <h3 className="text-xl sm:text-2xl font-bold text-slate-900">
-                      {formatCurrency(0)} <span className="text-sm font-normal text-slate-500">(0)</span>
-                    </h3>
+                    <p className="text-xl font-bold text-slate-900">
+                      {formatCurrency(0)} <span className="text-xs font-normal text-slate-500">(0)</span>
+                    </p>
                   )}
                 </div>
-                <div className="p-2 bg-slate-200/50 rounded-xl">
-                  <FileText className="h-5 w-5 text-slate-500" />
+                <div className="p-1.5 bg-slate-200/50 rounded-lg flex-shrink-0 ml-2">
+                  <FileText className="h-4 w-4 text-slate-500" />
                 </div>
               </div>
             </div>
 
             {/* Disputes */}
-            <div className="card-apple p-4 sm:p-6 bg-[#FFF5F5] border border-[#E6E8EA]" data-testid="card-disputes">
-              <div className="flex items-start justify-between mb-3">
-                <div>
-                  <p className="text-sm text-slate-600 mb-1">Disputes</p>
+            <div className="card-apple p-2.5 bg-[#FFF5F5] border border-[#E6E8EA]" data-testid="card-disputes">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-slate-600 mb-0.5">Disputes</p>
                   {metricsLoading ? (
-                    <div className="h-8 w-32 bg-slate-200 animate-pulse rounded"></div>
+                    <div className="h-6 w-24 bg-slate-200 animate-pulse rounded"></div>
                   ) : (
-                    <h3 className="text-xl sm:text-2xl font-bold text-slate-900">
-                      {formatCurrency(0)} <span className="text-sm font-normal text-slate-500">(0)</span>
-                    </h3>
+                    <p className="text-xl font-bold text-slate-900">
+                      {formatCurrency(0)} <span className="text-xs font-normal text-slate-500">(0)</span>
+                    </p>
                   )}
                 </div>
-                <div className="p-2 bg-[#E8A23B]/10 rounded-xl">
-                  <MessageSquare className="h-5 w-5 text-[#E8A23B]" />
+                <div className="p-1.5 bg-[#E8A23B]/10 rounded-lg flex-shrink-0 ml-2">
+                  <MessageSquare className="h-4 w-4 text-[#E8A23B]" />
                 </div>
               </div>
             </div>
 
             {/* Debt Recovery */}
-            <div className="card-apple p-4 sm:p-6 bg-[#FFF5F5] border border-[#E6E8EA]" data-testid="card-debt-recovery">
-              <div className="flex items-start justify-between mb-3">
-                <div>
-                  <p className="text-sm text-slate-600 mb-1">Debt Recovery</p>
+            <div className="card-apple p-2.5 bg-[#FFF5F5] border border-[#E6E8EA]" data-testid="card-debt-recovery">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-slate-600 mb-0.5">Debt Recovery</p>
                   {metricsLoading ? (
-                    <div className="h-8 w-32 bg-slate-200 animate-pulse rounded"></div>
+                    <div className="h-6 w-24 bg-slate-200 animate-pulse rounded"></div>
                   ) : (
-                    <h3 className="text-xl sm:text-2xl font-bold text-slate-900">
-                      {formatCurrency(0)} <span className="text-sm font-normal text-slate-500">(0)</span>
-                    </h3>
+                    <p className="text-xl font-bold text-slate-900">
+                      {formatCurrency(0)} <span className="text-xs font-normal text-slate-500">(0)</span>
+                    </p>
                   )}
                 </div>
-                <div className="p-2 bg-[#C75C5C]/10 rounded-xl">
-                  <Scale className="h-5 w-5 text-[#C75C5C]" />
+                <div className="p-1.5 bg-[#C75C5C]/10 rounded-lg flex-shrink-0 ml-2">
+                  <Scale className="h-4 w-4 text-[#C75C5C]" />
                 </div>
               </div>
             </div>
 
             {/* Legal */}
-            <div className="card-apple p-4 sm:p-6 bg-[#FFF5F5] border border-[#E6E8EA]" data-testid="card-legal">
-              <div className="flex items-start justify-between mb-3">
-                <div>
-                  <p className="text-sm text-slate-600 mb-1">Legal Cases</p>
+            <div className="card-apple p-2.5 bg-[#FFF5F5] border border-[#E6E8EA]" data-testid="card-legal">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-slate-600 mb-0.5">Legal Cases</p>
                   {metricsLoading ? (
-                    <div className="h-8 w-32 bg-slate-200 animate-pulse rounded"></div>
+                    <div className="h-6 w-24 bg-slate-200 animate-pulse rounded"></div>
                   ) : (
-                    <h3 className="text-xl sm:text-2xl font-bold text-slate-900">
-                      {formatCurrency(0)} <span className="text-sm font-normal text-slate-500">(0)</span>
-                    </h3>
+                    <p className="text-xl font-bold text-slate-900">
+                      {formatCurrency(0)} <span className="text-xs font-normal text-slate-500">(0)</span>
+                    </p>
                   )}
                 </div>
-                <div className="p-2 bg-[#C75C5C]/10 rounded-xl">
-                  <Gavel className="h-5 w-5 text-[#C75C5C]" />
+                <div className="p-1.5 bg-[#C75C5C]/10 rounded-lg flex-shrink-0 ml-2">
+                  <Gavel className="h-4 w-4 text-[#C75C5C]" />
                 </div>
               </div>
+            </div>
+          </div>
+
+          {/* Mobile: 2x4 grid of metrics */}
+          <div className="grid grid-cols-2 gap-3 mb-6 sm:hidden">
+            {/* Total Outstanding */}
+            <div className="card-apple p-2" data-testid="card-total-outstanding">
+              <p className="text-xs text-slate-600 mb-0.5">Outstanding</p>
+              {metricsLoading ? (
+                <div className="h-5 w-20 bg-slate-200 animate-pulse rounded"></div>
+              ) : (
+                <p className="text-base font-bold text-slate-900">{formatCurrency(totalOutstanding)}</p>
+              )}
+            </div>
+
+            {/* Overdue */}
+            <div className="card-apple p-2" data-testid="card-overdue">
+              <p className="text-xs text-slate-600 mb-0.5">Overdue</p>
+              {metricsLoading ? (
+                <div className="h-5 w-20 bg-slate-200 animate-pulse rounded"></div>
+              ) : (
+                <p className="text-base font-bold text-slate-900">{formatCurrency(overdueAmount)}</p>
+              )}
+            </div>
+
+            {/* Avg Days Late */}
+            <div className="card-apple p-2" data-testid="card-avg-days">
+              <p className="text-xs text-slate-600 mb-0.5">Avg Days Late</p>
+              {metricsLoading ? (
+                <div className="h-5 w-12 bg-slate-200 animate-pulse rounded"></div>
+              ) : (
+                <p className="text-base font-bold text-slate-900">{avgDaysOverdue.toFixed(0)}</p>
+              )}
+            </div>
+
+            {/* Interest */}
+            <div className="card-apple p-2 bg-[#F0F9FF]" data-testid="card-interest">
+              <p className="text-xs text-slate-600 mb-0.5">Interest</p>
+              {leaderboardsLoading ? (
+                <div className="h-5 w-20 bg-slate-200 animate-pulse rounded"></div>
+              ) : (
+                <p className="text-base font-bold text-slate-900">{formatCurrency(leaderboards?.summary?.totalInterest || 0)}</p>
+              )}
+            </div>
+
+            {/* Payment Plans */}
+            <div className="card-apple p-2 bg-[#F9FAFB]" data-testid="card-payment-plans">
+              <p className="text-xs text-slate-600 mb-0.5">Plans</p>
+              <p className="text-base font-bold text-slate-900">{formatCurrency(0)}</p>
+            </div>
+
+            {/* Disputes */}
+            <div className="card-apple p-2 bg-[#FFF5F5]" data-testid="card-disputes">
+              <p className="text-xs text-slate-600 mb-0.5">Disputes</p>
+              <p className="text-base font-bold text-slate-900">{formatCurrency(0)}</p>
+            </div>
+
+            {/* Debt Recovery */}
+            <div className="card-apple p-2 bg-[#FFF5F5]" data-testid="card-debt-recovery">
+              <p className="text-xs text-slate-600 mb-0.5">Recovery</p>
+              <p className="text-base font-bold text-slate-900">{formatCurrency(0)}</p>
+            </div>
+
+            {/* Legal */}
+            <div className="card-apple p-2 bg-[#FFF5F5]" data-testid="card-legal">
+              <p className="text-xs text-slate-600 mb-0.5">Legal</p>
+              <p className="text-base font-bold text-slate-900">{formatCurrency(0)}</p>
             </div>
           </div>
 
