@@ -374,7 +374,6 @@ export default function Invoices() {
                         <p className="font-semibold text-sm text-slate-900 truncate">
                           {invoice.contact?.companyName || invoice.contact?.name || 'Unknown Customer'}
                         </p>
-                        <p className="text-xs text-slate-500 truncate">{invoice.contact?.email}</p>
                       </div>
 
                       {/* Invoice Number */}
