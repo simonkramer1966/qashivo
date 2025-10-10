@@ -328,7 +328,7 @@ export default function Invoices() {
           </div>
 
           {/* Desktop: Table/List View */}
-          <div className="hidden sm:block">
+          <div className="hidden sm:block -mx-8">
             {isLoading ? (
               <div className="card-apple">
                 <div className="p-4 border-b">
@@ -345,9 +345,9 @@ export default function Invoices() {
                 <p className="text-slate-600">No invoices found</p>
               </div>
             ) : (
-              <div className="card-apple overflow-hidden">
+              <div className="card-apple overflow-hidden max-h-[calc(100vh-480px)] overflow-y-auto">
                 {/* Table Header */}
-                <div className="grid grid-cols-12 gap-4 px-6 py-3 bg-slate-50 border-b border-slate-200 text-sm font-semibold text-slate-600">
+                <div className="grid grid-cols-12 gap-4 px-8 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10">
                   <div className="col-span-3">Customer</div>
                   <div className="col-span-2">Invoice #</div>
                   <div className="col-span-2">Amount</div>
@@ -365,36 +365,36 @@ export default function Invoices() {
                   return (
                     <div
                       key={invoice.id}
-                      className={`grid grid-cols-12 gap-4 px-6 py-4 border-l-4 ${getStatusColor(invoice)} border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors`}
+                      className={`grid grid-cols-12 gap-4 px-8 py-2 border-l-4 ${getStatusColor(invoice)} border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors`}
                       onClick={() => setSelectedInvoice(invoice)}
                       data-testid={`invoice-item-${invoice.id}`}
                     >
                       {/* Customer */}
                       <div className="col-span-3 min-w-0">
-                        <p className="font-semibold text-slate-900 truncate">
+                        <p className="font-semibold text-sm text-slate-900 truncate">
                           {invoice.contact?.companyName || invoice.contact?.name || 'Unknown Customer'}
                         </p>
-                        <p className="text-sm text-slate-500 truncate">{invoice.contact?.email}</p>
+                        <p className="text-xs text-slate-500 truncate">{invoice.contact?.email}</p>
                       </div>
 
                       {/* Invoice Number */}
                       <div className="col-span-2 flex items-center">
-                        <p className="text-sm font-medium text-slate-900">{invoice.invoiceNumber}</p>
+                        <p className="text-xs font-medium text-slate-900">{invoice.invoiceNumber}</p>
                       </div>
 
                       {/* Amount */}
                       <div className="col-span-2 flex items-center gap-2">
-                        <p className="font-bold text-slate-900">
+                        <p className="font-bold text-sm text-slate-900">
                           {formatCurrency(invoice.status === 'paid' ? invoice.amount : outstanding)}
                         </p>
                         {invoice.status !== 'paid' && outstanding >= 1000 && (
-                          <Banknote className="h-4 w-4 text-[#17B6C3]" />
+                          <Banknote className="h-3.5 w-3.5 text-[#17B6C3]" />
                         )}
                       </div>
 
                       {/* Due Date / Paid Date */}
                       <div className="col-span-2 flex items-center">
-                        <p className="text-sm text-slate-700">
+                        <p className="text-xs text-slate-700">
                           {statusFilter === 'paid' && invoice.paidDate
                             ? new Date(invoice.paidDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
                             : new Date(invoice.dueDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
@@ -405,13 +405,13 @@ export default function Invoices() {
                       {/* Days Overdue */}
                       <div className="col-span-1 flex items-center">
                         {invoice.status === 'paid' ? (
-                          <p className="text-sm text-slate-500">-</p>
+                          <p className="text-xs text-slate-500">-</p>
                         ) : daysOverdue > 0 ? (
-                          <p className={`text-sm font-semibold ${daysOverdue >= 30 ? 'text-[#C75C5C]' : daysOverdue >= 7 ? 'text-[#E8A23B]' : 'text-blue-600'}`}>
+                          <p className={`text-xs font-semibold ${daysOverdue >= 30 ? 'text-[#C75C5C]' : daysOverdue >= 7 ? 'text-[#E8A23B]' : 'text-blue-600'}`}>
                             {daysOverdue} days
                           </p>
                         ) : (
-                          <p className="text-sm text-slate-500">Current</p>
+                          <p className="text-xs text-slate-500">Current</p>
                         )}
                       </div>
 
@@ -427,11 +427,11 @@ export default function Invoices() {
                             onClick={(e) => handleDemoStart(e, invoice.id)}
                             variant="ghost"
                             size="sm"
-                            className="h-8 px-2 text-[#17B6C3] hover:text-[#1396A1] hover:bg-[#17B6C3]/10"
+                            className="h-7 px-2 text-[#17B6C3] hover:text-[#1396A1] hover:bg-[#17B6C3]/10"
                             disabled={demoCompressionMutation.isPending}
                             data-testid={`button-demo-${invoice.id}`}
                           >
-                            <PlayCircle className="h-4 w-4" />
+                            <PlayCircle className="h-3.5 w-3.5" />
                           </Button>
                         )}
                       </div>
