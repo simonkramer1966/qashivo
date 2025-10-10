@@ -49,6 +49,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import nexusLogo from "@assets/Main Nexus Logo copy_1756923544828.png";
+import UserProfileDialog from "./UserProfileDialog";
 
 const navigationItems = [
   // Section 1: Dashboard
@@ -120,6 +121,7 @@ export default function NewSidebar() {
   const [isCollapsed, setIsCollapsed] = useState(true);
   const [orgSearchQuery, setOrgSearchQuery] = useState("");
   const [recentOrgIds, setRecentOrgIds] = useState<string[]>([]);
+  const [isProfileDialogOpen, setIsProfileDialogOpen] = useState(false);
   const queryClient = useQueryClient();
   const { triggerSplash } = useSplash();
 
@@ -821,7 +823,7 @@ export default function NewSidebar() {
               <ChevronDown className="h-4 w-4 text-gray-400" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56 bg-white border-gray-200">
-              <DropdownMenuItem onClick={() => setLocation('/profile')} className="cursor-pointer" data-testid="menu-item-profile">
+              <DropdownMenuItem onClick={() => setIsProfileDialogOpen(true)} className="cursor-pointer" data-testid="menu-item-profile">
                 <User className="mr-2 h-4 w-4" />
                 <span>Profile</span>
               </DropdownMenuItem>
@@ -861,7 +863,7 @@ export default function NewSidebar() {
               </Avatar>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56 bg-white border-gray-200">
-              <DropdownMenuItem onClick={() => setLocation('/profile')} className="cursor-pointer" data-testid="menu-item-profile">
+              <DropdownMenuItem onClick={() => setIsProfileDialogOpen(true)} className="cursor-pointer" data-testid="menu-item-profile">
                 <User className="mr-2 h-4 w-4" />
                 <span>Profile</span>
               </DropdownMenuItem>
@@ -876,6 +878,11 @@ export default function NewSidebar() {
 
     </aside>
 
+    <UserProfileDialog 
+      open={isProfileDialogOpen} 
+      onOpenChange={setIsProfileDialogOpen}
+      onLogout={handleLogout}
+    />
     </>
   );
 }
