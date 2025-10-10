@@ -129,13 +129,21 @@ export default function ActionCentre() {
         limit: commsLimit.toString(),
         ...(searchQuery && { search: searchQuery }),
         ...(commsContactFilter && { contactId: commsContactFilter }),
+        _t: Date.now().toString(), // Cache buster
       });
-      const response = await fetch(`/api/actions/all?${params}`);
+      const response = await fetch(`/api/actions/all?${params}`, {
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache',
+        },
+      });
       if (!response.ok) throw new Error('Failed to fetch comms data');
       return response.json();
     },
     enabled: activeTab === 'comms',
     refetchInterval: 15000,
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
   });
 
   // Fetch categorized tab data
@@ -501,12 +509,12 @@ export default function ActionCentre() {
                   </div>
                 ))}
               </div>
-            ) : (isCommsTab && commsData?.actions.length === 0) ? (
+            ) : (isCommsTab && (!commsData?.actions || commsData.actions.length === 0)) ? (
               <div className="p-8 text-center">
                 <AlertTriangle className="h-12 w-12 mx-auto mb-3 text-slate-400" />
                 <p className="text-slate-600">No communications found</p>
               </div>
-            ) : filteredActions.length === 0 ? (
+            ) : filteredActions.length === 0 && !isCommsTab ? (
               <div className="p-8 text-center">
                 <AlertTriangle className="h-12 w-12 mx-auto mb-3 text-slate-400" />
                 <p className="text-slate-600">
