@@ -355,10 +355,10 @@ export default function CollectionScheduleBuilder({ className }: CollectionSched
       {viewMode === 'list' ? (
         <>
           {/* Workflows Table */}
-          <div className="bg-white/80 backdrop-blur-sm border border-white/50 rounded-lg shadow-lg overflow-hidden">
-            <div className="overflow-x-auto">
+          <div className="bg-white/80 backdrop-blur-sm border border-white/50 rounded-lg shadow-lg overflow-hidden max-h-[calc(100vh-280px)]">
+            <div className="overflow-x-auto overflow-y-auto h-full">
               <table className="w-full">
-                <thead className="bg-gray-50/50 border-b border-gray-200">
+                <thead className="bg-gray-50/50 border-b border-gray-200 sticky top-0 z-10">
                   <tr>
                     <th className="px-4 py-2 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
                       Workflow Name
