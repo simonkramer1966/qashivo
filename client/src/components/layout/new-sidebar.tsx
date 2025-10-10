@@ -60,7 +60,7 @@ const navigationItems = [
   // Section 2: Core Operations
   { name: "Customers", href: "/contacts", icon: Users },
   { name: "Invoices", href: "/invoices", icon: FileText },
-  { name: "Action Centre", href: "/action-centre", icon: Target },
+  { name: "Workspace", href: "/action-centre", icon: Target },
   { name: "Wallet", href: "/wallet", icon: Wallet },
   { name: "divider", href: "#", icon: null },
   
