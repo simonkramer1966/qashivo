@@ -3344,6 +3344,111 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get paginated actions with search and filtering (for Comms tab)
+  app.get("/api/actions/all", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const {
+        search = '',
+        contactId = '',
+        page = '1',
+        limit = '20'
+      } = req.query;
+
+      const pageNum = parseInt(page);
+      const limitNum = parseInt(limit);
+      const offset = (pageNum - 1) * limitNum;
+
+      // Get all actions
+      const allActions = await storage.getActions(user.tenantId);
+      
+      // Filter by search query (search in subject, content, contact name)
+      let filteredActions = allActions;
+      
+      // Enrich with contact and invoice info first (needed for search)
+      const enrichedActions = await Promise.all(
+        filteredActions.map(async (action) => {
+          let contactName = null;
+          let invoiceNumber = null;
+          let invoiceAmount = null;
+          
+          if (action.contactId) {
+            try {
+              const contact = await storage.getContact(action.contactId, user.tenantId);
+              if (contact) {
+                contactName = contact.companyName || contact.name || null;
+              }
+            } catch (e) {
+              // Contact not found
+            }
+          }
+          
+          if (action.invoiceId) {
+            try {
+              const invoice = await storage.getInvoice(action.invoiceId, user.tenantId);
+              if (invoice) {
+                invoiceNumber = invoice.invoiceNumber;
+                invoiceAmount = invoice.amount;
+              }
+            } catch (e) {
+              // Invoice not found
+            }
+          }
+          
+          return {
+            ...action,
+            contactName,
+            invoiceNumber,
+            invoiceAmount
+          };
+        })
+      );
+
+      // Apply customer filter (contactId param contains contactName from frontend)
+      let filteredByCustomer = enrichedActions;
+      if (contactId) {
+        filteredByCustomer = enrichedActions.filter(action => 
+          action.contactName === contactId
+        );
+      }
+
+      // Apply search filter
+      let searchedActions = filteredByCustomer;
+      if (search) {
+        const searchLower = search.toLowerCase();
+        searchedActions = filteredByCustomer.filter(action => 
+          action.subject?.toLowerCase().includes(searchLower) ||
+          action.content?.toLowerCase().includes(searchLower) ||
+          action.contactName?.toLowerCase().includes(searchLower) ||
+          action.invoiceNumber?.toLowerCase().includes(searchLower)
+        );
+      }
+
+      // Sort by date (newest first)
+      const sortedActions = searchedActions.sort((a, b) => 
+        new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+      );
+
+      // Paginate
+      const paginatedActions = sortedActions.slice(offset, offset + limitNum);
+      
+      res.json({
+        actions: paginatedActions,
+        total: sortedActions.length,
+        page: pageNum,
+        limit: limitNum,
+        totalPages: Math.ceil(sortedActions.length / limitNum)
+      });
+    } catch (error) {
+      console.error("Error fetching paginated actions:", error);
+      res.status(500).json({ message: "Failed to fetch actions" });
+    }
+  });
+
   // Get contact history for a specific invoice
   app.get("/api/invoices/:invoiceId/contact-history", isAuthenticated, async (req: any, res) => {
     try {
