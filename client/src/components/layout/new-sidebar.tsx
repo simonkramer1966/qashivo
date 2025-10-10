@@ -116,7 +116,7 @@ const addToRecentOrganizations = (orgId: string) => {
 export default function NewSidebar() {
   const { user } = useAuth();
   const [location, setLocation] = useLocation();
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(true);
   const [orgSearchQuery, setOrgSearchQuery] = useState("");
   const [recentOrgIds, setRecentOrgIds] = useState<string[]>([]);
   const queryClient = useQueryClient();
