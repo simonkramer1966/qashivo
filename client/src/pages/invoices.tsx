@@ -538,7 +538,7 @@ export default function Invoices() {
                         className="px-4 py-2 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center"
                         onClick={() => setSelectedInvoice(invoice)}
                       >
-                        <p className="text-xs font-medium text-slate-900">{invoice.invoiceNumber}</p>
+                        <p className="text-sm font-medium text-slate-900">{invoice.invoiceNumber}</p>
                       </div>
 
                       {/* Amount */}
@@ -559,7 +559,7 @@ export default function Invoices() {
                         className="px-4 py-2 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center justify-end"
                         onClick={() => setSelectedInvoice(invoice)}
                       >
-                        <p className="text-xs text-slate-700">
+                        <p className="text-sm text-slate-700">
                           {statusFilter === 'paid' && invoice.paidDate
                             ? formatDateShort(invoice.paidDate)
                             : formatDateShort(invoice.dueDate)
@@ -572,7 +572,7 @@ export default function Invoices() {
                         className="px-4 py-2 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center justify-end"
                         onClick={() => setSelectedInvoice(invoice)}
                       >
-                        <p className="text-xs text-slate-700">
+                        <p className="text-sm text-slate-700">
                           {invoice.status !== 'paid' ? formatDateShort(expDate.toISOString()) : '-'}
                         </p>
                       </div>
@@ -583,13 +583,13 @@ export default function Invoices() {
                         onClick={() => setSelectedInvoice(invoice)}
                       >
                         {invoice.status === 'paid' ? (
-                          <p className="text-xs text-slate-500">-</p>
+                          <p className="text-sm text-slate-500">-</p>
                         ) : daysOverdue > 0 ? (
-                          <p className={`text-xs font-semibold ${daysOverdue >= 30 ? 'text-[#C75C5C]' : daysOverdue >= 7 ? 'text-[#E8A23B]' : 'text-blue-600'}`}>
+                          <p className={`text-sm font-semibold ${daysOverdue >= 30 ? 'text-[#C75C5C]' : daysOverdue >= 7 ? 'text-[#E8A23B]' : 'text-blue-600'}`}>
                             {daysOverdue} days
                           </p>
                         ) : (
-                          <p className="text-xs text-slate-500">Current</p>
+                          <p className="text-sm text-slate-500">Current</p>
                         )}
                       </div>
 
