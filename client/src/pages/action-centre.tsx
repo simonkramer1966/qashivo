@@ -318,7 +318,7 @@ export default function ActionCentre() {
   }, [currentTabItems, searchQuery, directionFilters, channelFilters, intentFilters, statusFilters]);
 
   // Determine if current tab shows invoices or actions
-  const isInvoiceTab = ['overdue', 'debtRecovery', 'legal'].includes(activeTab);
+  const isInvoiceTab = activeTab === 'overdue';
   const isPTPTab = activeTab === 'upcomingPTP';
 
   return (
@@ -402,32 +402,6 @@ export default function ActionCentre() {
               >
                 <span>Disputes</span>
                 {tabData && <span className={`ml-2 px-1.5 py-0.5 rounded-full text-xs ${activeTab === 'disputes' ? 'bg-white/20' : 'bg-slate-200'}`}>{tabData.disputes.count}</span>}
-              </button>
-              
-              <button
-                onClick={() => setActiveTab('debtRecovery')}
-                className={`flex-1 px-3 py-2 rounded-md text-xs sm:text-sm font-medium transition-all ${
-                  activeTab === 'debtRecovery'
-                    ? 'bg-red-600 text-white shadow-sm'
-                    : 'bg-transparent text-slate-600 hover:bg-white/50'
-                }`}
-                data-testid="tab-debt-recovery"
-              >
-                <span>Debt Recovery</span>
-                {tabData && <span className={`ml-2 px-1.5 py-0.5 rounded-full text-xs ${activeTab === 'debtRecovery' ? 'bg-white/20' : 'bg-slate-200'}`}>{tabData.debtRecovery.count}</span>}
-              </button>
-              
-              <button
-                onClick={() => setActiveTab('legal')}
-                className={`flex-1 px-3 py-2 rounded-md text-xs sm:text-sm font-medium transition-all ${
-                  activeTab === 'legal'
-                    ? 'bg-red-800 text-white shadow-sm'
-                    : 'bg-transparent text-slate-600 hover:bg-white/50'
-                }`}
-                data-testid="tab-legal"
-              >
-                <span>Legal</span>
-                {tabData && <span className={`ml-2 px-1.5 py-0.5 rounded-full text-xs ${activeTab === 'legal' ? 'bg-white/20' : 'bg-slate-200'}`}>{tabData.legal.count}</span>}
               </button>
             </div>
           </div>
