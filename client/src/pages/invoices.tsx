@@ -345,18 +345,18 @@ export default function Invoices() {
                 <p className="text-slate-600">No invoices found</p>
               </div>
             ) : (
-              <div className="bg-white border-t border-b border-slate-200">
+              <div className="bg-white border-t border-b border-slate-200" style={{ display: 'grid', gridTemplateColumns: 'auto 8rem 7rem 8rem 6rem 5rem 3rem' }}>
                 {/* Table Header */}
-                <div className="flex items-center gap-4 px-8 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10">
-                  <div className="min-w-0">Customer</div>
-                  <div className="w-32">Invoice #</div>
-                  <div className="w-28">Amount</div>
-                  <div className="w-32">{statusFilter === 'paid' ? 'Paid Date' : 'Due Date'}</div>
-                  <div className="w-24">Overdue</div>
-                  <div className="w-20 flex items-center justify-end">
+                <div className="contents">
+                  <div className="px-8 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10">Customer</div>
+                  <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10">Invoice #</div>
+                  <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10">Amount</div>
+                  <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10">{statusFilter === 'paid' ? 'Paid Date' : 'Due Date'}</div>
+                  <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10">Overdue</div>
+                  <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 flex items-center justify-end">
                     <span className="inline-flex items-center justify-center min-w-[75px]">Status</span>
                   </div>
-                  <div className="w-12 text-right">Demo</div>
+                  <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 text-right">Demo</div>
                 </div>
 
                 {/* Table Rows */}
@@ -367,24 +367,24 @@ export default function Invoices() {
                   return (
                     <div
                       key={invoice.id}
-                      className={`flex items-center gap-4 px-8 py-2 border-l-4 ${getStatusColor(invoice)} border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors`}
+                      className="contents"
                       onClick={() => setSelectedInvoice(invoice)}
                       data-testid={`invoice-item-${invoice.id}`}
                     >
                       {/* Customer */}
-                      <div className="min-w-0">
+                      <div className={`px-8 py-2 border-l-4 ${getStatusColor(invoice)} border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center`}>
                         <p className="font-semibold text-sm text-slate-900 whitespace-nowrap">
                           {invoice.contact?.companyName || invoice.contact?.name || 'Unknown Customer'}
                         </p>
                       </div>
 
                       {/* Invoice Number */}
-                      <div className="w-32">
+                      <div className="px-4 py-2 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center">
                         <p className="text-xs font-medium text-slate-900">{invoice.invoiceNumber}</p>
                       </div>
 
                       {/* Amount */}
-                      <div className="w-28 flex items-center gap-2">
+                      <div className="px-4 py-2 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center gap-2">
                         <p className="font-bold text-sm text-slate-900">
                           {formatCurrency(invoice.status === 'paid' ? invoice.amount : outstanding)}
                         </p>
@@ -394,7 +394,7 @@ export default function Invoices() {
                       </div>
 
                       {/* Due Date / Paid Date */}
-                      <div className="w-32">
+                      <div className="px-4 py-2 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center">
                         <p className="text-xs text-slate-700">
                           {statusFilter === 'paid' && invoice.paidDate
                             ? new Date(invoice.paidDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
@@ -404,7 +404,7 @@ export default function Invoices() {
                       </div>
 
                       {/* Days Overdue */}
-                      <div className="w-24">
+                      <div className="px-4 py-2 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center">
                         {invoice.status === 'paid' ? (
                           <p className="text-xs text-slate-500">-</p>
                         ) : daysOverdue > 0 ? (
@@ -417,12 +417,12 @@ export default function Invoices() {
                       </div>
 
                       {/* Status */}
-                      <div className="w-20 flex items-center justify-end">
+                      <div className="px-4 py-2 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center justify-end">
                         {getStatusBadge(invoice)}
                       </div>
 
                       {/* Demo Button */}
-                      <div className="w-12 flex items-center justify-end">
+                      <div className="px-4 py-2 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center justify-end">
                         {invoice.status !== 'paid' && daysOverdue > 0 && (
                           <Button
                             onClick={(e) => handleDemoStart(e, invoice.id)}
