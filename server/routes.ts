@@ -3754,7 +3754,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.json({
         queries: { count: queries.length, items: queries },
-        overdueInvoices: { count: overdueCustomers.length, items: overdueCustomers },
+        overdueInvoices: { count: overdueInvoicesRaw.length, items: overdueCustomers },
         upcomingPTP: { count: upcomingPTP.length, items: upcomingPTP },
         brokenPromises: { count: brokenPromises.length, items: brokenPromises },
         disputes: { count: disputes.length, items: disputes },
