@@ -386,7 +386,7 @@ export default function ActionCentre() {
                 onClick={() => setActiveTab('queries')}
                 className={`flex-1 px-3 py-2 rounded-md text-xs sm:text-sm font-medium transition-all ${
                   activeTab === 'queries'
-                    ? 'bg-blue-500 text-white shadow-sm'
+                    ? 'bg-[#17B6C3] text-white shadow-sm'
                     : 'bg-transparent text-slate-600 hover:bg-white/50'
                 }`}
                 data-testid="tab-queries"
@@ -412,7 +412,7 @@ export default function ActionCentre() {
                 onClick={() => setActiveTab('upcomingPTP')}
                 className={`flex-1 px-3 py-2 rounded-md text-xs sm:text-sm font-medium transition-all ${
                   activeTab === 'upcomingPTP'
-                    ? 'bg-green-500 text-white shadow-sm'
+                    ? 'bg-[#17B6C3] text-white shadow-sm'
                     : 'bg-transparent text-slate-600 hover:bg-white/50'
                 }`}
                 data-testid="tab-upcoming-ptp"
@@ -425,7 +425,7 @@ export default function ActionCentre() {
                 onClick={() => setActiveTab('brokenPromises')}
                 className={`flex-1 px-3 py-2 rounded-md text-xs sm:text-sm font-medium transition-all ${
                   activeTab === 'brokenPromises'
-                    ? 'bg-orange-500 text-white shadow-sm'
+                    ? 'bg-[#17B6C3] text-white shadow-sm'
                     : 'bg-transparent text-slate-600 hover:bg-white/50'
                 }`}
                 data-testid="tab-broken-promises"
@@ -438,7 +438,7 @@ export default function ActionCentre() {
                 onClick={() => setActiveTab('disputes')}
                 className={`flex-1 px-3 py-2 rounded-md text-xs sm:text-sm font-medium transition-all ${
                   activeTab === 'disputes'
-                    ? 'bg-red-500 text-white shadow-sm'
+                    ? 'bg-[#17B6C3] text-white shadow-sm'
                     : 'bg-transparent text-slate-600 hover:bg-white/50'
                 }`}
                 data-testid="tab-disputes"
