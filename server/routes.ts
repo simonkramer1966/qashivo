@@ -3570,13 +3570,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const overdueCustomers = Array.from(customerGroups.values());
       
-      // 3. UPCOMING PTP - promise_to_pay with future dates
-      const upcomingPTP = allActions.filter(a => {
+      // 3. UPCOMING PTP - promise_to_pay with future dates (enriched with invoice & customer data)
+      const upcomingPTPRaw = allActions.filter(a => {
         if (a.intentType !== 'promise_to_pay') return false;
         const promisedDate = a.metadata?.analysis?.entities?.dates?.[0];
         if (!promisedDate) return false;
         return new Date(promisedDate) >= today;
       });
+      
+      const upcomingPTP = await Promise.all(upcomingPTPRaw.map(async (action) => {
+        const promisedDate = action.metadata?.analysis?.entities?.dates?.[0];
+        const promisedAmount = action.metadata?.analysis?.entities?.amounts?.[0] || null;
+        
+        // Get invoice details
+        let invoice = null;
+        let contactName = '';
+        if (action.invoiceId) {
+          invoice = allInvoices.find(inv => inv.id === action.invoiceId);
+          if (invoice?.contactId) {
+            try {
+              const contact = await storage.getContact(invoice.contactId, tenantId);
+              if (contact) {
+                contactName = contact.companyName || contact.name;
+              }
+            } catch (e) {
+              // Contact not found
+            }
+          }
+        }
+        
+        // Calculate days until promised date
+        const daysUntil = Math.ceil((new Date(promisedDate).getTime() - today.getTime()) / (1000 * 3600 * 24));
+        
+        // Determine source
+        let source = 'Manual';
+        if (action.metadata?.direction === 'inbound') {
+          if (action.type === 'email') source = 'Inbound Email';
+          else if (action.type === 'sms') source = 'Inbound SMS';
+          else if (action.type === 'call') source = 'Voice Call';
+        }
+        
+        // Get confidence (only for AI-detected PTPs)
+        const confidence = action.intentConfidence || null;
+        
+        return {
+          ...action,
+          contactName,
+          invoiceNumber: invoice?.invoiceNumber || 'N/A',
+          invoiceAmount: invoice?.amount || '0',
+          promisedDate,
+          promisedAmount,
+          daysUntil,
+          source,
+          confidence
+        };
+      }));
       
       // 4. BROKEN PROMISES - PTP with past dates + invoice still unpaid
       const brokenPromises = allActions.filter(a => {

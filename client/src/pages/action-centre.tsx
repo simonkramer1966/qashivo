@@ -319,6 +319,7 @@ export default function ActionCentre() {
 
   // Determine if current tab shows invoices or actions
   const isInvoiceTab = ['overdue', 'debtRecovery', 'legal'].includes(activeTab);
+  const isPTPTab = activeTab === 'upcomingPTP';
 
   return (
     <div className="flex h-screen bg-white">
@@ -447,7 +448,7 @@ export default function ActionCentre() {
           </div>
 
           {/* Action List */}
-          <div className={isInvoiceTab ? "" : "card-apple overflow-hidden"}>
+          <div className={isInvoiceTab || isPTPTab ? "" : "card-apple overflow-hidden"}>
             {isLoading ? (
               // Loading skeleton
               <div className="divide-y divide-slate-100">
@@ -465,6 +466,145 @@ export default function ActionCentre() {
                     ? 'No actions need attention right now' 
                     : 'No actions found'}
                 </p>
+              </div>
+            ) : isPTPTab ? (
+              // PTP table format
+              <div className="bg-white border-t border-b border-slate-200 overflow-hidden">
+                <div className="max-h-[600px] overflow-y-auto" style={{ display: 'grid', gridTemplateColumns: '2fr 1.2fr 1.2fr 1fr 1fr 1fr 1.5fr 1fr' }}>
+                  {/* Table Header */}
+                  <div className="contents">
+                    <div className="px-8 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10">Customer</div>
+                    <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10">Invoice No</div>
+                    <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 text-right">Amount Promised</div>
+                    <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10">Date Promised</div>
+                    <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 text-center">Days Until</div>
+                    <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 text-right">Total Invoice</div>
+                    <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 text-center">Source</div>
+                    <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 text-center">Confidence</div>
+                  </div>
+
+                  {/* Table Rows */}
+                  {filteredActions.map((ptp: any) => {
+                    const daysUntil = ptp.daysUntil || 0;
+                    const isUrgent = daysUntil <= 2;
+                    const isComingSoon = daysUntil > 2 && daysUntil <= 7;
+                    
+                    return (
+                      <div
+                        key={ptp.id}
+                        className="contents"
+                        data-testid={`ptp-item-${ptp.id}`}
+                      >
+                        {/* Customer */}
+                        <div 
+                          className="px-8 py-2 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center min-w-0"
+                          onClick={() => ptp.invoiceId && setLocation(`/invoices/${ptp.invoiceId}`)}
+                        >
+                          <p className="font-semibold text-sm text-slate-900 truncate">
+                            {ptp.contactName || 'Unknown Customer'}
+                          </p>
+                        </div>
+
+                        {/* Invoice No */}
+                        <div 
+                          className="px-4 py-2 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center"
+                          onClick={() => ptp.invoiceId && setLocation(`/invoices/${ptp.invoiceId}`)}
+                        >
+                          <p className="text-sm text-[#17B6C3] font-medium">
+                            {ptp.invoiceNumber || 'N/A'}
+                          </p>
+                        </div>
+
+                        {/* Amount Promised */}
+                        <div 
+                          className="px-4 py-2 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center justify-end"
+                          onClick={() => ptp.invoiceId && setLocation(`/invoices/${ptp.invoiceId}`)}
+                        >
+                          <p className={`font-semibold text-sm ${ptp.promisedAmount && parseFloat(ptp.promisedAmount) === parseFloat(ptp.invoiceAmount) ? 'text-green-700' : 'text-slate-900'}`}>
+                            {ptp.promisedAmount ? formatCurrency(parseFloat(ptp.promisedAmount)) : formatCurrency(parseFloat(ptp.invoiceAmount))}
+                          </p>
+                        </div>
+
+                        {/* Date Promised */}
+                        <div 
+                          className="px-4 py-2 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center"
+                          onClick={() => ptp.invoiceId && setLocation(`/invoices/${ptp.invoiceId}`)}
+                        >
+                          <p className="text-sm text-slate-700">
+                            {ptp.promisedDate ? formatDateShort(ptp.promisedDate) : 'N/A'}
+                          </p>
+                        </div>
+
+                        {/* Days Until */}
+                        <div 
+                          className="px-4 py-2 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center justify-center"
+                          onClick={() => ptp.invoiceId && setLocation(`/invoices/${ptp.invoiceId}`)}
+                        >
+                          <Badge 
+                            className={`text-xs ${
+                              isUrgent 
+                                ? 'bg-red-100 text-red-800 border-red-200' 
+                                : isComingSoon 
+                                ? 'bg-amber-100 text-amber-800 border-amber-200' 
+                                : 'bg-green-100 text-green-800 border-green-200'
+                            }`}
+                          >
+                            {daysUntil === 0 ? 'Today' : daysUntil === 1 ? '1 day' : `${daysUntil} days`}
+                          </Badge>
+                        </div>
+
+                        {/* Total Invoice */}
+                        <div 
+                          className="px-4 py-2 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center justify-end"
+                          onClick={() => ptp.invoiceId && setLocation(`/invoices/${ptp.invoiceId}`)}
+                        >
+                          <p className="text-sm text-slate-500">
+                            {formatCurrency(parseFloat(ptp.invoiceAmount))}
+                          </p>
+                        </div>
+
+                        {/* Source */}
+                        <div 
+                          className="px-4 py-2 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center justify-center"
+                          onClick={() => ptp.invoiceId && setLocation(`/invoices/${ptp.invoiceId}`)}
+                        >
+                          <Badge 
+                            className={`text-xs ${
+                              ptp.source === 'Inbound Email' ? 'bg-blue-100 text-blue-800 border-blue-200' :
+                              ptp.source === 'Inbound SMS' ? 'bg-purple-100 text-purple-800 border-purple-200' :
+                              ptp.source === 'Voice Call' ? 'bg-green-100 text-green-800 border-green-200' :
+                              'bg-slate-100 text-slate-800 border-slate-200'
+                            }`}
+                          >
+                            {ptp.source || 'Manual'}
+                          </Badge>
+                        </div>
+
+                        {/* Confidence */}
+                        <div 
+                          className="px-4 py-2 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center justify-center"
+                          onClick={() => ptp.invoiceId && setLocation(`/invoices/${ptp.invoiceId}`)}
+                        >
+                          {ptp.confidence ? (
+                            ptp.confidence >= 60 ? (
+                              <Badge className="bg-green-100 text-green-800 border-green-200 text-xs flex items-center gap-1">
+                                <CheckCircle2 className="h-3 w-3" />
+                                High
+                              </Badge>
+                            ) : (
+                              <Badge className="bg-amber-100 text-amber-800 border-amber-200 text-xs flex items-center gap-1">
+                                <AlertTriangle className="h-3 w-3" />
+                                Review
+                              </Badge>
+                            )
+                          ) : (
+                            <span className="text-slate-400 text-sm">-</span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             ) : isInvoiceTab ? (
               // Customer table format (grouped by customer)
