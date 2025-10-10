@@ -119,8 +119,44 @@ export default function Customers() {
         />
         
         <div className="container-apple py-4 sm:py-6 lg:py-8">
-          {/* Search Bar & Add Button */}
-          <div className="mb-6 flex gap-3">
+          {/* Summary Stats - Desktop */}
+          <div className="hidden sm:grid grid-cols-3 gap-4 mb-6">
+            <div className="bg-white/80 backdrop-blur-sm border border-white/50 shadow-lg rounded-xl p-4 border-l-4 border-l-slate-400">
+              <p className="text-sm text-slate-600 mb-1">Total</p>
+              <p className="text-2xl font-bold text-slate-900">{aggregates.totalContacts}</p>
+            </div>
+            <div className="bg-white/80 backdrop-blur-sm border border-white/50 shadow-lg rounded-xl p-4 border-l-4 border-l-[#C75C5C]">
+              <p className="text-sm text-slate-600 mb-1">High Risk</p>
+              <p className="text-2xl font-bold text-[#C75C5C]">{aggregates.highRiskCount}</p>
+            </div>
+            <div className="bg-white/80 backdrop-blur-sm border border-white/50 shadow-lg rounded-xl p-4 border-l-4 border-l-[#17B6C3]">
+              <p className="text-sm text-slate-600 mb-1">Outstanding</p>
+              <p className="text-2xl font-bold text-slate-900">{formatCurrency(aggregates.totalOutstanding)}</p>
+            </div>
+          </div>
+
+          {/* Summary Stats - Mobile */}
+          <div className="grid grid-cols-2 gap-3 mb-6 sm:hidden">
+            <div className="bg-white/80 backdrop-blur-sm border border-white/50 shadow-lg rounded-xl p-2 border-l-4 border-l-slate-400">
+              <p className="text-xs text-slate-600 mb-0.5">Total</p>
+              <p className="text-base font-bold text-slate-900">{aggregates.totalContacts}</p>
+            </div>
+            <div className="bg-white/80 backdrop-blur-sm border border-white/50 shadow-lg rounded-xl p-2 border-l-4 border-l-[#C75C5C]">
+              <p className="text-xs text-slate-600 mb-0.5">High Risk</p>
+              <p className="text-base font-bold text-[#C75C5C]">{aggregates.highRiskCount}</p>
+            </div>
+            <div className="bg-white/80 backdrop-blur-sm border border-white/50 shadow-lg rounded-xl p-2 col-span-2 border-l-4 border-l-[#17B6C3]">
+              <p className="text-xs text-slate-600 mb-0.5">Outstanding</p>
+              <p className="text-base font-bold text-slate-900">{formatCurrency(aggregates.totalOutstanding)}</p>
+            </div>
+          </div>
+
+          {/* Control Row: Customer Count + Search + Add Button + Pagination - Desktop */}
+          <div className="hidden sm:flex items-center gap-3 mb-4 flex-wrap">
+            <p className="text-sm text-slate-600 whitespace-nowrap">
+              {pagination.total} customer{pagination.total !== 1 ? 's' : ''}
+            </p>
+            
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" />
               <Input
@@ -132,37 +168,143 @@ export default function Customers() {
                 data-testid="input-search-customers"
               />
             </div>
+
             <Button
               onClick={() => setShowAddCustomerDialog(true)}
               className="bg-[#17B6C3] hover:bg-[#1396A1] flex-shrink-0"
               data-testid="button-add-customer"
             >
               <Plus className="h-4 w-4 mr-2" />
-              <span className="hidden sm:inline">Add Customer</span>
-              <span className="sm:hidden">Add</span>
+              Add Customer
             </Button>
+
+            {/* Pagination Controls */}
+            {pagination.totalPages > 1 && (
+              <div className="flex gap-2 items-center">
+                <Button
+                  onClick={() => setPage(Math.max(1, page - 1))}
+                  disabled={page === 1}
+                  variant="outline"
+                  size="sm"
+                  className="h-9"
+                  data-testid="button-previous-page"
+                >
+                  Prev.
+                </Button>
+                
+                <div className="flex gap-1">
+                  {Array.from({ length: pagination.totalPages }, (_, i) => i + 1)
+                    .filter(pageNum => {
+                      return Math.abs(pageNum - page) <= 1 || pageNum === 1 || pageNum === pagination.totalPages;
+                    })
+                    .map((pageNum, idx, arr) => (
+                      <div key={pageNum} className="flex gap-1 items-center">
+                        {idx > 0 && arr[idx - 1] !== pageNum - 1 && (
+                          <span className="px-2 py-1 text-slate-400 text-sm">...</span>
+                        )}
+                        <Button
+                          onClick={() => setPage(pageNum)}
+                          variant={page === pageNum ? "default" : "outline"}
+                          size="sm"
+                          className="h-9 min-w-[36px]"
+                          data-testid={`button-page-${pageNum}`}
+                        >
+                          {pageNum}
+                        </Button>
+                      </div>
+                    ))}
+                </div>
+                
+                <Button
+                  onClick={() => setPage(Math.min(pagination.totalPages, page + 1))}
+                  disabled={page === pagination.totalPages}
+                  variant="outline"
+                  size="sm"
+                  className="h-9"
+                  data-testid="button-next-page"
+                >
+                  Next
+                </Button>
+              </div>
+            )}
           </div>
 
-          {/* Summary Stats */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 mb-6">
-            <div className="card-apple p-3 sm:p-4">
-              <p className="text-xs sm:text-sm text-slate-600 mb-1">Total</p>
-              <p className="text-xl sm:text-2xl font-bold text-slate-900">
-                {aggregates.totalContacts}
-              </p>
+          {/* Mobile: Search + Add Button */}
+          <div className="sm:hidden space-y-3 mb-4">
+            <p className="text-sm text-slate-600">
+              {pagination.total} customer{pagination.total !== 1 ? 's' : ''}
+            </p>
+            
+            <div className="flex gap-3">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" />
+                <Input
+                  type="text"
+                  placeholder="Search customers..."
+                  value={search}
+                  onChange={(e) => handleSearchChange(e.target.value)}
+                  className="input-apple pl-10"
+                  data-testid="input-search-customers"
+                />
+              </div>
+              <Button
+                onClick={() => setShowAddCustomerDialog(true)}
+                className="bg-[#17B6C3] hover:bg-[#1396A1] flex-shrink-0"
+                data-testid="button-add-customer"
+              >
+                <Plus className="h-4 w-4" />
+              </Button>
             </div>
-            <div className="card-apple p-3 sm:p-4">
-              <p className="text-xs sm:text-sm text-slate-600 mb-1">High Risk</p>
-              <p className="text-xl sm:text-2xl font-bold text-[#C75C5C]">
-                {aggregates.highRiskCount}
-              </p>
-            </div>
-            <div className="card-apple p-3 sm:p-4 col-span-2 sm:col-span-1">
-              <p className="text-xs sm:text-sm text-slate-600 mb-1">Outstanding</p>
-              <p className="text-xl sm:text-2xl font-bold text-slate-900">
-                {formatCurrency(aggregates.totalOutstanding)}
-              </p>
-            </div>
+
+            {/* Mobile: Pagination Controls */}
+            {pagination.totalPages > 1 && (
+              <div className="flex gap-2 items-center justify-between">
+                <Button
+                  onClick={() => setPage(Math.max(1, page - 1))}
+                  disabled={page === 1}
+                  variant="outline"
+                  size="sm"
+                  className="h-9"
+                  data-testid="button-previous-page"
+                >
+                  Prev.
+                </Button>
+                
+                <div className="flex gap-1">
+                  {Array.from({ length: pagination.totalPages }, (_, i) => i + 1)
+                    .filter(pageNum => {
+                      return Math.abs(pageNum - page) <= 1;
+                    })
+                    .map((pageNum, idx, arr) => (
+                      <div key={pageNum} className="flex gap-1 items-center">
+                        {idx > 0 && arr[idx - 1] !== pageNum - 1 && (
+                          <span className="px-2 py-1 text-slate-400 text-sm">...</span>
+                        )}
+                        <Button
+                          onClick={() => setPage(pageNum)}
+                          variant={page === pageNum ? "default" : "outline"}
+                          size="sm"
+                          className="h-9 min-w-[36px]"
+                          data-testid={`button-page-${pageNum}`}
+                        >
+                          {pageNum}
+                        </Button>
+                      </div>
+                    ))}
+                </div>
+                
+                <Button
+                  onClick={() => setPage(Math.min(pagination.totalPages, page + 1))}
+                  disabled={page === pagination.totalPages}
+                  variant="outline"
+                  size="sm"
+                  className="h-9"
+                  data-testid="button-next-page"
+                >
+                  Next
+                </Button>
+              </div>
+            )}
           </div>
 
           {/* Mobile View - Cards */}
@@ -247,10 +389,10 @@ export default function Customers() {
             )}
           </div>
 
-          {/* Desktop View - Table/Rows */}
-          <div className="hidden sm:block -mx-8">
+          {/* Desktop View - Table/List */}
+          <div className="hidden sm:block">
             {isLoading ? (
-              <div className="card-apple">
+              <div className="bg-white border-t border-b border-slate-200">
                 <div className="p-4 border-b">
                   <div className="h-10 bg-slate-200 animate-pulse rounded"></div>
                 </div>
@@ -261,148 +403,119 @@ export default function Customers() {
                 ))}
               </div>
             ) : contacts.length === 0 ? (
-              <div className="card-apple p-8 text-center">
+              <div className="bg-white border-t border-b border-slate-200 p-8 text-center">
                 <User className="h-12 w-12 mx-auto mb-3 text-slate-400" />
                 <p className="text-slate-600">No customers found</p>
               </div>
             ) : (
-              <div className="card-apple overflow-hidden max-h-[calc(100vh-400px)] overflow-y-auto">
-                {/* Table Header */}
-                <div className="grid grid-cols-12 gap-4 px-8 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10">
-                  <div className="col-span-3">Customer</div>
-                  <div className="col-span-2">Email</div>
-                  <div className="col-span-2">Credit Limit</div>
-                  <div className="col-span-2">Outstanding</div>
-                  <div className="col-span-2">Overdue</div>
-                  <div className="col-span-1 text-right">Risk</div>
-                </div>
-
-                {/* Table Rows */}
-                {contacts.map((contact) => (
-                  <div
-                    key={contact.id}
-                    className={`grid grid-cols-12 gap-4 px-8 py-2 border-l-4 ${getRiskColor(contact.riskBand)} border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors`}
-                    onClick={() => {
-                      setSelectedContact(contact);
-                      setShowCustomerDetail(true);
-                    }}
-                    data-testid={`customer-item-${contact.id}`}
-                  >
-                    {/* Customer */}
-                    <div className="col-span-3 min-w-0">
-                      <p className="font-semibold text-sm text-slate-900 truncate flex items-center gap-1.5">
-                        <span className="truncate">{contact.companyName || contact.name}</span>
-                        {contact.riskBand ? (
-                          <ShieldCheck className="h-3.5 w-3.5 text-[#4FAD80] flex-shrink-0" data-testid={`shield-checked-${contact.id}`} />
-                        ) : (
-                          <Shield className="h-3.5 w-3.5 text-[#E8A23B] flex-shrink-0" data-testid={`shield-unchecked-${contact.id}`} />
-                        )}
-                      </p>
-                    </div>
-
-                    {/* Email */}
-                    <div className="col-span-2 min-w-0">
-                      <p className="text-xs text-slate-600 truncate">{contact.email || '-'}</p>
-                    </div>
-
-                    {/* Credit Limit */}
-                    <div className="col-span-2">
-                      <p className="text-xs text-slate-900">
-                        {contact.creditLimit ? formatCurrency(contact.creditLimit) : '-'}
-                      </p>
-                    </div>
-
-                    {/* Outstanding */}
-                    <div className="col-span-2">
-                      <p className="font-semibold text-sm text-slate-900">
-                        {formatCurrency(contact.outstandingAmount)} <span className="text-slate-400">({contact.invoiceCount})</span>
-                      </p>
-                    </div>
-
-                    {/* Overdue */}
-                    <div className="col-span-2">
-                      {contact.overdueAmount > 0 ? (
-                        <p className="font-semibold text-sm text-[#C75C5C]">
-                          {formatCurrency(contact.overdueAmount)} <span className="text-slate-400">({contact.overdueCount})</span>
-                        </p>
-                      ) : (
-                        <p className="text-xs text-slate-400">-</p>
-                      )}
-                    </div>
-
-                    {/* Risk Badge */}
-                    <div className="col-span-1 flex justify-end items-start">
-                      {getRiskBandBadge(contact.riskBand)}
-                    </div>
+              <div className="bg-white border-t border-b border-slate-200 overflow-hidden">
+                <div className="max-h-[600px] overflow-y-auto" style={{ display: 'grid', gridTemplateColumns: '2fr 1.5fr 1fr 1.2fr 1.2fr 0.8fr' }}>
+                  {/* Table Header */}
+                  <div className="contents">
+                    <div className="px-8 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10">Customer</div>
+                    <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10">Email</div>
+                    <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10">Credit Limit</div>
+                    <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10">Outstanding</div>
+                    <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10">Overdue</div>
+                    <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 text-right">Risk</div>
                   </div>
-                ))}
+
+                  {/* Table Rows */}
+                  {contacts.map((contact) => (
+                    <div
+                      key={contact.id}
+                      className="contents"
+                      data-testid={`customer-item-${contact.id}`}
+                    >
+                      {/* Customer */}
+                      <div 
+                        className={`px-8 py-2 border-l-4 ${getRiskColor(contact.riskBand)} border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center min-w-0`}
+                        onClick={() => {
+                          setSelectedContact(contact);
+                          setShowCustomerDetail(true);
+                        }}
+                      >
+                        <p className="font-semibold text-sm text-slate-900 truncate flex items-center gap-1.5">
+                          <span className="truncate">{contact.companyName || contact.name}</span>
+                          {contact.riskBand ? (
+                            <ShieldCheck className="h-3.5 w-3.5 text-[#4FAD80] flex-shrink-0" data-testid={`shield-checked-${contact.id}`} />
+                          ) : (
+                            <Shield className="h-3.5 w-3.5 text-[#E8A23B] flex-shrink-0" data-testid={`shield-unchecked-${contact.id}`} />
+                          )}
+                        </p>
+                      </div>
+
+                      {/* Email */}
+                      <div 
+                        className="px-4 py-2 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center min-w-0"
+                        onClick={() => {
+                          setSelectedContact(contact);
+                          setShowCustomerDetail(true);
+                        }}
+                      >
+                        <p className="text-xs text-slate-600 truncate">{contact.email || '-'}</p>
+                      </div>
+
+                      {/* Credit Limit */}
+                      <div 
+                        className="px-4 py-2 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center"
+                        onClick={() => {
+                          setSelectedContact(contact);
+                          setShowCustomerDetail(true);
+                        }}
+                      >
+                        <p className="text-xs text-slate-900">
+                          {contact.creditLimit ? formatCurrency(contact.creditLimit) : '-'}
+                        </p>
+                      </div>
+
+                      {/* Outstanding */}
+                      <div 
+                        className="px-4 py-2 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center"
+                        onClick={() => {
+                          setSelectedContact(contact);
+                          setShowCustomerDetail(true);
+                        }}
+                      >
+                        <p className="font-semibold text-sm text-slate-900">
+                          {formatCurrency(contact.outstandingAmount)} <span className="text-slate-400">({contact.invoiceCount})</span>
+                        </p>
+                      </div>
+
+                      {/* Overdue */}
+                      <div 
+                        className="px-4 py-2 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center"
+                        onClick={() => {
+                          setSelectedContact(contact);
+                          setShowCustomerDetail(true);
+                        }}
+                      >
+                        {contact.overdueAmount > 0 ? (
+                          <p className="font-semibold text-sm text-[#C75C5C]">
+                            {formatCurrency(contact.overdueAmount)} <span className="text-slate-400">({contact.overdueCount})</span>
+                          </p>
+                        ) : (
+                          <p className="text-xs text-slate-400">-</p>
+                        )}
+                      </div>
+
+                      {/* Risk Badge */}
+                      <div 
+                        className="px-4 py-2 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center justify-end"
+                        onClick={() => {
+                          setSelectedContact(contact);
+                          setShowCustomerDetail(true);
+                        }}
+                      >
+                        {getRiskBandBadge(contact.riskBand)}
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </div>
 
-          {/* Pagination Controls */}
-          {!isLoading && contacts.length > 0 && pagination.totalPages > 1 && (
-            <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4 pb-4">
-              <p className="text-sm text-slate-600">
-                Showing {((pagination.page - 1) * pagination.limit) + 1} to {Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total} customers
-              </p>
-              
-              <div className="flex gap-2">
-                <Button
-                  onClick={() => setPage(Math.max(1, page - 1))}
-                  disabled={page === 1}
-                  variant="outline"
-                  size="sm"
-                  className="touch-target"
-                  data-testid="button-previous-page"
-                >
-                  Previous
-                </Button>
-                
-                {/* Page Numbers - Show 3 on mobile, more on desktop */}
-                <div className="flex gap-1">
-                  {Array.from({ length: pagination.totalPages }, (_, i) => i + 1)
-                    .filter(pageNum => {
-                      // On mobile (assume < 640px), show current, prev, and next
-                      const isMobile = window.innerWidth < 640;
-                      if (isMobile) {
-                        return Math.abs(pageNum - page) <= 1;
-                      }
-                      // On desktop, show more pages
-                      return Math.abs(pageNum - page) <= 2 || pageNum === 1 || pageNum === pagination.totalPages;
-                    })
-                    .map((pageNum, idx, arr) => (
-                      <>
-                        {idx > 0 && arr[idx - 1] !== pageNum - 1 && (
-                          <span key={`ellipsis-${pageNum}`} className="px-2 py-1 text-slate-400">...</span>
-                        )}
-                        <Button
-                          key={pageNum}
-                          onClick={() => setPage(pageNum)}
-                          variant={page === pageNum ? "default" : "outline"}
-                          size="sm"
-                          className="touch-target min-w-[40px]"
-                          data-testid={`button-page-${pageNum}`}
-                        >
-                          {pageNum}
-                        </Button>
-                      </>
-                    ))}
-                </div>
-                
-                <Button
-                  onClick={() => setPage(Math.min(pagination.totalPages, page + 1))}
-                  disabled={page === pagination.totalPages}
-                  variant="outline"
-                  size="sm"
-                  className="touch-target"
-                  data-testid="button-next-page"
-                >
-                  Next
-                </Button>
-              </div>
-            </div>
-          )}
 
           {/* Test Button - Seed Payment Behavior Customers */}
           <div className="mt-6 text-center pb-4">
