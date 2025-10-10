@@ -485,7 +485,7 @@ export default function Customers() {
                             {formatCurrency(contact.overdueAmount)} <span className="text-slate-400">({contact.overdueCount})</span>
                           </p>
                         ) : (
-                          <p className="text-xs text-slate-400">-</p>
+                          <p className="text-sm text-slate-400">-</p>
                         )}
                       </div>
 
@@ -502,7 +502,7 @@ export default function Customers() {
                             {contact.averageDaysPastDue}
                           </p>
                         ) : (
-                          <p className="text-xs text-slate-400">-</p>
+                          <p className="text-sm text-slate-400">-</p>
                         )}
                       </div>
 
@@ -514,7 +514,7 @@ export default function Customers() {
                           setShowCustomerDetail(true);
                         }}
                       >
-                        <p className="text-xs text-slate-700">
+                        <p className="text-sm text-slate-700">
                           {formatDateShort(contact.lastContactDate)}
                         </p>
                       </div>
@@ -527,7 +527,7 @@ export default function Customers() {
                           setShowCustomerDetail(true);
                         }}
                       >
-                        <p className="text-xs text-slate-700">
+                        <p className="text-sm text-slate-700">
                           {formatDateShort(contact.lastPaymentDate)}
                         </p>
                       </div>
