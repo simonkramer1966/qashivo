@@ -459,7 +459,13 @@ export default function ActionCentre() {
 
           {/* Search Bar */}
           <div className="mb-6">
-            <div className="flex gap-4">
+            <div className="flex items-center gap-3">
+              {isCommsTab && commsData && (
+                <p className="text-sm text-slate-600 whitespace-nowrap">
+                  {commsData.total} communication{commsData.total !== 1 ? 's' : ''}
+                </p>
+              )}
+              
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" />
                 <Input
@@ -494,6 +500,57 @@ export default function ActionCentre() {
                     ))}
                   </SelectContent>
                 </Select>
+              )}
+              
+              {isCommsTab && commsData && commsData.totalPages > 1 && (
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCommsPage(Math.max(1, commsPage - 1))}
+                    disabled={commsPage === 1}
+                    className="h-9"
+                    data-testid="button-prev-page"
+                  >
+                    Prev.
+                  </Button>
+                  <div className="flex items-center gap-1">
+                    {Array.from({ length: Math.min(5, commsData.totalPages) }, (_, i) => {
+                      let pageNum;
+                      if (commsData.totalPages <= 5) {
+                        pageNum = i + 1;
+                      } else if (commsPage <= 3) {
+                        pageNum = i + 1;
+                      } else if (commsPage >= commsData.totalPages - 2) {
+                        pageNum = commsData.totalPages - 4 + i;
+                      } else {
+                        pageNum = commsPage - 2 + i;
+                      }
+                      return (
+                        <Button
+                          key={pageNum}
+                          variant={commsPage === pageNum ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => setCommsPage(pageNum)}
+                          className={`h-9 min-w-[36px] ${commsPage === pageNum ? "bg-[#17B6C3] hover:bg-[#1396A1]" : ""}`}
+                          data-testid={`button-page-${pageNum}`}
+                        >
+                          {pageNum}
+                        </Button>
+                      );
+                    })}
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCommsPage(Math.min(commsData.totalPages, commsPage + 1))}
+                    disabled={commsPage === commsData.totalPages}
+                    className="h-9"
+                    data-testid="button-next-page"
+                  >
+                    Next
+                  </Button>
+                </div>
               )}
             </div>
           </div>
@@ -657,61 +714,6 @@ export default function ActionCentre() {
                     );
                   })}
                 </div>
-                
-                {/* Pagination Controls */}
-                {commsData && commsData.totalPages > 1 && (
-                  <div className="flex items-center justify-between px-8 py-4 border-t border-slate-200 bg-white">
-                    <div className="text-sm text-slate-600">
-                      Showing {((commsData.page - 1) * commsData.limit) + 1} to {Math.min(commsData.page * commsData.limit, commsData.total)} of {commsData.total} communications
-                    </div>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setCommsPage(Math.max(1, commsPage - 1))}
-                        disabled={commsPage === 1}
-                        data-testid="button-prev-page"
-                      >
-                        Previous
-                      </Button>
-                      <div className="flex items-center gap-1">
-                        {Array.from({ length: Math.min(5, commsData.totalPages) }, (_, i) => {
-                          let pageNum;
-                          if (commsData.totalPages <= 5) {
-                            pageNum = i + 1;
-                          } else if (commsPage <= 3) {
-                            pageNum = i + 1;
-                          } else if (commsPage >= commsData.totalPages - 2) {
-                            pageNum = commsData.totalPages - 4 + i;
-                          } else {
-                            pageNum = commsPage - 2 + i;
-                          }
-                          return (
-                            <Button
-                              key={pageNum}
-                              variant={commsPage === pageNum ? "default" : "outline"}
-                              size="sm"
-                              onClick={() => setCommsPage(pageNum)}
-                              className={commsPage === pageNum ? "bg-[#17B6C3] hover:bg-[#1396A1]" : ""}
-                              data-testid={`button-page-${pageNum}`}
-                            >
-                              {pageNum}
-                            </Button>
-                          );
-                        })}
-                      </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setCommsPage(Math.min(commsData.totalPages, commsPage + 1))}
-                        disabled={commsPage === commsData.totalPages}
-                        data-testid="button-next-page"
-                      >
-                        Next
-                      </Button>
-                    </div>
-                  </div>
-                )}
               </div>
             ) : isPTPTab ? (
               // PTP table format
