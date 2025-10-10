@@ -159,3 +159,136 @@ Recent fixes (Oct 2025):
 - **Lucide**: Icon library
 - **Tailwind CSS**: Utility-first CSS framework
 - **Class Variance Authority**: Component variant management
+
+## Competitive Analysis
+
+### Kolleno (October 2025)
+Leading accounts receivable automation platform with 1,000+ enterprise customers.
+
+#### Core Features Observed
+
+**1. Activity-Centric Dashboard**
+- Central activity feed showing all customer interactions chronologically
+- Metrics cards: Customers (185), Overdue (£2,000), Due (£12,000), Collected (£10,000)
+- Filterable activity stream with customer names, dates, interaction types
+- Clean, scannable list format for quick overview
+
+**2. AI-Powered Communication**
+- **AI Email Suggestion** feature that drafts personalized emails based on context
+- Analyzes balance, payment history, and suggests appropriate tone
+- "Insert Reply" button for quick implementation
+- Shows balance details (£13,732.29) with contextual messaging
+
+**3. Automated Workflows**
+- Visual workflow builder with conditional triggers
+- Example trigger: "Balance overdue >10,000"
+- Action menu includes: Create task, Send email, Send SMS, Make phone call
+- Workflow execution shown visually with icons and timelines
+
+**4. Multi-Channel Action Center**
+Their "Add Action" dropdown offers:
+- 📞 Make a phone call
+- 💬 Send an SMS  
+- ✉️ Send an email
+- 📋 Create a task
+- 🎯 Assign to a strategy
+- 👤 Assign an account manager
+- 🔍 Dispute KYB/A (Know Your Business/Anti-fraud)
+
+**5. Communications Timeline**
+- Visual timeline showing complete invoice lifecycle
+- Icons for different communication types (email, SMS, call, invoice)
+- Historical view of all customer touchpoints
+- Integration with invoice status changes
+
+**6. Performance Analytics**
+- Collected amount tracking (£150,000)
+- Invoices Paid On Time: 90%
+- Invoices Paid Late: 10%
+- Bar charts showing payment trends over time
+- Multiple metrics views for different stakeholders
+
+**7. Enterprise Social Proof**
+- Trusted by 1,000+ companies globally
+- Notable clients: Payhawk, Autodesk, HubSpot, Stripe, GoCardless, Spendesk, Rakuten, DRATA
+- 4.9/5 rating across G2, Capterra, Gartner
+- ISO 27001 Certified security
+
+#### Market Positioning
+- **Tagline**: "Leave Your Collections Challenges to Kolleno"
+- **Value Prop**: "Focus on every single invoice outstanding and leave no customer enquiry unaddressed"
+- **Target**: Enterprise B2B companies with complex AR processes
+- **Pricing**: Not shown, likely enterprise/custom pricing model
+
+### Competitive Comparison: Nexus AR vs Kolleno
+
+#### Where Nexus AR Leads ✅
+
+**1. Intent Analyst AI (Our Secret Weapon)**
+- Automatic inbound message analysis with date extraction
+- AI-powered entity recognition (amounts, dates, promises)
+- Sentiment analysis on all communications
+- Confidence scoring (>60% auto-action, <60% manual review)
+- **Kolleno doesn't show this capability**
+
+**2. Intelligent Date Extraction**
+- Automatically extracts payment commitment dates from messages
+- Parses natural language: "end of month" → October 31
+- Creates categorized actions: Upcoming PTP vs Broken Promises
+- **Kolleno appears to lack automated date parsing**
+
+**3. Action Centre Workflow Tabs**
+- Pre-categorized workflows: Queries, Overdue, Upcoming PTP, Broken Promises, Disputes, Debt Recovery, Legal
+- Automatic categorization based on AI intent analysis
+- Real-time 15-second auto-refresh
+- **More structured than Kolleno's generic activity feed**
+
+**4. Message Content Display**
+- Inbound SMS/email content shown in Action Centre
+- Full message context with quotes and visual formatting
+- Better context for decision-making
+- **Kolleno shows less message detail in activity view**
+
+#### Where Kolleno Leads 📊
+
+**1. Visual Communication Timeline**
+- Invoice lifecycle visualization with icons
+- Better historical context at a glance
+- **Opportunity**: Add visual timeline to invoice detail pages
+
+**2. AI Email Drafting**
+- Suggests complete email responses
+- "Insert Reply" quick action
+- **Opportunity**: Extend our Intent Analyst to suggest responses, not just analyze
+
+**3. Strategy Assignment**
+- Assign customers to collection strategies
+- Account manager assignment workflow
+- **Opportunity**: Add strategy templates and team assignment features
+
+**4. Enhanced Metrics Dashboard**
+- Collection rate percentages
+- Paid on-time vs late breakdown
+- **Opportunity**: Add percentage-based KPIs to dashboard
+
+**5. Team Collaboration Features**
+- Account manager assignment
+- Task creation and assignment
+- **Opportunity**: Multi-user workflows for enterprise
+
+### Strategic Opportunities
+
+**Near-Term Enhancements:**
+1. **Visual Timeline**: Add invoice communication timeline to detail pages
+2. **AI Response Suggestions**: Extend Intent Analyst to suggest reply messages
+3. **Collection Rate Metrics**: Add % paid on-time, % paid late to dashboard
+4. **Strategy Templates**: Pre-built collection strategy workflows
+
+**Long-Term Differentiation:**
+1. **Advanced Intent AI**: Our core strength - continue enhancing date/entity extraction
+2. **Predictive Analytics**: Use ML to predict payment likelihood
+3. **Voice AI Superiority**: Leverage Retell AI for better voice automation than competitors
+4. **Real-time Intelligence**: 15-second Action Centre refresh vs static dashboards
+
+### Key Takeaway
+Kolleno is a mature, well-funded competitor with strong enterprise features. **Our competitive advantage is the Intent Analyst system** - no competitor shows AI-powered inbound analysis with automatic date extraction and categorization. We should double down on AI intelligence while selectively adopting their UX patterns (visual timelines, metrics) where they enhance user value.
