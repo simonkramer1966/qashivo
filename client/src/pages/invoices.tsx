@@ -370,7 +370,7 @@ export default function Invoices() {
                       data-testid={`invoice-item-${invoice.id}`}
                     >
                       {/* Customer */}
-                      <div className="col-span-3 min-w-0">
+                      <div className="col-span-3 min-w-0 flex items-center">
                         <p className="font-semibold text-sm text-slate-900 truncate">
                           {invoice.contact?.companyName || invoice.contact?.name || 'Unknown Customer'}
                         </p>
