@@ -345,7 +345,7 @@ export default function Invoices() {
                 <p className="text-slate-600">No invoices found</p>
               </div>
             ) : (
-              <div className="bg-white border-t border-b border-slate-200" style={{ display: 'grid', gridTemplateColumns: 'auto 8rem 7rem 8rem 6rem 5rem 3rem' }}>
+              <div className="bg-white border-t border-b border-slate-200" style={{ display: 'grid', gridTemplateColumns: '200px 8rem 7rem 8rem 6rem 5rem 3rem' }}>
                 {/* Table Header */}
                 <div className="contents">
                   <div className="px-8 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10">Customer</div>
@@ -372,8 +372,8 @@ export default function Invoices() {
                       data-testid={`invoice-item-${invoice.id}`}
                     >
                       {/* Customer */}
-                      <div className={`px-8 py-2 border-l-4 ${getStatusColor(invoice)} border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center`}>
-                        <p className="font-semibold text-sm text-slate-900 whitespace-nowrap">
+                      <div className={`px-8 py-2 border-l-4 ${getStatusColor(invoice)} border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center min-w-0`}>
+                        <p className="font-semibold text-sm text-slate-900 truncate">
                           {invoice.contact?.companyName || invoice.contact?.name || 'Unknown Customer'}
                         </p>
                       </div>
