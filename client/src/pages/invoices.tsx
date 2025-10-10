@@ -348,7 +348,7 @@ export default function Invoices() {
               <div className="bg-white border-t border-b border-slate-200">
                 {/* Table Header */}
                 <div className="flex items-center gap-4 px-8 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10">
-                  <div className="flex-1 min-w-0">Customer</div>
+                  <div className="min-w-0">Customer</div>
                   <div className="w-32">Invoice #</div>
                   <div className="w-28">Amount</div>
                   <div className="w-32">{statusFilter === 'paid' ? 'Paid Date' : 'Due Date'}</div>
@@ -372,8 +372,8 @@ export default function Invoices() {
                       data-testid={`invoice-item-${invoice.id}`}
                     >
                       {/* Customer */}
-                      <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-sm text-slate-900 truncate">
+                      <div className="min-w-0">
+                        <p className="font-semibold text-sm text-slate-900 whitespace-nowrap">
                           {invoice.contact?.companyName || invoice.contact?.name || 'Unknown Customer'}
                         </p>
                       </div>
