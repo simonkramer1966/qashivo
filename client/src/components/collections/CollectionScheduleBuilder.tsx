@@ -354,131 +354,191 @@ export default function CollectionScheduleBuilder({ className }: CollectionSched
       {/* Conditional Rendering based on viewMode */}
       {viewMode === 'list' ? (
         <>
-          {/* Schedules Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {(schedules as CollectionSchedule[]).map((schedule: CollectionSchedule) => (
-          <Card key={schedule.id} className="card-glass">
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Target className="h-5 w-5 text-gray-600" />
-                  {schedule.name}
-                </CardTitle>
-                <div className="flex gap-1">
-                  {schedule.isDefault && (
-                    <Badge className="bg-yellow-100 text-yellow-800 text-xs">
-                      Default
-                    </Badge>
-                  )}
-                  <Badge variant={schedule.isActive ? "default" : "secondary"}>
-                    {schedule.isActive ? "Active" : "Inactive"}
-                  </Badge>
-                </div>
-              </div>
-              {schedule.description && (
-                <p className="text-sm text-gray-600 line-clamp-2">{schedule.description}</p>
-              )}
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Steps Preview */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between text-xs text-gray-600">
-                  <span>Workflow Steps</span>
-                  <span>{Array.isArray(schedule.scheduleSteps) ? schedule.scheduleSteps.length : 0} steps</span>
-                </div>
-                {Array.isArray(schedule.scheduleSteps) && schedule.scheduleSteps.length > 0 && (
-                  <div className="flex items-center gap-1 overflow-x-auto">
-                    {schedule.scheduleSteps.slice(0, 5).map((step: any, index: number) => {
-                      const StepIcon = getStepIcon(step.type);
-                      return (
-                        <div key={step.id} className="flex items-center gap-1">
-                          <div className={`p-1 rounded border ${getStepColor(step.type)}`}>
-                            <StepIcon className="h-3 w-3" />
+          {/* Workflows Table */}
+          <div className="bg-white/80 backdrop-blur-sm border border-white/50 rounded-lg shadow-lg overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50/50 border-b border-gray-200">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                      Workflow Name
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                      Status
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                      Steps
+                    </th>
+                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider">
+                      Customers
+                    </th>
+                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider">
+                      Duration
+                    </th>
+                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider">
+                      Success Rate
+                    </th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {(schedules as CollectionSchedule[]).map((schedule: CollectionSchedule) => (
+                    <tr 
+                      key={schedule.id} 
+                      className="hover:bg-gray-50/50 transition-colors"
+                      data-testid={`row-schedule-${schedule.id}`}
+                    >
+                      {/* Workflow Name */}
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-2">
+                          <Target className="h-4 w-4 text-gray-600 flex-shrink-0" />
+                          <div>
+                            <div className="font-medium text-gray-900">{schedule.name}</div>
+                            {schedule.description && (
+                              <div className="text-sm text-gray-500 line-clamp-1">{schedule.description}</div>
+                            )}
                           </div>
-                          {index < Math.min(4, (schedule.scheduleSteps as any[]).length - 1) && (
-                            <ArrowRight className="h-2 w-2 text-gray-400" />
+                        </div>
+                      </td>
+
+                      {/* Status */}
+                      <td className="px-6 py-4">
+                        <div className="flex gap-1">
+                          {schedule.isDefault && (
+                            <Badge className="bg-yellow-100 text-yellow-800 text-xs">
+                              Default
+                            </Badge>
+                          )}
+                          <Badge variant={schedule.isActive ? "default" : "secondary"} className="text-xs">
+                            {schedule.isActive ? "Active" : "Inactive"}
+                          </Badge>
+                        </div>
+                      </td>
+
+                      {/* Steps */}
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-1">
+                          {Array.isArray(schedule.scheduleSteps) && schedule.scheduleSteps.length > 0 ? (
+                            <>
+                              {schedule.scheduleSteps.slice(0, 5).map((step: any, index: number) => {
+                                const StepIcon = getStepIcon(step.type);
+                                return (
+                                  <div key={step.id} className="flex items-center gap-1">
+                                    <div className={`p-1 rounded border ${getStepColor(step.type)}`}>
+                                      <StepIcon className="h-3 w-3" />
+                                    </div>
+                                    {index < Math.min(4, (schedule.scheduleSteps as any[]).length - 1) && (
+                                      <ArrowRight className="h-2 w-2 text-gray-400" />
+                                    )}
+                                  </div>
+                                );
+                              })}
+                              {schedule.scheduleSteps.length > 5 && (
+                                <span className="text-xs text-gray-500">+{schedule.scheduleSteps.length - 5}</span>
+                              )}
+                            </>
+                          ) : (
+                            <span className="text-xs text-gray-400">No steps</span>
                           )}
                         </div>
-                      );
-                    })}
-                    {schedule.scheduleSteps.length > 5 && (
-                      <span className="text-xs text-gray-500">+{schedule.scheduleSteps.length - 5}</span>
-                    )}
-                  </div>
-                )}
-              </div>
+                      </td>
 
-              {/* Metrics */}
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div className="bg-gray-50 p-2 rounded">
-                  <div className="flex items-center gap-1">
-                    <Users className="h-3 w-3 text-gray-500" />
-                    <span className="text-xs text-gray-600">Customers</span>
-                  </div>
-                  <p className="font-medium">{schedule.totalCustomersAssigned || 0}</p>
-                </div>
-                <div className="bg-gray-50 p-2 rounded">
-                  <div className="flex items-center gap-1">
-                    <Clock className="h-3 w-3 text-gray-500" />
-                    <span className="text-xs text-gray-600">Duration</span>
-                  </div>
-                  <p className="font-medium">{calculateTotalDelay(Array.isArray(schedule.scheduleSteps) ? schedule.scheduleSteps : [])}</p>
-                </div>
-              </div>
+                      {/* Customers */}
+                      <td className="px-6 py-4 text-center">
+                        <div className="flex items-center justify-center gap-1">
+                          <Users className="h-3 w-3 text-gray-500" />
+                          <span className="font-medium text-gray-900">{schedule.totalCustomersAssigned || 0}</span>
+                        </div>
+                      </td>
 
-              {/* Performance Metrics */}
-              {schedule.successRate !== undefined && (
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-gray-600">Success Rate</span>
-                    <span className="font-medium">{Math.round(((schedule.successRate ?? 0) as number) * 100)}%</span>
-                  </div>
-                  <Progress value={((schedule.successRate ?? 0) as number) * 100} className="h-2" />
-                </div>
-              )}
+                      {/* Duration */}
+                      <td className="px-6 py-4 text-center">
+                        <div className="flex items-center justify-center gap-1">
+                          <Clock className="h-3 w-3 text-gray-500" />
+                          <span className="font-medium text-gray-900">
+                            {calculateTotalDelay(Array.isArray(schedule.scheduleSteps) ? schedule.scheduleSteps : [])}
+                          </span>
+                        </div>
+                      </td>
 
-              <div className="flex items-center justify-between pt-2">
-                <div className="flex items-center gap-2">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => openEditDialog(schedule)}
-                    data-testid={`button-edit-schedule-${schedule.id}`}
-                  >
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => deleteMutation.mutate(schedule.id)}
-                    disabled={schedule.isDefault === true}
-                    data-testid={`button-delete-schedule-${schedule.id}`}
-                  >
-                    <Trash2 className="h-4 w-4 text-red-500" />
-                  </Button>
-                  {schedule.isDefault && (
-                    <Button
-                      size="sm"
-                      onClick={handleAssignAllToDefault}
-                      disabled={assignAllToDefaultMutation.isPending}
-                      className="bg-[#17B6C3] hover:bg-[#1396A1] text-white"
-                      data-testid="button-assign-all-to-default"
-                    >
-                      <Users className="h-4 w-4 mr-1" />
-                      {assignAllToDefaultMutation.isPending ? "Assigning..." : "Assign All Customers"}
-                    </Button>
-                  )}
-                </div>
-                
-                <div className="flex items-center gap-1 text-xs text-gray-500">
-                  <TrendingUp className="h-3 w-3" />
-                  Performance tracked
-                </div>
+                      {/* Success Rate */}
+                      <td className="px-6 py-4 text-center">
+                        {schedule.successRate !== undefined ? (
+                          <div className="flex items-center justify-center gap-2">
+                            <div className="flex-1 max-w-[80px]">
+                              <Progress 
+                                value={((schedule.successRate ?? 0) as number) * 100} 
+                                className="h-2"
+                              />
+                            </div>
+                            <span className="text-sm font-medium text-gray-900 w-10 text-right">
+                              {Math.round(((schedule.successRate ?? 0) as number) * 100)}%
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-gray-400">-</span>
+                        )}
+                      </td>
+
+                      {/* Actions */}
+                      <td className="px-6 py-4">
+                        <div className="flex items-center justify-end gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => openEditDialog(schedule)}
+                            data-testid={`button-edit-schedule-${schedule.id}`}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => deleteMutation.mutate(schedule.id)}
+                            disabled={schedule.isDefault === true}
+                            data-testid={`button-delete-schedule-${schedule.id}`}
+                          >
+                            <Trash2 className="h-4 w-4 text-red-500" />
+                          </Button>
+                          {schedule.isDefault && (
+                            <Button
+                              size="sm"
+                              onClick={handleAssignAllToDefault}
+                              disabled={assignAllToDefaultMutation.isPending}
+                              className="bg-[#17B6C3] hover:bg-[#1396A1] text-white whitespace-nowrap"
+                              data-testid="button-assign-all-to-default"
+                            >
+                              <Users className="h-4 w-4 mr-1" />
+                              {assignAllToDefaultMutation.isPending ? "Assigning..." : "Assign All"}
+                            </Button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Empty State */}
+            {schedules.length === 0 && (
+              <div className="text-center py-12">
+                <Target className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No workflows yet</h3>
+                <p className="text-gray-600 mb-4">Create your first collection workflow to get started</p>
+                <Button
+                  onClick={openCreateDialog}
+                  className="bg-[#17B6C3] hover:bg-[#1396A1] text-white"
+                  data-testid="button-create-first-schedule"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create Workflow
+                </Button>
               </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+            )}
+          </div>
 
       {/* Create/Edit Schedule Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
