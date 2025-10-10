@@ -652,11 +652,11 @@ export default function ActionCentre() {
             ) : isInvoiceTab ? (
               // Invoice table format (matching invoice page)
               <div className="bg-white border-t border-b border-slate-200 overflow-hidden">
-                <div className="max-h-[600px] overflow-y-auto" style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr 1fr 1fr 1fr auto' }}>
+                <div className="max-h-[600px] overflow-y-auto" style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr 1fr 1fr 1fr auto' }}>
                   {/* Table Header */}
                   <div className="contents">
-                    <div className="px-8 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10">Invoice #</div>
-                    <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10">Customer</div>
+                    <div className="px-8 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10">Customer</div>
+                    <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10">Invoice #</div>
                     <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 text-right">Amount</div>
                     <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 text-right">Days Overdue</div>
                     <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 text-right">Due Date</div>
@@ -682,23 +682,23 @@ export default function ActionCentre() {
                         className="contents"
                         data-testid={`invoice-item-${item.id}`}
                       >
-                        {/* Invoice Number */}
+                        {/* Customer */}
                         <div 
                           className={`px-8 py-2 border-l-4 ${getBorderColor()} border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center min-w-0`}
                           onClick={() => setLocation(`/invoices/${item.id}`)}
                         >
                           <p className="font-semibold text-sm text-slate-900 truncate">
-                            {item.invoiceNumber || 'Unknown'}
+                            {item.contactName || 'Unknown Customer'}
                           </p>
                         </div>
 
-                        {/* Customer */}
+                        {/* Invoice Number */}
                         <div 
                           className="px-4 py-2 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center min-w-0"
                           onClick={() => setLocation(`/invoices/${item.id}`)}
                         >
                           <p className="text-sm text-slate-900 truncate">
-                            {item.contactName || 'Unknown Customer'}
+                            {item.invoiceNumber || 'Unknown'}
                           </p>
                         </div>
 
