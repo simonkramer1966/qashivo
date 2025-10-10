@@ -33,6 +33,7 @@ interface Contact {
   invoiceCount: number;
   overdueAmount: number;
   overdueCount: number;
+  averageDaysPastDue: number;
   riskScore: number;
   riskBand?: string | null;
   creditLimit?: number | null;
@@ -409,12 +410,13 @@ export default function Customers() {
               </div>
             ) : (
               <div className="bg-white border-t border-b border-slate-200 overflow-hidden">
-                <div className="max-h-[600px] overflow-y-auto" style={{ display: 'grid', gridTemplateColumns: '2fr 1.5fr 1.5fr 1fr' }}>
+                <div className="max-h-[600px] overflow-y-auto" style={{ display: 'grid', gridTemplateColumns: '2fr 1.5fr 1.5fr 0.8fr 1fr' }}>
                   {/* Table Header */}
                   <div className="contents">
                     <div className="px-8 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10">Customer</div>
                     <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 text-right">Outstanding</div>
                     <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 text-right">Overdue</div>
+                    <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 text-right">ADPD</div>
                     <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 text-right">Risk</div>
                   </div>
 
@@ -467,6 +469,23 @@ export default function Customers() {
                         {contact.overdueAmount > 0 ? (
                           <p className="font-semibold text-sm text-[#C75C5C]">
                             {formatCurrency(contact.overdueAmount)} <span className="text-slate-400">({contact.overdueCount})</span>
+                          </p>
+                        ) : (
+                          <p className="text-xs text-slate-400">-</p>
+                        )}
+                      </div>
+
+                      {/* ADPD - Average Days Past Due */}
+                      <div 
+                        className="px-4 py-2 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center justify-end"
+                        onClick={() => {
+                          setSelectedContact(contact);
+                          setShowCustomerDetail(true);
+                        }}
+                      >
+                        {contact.averageDaysPastDue > 0 ? (
+                          <p className="font-semibold text-sm text-[#C75C5C]">
+                            {contact.averageDaysPastDue}
                           </p>
                         ) : (
                           <p className="text-xs text-slate-400">-</p>

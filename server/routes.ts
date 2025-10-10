@@ -2552,6 +2552,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           const overdueCount = overdueInvoices.length;
           
+          // Calculate average days past due (ADPD)
+          let averageDaysPastDue = 0;
+          if (overdueInvoices.length > 0) {
+            const totalDaysPastDue = overdueInvoices.reduce((sum, inv) => {
+              if (inv.dueDate) {
+                const dueDate = new Date(inv.dueDate);
+                const daysPastDue = Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
+                return sum + Math.max(0, daysPastDue);
+              }
+              return sum;
+            }, 0);
+            averageDaysPastDue = Math.round(totalDaysPastDue / overdueInvoices.length);
+          }
+          
           // Calculate risk score based on overdue invoices
           let riskScore = 0;
           unpaidInvoices.forEach(inv => {
@@ -2572,6 +2586,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             invoiceCount: contactInvoices.length,
             overdueAmount,
             overdueCount,
+            averageDaysPastDue,
             riskScore
           };
         })
