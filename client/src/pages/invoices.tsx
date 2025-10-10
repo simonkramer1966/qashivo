@@ -211,47 +211,47 @@ export default function Invoices() {
 
           {/* Desktop: 4-column grid of metrics */}
           <div className="hidden sm:grid sm:grid-cols-4 gap-4 mb-6">
-            <Card className="card-apple p-4 border-l-4 border-l-[#17B6C3]">
-              <p className="text-sm text-slate-600 mb-1">Total Outstanding</p>
-              <p className="text-2xl font-bold text-slate-900">{formatCurrency(aggregates.totalOutstanding)}</p>
+            <Card className="card-apple p-2.5 border-l-4 border-l-[#17B6C3]">
+              <p className="text-sm text-slate-600 mb-0.5">Total Outstanding</p>
+              <p className="text-xl font-bold text-slate-900">{formatCurrency(aggregates.totalOutstanding)}</p>
             </Card>
             
-            <Card className="card-apple p-4 border-l-4 border-l-[#C75C5C]">
-              <p className="text-sm text-slate-600 mb-1">Critical</p>
-              <p className="text-2xl font-bold text-[#C75C5C]">{aggregates.criticalCount}</p>
+            <Card className="card-apple p-2.5 border-l-4 border-l-[#C75C5C]">
+              <p className="text-sm text-slate-600 mb-0.5">Critical</p>
+              <p className="text-xl font-bold text-[#C75C5C]">{aggregates.criticalCount}</p>
             </Card>
             
-            <Card className="card-apple p-4 border-l-4 border-l-[#E8A23B]">
-              <p className="text-sm text-slate-600 mb-1">Overdue</p>
-              <p className="text-2xl font-bold text-[#E8A23B]">{aggregates.overdueCount}</p>
+            <Card className="card-apple p-2.5 border-l-4 border-l-[#E8A23B]">
+              <p className="text-sm text-slate-600 mb-0.5">Overdue</p>
+              <p className="text-xl font-bold text-[#E8A23B]">{aggregates.overdueCount}</p>
             </Card>
             
-            <Card className="card-apple p-4 border-l-4 border-l-blue-500">
-              <p className="text-sm text-slate-600 mb-1">Due</p>
-              <p className="text-2xl font-bold text-blue-600">{aggregates.pendingCount}</p>
+            <Card className="card-apple p-2.5 border-l-4 border-l-blue-500">
+              <p className="text-sm text-slate-600 mb-0.5">Due</p>
+              <p className="text-xl font-bold text-blue-600">{aggregates.pendingCount}</p>
             </Card>
           </div>
 
           {/* Mobile: 2x2 grid of metrics */}
           <div className="grid grid-cols-2 gap-3 mb-6 sm:hidden">
-            <Card className="card-apple p-3 border-l-4 border-l-[#17B6C3]">
-              <p className="text-xs text-slate-600 mb-1">Outstanding</p>
-              <p className="text-lg font-bold text-slate-900">{formatCurrency(aggregates.totalOutstanding)}</p>
+            <Card className="card-apple p-2 border-l-4 border-l-[#17B6C3]">
+              <p className="text-xs text-slate-600 mb-0.5">Outstanding</p>
+              <p className="text-base font-bold text-slate-900">{formatCurrency(aggregates.totalOutstanding)}</p>
             </Card>
             
-            <Card className="card-apple p-3 border-l-4 border-l-[#C75C5C]">
-              <p className="text-xs text-slate-600 mb-1">Critical</p>
-              <p className="text-lg font-bold text-[#C75C5C]">{aggregates.criticalCount}</p>
+            <Card className="card-apple p-2 border-l-4 border-l-[#C75C5C]">
+              <p className="text-xs text-slate-600 mb-0.5">Critical</p>
+              <p className="text-base font-bold text-[#C75C5C]">{aggregates.criticalCount}</p>
             </Card>
             
-            <Card className="card-apple p-3 border-l-4 border-l-[#E8A23B]">
-              <p className="text-xs text-slate-600 mb-1">Overdue</p>
-              <p className="text-lg font-bold text-[#E8A23B]">{aggregates.overdueCount}</p>
+            <Card className="card-apple p-2 border-l-4 border-l-[#E8A23B]">
+              <p className="text-xs text-slate-600 mb-0.5">Overdue</p>
+              <p className="text-base font-bold text-[#E8A23B]">{aggregates.overdueCount}</p>
             </Card>
             
-            <Card className="card-apple p-3 border-l-4 border-l-blue-500">
-              <p className="text-xs text-slate-600 mb-1">Due</p>
-              <p className="text-lg font-bold text-blue-600">{aggregates.pendingCount}</p>
+            <Card className="card-apple p-2 border-l-4 border-l-blue-500">
+              <p className="text-xs text-slate-600 mb-0.5">Due</p>
+              <p className="text-base font-bold text-blue-600">{aggregates.pendingCount}</p>
             </Card>
           </div>
 
