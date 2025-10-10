@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, DragEvent } from "react";
+import { useState, useCallback, useRef, useEffect, DragEvent } from "react";
 import {
   ReactFlow,
   Node,
@@ -183,6 +183,16 @@ export default function VisualWorkflowBuilder({ initialWorkflow, onSave }: Visua
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const [selectedNode, setSelectedNode] = useState<Node<NodeData> | null>(null);
   const [reactFlowInstance, setReactFlowInstance] = useState<any>(null);
+
+  // Sync selectedNode with nodes state
+  useEffect(() => {
+    if (selectedNode) {
+      const updatedNode = nodes.find(n => n.id === selectedNode.id);
+      if (updatedNode) {
+        setSelectedNode(updatedNode);
+      }
+    }
+  }, [nodes]);
 
   // Handle connection between nodes
   const onConnect = useCallback(
