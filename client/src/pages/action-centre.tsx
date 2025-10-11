@@ -686,8 +686,8 @@ export default function ActionCentre() {
                         </div>
 
                         {/* Subject/Message */}
-                        <div className="px-4 py-2 border-b border-slate-100 hover:bg-slate-50 transition-colors flex items-center min-w-0">
-                          <p className="text-xs text-slate-700 truncate">
+                        <div className="px-4 py-2 border-b border-slate-100 hover:bg-slate-50 transition-colors flex items-start min-w-0">
+                          <p className="text-xs text-slate-700 line-clamp-3">
                             {comm.subject || comm.content || '-'}
                           </p>
                         </div>
