@@ -3623,6 +3623,107 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Manual call capture with promise tracking
+  app.post("/api/calls/manual", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { 
+        invoiceId, 
+        contactId, 
+        direction, 
+        outcome, 
+        notes,
+        capturePromise,
+        promiseType,
+        promiseDate,
+        promiseAmount,
+        installments 
+      } = req.body;
+
+      // Create the call action
+      const callAction = await storage.createAction({
+        tenantId: user.tenantId,
+        userId: user.id,
+        contactId,
+        invoiceId,
+        type: 'call',
+        status: 'completed',
+        priority: 'medium',
+        title: `${direction === 'inbound' ? 'Inbound' : 'Outbound'} call - ${outcome}`,
+        description: notes || `Manual call capture: ${outcome}`,
+        metadata: {
+          direction,
+          outcome,
+          notes,
+          source: 'manual',
+          capturedPromise: capturePromise
+        }
+      });
+
+      const promises: any[] = [];
+
+      // If capturing a promise, create promise records
+      if (capturePromise) {
+        const { getPromiseReliabilityService } = await import('./services/promiseReliabilityService.js');
+        const promiseService = getPromiseReliabilityService();
+
+        if (promiseType === 'payment_plan' && installments && installments.length > 0) {
+          // Create multiple promises for payment plan
+          for (const installment of installments) {
+            const promise = await promiseService.createPromise({
+              tenantId: user.tenantId,
+              contactId,
+              invoiceId,
+              promiseType: 'payment_plan',
+              promisedDate: new Date(installment.date),
+              promisedAmount: installment.amount,
+              sourceType: 'manual',
+              sourceId: callAction.id,
+              channel: 'phone',
+              createdByUserId: user.id,
+              notes: `Payment plan installment: ${notes || ''}`,
+            });
+            promises.push(promise);
+          }
+        } else if (promiseDate && promiseAmount) {
+          // Create single promise
+          const promise = await promiseService.createPromise({
+            tenantId: user.tenantId,
+            contactId,
+            invoiceId,
+            promiseType: promiseType || 'payment_date',
+            promisedDate: new Date(promiseDate),
+            promisedAmount: parseFloat(promiseAmount),
+            sourceType: 'manual',
+            sourceId: callAction.id,
+            channel: 'phone',
+            createdByUserId: user.id,
+            notes: notes || '',
+          });
+          promises.push(promise);
+        }
+      }
+
+      res.status(201).json({ 
+        action: callAction,
+        promises,
+        message: capturePromise 
+          ? `Call captured with ${promises.length} promise(s) recorded` 
+          : 'Call captured successfully'
+      });
+    } catch (error) {
+      console.error("Error capturing manual call:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid call data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to capture call" });
+    }
+  });
+
   // Get categorized items for Action Centre tabs
   app.get("/api/action-centre/tabs", isAuthenticated, async (req: any, res) => {
     try {
