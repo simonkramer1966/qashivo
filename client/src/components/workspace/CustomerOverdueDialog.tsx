@@ -22,6 +22,7 @@ import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { SendSMSDialog } from "../invoices/SendSMSDialog";
 import { ManualCallCaptureDialog } from "./ManualCallCaptureDialog";
+import { AIVoiceDialog } from "../invoices/AIVoiceDialog";
 
 interface CustomerOverdueDialogProps {
   customer: any | null;
@@ -33,6 +34,7 @@ export function CustomerOverdueDialog({ customer, open, onOpenChange }: Customer
   const [, setLocation] = useLocation();
   const [smsDialogOpen, setSmsDialogOpen] = useState(false);
   const [callCaptureDialogOpen, setCallCaptureDialogOpen] = useState(false);
+  const [aiVoiceDialogOpen, setAiVoiceDialogOpen] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<any>(null);
   
   // Fetch tenant information for organization name
@@ -108,7 +110,7 @@ export function CustomerOverdueDialog({ customer, open, onOpenChange }: Customer
               {/* Communication Actions */}
               <div>
                 <h3 className="text-sm font-semibold text-slate-900 mb-3">Chase Outstanding Balance</h3>
-                <div className="grid grid-cols-4 gap-3">
+                <div className="grid grid-cols-5 gap-3">
                   <Button 
                     variant="outline" 
                     className="flex items-center gap-2 justify-start"
@@ -155,10 +157,25 @@ export function CustomerOverdueDialog({ customer, open, onOpenChange }: Customer
                         setCallCaptureDialogOpen(true);
                       }
                     }}
-                    data-testid="button-voice-call"
+                    data-testid="button-manual-call"
+                  >
+                    <Phone className="h-4 w-4" />
+                    Call
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    className="flex items-center gap-2 justify-start"
+                    onClick={() => {
+                      // Use first invoice for AI voice call
+                      if (customer.invoices?.length > 0) {
+                        setSelectedInvoice(customer.invoices[0]);
+                        setAiVoiceDialogOpen(true);
+                      }
+                    }}
+                    data-testid="button-ai-voice-call"
                   >
                     <Mic className="h-4 w-4" />
-                    Call
+                    Voice Call
                   </Button>
                 </div>
               </div>
@@ -239,6 +256,17 @@ export function CustomerOverdueDialog({ customer, open, onOpenChange }: Customer
           onOpenChange={setCallCaptureDialogOpen}
           invoice={selectedInvoice}
           customer={customer}
+        />
+      )}
+
+      {/* AI Voice Call Dialog */}
+      {selectedInvoice && tenant && (
+        <AIVoiceDialog
+          open={aiVoiceDialogOpen}
+          onOpenChange={setAiVoiceDialogOpen}
+          invoice={selectedInvoice}
+          daysOverdue={selectedInvoiceDaysOverdue}
+          tenantName={tenant.name}
         />
       )}
     </>
