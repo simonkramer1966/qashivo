@@ -9643,6 +9643,17 @@ Payment required immediately to avoid collection action. Contact us NOW.`
         return res.status(200).send("OK - No matching contact");
       }
 
+      // Check if message already exists (handle duplicate webhooks)
+      const existingSms = await db.select()
+        .from(smsMessages)
+        .where(eq(smsMessages.vonageMessageId, messageId))
+        .limit(1);
+
+      if (existingSms.length > 0) {
+        console.log("⚠️ Duplicate Vonage webhook ignored - message already processed:", messageId);
+        return res.status(200).send("OK - Duplicate message");
+      }
+
       // Save SMS to database
       const smsData: any = {
         tenantId: matchedTenantId,
