@@ -21,7 +21,7 @@ import { useState } from "react";
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { SendSMSDialog } from "../invoices/SendSMSDialog";
-import { AIVoiceDialog } from "../invoices/AIVoiceDialog";
+import { ManualCallCaptureDialog } from "./ManualCallCaptureDialog";
 
 interface CustomerOverdueDialogProps {
   customer: any | null;
@@ -32,7 +32,7 @@ interface CustomerOverdueDialogProps {
 export function CustomerOverdueDialog({ customer, open, onOpenChange }: CustomerOverdueDialogProps) {
   const [, setLocation] = useLocation();
   const [smsDialogOpen, setSmsDialogOpen] = useState(false);
-  const [voiceDialogOpen, setVoiceDialogOpen] = useState(false);
+  const [callCaptureDialogOpen, setCallCaptureDialogOpen] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<any>(null);
   
   // Fetch tenant information for organization name
@@ -149,15 +149,16 @@ export function CustomerOverdueDialog({ customer, open, onOpenChange }: Customer
                     variant="outline" 
                     className="flex items-center gap-2 justify-start"
                     onClick={() => {
-                      // Use first invoice for voice call (need invoice context)
+                      // Use first invoice for manual call capture
                       if (customer.invoices?.length > 0) {
                         setSelectedInvoice(customer.invoices[0]);
-                        setVoiceDialogOpen(true);
+                        setCallCaptureDialogOpen(true);
                       }
                     }}
+                    data-testid="button-voice-call"
                   >
                     <Mic className="h-4 w-4" />
-                    Voice Call
+                    Call
                   </Button>
                 </div>
               </div>
@@ -231,14 +232,13 @@ export function CustomerOverdueDialog({ customer, open, onOpenChange }: Customer
         />
       )}
 
-      {/* Voice Call Dialog */}
+      {/* Manual Call Capture Dialog */}
       {selectedInvoice && (
-        <AIVoiceDialog
-          open={voiceDialogOpen}
-          onOpenChange={setVoiceDialogOpen}
+        <ManualCallCaptureDialog
+          open={callCaptureDialogOpen}
+          onOpenChange={setCallCaptureDialogOpen}
           invoice={selectedInvoice}
-          daysOverdue={selectedInvoiceDaysOverdue}
-          tenantName={tenant?.name || 'Your Organization'}
+          customer={customer}
         />
       )}
     </>
