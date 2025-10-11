@@ -35,6 +35,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface Action {
   id: string;
@@ -87,6 +93,18 @@ function formatDateShort(dateStr: string | null): string {
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const year = String(date.getFullYear()).slice(-2);
   return `${day}/${month}/${year}`;
+}
+
+// Format exact date and time for tooltip
+function formatExactDateTime(dateStr: string): string {
+  const date = new Date(dateStr);
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const year = date.getFullYear();
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  const seconds = String(date.getSeconds()).padStart(2, '0');
+  return `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
 }
 
 export default function ActionCentre() {
@@ -646,9 +664,18 @@ export default function ActionCentre() {
 
                         {/* Date/Time */}
                         <div className="px-4 py-2 border-b border-slate-100 hover:bg-slate-50 transition-colors flex items-center">
-                          <p className="text-sm text-slate-700">
-                            {getSmartTimestamp(comm.createdAt)}
-                          </p>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <p className="text-sm text-slate-700 cursor-help">
+                                  {getSmartTimestamp(comm.createdAt)}
+                                </p>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>{formatExactDateTime(comm.createdAt)}</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
                         </div>
 
                         {/* Invoice */}
