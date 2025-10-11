@@ -1396,7 +1396,7 @@ export const templatePerformanceRelations = relations(templatePerformance, ({ on
 }));
 
 // AI Learning Tables for Credit Control Optimization
-// Customer learning profiles - tracks what we learn about each customer's preferences
+// Customer learning profiles - tracks what we learn about each customer's preferences and behavioral patterns
 export const customerLearningProfiles = pgTable("customer_learning_profiles", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
@@ -1421,11 +1421,51 @@ export const customerLearningProfiles = pgTable("customer_learning_profiles", {
   // AI learning confidence (0-1, how confident we are in our recommendations)
   learningConfidence: decimal("learning_confidence", { precision: 3, scale: 2 }).default("0.1"),
   
+  // === Promise Reliability Score (PRS) - MVP-01 to MVP-05 ===
+  totalPromisesMade: integer("total_promises_made").default(0),
+  promisesKept: integer("promises_kept").default(0),
+  promisesBroken: integer("promises_broken").default(0),
+  promisesPartiallyKept: integer("promises_partially_kept").default(0),
+  promiseReliabilityScore: decimal("promise_reliability_score", { precision: 5, scale: 2 }), // 0-100
+  
+  // Rolling windows for trend analysis
+  prsLast30Days: decimal("prs_last_30_days", { precision: 5, scale: 2 }),
+  prsLast90Days: decimal("prs_last_90_days", { precision: 5, scale: 2 }),
+  prsLast12Months: decimal("prs_last_12_months", { precision: 5, scale: 2 }),
+  
+  // === Behavioral Flags (MVP-06 to MVP-10) ===
+  isSerialPromiser: boolean("is_serial_promiser").default(false), // Makes promises but rarely keeps them
+  isReliableLatePayer: boolean("is_reliable_late_payer").default(false), // Pays late but consistently
+  isRelationshipDeteriorating: boolean("is_relationship_deteriorating").default(false), // PRS trending down
+  isNewCustomer: boolean("is_new_customer").default(true), // Cold start - less than 3 interactions
+  hasActiveDispute: boolean("has_active_dispute").default(false), // Currently disputing an invoice
+  
+  // Payment personality profiling
+  averageDaysLate: decimal("average_days_late", { precision: 8, scale: 2 }),
+  preferredPaymentDay: integer("preferred_payment_day"), // 1-31 (day of month they typically pay)
+  responsiveness: varchar("responsiveness"), // high, medium, low, none
+  
+  // Relationship health trajectory
+  sentimentTrend: varchar("sentiment_trend"), // improving, stable, deteriorating
+  lastPositiveInteraction: timestamp("last_positive_interaction"),
+  lastNegativeInteraction: timestamp("last_negative_interaction"),
+  consecutiveNegativeInteractions: integer("consecutive_negative_interactions").default(0),
+  
+  // Engagement metrics
+  totalInboundMessages: integer("total_inbound_messages").default(0),
+  totalOutboundMessages: integer("total_outbound_messages").default(0),
+  lastEngagementDate: timestamp("last_engagement_date"),
+  engagementScore: decimal("engagement_score", { precision: 5, scale: 2 }), // 0-100
+  
   // Metadata
   lastUpdated: timestamp("last_updated").defaultNow(),
+  lastCalculatedAt: timestamp("last_calculated_at").defaultNow(),
+  calculationVersion: varchar("calculation_version").default("1.0"), // Track algorithm version
   createdAt: timestamp("created_at").defaultNow(),
 }, (table) => [
-  unique("customer_learning_profiles_tenant_contact").on(table.tenantId, table.contactId)
+  unique("customer_learning_profiles_tenant_contact").on(table.tenantId, table.contactId),
+  index("idx_customer_profiles_prs").on(table.promiseReliabilityScore),
+  index("idx_customer_profiles_flags").on(table.isSerialPromiser, table.isRelationshipDeteriorating),
 ]);
 
 // Action effectiveness tracking - measures success of each collection action
@@ -2989,17 +3029,41 @@ export const actionLogs = pgTable("action_logs", {
   index("idx_action_logs_created_at").on(table.createdAt),
 ]);
 
-// Payment promises table for tracking customer payment commitments
+// Payment promises table for tracking customer payment commitments (Enhanced for PRS)
 export const paymentPromises = pgTable("payment_promises", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
   invoiceId: varchar("invoice_id").notNull().references(() => invoices.id),
   contactId: varchar("contact_id").notNull().references(() => contacts.id),
-  promisedAmount: decimal("promised_amount", { precision: 10, scale: 2 }).notNull(),
+  
+  // Promise details
+  promiseType: varchar("promise_type").notNull().default("payment_date"), // payment_date, partial_payment, payment_plan, callback, dispute_resolution
+  promisedAmount: decimal("promised_amount", { precision: 10, scale: 2 }),
   promisedDate: timestamp("promised_date").notNull(),
-  status: varchar("status").notNull().default("open"), // 'open', 'kept', 'broken', 'rescheduled'
-  notes: text("notes"), // Additional context about the promise
+  
+  // Source tracking - where did the promise come from?
+  sourceType: varchar("source_type").notNull(), // inbound_message, action_item, voice_call, manual
+  sourceId: varchar("source_id"), // ID of the inbound message, action item, or call
+  channel: varchar("channel"), // email, sms, voice, whatsapp
+  
+  // Status and outcomes
+  status: varchar("status").notNull().default("open"), // open, kept, broken, partially_kept, rescheduled, cancelled
+  actualPaymentDate: timestamp("actual_payment_date"), // When payment was actually made (if kept)
+  actualPaymentAmount: decimal("actual_payment_amount", { precision: 10, scale: 2 }), // Actual amount paid
+  daysLate: integer("days_late"), // How many days late from promised date (negative if early)
+  
+  // Behavioral tracking
+  isSerialPromise: boolean("is_serial_promise").default(false), // True if customer has made multiple promises for same invoice
+  previousPromiseId: varchar("previous_promise_id"), // Link to previous broken promise if rescheduled
+  promiseSequence: integer("promise_sequence").default(1), // 1st, 2nd, 3rd promise for this invoice
+  
+  // Additional context
+  notes: text("notes"),
+  metadata: jsonb("metadata"), // Additional structured data (call transcript excerpts, email snippets, etc.)
+  
   createdByUserId: varchar("created_by_user_id").notNull().references(() => users.id),
+  evaluatedAt: timestamp("evaluated_at"), // When the promise outcome was determined
+  evaluatedByUserId: varchar("evaluated_by_user_id").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => [
@@ -3008,7 +3072,10 @@ export const paymentPromises = pgTable("payment_promises", {
   index("idx_payment_promises_tenant_invoice").on(table.tenantId, table.invoiceId),
   index("idx_payment_promises_promised_date").on(table.promisedDate),
   index("idx_payment_promises_contact_id").on(table.contactId),
+  index("idx_payment_promises_source").on(table.sourceType, table.sourceId),
+  index("idx_payment_promises_promise_type").on(table.promiseType),
 ]);
+
 
 // Relations for Action Centre tables
 export const actionItemsRelations = relations(actionItems, ({ one, many }) => ({
@@ -3065,6 +3132,10 @@ export const paymentPromisesRelations = relations(paymentPromises, ({ one }) => 
   }),
   createdByUser: one(users, {
     fields: [paymentPromises.createdByUserId],
+    references: [users.id],
+  }),
+  evaluatedByUser: one(users, {
+    fields: [paymentPromises.evaluatedByUserId],
     references: [users.id],
   }),
 }));

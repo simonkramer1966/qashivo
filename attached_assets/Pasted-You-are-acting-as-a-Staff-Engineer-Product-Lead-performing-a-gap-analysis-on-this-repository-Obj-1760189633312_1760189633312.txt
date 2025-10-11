@@ -1,0 +1,179 @@
+You are acting as a Staff Engineer + Product Lead performing a gap analysis on this repository.
+
+Objective
+---------
+Compare the current codebase to the following UPDATED Investor MVP specification for **Qashivo** (SME credit control app). Then produce:
+1) A concise “What’s Missing” report.
+2) A prioritized backlog of jobs (with acceptance criteria) to close the gaps.
+3) A mapping table showing which MVP capabilities are PRESENT, PARTIAL, or MISSING with direct links to files/functions.
+
+Scope: READ-ONLY analysis. Do not rewrite files unless explicitly asked. Be specific and pragmatic.
+
+--- Qashivo Investor MVP — Source of Truth (UPDATED) ---
+
+A. Required capabilities (MVP-01..MVP-26)
+
+MVP-01 Promise-to-Pay (PTP) lifecycle
+- Capture PTP on an invoice; statuses: active | kept | broken | replaced | cancelled.
+- Auto-mark kept/broken from Payments.
+- Store promised_date, created_ts, source_message_id, created_by, kept_ts.
+
+MVP-02 Promise Reliability Score (PRS)
+- Exponential decay half-life = 60 days across past PTP outcomes.
+- PRS_mean = (1 + successes_d) / (2 + successes_d + failures_d).
+- Compute Wilson lower bound @95% (PRS_LB95) for conservative routing.
+
+MVP-03 Guardrails (baseline)
+- Suppress dunning when dispute_active OR when PTP is active (before promised_date).
+
+MVP-04 Escalation rule
+- If PRS_LB95 < 0.40 OR broken_ptp_in_30d >= 1 → create “senior_call in 24h”; suppress templated nudges.
+
+MVP-05 Predicted pay date v0
+- P50 = due_date + expected_slip_days(buyer).
+- P90 = P50 + segment_q90_slip.
+- If active PTP exists, clamp P50 to promised_date unless history shows consistent slip.
+
+MVP-06 90‑day cash-in curve
+- Portfolio roll-up using per-invoice P50/P90 to plot P50 band and P90 band over next 90 days.
+
+MVP-07 Explainability
+- Every recommended action shows 2–3 reasons (e.g., “PRS_LB95=0.31; 1 broken PTP in 30d; sentiment down”).
+
+MVP-08 Prioritized Worklist
+- Sort by: high value & low PRS, broken PTP, approaching PTP date, then others.
+
+MVP-09 Invoice Detail screen
+- Invoice status, dispute badge, PTP panel, predicted pay date, next action, and “why”.
+
+MVP-10 Portfolio Dashboard
+- Cash curve (P50/P90), tiles: PTP kept rate, average slip days, mis-fires count (dunning during dispute/after payment).
+
+MVP-11 “Insured” flag & buyer limit (stub)
+- Toggle at invoice level; when ON, show indemnity % (e.g., 90%) and buyer limit.
+
+MVP-12 Spot finance offer (stub)
+- If invoice undisputed & insured flag ON, show a partner-backed offer card: advance %, fee, tenor note. No real underwriting.
+
+MVP-13 Recovery timeline (stub)
+- For EN/Wales: show earliest dates for PAP Letter (sole trader) or LBA (company), MCOL issue date, and post-judgment transfer-up eligibility (>£600). Buttons disabled with tooltip “available post-funding”.
+
+MVP-14 Messaging guardrails (basic)
+- Send window (08:30–17:30 local, weekdays only), max 3 touches/week, respect opt-out flag.
+
+MVP-15 Templates & call script (minimal)
+- Two email templates: gentle_nudge, firm_ptp_plus_consequence.
+- One **voice call script** suitable for AI agent.
+
+MVP-16 Demo dataset & toggles
+- Seed data (~10 customers / 120 invoices) covering predictable-late vs serial-promiser behaviors.
+- UI toggles to: set dispute on/off, add PTP, mark broken PTP, flip insured flag.
+
+--- NEW multi-channel + webhook capabilities ---
+
+MVP-17 Webhook ingestion (SMS + email)
+- HTTP endpoints to receive provider webhooks containing: message_id, thread_id, customer_id, invoice_id?, ts, channel, direction, actor, text, intents[], sentiment, provider_signature.
+- Store as Comm events; update response_latency, sentiment trend, and allow these events to trigger playbook rules.
+
+MVP-18 Outbound AI voice calls (integration)
+- Ability to schedule an AI voice call action from the playbook.
+- Receive **voice webhooks** for call events: started, connected, voicemail, completed, failed, transcript_url, summary, detected_intents[], detected_sentiment, ptp_captured (date?), call_result (spoke/voicemail/failed).
+- If ptp_captured=true, create/attach a PTP with source="voice" and promised_date parsed from payload or transcript.
+
+MVP-19 Channel policy & throttling v2
+- Per-channel budgets and windows (Email, SMS, Voice): max attempts/week and time-of-day windows.
+- Fallback order (e.g., Email → SMS → Voice) configurable; prevent voice if customer opted out or has recent “do-not-call” flag.
+
+MVP-20 Webhook security & idempotency
+- Verify provider signatures (e.g., HMAC); reject on fail.
+- Idempotency keys to avoid duplicate actions on retry.
+
+MVP-21 Explainability (channel-aware)
+- Next-action reasons must reference channel logic (e.g., “Voice chosen: PRS_LB95 low, broken PTP, email unresponsive 10d, within call window”).
+- Customer 360 shows latest **voice transcript snippet/summary** and sentiment.
+
+MVP-22 Outcome logging for voice
+- Record talk path: attempts, connect status, duration_s, result, who spoke to, and whether a PTP or dispute was captured.
+- Use outcomes to update PRS/RHS.
+
+MVP-23 Opt-out/blacklist per channel
+- Fields and enforcement for email_opt_out, sms_opt_out, voice_opt_out/do_not_call; UI badges and hard guardrails.
+
+MVP-24 Inbound reply threading
+- Map inbound SMS/email/voice callbacks to existing threads by thread_id or heuristic; update response_latency metrics.
+
+MVP-25 Test harness for webhooks (dev)
+- CLI or test endpoint to replay canned webhook payloads for SMS/email/voice so demos are deterministic.
+
+MVP-26 Metrics for multi-channel
+- Tiles: call connect rate, PTP captured via voice %, % actions blocked by guardrails, webhook error rate.
+
+B. Minimal architecture assumptions (adapt mapping if stack differs)
+- API: FastAPI (or similar) with endpoints/modules for: invoices, payments, promises, disputes, actions, **/webhooks/{provider}**.
+- DB: Postgres tables: customers, invoices, payments, promises, disputes, comms, actions_log, features_daily, **webhook_events**, **call_attempts**.
+- Feature job: recomputes PRS and expected_slip daily + on events (including webhooks).
+- Rules/Playbook: predicate engine now aware of channel budgets and windows.
+- UI: 5 surfaces — Portfolio, Worklist, Customer 360 (now includes transcript/summary), Invoice Detail, Settings (now includes per-channel throttles and webhook secret config).
+
+C. Data contracts you should look for (names can vary; map heuristically)
+- Comm: { message_id, thread_id, customer_id, invoice_id?, ts, channel(email|sms|voice), direction, actor, text?, intents[], sentiment?, provider, provider_ref, webhook_received_ts }
+- VoiceCallAttempt: { attempt_id, customer_id, invoice_id?, scheduled_ts, started_ts?, connected_ts?, ended_ts?, duration_s?, result(spoke|voicemail|failed), transcript_url?, summary?, detected_intents[], detected_sentiment }
+- Promise: { promise_id, invoice_id, customer_id, created_ts, promised_date, source_message_id?, source('email'|'sms'|'voice'|'ui'), created_by, status, kept_ts? }
+- WebhookEvent: { idempotency_key, provider, payload_hash, received_ts, verified(bool), status(processed|ignored) }
+- Actions_log: { id, customer_id, invoice_id?, action(email|sms|voice|task|hold), due_at?, reasons[], created_ts }
+
+D. Acceptance tests this MVP must pass live (add to AC-1..AC-6)
+
+AC-1: Set dispute_active=true on an invoice → zero outbound dunning; audit shows guardrail fired.
+AC-2: Log a PTP for Friday → cadence shifts; if unpaid by Monday, a broken‑promise task appears.
+AC-3: Two customers send the same “We’ll pay Friday” → one escalates (low PRS), one de‑prioritizes (predictable-late).
+AC-4: Cash curve updates when PRS/PTP status changes.
+AC-5: Finance card changes when Insured toggle flips.
+AC-6: Send window and max touches correctly throttle outbound.
+AC-7: **Voice webhook** with ptp_captured=true creates a PTP and suppresses further dunning; Explainability shows “captured via voice”.
+AC-8: **Inbound SMS/email webhook** updates sentiment and response_latency; RHS alert triggers AM outreach when slope falls.
+AC-9: **Channel budgets** enforce max voice attempts/week and voice time window; attempts beyond limits are blocked and logged.
+AC-10: **Webhook idempotency**: replaying the same provider payload (same idempotency_key) does NOT duplicate PTPs or actions.
+
+--- Your analysis tasks ---
+
+1) Inventory & mapping
+- Scan the repo: list relevant files, DB migrations/schemas, endpoints, background jobs, UI components.
+- Map each to MVP-01..MVP-26. For each capability, mark:
+  - Status: PRESENT | PARTIAL | MISSING.
+  - Where found (file path + symbol names).
+  - What’s wrong or incomplete (if PARTIAL).
+  - Exact blockers (e.g., “no Wilson LB95”, “no call throttling”, “no webhook signature verification”, “no 90-day roll-up”).
+
+2) Produce the prioritized backlog
+For each MISSING or PARTIAL item, create a job entry with:
+- id: MVP-XX
+- title
+- rationale (one sentence)
+- acceptance criteria (tie to AC-1..AC-10 where relevant)
+- dependencies
+- suggested files/modules to add or edit
+- T-shirt effort: S/M/L
+
+3) Call out risky gaps (red flags)
+- Anything that would make the demo fail AC-1..AC-10.
+- Missing seed data or webhook harness preventing deterministic demo.
+- Deliverability/guardrail holes (ability to over-call or over-text).
+
+4) Output format (both human + machine)
+- HUMAN: Markdown report with three sections:
+  A) Executive summary (top 10 missing items),
+  B) Detailed backlog (jobs grouped by domain: Data, Features, Rules, UI, Webhooks/Voice, Demo/Seeds),
+  C) Found vs Missing mapping table.
+- MACHINE: A JSON block named JobList with an array of {id, title, status, rationale, acceptance_criteria[], dependencies[], files[], effort} so we can import into a tracker.
+
+5) Be specific and reference code
+- Always point to exact file paths and function/class names when you mark something PRESENT/PARTIAL.
+- If a capability is already present, say so and note any polish needed to pass ACs.
+
+6) Quality bar (self-check before returning)
+- Does every MVP-01..MVP-26 line have a status?
+- Do the acceptance criteria tie back to AC-1..AC-10 where relevant?
+- Are there at least 2 quick wins (S-size) we can ship in <1 day to de-risk the demo?
+
+Return the report now. Do not make code changes in this pass.
