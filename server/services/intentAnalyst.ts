@@ -2,6 +2,7 @@ import OpenAI from "openai";
 import { db } from "../db";
 import { inboundMessages, actions, contacts, invoices } from "@shared/schema";
 import { eq, and } from "drizzle-orm";
+import { getPromiseReliabilityService } from "./promiseReliabilityService.js";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -192,6 +193,11 @@ Respond with valid JSON only, no markdown formatting.`
       // Auto-create action if high confidence
       if (analysis.confidence >= this.CONFIDENCE_THRESHOLD && analysis.intentType !== 'unknown') {
         await this.createActionFromIntent(message, analysis);
+        
+        // Create promise record if this is a promise_to_pay intent
+        if (analysis.intentType === 'promise_to_pay' && message.contactId && message.invoiceId) {
+          await this.createPromiseFromIntent(message, analysis, context);
+        }
       } else {
         console.log(`⚠️  Low confidence (${(analysis.confidence * 100).toFixed(0)}%) - flagged for manual review`);
       }
@@ -304,6 +310,132 @@ Respond with valid JSON only, no markdown formatting.`
     content += `Message:\n"${message.content}"`;
     
     return content;
+  }
+
+  /**
+   * Create a promise record from promise_to_pay intent
+   */
+  private async createPromiseFromIntent(
+    message: typeof inboundMessages.$inferSelect,
+    analysis: IntentAnalysisResult,
+    context: any
+  ): Promise<void> {
+    try {
+      const promiseService = getPromiseReliabilityService();
+      
+      // Extract promised date from entities
+      let promisedDate: Date | null = null;
+      if (analysis.extractedEntities.dates && analysis.extractedEntities.dates.length > 0) {
+        // Try to parse the first date mentioned
+        const dateStr = analysis.extractedEntities.dates[0];
+        promisedDate = this.parsePromisedDate(dateStr);
+      }
+      
+      // If no date extracted, default to 7 days from now
+      if (!promisedDate) {
+        promisedDate = new Date();
+        promisedDate.setDate(promisedDate.getDate() + 7);
+      }
+      
+      // Extract promised amount from entities
+      let promisedAmount: number | undefined;
+      if (analysis.extractedEntities.amounts && analysis.extractedEntities.amounts.length > 0) {
+        const amountStr = analysis.extractedEntities.amounts[0];
+        promisedAmount = this.parseAmount(amountStr);
+      }
+      
+      // Get a user ID (system user) for promise creation
+      // TODO: In production, this should be a proper system user or the tenant's default user
+      const systemUserId = message.tenantId; // Temporary workaround
+      
+      const promise = await promiseService.createPromise({
+        tenantId: message.tenantId,
+        contactId: message.contactId!,
+        invoiceId: message.invoiceId!,
+        promiseType: 'payment_date',
+        promisedDate,
+        promisedAmount,
+        sourceType: 'inbound_message',
+        sourceId: message.id,
+        channel: message.channel,
+        createdByUserId: systemUserId,
+        notes: `Promise extracted from ${message.channel} message`,
+        metadata: {
+          originalMessage: message.content,
+          extractedEntities: analysis.extractedEntities,
+          confidence: analysis.confidence,
+          sentiment: analysis.sentiment,
+        },
+      });
+      
+      console.log(`✅ Promise created: ${promise.id} - Payment by ${promisedDate.toLocaleDateString()}`);
+    } catch (error) {
+      console.error('❌ Error creating promise from intent:', error);
+    }
+  }
+  
+  /**
+   * Parse a date string from natural language
+   */
+  private parsePromisedDate(dateStr: string): Date | null {
+    try {
+      // Handle common patterns
+      const lowerStr = dateStr.toLowerCase();
+      const now = new Date();
+      
+      // "tomorrow"
+      if (lowerStr.includes('tomorrow')) {
+        const tomorrow = new Date(now);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        return tomorrow;
+      }
+      
+      // "next week" or "week"
+      if (lowerStr.includes('next week') || lowerStr === 'week') {
+        const nextWeek = new Date(now);
+        nextWeek.setDate(nextWeek.getDate() + 7);
+        return nextWeek;
+      }
+      
+      // "friday" or other day names
+      const dayNames = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+      for (let i = 0; i < dayNames.length; i++) {
+        if (lowerStr.includes(dayNames[i])) {
+          const targetDay = i + 1; // Monday = 1
+          const currentDay = now.getDay() || 7; // Sunday = 7
+          let daysToAdd = targetDay - currentDay;
+          if (daysToAdd <= 0) daysToAdd += 7; // Next week if day already passed
+          const result = new Date(now);
+          result.setDate(result.getDate() + daysToAdd);
+          return result;
+        }
+      }
+      
+      // Try standard date parsing
+      const parsed = new Date(dateStr);
+      if (!isNaN(parsed.getTime())) {
+        return parsed;
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('Error parsing date:', error);
+      return null;
+    }
+  }
+  
+  /**
+   * Parse amount from string
+   */
+  private parseAmount(amountStr: string): number | undefined {
+    try {
+      // Remove currency symbols and commas
+      const cleaned = amountStr.replace(/[£$€,]/g, '').trim();
+      const amount = parseFloat(cleaned);
+      return isNaN(amount) ? undefined : amount;
+    } catch (error) {
+      return undefined;
+    }
   }
 
   /**

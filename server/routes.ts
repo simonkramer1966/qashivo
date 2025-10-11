@@ -2890,6 +2890,125 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // === Promise Reliability Score (PRS) Routes ===
+  
+  // Get PRS summary for a contact
+  app.get("/api/contacts/:contactId/prs", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { contactId } = req.params;
+      
+      // Import Promise Reliability Service
+      const { getPromiseReliabilityService } = await import('./services/promiseReliabilityService.js');
+      const promiseService = getPromiseReliabilityService();
+      
+      const prsSummary = await promiseService.getCustomerPRSSummary(user.tenantId, contactId);
+      
+      if (!prsSummary) {
+        return res.json({
+          contactId,
+          promiseReliabilityScore: 0,
+          totalPromises: 0,
+          promisesKept: 0,
+          promisesBroken: 0,
+          promisesPartiallyKept: 0,
+          prsLast30Days: 0,
+          prsLast90Days: 0,
+          prsLast12Months: 0,
+          behavioralFlags: {
+            isSerialPromiser: false,
+            isReliableLatePayer: false,
+            isRelationshipDeteriorating: false,
+            isNewCustomer: true,
+          },
+        });
+      }
+      
+      res.json(prsSummary);
+    } catch (error) {
+      console.error("Error getting PRS summary:", error);
+      res.status(500).json({ message: "Failed to get PRS summary" });
+    }
+  });
+  
+  // Get all promises for a contact
+  app.get("/api/contacts/:contactId/promises", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { contactId } = req.params;
+      
+      const { getPromiseReliabilityService } = await import('./services/promiseReliabilityService.js');
+      const promiseService = getPromiseReliabilityService();
+      
+      const promises = await promiseService.getCustomerPromises(user.tenantId, contactId);
+      res.json(promises);
+    } catch (error) {
+      console.error("Error getting customer promises:", error);
+      res.status(500).json({ message: "Failed to get promises" });
+    }
+  });
+  
+  // Evaluate a promise outcome
+  app.post("/api/promises/:promiseId/evaluate", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { promiseId } = req.params;
+      const { status, actualPaymentDate, actualPaymentAmount, notes } = req.body;
+      
+      if (!status || !['kept', 'broken', 'partially_kept', 'cancelled'].includes(status)) {
+        return res.status(400).json({ message: "Invalid status" });
+      }
+      
+      const { getPromiseReliabilityService } = await import('./services/promiseReliabilityService.js');
+      const promiseService = getPromiseReliabilityService();
+      
+      const updatedPromise = await promiseService.evaluatePromise({
+        promiseId,
+        status,
+        actualPaymentDate: actualPaymentDate ? new Date(actualPaymentDate) : undefined,
+        actualPaymentAmount,
+        evaluatedByUserId: req.user.claims.sub,
+        notes,
+      });
+      
+      res.json(updatedPromise);
+    } catch (error) {
+      console.error("Error evaluating promise:", error);
+      res.status(500).json({ message: "Failed to evaluate promise" });
+    }
+  });
+  
+  // Get all open promises for evaluation
+  app.get("/api/promises/open", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+      
+      const { getPromiseReliabilityService } = await import('./services/promiseReliabilityService.js');
+      const promiseService = getPromiseReliabilityService();
+      
+      const openPromises = await promiseService.getOpenPromisesForEvaluation(user.tenantId);
+      res.json(openPromises);
+    } catch (error) {
+      console.error("Error getting open promises:", error);
+      res.status(500).json({ message: "Failed to get open promises" });
+    }
+  });
+
   // Sync contact to Xero with risk band
   app.post("/api/contacts/:contactId/sync-to-xero", isAuthenticated, async (req: any, res) => {
     try {
