@@ -626,6 +626,11 @@ export default function ActionCentre() {
                       }
                     };
                     
+                    // For inbound messages, the actual customer message is in metadata
+                    const displayMessage = isInbound && comm.metadata?.originalMessage?.content 
+                      ? comm.metadata.originalMessage.content 
+                      : comm.subject || comm.content || '-';
+                    
                     return (
                       <div
                         key={comm.id}
@@ -688,7 +693,7 @@ export default function ActionCentre() {
                         {/* Subject/Message */}
                         <div className="px-4 py-2 border-b border-slate-100 hover:bg-slate-50 transition-colors flex items-start min-w-0">
                           <p className="text-xs text-slate-700 line-clamp-3">
-                            {comm.subject || comm.content || '-'}
+                            {displayMessage}
                           </p>
                         </div>
 
