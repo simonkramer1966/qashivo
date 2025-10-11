@@ -96,21 +96,54 @@ export function ManualCallCaptureDialog({
   const handleSave = () => {
     // Validate
     if (capturePromise) {
-      if (promiseType !== 'payment_plan' && !promiseDate) {
-        toast({
-          title: "Promise date required",
-          description: "Please select a date for the payment promise.",
-          variant: "destructive",
+      if (promiseType !== 'payment_plan') {
+        if (!promiseDate) {
+          toast({
+            title: "Promise date required",
+            description: "Please select a date for the payment promise.",
+            variant: "destructive",
+          });
+          return;
+        }
+        
+        const amount = parseFloat(promiseAmount);
+        if (!promiseAmount || isNaN(amount) || amount <= 0) {
+          toast({
+            title: "Valid amount required",
+            description: "Please enter a valid positive amount for the payment promise.",
+            variant: "destructive",
+          });
+          return;
+        }
+      } else {
+        // Payment plan validation
+        const validInstallments = installments.filter(i => {
+          const amount = parseFloat(i.amount);
+          return i.date && i.amount && !isNaN(amount) && amount > 0;
         });
-        return;
-      }
-      
-      if (promiseType === 'payment_plan') {
-        const validInstallments = installments.filter(i => i.date && i.amount);
+        
         if (validInstallments.length === 0) {
           toast({
             title: "Payment plan required",
-            description: "Please add at least one installment with date and amount.",
+            description: "Please add at least one installment with valid date and positive amount.",
+            variant: "destructive",
+          });
+          return;
+        }
+        
+        // Check if any installments have invalid amounts
+        const hasInvalidAmounts = installments.some(i => {
+          if (!i.date && !i.amount) return false; // Skip empty rows
+          if (i.date && (!i.amount || isNaN(parseFloat(i.amount)) || parseFloat(i.amount) <= 0)) {
+            return true;
+          }
+          return false;
+        });
+        
+        if (hasInvalidAmounts) {
+          toast({
+            title: "Invalid installment amount",
+            description: "All installments with dates must have valid positive amounts.",
             variant: "destructive",
           });
           return;

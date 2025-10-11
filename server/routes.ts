@@ -55,7 +55,8 @@ import {
   bankTransactions,
   seasonalPatterns,
   customerLearningProfiles,
-  inboundMessages
+  inboundMessages,
+  smsMessages
 } from "@shared/schema";
 import { getOverdueCategoryFromDueDate } from "@shared/utils/overdueUtils";
 import { calculateLatePaymentInterest } from "./utils/interestCalculator";
@@ -3671,16 +3672,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const { getPromiseReliabilityService } = await import('./services/promiseReliabilityService.js');
         const promiseService = getPromiseReliabilityService();
 
-        if (promiseType === 'payment_plan' && installments && installments.length > 0) {
+        if (promiseType === 'payment_plan') {
+          // Payment plan must have installments array
+          if (!installments || installments.length === 0) {
+            return res.status(400).json({ 
+              message: "Payment plan requires at least one installment" 
+            });
+          }
+
+          // Validate installments
+          const validInstallments = installments.filter(i => {
+            const amount = parseFloat(i.amount);
+            return i.date && i.amount && !isNaN(amount) && amount > 0;
+          });
+
+          if (validInstallments.length === 0) {
+            return res.status(400).json({ 
+              message: "Payment plan requires at least one installment with valid date and positive amount" 
+            });
+          }
+
           // Create multiple promises for payment plan
-          for (const installment of installments) {
+          for (const installment of validInstallments) {
             const promise = await promiseService.createPromise({
               tenantId: user.tenantId,
               contactId,
               invoiceId,
               promiseType: 'payment_plan',
               promisedDate: new Date(installment.date),
-              promisedAmount: installment.amount,
+              promisedAmount: parseFloat(installment.amount),
               sourceType: 'manual',
               sourceId: callAction.id,
               channel: 'phone',
@@ -3690,6 +3710,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
             promises.push(promise);
           }
         } else if (promiseDate && promiseAmount) {
+          // Validate promise amount
+          const amount = parseFloat(promiseAmount);
+          if (isNaN(amount) || amount <= 0) {
+            return res.status(400).json({ 
+              message: "Promise amount must be a valid positive number" 
+            });
+          }
+
           // Create single promise
           const promise = await promiseService.createPromise({
             tenantId: user.tenantId,
@@ -3697,7 +3725,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             invoiceId,
             promiseType: promiseType || 'payment_date',
             promisedDate: new Date(promiseDate),
-            promisedAmount: parseFloat(promiseAmount),
+            promisedAmount: amount,
             sourceType: 'manual',
             sourceId: callAction.id,
             channel: 'phone',
@@ -3705,6 +3733,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
             notes: notes || '',
           });
           promises.push(promise);
+        } else if (promiseType !== 'payment_plan') {
+          // If not payment plan, require promiseDate and promiseAmount
+          return res.status(400).json({ 
+            message: "Promise date and amount are required for single promises" 
+          });
         }
       }
 
