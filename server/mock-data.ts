@@ -291,15 +291,16 @@ const INDUSTRIES = [
 ];
 
 // Service types with realistic pricing
+// All invoices between £500 - £25,000
 const SERVICE_TYPES = [
-  { name: 'Monthly Consulting', minAmount: 25000, maxAmount: 500000 },    // £250 - £5,000
-  { name: 'Project Delivery', minAmount: 50000, maxAmount: 500000 },     // £500 - £5,000  
-  { name: 'Technical Support', minAmount: 30000, maxAmount: 200000 },    // £300 - £2,000
-  { name: 'Software Licensing', minAmount: 100000, maxAmount: 300000 },  // £1,000 - £3,000
-  { name: 'Implementation Services', minAmount: 200000, maxAmount: 500000 }, // £2,000 - £5,000
-  { name: 'Training & Development', minAmount: 75000, maxAmount: 350000 },   // £750 - £3,500
-  { name: 'Maintenance Contract', minAmount: 40000, maxAmount: 250000 },     // £400 - £2,500
-  { name: 'Strategic Advisory', minAmount: 150000, maxAmount: 500000 }       // £1,500 - £5,000
+  { name: 'Monthly Consulting', minAmount: 50000, maxAmount: 2500000 },    // £500 - £25,000
+  { name: 'Project Delivery', minAmount: 50000, maxAmount: 2500000 },      // £500 - £25,000  
+  { name: 'Technical Support', minAmount: 50000, maxAmount: 2500000 },     // £500 - £25,000
+  { name: 'Software Licensing', minAmount: 50000, maxAmount: 2500000 },    // £500 - £25,000
+  { name: 'Implementation Services', minAmount: 50000, maxAmount: 2500000 }, // £500 - £25,000
+  { name: 'Training & Development', minAmount: 50000, maxAmount: 2500000 },   // £500 - £25,000
+  { name: 'Maintenance Contract', minAmount: 50000, maxAmount: 2500000 },     // £500 - £25,000
+  { name: 'Strategic Advisory', minAmount: 50000, maxAmount: 2500000 }       // £500 - £25,000
 ];
 
 // Utility functions for realistic data generation
