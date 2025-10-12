@@ -33,7 +33,8 @@ import {
   BookOpen,
   Calculator,
   UserPlus,
-  Wallet
+  Wallet,
+  Brain
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -72,6 +73,7 @@ const navigationItems = [
   
   // Section 4: AI & Intelligence
   { name: "AI Insights", href: "/insights", icon: BarChart3 },
+  { name: "Client Intelligence", href: "/client-intelligence", icon: Brain },
 ];
 
 // Partner-specific navigation items

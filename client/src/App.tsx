@@ -29,6 +29,7 @@ const PartnerRegistration = lazy(() => import("@/pages/partner-registration"));
 const ClientRegistration = lazy(() => import("@/pages/client-registration"));
 const SignIn = lazy(() => import("@/pages/signin"));
 const Insights = lazy(() => import("@/pages/insights"));
+const ClientIntelligence = lazy(() => import("@/pages/client-intelligence"));
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -81,6 +82,7 @@ function Router() {
           <Route path="/documentation" component={Documentation} />
           <Route path="/documentation-review" component={DocumentationReview} />
           <Route path="/insights" component={Insights} />
+          <Route path="/client-intelligence" component={ClientIntelligence} />
           <Route path="/settings" component={Settings} />
           <Route path="/account" component={Account} />
           <Route path="/" component={Cashboard} />
