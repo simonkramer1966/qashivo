@@ -4,48 +4,49 @@ import type { InsertContact, InsertInvoice, InsertAction } from "@shared/schema"
 // Enhanced testing clients - 20 strategically designed for automation testing
 const testingClients = [
   // Group 1: Current invoices (not yet due) - 5 clients
-  { name: "Sarah Mitchell", company: "TechFlow Solutions", email: "info@nexuskpi.com", phone: "07716 273336", group: "current" },
-  { name: "David Rodriguez", company: "Digital Marketing Pro", email: "info@nexuskpi.com", phone: "07716 273336", group: "current" },
-  { name: "Emily Chen", company: "CloudSync Technologies", email: "info@nexuskpi.com", phone: "07716 273336", group: "current" },
-  { name: "Michael Johnson", company: "E-Commerce Empire", email: "info@nexuskpi.com", phone: "07716 273336", group: "current" },
-  { name: "Jessica Thompson", company: "FinTech Innovations", email: "info@nexuskpi.com", phone: "07716 273336", group: "current" },
+  { name: "Sarah Mitchell", company: "TechFlow Solutions", email: "info@nexuskpi.com", phone: "+447716273336", group: "current" },
+  { name: "David Rodriguez", company: "Digital Marketing Pro", email: "info@nexuskpi.com", phone: "+447716273336", group: "current" },
+  { name: "Emily Chen", company: "CloudSync Technologies", email: "info@nexuskpi.com", phone: "+447716273336", group: "current" },
+  { name: "Michael Johnson", company: "E-Commerce Empire", email: "info@nexuskpi.com", phone: "+447716273336", group: "current" },
+  { name: "Jessica Thompson", company: "FinTech Innovations", email: "info@nexuskpi.com", phone: "+447716273336", group: "current" },
   
   // Group 2: 1-7 days overdue - 5 clients  
-  { name: "Robert Anderson", company: "HealthTech Solutions", email: "info@nexuskpi.com", phone: "07716 273336", group: "early_overdue" },
-  { name: "Amanda Williams", company: "RetailRise Brands", email: "info@nexuskpi.com", phone: "07716 273336", group: "early_overdue" },
-  { name: "Christopher Lee", company: "SaaS Dynamics", email: "info@nexuskpi.com", phone: "07716 273336", group: "early_overdue" },
-  { name: "Rachel Garcia", company: "Global Manufacturing Corp", email: "info@nexuskpi.com", phone: "07716 273336", group: "early_overdue" },
-  { name: "Daniel Martinez", company: "StartupLaunch Ventures", email: "info@nexuskpi.com", phone: "07716 273336", group: "early_overdue" },
+  { name: "Robert Anderson", company: "HealthTech Solutions", email: "info@nexuskpi.com", phone: "+447716273336", group: "early_overdue" },
+  { name: "Amanda Williams", company: "RetailRise Brands", email: "info@nexuskpi.com", phone: "+447716273336", group: "early_overdue" },
+  { name: "Christopher Lee", company: "SaaS Dynamics", email: "info@nexuskpi.com", phone: "+447716273336", group: "early_overdue" },
+  { name: "Rachel Garcia", company: "Global Manufacturing Corp", email: "info@nexuskpi.com", phone: "+447716273336", group: "early_overdue" },
+  { name: "Daniel Martinez", company: "StartupLaunch Ventures", email: "info@nexuskpi.com", phone: "+447716273336", group: "early_overdue" },
   
   // Group 3: 8-21 days overdue - 5 clients
-  { name: "Lisa Brown", company: "CyberSecurity First", email: "info@nexuskpi.com", phone: "07716 273336", group: "mid_overdue" },
-  { name: "Kevin Wilson", company: "PropTech Innovations", email: "info@nexuskpi.com", phone: "07716 273336", group: "mid_overdue" },
-  { name: "Jennifer Davis", company: "AI Analytics Co", email: "info@nexuskpi.com", phone: "07716 273336", group: "mid_overdue" },
-  { name: "Matthew Taylor", company: "GreenEnergy Solutions", email: "info@nexuskpi.com", phone: "07716 273336", group: "mid_overdue" },
-  { name: "Ashley Miller", company: "LogisticsTech Hub", email: "info@nexuskpi.com", phone: "07716 273336", group: "mid_overdue" },
+  { name: "Lisa Brown", company: "CyberSecurity First", email: "info@nexuskpi.com", phone: "+447716273336", group: "mid_overdue" },
+  { name: "Kevin Wilson", company: "PropTech Innovations", email: "info@nexuskpi.com", phone: "+447716273336", group: "mid_overdue" },
+  { name: "Jennifer Davis", company: "AI Analytics Co", email: "info@nexuskpi.com", phone: "+447716273336", group: "mid_overdue" },
+  { name: "Matthew Taylor", company: "GreenEnergy Solutions", email: "info@nexuskpi.com", phone: "+447716273336", group: "mid_overdue" },
+  { name: "Ashley Miller", company: "LogisticsTech Hub", email: "info@nexuskpi.com", phone: "+447716273336", group: "mid_overdue" },
   
   // Group 4: 22+ days overdue - 5 clients
-  { name: "James White", company: "MedDevice Innovations", email: "info@nexuskpi.com", phone: "07716 273336", group: "late_overdue" },
-  { name: "Nicole Jackson", company: "EduTech Solutions", email: "info@nexuskpi.com", phone: "07716 273336", group: "late_overdue" },
-  { name: "Andrew Harris", company: "SportsTech Dynamics", email: "info@nexuskpi.com", phone: "07716 273336", group: "late_overdue" },
-  { name: "Stephanie Clark", company: "FoodTech Enterprises", email: "info@nexuskpi.com", phone: "07716 273336", group: "late_overdue" },
-  { name: "Brandon Lewis", company: "LegalTech Innovations", email: "info@nexuskpi.com", phone: "07716 273336", group: "late_overdue" }
+  { name: "James White", company: "MedDevice Innovations", email: "info@nexuskpi.com", phone: "+447716273336", group: "late_overdue" },
+  { name: "Nicole Jackson", company: "EduTech Solutions", email: "info@nexuskpi.com", phone: "+447716273336", group: "late_overdue" },
+  { name: "Andrew Harris", company: "SportsTech Dynamics", email: "info@nexuskpi.com", phone: "+447716273336", group: "late_overdue" },
+  { name: "Stephanie Clark", company: "FoodTech Enterprises", email: "info@nexuskpi.com", phone: "+447716273336", group: "late_overdue" },
+  { name: "Brandon Lewis", company: "LegalTech Innovations", email: "info@nexuskpi.com", phone: "+447716273336", group: "late_overdue" }
 ];
 
 // Project types and pricing ranges (amounts in pence for database storage)
+// All invoices between £500 - £25,000
 const projectTypes = [
-  { name: "Brand Identity Design", minAmount: 50000, maxAmount: 500000 },        // £500 - £5,000
-  { name: "Website Development", minAmount: 150000, maxAmount: 2500000 },       // £1,500 - £25,000
-  { name: "Mobile App Development", minAmount: 500000, maxAmount: 5000000 },    // £5,000 - £50,000
-  { name: "Digital Marketing Campaign", minAmount: 100000, maxAmount: 1500000 }, // £1,000 - £15,000
-  { name: "SEO Optimization", minAmount: 75000, maxAmount: 800000 },            // £750 - £8,000
-  { name: "Social Media Management", minAmount: 50000, maxAmount: 300000 },     // £500 - £3,000
-  { name: "Content Strategy", minAmount: 100000, maxAmount: 1000000 },          // £1,000 - £10,000
-  { name: "UI/UX Design", minAmount: 200000, maxAmount: 1500000 },              // £2,000 - £15,000
-  { name: "E-commerce Platform", minAmount: 800000, maxAmount: 3500000 },       // £8,000 - £35,000
-  { name: "Monthly Retainer", minAmount: 150000, maxAmount: 800000 },           // £1,500 - £8,000
-  { name: "Video Production", minAmount: 300000, maxAmount: 2000000 },          // £3,000 - £20,000
-  { name: "Consultation Services", minAmount: 100000, maxAmount: 500000 }       // £1,000 - £5,000
+  { name: "Brand Identity Design", minAmount: 50000, maxAmount: 2500000 },        // £500 - £25,000
+  { name: "Website Development", minAmount: 50000, maxAmount: 2500000 },          // £500 - £25,000
+  { name: "Mobile App Development", minAmount: 50000, maxAmount: 2500000 },       // £500 - £25,000
+  { name: "Digital Marketing Campaign", minAmount: 50000, maxAmount: 2500000 },   // £500 - £25,000
+  { name: "SEO Optimization", minAmount: 50000, maxAmount: 2500000 },             // £500 - £25,000
+  { name: "Social Media Management", minAmount: 50000, maxAmount: 2500000 },      // £500 - £25,000
+  { name: "Content Strategy", minAmount: 50000, maxAmount: 2500000 },             // £500 - £25,000
+  { name: "UI/UX Design", minAmount: 50000, maxAmount: 2500000 },                 // £500 - £25,000
+  { name: "E-commerce Platform", minAmount: 50000, maxAmount: 2500000 },          // £500 - £25,000
+  { name: "Monthly Retainer", minAmount: 50000, maxAmount: 2500000 },             // £500 - £25,000
+  { name: "Video Production", minAmount: 50000, maxAmount: 2500000 },             // £500 - £25,000
+  { name: "Consultation Services", minAmount: 50000, maxAmount: 2500000 }         // £500 - £25,000
 ];
 
 // Generate random amount within range
@@ -222,7 +223,7 @@ export async function generateMockData(tenantId: string): Promise<void> {
   console.log(`   • 5 clients with 1-7 days overdue invoices`);
   console.log(`   • 5 clients with 8-21 days overdue invoices`);
   console.log(`   • 5 clients with 22+ days overdue invoices`);
-  console.log(`   • All contacts use: info@nexuskpi.com & 07716 273336`);
+  console.log(`   • All contacts use: info@nexuskpi.com & +447716273336`);
   console.log(`   • Perfect for testing email → SMS → voice automation workflows`);
 }
 
@@ -502,7 +503,7 @@ export async function generateComprehensiveDataset(
       tenantId,
       name: generateContactName(),
       email: 'info@nexuskpi.com', // Use your email for testing
-      phone: '07716 273336', // Use your phone for testing
+      phone: '+447716273336', // Use your phone for testing
       companyName: generateCompanyName(),
       paymentTerms: industry.paymentTerms,
       preferredContactMethod: getRandomElement(behavior.preferredChannels) as any,
