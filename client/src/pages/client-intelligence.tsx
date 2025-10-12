@@ -149,7 +149,7 @@ export default function ClientIntelligencePage() {
             {/* Top Half - Client Detail */}
             <div className="flex-1 min-h-0">
               {isLoadingDetail || !selectedClientData ? (
-                <Card className="h-full bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
+                <Card className="h-full bg-white/80 backdrop-blur-sm border-white/50 shadow-lg overflow-auto">
                   <CardContent className="p-6">
                     <div className="space-y-4">
                       <Skeleton className="h-8 w-64" />
