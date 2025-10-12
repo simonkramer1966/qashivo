@@ -83,6 +83,31 @@ const behavioralSegments = [
     confidenceGrowth: "+22%"
   },
   {
+    id: "unpredictable_late",
+    name: "Unpredictable Late",
+    icon: Shuffle,
+    color: "#06b6d4",
+    description: "Inconsistent payment patterns. No clear timeline, making collection challenging.",
+    avgPRS: 0.55,
+    avgSentiment: 0.1,
+    trend: [
+      { month: "Jan", score: 0.52 },
+      { month: "Feb", score: 0.58 },
+      { month: "Mar", score: 0.51 },
+      { month: "Apr", score: 0.59 },
+      { month: "May", score: 0.53 },
+      { month: "Jun", score: 0.57 },
+      { month: "Jul", score: 0.54 },
+      { month: "Aug", score: 0.56 },
+      { month: "Sep", score: 0.55 },
+      { month: "Oct", score: 0.58 },
+      { month: "Nov", score: 0.54 },
+      { month: "Dec", score: 0.56 }
+    ],
+    customerCount: 40,
+    confidenceGrowth: "+19%"
+  },
+  {
     id: "disputer",
     name: "Disputer",
     icon: AlertTriangle,
@@ -131,31 +156,6 @@ const behavioralSegments = [
     ],
     customerCount: 40,
     confidenceGrowth: "+45%"
-  },
-  {
-    id: "unpredictable_late",
-    name: "Unpredictable Late",
-    icon: Shuffle,
-    color: "#06b6d4",
-    description: "Inconsistent payment patterns. No clear timeline, making collection challenging.",
-    avgPRS: 0.55,
-    avgSentiment: 0.1,
-    trend: [
-      { month: "Jan", score: 0.52 },
-      { month: "Feb", score: 0.58 },
-      { month: "Mar", score: 0.51 },
-      { month: "Apr", score: 0.59 },
-      { month: "May", score: 0.53 },
-      { month: "Jun", score: 0.57 },
-      { month: "Jul", score: 0.54 },
-      { month: "Aug", score: 0.56 },
-      { month: "Sep", score: 0.55 },
-      { month: "Oct", score: 0.58 },
-      { month: "Nov", score: 0.54 },
-      { month: "Dec", score: 0.56 }
-    ],
-    customerCount: 40,
-    confidenceGrowth: "+19%"
   }
 ];
 
