@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -118,9 +118,11 @@ export default function ClientIntelligencePage() {
     ? parseFloat(selectedClientData.learningProfile.learningConfidence || "0.1")
     : 0.1;
 
-  const getBehavioralSegment = () => {
+  const segment = useMemo(() => {
     if (!selectedClientData) return { name: "Unknown", color: "#94a3b8" };
     const { behavioralFlags, learningProfile } = selectedClientData;
+
+    if (!behavioralFlags) return { name: "Unknown", color: "#94a3b8" };
 
     if (behavioralFlags.isSerialPromiser) return { name: "Serial Promiser", color: "#f97316" };
     if (behavioralFlags.isRelationshipDeteriorating) return { name: "Deteriorating", color: "#be123c" };
@@ -131,9 +133,7 @@ export default function ClientIntelligencePage() {
       return { name: "Unpredictable Late", color: "#f59e0b" };
 
     return { name: "Unknown", color: "#94a3b8" };
-  };
-
-  const segment = getBehavioralSegment();
+  }, [selectedClientData]);
 
   return (
     <div className="flex h-screen bg-white">
