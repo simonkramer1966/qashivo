@@ -6,6 +6,7 @@ import { EmailServiceConfig, EmailMessage, EmailAddress, EmailProvider } from '.
 const config: EmailServiceConfig = {
   provider: EmailProvider.SENDGRID,
   apiKey: process.env.SENDGRID_API_KEY || 'default_key',
+  environment: process.env.NODE_ENV === 'production' ? 'production' : 'development',
   defaultFrom: {
     email: process.env.SENDGRID_FROM_EMAIL || 'noreply@example.com',
     name: process.env.SENDGRID_FROM_NAME || 'Nexus AR'
