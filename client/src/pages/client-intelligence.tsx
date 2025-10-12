@@ -335,10 +335,10 @@ export default function ClientIntelligencePage() {
                               <div className="flex-1 min-w-0 flex items-center gap-3">
                                 <div className="flex-1 min-w-0">
                                   <p className="font-medium text-gray-900 truncate text-sm" data-testid={`text-name-${client.id}`}>
-                                    {client.name}
+                                    {client.companyName || client.name}
                                   </p>
                                   {client.companyName && (
-                                    <p className="text-xs text-gray-500 truncate">{client.companyName}</p>
+                                    <p className="text-xs text-gray-500 truncate">{client.name}</p>
                                   )}
                                 </div>
                                 <Badge
