@@ -176,14 +176,21 @@ async function seedData() {
 
   // Generate customers for each profile
   for (const [profileKey, profile] of Object.entries(PROFILES)) {
-    console.log(`\n📊 Generating ${profile.name} customers (20)...`);
+    console.log(`\n📊 Generating ${profile.name} customers (40)...`);
     
-    for (let i = 0; i < 20; i++) {
+    const contactsBatch: any[] = [];
+    const invoicesBatch: any[] = [];
+    const inboundMessagesBatch: any[] = [];
+    const actionsBatch: any[] = [];
+    const promisesBatch: any[] = [];
+    const profilesBatch: any[] = [];
+    
+    // Step 1: Prepare all contact data
+    for (let i = 0; i < 40; i++) {
       const companyName = faker.company.name();
       const contactEmail = faker.internet.email().toLowerCase();
       
-      // Create contact
-      const [contact] = await db.insert(contacts).values({
+      contactsBatch.push({
         tenantId: LEARNING_DEMO_TENANT_ID,
         name: faker.person.fullName(),
         email: contactEmail,
@@ -192,12 +199,19 @@ async function seedData() {
         role: 'customer',
         isActive: true,
         paymentTerms: 30,
-      }).returning();
+      });
       
       totalCustomers++;
+    }
+    
+    // Step 2: Batch insert all contacts
+    const insertedContacts = await db.insert(contacts).values(contactsBatch).returning();
+    
+    // Step 3: Generate all invoices and communications for these contacts
+    for (const contact of insertedContacts) {
 
-      // Generate 10-18 invoices over 12 months
-      const numInvoices = Math.floor(Math.random() * 9) + 10;
+      // Generate 15-30 invoices over 12 months
+      const numInvoices = Math.floor(Math.random() * 16) + 15;
       const now = new Date();
       const twelveMonthsAgo = new Date(now);
       twelveMonthsAgo.setMonth(now.getMonth() - 12);
@@ -236,8 +250,8 @@ async function seedData() {
         
         totalInvoices++;
 
-        // Generate 3-6 communications per invoice (batch for performance)
-        const numComms = Math.floor(Math.random() * 4) + 3;
+        // Generate 5-10 communications per invoice (batch for performance)
+        const numComms = Math.floor(Math.random() * 6) + 5;
         const isDisputed = Math.random() < profile.disputeRate;
         
         const inboundBatch: any[] = [];
