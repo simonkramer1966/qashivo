@@ -28,6 +28,7 @@ const DocumentationReview = lazy(() => import("@/pages/documentation-review"));
 const PartnerRegistration = lazy(() => import("@/pages/partner-registration"));
 const ClientRegistration = lazy(() => import("@/pages/client-registration"));
 const SignIn = lazy(() => import("@/pages/signin"));
+const Insights = lazy(() => import("@/pages/insights"));
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -79,6 +80,7 @@ function Router() {
           <Route path="/activity-log" component={ActivityLog} />
           <Route path="/documentation" component={Documentation} />
           <Route path="/documentation-review" component={DocumentationReview} />
+          <Route path="/insights" component={Insights} />
           <Route path="/settings" component={Settings} />
           <Route path="/account" component={Account} />
           <Route path="/" component={Cashboard} />
