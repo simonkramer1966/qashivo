@@ -50,6 +50,7 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import nexusLogo from "@assets/Main Nexus Logo copy_1756923544828.png";
 import UserProfileDialog from "./UserProfileDialog";
+import DemoModeToggle from "./DemoModeToggle";
 
 const navigationItems = [
   // Section 1: Dashboard
@@ -779,7 +780,11 @@ export default function NewSidebar() {
 
       {/* User Profile Section - Footer */}
       {!isCollapsed && (
-        <div className="border-t border-gray-200 p-4 mt-auto">
+        <div className="border-t border-gray-200 p-4 mt-auto space-y-3">
+          {/* Demo Mode Toggle */}
+          <DemoModeToggle collapsed={false} />
+          
+          {/* User Profile Dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger className="w-full flex items-center space-x-3 hover:bg-accent hover:text-accent-foreground rounded-lg px-3 py-2 transition-colors" data-testid="button-user-menu">
               <Avatar className="h-10 w-10" data-testid="avatar-user">
@@ -838,7 +843,11 @@ export default function NewSidebar() {
 
       {/* Collapsed State - Show User Avatar Only */}
       {isCollapsed && (
-        <div className="border-t border-gray-200 p-2 mt-auto">
+        <div className="border-t border-gray-200 p-2 mt-auto space-y-2">
+          {/* Demo Mode Toggle - Collapsed */}
+          <DemoModeToggle collapsed={true} />
+          
+          {/* User Profile Dropdown - Collapsed */}
           <DropdownMenu>
             <DropdownMenuTrigger className="w-full flex items-center justify-center hover:bg-accent rounded-lg p-2 transition-colors" data-testid="button-user-menu-collapsed">
               <Avatar className="h-8 w-8" data-testid="avatar-user-collapsed">

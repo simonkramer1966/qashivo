@@ -16048,6 +16048,44 @@ ${tenant.name}
 
   // ==================== END PARTNER-CLIENT SYSTEM API ====================
 
+  // ==================== DEMO MODE API ====================
+  
+  // Get demo mode status
+  app.get("/api/demo-mode/status", isAuthenticated, async (req: any, res) => {
+    try {
+      const { demoModeService } = await import('./services/demoModeService.js');
+      res.json(demoModeService.getStatus());
+    } catch (error) {
+      console.error("Error getting demo mode status:", error);
+      res.status(500).json({ message: "Failed to get demo mode status" });
+    }
+  });
+
+  // Toggle demo mode
+  app.post("/api/demo-mode/toggle", isAuthenticated, async (req: any, res) => {
+    try {
+      const { enabled } = req.body;
+      
+      if (typeof enabled !== 'boolean') {
+        return res.status(400).json({ message: "enabled must be a boolean" });
+      }
+
+      const { demoModeService } = await import('./services/demoModeService.js');
+      demoModeService.setEnabled(enabled);
+      
+      res.json({ 
+        success: true, 
+        enabled,
+        message: `Demo mode ${enabled ? 'enabled' : 'disabled'}` 
+      });
+    } catch (error) {
+      console.error("Error toggling demo mode:", error);
+      res.status(500).json({ message: "Failed to toggle demo mode" });
+    }
+  });
+
+  // ==================== END DEMO MODE API ====================
+
   const httpServer = createServer(app);
   return httpServer;
 }
