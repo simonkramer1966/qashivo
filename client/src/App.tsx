@@ -8,6 +8,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { SplashProvider, useSplash } from "@/contexts/SplashContext";
 import SplashScreen from "@/components/SplashScreen";
 import { useInactivityTimer } from "@/hooks/useInactivityTimer";
+import PageLoader from "@/components/PageLoader";
 
 // Lazy-loaded pages for code splitting
 const NotFound = lazy(() => import("@/pages/not-found"));
@@ -93,14 +94,7 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <SplashProvider>
         <TooltipProvider>
-          <Suspense fallback={
-            <div className="min-h-screen bg-white flex items-center justify-center">
-              <div className="text-center">
-                <div className="w-8 h-8 border-4 border-[#17B6C3] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                <p className="text-gray-600">Loading...</p>
-              </div>
-            </div>
-          }>
+          <Suspense fallback={<PageLoader />}>
             <Router />
             <Toaster />
           </Suspense>
