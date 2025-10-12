@@ -11154,6 +11154,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
       const DEMO_TENANT_ID = "bfa5f70f-4af5-421a-9d05-26df67f45c15";
       const QASHIVO_PRODUCTION_TENANT_ID = "7c91ba57-23d2-47eb-be4f-8440700fca60";
       const INVESTOR_DEMO_TENANT_ID = "6feb7f4d-ba6f-4a67-936e-9cff78f49c59";
+      const LEARNING_DEMO_TENANT_ID = "db071cd0-9ed0-47c5-b6b8-68587a54d21a";
       
       // Add Nexus AR tenant (original data)
       const nexusTenant = allTenants.find(t => t.id === NEXUS_AR_TENANT_ID);
@@ -11177,6 +11178,12 @@ Payment required immediately to avoid collection action. Contact us NOW.`
       const investorDemoTenant = allTenants.find(t => t.id === INVESTOR_DEMO_TENANT_ID);
       if (investorDemoTenant) {
         tenants.push({ ...investorDemoTenant, accessType: 'system' });
+      }
+      
+      // Add LearningDemo tenant (ML training & behavioral learning)
+      const learningDemoTenant = allTenants.find(t => t.id === LEARNING_DEMO_TENANT_ID);
+      if (learningDemoTenant) {
+        tenants.push({ ...learningDemoTenant, accessType: 'system' });
       }
       
       // ENHANCED: Add client tenants for partners (B2B2C Model)
