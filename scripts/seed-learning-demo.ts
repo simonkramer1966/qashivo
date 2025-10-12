@@ -176,9 +176,9 @@ async function seedData() {
 
   // Generate customers for each profile
   for (const [profileKey, profile] of Object.entries(PROFILES)) {
-    console.log(`\n📊 Generating ${profile.name} customers (40)...`);
+    console.log(`\n📊 Generating ${profile.name} customers (20)...`);
     
-    for (let i = 0; i < 40; i++) {
+    for (let i = 0; i < 20; i++) {
       const companyName = faker.company.name();
       const contactEmail = faker.internet.email().toLowerCase();
       
@@ -196,8 +196,8 @@ async function seedData() {
       
       totalCustomers++;
 
-      // Generate 15-30 invoices over 12 months
-      const numInvoices = Math.floor(Math.random() * 16) + 15;
+      // Generate 10-18 invoices over 12 months
+      const numInvoices = Math.floor(Math.random() * 9) + 10;
       const now = new Date();
       const twelveMonthsAgo = new Date(now);
       twelveMonthsAgo.setMonth(now.getMonth() - 12);
@@ -236,8 +236,8 @@ async function seedData() {
         
         totalInvoices++;
 
-        // Generate 5-10 communications per invoice (batch for performance)
-        const numComms = Math.floor(Math.random() * 6) + 5;
+        // Generate 3-6 communications per invoice (batch for performance)
+        const numComms = Math.floor(Math.random() * 4) + 3;
         const isDisputed = Math.random() < profile.disputeRate;
         
         const inboundBatch: any[] = [];
