@@ -1,0 +1,56 @@
+Replit Prompt — “Build the Behavioural Insights Dashboard (Investor Demo View)”
+
+Please create a new page in the Qashivo (Nexus AR) frontend called client/src/pages/insights.tsx.
+This page will be the Behavioural Insights Dashboard — an investor demo screen that visually shows how Qashivo’s AI learns and improves over time.
+
+⸻
+
+Goal:
+Build a beautiful, storytelling dashboard that makes investors see and feel Qashivo’s intelligence — how it understands customers, tracks promise reliability, and adapts to behaviour patterns automatically.
+
+⸻
+
+Page Structure:
+
+1️⃣ Header Section
+	•	Title: “AI Behavioural Insights”
+	•	Subtitle: “How Qashivo learns to understand every customer”
+	•	Three glass-style metric tiles showing key numbers:
+	•	Total Customers (e.g. 200)
+	•	Average Promise Reliability (e.g. 0.74)
+	•	System Confidence Growth (e.g. +45%)
+
+2️⃣ Trend Visualization Section
+	•	Multi-line Recharts LineChart displaying learning trends over the past 12 months.
+	•	X-axis: months, Y-axis: Promise Reliability Score (0–1).
+	•	4–5 lines, each representing a customer behaviour type:
+	•	Reliable
+	•	Serial Promiser
+	•	Predictable Late
+	•	Disputer
+	•	Deteriorating
+	•	Add legend, tooltip, smooth line curves, and soft animation.
+	•	Use teal and blue tones consistent with Qashivo branding.
+
+3️⃣ Behavioural Segment Cards
+	•	Display a grid of 5 segment cards (one per behaviour type).
+	•	Each card includes:
+	•	Segment name and icon
+	•	Short description (“These customers keep most promises.”)
+	•	Average sentiment value and trend sparkline
+	•	Mini insight line like “AI Confidence: +22% this quarter.”
+	•	Clicking a card opens a small modal with example customers and their PRS & sentiment trend.
+
+4️⃣ Quote Banner
+	•	Below the cards, add a text banner:
+“Each dot on these charts represents a customer interaction that Qashivo has learned from.”
+
+5️⃣ Visual Style
+	•	Use Shadcn UI cards and typography.
+	•	Background: gradient teal → blue (glassmorphism).
+	•	Animate charts and cards on load with subtle fade-in / slide-up effects (Framer Motion).
+	•	Consistent typography and spacing with other Qashivo pages.
+
+6️⃣ Data Source
+	•	First load mock data inline (5 segments with sample trends).
+	•	Later, allow it to fetch from /api/ml/behavioural-insights and /api/ml/customer-features-history if available.
