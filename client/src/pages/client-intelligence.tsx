@@ -22,6 +22,8 @@ import {
 import Header from "@/components/layout/header";
 import NewSidebar from "@/components/layout/new-sidebar";
 import BottomNav from "@/components/layout/bottom-nav";
+import { ClientJourney } from "@/components/ClientJourney";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LineChart, Line, ResponsiveContainer, XAxis, YAxis, Tooltip } from "recharts";
 
 interface ClientListItem {
@@ -235,8 +237,8 @@ export default function ClientIntelligencePage() {
                   </CardContent>
                 </Card>
               ) : (
-                <Card className="h-full bg-white/80 backdrop-blur-sm border-white/50 shadow-lg overflow-auto">
-                  <CardHeader className="border-b border-gray-200/50 pb-4">
+                <Card className="h-full bg-white/80 backdrop-blur-sm border-white/50 shadow-lg flex flex-col overflow-hidden">
+                  <CardHeader className="border-b border-gray-200/50 pb-4 flex-shrink-0">
                     <div className="flex items-center justify-between">
                       <div>
                         <CardTitle className="text-2xl font-bold text-gray-900" data-testid="text-client-name">
@@ -258,7 +260,16 @@ export default function ClientIntelligencePage() {
                     </div>
                   </CardHeader>
 
-                  <CardContent className="p-6">
+                  <Tabs defaultValue="analytics" className="flex-1 flex flex-col overflow-hidden">
+                    <div className="border-b border-gray-200/50 px-6 pt-3 flex-shrink-0">
+                      <TabsList className="bg-transparent">
+                        <TabsTrigger value="analytics" data-testid="tab-analytics">Analytics</TabsTrigger>
+                        <TabsTrigger value="journey" data-testid="tab-journey">Journey</TabsTrigger>
+                      </TabsList>
+                    </div>
+
+                    <TabsContent value="analytics" className="flex-1 overflow-auto mt-0">
+                      <CardContent className="p-6">
                     {/* Key Metrics Grid */}
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
                       <div className="bg-white/70 backdrop-blur-md border-0 shadow-xl rounded-lg p-4">
@@ -369,8 +380,14 @@ export default function ClientIntelligencePage() {
                       </div>
                     </div>
                   </CardContent>
-                </Card>
-              )}
+                </TabsContent>
+
+                <TabsContent value="journey" className="flex-1 overflow-hidden mt-0 p-6">
+                  <ClientJourney contactId={selectedClientId!} />
+                </TabsContent>
+              </Tabs>
+            </Card>
+          )}
             </div>
           </div>
         </div>
