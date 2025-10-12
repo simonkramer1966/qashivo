@@ -281,13 +281,8 @@ export default function NewSidebar() {
       console.log('🔄 Comprehensive cache clear - removing ALL queries for tenant switch');
       queryClient.clear();
       
-      // Force immediate refetch of critical dashboard queries  
-      setTimeout(() => {
-        queryClient.refetchQueries({ queryKey: ['/api/dashboard/metrics'] });
-        queryClient.refetchQueries({ queryKey: ['/api/dashboard/recent-activity'] });
-        queryClient.refetchQueries({ queryKey: ['/api/dashboard/top-debtors'] });
-        queryClient.refetchQueries({ queryKey: ['/api/dashboard/exceptions'] });
-      }, 100);
+      // Hard page refresh to ensure clean slate for new tenant
+      window.location.reload();
     },
   });
 
