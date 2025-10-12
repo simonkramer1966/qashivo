@@ -94,9 +94,10 @@ export default function ClientIntelligencePage() {
     queryKey: ["/api/client-intelligence/clients"],
   });
 
-  const { data: selectedClientData, isLoading: isLoadingDetail } = useQuery<ClientDetail>({
+  const { data: selectedClientData, isLoading: isLoadingDetail, error: detailError } = useQuery<ClientDetail>({
     queryKey: [`/api/client-intelligence/clients/${selectedClientId}`],
     enabled: !!selectedClientId,
+    retry: 1, // Only retry once on error
   });
 
   // Auto-select first client if none selected
@@ -119,6 +120,12 @@ export default function ClientIntelligencePage() {
   const confidenceScore = selectedClientData?.learningProfile
     ? parseFloat(selectedClientData.learningProfile.learningConfidence || "0.1")
     : 0.1;
+
+  // Get selected client from list for basic info
+  const selectedClient = useMemo(() => 
+    clients.find(c => c.id === selectedClientId),
+    [clients, selectedClientId]
+  );
 
   const segment = useMemo(() => {
     if (!selectedClientData) return { name: "Unknown", color: "#94a3b8" };
@@ -226,7 +233,7 @@ export default function ClientIntelligencePage() {
 
             {/* Right Main Area - Analytics */}
             <div className="flex-1 min-w-0">
-              {isLoadingDetail || !selectedClientData ? (
+              {isLoadingDetail ? (
                 <Card className="h-full bg-white/80 backdrop-blur-sm border-white/50 shadow-lg overflow-auto">
                   <CardContent className="p-6">
                     <div className="space-y-4">
@@ -236,26 +243,26 @@ export default function ClientIntelligencePage() {
                     </div>
                   </CardContent>
                 </Card>
-              ) : (
+              ) : selectedClientId ? (
                 <Card className="h-full bg-white/80 backdrop-blur-sm border-white/50 shadow-lg flex flex-col overflow-hidden">
                   <CardHeader className="border-b border-gray-200/50 pb-4 flex-shrink-0">
                     <div className="flex items-center justify-between">
                       <div>
                         <CardTitle className="text-2xl font-bold text-gray-900" data-testid="text-client-name">
-                          {selectedClientData.client.companyName || selectedClientData.client.name}
+                          {selectedClient?.companyName || selectedClient?.name || "Client"}
                         </CardTitle>
-                        {selectedClientData.client.companyName && (
+                        {selectedClient?.companyName && (
                           <p className="text-sm text-gray-600 mt-1" data-testid="text-company-name">
-                            {selectedClientData.client.name}
+                            {selectedClient.name}
                           </p>
                         )}
                       </div>
                       <Badge
-                        style={{ backgroundColor: segment.color }}
+                        style={{ backgroundColor: selectedClient?.segmentColor || segment.color }}
                         className="text-white px-3 py-1"
                         data-testid="badge-behavioral-segment"
                       >
-                        {segment.name}
+                        {selectedClient?.behavioralSegment || segment.name}
                       </Badge>
                     </div>
                   </CardHeader>
@@ -270,6 +277,17 @@ export default function ClientIntelligencePage() {
 
                     <TabsContent value="analytics" className="flex-1 overflow-auto mt-0">
                       <CardContent className="p-6">
+                    {detailError || !selectedClientData ? (
+                      <div className="flex flex-col items-center justify-center h-64 gap-4">
+                        <AlertCircle className="w-12 h-12 text-orange-500" />
+                        <div className="text-center">
+                          <p className="text-lg font-semibold text-gray-900">Unable to load behavioral analytics</p>
+                          <p className="text-sm text-gray-600 mt-2">The system encountered an error loading detailed analytics for this client.</p>
+                          <p className="text-sm text-gray-600">Try switching to the Journey tab to view interaction history.</p>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
                     {/* Key Metrics Grid */}
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
                       <div className="bg-white/70 backdrop-blur-md border-0 shadow-xl rounded-lg p-4">
@@ -379,6 +397,8 @@ export default function ClientIntelligencePage() {
                         </div>
                       </div>
                     </div>
+                      </>
+                    )}
                   </CardContent>
                 </TabsContent>
 
@@ -387,7 +407,7 @@ export default function ClientIntelligencePage() {
                 </TabsContent>
               </Tabs>
             </Card>
-          )}
+              ) : null}
             </div>
           </div>
         </div>
