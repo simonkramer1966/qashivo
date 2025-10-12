@@ -234,54 +234,87 @@ export default function InsightsPage() {
           </div>
         </motion.div>
 
-        {/* Trend Visualization Section */}
+        {/* Trend Visualization Section - Small Multiples */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.2 }}
         >
-          <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg" data-testid="card-trend-chart">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <BarChart3 className="w-6 h-6 text-[#17B6C3]" />
-                Promise Reliability Score Trends (12 Months)
-              </CardTitle>
-              <CardDescription>
-                How different customer segments perform over time
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={400}>
-                <LineChart data={combinedTrendData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                  <XAxis dataKey="month" stroke="#6b7280" style={{ fontSize: '12px' }} />
-                  <YAxis domain={[0, 1]} stroke="#6b7280" style={{ fontSize: '12px' }} />
-                  <Tooltip 
-                    contentStyle={{ 
-                      backgroundColor: 'rgba(255, 255, 255, 0.95)', 
-                      border: '1px solid #e5e7eb',
-                      borderRadius: '8px',
-                      boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
-                    }}
-                  />
-                  <Legend wrapperStyle={{ fontSize: '13px' }} />
-                  {behavioralSegments.map((segment) => (
-                    <Line
-                      key={segment.id}
-                      type="monotone"
-                      dataKey={segment.id}
-                      name={segment.name}
-                      stroke={segment.color}
-                      strokeWidth={2}
-                      dot={{ fill: segment.color, r: 4 }}
-                      activeDot={{ r: 6 }}
-                      animationDuration={1500}
-                    />
-                  ))}
-                </LineChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
+          <div className="mb-4">
+            <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+              <BarChart3 className="w-6 h-6 text-[#17B6C3]" />
+              Promise Reliability Score Trends (12 Months)
+            </h2>
+            <p className="text-gray-600 mt-1">How different customer segments perform over time</p>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {behavioralSegments.map((segment, index) => {
+              const Icon = segment.icon;
+              return (
+                <motion.div
+                  key={segment.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4, delay: 0.1 * index }}
+                >
+                  <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg" data-testid={`card-chart-${segment.id}`}>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="flex items-center gap-2 text-lg">
+                        <div className="p-1.5 rounded-lg" style={{ backgroundColor: `${segment.color}20` }}>
+                          <Icon className="w-5 h-5" style={{ color: segment.color }} />
+                        </div>
+                        <span>{segment.name}</span>
+                      </CardTitle>
+                      <CardDescription className="text-xs">
+                        PRS: {(segment.avgPRS * 100).toFixed(0)}% | {segment.customerCount} customers
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <ResponsiveContainer width="100%" height={180}>
+                        <LineChart data={segment.trend} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
+                          <XAxis 
+                            dataKey="month" 
+                            stroke="#9ca3af" 
+                            style={{ fontSize: '10px' }}
+                            tick={{ fill: '#6b7280' }}
+                            interval={2}
+                          />
+                          <YAxis 
+                            domain={[0, 1]} 
+                            stroke="#9ca3af" 
+                            style={{ fontSize: '10px' }}
+                            tick={{ fill: '#6b7280' }}
+                            ticks={[0, 0.5, 1]}
+                          />
+                          <Tooltip 
+                            contentStyle={{ 
+                              backgroundColor: 'rgba(255, 255, 255, 0.95)', 
+                              border: '1px solid #e5e7eb',
+                              borderRadius: '8px',
+                              boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+                              fontSize: '12px'
+                            }}
+                            formatter={(value: any) => [(value * 100).toFixed(0) + '%', 'PRS']}
+                          />
+                          <Line
+                            type="monotone"
+                            dataKey="score"
+                            stroke={segment.color}
+                            strokeWidth={3}
+                            dot={false}
+                            activeDot={{ r: 5 }}
+                            animationDuration={1000}
+                          />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              );
+            })}
+          </div>
         </motion.div>
 
         {/* Behavioral Segment Cards */}
