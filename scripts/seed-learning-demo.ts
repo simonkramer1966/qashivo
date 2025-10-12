@@ -242,6 +242,7 @@ async function seedData() {
         
         const inboundBatch: any[] = [];
         const outboundBatch: any[] = [];
+        const inboundActionBatch: any[] = [];
         
         for (let comm = 0; comm < numComms; comm++) {
           const commDate = randomDate(issueDate, paidDate || now);
@@ -253,6 +254,9 @@ async function seedData() {
           if (isInbound) {
             const content = getMessageTemplate(profile, sentiment, isDisputed);
             const intentType = getIntentType(isDisputed, isPromise);
+            const confidence = (Math.random() * 0.4 + 0.6).toFixed(2);
+            const sentimentCategory = getSentimentCategory(sentiment);
+            const promisedDate = isPromise ? new Date(commDate.getTime() + 7 * 24 * 60 * 60 * 1000) : null;
             
             inboundBatch.push({
               tenantId: LEARNING_DEMO_TENANT_ID,
@@ -265,12 +269,41 @@ async function seedData() {
               content,
               intentAnalyzed: true,
               intentType,
-              intentConfidence: (Math.random() * 0.4 + 0.6).toFixed(2),
-              sentiment: getSentimentCategory(sentiment),
-              extractedEntities: isPromise ? {
-                promisedDate: new Date(commDate.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+              intentConfidence: confidence,
+              sentiment: sentimentCategory,
+              extractedEntities: promisedDate ? {
+                promisedDate: promisedDate.toISOString(),
                 promisedAmount: amount,
               } : null,
+            });
+            
+            // Create corresponding action record for Intent Analyst system
+            inboundActionBatch.push({
+              tenantId: LEARNING_DEMO_TENANT_ID,
+              contactId: contact.id,
+              invoiceId: invoice.id,
+              type: 'inbound_analyzed' as const,
+              actionType: intentType === 'promise_to_pay' ? 'promise_to_pay' : (intentType === 'dispute' ? 'dispute' : 'follow_up'),
+              intentType,
+              status: 'open' as const,
+              priority: intentType === 'dispute' ? 'high' : (intentType === 'promise_to_pay' ? 'medium' : 'low'),
+              subject: channel === 'email' ? `Re: Invoice ${invoice.invoiceNumber}` : `${intentType} via ${channel}`,
+              content,
+              metadata: {
+                analysis: {
+                  intent: intentType,
+                  confidence: parseFloat(confidence),
+                  sentiment: sentimentCategory,
+                  entities: {
+                    dates: promisedDate ? [promisedDate.toISOString()] : [],
+                    amounts: promisedDate ? [amount] : [],
+                  },
+                },
+                channel,
+                source: 'inbound_message',
+              },
+              source: 'inbound' as const,
+              createdAt: commDate,
             });
             
             totalCommunications++;
@@ -293,8 +326,9 @@ async function seedData() {
           }
         }
         
-        // Batch insert messages
+        // Batch insert messages and actions
         if (inboundBatch.length > 0) await db.insert(inboundMessages).values(inboundBatch);
+        if (inboundActionBatch.length > 0) await db.insert(actions).values(inboundActionBatch);
         if (outboundBatch.length > 0) await db.insert(actions).values(outboundBatch);
 
         // Generate promises for this invoice (batch)
