@@ -319,60 +319,59 @@ export default function ClientIntelligencePage() {
                         ))}
                       </div>
                     ) : (
-                      <div className="space-y-2">
+                      <div className="divide-y divide-gray-200">
                         {clients.map((client) => (
-                          <motion.div
+                          <div
                             key={client.id}
-                            whileHover={{ scale: 1.01 }}
-                            className={`p-3 rounded-lg border cursor-pointer transition-all ${
+                            className={`py-2 px-3 cursor-pointer transition-colors ${
                               selectedClientId === client.id
-                                ? "bg-[#17B6C3]/10 border-[#17B6C3]"
-                                : "bg-white/50 border-gray-200 hover:border-[#17B6C3]/50"
+                                ? "bg-[#17B6C3]/10"
+                                : "hover:bg-gray-50"
                             }`}
                             onClick={() => setSelectedClientId(client.id)}
                             data-testid={`row-client-${client.id}`}
                           >
-                            <div className="flex items-center justify-between">
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2">
-                                  <p className="font-semibold text-gray-900 truncate" data-testid={`text-name-${client.id}`}>
+                            <div className="flex items-center justify-between gap-4">
+                              <div className="flex-1 min-w-0 flex items-center gap-3">
+                                <div className="flex-1 min-w-0">
+                                  <p className="font-medium text-gray-900 truncate text-sm" data-testid={`text-name-${client.id}`}>
                                     {client.name}
                                   </p>
-                                  <Badge
-                                    style={{ backgroundColor: client.segmentColor }}
-                                    className="text-white text-xs px-2 py-0"
-                                    data-testid={`badge-segment-${client.id}`}
-                                  >
-                                    {client.behavioralSegment}
-                                  </Badge>
+                                  {client.companyName && (
+                                    <p className="text-xs text-gray-500 truncate">{client.companyName}</p>
+                                  )}
                                 </div>
-                                {client.companyName && (
-                                  <p className="text-xs text-gray-600 truncate">{client.companyName}</p>
-                                )}
+                                <Badge
+                                  style={{ backgroundColor: client.segmentColor }}
+                                  className="text-white text-xs px-2 py-0.5 shrink-0"
+                                  data-testid={`badge-segment-${client.id}`}
+                                >
+                                  {client.behavioralSegment}
+                                </Badge>
                               </div>
 
-                              <div className="flex items-center gap-4 ml-4">
-                                <div className="text-right">
-                                  <p className="text-xs text-gray-600">PRS</p>
-                                  <p className="text-sm font-bold text-[#17B6C3]" data-testid={`text-prs-${client.id}`}>
+                              <div className="flex items-center gap-6 shrink-0">
+                                <div className="text-center min-w-[60px]">
+                                  <p className="text-xs text-gray-500 mb-0.5">PRS</p>
+                                  <p className="text-sm font-semibold text-[#17B6C3]" data-testid={`text-prs-${client.id}`}>
                                     {client.prs}
                                   </p>
                                 </div>
-                                <div className="text-right">
-                                  <p className="text-xs text-gray-600">Confidence</p>
-                                  <p className="text-sm font-bold text-blue-600" data-testid={`text-conf-${client.id}`}>
+                                <div className="text-center min-w-[70px]">
+                                  <p className="text-xs text-gray-500 mb-0.5">Confidence</p>
+                                  <p className="text-sm font-semibold text-blue-600" data-testid={`text-conf-${client.id}`}>
                                     {Math.round(client.confidenceScore * 100)}%
                                   </p>
                                 </div>
-                                <div className="text-right">
-                                  <p className="text-xs text-gray-600">Interactions</p>
-                                  <p className="text-sm font-bold text-gray-700">
+                                <div className="text-center min-w-[70px]">
+                                  <p className="text-xs text-gray-500 mb-0.5">Actions</p>
+                                  <p className="text-sm font-semibold text-gray-700">
                                     {client.totalInteractions || 0}
                                   </p>
                                 </div>
                               </div>
                             </div>
-                          </motion.div>
+                          </div>
                         ))}
                       </div>
                     )}
