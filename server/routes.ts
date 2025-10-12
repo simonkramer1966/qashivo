@@ -16058,6 +16058,198 @@ ${tenant.name}
 
   // ==================== END PARTNER-CLIENT SYSTEM API ====================
 
+  // ==================== CLIENT INTELLIGENCE API ====================
+  
+  // Get client list with behavioral statistics
+  app.get("/api/client-intelligence/clients", isAuthenticated, async (req: any, res) => {
+    try {
+      const tenantId = req.user?.tenantId;
+      if (!tenantId) {
+        return res.status(403).json({ message: "Tenant ID not found" });
+      }
+
+      const clientsData = await db
+        .select({
+          id: contacts.id,
+          name: contacts.name,
+          companyName: contacts.companyName,
+          email: contacts.email,
+          // Learning profile data
+          learningConfidence: customerLearningProfiles.learningConfidence,
+          promiseReliabilityScore: customerLearningProfiles.promiseReliabilityScore,
+          totalInteractions: customerLearningProfiles.totalInteractions,
+          totalPromisesMade: customerLearningProfiles.totalPromisesMade,
+          promisesKept: customerLearningProfiles.promisesKept,
+          promisesBroken: customerLearningProfiles.promisesBroken,
+          isSerialPromiser: customerLearningProfiles.isSerialPromiser,
+          isReliableLatePayer: customerLearningProfiles.isReliableLatePayer,
+          isRelationshipDeteriorating: customerLearningProfiles.isRelationshipDeteriorating,
+          preferredChannel: customerLearningProfiles.preferredChannel,
+          averageResponseTime: customerLearningProfiles.averageResponseTime,
+        })
+        .from(contacts)
+        .leftJoin(
+          customerLearningProfiles,
+          and(
+            eq(customerLearningProfiles.contactId, contacts.id),
+            eq(customerLearningProfiles.tenantId, tenantId)
+          )
+        )
+        .where(
+          and(
+            eq(contacts.tenantId, tenantId),
+            eq(contacts.role, 'customer'),
+            eq(contacts.isActive, true)
+          )
+        )
+        .orderBy(desc(customerLearningProfiles.totalInteractions));
+
+      // Determine behavioral segment for each client
+      const clientsWithSegments = clientsData.map(client => {
+        let segment = 'Unknown';
+        let segmentColor = '#94a3b8'; // slate-400
+        
+        if (client.isSerialPromiser) {
+          segment = 'Serial Promiser';
+          segmentColor = '#f97316'; // orange
+        } else if (client.isRelationshipDeteriorating) {
+          segment = 'Deteriorating';
+          segmentColor = '#be123c'; // rose
+        } else if (client.isReliableLatePayer) {
+          segment = 'Predictable Late';
+          segmentColor = '#facc15'; // yellow
+        } else if (client.promiseReliabilityScore && parseFloat(client.promiseReliabilityScore) >= 85) {
+          segment = 'Reliable';
+          segmentColor = '#22c55e'; // green
+        } else if (client.totalPromisesMade && client.totalPromisesMade > 0) {
+          segment = 'Unpredictable Late';
+          segmentColor = '#f59e0b'; // amber
+        }
+
+        return {
+          ...client,
+          behavioralSegment: segment,
+          segmentColor,
+          confidenceScore: client.learningConfidence ? parseFloat(client.learningConfidence) : 0.1,
+          prs: client.promiseReliabilityScore ? parseFloat(client.promiseReliabilityScore) : 0,
+        };
+      });
+
+      res.json(clientsWithSegments);
+    } catch (error) {
+      console.error("Error fetching client intelligence list:", error);
+      res.status(500).json({ message: "Failed to fetch client intelligence list" });
+    }
+  });
+
+  // Get detailed client behavioral analytics
+  app.get("/api/client-intelligence/clients/:contactId", isAuthenticated, async (req: any, res) => {
+    try {
+      const tenantId = req.user?.tenantId;
+      const { contactId } = req.params;
+
+      if (!tenantId) {
+        return res.status(403).json({ message: "Tenant ID not found" });
+      }
+
+      // Get client basic info
+      const client = await db
+        .select()
+        .from(contacts)
+        .where(
+          and(
+            eq(contacts.id, contactId),
+            eq(contacts.tenantId, tenantId)
+          )
+        )
+        .limit(1);
+
+      if (!client || client.length === 0) {
+        return res.status(404).json({ message: "Client not found" });
+      }
+
+      // Get learning profile
+      const learningProfile = await db
+        .select()
+        .from(customerLearningProfiles)
+        .where(
+          and(
+            eq(customerLearningProfiles.contactId, contactId),
+            eq(customerLearningProfiles.tenantId, tenantId)
+          )
+        )
+        .limit(1);
+
+      // Get promise history
+      const promises = await db
+        .select({
+          id: sql<string>`${inboundMessages.id}`,
+          promisedDate: sql<Date>`${inboundMessages.promisedPaymentDate}`,
+          promisedAmount: sql<string>`${inboundMessages.promisedPaymentAmount}`,
+          status: sql<string>`${inboundMessages.promiseStatus}`,
+          createdAt: sql<Date>`${inboundMessages.createdAt}`,
+          sentiment: sql<string>`${inboundMessages.sentiment}`,
+        })
+        .from(inboundMessages)
+        .where(
+          and(
+            eq(inboundMessages.contactId, contactId),
+            eq(inboundMessages.tenantId, tenantId),
+            eq(inboundMessages.intentType, 'promise_to_pay')
+          )
+        )
+        .orderBy(desc(inboundMessages.createdAt))
+        .limit(20);
+
+      // Get recent interactions count by channel
+      const channelStats = await db
+        .select({
+          channel: actions.channel,
+          count: count(),
+          avgSentiment: avg(sql<number>`CASE 
+            WHEN ${actions.sentiment} = 'positive' THEN 1 
+            WHEN ${actions.sentiment} = 'neutral' THEN 0 
+            WHEN ${actions.sentiment} = 'negative' THEN -1 
+            ELSE 0 
+          END`),
+        })
+        .from(actions)
+        .where(
+          and(
+            eq(actions.contactId, contactId),
+            eq(actions.tenantId, tenantId)
+          )
+        )
+        .groupBy(actions.channel);
+
+      const profile = learningProfile[0] || null;
+
+      res.json({
+        client: client[0],
+        learningProfile: profile,
+        promises: promises.map(p => ({
+          ...p,
+          promisedAmount: p.promisedAmount ? parseFloat(p.promisedAmount) : 0,
+        })),
+        channelStats: channelStats.map(stat => ({
+          ...stat,
+          avgSentiment: stat.avgSentiment ? parseFloat(stat.avgSentiment as any) : 0,
+        })),
+        behavioralFlags: {
+          isSerialPromiser: profile?.isSerialPromiser || false,
+          isReliableLatePayer: profile?.isReliableLatePayer || false,
+          isRelationshipDeteriorating: profile?.isRelationshipDeteriorating || false,
+          isNewCustomer: profile?.isNewCustomer || true,
+        }
+      });
+    } catch (error) {
+      console.error("Error fetching client behavioral analytics:", error);
+      res.status(500).json({ message: "Failed to fetch client behavioral analytics" });
+    }
+  });
+
+  // ==================== END CLIENT INTELLIGENCE API ====================
+
   // ==================== DEMO MODE API ====================
   
   // Get demo mode status
