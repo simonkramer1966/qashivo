@@ -6,6 +6,7 @@ import { eq } from 'drizzle-orm';
 const LEARNING_DEMO_TENANT_ID = 'db071cd0-9ed0-47c5-b6b8-68587a54d21a';
 const DEMO_PHONE = '+447716273336';
 const DEMO_USER_ID = 'demo-user-47061483'; // System user for demo
+const BATCH_SIZE = 500; // Max records per batch insert to avoid PostgreSQL parameter limits
 
 // Behavioral profile definitions
 interface BehavioralProfile {
@@ -80,6 +81,15 @@ const PROFILES: Record<string, BehavioralProfile> = {
 };
 
 // Helper functions
+// Chunk array into smaller batches to avoid PostgreSQL parameter limits
+function chunk<T>(array: T[], size: number): T[][] {
+  const chunks: T[][] = [];
+  for (let i = 0; i < array.length; i += size) {
+    chunks.push(array.slice(i, i + size));
+  }
+  return chunks;
+}
+
 function randomAmount(min: number = 500, max: number = 25000): number {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
@@ -263,8 +273,13 @@ async function seedData() {
       }
     }
     
-    // Step 4: Batch insert all invoices
-    const insertedInvoices = await db.insert(invoices).values(invoicesBatch).returning();
+    // Step 4: Batch insert all invoices in chunks
+    const insertedInvoices: any[] = [];
+    const invoiceChunks = chunk(invoicesBatch, BATCH_SIZE);
+    for (const invoiceChunk of invoiceChunks) {
+      const inserted = await db.insert(invoices).values(invoiceChunk).returning();
+      insertedInvoices.push(...inserted);
+    }
     
     // Step 5: Generate all communications, actions, and promises
     for (let i = 0; i < insertedInvoices.length; i++) {
@@ -400,10 +415,22 @@ async function seedData() {
         }
     }
     
-    // Step 6: Batch insert all messages, actions, and promises
-    if (inboundMessagesBatch.length > 0) await db.insert(inboundMessages).values(inboundMessagesBatch);
-    if (actionsBatch.length > 0) await db.insert(actions).values(actionsBatch);
-    if (promisesBatch.length > 0) await db.insert(paymentPromises).values(promisesBatch);
+    // Step 6: Batch insert all messages, actions, and promises in chunks
+    if (inboundMessagesBatch.length > 0) {
+      for (const messageChunk of chunk(inboundMessagesBatch, BATCH_SIZE)) {
+        await db.insert(inboundMessages).values(messageChunk);
+      }
+    }
+    if (actionsBatch.length > 0) {
+      for (const actionChunk of chunk(actionsBatch, BATCH_SIZE)) {
+        await db.insert(actions).values(actionChunk);
+      }
+    }
+    if (promisesBatch.length > 0) {
+      for (const promiseChunk of chunk(promisesBatch, BATCH_SIZE)) {
+        await db.insert(paymentPromises).values(promiseChunk);
+      }
+    }
     
     // Step 7: Calculate learning profiles from in-memory data
     for (const contact of insertedContacts) {
@@ -496,8 +523,12 @@ async function seedData() {
       totalProfiles++;
     }
     
-    // Step 8: Batch insert all learning profiles for this profile group
-    if (profilesBatch.length > 0) await db.insert(customerLearningProfiles).values(profilesBatch);
+    // Step 8: Batch insert all learning profiles for this profile group in chunks
+    if (profilesBatch.length > 0) {
+      for (const profileChunk of chunk(profilesBatch, BATCH_SIZE)) {
+        await db.insert(customerLearningProfiles).values(profileChunk);
+      }
+    }
     
     console.log(`✅ ${profile.name}: 40 customers created`);
   }
