@@ -36,7 +36,7 @@ const behavioralSegments = [
     id: "serial_promiser",
     name: "Serial Promiser",
     icon: XCircle,
-    color: "#ef4444",
+    color: "#f97316",
     description: "Frequent promise-makers who rarely follow through. High communication, low delivery.",
     avgPRS: 0.35,
     avgSentiment: -0.2,
@@ -111,7 +111,7 @@ const behavioralSegments = [
     id: "deteriorating",
     name: "Deteriorating",
     icon: TrendingDown,
-    color: "#dc2626",
+    color: "#be123c",
     description: "Payment behavior worsening over time. Started reliable, now showing risk signals.",
     avgPRS: 0.40,
     avgSentiment: -0.6,
@@ -254,8 +254,8 @@ export default function InsightsPage() {
               <ResponsiveContainer width="100%" height={400}>
                 <LineChart data={combinedTrendData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                  <XAxis dataKey="month" stroke="#6b7280" />
-                  <YAxis domain={[0, 1]} stroke="#6b7280" />
+                  <XAxis dataKey="month" stroke="#6b7280" style={{ fontSize: '12px' }} />
+                  <YAxis domain={[0, 1]} stroke="#6b7280" style={{ fontSize: '12px' }} />
                   <Tooltip 
                     contentStyle={{ 
                       backgroundColor: 'rgba(255, 255, 255, 0.95)', 
@@ -264,7 +264,7 @@ export default function InsightsPage() {
                       boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
                     }}
                   />
-                  <Legend />
+                  <Legend wrapperStyle={{ fontSize: '13px' }} />
                   {behavioralSegments.map((segment) => (
                     <Line
                       key={segment.id}
