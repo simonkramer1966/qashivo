@@ -1,0 +1,92 @@
+I’m building a FastAPI app called Qashivo for SME credit control.
+Please create two developer-only tools in my repo:
+
+1️⃣ Demo Data Seeder (/seed/demo_data.py)
+
+Use Faker, datetime, and random to create about 10 synthetic customers.
+
+Each customer should have 8–12 invoices and a few communications (SMS or email).
+
+Include attributes like:
+
+segment: reliable, serial_promiser, predictable_late, disputer, deteriorating
+
+sentiment: positive, neutral, negative
+
+invoice.amount, invoice.due_date, invoice.status (open/paid/disputed)
+
+Optional PromiseToPay record with random kept/broken status
+
+When I run python seed/demo_data.py, it should connect to my local SQLite/Postgres via SQLAlchemy and print “✅ Demo data seeded successfully.”
+
+2️⃣ Fake Inbound Simulator (/mock_responder.py)
+
+This should automatically respond to any outbound voice, SMS, or email action with a realistic inbound message after a short delay.
+
+It must only run when a toggle is ON.
+
+Key behaviours:
+
+Define a global enabled flag (default off) and two endpoints:
+
+GET /mock-responder/status → returns whether enabled
+
+POST /mock-responder/toggle → body { "enabled": true|false }
+
+When enabled, the function notify_outbound(channel, customer_id, invoice_id):
+
+Waits 2–6 seconds, then POSTs a canned inbound webhook to /webhooks/{channel}.
+
+Payload should include intents, sentiment, and (for voice) optional ptp_captured=true.
+
+Use async httpx or requests to post back internally.
+
+Support 3 canned message types:
+
+Positive promise → “We’ll pay Friday”
+
+No commitment → “We can’t pay yet”
+
+Voicemail (voice only) → “Left voicemail — please call back.”
+
+Add environment flag MOCK_RESPONDER_ENABLED to allow it only in dev or demo mode.
+
+3️⃣ Integration
+
+After any outbound action (voice/SMS/email), call:
+
+from qashivo.mock_responder import notify_outbound
+notify_outbound(channel="voice", customer_id=customer.id, invoice_id=invoice.id)
+
+
+If the toggle is ON, the mock responder should post a fake inbound webhook automatically.
+
+4️⃣ Frontend Toggle
+
+Add a simple Settings toggle button that calls /mock-responder/toggle to enable or disable the fake inbound responder.
+
+Deliverables
+
+seed/demo_data.py (ready to run)
+
+mock_responder.py (async delayed poster + toggle endpoints)
+
+Small updates in main.py to register the endpoints and confirm in logs that it’s active.
+
+Use only built-in or easily installed packages: fastapi, sqlalchemy, faker, httpx.
+
+Keep everything runnable in Replit (no Docker or Celery).
+
+The goal: when I enable the fake responder and press “AI Voice Call” or “Send SMS” in my UI, a realistic inbound reply (like “We’ll pay Friday”) appears automatically a few seconds later.
+This lets me demo the full behavioural loop without any real integrations.
+
+✅ Result:
+When you paste this into Replit’s AI assistant, it will generate:
+
+seed/demo_data.py → fake customers, invoices, promises, and comms
+
+mock_responder.py → fake inbound simulator with toggle endpoints
+
+/mock-responder/toggle → switch on/off
+
+Automatic inbound replies appearing on every outbound message action.
