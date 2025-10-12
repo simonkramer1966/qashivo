@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -98,11 +98,11 @@ export default function ClientIntelligencePage() {
   });
 
   // Auto-select first client if none selected
-  useState(() => {
+  useEffect(() => {
     if (clients.length > 0 && !selectedClientId) {
       setSelectedClientId(clients[0].id);
     }
-  });
+  }, [clients, selectedClientId]);
 
   // Prepare PRS trend data
   const prsTrendData = selectedClientData?.learningProfile
