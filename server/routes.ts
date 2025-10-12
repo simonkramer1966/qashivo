@@ -60,7 +60,7 @@ import {
 } from "@shared/schema";
 import { getOverdueCategoryFromDueDate } from "@shared/utils/overdueUtils";
 import { calculateLatePaymentInterest } from "./utils/interestCalculator";
-import { eq, and, desc, sql, count, avg, gte, lte, inArray, or, isNull } from 'drizzle-orm';
+import { eq, and, desc, sql, count, avg, gte, lte, inArray, or, isNull, gt } from 'drizzle-orm';
 import { db } from './db';
 import { z } from "zod";
 
@@ -16266,7 +16266,6 @@ ${tenant.name}
           type: actions.type,
           subject: actions.subject,
           content: actions.content,
-          channel: actions.channel,
           sentiment: actions.sentiment,
           createdAt: actions.createdAt,
           completedAt: actions.completedAt,
@@ -16300,7 +16299,7 @@ ${tenant.name}
           and(
             eq(invoices.contactId, contactId),
             eq(invoices.tenantId, tenantId),
-            sql`${invoices.amountPaid} > 0`
+            gt(invoices.amountPaid, "0")
           )
         )
         .orderBy(desc(invoices.paidDate))
@@ -16309,7 +16308,14 @@ ${tenant.name}
       // Get behavioral segment changes from learning profile history
       // For now, we'll compute current segment and include it as the latest change
       const learningProfile = await db
-        .select()
+        .select({
+          isSerialPromiser: customerLearningProfiles.isSerialPromiser,
+          isReliableLatePayer: customerLearningProfiles.isReliableLatePayer,
+          isRelationshipDeteriorating: customerLearningProfiles.isRelationshipDeteriorating,
+          promiseReliabilityScore: customerLearningProfiles.promiseReliabilityScore,
+          totalPromisesMade: customerLearningProfiles.totalPromisesMade,
+          lastUpdated: customerLearningProfiles.lastUpdated,
+        })
         .from(customerLearningProfiles)
         .where(
           and(
@@ -16345,7 +16351,7 @@ ${tenant.name}
       const segmentChanges = [{
         segment: currentSegment,
         color: segmentColor,
-        changedAt: profile?.updatedAt || new Date(),
+        changedAt: profile?.lastUpdated || new Date(),
         reason: 'Current behavioral segment'
       }];
 
@@ -16355,7 +16361,7 @@ ${tenant.name}
           id: i.id,
           type: 'interaction' as const,
           eventType: i.type,
-          channel: i.channel,
+          channel: i.type, // actions use 'type' which includes email, sms, call, etc.
           subject: i.subject,
           content: i.content,
           sentiment: i.sentiment,
