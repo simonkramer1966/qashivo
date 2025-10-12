@@ -1,32 +1,32 @@
 import { Switch, Route } from "wouter";
-import { Suspense } from "react";
+import { Suspense, lazy } from "react";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import NotFound from "@/pages/not-found";
-// Core application pages
-import Cashboard from "@/pages/cashboard";
-import Cashflow from "@/pages/cashflow";
-import Invoices from "@/pages/invoices";
-import Contacts from "@/pages/contacts";
-import ActionCentre from "@/pages/action-centre";
-import Wallet from "@/pages/wallet";
-import Workflows from "@/pages/workflows";
-import ActivityLog from "@/pages/activity-log";
-import Settings from "@/pages/settings";
-import Account from "@/pages/account";
-import PartnerDashboard from "@/pages/partner";
-import Documentation from "@/pages/documentation";
-import DocumentationReview from "@/pages/documentation-review";
-// Signup and authentication pages
-import PartnerRegistration from "@/pages/partner-registration";
-import ClientRegistration from "@/pages/client-registration";
-import SignIn from "@/pages/signin";
 import { useAuth } from "@/hooks/useAuth";
 import { SplashProvider, useSplash } from "@/contexts/SplashContext";
 import SplashScreen from "@/components/SplashScreen";
 import { useInactivityTimer } from "@/hooks/useInactivityTimer";
+
+// Lazy-loaded pages for code splitting
+const NotFound = lazy(() => import("@/pages/not-found"));
+const Cashboard = lazy(() => import("@/pages/cashboard"));
+const Cashflow = lazy(() => import("@/pages/cashflow"));
+const Invoices = lazy(() => import("@/pages/invoices"));
+const Contacts = lazy(() => import("@/pages/contacts"));
+const ActionCentre = lazy(() => import("@/pages/action-centre"));
+const Wallet = lazy(() => import("@/pages/wallet"));
+const Workflows = lazy(() => import("@/pages/workflows"));
+const ActivityLog = lazy(() => import("@/pages/activity-log"));
+const Settings = lazy(() => import("@/pages/settings"));
+const Account = lazy(() => import("@/pages/account"));
+const PartnerDashboard = lazy(() => import("@/pages/partner"));
+const Documentation = lazy(() => import("@/pages/documentation"));
+const DocumentationReview = lazy(() => import("@/pages/documentation-review"));
+const PartnerRegistration = lazy(() => import("@/pages/partner-registration"));
+const ClientRegistration = lazy(() => import("@/pages/client-registration"));
+const SignIn = lazy(() => import("@/pages/signin"));
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
