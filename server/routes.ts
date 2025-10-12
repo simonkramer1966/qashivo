@@ -16063,10 +16063,11 @@ ${tenant.name}
   // Get client list with behavioral statistics
   app.get("/api/client-intelligence/clients", isAuthenticated, async (req: any, res) => {
     try {
-      const tenantId = req.user?.tenantId;
-      if (!tenantId) {
-        return res.status(403).json({ message: "Tenant ID not found" });
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
       }
+      const tenantId = user.tenantId;
 
       const clientsData = await db
         .select({
@@ -16145,12 +16146,12 @@ ${tenant.name}
   // Get detailed client behavioral analytics
   app.get("/api/client-intelligence/clients/:contactId", isAuthenticated, async (req: any, res) => {
     try {
-      const tenantId = req.user?.tenantId;
-      const { contactId } = req.params;
-
-      if (!tenantId) {
-        return res.status(403).json({ message: "Tenant ID not found" });
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
       }
+      const tenantId = user.tenantId;
+      const { contactId } = req.params;
 
       // Get client basic info
       const client = await db
