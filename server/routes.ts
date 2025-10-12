@@ -11240,12 +11240,13 @@ Payment required immediately to avoid collection action. Contact us NOW.`
         return res.status(404).json({ message: "User not found" });
       }
 
-      // Get system accessible tenants (Nexus AR + Qashivo Production + Demo Agency + Investor Demo)
+      // Get system accessible tenants (Nexus AR + Qashivo Production + Demo Agency + Investor Demo + LearningDemo)
       const NEXUS_AR_TENANT_ID = "9ffa8e58-af89-4f6a-adee-7fe09d956295";
       const DEMO_TENANT_ID = "bfa5f70f-4af5-421a-9d05-26df67f45c15";
       const QASHIVO_PRODUCTION_TENANT_ID = "7c91ba57-23d2-47eb-be4f-8440700fca60";
       const INVESTOR_DEMO_TENANT_ID = "6feb7f4d-ba6f-4a67-936e-9cff78f49c59";
-      const systemAccessibleTenantIds = [NEXUS_AR_TENANT_ID, QASHIVO_PRODUCTION_TENANT_ID, DEMO_TENANT_ID, INVESTOR_DEMO_TENANT_ID];
+      const LEARNING_DEMO_TENANT_ID = "db071cd0-9ed0-47c5-b6b8-68587a54d21a";
+      const systemAccessibleTenantIds = [NEXUS_AR_TENANT_ID, QASHIVO_PRODUCTION_TENANT_ID, DEMO_TENANT_ID, INVESTOR_DEMO_TENANT_ID, LEARNING_DEMO_TENANT_ID];
       
       let hasAccess = false;
       let accessType = '';
