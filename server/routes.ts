@@ -16249,6 +16249,154 @@ ${tenant.name}
     }
   });
 
+  // Get client journey timeline (interactions, payments, segment changes)
+  app.get("/api/client-intelligence/clients/:contactId/journey", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+      const tenantId = user.tenantId;
+      const { contactId } = req.params;
+
+      // Get all actions/interactions for this contact
+      const interactions = await db
+        .select({
+          id: actions.id,
+          type: actions.type,
+          subject: actions.subject,
+          content: actions.content,
+          channel: actions.channel,
+          sentiment: actions.sentiment,
+          createdAt: actions.createdAt,
+          completedAt: actions.completedAt,
+          status: actions.status,
+          metadata: actions.metadata,
+        })
+        .from(actions)
+        .where(
+          and(
+            eq(actions.contactId, contactId),
+            eq(actions.tenantId, tenantId)
+          )
+        )
+        .orderBy(desc(actions.createdAt))
+        .limit(100);
+
+      // Get payment history from invoices
+      const payments = await db
+        .select({
+          id: invoices.id,
+          invoiceNumber: invoices.invoiceNumber,
+          amount: invoices.amount,
+          amountPaid: invoices.amountPaid,
+          paidDate: invoices.paidDate,
+          status: invoices.status,
+          dueDate: invoices.dueDate,
+          issueDate: invoices.issueDate,
+        })
+        .from(invoices)
+        .where(
+          and(
+            eq(invoices.contactId, contactId),
+            eq(invoices.tenantId, tenantId),
+            sql`${invoices.amountPaid} > 0`
+          )
+        )
+        .orderBy(desc(invoices.paidDate))
+        .limit(50);
+
+      // Get behavioral segment changes from learning profile history
+      // For now, we'll compute current segment and include it as the latest change
+      const learningProfile = await db
+        .select()
+        .from(customerLearningProfiles)
+        .where(
+          and(
+            eq(customerLearningProfiles.contactId, contactId),
+            eq(customerLearningProfiles.tenantId, tenantId)
+          )
+        )
+        .limit(1);
+
+      const profile = learningProfile[0];
+      let currentSegment = 'Unknown';
+      let segmentColor = '#94a3b8';
+
+      if (profile) {
+        if (profile.isSerialPromiser) {
+          currentSegment = 'Serial Promiser';
+          segmentColor = '#f97316';
+        } else if (profile.isRelationshipDeteriorating) {
+          currentSegment = 'Deteriorating';
+          segmentColor = '#be123c';
+        } else if (profile.isReliableLatePayer) {
+          currentSegment = 'Predictable Late';
+          segmentColor = '#facc15';
+        } else if (profile.promiseReliabilityScore && parseFloat(profile.promiseReliabilityScore) >= 85) {
+          currentSegment = 'Reliable';
+          segmentColor = '#22c55e';
+        } else if (profile.totalPromisesMade && profile.totalPromisesMade > 0) {
+          currentSegment = 'Unpredictable Late';
+          segmentColor = '#f59e0b';
+        }
+      }
+
+      const segmentChanges = [{
+        segment: currentSegment,
+        color: segmentColor,
+        changedAt: profile?.updatedAt || new Date(),
+        reason: 'Current behavioral segment'
+      }];
+
+      // Format timeline events
+      const timelineEvents = [
+        ...interactions.map(i => ({
+          id: i.id,
+          type: 'interaction' as const,
+          eventType: i.type,
+          channel: i.channel,
+          subject: i.subject,
+          content: i.content,
+          sentiment: i.sentiment,
+          status: i.status,
+          metadata: i.metadata,
+          timestamp: i.completedAt || i.createdAt,
+        })),
+        ...payments.map(p => ({
+          id: p.id,
+          type: 'payment' as const,
+          invoiceNumber: p.invoiceNumber,
+          amount: parseFloat(p.amount),
+          amountPaid: parseFloat(p.amountPaid),
+          status: p.status,
+          timestamp: p.paidDate || p.issueDate,
+        })),
+        ...segmentChanges.map((s, idx) => ({
+          id: `segment-${idx}`,
+          type: 'segment_change' as const,
+          segment: s.segment,
+          color: s.color,
+          reason: s.reason,
+          timestamp: s.changedAt,
+        }))
+      ].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+      res.json({
+        timelineEvents,
+        summary: {
+          totalInteractions: interactions.length,
+          totalPayments: payments.length,
+          currentSegment,
+          segmentColor,
+        }
+      });
+    } catch (error) {
+      console.error("Error fetching client journey:", error);
+      res.status(500).json({ message: "Failed to fetch client journey" });
+    }
+  });
+
   // ==================== END CLIENT INTELLIGENCE API ====================
 
   // ==================== DEMO MODE API ====================
