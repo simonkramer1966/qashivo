@@ -1,0 +1,111 @@
+Replit Prompt — “Create Mock Responder (TypeScript) for Qashivo”
+
+Prompt:
+
+I’m working on the Qashivo / Nexus AR Express + TypeScript backend.
+Please create a mock inbound responder module that simulates fake replies for demo and testing purposes.
+It must integrate into the existing codebase exactly as described below:
+
+1️⃣ File to create: server/mockResponder.ts
+
+Goal:
+When the app sends an outbound message (email, SMS, or AI voice call), the mock responder automatically posts a simulated inbound webhook back into the app after a short delay.
+
+2️⃣ Behaviours required
+
+Export notifyOutbound(channel: string, contactId: string, invoiceId: string): void
+
+When called, wait 2–6 seconds (based on channel) and POST a fake inbound payload to:
+
+/api/webhooks/sendgrid/inbound for email
+
+/api/webhooks/vonage/sms for sms
+
+/api/webhooks/retell/transcript for voice
+
+Payload should include:
+
+{
+  "contactId": "...",
+  "invoiceId": "...",
+  "text": "We’ll pay Friday",
+  "intentType": "promise_to_pay",
+  "sentiment": "positive",
+  "ptpCaptured": true,
+  "promisedDate": "2025-10-15"
+}
+
+
+Add 2–3 randomised message variations:
+
+“We can’t pay yet” (negative, no PTP)
+
+“Left voicemail — please call back” (voice only)
+
+“Payment scheduled for next Tuesday” (positive, PTP)
+
+Use axios or node-fetch to POST internally.
+
+3️⃣ Toggle endpoints
+Add two dev-only routes in server/routes/devRoutes.ts:
+
+GET  /api/mock-responder/status   → returns { enabled: boolean }
+POST /api/mock-responder/toggle   → body { enabled: true|false }
+
+
+The module should export:
+
+isEnabled(): boolean
+setEnabled(value: boolean): void
+
+
+Default to false unless process.env.MOCK_RESPONDER_ENABLED === 'true'.
+
+4️⃣ Integration
+In server/services/actionExecutor.ts, after each successful outbound send:
+
+import { notifyOutbound } from '../mockResponder';
+if (process.env.MOCK_RESPONDER_ENABLED === 'true') {
+  notifyOutbound(action.type, action.contactId, action.invoiceId);
+}
+
+
+This ensures that when the toggle is ON, every outbound message generates a realistic inbound reply for demos.
+
+5️⃣ Developer toggle in frontend
+
+Add a simple Settings switch that calls:
+
+GET /api/mock-responder/status
+
+POST /api/mock-responder/toggle
+
+Use Shadcn Switch component and show “Mock Responder: On/Off”.
+
+6️⃣ Constraints
+
+TypeScript + ES modules
+
+Compatible with Express 5 and Node 18+
+
+Use only lightweight dependencies (axios, uuid)
+
+Log events like:
+
+[MockResponder] Posted inbound voice webhook for invoice 123
+
+
+Outcome:
+When I press “Send SMS” or “AI Voice Call” in the Qashivo UI with mock mode ON, a fake inbound message (e.g. “We’ll pay Friday”) appears in the Action Centre a few seconds later — proving the full AI workflow works offline.
+
+Please output:
+
+server/mockResponder.ts
+
+server/routes/devRoutes.ts
+
+Example update snippet for actionExecutor.ts
+
+Brief instructions to test in Replit.
+
+When you paste this into Replit’s AI, it will build the mock responder system and wire it directly into your Express backend — fully demo-ready.
