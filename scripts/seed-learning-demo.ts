@@ -207,10 +207,10 @@ async function seedData() {
     // Step 2: Batch insert all contacts
     const insertedContacts = await db.insert(contacts).values(contactsBatch).returning();
     
-    // Step 3: Generate all invoices and communications for these contacts
+    // Step 3: Collect all invoices for these contacts (batch)
+    const invoiceMetadata: any[] = []; // Store invoice metadata for later use
+    
     for (const contact of insertedContacts) {
-
-      // Generate 15-30 invoices over 12 months
       const numInvoices = Math.floor(Math.random() * 16) + 15;
       const now = new Date();
       const twelveMonthsAgo = new Date(now);
@@ -226,7 +226,6 @@ async function seedData() {
         
         const amount = randomAmount();
         
-        // Determine if paid based on profile
         const isPaid = Math.random() < (profile.ptpKeptRate - (profile.deteriorationRate || 0) * monthsAgo);
         const slipDays = profile.isUnpredictable 
           ? Math.floor(Math.random() * (profile.avgSlipDays.max - profile.avgSlipDays.min + 1)) + profile.avgSlipDays.min
@@ -235,7 +234,7 @@ async function seedData() {
         const paidDate = isPaid ? new Date(dueDate.getTime() + slipDays * 24 * 60 * 60 * 1000) : null;
         const status = isPaid ? 'paid' : (dueDate < now ? 'overdue' : 'pending');
         
-        const [invoice] = await db.insert(invoices).values({
+        invoicesBatch.push({
           tenantId: LEARNING_DEMO_TENANT_ID,
           contactId: contact.id,
           invoiceNumber: generateInvoiceNumber(),
@@ -246,17 +245,37 @@ async function seedData() {
           dueDate,
           paidDate,
           currency: 'GBP',
-        }).returning();
+        });
+        
+        // Store metadata for generating communications later
+        invoiceMetadata.push({
+          contact,
+          amount,
+          isPaid,
+          paidDate,
+          issueDate,
+          dueDate,
+          monthsAgo,
+          status
+        });
         
         totalInvoices++;
+      }
+    }
+    
+    // Step 4: Batch insert all invoices
+    const insertedInvoices = await db.insert(invoices).values(invoicesBatch).returning();
+    
+    // Step 5: Generate all communications, actions, and promises
+    for (let i = 0; i < insertedInvoices.length; i++) {
+      const invoice = insertedInvoices[i];
+      const meta = invoiceMetadata[i];
+      const { contact, amount, isPaid, paidDate, issueDate, dueDate, monthsAgo, status } = meta;
+      const now = new Date();
 
-        // Generate 5-10 communications per invoice (batch for performance)
-        const numComms = Math.floor(Math.random() * 6) + 5;
-        const isDisputed = Math.random() < profile.disputeRate;
-        
-        const inboundBatch: any[] = [];
-        const outboundBatch: any[] = [];
-        const inboundActionBatch: any[] = [];
+      // Generate 5-10 communications per invoice
+      const numComms = Math.floor(Math.random() * 6) + 5;
+      const isDisputed = Math.random() < profile.disputeRate;
         
         for (let comm = 0; comm < numComms; comm++) {
           const commDate = randomDate(issueDate, paidDate || now);
@@ -272,12 +291,12 @@ async function seedData() {
             const sentimentCategory = getSentimentCategory(sentiment);
             const promisedDate = isPromise ? new Date(commDate.getTime() + 7 * 24 * 60 * 60 * 1000) : null;
             
-            inboundBatch.push({
+            inboundMessagesBatch.push({
               tenantId: LEARNING_DEMO_TENANT_ID,
               contactId: contact.id,
               invoiceId: invoice.id,
               channel,
-              from: channel === 'email' ? contactEmail : DEMO_PHONE,
+              from: channel === 'email' ? contact.email : DEMO_PHONE,
               to: channel === 'email' ? 'collections@nexusar.com' : '+447418317011',
               subject: channel === 'email' ? `Re: Invoice ${invoice.invoiceNumber}` : null,
               content,
@@ -292,7 +311,7 @@ async function seedData() {
             });
             
             // Create corresponding action record for Intent Analyst system
-            inboundActionBatch.push({
+            actionsBatch.push({
               tenantId: LEARNING_DEMO_TENANT_ID,
               contactId: contact.id,
               invoiceId: invoice.id,
@@ -322,7 +341,7 @@ async function seedData() {
             
             totalCommunications++;
           } else {
-            outboundBatch.push({
+            actionsBatch.push({
               tenantId: LEARNING_DEMO_TENANT_ID,
               contactId: contact.id,
               invoiceId: invoice.id,
@@ -339,16 +358,10 @@ async function seedData() {
             totalCommunications++;
           }
         }
-        
-        // Batch insert messages and actions
-        if (inboundBatch.length > 0) await db.insert(inboundMessages).values(inboundBatch);
-        if (inboundActionBatch.length > 0) await db.insert(actions).values(inboundActionBatch);
-        if (outboundBatch.length > 0) await db.insert(actions).values(outboundBatch);
 
-        // Generate promises for this invoice (batch)
-        if (!isDisputed && Math.random() < 0.6) {
-          const numPromises = profile.name === 'Serial Promiser' ? Math.floor(Math.random() * 3) + 2 : Math.floor(Math.random() * 2) + 1;
-          const promiseBatch: any[] = [];
+      // Generate promises for this invoice
+      if (!isDisputed && Math.random() < 0.6) {
+        const numPromises = profile.name === 'Serial Promiser' ? Math.floor(Math.random() * 3) + 2 : Math.floor(Math.random() * 2) + 1;
           
           for (let p = 0; p < numPromises; p++) {
             const promiseDate = randomDate(dueDate, paidDate || now);
@@ -363,7 +376,7 @@ async function seedData() {
             const isPromiseFuture = promisedPaymentDate > now;
             const promiseStatus = isPromiseFuture && !paidDate ? 'open' : (wasKept ? 'kept' : 'broken');
             
-            promiseBatch.push({
+            promisesBatch.push({
               tenantId: LEARNING_DEMO_TENANT_ID,
               contactId: contact.id,
               invoiceId: invoice.id,
@@ -384,12 +397,16 @@ async function seedData() {
             
             totalPromises++;
           }
-          
-          if (promiseBatch.length > 0) await db.insert(paymentPromises).values(promiseBatch);
         }
-      }
-
-      // CRITICAL FIX: Calculate learning profile using actual generated data
+    }
+    
+    // Step 6: Batch insert all messages, actions, and promises
+    if (inboundMessagesBatch.length > 0) await db.insert(inboundMessages).values(inboundMessagesBatch);
+    if (actionsBatch.length > 0) await db.insert(actions).values(actionsBatch);
+    if (promisesBatch.length > 0) await db.insert(paymentPromises).values(promisesBatch);
+    
+    // Step 7: Calculate and batch insert learning profiles for all contacts
+    for (const contact of insertedContacts) {
       const allPromises = await db.select().from(paymentPromises).where(eq(paymentPromises.contactId, contact.id));
       const allMessages = await db.select().from(inboundMessages).where(eq(inboundMessages.contactId, contact.id));
       const allActions = await db.select().from(actions).where(eq(actions.contactId, contact.id));
