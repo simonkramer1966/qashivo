@@ -405,23 +405,24 @@ async function seedData() {
     if (actionsBatch.length > 0) await db.insert(actions).values(actionsBatch);
     if (promisesBatch.length > 0) await db.insert(paymentPromises).values(promisesBatch);
     
-    // Step 7: Calculate and batch insert learning profiles for all contacts
+    // Step 7: Calculate learning profiles from in-memory data
     for (const contact of insertedContacts) {
-      const allPromises = await db.select().from(paymentPromises).where(eq(paymentPromises.contactId, contact.id));
-      const allMessages = await db.select().from(inboundMessages).where(eq(inboundMessages.contactId, contact.id));
-      const allActions = await db.select().from(actions).where(eq(actions.contactId, contact.id));
-      const allInvoices = await db.select().from(invoices).where(eq(invoices.contactId, contact.id));
+      // Filter in-memory data for this contact
+      const contactInvoices = insertedInvoices.filter(inv => inv.contactId === contact.id);
+      const contactPromises = promisesBatch.filter(p => p.contactId === contact.id);
+      const contactMessages = inboundMessagesBatch.filter(m => m.contactId === contact.id);
+      const contactActions = actionsBatch.filter(a => a.contactId === contact.id);
       
       // Calculate promise metrics from actual data
-      const promisesKept = allPromises.filter(p => p.status === 'kept').length;
-      const promisesBroken = allPromises.filter(p => p.status === 'broken').length;
-      const totalPromisesMade = allPromises.length;
+      const promisesKept = contactPromises.filter(p => p.status === 'kept').length;
+      const promisesBroken = contactPromises.filter(p => p.status === 'broken').length;
+      const totalPromisesMade = contactPromises.length;
       const prs = totalPromisesMade > 0 ? (promisesKept / totalPromisesMade) * 100 : null;
       
       // Calculate channel effectiveness from actual promise outcomes per channel
-      const emailPromises = allPromises.filter(p => p.channel === 'email');
-      const smsPromises = allPromises.filter(p => p.channel === 'sms');
-      const voicePromises = allPromises.filter(p => p.channel === 'voice');
+      const emailPromises = contactPromises.filter(p => p.channel === 'email');
+      const smsPromises = contactPromises.filter(p => p.channel === 'sms');
+      const voicePromises = contactPromises.filter(p => p.channel === 'voice');
       
       const emailEffectiveness = emailPromises.length > 0 
         ? emailPromises.filter(p => p.status === 'kept').length / emailPromises.length 
@@ -434,9 +435,9 @@ async function seedData() {
         : 0.5;
       
       // Calculate payment reliability from actual invoice payment data
-      const paidInvoices = allInvoices.filter(inv => inv.status === 'paid');
-      const paymentReliability = allInvoices.length > 0 
-        ? paidInvoices.length / allInvoices.length 
+      const paidInvoices = contactInvoices.filter(inv => inv.status === 'paid');
+      const paymentReliability = contactInvoices.length > 0 
+        ? paidInvoices.length / contactInvoices.length 
         : 0;
       
       // Calculate average payment delay from actual paid invoices
@@ -452,16 +453,16 @@ async function seedData() {
         : 0;
       
       // Calculate channel usage for preferred channel
-      const emailMessages = allMessages.filter(m => m.channel === 'email').length;
-      const smsMessages = allMessages.filter(m => m.channel === 'sms').length;
-      const voiceMessages = allMessages.filter(m => m.channel === 'voice').length;
+      const emailMessages = contactMessages.filter(m => m.channel === 'email').length;
+      const smsMessages = contactMessages.filter(m => m.channel === 'sms').length;
+      const voiceMessages = contactMessages.filter(m => m.channel === 'voice').length;
       const totalMessages = emailMessages + smsMessages + voiceMessages;
       
       // Use generated data for interactions
-      const totalInteractions = allMessages.length + allActions.length;
-      const successfulActions = allPromises.filter(p => p.status === 'kept').length;
+      const totalInteractions = contactMessages.length + contactActions.length;
+      const successfulActions = contactPromises.filter(p => p.status === 'kept').length;
       
-      await db.insert(customerLearningProfiles).values({
+      profilesBatch.push({
         tenantId: LEARNING_DEMO_TENANT_ID,
         contactId: contact.id,
         emailEffectiveness: emailEffectiveness.toFixed(2),
@@ -494,6 +495,9 @@ async function seedData() {
       
       totalProfiles++;
     }
+    
+    // Step 8: Batch insert all learning profiles for this profile group
+    if (profilesBatch.length > 0) await db.insert(customerLearningProfiles).values(profilesBatch);
     
     console.log(`✅ ${profile.name}: 40 customers created`);
   }
