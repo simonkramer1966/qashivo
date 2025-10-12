@@ -16143,7 +16143,7 @@ ${tenant.name}
     }
   });
 
-  // Get detailed client behavioral analytics
+  // Get detailed client behavioral analytics - REWRITTEN FROM SCRATCH
   app.get("/api/client-intelligence/clients/:contactId", isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.claims.sub);
@@ -16153,79 +16153,96 @@ ${tenant.name}
       const tenantId = user.tenantId;
       const { contactId } = req.params;
 
-      // Get client basic info
-      const client = await db
-        .select({
-          id: contacts.id,
-          name: contacts.name,
-          email: contacts.email,
-          phone: contacts.phone,
-          companyName: contacts.companyName,
-          status: contacts.status,
-        })
-        .from(contacts)
-        .where(
-          and(
-            eq(contacts.id, contactId),
-            eq(contacts.tenantId, tenantId)
-          )
-        )
-        .limit(1);
+      // Step 1: Get basic client info using raw query to avoid Drizzle issues
+      const clientResult = await db.execute(sql`
+        SELECT id, name, email, phone, company_name, is_active
+        FROM contacts
+        WHERE id = ${contactId} AND tenant_id = ${tenantId}
+        LIMIT 1
+      `);
 
-      if (!client || client.length === 0) {
+      if (!clientResult.rows || clientResult.rows.length === 0) {
         return res.status(404).json({ message: "Client not found" });
       }
 
-      // Get learning profile - temporarily returning mock data due to Drizzle ORM issue with customerLearningProfiles table
-      const learningProfile = [{
-        id: 'temp',
-        emailEffectiveness: '0.5',
-        smsEffectiveness: '0.5',
-        voiceEffectiveness: '0.5',
-        totalInteractions: 0,
-        successfulActions: 0,
-        averageResponseTime: 24,
-        preferredChannel: 'email',
-        preferredContactTime: 'morning',
-        promiseReliabilityScore: '0',
-        totalPromisesMade: 0,
-        promisesKept: 0,
-        promisesBroken: 0,
-        promisesPartiallyKept: 0,
-        isSerialPromiser: false,
-        isReliableLatePayer: false,
-        isRelationshipDeteriorating: false,
-        isNewCustomer: true,
-        prsLast30Days: '0',
-        prsLast90Days: '0',
-        prsLast12Months: '0',
-      }];
-      // TODO: Fix Drizzle ORM issue with customerLearningProfiles.select()
+      const clientRow = clientResult.rows[0] as any;
+      const client = {
+        id: clientRow.id,
+        name: clientRow.name,
+        email: clientRow.email,
+        phone: clientRow.phone,
+        companyName: clientRow.company_name,
+        status: clientRow.is_active ? 'active' : 'inactive',
+      };
 
-      // Get promise history
-      // Note: Promise-specific fields don't exist as direct columns in inboundMessages
-      // They're stored in the extractedEntities JSONB field
-      const promises: any[] = [];
+      // Step 2: Get learning profile using raw query
+      const profileResult = await db.execute(sql`
+        SELECT 
+          email_effectiveness,
+          sms_effectiveness,
+          voice_effectiveness,
+          total_interactions,
+          successful_actions,
+          average_response_time,
+          preferred_channel,
+          preferred_contact_time,
+          promise_reliability_score,
+          total_promises_made,
+          promises_kept,
+          promises_broken,
+          promises_partially_kept,
+          is_serial_promiser,
+          is_reliable_late_payer,
+          is_relationship_deteriorating,
+          is_new_customer,
+          prs_last_30_days,
+          prs_last_90_days,
+          prs_last_12_months,
+          learning_confidence
+        FROM customer_learning_profiles
+        WHERE contact_id = ${contactId} AND tenant_id = ${tenantId}
+        LIMIT 1
+      `);
 
-      // Get recent interactions count by channel - temporarily disabled due to Drizzle ORM issue
-      const channelStats: any[] = [];
+      let learningProfile = null;
+      if (profileResult.rows && profileResult.rows.length > 0) {
+        const profileRow = profileResult.rows[0] as any;
+        learningProfile = {
+          emailEffectiveness: profileRow.email_effectiveness || '0.5',
+          smsEffectiveness: profileRow.sms_effectiveness || '0.5',
+          voiceEffectiveness: profileRow.voice_effectiveness || '0.5',
+          totalInteractions: profileRow.total_interactions || 0,
+          successfulActions: profileRow.successful_actions || 0,
+          averageResponseTime: profileRow.average_response_time || 24,
+          preferredChannel: profileRow.preferred_channel || 'email',
+          preferredContactTime: profileRow.preferred_contact_time || 'morning',
+          promiseReliabilityScore: profileRow.promise_reliability_score || '0',
+          totalPromisesMade: profileRow.total_promises_made || 0,
+          promisesKept: profileRow.promises_kept || 0,
+          promisesBroken: profileRow.promises_broken || 0,
+          promisesPartiallyKept: profileRow.promises_partially_kept || 0,
+          prsLast30Days: profileRow.prs_last_30_days || '0',
+          prsLast90Days: profileRow.prs_last_90_days || '0',
+          prsLast12Months: profileRow.prs_last_12_months || '0',
+          learningConfidence: profileRow.learning_confidence || '0.1',
+        };
+      }
 
-      const profile = learningProfile[0] || null;
+      // Step 3: Calculate behavioral flags
+      const behavioralFlags = {
+        isSerialPromiser: profileResult.rows?.[0]?.is_serial_promiser || false,
+        isReliableLatePayer: profileResult.rows?.[0]?.is_reliable_late_payer || false,
+        isRelationshipDeteriorating: profileResult.rows?.[0]?.is_relationship_deteriorating || false,
+        isNewCustomer: profileResult.rows?.[0]?.is_new_customer !== false,
+      };
 
+      // Step 4: Return response
       res.json({
-        client: client[0],
-        learningProfile: profile,
-        promises: promises.map(p => ({
-          ...p,
-          promisedAmount: p.promisedAmount ? parseFloat(p.promisedAmount) : 0,
-        })),
-        channelStats: channelStats,
-        behavioralFlags: {
-          isSerialPromiser: profile?.isSerialPromiser || false,
-          isReliableLatePayer: profile?.isReliableLatePayer || false,
-          isRelationshipDeteriorating: profile?.isRelationshipDeteriorating || false,
-          isNewCustomer: profile?.isNewCustomer || true,
-        }
+        client,
+        learningProfile,
+        promises: [], // Will be added later if needed
+        channelStats: [], // Will be added later if needed
+        behavioralFlags,
       });
     } catch (error) {
       console.error("Error fetching client behavioral analytics:", error);
