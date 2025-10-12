@@ -93,7 +93,7 @@ export default function ClientIntelligencePage() {
   });
 
   const { data: selectedClientData, isLoading: isLoadingDetail } = useQuery<ClientDetail>({
-    queryKey: ["/api/client-intelligence/clients", selectedClientId],
+    queryKey: [`/api/client-intelligence/clients/${selectedClientId}`],
     enabled: !!selectedClientId,
   });
 
