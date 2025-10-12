@@ -145,9 +145,85 @@ export default function ClientIntelligencePage() {
         <Header title="Client Intelligence" subtitle="AI learning progression for each customer" />
 
         <div className="flex-1 bg-gradient-to-br from-slate-50 via-blue-50 to-teal-50 overflow-hidden">
-          <div className="h-full flex flex-col p-6 gap-6 max-w-7xl mx-auto">
-            {/* Top Half - Client Detail */}
-            <div className="flex-1 min-h-0">
+          <div className="h-full flex flex-col md:flex-row p-6 gap-6 max-w-7xl mx-auto">
+            {/* Left Sidebar - Client List */}
+            <div className="w-full md:w-96 flex-shrink-0">
+              <Card className="h-full bg-white/80 backdrop-blur-sm border-white/50 shadow-lg flex flex-col">
+                <CardHeader className="border-b border-gray-200/50 pb-3 flex-shrink-0">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-lg font-bold text-gray-900">All Clients</CardTitle>
+                    <Badge variant="outline" className="text-gray-600" data-testid="badge-client-count">
+                      <Users className="w-3 h-3 mr-1" />
+                      {clients.length} clients
+                    </Badge>
+                  </div>
+                </CardHeader>
+
+                <ScrollArea className="flex-1">
+                  <div className="p-4">
+                    {isLoadingClients ? (
+                      <div className="space-y-2">
+                        {[1, 2, 3, 4, 5].map((i) => (
+                          <Skeleton key={i} className="h-16 w-full" />
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="divide-y divide-gray-200">
+                        {clients.map((client) => (
+                          <div
+                            key={client.id}
+                            className={`py-2 px-3 cursor-pointer transition-colors ${
+                              selectedClientId === client.id
+                                ? "bg-[#17B6C3]/10"
+                                : "hover:bg-gray-50"
+                            }`}
+                            onClick={() => setSelectedClientId(client.id)}
+                            data-testid={`row-client-${client.id}`}
+                          >
+                            <div className="flex flex-col gap-2">
+                              <div className="flex items-center justify-between gap-2">
+                                <div className="flex-1 min-w-0">
+                                  <p className="font-medium text-gray-900 truncate text-sm" data-testid={`text-name-${client.id}`}>
+                                    {client.companyName || client.name}
+                                  </p>
+                                  {client.companyName && (
+                                    <p className="text-xs text-gray-500 truncate">{client.name}</p>
+                                  )}
+                                </div>
+                                <Badge
+                                  style={{ backgroundColor: client.segmentColor }}
+                                  className="text-white text-xs px-2 py-0.5 shrink-0"
+                                  data-testid={`badge-segment-${client.id}`}
+                                >
+                                  {client.behavioralSegment}
+                                </Badge>
+                              </div>
+                              <div className="flex items-center gap-4 text-xs">
+                                <div className="flex items-center gap-1">
+                                  <span className="text-gray-500">PRS:</span>
+                                  <span className="font-semibold text-[#17B6C3]" data-testid={`text-prs-${client.id}`}>
+                                    {client.prs}
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <span className="text-gray-500">Conf:</span>
+                                  <span className="font-semibold text-blue-600" data-testid={`text-conf-${client.id}`}>
+                                    {Math.round(client.confidenceScore * 100)}%
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </ScrollArea>
+              </Card>
+            </div>
+
+            {/* Right Main Area - Analytics */}
+            <div className="flex-1 min-w-0">
               {isLoadingDetail || !selectedClientData ? (
                 <Card className="h-full bg-white/80 backdrop-blur-sm border-white/50 shadow-lg overflow-auto">
                   <CardContent className="p-6">
@@ -164,11 +240,11 @@ export default function ClientIntelligencePage() {
                     <div className="flex items-center justify-between">
                       <div>
                         <CardTitle className="text-2xl font-bold text-gray-900" data-testid="text-client-name">
-                          {selectedClientData.client.name}
+                          {selectedClientData.client.companyName || selectedClientData.client.name}
                         </CardTitle>
                         {selectedClientData.client.companyName && (
                           <p className="text-sm text-gray-600 mt-1" data-testid="text-company-name">
-                            {selectedClientData.client.companyName}
+                            {selectedClientData.client.name}
                           </p>
                         )}
                       </div>
@@ -295,89 +371,6 @@ export default function ClientIntelligencePage() {
                   </CardContent>
                 </Card>
               )}
-            </div>
-
-            {/* Bottom Half - Client List */}
-            <div className="flex-1 min-h-0">
-              <Card className="h-full bg-white/80 backdrop-blur-sm border-white/50 shadow-lg flex flex-col">
-                <CardHeader className="border-b border-gray-200/50 pb-3 flex-shrink-0">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-lg font-bold text-gray-900">All Clients</CardTitle>
-                    <Badge variant="outline" className="text-gray-600" data-testid="badge-client-count">
-                      <Users className="w-3 h-3 mr-1" />
-                      {clients.length} clients
-                    </Badge>
-                  </div>
-                </CardHeader>
-
-                <ScrollArea className="flex-1">
-                  <div className="p-4">
-                    {isLoadingClients ? (
-                      <div className="space-y-2">
-                        {[1, 2, 3, 4, 5].map((i) => (
-                          <Skeleton key={i} className="h-16 w-full" />
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="divide-y divide-gray-200">
-                        {clients.map((client) => (
-                          <div
-                            key={client.id}
-                            className={`py-2 px-3 cursor-pointer transition-colors ${
-                              selectedClientId === client.id
-                                ? "bg-[#17B6C3]/10"
-                                : "hover:bg-gray-50"
-                            }`}
-                            onClick={() => setSelectedClientId(client.id)}
-                            data-testid={`row-client-${client.id}`}
-                          >
-                            <div className="flex items-center justify-between gap-4">
-                              <div className="flex-1 min-w-0 flex items-center gap-3">
-                                <div className="flex-1 min-w-0">
-                                  <p className="font-medium text-gray-900 truncate text-sm" data-testid={`text-name-${client.id}`}>
-                                    {client.companyName || client.name}
-                                  </p>
-                                  {client.companyName && (
-                                    <p className="text-xs text-gray-500 truncate">{client.name}</p>
-                                  )}
-                                </div>
-                                <Badge
-                                  style={{ backgroundColor: client.segmentColor }}
-                                  className="text-white text-xs px-2 py-0.5 shrink-0"
-                                  data-testid={`badge-segment-${client.id}`}
-                                >
-                                  {client.behavioralSegment}
-                                </Badge>
-                              </div>
-
-                              <div className="flex items-center gap-6 shrink-0">
-                                <div className="text-center min-w-[60px]">
-                                  <p className="text-xs text-gray-500 mb-0.5">PRS</p>
-                                  <p className="text-sm font-semibold text-[#17B6C3]" data-testid={`text-prs-${client.id}`}>
-                                    {client.prs}
-                                  </p>
-                                </div>
-                                <div className="text-center min-w-[70px]">
-                                  <p className="text-xs text-gray-500 mb-0.5">Confidence</p>
-                                  <p className="text-sm font-semibold text-blue-600" data-testid={`text-conf-${client.id}`}>
-                                    {Math.round(client.confidenceScore * 100)}%
-                                  </p>
-                                </div>
-                                <div className="text-center min-w-[70px]">
-                                  <p className="text-xs text-gray-500 mb-0.5">Actions</p>
-                                  <p className="text-sm font-semibold text-gray-700">
-                                    {client.totalInteractions || 0}
-                                  </p>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </ScrollArea>
-              </Card>
             </div>
           </div>
         </div>
