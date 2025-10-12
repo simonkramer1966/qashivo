@@ -24,12 +24,35 @@ interface SMSParams {
   from?: string;
 }
 
-export async function sendSMS(params: SMSParams): Promise<{
+export async function sendSMS(params: SMSParams & { 
+  invoiceId?: string; 
+  customerId?: string; 
+}): Promise<{
   success: boolean;
   messageId?: string;
   error?: string;
 }> {
   try {
+    // Check if demo mode is enabled - SHORT-CIRCUIT and return mock success
+    const { demoModeService } = await import('./demoModeService.js');
+    if (demoModeService.isEnabled()) {
+      console.log('🎭 Demo mode: Skipping real SMS send, returning mock success');
+      
+      // Schedule mock inbound response if context available
+      if (params.invoiceId && params.customerId) {
+        const { mockResponderService } = await import('./mockResponderService.js');
+        mockResponderService.simulateSMSResponse({
+          fromNumber: params.to,
+          toNumber: params.from || fromNumber,
+          invoiceId: params.invoiceId,
+          customerId: params.customerId,
+        });
+      }
+      
+      // Return mock success immediately - DO NOT send real SMS
+      return { success: true, messageId: 'demo-mock-sms-' + Date.now() };
+    }
+
     if (!vonageClient) {
       console.log("Vonage credentials not configured, skipping SMS send:", params);
       return { success: true, messageId: 'mock-vonage-id' };

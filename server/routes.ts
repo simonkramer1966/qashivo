@@ -2130,6 +2130,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const result = await vonageService.sendSMS({
         to: invoice.contact.phone,
         message: message,
+        invoiceId: invoice.id,
+        customerId: invoice.contactId,
       });
 
       if (result.success) {

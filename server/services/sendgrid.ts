@@ -25,8 +25,30 @@ export async function sendEmail(params: {
   subject: string;
   html: string;
   text?: string;
+  invoiceId?: string;
+  customerId?: string;
 }): Promise<boolean> {
   try {
+    // Check if demo mode is enabled - SHORT-CIRCUIT and return mock success
+    const { demoModeService } = await import('./demoModeService.js');
+    if (demoModeService.isEnabled()) {
+      console.log('🎭 Demo mode: Skipping real email send, returning mock success');
+      
+      // Schedule mock inbound response if context available
+      if (params.invoiceId && params.customerId) {
+        const { mockResponderService } = await import('./mockResponderService.js');
+        mockResponderService.simulateEmailResponse({
+          fromEmail: params.to,
+          toEmail: params.from,
+          invoiceId: params.invoiceId,
+          customerId: params.customerId,
+        });
+      }
+      
+      // Return mock success immediately - DO NOT send real email
+      return true;
+    }
+
     const message: EmailMessage = {
       to: [{ email: params.to }],
       from: parseEmailAddress(params.from),

@@ -40,6 +40,35 @@ export class RetellService {
    */
   async createCall(params: CreateCallParams): Promise<CallResult> {
     try {
+      // Check if demo mode is enabled - SHORT-CIRCUIT and return mock success
+      const { demoModeService } = await import('./services/demoModeService.js');
+      if (demoModeService.isEnabled()) {
+        console.log('🎭 Demo mode: Skipping real voice call, returning mock success');
+        
+        const mockCallId = 'demo-mock-call-' + Date.now();
+        
+        // Schedule mock inbound response if context available
+        if (params.metadata?.invoiceId && params.metadata?.contactId) {
+          const { mockResponderService } = await import('./services/mockResponderService.js');
+          mockResponderService.simulateVoiceResponse({
+            callId: mockCallId,
+            invoiceId: params.metadata.invoiceId,
+            customerId: params.metadata.contactId,
+            customerPhone: params.toNumber,
+          });
+        }
+        
+        // Return mock success immediately - DO NOT place real call
+        return {
+          callId: mockCallId,
+          agentId: params.agentId || 'demo-agent',
+          status: 'registered',
+          fromNumber: params.fromNumber,
+          toNumber: params.toNumber,
+          direction: 'outbound',
+        };
+      }
+
       // Import and use the unified Retell call helper
       const { createUnifiedRetellCall } = await import('./utils/retellCallHelper');
       
