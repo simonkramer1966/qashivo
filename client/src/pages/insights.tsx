@@ -4,6 +4,9 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsi
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { TrendingUp, Users, Brain, BarChart3, CheckCircle, XCircle, Clock, AlertTriangle, TrendingDown, Shuffle } from "lucide-react";
+import NewSidebar from "@/components/layout/new-sidebar";
+import BottomNav from "@/components/layout/bottom-nav";
+import Header from "@/components/layout/header";
 
 // Mock data for 6 behavioral segments based on LearningDemo seed data
 const behavioralSegments = [
@@ -177,25 +180,29 @@ export default function InsightsPage() {
   const [selectedSegment, setSelectedSegment] = useState<typeof behavioralSegments[0] | null>(null);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-teal-50 p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
-        
-        {/* Hero Header with Metric Tiles */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-        >
-          <div className="text-center mb-8">
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-[#17B6C3] to-blue-600 bg-clip-text text-transparent mb-2">
-              AI Behavioural Insights
-            </h1>
-            <p className="text-gray-600 text-lg">
-              How Qashivo learns to understand every customer
-            </p>
-          </div>
+    <div className="flex h-screen bg-white">
+      {/* Desktop Sidebar */}
+      <div className="hidden lg:block">
+        <NewSidebar />
+      </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+      {/* Main Content */}
+      <main className="flex-1 overflow-y-auto main-with-bottom-nav">
+        <Header 
+          title="AI Behavioural Insights" 
+          subtitle="How Qashivo learns to understand every customer"
+        />
+        
+        <div className="bg-gradient-to-br from-slate-50 via-blue-50 to-teal-50 min-h-full p-6">
+          <div className="max-w-7xl mx-auto space-y-6">
+        
+            {/* Hero Header with Metric Tiles */}
+            <motion.div
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
+            >
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
             <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg" data-testid="card-metric-customers">
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
@@ -417,64 +424,69 @@ export default function InsightsPage() {
             "Each dot on these charts represents a customer interaction that Qashivo has learned from."
           </p>
         </motion.div>
-      </div>
+          </div>
+        </div>
 
-      {/* Segment Detail Modal */}
-      <Dialog open={!!selectedSegment} onOpenChange={() => setSelectedSegment(null)}>
-        <DialogContent className="max-w-2xl" data-testid="modal-segment-detail">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-3">
-              {selectedSegment && (
-                <>
-                  <div className="p-2 rounded-lg" style={{ backgroundColor: `${selectedSegment.color}20` }}>
-                    {(() => {
-                      const Icon = selectedSegment.icon;
-                      return <Icon className="w-6 h-6" style={{ color: selectedSegment.color }} />;
-                    })()}
+        {/* Segment Detail Modal */}
+        <Dialog open={!!selectedSegment} onOpenChange={() => setSelectedSegment(null)}>
+          <DialogContent className="max-w-2xl" data-testid="modal-segment-detail">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-3">
+                {selectedSegment && (
+                  <>
+                    <div className="p-2 rounded-lg" style={{ backgroundColor: `${selectedSegment.color}20` }}>
+                      {(() => {
+                        const Icon = selectedSegment.icon;
+                        return <Icon className="w-6 h-6" style={{ color: selectedSegment.color }} />;
+                      })()}
+                    </div>
+                    <span data-testid="text-modal-segment-name">{selectedSegment.name}</span>
+                  </>
+                )}
+              </DialogTitle>
+              <DialogDescription data-testid="text-modal-segment-description">
+                {selectedSegment?.description}
+              </DialogDescription>
+            </DialogHeader>
+            
+            {selectedSegment && (
+              <div className="space-y-4 mt-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-gray-50 p-4 rounded-lg">
+                    <p className="text-sm text-gray-600 mb-1">Customer Count</p>
+                    <p className="text-2xl font-bold text-[#17B6C3]" data-testid="text-modal-customer-count">{selectedSegment.customerCount}</p>
                   </div>
-                  <span data-testid="text-modal-segment-name">{selectedSegment.name}</span>
-                </>
-              )}
-            </DialogTitle>
-            <DialogDescription data-testid="text-modal-segment-description">
-              {selectedSegment?.description}
-            </DialogDescription>
-          </DialogHeader>
-          
-          {selectedSegment && (
-            <div className="space-y-4 mt-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <p className="text-sm text-gray-600 mb-1">Customer Count</p>
-                  <p className="text-2xl font-bold text-[#17B6C3]" data-testid="text-modal-customer-count">{selectedSegment.customerCount}</p>
+                  <div className="bg-gray-50 p-4 rounded-lg">
+                    <p className="text-sm text-gray-600 mb-1">Promise Reliability Score</p>
+                    <p className="text-2xl font-bold" style={{ color: selectedSegment.color }} data-testid="text-modal-prs">
+                      {(selectedSegment.avgPRS * 100).toFixed(0)}%
+                    </p>
+                  </div>
+                  <div className="bg-gray-50 p-4 rounded-lg">
+                    <p className="text-sm text-gray-600 mb-1">Average Sentiment</p>
+                    <p className={`text-2xl font-bold ${selectedSegment.avgSentiment >= 0 ? 'text-green-600' : 'text-red-600'}`} data-testid="text-modal-sentiment">
+                      {selectedSegment.avgSentiment >= 0 ? '+' : ''}{selectedSegment.avgSentiment.toFixed(1)}
+                    </p>
+                  </div>
+                  <div className="bg-gray-50 p-4 rounded-lg">
+                    <p className="text-sm text-gray-600 mb-1">AI Confidence Growth</p>
+                    <p className="text-2xl font-bold text-green-600" data-testid="text-modal-confidence">{selectedSegment.confidenceGrowth}</p>
+                  </div>
                 </div>
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <p className="text-sm text-gray-600 mb-1">Promise Reliability Score</p>
-                  <p className="text-2xl font-bold" style={{ color: selectedSegment.color }} data-testid="text-modal-prs">
-                    {(selectedSegment.avgPRS * 100).toFixed(0)}%
-                  </p>
-                </div>
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <p className="text-sm text-gray-600 mb-1">Average Sentiment</p>
-                  <p className={`text-2xl font-bold ${selectedSegment.avgSentiment >= 0 ? 'text-green-600' : 'text-red-600'}`} data-testid="text-modal-sentiment">
-                    {selectedSegment.avgSentiment >= 0 ? '+' : ''}{selectedSegment.avgSentiment.toFixed(1)}
-                  </p>
-                </div>
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <p className="text-sm text-gray-600 mb-1">AI Confidence Growth</p>
-                  <p className="text-2xl font-bold text-green-600" data-testid="text-modal-confidence">{selectedSegment.confidenceGrowth}</p>
-                </div>
-              </div>
 
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <p className="text-sm text-blue-800">
-                  <strong>Next Steps:</strong> This segment detail view will be enhanced with real customer examples from the LearningDemo dataset, showing specific customers, their PRS history, and recent interactions.
-                </p>
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <p className="text-sm text-blue-800">
+                    <strong>Next Steps:</strong> This segment detail view will be enhanced with real customer examples from the LearningDemo dataset, showing specific customers, their PRS history, and recent interactions.
+                  </p>
+                </div>
               </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+            )}
+          </DialogContent>
+        </Dialog>
+      </main>
+
+      {/* Mobile Bottom Navigation */}
+      <BottomNav />
     </div>
   );
 }
