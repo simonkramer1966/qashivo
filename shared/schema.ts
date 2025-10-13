@@ -36,7 +36,9 @@ export const users = pgTable("users", {
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
   tenantId: varchar("tenant_id").references(() => tenants.id),
+  partnerId: varchar("partner_id").references(() => partners.id), // Links user to a partner organization
   role: varchar("role").notNull().default("user"), // owner, admin, user, partner, client_owner, client_user
+  tenantRole: varchar("tenant_role").default("user"), // admin, collector, manager, user (role within a specific tenant)
   stripeCustomerId: varchar("stripe_customer_id"),
   stripeSubscriptionId: varchar("stripe_subscription_id"),
   createdAt: timestamp("created_at").defaultNow(),
@@ -3368,9 +3370,109 @@ export const activityLogs = pgTable("activity_logs", {
   index("idx_activity_logs_created_at").on(table.createdAt),
 ]);
 
+// Partners table - Accounting firms that manage multiple client tenants
+export const partners = pgTable("partners", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Partner details
+  name: varchar("name").notNull(), // Accounting firm name
+  email: varchar("email").notNull(),
+  phone: varchar("phone"),
+  website: varchar("website"),
+  
+  // Address
+  addressLine1: varchar("address_line1"),
+  addressLine2: varchar("address_line2"),
+  city: varchar("city"),
+  state: varchar("state"),
+  postalCode: varchar("postal_code"),
+  country: varchar("country").default("GB"),
+  
+  // Branding
+  logoUrl: varchar("logo_url"),
+  brandColor: varchar("brand_color").default("#17B6C3"),
+  
+  // Subscription and billing
+  subscriptionPlanId: varchar("subscription_plan_id").references(() => subscriptionPlans.id),
+  stripeCustomerId: varchar("stripe_customer_id"),
+  stripeSubscriptionId: varchar("stripe_subscription_id"),
+  subscriptionStatus: varchar("subscription_status").default("active"), // active, past_due, cancelled, suspended
+  
+  // Usage and limits
+  currentClientCount: integer("current_client_count").default(0),
+  maxClientCount: integer("max_client_count").default(10), // Based on subscription plan
+  
+  // Status
+  isActive: boolean("is_active").default(true),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_partners_email").on(table.email),
+  index("idx_partners_status").on(table.isActive),
+]);
+
+// User contact assignments - For assigning specific contacts to team members (collectors)
+export const userContactAssignments = pgTable("user_contact_assignments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Assignment details
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  contactId: varchar("contact_id").notNull().references(() => contacts.id, { onDelete: "cascade" }),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  
+  // Assignment metadata
+  assignedAt: timestamp("assigned_at").defaultNow(),
+  assignedBy: varchar("assigned_by").notNull().references(() => users.id),
+  
+  // Status
+  isActive: boolean("is_active").default(true),
+  notes: text("notes"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  // Ensure unique user-contact assignments per tenant
+  unique("unique_user_contact_assignment").on(table.userId, table.contactId),
+  // Performance indexes
+  index("idx_user_contact_assignments_user").on(table.userId),
+  index("idx_user_contact_assignments_contact").on(table.contactId),
+  index("idx_user_contact_assignments_tenant").on(table.tenantId),
+  index("idx_user_contact_assignments_active").on(table.isActive),
+]);
+
+// Relations for partner architecture
+export const partnersRelations = relations(partners, ({ one, many }) => ({
+  subscriptionPlan: one(subscriptionPlans, {
+    fields: [partners.subscriptionPlanId],
+    references: [subscriptionPlans.id],
+  }),
+  users: many(users),
+}));
+
+export const userContactAssignmentsRelations = relations(userContactAssignments, ({ one }) => ({
+  user: one(users, {
+    fields: [userContactAssignments.userId],
+    references: [users.id],
+  }),
+  contact: one(contacts, {
+    fields: [userContactAssignments.contactId],
+    references: [contacts.id],
+  }),
+  tenant: one(tenants, {
+    fields: [userContactAssignments.tenantId],
+    references: [tenants.id],
+  }),
+  assignedByUser: one(users, {
+    fields: [userContactAssignments.assignedBy],
+    references: [users.id],
+  }),
+}));
+
 // Relations for partner system
 export const subscriptionPlansRelations = relations(subscriptionPlans, ({ many }) => ({
   tenantMetadata: many(tenantMetadata),
+  partners: many(partners),
 }));
 
 export const partnerClientRelationshipsRelations = relations(partnerClientRelationships, ({ one }) => ({
@@ -3419,6 +3521,19 @@ export const tenantMetadataRelations = relations(tenantMetadata, ({ one }) => ({
 }));
 
 // Insert schemas for partner system
+export const insertPartnerSchema = createInsertSchema(partners).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertUserContactAssignmentSchema = createInsertSchema(userContactAssignments).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  assignedAt: true,
+});
+
 export const insertSubscriptionPlanSchema = createInsertSchema(subscriptionPlans).omit({
   id: true,
   createdAt: true,
@@ -3444,6 +3559,12 @@ export const insertTenantMetadataSchema = createInsertSchema(tenantMetadata).omi
 });
 
 // Type exports for partner system
+export type Partner = typeof partners.$inferSelect;
+export type InsertPartner = z.infer<typeof insertPartnerSchema>;
+
+export type UserContactAssignment = typeof userContactAssignments.$inferSelect;
+export type InsertUserContactAssignment = z.infer<typeof insertUserContactAssignmentSchema>;
+
 export type SubscriptionPlan = typeof subscriptionPlans.$inferSelect;
 export type InsertSubscriptionPlan = z.infer<typeof insertSubscriptionPlanSchema>;
 

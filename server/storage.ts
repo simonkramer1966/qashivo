@@ -141,6 +141,12 @@ import {
   financeAdvances,
   type FinanceAdvance,
   type InsertFinanceAdvance,
+  partners,
+  type Partner,
+  type InsertPartner,
+  userContactAssignments,
+  type UserContactAssignment,
+  type InsertUserContactAssignment,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, sql, count, sum, ne, isNotNull, gte, lte, lt, or, ilike, inArray } from "drizzle-orm";
@@ -519,6 +525,33 @@ export interface IStorage {
   getFinanceAdvance(id: string, tenantId: string): Promise<FinanceAdvance | undefined>;
   createFinanceAdvance(advance: InsertFinanceAdvance): Promise<FinanceAdvance>;
   updateFinanceAdvance(id: string, tenantId: string, updates: Partial<InsertFinanceAdvance>): Promise<FinanceAdvance>;
+
+  // Partner architecture operations
+  // Partner operations
+  getPartners(filters?: { isActive?: boolean }): Promise<Partner[]>;
+  getPartner(id: string): Promise<Partner | undefined>;
+  createPartner(partner: InsertPartner): Promise<Partner>;
+  updatePartner(id: string, updates: Partial<InsertPartner>): Promise<Partner>;
+  
+  // Get tenants accessible by a partner user
+  getPartnerTenants(partnerUserId: string): Promise<(Tenant & { relationship: PartnerClientRelationship })[]>;
+  
+  // Get users by tenant with their roles
+  getTenantUsers(tenantId: string): Promise<(User & { contactAssignments?: UserContactAssignment[] })[]>;
+  
+  // User contact assignment operations
+  getUserContactAssignments(userId: string, tenantId: string): Promise<(UserContactAssignment & { contact: Contact })[]>;
+  getContactAssignments(contactId: string, tenantId: string): Promise<(UserContactAssignment & { user: User })[]>;
+  createUserContactAssignment(assignment: InsertUserContactAssignment): Promise<UserContactAssignment>;
+  deleteUserContactAssignment(id: string, tenantId: string): Promise<void>;
+  bulkAssignContacts(userId: string, contactIds: string[], tenantId: string, assignedBy: string): Promise<UserContactAssignment[]>;
+  bulkUnassignContacts(userId: string, contactIds: string[], tenantId: string): Promise<void>;
+  
+  // Check if user has access to a specific contact
+  hasContactAccess(userId: string, contactId: string, tenantId: string): Promise<boolean>;
+  
+  // Get contacts assigned to a user (for collectors)
+  getAssignedContacts(userId: string, tenantId: string): Promise<Contact[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -4516,6 +4549,230 @@ export class DatabaseStorage implements IStorage {
       .returning();
     
     return advance;
+  }
+
+  // Partner architecture operations
+  // Partner operations
+  async getPartners(filters?: { isActive?: boolean }): Promise<Partner[]> {
+    const conditions = [];
+    
+    if (filters?.isActive !== undefined) {
+      conditions.push(eq(partners.isActive, filters.isActive));
+    }
+    
+    const result = await db
+      .select()
+      .from(partners)
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .orderBy(desc(partners.createdAt));
+    
+    return result;
+  }
+
+  async getPartner(id: string): Promise<Partner | undefined> {
+    const [partner] = await db
+      .select()
+      .from(partners)
+      .where(eq(partners.id, id));
+    
+    return partner;
+  }
+
+  async createPartner(partnerData: InsertPartner): Promise<Partner> {
+    const [partner] = await db
+      .insert(partners)
+      .values(partnerData)
+      .returning();
+    
+    return partner;
+  }
+
+  async updatePartner(id: string, updates: Partial<InsertPartner>): Promise<Partner> {
+    const [partner] = await db
+      .update(partners)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(partners.id, id))
+      .returning();
+    
+    return partner;
+  }
+
+  // Get tenants accessible by a partner user
+  async getPartnerTenants(partnerUserId: string): Promise<(Tenant & { relationship: PartnerClientRelationship })[]> {
+    const results = await db
+      .select({
+        tenant: tenants,
+        relationship: partnerClientRelationships,
+      })
+      .from(partnerClientRelationships)
+      .innerJoin(tenants, eq(partnerClientRelationships.clientTenantId, tenants.id))
+      .where(and(
+        eq(partnerClientRelationships.partnerUserId, partnerUserId),
+        eq(partnerClientRelationships.status, 'active')
+      ))
+      .orderBy(desc(partnerClientRelationships.lastAccessedAt));
+    
+    return results.map(r => ({ ...r.tenant, relationship: r.relationship }));
+  }
+
+  // Get users by tenant with their roles
+  async getTenantUsers(tenantId: string): Promise<(User & { contactAssignments?: UserContactAssignment[] })[]> {
+    const tenantUsers = await db
+      .select()
+      .from(users)
+      .where(eq(users.tenantId, tenantId))
+      .orderBy(users.firstName, users.lastName);
+    
+    // Get contact assignments for each user
+    const usersWithAssignments = await Promise.all(
+      tenantUsers.map(async (user) => {
+        const assignments = await db
+          .select()
+          .from(userContactAssignments)
+          .where(and(
+            eq(userContactAssignments.userId, user.id),
+            eq(userContactAssignments.tenantId, tenantId),
+            eq(userContactAssignments.isActive, true)
+          ));
+        
+        return { ...user, contactAssignments: assignments };
+      })
+    );
+    
+    return usersWithAssignments;
+  }
+
+  // User contact assignment operations
+  async getUserContactAssignments(userId: string, tenantId: string): Promise<(UserContactAssignment & { contact: Contact })[]> {
+    const results = await db
+      .select()
+      .from(userContactAssignments)
+      .innerJoin(contacts, eq(userContactAssignments.contactId, contacts.id))
+      .where(and(
+        eq(userContactAssignments.userId, userId),
+        eq(userContactAssignments.tenantId, tenantId),
+        eq(userContactAssignments.isActive, true)
+      ))
+      .orderBy(desc(userContactAssignments.assignedAt));
+    
+    return results.map(r => ({ ...r.user_contact_assignments, contact: r.contacts }));
+  }
+
+  async getContactAssignments(contactId: string, tenantId: string): Promise<(UserContactAssignment & { user: User })[]> {
+    const results = await db
+      .select()
+      .from(userContactAssignments)
+      .innerJoin(users, eq(userContactAssignments.userId, users.id))
+      .where(and(
+        eq(userContactAssignments.contactId, contactId),
+        eq(userContactAssignments.tenantId, tenantId),
+        eq(userContactAssignments.isActive, true)
+      ))
+      .orderBy(desc(userContactAssignments.assignedAt));
+    
+    return results.map(r => ({ ...r.user_contact_assignments, user: r.users }));
+  }
+
+  async createUserContactAssignment(assignmentData: InsertUserContactAssignment): Promise<UserContactAssignment> {
+    const [assignment] = await db
+      .insert(userContactAssignments)
+      .values(assignmentData)
+      .returning();
+    
+    return assignment;
+  }
+
+  async deleteUserContactAssignment(id: string, tenantId: string): Promise<void> {
+    await db
+      .update(userContactAssignments)
+      .set({ isActive: false, updatedAt: new Date() })
+      .where(and(
+        eq(userContactAssignments.id, id),
+        eq(userContactAssignments.tenantId, tenantId)
+      ));
+  }
+
+  async bulkAssignContacts(userId: string, contactIds: string[], tenantId: string, assignedBy: string): Promise<UserContactAssignment[]> {
+    const assignments: InsertUserContactAssignment[] = contactIds.map(contactId => ({
+      userId,
+      contactId,
+      tenantId,
+      assignedBy,
+      isActive: true,
+    }));
+    
+    const result = await db
+      .insert(userContactAssignments)
+      .values(assignments)
+      .onConflictDoUpdate({
+        target: [userContactAssignments.userId, userContactAssignments.contactId],
+        set: {
+          isActive: true,
+          assignedBy,
+          updatedAt: new Date(),
+        },
+      })
+      .returning();
+    
+    return result;
+  }
+
+  async bulkUnassignContacts(userId: string, contactIds: string[], tenantId: string): Promise<void> {
+    await db
+      .update(userContactAssignments)
+      .set({ isActive: false, updatedAt: new Date() })
+      .where(and(
+        eq(userContactAssignments.userId, userId),
+        eq(userContactAssignments.tenantId, tenantId),
+        inArray(userContactAssignments.contactId, contactIds)
+      ));
+  }
+
+  // Check if user has access to a specific contact
+  async hasContactAccess(userId: string, contactId: string, tenantId: string): Promise<boolean> {
+    // First check if user has admin role or is tenant admin
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, userId));
+    
+    if (!user) return false;
+    
+    // Admins and partner users have access to all contacts
+    if (user.tenantRole === 'admin' || user.role === 'partner' || user.role === 'owner') {
+      return true;
+    }
+    
+    // Otherwise check if contact is assigned to user
+    const [assignment] = await db
+      .select()
+      .from(userContactAssignments)
+      .where(and(
+        eq(userContactAssignments.userId, userId),
+        eq(userContactAssignments.contactId, contactId),
+        eq(userContactAssignments.tenantId, tenantId),
+        eq(userContactAssignments.isActive, true)
+      ));
+    
+    return !!assignment;
+  }
+
+  // Get contacts assigned to a user (for collectors)
+  async getAssignedContacts(userId: string, tenantId: string): Promise<Contact[]> {
+    const results = await db
+      .select({
+        contact: contacts,
+      })
+      .from(userContactAssignments)
+      .innerJoin(contacts, eq(userContactAssignments.contactId, contacts.id))
+      .where(and(
+        eq(userContactAssignments.userId, userId),
+        eq(userContactAssignments.tenantId, tenantId),
+        eq(userContactAssignments.isActive, true)
+      ))
+      .orderBy(contacts.name);
+    
+    return results.map(r => r.contact);
   }
 }
 
