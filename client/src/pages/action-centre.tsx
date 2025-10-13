@@ -114,7 +114,7 @@ export default function ActionCentre() {
   const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
   
   // Workflow-based filter (main tabs)
-  const [activeTab, setActiveTab] = useState<'comms' | 'queries' | 'overdue' | 'upcomingPTP' | 'brokenPromises' | 'disputes'>('comms');
+  const [activeTab, setActiveTab] = useState<'comms' | 'queries' | 'overdue' | 'upcomingPTP' | 'brokenPromises' | 'disputes' | 'onHold'>('comms');
   
   // Multi-select toggle filters
   const [directionFilters, setDirectionFilters] = useState<string[]>([]);
@@ -171,6 +171,7 @@ export default function ActionCentre() {
     upcomingPTP: { count: number; items: any[] };
     brokenPromises: { count: number; items: any[] };
     disputes: { count: number; items: any[] };
+    onHold: { count: number; items: any[] };
     debtRecovery: { count: number; items: any[] };
     legal: { count: number; items: any[] };
   }>({
@@ -328,6 +329,8 @@ export default function ActionCentre() {
         return tabData.brokenPromises.items;
       case 'disputes':
         return tabData.disputes.items;
+      case 'onHold':
+        return tabData.onHold.items;
       case 'debtRecovery':
         return tabData.debtRecovery.items;
       case 'legal':
@@ -374,6 +377,7 @@ export default function ActionCentre() {
 
   // Determine if current tab shows invoices or actions
   const isInvoiceTab = activeTab === 'overdue';
+  const isOnHoldTab = activeTab === 'onHold';
   const isPTPTab = activeTab === 'upcomingPTP';
   const isCommsTab = activeTab === 'comms';
 
@@ -471,6 +475,19 @@ export default function ActionCentre() {
               >
                 <span>Disputes</span>
                 {tabData && <span className={`ml-2 px-1.5 py-0.5 rounded-full text-xs ${activeTab === 'disputes' ? 'bg-white/20' : 'bg-slate-200'}`}>{tabData.disputes.count}</span>}
+              </button>
+              
+              <button
+                onClick={() => setActiveTab('onHold')}
+                className={`flex-1 px-3 py-2 rounded-md text-xs sm:text-sm font-medium transition-all ${
+                  activeTab === 'onHold'
+                    ? 'bg-[#17B6C3] text-white shadow-sm'
+                    : 'bg-transparent text-slate-600 hover:bg-white/50'
+                }`}
+                data-testid="tab-on-hold"
+              >
+                <span>On Hold</span>
+                {tabData && <span className={`ml-2 px-1.5 py-0.5 rounded-full text-xs ${activeTab === 'onHold' ? 'bg-white/20' : 'bg-slate-200'}`}>{tabData.onHold.count}</span>}
               </button>
             </div>
           </div>
@@ -574,7 +591,7 @@ export default function ActionCentre() {
           </div>
 
           {/* Action List */}
-          <div className={isInvoiceTab || isPTPTab || isCommsTab ? "" : "card-apple overflow-hidden"}>
+          <div className={isInvoiceTab || isPTPTab || isCommsTab || isOnHoldTab ? "" : "card-apple overflow-hidden"}>
             {(isLoading || (isCommsTab && isLoadingComms)) ? (
               // Loading skeleton
               <div className="divide-y divide-slate-100">
@@ -1017,6 +1034,97 @@ export default function ActionCentre() {
                           ) : (
                             <p className="text-sm text-slate-400">Unassigned</p>
                           )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : isOnHoldTab ? (
+              // On Hold invoices table format
+              <div className="bg-white border-t border-b border-slate-200 overflow-hidden">
+                <div className="max-h-[600px] overflow-y-auto" style={{ display: 'grid', gridTemplateColumns: '2fr 1.2fr 1.2fr 1fr 1.2fr' }}>
+                  {/* Table Header */}
+                  <div className="contents">
+                    <div className="px-8 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10">Customer</div>
+                    <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10">Invoice No</div>
+                    <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 text-right">Amount</div>
+                    <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10">Due Date</div>
+                    <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 text-center">Hold Reason</div>
+                  </div>
+
+                  {/* Table Rows */}
+                  {filteredActions.map((invoice: any) => {
+                    const daysOverdue = invoice.dueDate ? Math.floor((new Date().getTime() - new Date(invoice.dueDate).getTime()) / (1000 * 3600 * 24)) : 0;
+                    
+                    return (
+                      <div
+                        key={invoice.id}
+                        className="contents"
+                        data-testid={`onhold-invoice-${invoice.id}`}
+                      >
+                        {/* Customer */}
+                        <div 
+                          className="px-8 py-2 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center min-w-0"
+                          onClick={() => setLocation(`/invoices/${invoice.id}`)}
+                        >
+                          <p className="font-semibold text-sm text-slate-900 truncate">
+                            {invoice.contactName || 'Unknown Customer'}
+                          </p>
+                        </div>
+
+                        {/* Invoice No */}
+                        <div 
+                          className="px-4 py-2 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center"
+                          onClick={() => setLocation(`/invoices/${invoice.id}`)}
+                        >
+                          <p className="text-sm text-[#17B6C3] font-medium">
+                            {invoice.invoiceNumber || 'N/A'}
+                          </p>
+                        </div>
+
+                        {/* Amount */}
+                        <div 
+                          className="px-4 py-2 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center justify-end"
+                          onClick={() => setLocation(`/invoices/${invoice.id}`)}
+                        >
+                          <p className="font-semibold text-sm text-slate-900">
+                            {formatCurrency(parseFloat(invoice.amount || '0'))}
+                          </p>
+                        </div>
+
+                        {/* Due Date */}
+                        <div 
+                          className="px-4 py-2 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center"
+                          onClick={() => setLocation(`/invoices/${invoice.id}`)}
+                        >
+                          <div>
+                            <p className="text-sm text-slate-700">
+                              {formatDateShort(invoice.dueDate)}
+                            </p>
+                            {daysOverdue > 0 && (
+                              <p className="text-xs text-red-600">
+                                {daysOverdue} days overdue
+                              </p>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Hold Reason */}
+                        <div 
+                          className="px-4 py-2 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center justify-center"
+                          onClick={() => setLocation(`/invoices/${invoice.id}`)}
+                        >
+                          <Badge 
+                            className={`text-xs ${
+                              invoice.holdReason === 'Payment Plan' ? 'bg-blue-100 text-blue-800 border-blue-200' :
+                              invoice.holdReason === 'Dispute' ? 'bg-red-100 text-red-800 border-red-200' :
+                              invoice.holdReason === 'Promise to Pay' ? 'bg-green-100 text-green-800 border-green-200' :
+                              'bg-slate-100 text-slate-800 border-slate-200'
+                            }`}
+                          >
+                            {invoice.holdReason || 'On Hold'}
+                          </Badge>
                         </div>
                       </div>
                     );

@@ -4043,11 +4043,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // 5. DISPUTES - actions with dispute intent
       const disputes = allActions.filter(a => a.intentType === 'dispute');
       
-      // 6. DEBT RECOVERY - invoices with escalation flag
+      // 6. ON HOLD - invoices with active PTP, Payment Plan, or Dispute (paused from dunning)
+      const onHoldRaw = allInvoices.filter(inv => {
+        const isOverdueOrUnpaid = inv.status === 'overdue' || inv.status === 'unpaid';
+        const hasPaymentPlan = inv.paymentPlanId;
+        const hasDispute = allActions.some(a => a.invoiceId === inv.id && a.intentType === 'dispute' && a.status === 'open');
+        const hasPTP = allActions.some(a => a.invoiceId === inv.id && a.intentType === 'promise_to_pay');
+        
+        return isOverdueOrUnpaid && (hasPaymentPlan || hasDispute || hasPTP);
+      });
+      
+      const onHold = await Promise.all(onHoldRaw.map(async (inv) => {
+        const enriched = await enrichInvoice(inv);
+        
+        // Determine why it's on hold
+        const hasPaymentPlan = inv.paymentPlanId;
+        const hasDispute = allActions.some(a => a.invoiceId === inv.id && a.intentType === 'dispute' && a.status === 'open');
+        const hasPTP = allActions.some(a => a.invoiceId === inv.id && a.intentType === 'promise_to_pay');
+        
+        let holdReason = '';
+        if (hasPaymentPlan) holdReason = 'Payment Plan';
+        else if (hasDispute) holdReason = 'Dispute';
+        else if (hasPTP) holdReason = 'Promise to Pay';
+        
+        return { ...enriched, holdReason };
+      }));
+      
+      // 7. DEBT RECOVERY - invoices with escalation flag
       const debtRecoveryRaw = allInvoices.filter(inv => inv.escalationFlag === true);
       const debtRecovery = await Promise.all(debtRecoveryRaw.map(enrichInvoice));
       
-      // 7. LEGAL - invoices with legal flag
+      // 8. LEGAL - invoices with legal flag
       const legalRaw = allInvoices.filter(inv => inv.legalFlag === true);
       const legal = await Promise.all(legalRaw.map(enrichInvoice));
       
@@ -4057,6 +4083,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         upcomingPTP: { count: upcomingPTP.length, items: upcomingPTP },
         brokenPromises: { count: brokenPromises.length, items: brokenPromises },
         disputes: { count: disputes.length, items: disputes },
+        onHold: { count: onHold.length, items: onHold },
         debtRecovery: { count: debtRecovery.length, items: debtRecovery },
         legal: { count: legal.length, items: legal }
       });
