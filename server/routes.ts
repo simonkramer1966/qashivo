@@ -37,6 +37,8 @@ import {
   insertActionItemSchema,
   insertActionLogSchema,
   insertPaymentPromiseSchema,
+  insertPartnerSchema,
+  insertUserContactAssignmentSchema,
   type Invoice,
   type Contact,
   type ContactNote,
@@ -352,6 +354,241 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Failed to switch tenant:', error);
       res.status(500).json({ message: 'Failed to switch tenant' });
+    }
+  });
+
+  // Partner Management Routes (Owner/Admin only)
+  // List all partners
+  app.get('/api/partners', isAuthenticated, isOwner, async (req, res) => {
+    try {
+      const { isActive } = req.query;
+      const filters = isActive !== undefined ? { isActive: isActive === 'true' } : undefined;
+      const partners = await storage.getPartners(filters);
+      res.json({ partners });
+    } catch (error) {
+      console.error('Failed to get partners:', error);
+      res.status(500).json({ message: 'Failed to retrieve partners' });
+    }
+  });
+
+  // Get single partner
+  app.get('/api/partners/:partnerId', isAuthenticated, isOwner, async (req, res) => {
+    try {
+      const partner = await storage.getPartner(req.params.partnerId);
+      if (!partner) {
+        return res.status(404).json({ message: 'Partner not found' });
+      }
+      res.json({ partner });
+    } catch (error) {
+      console.error('Failed to get partner:', error);
+      res.status(500).json({ message: 'Failed to retrieve partner' });
+    }
+  });
+
+  // Create partner with Zod validation
+  app.post('/api/partners', isAuthenticated, isOwner, async (req, res) => {
+    try {
+      const validatedData = insertPartnerSchema.parse(req.body);
+      const partner = await storage.createPartner({
+        ...validatedData,
+        isActive: true,
+      });
+      res.status(201).json({ partner });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ 
+          message: 'Invalid input', 
+          errors: error.errors 
+        });
+      }
+      console.error('Failed to create partner:', error);
+      res.status(500).json({ message: 'Failed to create partner' });
+    }
+  });
+
+  // Update partner with Zod validation
+  app.patch('/api/partners/:partnerId', isAuthenticated, isOwner, async (req, res) => {
+    try {
+      const validatedData = insertPartnerSchema.partial().parse(req.body);
+      const partner = await storage.updatePartner(req.params.partnerId, validatedData);
+      res.json({ partner });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ 
+          message: 'Invalid input', 
+          errors: error.errors 
+        });
+      }
+      console.error('Failed to update partner:', error);
+      res.status(500).json({ message: 'Failed to update partner' });
+    }
+  });
+
+  // Tenant User Management Routes
+  // Import RBAC middleware
+  const { withRBACContext, requireTenantAdmin } = await import('./middleware/rbac');
+
+  // Get users in tenant (requires tenant admin or higher)
+  app.get('/api/tenants/:tenantId/users', isAuthenticated, withRBACContext, requireTenantAdmin, async (req, res) => {
+    try {
+      if (!req.rbac) {
+        return res.status(500).json({ message: 'RBAC context not initialized' });
+      }
+
+      // Security: Verify tenant isolation - tenantId must match active tenant
+      if (req.params.tenantId !== req.rbac.tenantId) {
+        return res.status(403).json({ 
+          message: 'Access denied: Cannot access users from another tenant' 
+        });
+      }
+
+      const users = await storage.getTenantUsers(req.params.tenantId);
+      res.json({ users });
+    } catch (error) {
+      console.error('Failed to get tenant users:', error);
+      res.status(500).json({ message: 'Failed to retrieve tenant users' });
+    }
+  });
+
+  // Contact Assignment Routes
+  // Validation schema for assignment operations
+  const assignmentBodySchema = z.object({
+    contactId: z.string().min(1, "Contact ID is required")
+  });
+
+  const bulkAssignmentSchema = z.object({
+    contactIds: z.array(z.string()).min(1, "At least one contact ID required")
+  });
+
+  // Get user's contact assignments
+  app.get('/api/users/:userId/assignments', isAuthenticated, withRBACContext, async (req, res) => {
+    try {
+      if (!req.rbac) {
+        return res.status(500).json({ message: 'RBAC context not initialized' });
+      }
+
+      const assignments = await storage.getUserContactAssignments(req.params.userId, req.rbac.tenantId);
+      res.json({ assignments });
+    } catch (error) {
+      console.error('Failed to get user assignments:', error);
+      res.status(500).json({ message: 'Failed to retrieve assignments' });
+    }
+  });
+
+  // Get contact's assignments (who is assigned to this contact)
+  app.get('/api/contacts/:contactId/assignments', isAuthenticated, withRBACContext, requireTenantAdmin, async (req, res) => {
+    try {
+      if (!req.rbac) {
+        return res.status(500).json({ message: 'RBAC context not initialized' });
+      }
+
+      const assignments = await storage.getContactAssignments(req.params.contactId, req.rbac.tenantId);
+      res.json({ assignments });
+    } catch (error) {
+      console.error('Failed to get contact assignments:', error);
+      res.status(500).json({ message: 'Failed to retrieve assignments' });
+    }
+  });
+
+  // Assign contact to user with validation
+  app.post('/api/users/:userId/assignments', isAuthenticated, withRBACContext, requireTenantAdmin, async (req, res) => {
+    try {
+      if (!req.rbac) {
+        return res.status(500).json({ message: 'RBAC context not initialized' });
+      }
+
+      const { contactId } = assignmentBodySchema.parse(req.body);
+
+      const assignment = await storage.createUserContactAssignment({
+        userId: req.params.userId,
+        contactId,
+        tenantId: req.rbac.tenantId,
+        assignedBy: req.rbac.userId,
+        isActive: true,
+      });
+
+      res.status(201).json({ assignment });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ 
+          message: 'Invalid input', 
+          errors: error.errors 
+        });
+      }
+      console.error('Failed to create assignment:', error);
+      res.status(500).json({ message: 'Failed to create assignment' });
+    }
+  });
+
+  // Unassign contact from user
+  app.delete('/api/users/:userId/assignments/:assignmentId', isAuthenticated, withRBACContext, requireTenantAdmin, async (req, res) => {
+    try {
+      if (!req.rbac) {
+        return res.status(500).json({ message: 'RBAC context not initialized' });
+      }
+
+      await storage.deleteUserContactAssignment(req.params.assignmentId, req.rbac.tenantId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Failed to delete assignment:', error);
+      res.status(500).json({ message: 'Failed to delete assignment' });
+    }
+  });
+
+  // Bulk assign contacts to user with validation
+  app.post('/api/users/:userId/assignments/bulk', isAuthenticated, withRBACContext, requireTenantAdmin, async (req, res) => {
+    try {
+      if (!req.rbac) {
+        return res.status(500).json({ message: 'RBAC context not initialized' });
+      }
+
+      const { contactIds } = bulkAssignmentSchema.parse(req.body);
+
+      const assignments = await storage.bulkAssignContacts(
+        req.params.userId,
+        contactIds,
+        req.rbac.tenantId,
+        req.rbac.userId
+      );
+
+      res.status(201).json({ assignments, count: assignments.length });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ 
+          message: 'Invalid input', 
+          errors: error.errors 
+        });
+      }
+      console.error('Failed to bulk assign contacts:', error);
+      res.status(500).json({ message: 'Failed to bulk assign contacts' });
+    }
+  });
+
+  // Bulk unassign contacts from user with validation
+  app.post('/api/users/:userId/assignments/bulk-unassign', isAuthenticated, withRBACContext, requireTenantAdmin, async (req, res) => {
+    try {
+      if (!req.rbac) {
+        return res.status(500).json({ message: 'RBAC context not initialized' });
+      }
+
+      const { contactIds } = bulkAssignmentSchema.parse(req.body);
+
+      await storage.bulkUnassignContacts(
+        req.params.userId,
+        contactIds,
+        req.rbac.tenantId
+      );
+
+      res.json({ success: true, count: contactIds.length });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ 
+          message: 'Invalid input', 
+          errors: error.errors 
+        });
+      }
+      console.error('Failed to bulk unassign contacts:', error);
+      res.status(500).json({ message: 'Failed to bulk unassign contacts' });
     }
   });
 
