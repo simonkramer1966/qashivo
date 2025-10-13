@@ -425,8 +425,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Tenant User Management Routes
-  // Import RBAC middleware
-  const { withRBACContext, requireTenantAdmin } = await import('./middleware/rbac');
+  // Import RBAC middleware  
+  const { withRBACContext, requireTenantAdmin, enforceContactAccess, getContactFilter } = await import('./middleware/rbac');
 
   // Get users in tenant (requires tenant admin or higher)
   app.get('/api/tenants/:tenantId/users', isAuthenticated, withRBACContext, requireTenantAdmin, async (req, res) => {
@@ -1430,8 +1430,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Initialize onboarding for a tenant
   app.post('/api/onboarding/start', isAuthenticated, async (req: any, res) => {
     try {
-      const { withRBACContext } = await import("./middleware/rbac");
-      
       // Apply RBAC context manually
       await new Promise<void>((resolve, reject) => {
         withRBACContext(req, res, (error) => {
@@ -1455,8 +1453,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get current onboarding progress
   app.get('/api/onboarding/progress', isAuthenticated, async (req: any, res) => {
     try {
-      const { withRBACContext } = await import("./middleware/rbac");
-      
       // Apply RBAC context manually
       await new Promise<void>((resolve, reject) => {
         withRBACContext(req, res, (error) => {
@@ -1498,7 +1494,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      const { withRBACContext } = await import("./middleware/rbac");
+      // Apply RBAC context manually
       
       // Apply RBAC context manually
       await new Promise<void>((resolve, reject) => {
@@ -1533,7 +1529,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      const { withRBACContext } = await import("./middleware/rbac");
+      // Apply RBAC context manually
       
       // Apply RBAC context manually
       await new Promise<void>((resolve, reject) => {
@@ -1569,7 +1565,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Complete entire onboarding
   app.post('/api/onboarding/complete', isAuthenticated, async (req: any, res) => {
     try {
-      const { withRBACContext } = await import("./middleware/rbac");
+      // Apply RBAC context manually
       
       // Apply RBAC context manually
       await new Promise<void>((resolve, reject) => {
@@ -1594,7 +1590,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Check onboarding status
   app.get('/api/onboarding/status', isAuthenticated, async (req: any, res) => {
     try {
-      const { withRBACContext } = await import("./middleware/rbac");
+      // Apply RBAC context manually
       
       // Apply RBAC context manually
       await new Promise<void>((resolve, reject) => {
@@ -1619,7 +1615,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Xero automated data import for onboarding
   app.post('/api/onboarding/xero-import', isAuthenticated, async (req: any, res) => {
     try {
-      const { withRBACContext } = await import("./middleware/rbac");
+      // Apply RBAC context manually
       
       // Apply RBAC context manually
       await new Promise<void>((resolve, reject) => {
@@ -15523,7 +15519,7 @@ ${tenant.name}
   // ==================== RBAC MANAGEMENT API ====================
 
   // Import RBAC middleware and permission service
-  const { withPermission, withRole, withMinimumRole, canManageUser, withRBACContext } = await import("./middleware/rbac");
+  const { withPermission, withRole, withMinimumRole, canManageUser } = await import("./middleware/rbac");
   const { PermissionService } = await import("./services/permissionService");
 
   // Get all users in tenant with their roles and permissions

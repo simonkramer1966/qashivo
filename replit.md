@@ -43,6 +43,46 @@ The application features a Premium Glassmorphism UI with a `bg-gradient-to-br fr
 - **Authentication**: Replit Auth (OpenID Connect) via Passport.js, with PostgreSQL-backed session storage.
 - **Data Models**: Core entities include Users, Tenants, Contacts, Invoices, Actions, and Workflows, all with multi-tenant architecture and Zod validation.
 
+### Partner Architecture (B2B2B Model)
+A three-tier hierarchy designed for accounting firms (partners) to manage multiple client businesses (tenants) with role-based access control:
+
+**Architecture Layers:**
+1. **Partners** (Accounting Firms): Top-level organizations that manage multiple client businesses
+2. **Tenants** (Client Businesses): Individual businesses served by partners
+3. **Users** (Team Members): People within tenants with specific roles and contact assignments
+
+**Database Schema:**
+- `partners`: Partner organization data (id, name, email, phone, addressLine1, addressLine2, city, state, postalCode, country, subscriptionPlanId, customPricing, isActive)
+- `users`: Extended with `partnerId` (links to partner organization) and `tenantRole` (role within tenant: admin, collector, viewer)
+- `userContactAssignments`: Maps users to contacts they manage (userId, contactId, tenantId, assignedBy, isActive)
+- `partnerClientRelationships`: Tracks partner user access to client tenants (partnerUserId, partnerTenantId, clientTenantId, accessLevel, status)
+
+**Authentication & RBAC:**
+- Extended `Express.Request.rbac` with: `isPartner`, `partnerId`, `activeTenantId`, `tenantRole`, `userRole`, `permissions`
+- Session-based tenant switching for partner users (stored in `req.session.activeTenantId`)
+- `withRBACContext` middleware detects partner users, validates tenant access, and loads appropriate context
+- Access control middleware: `requirePartnerAccess`, `requireTenantAdmin`, `enforceContactAccess`, `getContactFilter`
+- Validation: Partner tenant access verified via `storage.getPartnerTenants()`, session updated on tenant switch
+
+**API Endpoints:**
+- Context Management: `GET /api/auth/context`, `GET /api/partner/tenants`, `POST /api/partner/switch-tenant`
+- Partner CRUD: `GET /POST /PATCH /api/partners` (owner-only, Zod validated)
+- Tenant Users: `GET /api/tenants/:tenantId/users` (tenant-admin, isolation enforced)
+- Contact Assignments: `GET /POST /DELETE /api/users/:userId/assignments`, bulk operations with validation
+
+**Access Control Rules:**
+- Partners: Full visibility across all assigned tenants
+- Tenant Admins: Full access within their tenant
+- Collectors: Access only to assigned contacts
+- Data isolation enforced at middleware level with tenant ID validation
+
+**Storage Layer Methods:**
+- Partner ops: `getPartners`, `getPartner`, `createPartner`, `updatePartner`
+- Tenant access: `getPartnerTenants`, `getTenantUsers`
+- Assignment ops: `getUserContactAssignments`, `getContactAssignments`, `createUserContactAssignment`, `deleteUserContactAssignment`
+- Bulk ops: `bulkAssignContacts`, `bulkUnassignContacts`
+- Access checks: `hasContactAccess`, `getAssignedContacts`
+
 ### Feature Specifications
 
 #### Intent Analyst System
