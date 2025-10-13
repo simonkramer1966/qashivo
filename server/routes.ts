@@ -3770,9 +3770,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const tenantId = user.tenantId;
       const today = new Date();
       
-      // Get all actions and invoices
-      const allActions = await storage.getActions(tenantId);
-      const allInvoices = await storage.getInvoices(tenantId);
+      // Get actions with smart filtering for performance
+      // Load ALL OPEN actions with active intents, plus recent actions (last 90 days)
+      const ninetyDaysAgo = new Date();
+      ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+      
+      const allActions = await db
+        .select()
+        .from(actions)
+        .where(
+          and(
+            eq(actions.tenantId, tenantId),
+            or(
+              // Include ALL OPEN actions with general_query, promise_to_pay, or dispute intent
+              and(
+                eq(actions.status, 'open'),
+                or(
+                  eq(actions.intentType, 'general_query'),
+                  eq(actions.intentType, 'promise_to_pay'),
+                  eq(actions.intentType, 'dispute')
+                )
+              ),
+              // Or recent actions (last 90 days) regardless of intent/status
+              gte(actions.createdAt, ninetyDaysAgo)
+            )
+          )
+        )
+        .orderBy(desc(actions.createdAt));
+        
+      const allInvoices = await db
+        .select()
+        .from(invoices)
+        .where(
+          and(
+            eq(invoices.tenantId, tenantId),
+            or(
+              // Include ALL overdue and unpaid invoices (active work items)
+              eq(invoices.status, 'overdue'),
+              eq(invoices.status, 'unpaid'),
+              // Or recently paid invoices (last 90 days)
+              and(
+                eq(invoices.status, 'paid'),
+                gte(invoices.paidDate, ninetyDaysAgo)
+              )
+            )
+          )
+        )
+        .orderBy(desc(invoices.dueDate));
       
       // 1. QUERIES - actions with general_query intent
       const queries = allActions.filter(a => a.intentType === 'general_query');
