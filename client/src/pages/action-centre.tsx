@@ -114,7 +114,7 @@ export default function ActionCentre() {
   const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
   
   // Workflow-based filter (main tabs)
-  const [activeTab, setActiveTab] = useState<'comms' | 'queries' | 'overdue' | 'upcomingPTP' | 'brokenPromises' | 'disputes' | 'onHold'>('comms');
+  const [activeTab, setActiveTab] = useState<'queries' | 'overdue' | 'upcomingPTP' | 'brokenPromises' | 'disputes' | 'onHold'>('overdue');
   
   // Multi-select toggle filters
   const [directionFilters, setDirectionFilters] = useState<string[]>([]);
@@ -122,46 +122,10 @@ export default function ActionCentre() {
   const [intentFilters, setIntentFilters] = useState<string[]>([]);
   const [statusFilters, setStatusFilters] = useState<string[]>([]);
   
-  // Comms tab pagination and filtering
-  const [commsPage, setCommsPage] = useState(1);
-  const [commsLimit] = useState(20);
-  const [commsContactFilter, setCommsContactFilter] = useState("");
 
   const { data: actions = [], isLoading } = useQuery<Action[]>({
     queryKey: ['/api/actions'],
     refetchInterval: 15000, // Auto-refresh every 15 seconds
-  });
-
-  // Fetch paginated comms data
-  const { data: commsData, isLoading: isLoadingComms } = useQuery<{
-    actions: Action[];
-    total: number;
-    page: number;
-    limit: number;
-    totalPages: number;
-  }>({
-    queryKey: ['/api/actions/all', searchQuery, commsContactFilter, commsPage, commsLimit],
-    queryFn: async () => {
-      const params = new URLSearchParams({
-        page: commsPage.toString(),
-        limit: commsLimit.toString(),
-        ...(searchQuery && { search: searchQuery }),
-        ...(commsContactFilter && { contactId: commsContactFilter }),
-        _t: Date.now().toString(), // Cache buster
-      });
-      const response = await fetch(`/api/actions/all?${params}`, {
-        headers: {
-          'Cache-Control': 'no-cache',
-          'Pragma': 'no-cache',
-        },
-      });
-      if (!response.ok) throw new Error('Failed to fetch comms data');
-      return response.json();
-    },
-    enabled: activeTab === 'comms',
-    refetchInterval: 15000,
-    refetchOnMount: true,
-    refetchOnWindowFocus: true,
   });
 
   // Fetch categorized tab data
@@ -379,7 +343,6 @@ export default function ActionCentre() {
   const isInvoiceTab = activeTab === 'overdue';
   const isOnHoldTab = activeTab === 'onHold';
   const isPTPTab = activeTab === 'upcomingPTP';
-  const isCommsTab = activeTab === 'comms';
 
   return (
     <div className="flex h-screen bg-white">
@@ -399,19 +362,6 @@ export default function ActionCentre() {
           {/* Workflow Tabs */}
           <div className="mb-6">
             <div className="flex gap-2 p-1 bg-slate-100 rounded-lg">
-              <button
-                onClick={() => setActiveTab('comms')}
-                className={`flex-1 px-3 py-2 rounded-md text-xs sm:text-sm font-medium transition-all ${
-                  activeTab === 'comms'
-                    ? 'bg-[#17B6C3] text-white shadow-sm'
-                    : 'bg-transparent text-slate-600 hover:bg-white/50'
-                }`}
-                data-testid="tab-comms"
-              >
-                <span>Comms</span>
-                {commsData && <span className={`ml-2 px-1.5 py-0.5 rounded-full text-xs ${activeTab === 'comms' ? 'bg-white/20' : 'bg-slate-200'}`}>{commsData.total}</span>}
-              </button>
-              
               <button
                 onClick={() => setActiveTab('queries')}
                 className={`flex-1 px-3 py-2 rounded-md text-xs sm:text-sm font-medium transition-all ${
@@ -495,104 +445,23 @@ export default function ActionCentre() {
           {/* Search Bar */}
           <div className="mb-6">
             <div className="flex items-center gap-3">
-              {isCommsTab && commsData && (
-                <p className="text-sm text-slate-600 whitespace-nowrap">
-                  {commsData.total} Comms
-                </p>
-              )}
-              
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" />
                 <Input
                   type="text"
-                  placeholder={isCommsTab ? "Search communications..." : "Search by customer or invoice..."}
+                  placeholder="Search by customer or invoice..."
                   value={searchQuery}
-                  onChange={(e) => {
-                    setSearchQuery(e.target.value);
-                    if (isCommsTab) setCommsPage(1); // Reset to page 1 on search
-                  }}
+                  onChange={(e) => setSearchQuery(e.target.value)}
                   className="input-apple pl-10"
                   data-testid="input-search-actions"
                 />
               </div>
-              
-              {isCommsTab && (
-                <Select
-                  value={commsContactFilter || "all"}
-                  onValueChange={(value) => {
-                    setCommsContactFilter(value === "all" ? "" : value);
-                    setCommsPage(1); // Reset to page 1 on filter change
-                  }}
-                >
-                  <SelectTrigger className="w-[200px] input-apple">
-                    <SelectValue placeholder="All Customers" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Customers</SelectItem>
-                    {/* Will be populated with unique customers from comms data */}
-                    {commsData?.actions && Array.from(new Set(commsData.actions.map(a => a.contactName).filter(Boolean))).map((name) => (
-                      <SelectItem key={name} value={name as string}>{name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-              
-              {isCommsTab && commsData && commsData.totalPages > 1 && (
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setCommsPage(Math.max(1, commsPage - 1))}
-                    disabled={commsPage === 1}
-                    className="h-9"
-                    data-testid="button-prev-page"
-                  >
-                    Prev.
-                  </Button>
-                  <div className="flex items-center gap-1">
-                    {Array.from({ length: Math.min(5, commsData.totalPages) }, (_, i) => {
-                      let pageNum;
-                      if (commsData.totalPages <= 5) {
-                        pageNum = i + 1;
-                      } else if (commsPage <= 3) {
-                        pageNum = i + 1;
-                      } else if (commsPage >= commsData.totalPages - 2) {
-                        pageNum = commsData.totalPages - 4 + i;
-                      } else {
-                        pageNum = commsPage - 2 + i;
-                      }
-                      return (
-                        <Button
-                          key={pageNum}
-                          variant={commsPage === pageNum ? "default" : "outline"}
-                          size="sm"
-                          onClick={() => setCommsPage(pageNum)}
-                          className={`h-9 min-w-[36px] ${commsPage === pageNum ? "bg-[#17B6C3] hover:bg-[#1396A1]" : ""}`}
-                          data-testid={`button-page-${pageNum}`}
-                        >
-                          {pageNum}
-                        </Button>
-                      );
-                    })}
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setCommsPage(Math.min(commsData.totalPages, commsPage + 1))}
-                    disabled={commsPage === commsData.totalPages}
-                    className="h-9"
-                    data-testid="button-next-page"
-                  >
-                    Next
-                  </Button>
-                </div>
-              )}
             </div>
           </div>
 
           {/* Action List */}
-          <div className={isInvoiceTab || isPTPTab || isCommsTab || isOnHoldTab ? "" : "card-apple overflow-hidden"}>
-            {(isLoading || (isCommsTab && isLoadingComms)) ? (
+          <div className={isInvoiceTab || isPTPTab || isOnHoldTab ? "" : "card-apple overflow-hidden"}>
+            {isLoading ? (
               // Loading skeleton
               <div className="divide-y divide-slate-100">
                 {[...Array(5)].map((_, i) => (
@@ -601,12 +470,7 @@ export default function ActionCentre() {
                   </div>
                 ))}
               </div>
-            ) : (isCommsTab && (!commsData?.actions || commsData.actions.length === 0)) ? (
-              <div className="p-8 text-center">
-                <AlertTriangle className="h-12 w-12 mx-auto mb-3 text-slate-400" />
-                <p className="text-slate-600">No communications found</p>
-              </div>
-            ) : filteredActions.length === 0 && !isCommsTab ? (
+            ) : filteredActions.length === 0 ? (
               <div className="p-8 text-center">
                 <AlertTriangle className="h-12 w-12 mx-auto mb-3 text-slate-400" />
                 <p className="text-slate-600">
@@ -614,155 +478,6 @@ export default function ActionCentre() {
                     ? 'No actions need attention right now' 
                     : 'No actions found'}
                 </p>
-              </div>
-            ) : isCommsTab ? (
-              // Comms table format (all communications)
-              <div className="bg-white border-t border-b border-slate-200 overflow-hidden">
-                <div className="max-h-[600px] overflow-y-auto" style={{ display: 'grid', gridTemplateColumns: '2fr 0.8fr 1fr 1.2fr 1fr 2fr 1fr 1fr' }}>
-                  {/* Table Header */}
-                  <div className="contents">
-                    <div className="px-8 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10">Customer</div>
-                    <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 text-center">Direction</div>
-                    <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 text-center">Type</div>
-                    <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10">Date/Time</div>
-                    <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10">Invoice</div>
-                    <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10">Subject/Message</div>
-                    <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 text-center">Status</div>
-                    <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 text-center">Intent</div>
-                  </div>
-
-                  {/* Table Rows */}
-                  {commsData?.actions.map((comm: Action) => {
-                    const isInbound = comm.metadata?.direction === 'inbound';
-                    const getChannelIcon = () => {
-                      switch (comm.type) {
-                        case 'email': return <Mail className="h-4 w-4" />;
-                        case 'sms': return <MessageSquare className="h-4 w-4" />;
-                        case 'call': return <Phone className="h-4 w-4" />;
-                        default: return <Mail className="h-4 w-4" />;
-                      }
-                    };
-                    
-                    // For inbound messages, the actual customer message is in metadata
-                    const displayMessage = isInbound && comm.metadata?.originalMessage?.content 
-                      ? comm.metadata.originalMessage.content 
-                      : comm.subject || comm.content || '-';
-                    
-                    return (
-                      <div
-                        key={comm.id}
-                        className="contents"
-                        data-testid={`comm-item-${comm.id}`}
-                      >
-                        {/* Customer */}
-                        <div className="px-8 py-2 border-b border-slate-100 hover:bg-slate-50 transition-colors flex items-center min-w-0">
-                          <p className="font-semibold text-sm text-slate-900 truncate">
-                            {comm.contactName || 'Unknown Customer'}
-                          </p>
-                        </div>
-
-                        {/* Direction */}
-                        <div className="px-4 py-2 border-b border-slate-100 hover:bg-slate-50 transition-colors flex items-center justify-center">
-                          <div className={`p-1 rounded flex-shrink-0 ${isInbound ? 'bg-[#17B6C3]' : 'bg-slate-400'}`}>
-                            {isInbound ? (
-                              <ArrowDown className="h-3 w-3 text-white" />
-                            ) : (
-                              <ArrowUp className="h-3 w-3 text-white" />
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Type */}
-                        <div className="px-4 py-2 border-b border-slate-100 hover:bg-slate-50 transition-colors flex items-center justify-center">
-                          <div className={`p-2 rounded-lg ${
-                            comm.type === 'email' ? 'bg-blue-100 text-blue-800' :
-                            comm.type === 'sms' ? 'bg-purple-100 text-purple-800' :
-                            comm.type === 'call' ? 'bg-green-100 text-green-800' :
-                            'bg-slate-100 text-slate-800'
-                          }`}>
-                            {getChannelIcon()}
-                          </div>
-                        </div>
-
-                        {/* Date/Time */}
-                        <div className="px-4 py-2 border-b border-slate-100 hover:bg-slate-50 transition-colors flex items-center">
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <p className="text-sm text-slate-700 cursor-help">
-                                  {getSmartTimestamp(comm.createdAt)}
-                                </p>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>{formatExactDateTime(comm.createdAt)}</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        </div>
-
-                        {/* Invoice */}
-                        <div className="px-4 py-2 border-b border-slate-100 hover:bg-slate-50 transition-colors flex items-center">
-                          <p className="text-sm text-[#17B6C3] font-medium">
-                            {comm.invoiceNumber || '-'}
-                          </p>
-                        </div>
-
-                        {/* Subject/Message */}
-                        <div className="px-4 py-2 border-b border-slate-100 hover:bg-slate-50 transition-colors flex items-start min-w-0">
-                          <p className="text-xs text-slate-700 line-clamp-3">
-                            {displayMessage}
-                          </p>
-                        </div>
-
-                        {/* Status */}
-                        <div className="px-4 py-2 border-b border-slate-100 hover:bg-slate-50 transition-colors flex items-center justify-center">
-                          {isInbound ? (
-                            comm.status === 'resolved' ? (
-                              <Badge className="bg-green-100 text-green-800 border-green-200 text-xs">
-                                Actioned
-                              </Badge>
-                            ) : (
-                              <Badge className="bg-amber-100 text-amber-800 border-amber-200 text-xs">
-                                Pending
-                              </Badge>
-                            )
-                          ) : (
-                            comm.hasResponse ? (
-                              <Badge className="bg-green-100 text-green-800 border-green-200 flex items-center gap-1 text-xs">
-                                <CheckCircle2 className="h-3 w-3" />
-                                Responded
-                              </Badge>
-                            ) : (
-                              <Badge className="bg-slate-100 text-slate-600 border-slate-200 flex items-center gap-1 text-xs">
-                                <XCircle className="h-3 w-3" />
-                                No Response
-                              </Badge>
-                            )
-                          )}
-                        </div>
-
-                        {/* Intent */}
-                        <div className="px-4 py-2 border-b border-slate-100 hover:bg-slate-50 transition-colors flex items-center justify-center">
-                          {comm.intentType ? (
-                            <Badge className={`text-xs ${
-                              comm.intentType === 'promise_to_pay' ? 'bg-green-100 text-green-800 border-green-200' :
-                              comm.intentType === 'dispute' ? 'bg-red-100 text-red-800 border-red-200' :
-                              comm.intentType === 'general_query' ? 'bg-blue-100 text-blue-800 border-blue-200' :
-                              'bg-slate-100 text-slate-800 border-slate-200'
-                            }`}>
-                              {comm.intentType === 'promise_to_pay' ? 'PTP' :
-                               comm.intentType === 'dispute' ? 'Dispute' :
-                               comm.intentType === 'general_query' ? 'Query' :
-                               comm.intentType}
-                            </Badge>
-                          ) : (
-                            <span className="text-slate-400 text-sm">-</span>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
               </div>
             ) : isPTPTab ? (
               // PTP table format
