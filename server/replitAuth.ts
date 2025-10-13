@@ -154,6 +154,10 @@ export async function setupAuth(app: Express) {
       // Create demo user session
       await createDemoUserSession(req);
       
+      if (!req.user) {
+        return res.status(500).json({ message: "Failed to create demo user session" });
+      }
+      
       // Log the user in using passport
       req.login(req.user, (err) => {
         if (err) {

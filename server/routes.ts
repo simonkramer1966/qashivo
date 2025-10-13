@@ -246,6 +246,115 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
   await setupAuth(app);
 
+  // Partner and Context Management Routes
+  // Get current auth context (user info, role, active tenant)
+  app.get('/api/auth/context', isAuthenticated, async (req, res) => {
+    try {
+      const user = await storage.getUser((req as any).user.claims.sub);
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+
+      const isPartner = user.role === 'partner' && !!user.partnerId;
+      let accessibleTenants = [];
+
+      if (isPartner) {
+        // Get all tenants accessible by this partner
+        accessibleTenants = await storage.getPartnerTenants(user.id);
+      }
+
+      // @ts-ignore - session typing
+      const activeTenantId = isPartner ? req.session?.activeTenantId : user.tenantId;
+
+      res.json({
+        user: {
+          id: user.id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          role: user.role,
+          tenantRole: user.tenantRole,
+          partnerId: user.partnerId,
+        },
+        isPartner,
+        activeTenantId,
+        accessibleTenants: isPartner ? accessibleTenants : [],
+      });
+    } catch (error) {
+      console.error('Failed to get auth context:', error);
+      res.status(500).json({ message: 'Failed to retrieve auth context' });
+    }
+  });
+
+  // Get accessible tenants for partner users
+  app.get('/api/partner/tenants', isAuthenticated, async (req, res) => {
+    try {
+      const user = await storage.getUser((req as any).user.claims.sub);
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+
+      if (user.role !== 'partner' || !user.partnerId) {
+        return res.status(403).json({ message: 'Partner access required' });
+      }
+
+      const tenants = await storage.getPartnerTenants(user.id);
+      res.json({ tenants });
+    } catch (error) {
+      console.error('Failed to get partner tenants:', error);
+      res.status(500).json({ message: 'Failed to retrieve partner tenants' });
+    }
+  });
+
+  // Switch active tenant for partner users
+  app.post('/api/partner/switch-tenant', isAuthenticated, async (req, res) => {
+    try {
+      const user = await storage.getUser((req as any).user.claims.sub);
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+
+      if (user.role !== 'partner' || !user.partnerId) {
+        return res.status(403).json({ message: 'Partner access required' });
+      }
+
+      const { tenantId } = req.body;
+      if (!tenantId) {
+        return res.status(400).json({ message: 'Tenant ID required' });
+      }
+
+      // Verify partner has access to this tenant
+      const accessibleTenants = await storage.getPartnerTenants(user.id);
+      const hasAccess = accessibleTenants.some(t => t.id === tenantId);
+
+      if (!hasAccess) {
+        return res.status(403).json({ message: 'Access denied to this tenant' });
+      }
+
+      // Update session with new active tenant
+      // @ts-ignore - session typing
+      req.session.activeTenantId = tenantId;
+
+      // Save session explicitly to ensure it persists
+      req.session.save((err) => {
+        if (err) {
+          console.error('Failed to save session:', err);
+          return res.status(500).json({ message: 'Failed to switch tenant' });
+        }
+
+        const selectedTenant = accessibleTenants.find(t => t.id === tenantId);
+        res.json({ 
+          success: true,
+          activeTenantId: tenantId,
+          tenant: selectedTenant
+        });
+      });
+    } catch (error) {
+      console.error('Failed to switch tenant:', error);
+      res.status(500).json({ message: 'Failed to switch tenant' });
+    }
+  });
+
   // SendGrid Configuration Test Endpoint
   app.get('/api/test/sendgrid', isAuthenticated, async (req, res) => {
     try {
