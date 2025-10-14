@@ -337,10 +337,10 @@ export default function NewSidebar() {
     return allItems;
   };
 
-  // Enhanced logic for partner-client system: owners AND partners can switch organizations
-  // Non-partners (collectors, managers, regular users) only see their single tenant
+  // Enhanced logic for partner-client system: only partners can switch organizations
+  // Owners and non-partners (collectors, managers, regular users) only see their single tenant
   const canSwitchOrganizations = (
-    ((user as any)?.role === "owner" || (user as any)?.role === "partner") && 
+    (user as any)?.role === "partner" && 
     accessibleTenants.length > 0
   );
   
