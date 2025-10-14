@@ -77,10 +77,8 @@ const navigationItems = [
   { name: "Client Intelligence", href: "/client-intelligence", icon: Brain },
 ];
 
-// Partner-specific navigation items
-const partnerNavigationItems = [
-  { name: "My Nexus", href: "/partner", icon: Building2 },
-];
+// Partner-specific navigation items (now in dropdown menu instead)
+const partnerNavigationItems: typeof navigationItems = [];
 
 // Platform admin navigation items (Qashivo internal only)
 const platformAdminNavigationItems = [
@@ -733,14 +731,16 @@ export default function NewSidebar() {
                 
                 <div className="mx-4 my-2 h-px bg-gray-200"></div>
                 
-                {/* Bottom Section */}
-                <DropdownMenuItem 
-                  className="pl-7 pr-3 py-3 cursor-pointer hover:bg-gray-50"
-                  onClick={() => setLocation('/owner')}
-                  data-testid="menu-item-my-qashivo"
-                >
-                  <div className="font-medium text-sm">My Qashivo</div>
-                </DropdownMenuItem>
+                {/* Bottom Section - Partner Dashboard Link (only for partners) */}
+                {(user as any)?.role === "partner" && (
+                  <DropdownMenuItem 
+                    className="pl-7 pr-3 py-3 cursor-pointer hover:bg-gray-50"
+                    onClick={() => setLocation('/partner')}
+                    data-testid="menu-item-my-qashivo"
+                  >
+                    <div className="font-medium text-sm">My Qashivo</div>
+                  </DropdownMenuItem>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
         </div>
