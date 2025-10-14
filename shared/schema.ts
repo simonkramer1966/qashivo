@@ -39,6 +39,7 @@ export const users = pgTable("users", {
   partnerId: varchar("partner_id").references(() => partners.id), // Links user to a partner organization
   role: varchar("role").notNull().default("user"), // owner, admin, user, partner, client_owner, client_user
   tenantRole: varchar("tenant_role").default("user"), // admin, collector, manager, user (role within a specific tenant)
+  platformAdmin: boolean("platform_admin").default(false), // Qashivo platform admin access
   stripeCustomerId: varchar("stripe_customer_id"),
   stripeSubscriptionId: varchar("stripe_subscription_id"),
   createdAt: timestamp("created_at").defaultNow(),
