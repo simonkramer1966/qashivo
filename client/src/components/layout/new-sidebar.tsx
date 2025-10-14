@@ -318,7 +318,10 @@ export default function NewSidebar() {
   };
 
   // Get all navigation items based on current context (Route-Based Sidebar Navigation)
-  const getAllNavigationItems = () => {
+  // Memoized to update when location or user changes
+  const currentNavigationItems = useMemo(() => {
+    console.log('🔄 Recalculating navigation items for location:', location, 'user role:', (user as any)?.role);
+    
     // For business dashboard, show business management items
     if (location === '/business-dashboard' || location.startsWith('/business-dashboard')) {
       return [
@@ -340,6 +343,7 @@ export default function NewSidebar() {
     
     // Partner portal pages (My Qashivo) show partner management sidebar
     if (location === '/partner' || location.startsWith('/partner/')) {
+      console.log('✅ Partner route detected, returning partner navigation items');
       let partnerItems = [...partnerNavigationItems];
       
       // Add platform admin items if user is also a platform admin
@@ -351,6 +355,7 @@ export default function NewSidebar() {
     }
     
     // Default: Regular Qashivo operational sidebar (for all users working in tenant context)
+    console.log('📋 Returning default operational sidebar');
     let allItems = [...navigationItems];
     
     // Add owner-only items if user is an owner
@@ -364,7 +369,7 @@ export default function NewSidebar() {
     }
     
     return allItems;
-  };
+  }, [location, user]);
 
   // Enhanced logic for partner-client system: only partners can switch organizations
   // Owners and non-partners (collectors, managers, regular users) only see their single tenant
@@ -769,7 +774,7 @@ export default function NewSidebar() {
       {/* Navigation */}
       <nav className={cn("flex-1 mt-2.5", isCollapsed ? "px-2" : "px-4")}>
         <ul className="space-y-1">
-          {getAllNavigationItems().map((item, index) => {
+          {currentNavigationItems.map((item, index) => {
             // Render divider
             if (item.name === "divider") {
               return (
