@@ -552,6 +552,20 @@ export interface IStorage {
   
   // Get contacts assigned to a user (for collectors)
   getAssignedContacts(userId: string, tenantId: string): Promise<Contact[]>;
+  
+  // Platform Admin operations - for Qashivo internal use only
+  getPlatformStats(): Promise<{
+    totalUsers: number;
+    totalTenants: number;
+    totalPartners: number;
+    totalRelationships: number;
+    activeUsers: number;
+    activeTenants: number;
+  }>;
+  getAllPlatformUsers(filters?: { role?: string; isActive?: boolean }): Promise<(User & { tenant?: Tenant; partner?: Partner })[]>;
+  getAllPlatformTenants(): Promise<Tenant[]>;
+  getAllPlatformPartners(): Promise<Partner[]>;
+  getAllPlatformRelationships(): Promise<(PartnerClientRelationship & { partnerUser: User; partnerTenant: Tenant; clientTenant: Tenant })[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -4773,6 +4787,96 @@ export class DatabaseStorage implements IStorage {
       .orderBy(contacts.name);
     
     return results.map(r => r.contact);
+  }
+
+  // Platform Admin operations - for Qashivo internal use only
+  async getPlatformStats(): Promise<{
+    totalUsers: number;
+    totalTenants: number;
+    totalPartners: number;
+    totalRelationships: number;
+    activeUsers: number;
+    activeTenants: number;
+  }> {
+    const [userCount] = await db.select({ count: sql<number>`count(*)::int` }).from(users);
+    const [tenantCount] = await db.select({ count: sql<number>`count(*)::int` }).from(tenants);
+    const [partnerCount] = await db.select({ count: sql<number>`count(*)::int` }).from(partners);
+    const [relationshipCount] = await db.select({ count: sql<number>`count(*)::int` }).from(partnerClientRelationships);
+    
+    // Count active users and tenants (you can customize the "active" logic)
+    const [activeUserCount] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(users)
+      .where(sql`updated_at > NOW() - INTERVAL '30 days'`);
+    
+    const [activeTenantCount] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(tenants)
+      .where(sql`updated_at > NOW() - INTERVAL '30 days'`);
+
+    return {
+      totalUsers: userCount?.count || 0,
+      totalTenants: tenantCount?.count || 0,
+      totalPartners: partnerCount?.count || 0,
+      totalRelationships: relationshipCount?.count || 0,
+      activeUsers: activeUserCount?.count || 0,
+      activeTenants: activeTenantCount?.count || 0,
+    };
+  }
+
+  async getAllPlatformUsers(filters?: { role?: string; isActive?: boolean }): Promise<(User & { tenant?: Tenant; partner?: Partner })[]> {
+    let query = db
+      .select({
+        user: users,
+        tenant: tenants,
+        partner: partners,
+      })
+      .from(users)
+      .leftJoin(tenants, eq(users.tenantId, tenants.id))
+      .leftJoin(partners, eq(users.partnerId, partners.id))
+      .$dynamic();
+    
+    if (filters?.role) {
+      query = query.where(eq(users.role, filters.role));
+    }
+    
+    const results = await query.orderBy(users.createdAt);
+    
+    return results.map(r => ({
+      ...r.user,
+      tenant: r.tenant || undefined,
+      partner: r.partner || undefined,
+    }));
+  }
+
+  async getAllPlatformTenants(): Promise<Tenant[]> {
+    return await db.select().from(tenants).orderBy(tenants.createdAt);
+  }
+
+  async getAllPlatformPartners(): Promise<Partner[]> {
+    return await db.select().from(partners).orderBy(partners.createdAt);
+  }
+
+  async getAllPlatformRelationships(): Promise<(PartnerClientRelationship & { partnerUser: User; partnerTenant: Tenant; clientTenant: Tenant })[]> {
+    const results = await db
+      .select({
+        relationship: partnerClientRelationships,
+        partnerUser: users,
+        partnerTenant: { id: sql<string>`partner_tenant.id`, name: sql<string>`partner_tenant.name` },
+        clientTenant: { id: sql<string>`client_tenant.id`, name: sql<string>`client_tenant.name` },
+      })
+      .from(partnerClientRelationships)
+      .innerJoin(users, eq(partnerClientRelationships.partnerUserId, users.id))
+      .innerJoin(sql`tenants as partner_tenant`, sql`${partnerClientRelationships.partnerTenantId} = partner_tenant.id`)
+      .innerJoin(sql`tenants as client_tenant`, sql`${partnerClientRelationships.clientTenantId} = client_tenant.id`)
+      .orderBy(partnerClientRelationships.createdAt);
+    
+    return results.map(r => ({
+      ...r.relationship,
+      partnerUser: r.partnerUser,
+      partnerTenant: r.partnerTenant as Tenant,
+      clientTenant: r.clientTenant as Tenant,
+    }));
   }
 }
 

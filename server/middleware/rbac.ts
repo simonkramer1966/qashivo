@@ -538,3 +538,43 @@ export function withRole(role: string): RequestHandler[] {
 export function withMinimumRole(minimumRole: string): RequestHandler[] {
   return withAuthAndRBAC(requireMinimumRole(minimumRole));
 }
+
+/**
+ * Middleware to check if user is a Qashivo platform admin
+ * Platform admins have access to all system-wide data and functionality
+ */
+export const requirePlatformAdmin: RequestHandler = async (req, res, next) => {
+  try {
+    if (!req.user?.claims?.sub) {
+      return res.status(401).json({ message: 'Authentication required' });
+    }
+
+    const userId = req.user.claims.sub;
+    const user = await storage.getUser(userId);
+    
+    if (!user) {
+      return res.status(403).json({ message: 'User not found' });
+    }
+
+    if (!user.platformAdmin) {
+      return res.status(403).json({ 
+        message: 'Platform admin access required',
+        required: 'platform_admin',
+        userRole: user.role
+      });
+    }
+
+    // User is a platform admin, continue
+    next();
+  } catch (error) {
+    console.error('Platform admin check error:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+/**
+ * Helper to create platform admin routes easily
+ */
+export function withPlatformAdmin(): RequestHandler[] {
+  return [isAuthenticated, requirePlatformAdmin];
+}

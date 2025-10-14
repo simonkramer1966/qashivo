@@ -16857,6 +16857,71 @@ ${tenant.name}
 
   // ==================== END DEMO MODE API ====================
 
+  // ==================== PLATFORM ADMIN API ====================
+  // Qashivo internal platform administration - requires platformAdmin flag
+  
+  // Import platform admin middleware
+  const { withPlatformAdmin } = await import('./middleware/rbac.js');
+  
+  // Get platform stats
+  app.get("/api/platform-admin/stats", ...withPlatformAdmin(), async (req, res) => {
+    try {
+      const stats = await storage.getPlatformStats();
+      res.json(stats);
+    } catch (error) {
+      console.error("Error fetching platform stats:", error);
+      res.status(500).json({ message: "Failed to fetch platform stats" });
+    }
+  });
+  
+  // Get all platform users
+  app.get("/api/platform-admin/users", ...withPlatformAdmin(), async (req, res) => {
+    try {
+      const { role } = req.query;
+      const filters = role ? { role: role as string } : undefined;
+      const users = await storage.getAllPlatformUsers(filters);
+      res.json(users);
+    } catch (error) {
+      console.error("Error fetching platform users:", error);
+      res.status(500).json({ message: "Failed to fetch platform users" });
+    }
+  });
+  
+  // Get all platform tenants
+  app.get("/api/platform-admin/tenants", ...withPlatformAdmin(), async (req, res) => {
+    try {
+      const tenants = await storage.getAllPlatformTenants();
+      res.json(tenants);
+    } catch (error) {
+      console.error("Error fetching platform tenants:", error);
+      res.status(500).json({ message: "Failed to fetch platform tenants" });
+    }
+  });
+  
+  // Get all platform partners
+  app.get("/api/platform-admin/partners", ...withPlatformAdmin(), async (req, res) => {
+    try {
+      const partners = await storage.getAllPlatformPartners();
+      res.json(partners);
+    } catch (error) {
+      console.error("Error fetching platform partners:", error);
+      res.status(500).json({ message: "Failed to fetch platform partners" });
+    }
+  });
+  
+  // Get all platform relationships
+  app.get("/api/platform-admin/relationships", ...withPlatformAdmin(), async (req, res) => {
+    try {
+      const relationships = await storage.getAllPlatformRelationships();
+      res.json(relationships);
+    } catch (error) {
+      console.error("Error fetching platform relationships:", error);
+      res.status(500).json({ message: "Failed to fetch platform relationships" });
+    }
+  });
+
+  // ==================== END PLATFORM ADMIN API ====================
+
   const httpServer = createServer(app);
   return httpServer;
 }
