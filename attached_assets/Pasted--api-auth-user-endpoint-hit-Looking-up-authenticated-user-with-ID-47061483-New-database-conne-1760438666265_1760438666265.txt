@@ -1,0 +1,52 @@
+🔍 /api/auth/user endpoint hit
+🔍 Looking up authenticated user with ID: 47061483
+New database connection established
+🔍 Found user: true
+10:43:43 AM [express] GET /api/auth/user 200 in 285ms :: {"id":"47061483","email":"simon@simonkramer.…
+🔧 Development mode: Using demo authentication bypass
+🔧 Development mode: Using demo authentication bypass
+🔧 Development mode: Using demo authentication bypass
+🔧 Development mode: Using demo authentication bypass
+🔧 Development mode: Using demo authentication bypass
+🔧 Demo tenant already exists, fetching it
+New database connection established
+New database connection established
+New database connection established
+New database connection established
+New database connection established
+🔧 Demo tenant already exists, fetching it
+🔧 Demo tenant already exists, fetching it
+🔧 Demo tenant already exists, fetching it
+🔧 Demo tenant already exists, fetching it
+🔧 Development mode: Using demo authentication bypass
+New database connection established
+New database connection established
+New database connection established
+New database connection established
+New database connection established
+👥 Partner Access: User demo-user-47061483 has partner access to 0 client tenant(s)
+🔒 Enhanced Security: User demo-user-47061483 (role: partner) can access 2 tenant(s) via system + partner relationships
+10:43:45 AM [express] GET /api/user/accessible-tenants 200 in 273ms :: [{"id":"6feb7f4d-ba6f-4a67-936…
+🔧 Demo tenant already exists, fetching it
+10:43:45 AM [express] GET /api/demo-mode/status 200 in 284ms :: {"enabled":false}
+10:43:45 AM [express] GET /api/collections/automation/status 200 in 312ms :: {"enabled":true}
+10:43:45 AM [express] GET /api/dashboard/metrics 200 in 325ms :: {"totalOutstanding":70585449,"totalI…
+10:43:45 AM [express] GET /api/tenant 200 in 332ms :: {"id":"6feb7f4d-ba6f-4a67-936e-9cff78f49c59","n…
+🔧 Development mode: Using demo authentication bypass
+🔧 Demo tenant already exists, fetching it
+10:43:45 AM [express] GET /api/analytics/cashflow-forecast 200 in 320ms :: {"forecast":[{"date":"2025…
+10:43:46 AM [express] GET /api/dashboard/leaderboards 200 in 668ms :: {"bestPayers":[],"worstPayers":…
+🔧 Development mode: Using demo authentication bypass
+🔧 Demo tenant already exists, fetching it
+10:44:01 AM [express] GET /api/partner/clients 200 in 169ms :: []
+🔧 Development mode: Using demo authentication bypass
+🔧 Demo tenant already exists, fetching it
+10:44:01 AM [express] GET /api/invitations/incoming 200 in 162ms :: []
+
+
+
+
+
+
+
+
