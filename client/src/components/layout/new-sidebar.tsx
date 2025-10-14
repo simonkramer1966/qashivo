@@ -34,7 +34,8 @@ import {
   Calculator,
   UserPlus,
   Wallet,
-  Brain
+  Brain,
+  Shield
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -79,6 +80,11 @@ const navigationItems = [
 // Partner-specific navigation items
 const partnerNavigationItems = [
   { name: "My Nexus", href: "/partner", icon: Building2 },
+];
+
+// Platform admin navigation items (Qashivo internal only)
+const platformAdminNavigationItems = [
+  { name: "Platform Admin", href: "/qashivo-admin", icon: Shield },
 ];
 
 // Owner-only navigation items
@@ -332,6 +338,11 @@ export default function NewSidebar() {
     // Add partner-specific items if user is a partner
     if ((user as any)?.role === "partner") {
       allItems = [...partnerNavigationItems, ...allItems];
+    }
+    
+    // Add platform admin items if user is a platform admin (Qashivo internal)
+    if ((user as any)?.platformAdmin === true) {
+      allItems = [...platformAdminNavigationItems, ...allItems];
     }
     
     return allItems;
