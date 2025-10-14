@@ -157,9 +157,18 @@ export default function PartnerDashboard() {
     terminateRelationshipMutation.mutate({ relationshipId, reason });
   };
 
-  // Switch to client tenant
-  const switchToClient = (tenantId: string) => {
-    window.location.href = `/api/user/switch-tenant?tenantId=${tenantId}`;
+  // Switch to client tenant using partner endpoint
+  const switchToClient = async (tenantId: string) => {
+    try {
+      const response = await apiRequest('POST', '/api/partner/switch-tenant', { tenantId });
+      if (response.ok) {
+        // Invalidate all queries and refresh to reflect new tenant context
+        queryClient.invalidateQueries();
+        window.location.reload();
+      }
+    } catch (error) {
+      console.error('Failed to switch tenant:', error);
+    }
   };
 
   const pendingInvitations = incomingInvitations.filter(inv => inv.status === 'pending');
