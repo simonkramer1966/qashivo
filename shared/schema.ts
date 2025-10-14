@@ -3586,3 +3586,229 @@ export const insertActivityLogSchema = createInsertSchema(activityLogs).omit({
 
 export type ActivityLog = typeof activityLogs.$inferSelect;
 export type InsertActivityLog = z.infer<typeof insertActivityLogSchema>;
+
+// =============================================
+// INTELLIGENT CASHFLOW FORECAST SYSTEM
+// =============================================
+
+// Sales Forecast - Monthly sales input (Committed/Uncommitted/Stretch)
+export const salesForecasts = pgTable("sales_forecasts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  forecastMonth: varchar("forecast_month").notNull(), // YYYY-MM format
+  
+  // Sales categories with confidence weights
+  committedAmount: decimal("committed_amount", { precision: 12, scale: 2 }).notNull().default("0"),
+  uncommittedAmount: decimal("uncommitted_amount", { precision: 12, scale: 2 }).notNull().default("0"),
+  stretchAmount: decimal("stretch_amount", { precision: 12, scale: 2 }).notNull().default("0"),
+  
+  // Confidence weights (0-1)
+  committedConfidence: decimal("committed_confidence", { precision: 3, scale: 2 }).default("0.90"),
+  uncommittedConfidence: decimal("uncommitted_confidence", { precision: 3, scale: 2 }).default("0.60"),
+  stretchConfidence: decimal("stretch_confidence", { precision: 3, scale: 2 }).default("0.30"),
+  
+  // Metadata
+  notes: text("notes"),
+  createdByUserId: varchar("created_by_user_id").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  unique("sales_forecast_tenant_month").on(table.tenantId, table.forecastMonth),
+  index("sales_forecasts_tenant_idx").on(table.tenantId),
+]);
+
+// ARD History - Tracks Average Receivable Days over time
+export const ardHistory = pgTable("ard_history", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  calculationDate: timestamp("calculation_date").notNull(),
+  
+  // ARD metrics
+  averageReceivableDays: decimal("average_receivable_days", { precision: 6, scale: 2 }).notNull(),
+  sampleSize: integer("sample_size").notNull(), // Number of invoices in calculation
+  totalAmount: decimal("total_amount", { precision: 12, scale: 2 }).notNull(),
+  
+  // Calculation parameters
+  windowDays: integer("window_days").default(90), // Rolling window size
+  outliersExcluded: integer("outliers_excluded").default(0),
+  
+  // By segment (optional breakdown)
+  ardByCustomer: jsonb("ard_by_customer"), // { customerId: ARD }
+  ardByIndustry: jsonb("ard_by_industry"), // { industry: ARD }
+  
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("ard_history_tenant_date_idx").on(table.tenantId, table.calculationDate),
+]);
+
+// Pattern Library - Stores detected recurring payment/expense patterns
+export const patternLibrary = pgTable("pattern_library", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  entityType: varchar("entity_type").notNull(), // 'customer', 'supplier'
+  entityId: varchar("entity_id"), // contactId reference (optional)
+  entityName: varchar("entity_name").notNull(),
+  
+  // Pattern characteristics
+  patternType: varchar("pattern_type").notNull(), // 'inflow', 'outflow'
+  avgIntervalDays: decimal("avg_interval_days", { precision: 6, scale: 2 }).notNull(),
+  varianceDays: decimal("variance_days", { precision: 6, scale: 2 }).notNull(),
+  robustAmount: decimal("robust_amount", { precision: 12, scale: 2 }).notNull(),
+  
+  // Volatility classification
+  volatilityClass: varchar("volatility_class").notNull(), // 'STABLE', 'VARIABLE', 'VOLATILE'
+  confidence: decimal("confidence", { precision: 3, scale: 2 }).notNull(), // 0-1
+  
+  // Detection metadata
+  occurrenceCount: integer("occurrence_count").notNull(),
+  firstOccurrence: timestamp("first_occurrence").notNull(),
+  lastOccurrence: timestamp("last_occurrence").notNull(),
+  
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("pattern_library_tenant_idx").on(table.tenantId),
+  index("pattern_library_entity_idx").on(table.entityType, table.entityId),
+]);
+
+// Forecast Snapshots - Stores complete forecast at point in time
+export const forecastSnapshots = pgTable("forecast_snapshots", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  snapshotDate: timestamp("snapshot_date").notNull(),
+  forecastHorizonWeeks: integer("forecast_horizon_weeks").default(13),
+  
+  // Forecast mode
+  forecastMode: varchar("forecast_mode").notNull(), // 'inflow_only', 'total_cashflow'
+  scenarioType: varchar("scenario_type").notNull(), // 'conservative', 'base', 'optimistic'
+  
+  // Complete forecast data (JSON)
+  forecastData: jsonb("forecast_data").notNull(), // Full ForecastOutput from engine
+  
+  // Snapshot metadata
+  ardAtSnapshot: decimal("ard_at_snapshot", { precision: 6, scale: 2 }),
+  irregularBufferBeta: decimal("irregular_buffer_beta", { precision: 3, scale: 2 }).default("0.5"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("forecast_snapshots_tenant_date_idx").on(table.tenantId, table.snapshotDate),
+]);
+
+// Forecast Variance Tracking - Compare forecast vs actuals for learning
+export const forecastVarianceTracking = pgTable("forecast_variance_tracking", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  snapshotId: varchar("snapshot_id").references(() => forecastSnapshots.id),
+  comparisonDate: timestamp("comparison_date").notNull(),
+  
+  // Forecast vs Actual comparison
+  forecastedAmount: decimal("forecasted_amount", { precision: 12, scale: 2 }).notNull(),
+  actualAmount: decimal("actual_amount", { precision: 12, scale: 2 }).notNull(),
+  variance: decimal("variance", { precision: 12, scale: 2 }).notNull(),
+  variancePercentage: decimal("variance_percentage", { precision: 6, scale: 2 }),
+  
+  // Category breakdown
+  category: varchar("category").notNull(), // 'ar_collection', 'ap_payment', 'budget_income', 'budget_expense', 'irregular'
+  
+  // Accuracy metrics
+  mae: decimal("mae", { precision: 12, scale: 2 }), // Mean Absolute Error
+  rmse: decimal("rmse", { precision: 12, scale: 2 }), // Root Mean Squared Error
+  
+  // Learning adjustments made
+  adjustmentsMade: jsonb("adjustments_made"), // { ardAdjustment: X, confidenceAdjustment: Y, betaAdjustment: Z }
+  
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("forecast_variance_tenant_date_idx").on(table.tenantId, table.comparisonDate),
+  index("forecast_variance_snapshot_idx").on(table.snapshotId),
+]);
+
+// Relations
+export const salesForecastsRelations = relations(salesForecasts, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [salesForecasts.tenantId],
+    references: [tenants.id],
+  }),
+  createdBy: one(users, {
+    fields: [salesForecasts.createdByUserId],
+    references: [users.id],
+  }),
+}));
+
+export const ardHistoryRelations = relations(ardHistory, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [ardHistory.tenantId],
+    references: [tenants.id],
+  }),
+}));
+
+export const patternLibraryRelations = relations(patternLibrary, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [patternLibrary.tenantId],
+    references: [tenants.id],
+  }),
+}));
+
+export const forecastSnapshotsRelations = relations(forecastSnapshots, ({ one, many }) => ({
+  tenant: one(tenants, {
+    fields: [forecastSnapshots.tenantId],
+    references: [tenants.id],
+  }),
+  variances: many(forecastVarianceTracking),
+}));
+
+export const forecastVarianceTrackingRelations = relations(forecastVarianceTracking, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [forecastVarianceTracking.tenantId],
+    references: [tenants.id],
+  }),
+  snapshot: one(forecastSnapshots, {
+    fields: [forecastVarianceTracking.snapshotId],
+    references: [forecastSnapshots.id],
+  }),
+}));
+
+// Insert schemas
+export const insertSalesForecastSchema = createInsertSchema(salesForecasts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertArdHistorySchema = createInsertSchema(ardHistory).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertPatternLibrarySchema = createInsertSchema(patternLibrary).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertForecastSnapshotSchema = createInsertSchema(forecastSnapshots).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertForecastVarianceTrackingSchema = createInsertSchema(forecastVarianceTracking).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Type exports
+export type SalesForecast = typeof salesForecasts.$inferSelect;
+export type InsertSalesForecast = z.infer<typeof insertSalesForecastSchema>;
+
+export type ArdHistory = typeof ardHistory.$inferSelect;
+export type InsertArdHistory = z.infer<typeof insertArdHistorySchema>;
+
+export type PatternLibrary = typeof patternLibrary.$inferSelect;
+export type InsertPatternLibrary = z.infer<typeof insertPatternLibrarySchema>;
+
+export type ForecastSnapshot = typeof forecastSnapshots.$inferSelect;
+export type InsertForecastSnapshot = z.infer<typeof insertForecastSnapshotSchema>;
+
+export type ForecastVarianceTracking = typeof forecastVarianceTracking.$inferSelect;
+export type InsertForecastVarianceTracking = z.infer<typeof insertForecastVarianceTrackingSchema>;
