@@ -318,12 +318,14 @@ export default function NewSidebar() {
   };
 
   // Get all navigation items based on current context (Route-Based Sidebar Navigation)
-  // Memoized to update when location or user changes
-  const currentNavigationItems = useMemo(() => {
-    console.log('🔄 Recalculating navigation items for location:', location, 'user role:', (user as any)?.role);
+  // NOTE: Using window.location.pathname instead of wouter's location because wouter doesn't update reliably
+  // NOTE: Removed useMemo because window.location.pathname isn't reactive - sidebar updates on page load
+  const getAllNavigationItems = () => {
+    const currentPath = window.location.pathname;
+    console.log('🔄 Recalculating navigation items for location:', currentPath, 'user role:', (user as any)?.role);
     
     // For business dashboard, show business management items
-    if (location === '/business-dashboard' || location.startsWith('/business-dashboard')) {
+    if (currentPath === '/business-dashboard' || currentPath.startsWith('/business-dashboard')) {
       return [
         { name: "Dashboard", href: "/business-dashboard", icon: Gauge },
         { name: "Clients", href: "/business-dashboard/clients", icon: Users },
@@ -335,14 +337,14 @@ export default function NewSidebar() {
     }
     
     // Platform admin page gets minimal navigation
-    if (location === '/qashivo-admin' || location.startsWith('/qashivo-admin')) {
+    if (currentPath === '/qashivo-admin' || currentPath.startsWith('/qashivo-admin')) {
       return [
         { name: "Platform Admin", href: "/qashivo-admin", icon: Shield },
       ];
     }
     
     // Partner portal pages (My Qashivo) show partner management sidebar
-    if (location === '/partner' || location.startsWith('/partner/')) {
+    if (currentPath === '/partner' || currentPath.startsWith('/partner/')) {
       console.log('✅ Partner route detected, returning partner navigation items');
       let partnerItems = [...partnerNavigationItems];
       
@@ -369,7 +371,9 @@ export default function NewSidebar() {
     }
     
     return allItems;
-  }, [location, user]);
+  };
+  
+  const currentNavigationItems = getAllNavigationItems();
 
   // Enhanced logic for partner-client system: only partners can switch organizations
   // Owners and non-partners (collectors, managers, regular users) only see their single tenant
