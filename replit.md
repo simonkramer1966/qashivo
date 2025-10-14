@@ -83,6 +83,40 @@ A three-tier hierarchy designed for accounting firms (partners) to manage multip
 - Bulk ops: `bulkAssignContacts`, `bulkUnassignContacts`
 - Access checks: `hasContactAccess`, `getAssignedContacts`
 
+### Platform Admin System (Qashivo Internal)
+A secure administration interface for Qashivo employees to manage and monitor the entire platform across all partners and tenants.
+
+**Access Control:**
+- `platformAdmin` boolean field in `users` table (default: false)
+- `requirePlatformAdmin` middleware enforces access at API level
+- Frontend route guard redirects non-platform-admins from `/qashivo-admin`
+- Navigation link only visible to users with `platformAdmin=true`
+
+**Platform Admin Dashboard (`/qashivo-admin`):**
+- **Overview Tab**: Platform statistics (total users, tenants, partners, relationships), user distribution by role, partner status
+- **Users Tab**: Complete list of all users across all tenants with tenant/partner associations
+- **Tenants Tab**: All tenant organizations in the system
+- **Partners Tab**: All accounting firm partners with activity status
+
+**API Endpoints (Protected by `withPlatformAdmin()`):**
+- `GET /api/platform-admin/stats`: Platform-wide statistics
+- `GET /api/platform-admin/users`: All users with filtering options
+- `GET /api/platform-admin/tenants`: All tenant organizations
+- `GET /api/platform-admin/partners`: All partner organizations
+- `GET /api/platform-admin/relationships`: All partner-client relationships
+
+**Storage Methods:**
+- `getPlatformStats()`: Returns aggregated platform metrics
+- `getAllPlatformUsers(filters?)`: Fetches all users with optional role filtering
+- `getAllPlatformTenants()`: Returns all tenant organizations
+- `getAllPlatformPartners()`: Returns all partner organizations
+- `getAllPlatformRelationships()`: Returns all partner-client relationships with joined data
+
+**Security Implementation:**
+- Backend: All routes protected by `withPlatformAdmin()` middleware (isAuthenticated + requirePlatformAdmin)
+- Frontend: `useEffect` redirect + early return for non-platform-admins
+- Multi-layer defense: API returns 403 if platformAdmin check fails, UI prevents unauthorized access
+
 ### Feature Specifications
 
 #### Intent Analyst System
