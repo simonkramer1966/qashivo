@@ -317,7 +317,7 @@ export default function NewSidebar() {
     return location === href || location.startsWith(href + "/") || location.startsWith(href + "?");
   };
 
-  // Get all navigation items based on user role (Role-Based Sidebar Navigation)
+  // Get all navigation items based on current context (Route-Based Sidebar Navigation)
   const getAllNavigationItems = () => {
     // For business dashboard, show business management items
     if (location === '/business-dashboard' || location.startsWith('/business-dashboard')) {
@@ -331,8 +331,15 @@ export default function NewSidebar() {
       ];
     }
     
-    // Partners get their own dedicated sidebar for client management
-    if ((user as any)?.role === "partner") {
+    // Platform admin page gets minimal navigation
+    if (location === '/qashivo-admin' || location.startsWith('/qashivo-admin')) {
+      return [
+        { name: "Platform Admin", href: "/qashivo-admin", icon: Shield },
+      ];
+    }
+    
+    // Partner portal pages (My Qashivo) show partner management sidebar
+    if (location === '/partner' || location.startsWith('/partner/')) {
       let partnerItems = [...partnerNavigationItems];
       
       // Add platform admin items if user is also a platform admin
@@ -343,7 +350,7 @@ export default function NewSidebar() {
       return partnerItems;
     }
     
-    // Regular Qashivo users (tenant users) get the operational AR management sidebar
+    // Default: Regular Qashivo operational sidebar (for all users working in tenant context)
     let allItems = [...navigationItems];
     
     // Add owner-only items if user is an owner
