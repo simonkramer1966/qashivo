@@ -27,6 +27,13 @@ import { z } from "zod";
 export type ForecastScenario = 'base' | 'optimistic' | 'pessimistic' | 'custom';
 
 /**
+ * Forecast mode types
+ * - 'total': Traditional AR/AP approach (sum of existing receivables/payables)
+ * - 'inflow': Sales-driven approach (includes future sales forecasts with ARD conversion)
+ */
+export type ForecastMode = 'total' | 'inflow';
+
+/**
  * Risk assessment levels
  */
 export type RiskLevel = 'low' | 'medium' | 'high' | 'critical';
@@ -64,6 +71,9 @@ export interface ForecastConfig {
   forecastWeeks: number;
   baseCurrency: CurrencyCode;
   includeWeekends: boolean;
+  
+  // Forecast mode
+  mode?: ForecastMode; // 'total' (default) or 'inflow' (sales-driven)
   
   // Scenario parameters
   scenario: ForecastScenario;
@@ -104,6 +114,14 @@ export interface ForecastConfig {
     volatilityFactor: number; // Expected FX volatility
     hedgeRatio: number; // 0-1 percentage of exposure to hedge
   };
+  
+  // Intelligent forecast settings (for 'inflow' mode)
+  intelligentConfig?: {
+    averageReceivableDays: number; // ARD to shift sales forecasts
+    irregularBufferBeta: number; // Smoothing coefficient for one-off expenses
+    salesForecastConfidence: number; // 0-1 confidence multiplier for sales data
+    includeIrregularBuffer: boolean; // Apply irregular expense buffer
+  };
 }
 
 /**
@@ -113,6 +131,7 @@ export const DEFAULT_FORECAST_CONFIG: ForecastConfig = {
   forecastWeeks: 13,
   baseCurrency: 'USD',
   includeWeekends: false,
+  mode: 'total', // Default to traditional AR/AP mode
   scenario: 'base',
   
   arCollectionConfig: {
@@ -346,6 +365,19 @@ export interface HistoricalTransaction {
 }
 
 /**
+ * Sales forecast data (for intelligent 'inflow' mode)
+ */
+export interface ForecastSalesData {
+  forecastMonth: string; // YYYY-MM
+  committedAmount: number;
+  uncommittedAmount: number;
+  stretchAmount: number;
+  committedConfidence: number;
+  uncommittedConfidence: number;
+  stretchConfidence: number;
+}
+
+/**
  * Complete forecast input data
  */
 export interface ForecastInputData {
@@ -356,6 +388,9 @@ export interface ForecastInputData {
   exchangeRates: ForecastExchangeRate[];
   historicalTransactions: HistoricalTransaction[];
   forecastDate: Date; // Starting date for forecast
+  
+  // Sales forecasts (for 'inflow' mode)
+  salesForecasts?: ForecastSalesData[];
 }
 
 // =============================================
@@ -367,13 +402,14 @@ export interface ForecastInputData {
  */
 export interface DailyCashFlowItem {
   date: Date;
-  type: 'ar_collection' | 'ap_payment' | 'budget_income' | 'budget_expense' | 'fx_impact';
+  type: 'ar_collection' | 'ap_payment' | 'budget_income' | 'budget_expense' | 'fx_impact' | 'sales_inflow' | 'irregular_buffer';
   amount: number;
   currency: CurrencyCode;
   description: string;
   confidence: number; // 0-1
   sourceId?: string; // ID of invoice, bill, or budget line
   probability?: number; // For probabilistic items
+  category?: 'committed' | 'uncommitted' | 'stretch'; // For sales forecasts
 }
 
 /**
@@ -394,6 +430,10 @@ export interface DailyCashPosition {
   budgetIncome: number;
   budgetExpenses: number;
   fxImpact: number;
+  
+  // Intelligent forecast breakdowns (for 'inflow' mode)
+  salesInflows?: number;
+  irregularBuffer?: number;
   
   // Risk metrics
   confidenceInterval: [number, number]; // [lower, upper] bounds
