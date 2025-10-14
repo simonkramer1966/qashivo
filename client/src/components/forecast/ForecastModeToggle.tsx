@@ -25,7 +25,7 @@ export function ForecastModeToggle({ mode, onModeChange }: ForecastModeTogglePro
                 Total Cashflow
               </Label>
               <p className="text-xs text-gray-500 mt-1">
-                Traditional AR/AP approach - sum of existing receivables and payables
+                Comprehensive view: AR + AP from Xero + sales forecasts
               </p>
             </div>
           </div>
@@ -38,7 +38,7 @@ export function ForecastModeToggle({ mode, onModeChange }: ForecastModeTogglePro
                 Intelligent Inflow
               </Label>
               <p className="text-xs text-gray-500 mt-1">
-                Sales-driven approach - includes future sales forecasts with ARD-based conversion
+                Cash inflows only: AI AR forecasts + 12-month sales forecasts (no AP)
               </p>
             </div>
           </div>

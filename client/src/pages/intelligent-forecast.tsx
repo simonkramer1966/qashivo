@@ -53,7 +53,7 @@ export default function IntelligentForecast() {
           {/* Sales Forecast Grid (only shown in inflow mode) */}
           {forecastMode === 'inflow' && (
             <div className="mb-6">
-              <SalesForecastGrid months={6} />
+              <SalesForecastGrid />
             </div>
           )}
 

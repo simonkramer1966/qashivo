@@ -9,10 +9,10 @@ import { useToast } from "@/hooks/use-toast";
 import type { SalesForecast } from "@shared/schema";
 
 interface SalesForecastGridProps {
-  months?: number; // Number of months to display (default: 6)
+  months?: number; // Number of months to display (default: 12)
 }
 
-export function SalesForecastGrid({ months = 6 }: SalesForecastGridProps) {
+export function SalesForecastGrid({ months = 12 }: SalesForecastGridProps) {
   const { toast } = useToast();
   const [localForecasts, setLocalForecasts] = useState<Record<string, SalesForecast>>({});
   const [hasChanges, setHasChanges] = useState(false);
@@ -163,9 +163,9 @@ export function SalesForecastGrid({ months = 6 }: SalesForecastGridProps) {
         </Button>
       </div>
 
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto max-h-[500px] overflow-y-auto border border-gray-200 rounded-lg">
         <table className="w-full border-collapse">
-          <thead>
+          <thead className="sticky top-0 bg-white z-10">
             <tr className="border-b border-gray-200">
               <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">
                 <div className="flex items-center gap-2">
