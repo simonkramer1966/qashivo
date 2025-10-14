@@ -1,0 +1,53 @@
+# Qashivo Intelligent Cashflow Forecast Model  
+*Technical Specification v1.0 — October 2025*  
+
+---
+
+## 1. Overview  
+
+Qashivo’s Intelligent Cashflow Forecast Engine produces **probabilistic, explainable forecasts** of an SME’s future cash position by unifying three complementary data layers:
+
+1. **AI Behavioural Forecasting** — learns real payment behaviour from invoices, bills, and bank patterns.  
+2. **Sales Forecast Layer** — captures forward-looking monthly sales expectations (Committed / Uncommitted / Stretch) and converts them to cash via live Average Receivable Days (ARD).  
+3. **Irregular Buffer** — smooths out random, one-off spending to maintain realistic projections.
+
+The system continuously learns from actuals, updating forecasts daily or weekly as new data flows in.
+
+---
+
+## 2. System Architecture  
+
+### High-Level Components  
+
+| Component | Description |
+|------------|-------------|
+| **Data Integrators** | Connects to Xero (invoices, bills, bank data), Qashivo internal ledger, SendGrid/Vonage webhooks. |
+| **Data Normalisation Layer** | Cleans, aligns, and maps all financial data into a unified schema. |
+| **Feature Store** | Stores behaviour metrics: payment delays, volatility, seasonality, category trends. |
+| **Forecast Engine Core** | Combines heuristics and ML to predict inflows, outflows, and irregulars. |
+| **Sales Forecast Module** | Accepts monthly Committed / Uncommitted / Stretch inputs. |
+| **Receivable Timing Service** | Calculates and updates ARD dynamically from live data. |
+| **Forecast Database** | Persists forecast records, confidence weights, and snapshots. |
+| **UI Layer** | Interactive chart with confidence bands and scenario toggles. |
+| **Feedback Loop** | Continuously compares forecasts vs. actuals to retrain weighting and ARD. |
+
+---
+
+## 3. Data Inputs  
+
+| Source | Data Type | Key Fields | Frequency |
+|--------|------------|-------------|------------|
+| **Xero Invoices API** | Inflows | InvoiceID, ContactID, IssueDate, DueDate, PaidDate, Amount, Status | Daily |
+| **Xero Bills API** | Outflows | BillID, SupplierID, DueDate, PaymentDate, Amount | Daily |
+| **Xero Bank Transactions** | Cash movements | Date, Description, Amount, Type | Daily |
+| **User Input (Forecast UI)** | Future sales | Month, Committed, Uncommitted, Stretch | Monthly |
+| **System Metrics** | Behavioural patterns | ARD, volatility, recurrence intervals | Daily |
+
+---
+
+## 4. Core Algorithms  
+
+### 4.1 Average Receivable Days (ARD)
+
+```math
+ARD = (Σ((PaymentDate - InvoiceDate) × Amount)) / (Σ Amount)

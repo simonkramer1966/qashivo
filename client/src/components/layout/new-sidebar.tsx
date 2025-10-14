@@ -77,8 +77,13 @@ const navigationItems = [
   { name: "Client Intelligence", href: "/client-intelligence", icon: Brain },
 ];
 
-// Partner-specific navigation items (now in dropdown menu instead)
-const partnerNavigationItems: typeof navigationItems = [];
+// Partner-specific sidebar navigation (for accounting firms managing multiple clients)
+const partnerNavigationItems = [
+  { name: "My Clients", href: "/partner", icon: Building2 },
+  { name: "divider", href: "#", icon: null },
+  { name: "Team & Users", href: "/partner/team", icon: Users },
+  { name: "Settings", href: "/partner/settings", icon: Settings },
+];
 
 // Platform admin navigation items (Qashivo internal only)
 const platformAdminNavigationItems = [
@@ -312,7 +317,7 @@ export default function NewSidebar() {
     return location === href || location.startsWith(href + "/") || location.startsWith(href + "?");
   };
 
-  // Get all navigation items based on user role (Enhanced for Partner-Client System)
+  // Get all navigation items based on user role (Role-Based Sidebar Navigation)
   const getAllNavigationItems = () => {
     // For business dashboard, show business management items
     if (location === '/business-dashboard' || location.startsWith('/business-dashboard')) {
@@ -326,6 +331,19 @@ export default function NewSidebar() {
       ];
     }
     
+    // Partners get their own dedicated sidebar for client management
+    if ((user as any)?.role === "partner") {
+      let partnerItems = [...partnerNavigationItems];
+      
+      // Add platform admin items if user is also a platform admin
+      if ((user as any)?.platformAdmin === true) {
+        partnerItems = [...platformAdminNavigationItems, { name: "divider", href: "#", icon: null }, ...partnerItems];
+      }
+      
+      return partnerItems;
+    }
+    
+    // Regular Qashivo users (tenant users) get the operational AR management sidebar
     let allItems = [...navigationItems];
     
     // Add owner-only items if user is an owner
@@ -333,14 +351,9 @@ export default function NewSidebar() {
       allItems = [...allItems, ...ownerNavigationItems];
     }
     
-    // Add partner-specific items if user is a partner
-    if ((user as any)?.role === "partner") {
-      allItems = [...partnerNavigationItems, ...allItems];
-    }
-    
     // Add platform admin items if user is a platform admin (Qashivo internal)
     if ((user as any)?.platformAdmin === true) {
-      allItems = [...platformAdminNavigationItems, ...allItems];
+      allItems = [...platformAdminNavigationItems, { name: "divider", href: "#", icon: null }, ...allItems];
     }
     
     return allItems;
