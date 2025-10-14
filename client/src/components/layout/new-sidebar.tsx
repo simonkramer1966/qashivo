@@ -449,8 +449,8 @@ export default function NewSidebar() {
         </Button>
       </div>
 
-      {/* Organization Dropdown - Similar to Xero */}
-      {!isCollapsed && location !== '/business-dashboard' && (
+      {/* Organization Dropdown - Only for partners and owners */}
+      {!isCollapsed && location !== '/business-dashboard' && canSwitchOrganizations && (
         <div className="px-4 pb-4 mt-2.5">
           <DropdownMenu>
               <DropdownMenuTrigger asChild>

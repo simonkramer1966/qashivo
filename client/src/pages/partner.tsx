@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/hooks/use-toast";
 import { 
   Building2, 
   Users, 
@@ -94,6 +95,7 @@ const getAccessLevelVariant = (level: string) => {
 export default function PartnerDashboard() {
   const [activeTab, setActiveTab] = useState("clients");
   const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   // Fetch partner's client relationships
   const { data: clientTenants = [], isLoading: clientsLoading } = useQuery<ClientTenant[]>({
@@ -111,12 +113,27 @@ export default function PartnerDashboard() {
   const acceptInvitationMutation = useMutation({
     mutationFn: async ({ invitationId, responseMessage }: { invitationId: string; responseMessage?: string }) => {
       const response = await apiRequest('POST', `/api/invitations/${invitationId}/accept`, { responseMessage });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to accept invitation');
+      }
       return response.json();
     },
     onSuccess: () => {
+      toast({
+        title: "Invitation accepted",
+        description: "You now have access to this client organization",
+      });
       queryClient.invalidateQueries({ queryKey: ['/api/partner/clients'] });
       queryClient.invalidateQueries({ queryKey: ['/api/invitations/incoming'] });
       queryClient.invalidateQueries({ queryKey: ['/api/user/accessible-tenants'] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to accept invitation",
+        description: error.message,
+        variant: "destructive",
+      });
     },
   });
 
@@ -124,10 +141,25 @@ export default function PartnerDashboard() {
   const declineInvitationMutation = useMutation({
     mutationFn: async ({ invitationId, responseMessage }: { invitationId: string; responseMessage?: string }) => {
       const response = await apiRequest('POST', `/api/invitations/${invitationId}/decline`, { responseMessage });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to decline invitation');
+      }
       return response.json();
     },
     onSuccess: () => {
+      toast({
+        title: "Invitation declined",
+        description: "The invitation has been declined",
+      });
       queryClient.invalidateQueries({ queryKey: ['/api/invitations/incoming'] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to decline invitation",
+        description: error.message,
+        variant: "destructive",
+      });
     },
   });
 
@@ -135,11 +167,26 @@ export default function PartnerDashboard() {
   const terminateRelationshipMutation = useMutation({
     mutationFn: async ({ relationshipId, reason }: { relationshipId: string; reason?: string }) => {
       const response = await apiRequest('DELETE', `/api/partner/clients/${relationshipId}`, { reason });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to terminate relationship');
+      }
       return response.json();
     },
     onSuccess: () => {
+      toast({
+        title: "Partnership terminated",
+        description: "Client relationship has been successfully ended",
+      });
       queryClient.invalidateQueries({ queryKey: ['/api/partner/clients'] });
       queryClient.invalidateQueries({ queryKey: ['/api/user/accessible-tenants'] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to terminate partnership",
+        description: error.message,
+        variant: "destructive",
+      });
     },
   });
 
@@ -157,19 +204,35 @@ export default function PartnerDashboard() {
     terminateRelationshipMutation.mutate({ relationshipId, reason });
   };
 
-  // Switch to client tenant using partner endpoint
-  const switchToClient = async (tenantId: string) => {
-    try {
+  // Switch to client tenant using partner endpoint with mutation for better UX
+  const switchTenantMutation = useMutation({
+    mutationFn: async (tenantId: string) => {
       const response = await apiRequest('POST', '/api/partner/switch-tenant', { tenantId });
-      if (response.ok) {
-        // Invalidate all queries and refresh to reflect new tenant context
-        queryClient.invalidateQueries();
-        window.location.reload();
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to switch tenant');
       }
-    } catch (error) {
-      console.error('Failed to switch tenant:', error);
-    }
-  };
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Switching organization...",
+        description: "Loading client data",
+      });
+      // Invalidate all queries and refresh after a brief delay to show toast
+      queryClient.invalidateQueries();
+      setTimeout(() => {
+        window.location.reload();
+      }, 800);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to switch tenant",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
 
   const pendingInvitations = incomingInvitations.filter(inv => inv.status === 'pending');
 
@@ -297,17 +360,19 @@ export default function PartnerDashboard() {
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => switchToClient(client.id)}
+                                onClick={() => switchTenantMutation.mutate(client.id)}
+                                disabled={switchTenantMutation.isPending}
                                 className="border-[#17B6C3]/20 text-[#17B6C3] hover:bg-[#17B6C3]/5"
                                 data-testid={`button-access-client-${client.id}`}
                               >
                                 <ExternalLink className="h-4 w-4 mr-2" />
-                                Access
+                                {switchTenantMutation.isPending ? "Switching..." : "Access"}
                               </Button>
                               <Button
                                 variant="outline"
                                 size="sm"
                                 onClick={() => handleTerminateRelationship(client.id, "Partnership ended by partner")}
+                                disabled={terminateRelationshipMutation.isPending}
                                 className="border-red-200 text-red-600 hover:bg-red-50"
                                 data-testid={`button-terminate-client-${client.id}`}
                               >
