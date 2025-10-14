@@ -1,5 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useLocation } from "wouter";
+import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -106,6 +108,28 @@ const getRoleBadgeVariant = (role: string) => {
 
 export default function QashivoAdminDashboard() {
   const [activeTab, setActiveTab] = useState("overview");
+  const [, setLocation] = useLocation();
+  const { user } = useAuth();
+
+  // Platform admin access control - redirect non-platform-admins
+  useEffect(() => {
+    if (user && !(user as any).platformAdmin) {
+      console.warn('Access denied: User is not a platform admin');
+      setLocation('/');
+    }
+  }, [user, setLocation]);
+
+  // If not a platform admin, show loading while redirect happens
+  if (!(user as any)?.platformAdmin) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-teal-50 flex items-center justify-center">
+        <div className="text-center">
+          <Shield className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+          <p className="text-gray-600">Access restricted to platform administrators</p>
+        </div>
+      </div>
+    );
+  }
 
   // Fetch platform stats
   const { data: stats, isLoading: statsLoading } = useQuery<PlatformStats>({
