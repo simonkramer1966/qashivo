@@ -23,6 +23,7 @@ const ActivityLog = lazy(() => import("@/pages/activity-log"));
 const Settings = lazy(() => import("@/pages/settings"));
 const Account = lazy(() => import("@/pages/account"));
 const PartnerDashboard = lazy(() => import("@/pages/partner"));
+const QashivoAdminDashboard = lazy(() => import("@/pages/qashivo-admin"));
 const Documentation = lazy(() => import("@/pages/documentation"));
 const DocumentationReview = lazy(() => import("@/pages/documentation-review"));
 const PartnerRegistration = lazy(() => import("@/pages/partner-registration"));
@@ -71,6 +72,7 @@ function Router() {
       ) : (
         // Authenticated routes - main application
         <Switch>
+          <Route path="/qashivo-admin" component={QashivoAdminDashboard} />
           <Route path="/partner" component={PartnerDashboard} />
           <Route path="/cashflow" component={Cashflow} />
           <Route path="/contacts" component={Contacts} />
