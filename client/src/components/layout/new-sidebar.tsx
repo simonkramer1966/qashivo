@@ -760,7 +760,7 @@ export default function NewSidebar() {
                 {(user as any)?.role === "partner" && (
                   <DropdownMenuItem 
                     className="pl-7 pr-3 py-3 cursor-pointer hover:bg-gray-50"
-                    onClick={() => setLocation('/partner')}
+                    onClick={() => handleNavigation('/partner')}
                     data-testid="menu-item-my-qashivo"
                   >
                     <div className="font-medium text-sm">My Qashivo</div>
