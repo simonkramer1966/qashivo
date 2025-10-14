@@ -31,6 +31,7 @@ const ClientRegistration = lazy(() => import("@/pages/client-registration"));
 const SignIn = lazy(() => import("@/pages/signin"));
 const Insights = lazy(() => import("@/pages/insights"));
 const ClientIntelligence = lazy(() => import("@/pages/client-intelligence"));
+const IntelligentForecast = lazy(() => import("@/pages/intelligent-forecast"));
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -75,6 +76,7 @@ function Router() {
           <Route path="/qashivo-admin" component={QashivoAdminDashboard} />
           <Route path="/partner" component={PartnerDashboard} />
           <Route path="/cashflow" component={Cashflow} />
+          <Route path="/intelligent-forecast" component={IntelligentForecast} />
           <Route path="/contacts" component={Contacts} />
           <Route path="/invoices" component={Invoices} />
           <Route path="/action-centre" component={ActionCentre} />

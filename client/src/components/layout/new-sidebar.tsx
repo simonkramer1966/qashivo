@@ -58,6 +58,7 @@ const navigationItems = [
   // Section 1: Dashboard
   { name: "Cashboard", href: "/", icon: Gauge },
   { name: "Cashflow", href: "/cashflow", icon: TrendingUp },
+  { name: "AI Forecast", href: "/intelligent-forecast", icon: Brain },
   { name: "Wallet", href: "/wallet", icon: Wallet },
   { name: "divider", href: "#", icon: null },
   
