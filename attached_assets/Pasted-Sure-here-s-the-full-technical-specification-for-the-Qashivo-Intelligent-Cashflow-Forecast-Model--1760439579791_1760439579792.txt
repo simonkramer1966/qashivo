@@ -1,0 +1,336 @@
+Sure — here’s the full technical specification for the Qashivo Intelligent Cashflow Forecast Model, formatted in clean Markdown for internal documentation, developer briefings, or investor appendices:
+
+# Qashivo Intelligent Cashflow Forecast Model  
+*Technical Specification v1.0 — October 2025*  
+
+---
+
+## 1. Overview  
+
+Qashivo’s Intelligent Cashflow Forecast Engine produces **probabilistic, explainable forecasts** of an SME’s future cash position by unifying three complementary data layers:
+
+1. **AI Behavioural Forecasting** — learns real payment behaviour from invoices, bills, and bank patterns.  
+2. **Sales Forecast Layer** — captures forward-looking monthly sales expectations (Committed / Uncommitted / Stretch) and converts them to cash via live Average Receivable Days (ARD).  
+3. **Irregular Buffer** — smooths out random, one-off spending to maintain realistic projections.
+
+The system continuously learns from actuals, updating forecasts daily or weekly as new data flows in.
+
+---
+
+## 2. System Architecture  
+
+### High-Level Components  
+
+| Component | Description |
+|------------|-------------|
+| **Data Integrators** | Connects to Xero (invoices, bills, bank data), Qashivo internal ledger, SendGrid/Vonage webhooks. |
+| **Data Normalisation Layer** | Cleans, aligns, and maps all financial data into a unified schema. |
+| **Feature Store** | Stores behaviour metrics: payment delays, volatility, seasonality, category trends. |
+| **Forecast Engine Core** | Combines heuristics and ML to predict inflows, outflows, and irregulars. |
+| **Sales Forecast Module** | Accepts monthly Committed / Uncommitted / Stretch inputs. |
+| **Receivable Timing Service** | Calculates and updates ARD dynamically from live data. |
+| **Forecast Database** | Persists forecast records, confidence weights, and snapshots. |
+| **UI Layer** | Interactive chart with confidence bands and scenario toggles. |
+| **Feedback Loop** | Continuously compares forecasts vs. actuals to retrain weighting and ARD. |
+
+---
+
+## 3. Data Inputs  
+
+| Source | Data Type | Key Fields | Frequency |
+|--------|------------|-------------|------------|
+| **Xero Invoices API** | Inflows | InvoiceID, ContactID, IssueDate, DueDate, PaidDate, Amount, Status | Daily |
+| **Xero Bills API** | Outflows | BillID, SupplierID, DueDate, PaymentDate, Amount | Daily |
+| **Xero Bank Transactions** | Cash movements | Date, Description, Amount, Type | Daily |
+| **User Input (Forecast UI)** | Future sales | Month, Committed, Uncommitted, Stretch | Monthly |
+| **System Metrics** | Behavioural patterns | ARD, volatility, recurrence intervals | Daily |
+
+---
+
+## 4. Core Algorithms  
+
+### 4.1 Average Receivable Days (ARD)
+
+```math
+ARD = (Σ((PaymentDate - InvoiceDate) × Amount)) / (Σ Amount)
+
+
+Rolling 90-day window.
+
+Weighted by invoice amount.
+
+Outliers (>180 or <0 days) excluded.
+
+Default fallback = 45 days if data insufficient (<5 invoices).
+
+4.2 Inflow Forecasting
+Type	Logic	Confidence
+Committed (AI)	Approved invoices adjusted by historical payment lag	0.9
+Probable (Recurring)	Detects regular invoicing cadence for repeat clients	0.7
+Predicted (Sales Input)	Weighted user entries (Committed × 0.9, Uncommitted × 0.6, Stretch × 0.3) shifted by ARD	0.3–0.9
+
+Inflow at time t:
+
+𝐹
+𝑖
+𝑛
+(
+𝑡
+)
+=
+Σ
+(
+𝐴
+𝑖
+×
+𝑊
+𝑖
+)
+F
+i
+	​
+
+n(t)=Σ(A
+i
+	​
+
+×W
+i
+	​
+
+)
+4.3 Outflow Forecasting
+
+Logic:
+
+if bill.due_date > today:
+    forecast_date = due_date
+elif bill.due_date <= today and unpaid:
+    forecast_date = today + infer_delay(days_past_due)
+else if no due_date:
+    forecast_date = infer_from_supplier_pattern()
+
+
+Recurring Detection:
+
+Identify repeating debits (payee name + interval).
+
+Classify as STABLE / VARIABLE / VOLATILE based on amount and timing variance.
+
+Apply volatility weighting to confidence.
+
+4.4 Irregular Buffer
+𝐹
+𝑜
+𝑢
+𝑡
+𝑖
+𝑟
+𝑟
+(
+𝑡
+)
+=
+𝛽
+×
+𝑚
+𝑒
+𝑎
+𝑛
+(
+𝑂
+9
+0
+𝑑
+)
+F
+o
+	​
+
+ut
+i
+	​
+
+rr(t)=β×mean(O
+9
+	​
+
+0d)
+
+O_90d: one-off outflows from past 90 days.
+
+β: smoothing coefficient (0.5 default).
+
+4.5 Net Cashflow Equation
+𝐶
+^
+(
+𝑡
+)
+=
+𝐶
+0
++
+Σ
+[
+𝐹
+𝑖
+𝑛
+𝐴
+𝐼
+(
+𝑡
+)
++
+𝐹
+𝑖
+𝑛
+𝑠
+𝑎
+𝑙
+𝑒
+𝑠
+(
+𝑡
+)
+−
+(
+𝐹
+𝑜
+𝑢
+𝑡
+𝐴
+𝐼
+(
+𝑡
+)
++
+𝐹
+𝑜
+𝑢
+𝑡
+𝑖
+𝑟
+𝑟
+(
+𝑡
+)
+)
+]
+C
+^
+(t)=C
+0
+	​
+
++Σ[F
+i
+	​
+
+n
+A
+	​
+
+I(t)+F
+i
+	​
+
+n
+s
+	​
+
+ales(t)−(F
+o
+	​
+
+ut
+A
+	​
+
+I(t)+F
+o
+	​
+
+ut
+i
+	​
+
+rr(t))]
+
+Each term carries a confidence weight and volatility adjustment.
+
+5. Data Models
+Forecast Table
+Field	Type	Description
+forecast_id	UUID	Forecast record ID
+source	ENUM(XERO, USER, AI)	Origin of data
+transaction_type	ENUM(INFLOW, OUTFLOW)	Direction
+expected_date	DATE	Forecasted cash date
+amount	DECIMAL	Raw forecast amount
+confidence	FLOAT	0–1 probability
+adjusted_amount	DECIMAL	Weighted amount
+volatility_score	FLOAT	0–1 variance index
+explanation	TEXT	Human-readable reasoning
+Pattern Table
+Field	Type	Description
+entity_name	TEXT	Customer or supplier
+avg_interval_days	FLOAT	Mean payment interval
+variance_days	FLOAT	Std deviation of intervals
+robust_amount	DECIMAL	Outlier-resistant average
+volatility_class	ENUM(STABLE, VARIABLE, VOLATILE)	Category
+confidence	FLOAT	Trust level
+6. Forecast UI Logic
+
+Graph: Cumulative cash position with confidence shading.
+
+Scenarios:
+
+Conservative → deterministic inflows/outflows only.
+
+Base → + committed + uncommitted.
+
+Optimistic → + stretch, reduced irregular buffer.
+
+Tooltips: “£12k expected in 38 days (based on historical ARD).”
+
+Inputs: Monthly Committed / Uncommitted / Stretch grid, editable ARD scenario toggle.
+
+7. Learning Loop
+
+Compare forecasted vs actual weekly.
+
+Update ARD and volatility scores.
+
+Adjust irregular buffer smoothing.
+
+Recalibrate confidence weights.
+
+Store variance metrics to train accuracy over time.
+
+8. Technical Stack (MVP)
+Layer	Stack
+Backend	Node.js (Express) or FastAPI (Python)
+Database	PostgreSQL
+ML / Analytics	Python (pandas, scikit-learn)
+Integrations	Xero API, SendGrid, Vonage
+Frontend	React + Tailwind
+Scheduler	Celery or Cron-based refresh
+Hosting	Replit (dev) → AWS Lightsail/Lambda (prod)
+9. Phase 2 Extensions
+Area	Feature	Description
+AI Enhancement	Behavioural ML	Gradient boosting or Bayesian models for payment probability
+CRM Integration	Pipeline sync	Pull Committed / Uncommitted / Stretch directly from CRM
+Dynamic ARD	Time-varying ARD	ARD by debtor segment or season
+Anomaly Detection	Alerts	Detect cashflow shocks or deviations
+Multi-entity	Consolidated forecasting	Group-level rollups with eliminations
+Explainability	Narrative layer	Generate natural-language forecast summaries
+10. MVP Delivery Targets
+Milestone	Deliverable	Target Date
+v1.0 Forecast Engine	Core ARD + inflow/outflow logic	24 Oct 2025
+v1.1 UI Input Layer	Monthly forecast grid + visualisation	31 Oct 2025
+v1.2 Learning Loop	Weekly retraining and variance tracking	Nov 2025
+v1.3 Investor Demo	End-to-end demo environment	Dec 2025
+Summary
+
+Qashivo’s cashflow forecast engine is engineered from the hardest-to-predict variables — future sales and receivable timing — and enhanced by behavioural learning, irregular smoothing, and transparent explainability.
+It’s not just a forecast; it’s a self-learning model that understands how money actually moves through small businesses.
