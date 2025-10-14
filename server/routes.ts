@@ -15516,6 +15516,296 @@ ${tenant.name}
 
   // ==================== END COMPREHENSIVE ACCOUNTING DATA API ====================
 
+  // ==================== INTELLIGENT FORECAST API ====================
+  
+  // Import forecast services
+  const {
+    calculateARD,
+    calculateAndStoreARD,
+    getLatestARD,
+    getARDHistory,
+    getARDTrend
+  } = await import('./services/ardCalculationService.js');
+  
+  const {
+    getSalesForecast,
+    getSalesForecasts,
+    upsertSalesForecast,
+    convertSalesToCashInflows,
+    getSalesForecastCashInflows,
+    generateDefaultForecasts
+  } = await import('./services/salesForecastService.js');
+  
+  const {
+    calculateIrregularBuffer,
+    calculateIrregularBufferForForecast,
+    getRecommendedBeta
+  } = await import('./services/irregularBufferService.js');
+
+  /**
+   * GET /api/forecast/ard
+   * Get latest ARD (Average Receivable Days) for tenant
+   */
+  app.get('/api/forecast/ard', isAuthenticated, async (req, res) => {
+    try {
+      const user = await storage.getUser((req as any).user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const ard = await getLatestARD(user.tenantId);
+      
+      res.json({ averageReceivableDays: ard });
+    } catch (error) {
+      console.error('Error fetching ARD:', error);
+      res.status(500).json({ message: "Failed to fetch ARD" });
+    }
+  });
+
+  /**
+   * POST /api/forecast/ard/calculate
+   * Manually trigger ARD calculation
+   */
+  app.post('/api/forecast/ard/calculate', isAuthenticated, async (req, res) => {
+    try {
+      const user = await storage.getUser((req as any).user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const options = req.body || {};
+      const result = await calculateAndStoreARD(user.tenantId, options);
+      
+      res.json(result);
+    } catch (error) {
+      console.error('Error calculating ARD:', error);
+      res.status(500).json({ message: "Failed to calculate ARD" });
+    }
+  });
+
+  /**
+   * GET /api/forecast/ard/history
+   * Get ARD calculation history
+   */
+  app.get('/api/forecast/ard/history', isAuthenticated, async (req, res) => {
+    try {
+      const user = await storage.getUser((req as any).user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 30;
+      const history = await getARDHistory(user.tenantId, limit);
+      
+      res.json(history);
+    } catch (error) {
+      console.error('Error fetching ARD history:', error);
+      res.status(500).json({ message: "Failed to fetch ARD history" });
+    }
+  });
+
+  /**
+   * GET /api/forecast/ard/trend
+   * Get ARD trend (improving/stable/deteriorating)
+   */
+  app.get('/api/forecast/ard/trend', isAuthenticated, async (req, res) => {
+    try {
+      const user = await storage.getUser((req as any).user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const trend = await getARDTrend(user.tenantId);
+      
+      res.json(trend);
+    } catch (error) {
+      console.error('Error fetching ARD trend:', error);
+      res.status(500).json({ message: "Failed to fetch ARD trend" });
+    }
+  });
+
+  /**
+   * GET /api/forecast/sales
+   * Get sales forecasts for a date range
+   */
+  app.get('/api/forecast/sales', isAuthenticated, async (req, res) => {
+    try {
+      const user = await storage.getUser((req as any).user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { fromMonth, toMonth } = req.query;
+      
+      if (!fromMonth) {
+        return res.status(400).json({ message: "fromMonth is required (format: YYYY-MM)" });
+      }
+
+      const forecasts = await getSalesForecasts(
+        user.tenantId,
+        fromMonth as string,
+        toMonth as string | undefined
+      );
+      
+      res.json(forecasts);
+    } catch (error) {
+      console.error('Error fetching sales forecasts:', error);
+      res.status(500).json({ message: "Failed to fetch sales forecasts" });
+    }
+  });
+
+  /**
+   * POST /api/forecast/sales
+   * Create or update sales forecast for a month
+   */
+  app.post('/api/forecast/sales', isAuthenticated, async (req, res) => {
+    try {
+      const user = await storage.getUser((req as any).user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { forecastMonth, ...data } = req.body;
+      
+      if (!forecastMonth) {
+        return res.status(400).json({ message: "forecastMonth is required (format: YYYY-MM)" });
+      }
+
+      const forecast = await upsertSalesForecast(
+        user.tenantId,
+        forecastMonth,
+        data,
+        user.id
+      );
+      
+      res.json(forecast);
+    } catch (error) {
+      console.error('Error upserting sales forecast:', error);
+      res.status(500).json({ message: "Failed to save sales forecast" });
+    }
+  });
+
+  /**
+   * POST /api/forecast/sales/batch
+   * Batch update sales forecasts
+   */
+  app.post('/api/forecast/sales/batch', isAuthenticated, async (req, res) => {
+    try {
+      const user = await storage.getUser((req as any).user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { forecasts } = req.body;
+      
+      if (!Array.isArray(forecasts)) {
+        return res.status(400).json({ message: "forecasts must be an array" });
+      }
+
+      const results = await Promise.all(
+        forecasts.map(({ forecastMonth, ...data }) =>
+          upsertSalesForecast(user.tenantId!, forecastMonth, data, user.id)
+        )
+      );
+      
+      res.json({ updated: results.length, forecasts: results });
+    } catch (error) {
+      console.error('Error batch updating sales forecasts:', error);
+      res.status(500).json({ message: "Failed to batch update sales forecasts" });
+    }
+  });
+
+  /**
+   * GET /api/forecast/sales/cash-inflows
+   * Convert sales forecasts to expected cash inflows (ARD-adjusted)
+   */
+  app.get('/api/forecast/sales/cash-inflows', isAuthenticated, async (req, res) => {
+    try {
+      const user = await storage.getUser((req as any).user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const monthsAhead = req.query.months ? parseInt(req.query.months as string) : 6;
+      
+      const cashInflows = await getSalesForecastCashInflows(user.tenantId, monthsAhead);
+      
+      res.json(cashInflows);
+    } catch (error) {
+      console.error('Error fetching sales cash inflows:', error);
+      res.status(500).json({ message: "Failed to fetch sales cash inflows" });
+    }
+  });
+
+  /**
+   * POST /api/forecast/sales/generate-defaults
+   * Generate default (zero) forecasts for next 12 months
+   */
+  app.post('/api/forecast/sales/generate-defaults', isAuthenticated, async (req, res) => {
+    try {
+      const user = await storage.getUser((req as any).user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const forecasts = await generateDefaultForecasts(user.tenantId, user.id);
+      
+      res.json({ generated: forecasts.length, forecasts });
+    } catch (error) {
+      console.error('Error generating default forecasts:', error);
+      res.status(500).json({ message: "Failed to generate default forecasts" });
+    }
+  });
+
+  /**
+   * GET /api/forecast/irregular-buffer
+   * Get irregular buffer calculation for one-off expenses
+   */
+  app.get('/api/forecast/irregular-buffer', isAuthenticated, async (req, res) => {
+    try {
+      const user = await storage.getUser((req as any).user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const forecastDays = req.query.days ? parseInt(req.query.days as string) : 91;
+      const beta = req.query.beta ? parseFloat(req.query.beta as string) : undefined;
+
+      const buffer = await calculateIrregularBufferForForecast(
+        user.tenantId,
+        forecastDays,
+        beta ? { beta } : {}
+      );
+      
+      res.json(buffer);
+    } catch (error) {
+      console.error('Error calculating irregular buffer:', error);
+      res.status(500).json({ message: "Failed to calculate irregular buffer" });
+    }
+  });
+
+  /**
+   * GET /api/forecast/irregular-buffer/recommended-beta
+   * Get recommended beta coefficient based on expense volatility
+   */
+  app.get('/api/forecast/irregular-buffer/recommended-beta', isAuthenticated, async (req, res) => {
+    try {
+      const user = await storage.getUser((req as any).user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const beta = await getRecommendedBeta(user.tenantId);
+      
+      res.json({ recommendedBeta: beta });
+    } catch (error) {
+      console.error('Error calculating recommended beta:', error);
+      res.status(500).json({ message: "Failed to calculate recommended beta" });
+    }
+  });
+
+  // ==================== END INTELLIGENT FORECAST API ====================
+
   // ==================== RBAC MANAGEMENT API ====================
 
   // Import RBAC middleware and permission service
