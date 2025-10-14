@@ -338,9 +338,10 @@ export default function NewSidebar() {
   };
 
   // Enhanced logic for partner-client system: owners AND partners can switch organizations
+  // Non-partners (collectors, managers, regular users) only see their single tenant
   const canSwitchOrganizations = (
     ((user as any)?.role === "owner" || (user as any)?.role === "partner") && 
-    accessibleTenants.length > 1
+    accessibleTenants.length > 0
   );
   
   // Separate tenants by access type for better UX
@@ -637,24 +638,26 @@ export default function NewSidebar() {
                     {/* Grey dividing line */}
                     <div className="mx-4 my-2 h-px bg-gray-200"></div>
                     
-                    {/* Add a new organisation */}
-                    <DropdownMenuItem 
-                      className="pl-3 pr-3 py-3 cursor-pointer hover:bg-gray-50 mx-2"
-                      onClick={() => {
-                        // For now, just close the dropdown - placeholder for future functionality
-                        setOrgSearchQuery("");
-                      }}
-                      data-testid="dropdown-add-organization"
-                    >
-                      <div className="flex items-center space-x-3 w-full text-[#17B6C3]">
-                        <div className="w-8 h-8 rounded-lg border-2 border-dashed border-[#17B6C3] flex items-center justify-center">
-                          <Plus className="h-4 w-4 text-[#17B6C3]" />
+                    {/* Add a new organisation - Only for partners and owners */}
+                    {((user as any)?.role === "owner" || (user as any)?.role === "partner") && (
+                      <DropdownMenuItem 
+                        className="pl-3 pr-3 py-3 cursor-pointer hover:bg-gray-50 mx-2"
+                        onClick={() => {
+                          // For now, just close the dropdown - placeholder for future functionality
+                          setOrgSearchQuery("");
+                        }}
+                        data-testid="dropdown-add-organization"
+                      >
+                        <div className="flex items-center space-x-3 w-full text-[#17B6C3]">
+                          <div className="w-8 h-8 rounded-lg border-2 border-dashed border-[#17B6C3] flex items-center justify-center">
+                            <Plus className="h-4 w-4 text-[#17B6C3]" />
+                          </div>
+                          <div className="flex-1 text-left">
+                            <div className="font-medium text-sm text-[#17B6C3]">Add a new organisation</div>
+                          </div>
                         </div>
-                        <div className="flex-1 text-left">
-                          <div className="font-medium text-sm text-[#17B6C3]">Add a new organisation</div>
-                        </div>
-                      </div>
-                    </DropdownMenuItem>
+                      </DropdownMenuItem>
+                    )}
                   </DropdownMenuSubContent>
                 </DropdownMenuSub>
                 
