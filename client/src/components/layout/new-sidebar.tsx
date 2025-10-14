@@ -318,14 +318,10 @@ export default function NewSidebar() {
   };
 
   // Get all navigation items based on current context (Route-Based Sidebar Navigation)
-  // NOTE: Using window.location.pathname instead of wouter's location because wouter doesn't update reliably
-  // NOTE: Removed useMemo because window.location.pathname isn't reactive - sidebar updates on page load
-  const getAllNavigationItems = () => {
-    const currentPath = window.location.pathname;
-    console.log('🔄 Recalculating navigation items for location:', currentPath, 'user role:', (user as any)?.role);
-    
+  // Uses wouter's reactive location to properly detect route changes within the SPA
+  const currentNavigationItems = useMemo(() => {
     // For business dashboard, show business management items
-    if (currentPath === '/business-dashboard' || currentPath.startsWith('/business-dashboard')) {
+    if (location === '/business-dashboard' || location.startsWith('/business-dashboard')) {
       return [
         { name: "Dashboard", href: "/business-dashboard", icon: Gauge },
         { name: "Clients", href: "/business-dashboard/clients", icon: Users },
@@ -337,15 +333,14 @@ export default function NewSidebar() {
     }
     
     // Platform admin page gets minimal navigation
-    if (currentPath === '/qashivo-admin' || currentPath.startsWith('/qashivo-admin')) {
+    if (location === '/qashivo-admin' || location.startsWith('/qashivo-admin')) {
       return [
         { name: "Platform Admin", href: "/qashivo-admin", icon: Shield },
       ];
     }
     
     // Partner portal pages (My Qashivo) show partner management sidebar
-    if (currentPath === '/partner' || currentPath.startsWith('/partner/')) {
-      console.log('✅ Partner route detected, returning partner navigation items');
+    if (location === '/partner' || location.startsWith('/partner/')) {
       let partnerItems = [...partnerNavigationItems];
       
       // Add platform admin items if user is also a platform admin
@@ -357,7 +352,6 @@ export default function NewSidebar() {
     }
     
     // Default: Regular Qashivo operational sidebar (for all users working in tenant context)
-    console.log('📋 Returning default operational sidebar');
     let allItems = [...navigationItems];
     
     // Add owner-only items if user is an owner
@@ -371,9 +365,7 @@ export default function NewSidebar() {
     }
     
     return allItems;
-  };
-  
-  const currentNavigationItems = getAllNavigationItems();
+  }, [location, user]);
 
   // Enhanced logic for partner-client system: only partners can switch organizations
   // Owners and non-partners (collectors, managers, regular users) only see their single tenant
@@ -764,10 +756,7 @@ export default function NewSidebar() {
                 {(user as any)?.role === "partner" && (
                   <DropdownMenuItem 
                     className="pl-7 pr-3 py-3 cursor-pointer hover:bg-gray-50"
-                    onClick={() => {
-                      console.log('🔗 Navigating to /partner using window.location');
-                      window.location.href = '/partner';
-                    }}
+                    onClick={() => setLocation('/partner')}
                     data-testid="menu-item-my-qashivo"
                   >
                     <div className="font-medium text-sm">My Qashivo</div>
