@@ -17553,5 +17553,70 @@ Return only JSON with keys: intent, sentiment, confidence, keyInsights, actionIt
   // ==================== END INVESTOR DEMO API ====================
 
   const httpServer = createServer(app);
+  
+  // WebSocket server for real-time investor demo updates
+  const { WebSocketServer } = await import('ws');
+  const wss = new WebSocketServer({ server: httpServer, path: '/ws/investor-demo' });
+  
+  // Connection manager: leadId -> Set of WebSocket connections
+  const investorDemoConnections = new Map<string, Set<any>>();
+  
+  wss.on('connection', (ws, req) => {
+    // Extract leadId from query string
+    const url = new URL(req.url || '', `http://${req.headers.host}`);
+    const leadId = url.searchParams.get('leadId');
+    
+    if (!leadId) {
+      ws.close(1008, 'Lead ID required');
+      return;
+    }
+    
+    console.log(`🔌 WebSocket connected for lead: ${leadId}`);
+    
+    // Store connection
+    if (!investorDemoConnections.has(leadId)) {
+      investorDemoConnections.set(leadId, new Set());
+    }
+    investorDemoConnections.get(leadId)!.add(ws);
+    
+    // Handle disconnection
+    ws.on('close', () => {
+      console.log(`🔌 WebSocket disconnected for lead: ${leadId}`);
+      const connections = investorDemoConnections.get(leadId);
+      if (connections) {
+        connections.delete(ws);
+        if (connections.size === 0) {
+          investorDemoConnections.delete(leadId);
+        }
+      }
+    });
+    
+    ws.on('error', (error) => {
+      console.error(`WebSocket error for lead ${leadId}:`, error);
+    });
+  });
+  
+  // Helper function to broadcast demo results to connected clients
+  function broadcastDemoResults(leadId: string, results: any) {
+    const connections = investorDemoConnections.get(leadId);
+    if (connections && connections.size > 0) {
+      const message = JSON.stringify({
+        type: 'demo_results',
+        data: results
+      });
+      
+      connections.forEach((ws) => {
+        if (ws.readyState === 1) { // WebSocket.OPEN
+          ws.send(message);
+        }
+      });
+      
+      console.log(`📡 Broadcasted results to ${connections.size} client(s) for lead: ${leadId}`);
+    }
+  }
+  
+  // Attach broadcaster to app for access in webhooks
+  (app as any).broadcastDemoResults = broadcastDemoResults;
+  
   return httpServer;
 }
