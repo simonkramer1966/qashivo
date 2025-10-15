@@ -77,6 +77,36 @@ export default function InvestorDemo() {
   useEffect(() => {
     if (!leadId) return;
 
+    // WebSocket for real-time updates
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${protocol}//${window.location.host}/ws/investor-demo?leadId=${leadId}`;
+    const ws = new WebSocket(wsUrl);
+
+    ws.onopen = () => {
+      console.log('🔌 WebSocket connected for real-time demo updates');
+    };
+
+    ws.onmessage = (event) => {
+      try {
+        const message = JSON.parse(event.data);
+        if (message.type === 'demo_results') {
+          console.log('📡 Received real-time demo results:', message.data);
+          setDemoResults(message.data);
+        }
+      } catch (error) {
+        console.error('Error parsing WebSocket message:', error);
+      }
+    };
+
+    ws.onerror = (error) => {
+      console.error('WebSocket error:', error);
+    };
+
+    ws.onclose = () => {
+      console.log('🔌 WebSocket disconnected');
+    };
+
+    // Fallback polling every 5 seconds (reduced from 3s since we have WebSocket)
     const pollInterval = setInterval(async () => {
       try {
         const response = await fetch(`/api/investor/lead/${leadId}/results`);
@@ -87,9 +117,12 @@ export default function InvestorDemo() {
       } catch (error) {
         console.error("Error polling results:", error);
       }
-    }, 3000);
+    }, 5000);
 
-    return () => clearInterval(pollInterval);
+    return () => {
+      ws.close();
+      clearInterval(pollInterval);
+    };
   }, [leadId]);
 
   // Auto-update results when they arrive
