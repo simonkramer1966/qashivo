@@ -17640,42 +17640,71 @@ Return only JSON with keys: intent, sentiment, confidence, keyInsights, actionIt
   // Schedule investment call
   app.post("/api/investor/schedule-call", async (req, res) => {
     try {
-      const { name, phone, email, isHighNetWorth, acknowledgesRisk } = req.body;
+      // Import validation schema
+      const { insertInvestmentCallRequestSchema } = await import("@shared/schema");
+      const { z } = await import("zod");
       
-      // Validate required fields
-      if (!name || !phone || !email || !isHighNetWorth || !acknowledgesRisk) {
-        return res.status(400).json({ message: "All fields and compliance confirmations are required" });
-      }
+      // Enhanced validation schema with email/phone format checks
+      const validationSchema = insertInvestmentCallRequestSchema.extend({
+        email: z.string().email("Invalid email format"),
+        phone: z.string().min(10, "Phone number must be at least 10 digits"),
+        isHighNetWorth: z.boolean().refine(val => val === true, {
+          message: "High Net Worth declaration is required"
+        }),
+        acknowledgesRisk: z.boolean().refine(val => val === true, {
+          message: "Risk acknowledgment is required"
+        }),
+      });
       
-      // Store investment call request
+      // Validate request body
+      const validatedData = validationSchema.parse(req.body);
+      
+      // Store investment call request with timestamp
       const callRequest = await storage.createInvestmentCallRequest({
-        name,
-        phone,
-        email,
-        isHighNetWorth,
-        acknowledgesRisk,
-        requestedAt: new Date().toISOString(),
+        ...validatedData,
+        requestedAt: new Date(),
         status: 'pending'
       });
       
-      console.log('📞 Investment call scheduled:', callRequest);
+      console.log('📞 Investment call scheduled:', {
+        id: callRequest.id,
+        name: callRequest.name,
+        email: callRequest.email,
+        timestamp: callRequest.requestedAt
+      });
       
       // TODO: Send notification to team (email/Slack)
-      // For now, just log it
       console.log('💼 Investment call request received:', {
-        name,
-        phone,
-        email,
-        compliance: { isHighNetWorth, acknowledgesRisk }
+        name: callRequest.name,
+        phone: callRequest.phone,
+        email: callRequest.email,
+        compliance: { 
+          isHighNetWorth: callRequest.isHighNetWorth, 
+          acknowledgesRisk: callRequest.acknowledgesRisk 
+        }
       });
       
       res.json({ 
         success: true, 
         message: "Investment call scheduled successfully",
-        callRequest 
+        callRequest: {
+          id: callRequest.id,
+          name: callRequest.name,
+          email: callRequest.email,
+          requestedAt: callRequest.requestedAt
+        }
       });
     } catch (error) {
       console.error("Error scheduling investment call:", error);
+      
+      // Handle Zod validation errors
+      if (error instanceof Error && error.name === 'ZodError') {
+        return res.status(400).json({ 
+          message: "Validation failed",
+          errors: (error as any).errors 
+        });
+      }
+      
       res.status(500).json({ message: "Failed to schedule investment call" });
     }
   });

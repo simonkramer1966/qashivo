@@ -89,6 +89,7 @@ export default function InvestorDemo() {
   const [investorEmail, setInvestorEmail] = useState("");
   const [isHighNetWorth, setIsHighNetWorth] = useState(false);
   const [acknowledgesRisk, setAcknowledgesRisk] = useState(false);
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (!leadId) return;
@@ -339,20 +340,39 @@ export default function InvestorDemo() {
   const handleInvestmentCall = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validate form
-    if (!investorName || !investorPhone || !investorEmail) {
-      toast({
-        title: "Missing Information",
-        description: "Please fill in all fields",
-        variant: "destructive",
-      });
-      return;
+    // Clear previous errors
+    setFormErrors({});
+    const errors: Record<string, string> = {};
+    
+    // Validate form fields
+    if (!investorName || investorName.trim().length < 2) {
+      errors.name = "Please enter your full name";
     }
     
-    if (!isHighNetWorth || !acknowledgesRisk) {
+    if (!investorPhone || investorPhone.trim().length < 10) {
+      errors.phone = "Please enter a valid phone number (min 10 digits)";
+    }
+    
+    // Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!investorEmail || !emailRegex.test(investorEmail)) {
+      errors.email = "Please enter a valid email address";
+    }
+    
+    if (!isHighNetWorth) {
+      errors.highNetWorth = "You must confirm the High Net Worth declaration to proceed";
+    }
+    
+    if (!acknowledgesRisk) {
+      errors.risk = "You must acknowledge the investment risks to proceed";
+    }
+    
+    // If there are errors, display them and prevent submission
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
       toast({
-        title: "Compliance Required",
-        description: "Please confirm all compliance requirements",
+        title: "Validation Error",
+        description: "Please correct the errors below",
         variant: "destructive",
       });
       return;
@@ -365,15 +385,29 @@ export default function InvestorDemo() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name: investorName,
-          phone: investorPhone,
-          email: investorEmail,
+          name: investorName.trim(),
+          phone: investorPhone.trim(),
+          email: investorEmail.trim(),
           isHighNetWorth,
           acknowledgesRisk
         }),
       });
       
-      if (!response.ok) throw new Error("Failed to schedule call");
+      const data = await response.json();
+      
+      if (!response.ok) {
+        // Handle validation errors from backend
+        if (data.errors) {
+          const backendErrors: Record<string, string> = {};
+          data.errors.forEach((err: any) => {
+            if (err.path && err.path[0]) {
+              backendErrors[err.path[0]] = err.message;
+            }
+          });
+          setFormErrors(backendErrors);
+        }
+        throw new Error(data.message || "Failed to schedule call");
+      }
       
       toast({
         title: "Call Scheduled Successfully!",
@@ -386,13 +420,17 @@ export default function InvestorDemo() {
       setInvestorEmail("");
       setIsHighNetWorth(false);
       setAcknowledgesRisk(false);
+      setFormErrors({});
       setInvestmentDialogOpen(false);
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to schedule call. Please try again.",
-        variant: "destructive",
-      });
+      // Only show generic error toast, form errors are already displayed inline
+      if (Object.keys(formErrors).length === 0) {
+        toast({
+          title: "Error",
+          description: error instanceof Error ? error.message : "Failed to schedule call. Please try again.",
+          variant: "destructive",
+        });
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -949,12 +987,20 @@ export default function InvestorDemo() {
                 id="investor-name"
                 type="text"
                 value={investorName}
-                onChange={(e) => setInvestorName(e.target.value)}
+                onChange={(e) => {
+                  setInvestorName(e.target.value);
+                  if (formErrors.name) {
+                    setFormErrors({ ...formErrors, name: "" });
+                  }
+                }}
                 placeholder="John Smith"
-                className="bg-white border-gray-300"
+                className={`bg-white ${formErrors.name ? 'border-red-500' : 'border-gray-300'}`}
                 data-testid="input-investor-name"
                 required
               />
+              {formErrors.name && (
+                <p className="text-xs text-red-600 mt-1">{formErrors.name}</p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -963,12 +1009,20 @@ export default function InvestorDemo() {
                 id="investor-phone"
                 type="tel"
                 value={investorPhone}
-                onChange={(e) => setInvestorPhone(e.target.value)}
+                onChange={(e) => {
+                  setInvestorPhone(e.target.value);
+                  if (formErrors.phone) {
+                    setFormErrors({ ...formErrors, phone: "" });
+                  }
+                }}
                 placeholder="+44 7715 254857"
-                className="bg-white border-gray-300"
+                className={`bg-white ${formErrors.phone ? 'border-red-500' : 'border-gray-300'}`}
                 data-testid="input-investor-phone"
                 required
               />
+              {formErrors.phone && (
+                <p className="text-xs text-red-600 mt-1">{formErrors.phone}</p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -977,47 +1031,75 @@ export default function InvestorDemo() {
                 id="investor-email"
                 type="email"
                 value={investorEmail}
-                onChange={(e) => setInvestorEmail(e.target.value)}
+                onChange={(e) => {
+                  setInvestorEmail(e.target.value);
+                  if (formErrors.email) {
+                    setFormErrors({ ...formErrors, email: "" });
+                  }
+                }}
                 placeholder="john@example.com"
-                className="bg-white border-gray-300"
+                className={`bg-white ${formErrors.email ? 'border-red-500' : 'border-gray-300'}`}
                 data-testid="input-investor-email"
                 required
               />
+              {formErrors.email && (
+                <p className="text-xs text-red-600 mt-1">{formErrors.email}</p>
+              )}
             </div>
 
             <div className="border-t border-gray-200 pt-4 space-y-4">
-              <p className="text-sm font-semibold text-gray-900">Investment Compliance</p>
+              <p className="text-sm font-semibold text-gray-900">Investment Compliance (FCA Requirements)</p>
               
-              <div className="flex items-start gap-3">
-                <Checkbox
-                  id="high-net-worth"
-                  checked={isHighNetWorth}
-                  onCheckedChange={(checked) => setIsHighNetWorth(checked as boolean)}
-                  className="mt-1"
-                  data-testid="checkbox-high-net-worth"
-                />
-                <Label 
-                  htmlFor="high-net-worth" 
-                  className="text-sm text-gray-700 leading-tight cursor-pointer"
-                >
-                  I confirm I am a FCA High Net Worth investor and meet the eligibility requirements for SEIS investments
-                </Label>
+              <div>
+                <div className="flex items-start gap-3">
+                  <Checkbox
+                    id="high-net-worth"
+                    checked={isHighNetWorth}
+                    onCheckedChange={(checked) => {
+                      setIsHighNetWorth(checked as boolean);
+                      if (formErrors.highNetWorth) {
+                        setFormErrors({ ...formErrors, highNetWorth: "" });
+                      }
+                    }}
+                    className="mt-1 flex-shrink-0"
+                    data-testid="checkbox-high-net-worth"
+                  />
+                  <Label 
+                    htmlFor="high-net-worth" 
+                    className="text-xs text-gray-700 leading-tight cursor-pointer"
+                  >
+                    <strong>High Net Worth Declaration (COBS 4.12.6R):</strong> I declare that I am a certified high net worth individual for the purposes of the Financial Services and Markets Act 2000 (Financial Promotion) Order 2005. I understand that this means: (a) I can receive financial promotions that may not have been approved by an authorised person; (b) I accept that the investment to which the promotion relates may expose me to a significant risk of losing all of the money or other property invested. I am aware that it is open to me to seek advice from an authorised person who specialises in advising on investments of this kind.
+                  </Label>
+                </div>
+                {formErrors.highNetWorth && (
+                  <p className="text-xs text-red-600 mt-2 ml-7">{formErrors.highNetWorth}</p>
+                )}
               </div>
 
-              <div className="flex items-start gap-3">
-                <Checkbox
-                  id="risk-acknowledgment"
-                  checked={acknowledgesRisk}
-                  onCheckedChange={(checked) => setAcknowledgesRisk(checked as boolean)}
-                  className="mt-1"
-                  data-testid="checkbox-risk-acknowledgment"
-                />
-                <Label 
-                  htmlFor="risk-acknowledgment" 
-                  className="text-sm text-gray-700 leading-tight cursor-pointer"
-                >
-                  I understand that investing in early-stage companies carries significant risk and I could lose <strong>ALL</strong> of my investment
-                </Label>
+              <div>
+                <div className="flex items-start gap-3">
+                  <Checkbox
+                    id="risk-acknowledgment"
+                    checked={acknowledgesRisk}
+                    onCheckedChange={(checked) => {
+                      setAcknowledgesRisk(checked as boolean);
+                      if (formErrors.risk) {
+                        setFormErrors({ ...formErrors, risk: "" });
+                      }
+                    }}
+                    className="mt-1 flex-shrink-0"
+                    data-testid="checkbox-risk-acknowledgment"
+                  />
+                  <Label 
+                    htmlFor="risk-acknowledgment" 
+                    className="text-xs text-gray-700 leading-tight cursor-pointer"
+                  >
+                    <strong>Risk Warning:</strong> I understand and acknowledge that: (1) Investing in early-stage companies carries substantial risk and I may lose <strong>ALL</strong> of my investment; (2) Such investments are highly illiquid and I may not be able to sell my shares; (3) My investment is not protected by the Financial Services Compensation Scheme; (4) I should not invest more than I can afford to lose; (5) I have received and understood this statutory risk warning.
+                  </Label>
+                </div>
+                {formErrors.risk && (
+                  <p className="text-xs text-red-600 mt-2 ml-7">{formErrors.risk}</p>
+                )}
               </div>
             </div>
 
