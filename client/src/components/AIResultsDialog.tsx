@@ -320,7 +320,7 @@ export function AIResultsDialog({ open, onOpenChange, results, type }: AIResults
             <div className="flex items-center justify-center gap-2">
               <Badge variant="outline" className="bg-[#17B6C3]/10 border-[#17B6C3]/30 text-[#17B6C3] text-xs" data-testid="badge-tech">
                 <Sparkles className="w-3 h-3 mr-1" />
-                Powered by GPT-4o-mini
+                Powered by Qashivo AI
               </Badge>
               <Badge variant="outline" className="bg-white/5 border-white/20 text-slate-300 text-xs" data-testid="badge-realtime">
                 Real-time Analysis
