@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Phone, MessageSquare, TrendingUp, Shield, Zap, CheckCircle, Brain, Activity, ArrowRight, Clock, DollarSign, Users, BarChart3, Target, Rocket } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { SiXero, SiStripe, SiOpenai, SiQuickbooks } from "react-icons/si";
+import { AIResultsDialog } from "@/components/AIResultsDialog";
 import qashivoLogo from "@assets/Main Nexus Logo copy_1756923544828.png";
 import dashboardScreenshot from "@assets/Screenshot 2025-10-13 at 13.19.17_1760519077630.png";
 import investorDeckPdf from "@assets/Qashivo - Investor Deck_1760520688174.pdf";
@@ -21,6 +22,9 @@ export default function InvestorDemo() {
   const [smsPhone, setSmsPhone] = useState("");
   const [demoResults, setDemoResults] = useState<any>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [resultsDialogOpen, setResultsDialogOpen] = useState(false);
+  const [currentResults, setCurrentResults] = useState<any>(null);
+  const [resultsType, setResultsType] = useState<"voice" | "sms">("voice");
 
   useEffect(() => {
     if (!leadId) return;
@@ -39,6 +43,35 @@ export default function InvestorDemo() {
 
     return () => clearInterval(pollInterval);
   }, [leadId]);
+
+  // Auto-open results dialog when new results arrive
+  useEffect(() => {
+    if (!demoResults) return;
+
+    // Check if voice demo completed
+    if (demoResults.voiceDemoCompleted && demoResults.voiceDemoResults) {
+      setCurrentResults(demoResults.voiceDemoResults);
+      setResultsType("voice");
+      setResultsDialogOpen(true);
+      
+      toast({
+        title: "AI Analysis Complete",
+        description: "View the results of the voice call analysis",
+      });
+    }
+    
+    // Check if SMS demo completed
+    if (demoResults.smsDemoCompleted && demoResults.smsDemoResults) {
+      setCurrentResults(demoResults.smsDemoResults);
+      setResultsType("sms");
+      setResultsDialogOpen(true);
+      
+      toast({
+        title: "AI Analysis Complete",
+        description: "View the results of the SMS analysis",
+      });
+    }
+  }, [demoResults]);
 
   const handleLeadCapture = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -83,7 +116,7 @@ export default function InvestorDemo() {
       const response = await fetch("/api/investor/voice-demo", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ leadId, phone: voicePhone }),
+        body: JSON.stringify({ leadId, phone: voicePhone, name: voiceName }),
       });
       
       if (!response.ok) throw new Error("Failed to initiate call");
@@ -108,7 +141,7 @@ export default function InvestorDemo() {
       const response = await fetch("/api/investor/sms-demo", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ leadId, phone: smsPhone }),
+        body: JSON.stringify({ leadId, phone: smsPhone, name: smsName }),
       });
       
       if (!response.ok) throw new Error("Failed to send SMS");
@@ -734,6 +767,14 @@ export default function InvestorDemo() {
           © 2025 Qashivo. Built in London. Backed by innovation.
         </p>
       </footer>
+
+      {/* AI Results Dialog */}
+      <AIResultsDialog
+        open={resultsDialogOpen}
+        onOpenChange={setResultsDialogOpen}
+        results={currentResults}
+        type={resultsType}
+      />
     </div>
   );
 }
