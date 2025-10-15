@@ -1,7 +1,7 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Sparkles, Brain, TrendingUp, CheckCircle2, AlertCircle, MessageSquare } from "lucide-react";
+import { Sparkles, Brain, TrendingUp, CheckCircle2, AlertCircle, MessageSquare, Phone, UserCheck, Search, PhoneCall } from "lucide-react";
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 
@@ -81,6 +81,47 @@ export function AIResultsDialog({ open, onOpenChange, results, type }: AIResults
   const isInProgress = results.intent && inProgressStates.includes(results.intent);
   const dialogTitle = isInProgress ? "AI Analysis - In Progress" : "AI Analysis Complete";
 
+  // Define AI Next Actions based on intent
+  const nextActions: Record<string, { icon: any; title: string; description: string; color: string; type: string }> = {
+    payment_plan: {
+      icon: Phone,
+      title: "AI Call Scheduled",
+      description: "Automated call to negotiate payment plan terms and establish feasible schedule",
+      color: "from-[#17B6C3]/20 to-[#17B6C3]/5 border-[#17B6C3]/40",
+      type: "AI Automation"
+    },
+    paid: {
+      icon: Search,
+      title: "AI Verification Queued",
+      description: "Cross-checking payment against Xero invoices and bank statements via Open Banking",
+      color: "from-emerald-500/20 to-emerald-500/5 border-emerald-500/40",
+      type: "AI Verification"
+    },
+    dispute: {
+      icon: UserCheck,
+      title: "Human Escalation Created",
+      description: "Dispute flagged for personal follow-up to preserve customer relationship and resolve concerns",
+      color: "from-amber-500/20 to-amber-500/5 border-amber-500/40",
+      type: "Human Required"
+    },
+    unknown: {
+      icon: PhoneCall,
+      title: "AI Call Required",
+      description: "Intent unclear - automated call scheduled to clarify customer needs and capture accurate information",
+      color: "from-blue-500/20 to-blue-500/5 border-blue-500/40",
+      type: "AI Clarification"
+    },
+    general_query: {
+      icon: PhoneCall,
+      title: "AI Call Required",
+      description: "General query detected - automated call to understand and address customer question",
+      color: "from-blue-500/20 to-blue-500/5 border-blue-500/40",
+      type: "AI Clarification"
+    }
+  };
+
+  const currentAction = nextActions[results.intent as string] || nextActions.unknown;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent 
@@ -158,6 +199,44 @@ export function AIResultsDialog({ open, onOpenChange, results, type }: AIResults
               </div>
             </div>
           </div>
+
+          {/* AI Next Action */}
+          {!isInProgress && currentAction && (
+            <div className="space-y-3">
+              <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wide flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-[#17B6C3]" />
+                AI Next Action
+              </h3>
+              <div className={cn(
+                "relative p-4 backdrop-blur-sm border rounded-xl bg-gradient-to-br transition-all duration-500 animate-pulse",
+                currentAction.color
+              )}
+              data-testid="next-action-card">
+                <div className="flex items-start gap-4">
+                  <div className="p-3 bg-white/10 rounded-lg flex-shrink-0">
+                    <currentAction.icon className="w-5 h-5 text-white" data-testid="icon-next-action" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                      <h4 className="text-lg font-bold text-white" data-testid="text-next-action-title">
+                        {currentAction.title}
+                      </h4>
+                      <Badge variant="outline" className="bg-white/10 border-white/30 text-white text-xs" data-testid="badge-action-type">
+                        {currentAction.type}
+                      </Badge>
+                    </div>
+                    <p className="text-sm text-white/80 leading-relaxed" data-testid="text-next-action-description">
+                      {currentAction.description}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-white animate-ping" />
+                    <span className="text-xs text-white/60 font-medium">Queued</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Summary */}
           {results.summary && (
