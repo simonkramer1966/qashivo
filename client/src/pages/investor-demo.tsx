@@ -318,7 +318,7 @@ export default function InvestorDemo() {
                   <div>
                     <h3 className="text-xl font-bold text-gray-900 mb-2">Statutory Compliance</h3>
                     <p className="text-gray-600">
-                      Built on the Late Payment Act. Automated interest calculations, debt recovery 
+                      Built on the Late Payment Act and the most recent updates. Automated interest calculations, debt recovery 
                       notices, and legal escalation pathways.
                     </p>
                   </div>
