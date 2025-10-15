@@ -674,7 +674,7 @@ export default function InvestorDemo() {
                         type="tel"
                         value={smsPhone}
                         onChange={(e) => setSmsPhone(e.target.value)}
-                        placeholder="07716 273336"
+                        placeholder="07715 254857"
                         className="flex-1 bg-white border-gray-300"
                         data-testid="input-sms-phone"
                       />
