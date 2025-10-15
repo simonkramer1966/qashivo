@@ -206,7 +206,7 @@ export default function InvestorDemo() {
       {/* Trust Signals */}
       <section className="py-12 px-6 border-y border-gray-200 bg-gray-50">
         <div className="max-w-7xl mx-auto">
-          <p className="text-center text-sm text-gray-500 mb-6">POWERED BY ENTERPRISE-GRADE INTEGRATIONS</p>
+          <p className="text-center text-sm text-gray-500 mb-6">BUILT WITH ENTERPRISE-GRADE INTEGRATIONS</p>
           <div className="flex items-center justify-center gap-12 flex-wrap">
             <div className="flex items-center gap-2 text-gray-600">
               <SiXero className="w-8 h-8" />
