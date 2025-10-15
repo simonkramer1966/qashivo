@@ -127,13 +127,14 @@ export default function InvestorDemo() {
       {/* Sticky Header */}
       <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <img 
               src={qashivoLogo} 
               alt="Qashivo Logo" 
               className="h-10 w-auto"
               data-testid="img-qashivo-logo"
             />
+            <span className="text-2xl font-bold text-gray-900">Qashivo</span>
           </div>
           <Button 
             className="bg-[#17B6C3] hover:bg-[#1396A1] text-white"
