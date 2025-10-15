@@ -338,7 +338,7 @@ export default function InvestorDemo() {
             <div className="relative">
               <div className="aspect-video rounded-2xl shadow-2xl overflow-hidden border border-gray-300">
                 <video 
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-contain"
                   controls
                   autoPlay
                   muted
