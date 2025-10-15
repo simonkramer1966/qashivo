@@ -1,4 +1,4 @@
-import { Switch, Route } from "wouter";
+import { Switch, Route, useLocation } from "wouter";
 import { Suspense, lazy } from "react";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -37,12 +37,14 @@ const InvestorDemo = lazy(() => import("@/pages/investor-demo"));
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
   const { showSplash, setShowSplash, triggerSplash } = useSplash();
+  const [location] = useLocation();
 
-  // Inactivity timer - only active when authenticated and splash not shown
+  // Inactivity timer - disabled for investor demo page
+  const isInvestorDemo = location === '/investor-demo';
   useInactivityTimer({
     timeout: 60000, // 60 seconds
     onInactive: triggerSplash,
-    enabled: isAuthenticated && !showSplash
+    enabled: isAuthenticated && !showSplash && !isInvestorDemo
   });
 
   // Show loading state while checking authentication
