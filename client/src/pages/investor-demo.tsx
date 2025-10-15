@@ -677,7 +677,7 @@ export default function InvestorDemo() {
             </Button>
             <Button
               variant="outline"
-              className="border-2 border-white text-white hover:bg-white/10 text-xl px-12 py-7"
+              className="border-2 border-white bg-transparent text-white hover:bg-white hover:text-[#17B6C3] text-xl px-12 py-7"
               data-testid="button-download-deck"
             >
               Download Full Deck
