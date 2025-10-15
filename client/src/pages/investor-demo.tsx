@@ -374,7 +374,6 @@ export default function InvestorDemo() {
                   className="w-full h-full object-contain"
                   controls
                   muted
-                  loop
                   playsInline
                 >
                   <source src={introVideo} type="video/mp4" />
