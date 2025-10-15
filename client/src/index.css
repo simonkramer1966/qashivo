@@ -90,21 +90,25 @@
   h1 {
     @apply text-2xl font-bold tracking-tight;
     @apply sm:text-3xl lg:text-4xl;
+    font-family: 'Archivo', sans-serif;
   }
   
   h2 {
     @apply text-xl font-bold tracking-tight;
     @apply sm:text-2xl lg:text-3xl;
+    font-family: 'Archivo', sans-serif;
   }
   
   h3 {
     @apply text-lg font-semibold tracking-tight;
     @apply sm:text-xl lg:text-2xl;
+    font-family: 'Archivo', sans-serif;
   }
   
   h4 {
     @apply text-base font-semibold;
     @apply sm:text-lg;
+    font-family: 'Archivo', sans-serif;
   }
   
   /* Body text */
