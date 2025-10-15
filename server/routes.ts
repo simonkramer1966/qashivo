@@ -58,7 +58,8 @@ import {
   seasonalPatterns,
   customerLearningProfiles,
   inboundMessages,
-  smsMessages
+  smsMessages,
+  investorLeads
 } from "@shared/schema";
 import { getOverdueCategoryFromDueDate } from "@shared/utils/overdueUtils";
 import { calculateLatePaymentInterest } from "./utils/interestCalculator";
@@ -17517,7 +17518,7 @@ Return only JSON with keys: intent, sentiment, confidence, keyInsights, actionIt
       const analysis = JSON.parse(completion.choices[0].message.content || '{}');
       
       // Update lead with SMS demo results
-      await storage.updateInvestorLead(lead.id, {
+      const updatedLead = await storage.updateInvestorLead(lead.id, {
         smsDemoCompleted: true,
         smsDemoResults: {
           fromPhone: msisdn,
@@ -17530,6 +17531,16 @@ Return only JSON with keys: intent, sentiment, confidence, keyInsights, actionIt
       });
       
       console.log('✅ SMS analysis saved:', analysis);
+      
+      // Broadcast results via WebSocket for instant updates
+      if ((app as any).broadcastDemoResults) {
+        (app as any).broadcastDemoResults(lead.id, {
+          voiceDemoCompleted: updatedLead.voiceDemoCompleted,
+          smsDemoCompleted: updatedLead.smsDemoCompleted,
+          voiceDemoResults: updatedLead.voiceDemoResults,
+          smsDemoResults: updatedLead.smsDemoResults
+        });
+      }
       
       res.json({ success: true, analysis });
     } catch (error) {
