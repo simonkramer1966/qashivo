@@ -15,7 +15,9 @@ export default function InvestorDemo() {
   const [leadData, setLeadData] = useState({ name: "", email: "" });
   const [leadCaptured, setLeadCaptured] = useState(false);
   const [leadId, setLeadId] = useState("");
+  const [voiceName, setVoiceName] = useState("");
   const [voicePhone, setVoicePhone] = useState("");
+  const [smsName, setSmsName] = useState("");
   const [smsPhone, setSmsPhone] = useState("");
   const [demoResults, setDemoResults] = useState<any>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -383,16 +385,29 @@ export default function InvestorDemo() {
                   detecting intent, sentiment, and commitment to pay.
                 </p>
                 <div className="space-y-4">
-                  <div>
-                    <Label className="text-gray-700 font-medium">Your Phone Number</Label>
-                    <Input
-                      type="tel"
-                      value={voicePhone}
-                      onChange={(e) => setVoicePhone(e.target.value)}
-                      placeholder="+44 7700 900123"
-                      className="mt-1 bg-white border-gray-300"
-                      data-testid="input-voice-phone"
-                    />
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label className="text-gray-700 font-medium">Your Name</Label>
+                      <Input
+                        type="text"
+                        value={voiceName}
+                        onChange={(e) => setVoiceName(e.target.value)}
+                        placeholder="John Smith"
+                        className="mt-1 bg-white border-gray-300"
+                        data-testid="input-voice-name"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-gray-700 font-medium">Your Phone Number</Label>
+                      <Input
+                        type="tel"
+                        value={voicePhone}
+                        onChange={(e) => setVoicePhone(e.target.value)}
+                        placeholder="+44 7700 900123"
+                        className="mt-1 bg-white border-gray-300"
+                        data-testid="input-voice-phone"
+                      />
+                    </div>
                   </div>
                   <Button
                     onClick={handleVoiceDemo}
@@ -425,16 +440,29 @@ export default function InvestorDemo() {
                   and recommended next actions from your message.
                 </p>
                 <div className="space-y-4">
-                  <div>
-                    <Label className="text-gray-700 font-medium">Your Phone Number</Label>
-                    <Input
-                      type="tel"
-                      value={smsPhone}
-                      onChange={(e) => setSmsPhone(e.target.value)}
-                      placeholder="+44 7700 900123"
-                      className="mt-1 bg-white border-gray-300"
-                      data-testid="input-sms-phone"
-                    />
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label className="text-gray-700 font-medium">Your Name</Label>
+                      <Input
+                        type="text"
+                        value={smsName}
+                        onChange={(e) => setSmsName(e.target.value)}
+                        placeholder="John Smith"
+                        className="mt-1 bg-white border-gray-300"
+                        data-testid="input-sms-name"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-gray-700 font-medium">Your Phone Number</Label>
+                      <Input
+                        type="tel"
+                        value={smsPhone}
+                        onChange={(e) => setSmsPhone(e.target.value)}
+                        placeholder="+44 7700 900123"
+                        className="mt-1 bg-white border-gray-300"
+                        data-testid="input-sms-phone"
+                      />
+                    </div>
                   </div>
                   <Button
                     onClick={handleSMSDemo}
