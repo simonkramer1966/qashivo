@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -73,6 +73,7 @@ export default function InvestorDemo() {
   const [resultsDialogOpen, setResultsDialogOpen] = useState(false);
   const [currentResults, setCurrentResults] = useState<any>(null);
   const [resultsType, setResultsType] = useState<"voice" | "sms">("voice");
+  const lastShownResultsRef = useRef<string>("");
 
   useEffect(() => {
     if (!leadId) return;
@@ -131,11 +132,14 @@ export default function InvestorDemo() {
 
     // Update voice results if available
     if (demoResults.voiceDemoCompleted && demoResults.voiceDemoResults) {
+      const resultKey = `voice-${demoResults.voiceDemoResults.analyzedAt || Date.now()}`;
+      
       setCurrentResults(demoResults.voiceDemoResults);
       setResultsType("voice");
       
-      // Only open dialog and show toast if it's not already open
-      if (!resultsDialogOpen) {
+      // Only open dialog if we haven't shown these results yet
+      if (lastShownResultsRef.current !== resultKey) {
+        lastShownResultsRef.current = resultKey;
         setResultsDialogOpen(true);
         toast({
           title: "AI Analysis Complete",
@@ -146,11 +150,14 @@ export default function InvestorDemo() {
     
     // Update SMS results if available
     if (demoResults.smsDemoCompleted && demoResults.smsDemoResults) {
+      const resultKey = `sms-${demoResults.smsDemoResults.analyzedAt || Date.now()}`;
+      
       setCurrentResults(demoResults.smsDemoResults);
       setResultsType("sms");
       
-      // Only open dialog and show toast if it's not already open
-      if (!resultsDialogOpen) {
+      // Only open dialog if we haven't shown these results yet
+      if (lastShownResultsRef.current !== resultKey) {
+        lastShownResultsRef.current = resultKey;
         setResultsDialogOpen(true);
         toast({
           title: "AI Analysis Complete",
@@ -158,7 +165,7 @@ export default function InvestorDemo() {
         });
       }
     }
-  }, [demoResults, resultsDialogOpen]);
+  }, [demoResults, toast]);
 
   const handleLeadCapture = async (e: React.FormEvent) => {
     e.preventDefault();
