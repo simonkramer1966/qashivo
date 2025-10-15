@@ -263,7 +263,7 @@ export default function InvestorDemo() {
                 <Shield className="w-6 h-6 text-white" />
               </div>
               <h3 className="text-2xl font-bold text-gray-900 mb-2" data-testid="text-compliance-rate">100% Must Comply</h3>
-              <p className="text-gray-600 mb-4">Late Payment Act makes automation mandatory</p>
+              <p className="text-gray-600 mb-4">Late Payment Act becomes mandatory</p>
               <div className="text-4xl font-bold text-yellow-600" data-testid="text-solutions-count">£0</div>
               <p className="text-sm text-gray-500">Current compliant solutions</p>
             </Card>
