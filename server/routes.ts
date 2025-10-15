@@ -17240,20 +17240,23 @@ ${tenant.name}
   // Trigger voice demo (Retell call)
   app.post("/api/investor/voice-demo", async (req, res) => {
     try {
-      const { leadId, phone } = req.body;
+      const { leadId, phone, name } = req.body;
       
       if (!leadId || !phone) {
         return res.status(400).json({ message: "Lead ID and phone are required" });
       }
       
-      // Update lead with phone number
-      const lead = await storage.updateInvestorLead(leadId, { phone });
+      // Update lead with phone number and name if provided
+      const updateData: any = { phone };
+      if (name) updateData.voiceName = name;
+      
+      const lead = await storage.updateInvestorLead(leadId, updateData);
       
       // Trigger Retell AI call with investor demo script
       const { createUnifiedRetellCall, createStandardCollectionVariables } = await import('./utils/retellCallHelper.js');
       
       const callVariables = createStandardCollectionVariables({
-        customerName: lead.name,
+        customerName: name || lead.name,
         companyName: "Qashivo",
         invoiceNumber: "INV-DEMO-001",
         invoiceAmount: "5000",

@@ -3819,6 +3819,8 @@ export const investorLeads = pgTable("investor_leads", {
   name: varchar("name").notNull(),
   email: varchar("email").notNull(),
   phone: varchar("phone"), // Optional - if they try voice/SMS demo
+  voiceName: varchar("voice_name"), // Name provided for voice demo
+  smsName: varchar("sms_name"), // Name provided for SMS demo
   voiceDemoCompleted: boolean("voice_demo_completed").default(false),
   smsDemoCompleted: boolean("sms_demo_completed").default(false),
   voiceDemoResults: jsonb("voice_demo_results"), // Intent, sentiment, transcript
