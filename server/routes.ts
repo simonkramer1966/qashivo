@@ -10239,8 +10239,12 @@ Return only JSON with keys: intent, sentiment, confidence, keyInsights, actionIt
 
       // First, check if this is an investor demo lead response
       const fromPhone = msisdn.replace(/\D/g, '');
-      const investorLeadMatches = await db.select().from(investorLeads).where(eq(investorLeads.phone, msisdn));
-      const investorLead = investorLeadMatches[0];
+      
+      // Fetch all investor leads and match by normalized phone number
+      const allInvestorLeads = await db.select().from(investorLeads);
+      const investorLead = allInvestorLeads.find(lead => 
+        lead.phone && lead.phone.replace(/\D/g, '') === fromPhone
+      );
       
       if (investorLead) {
         console.log('📊 Processing investor demo SMS response for lead:', investorLead.id);
