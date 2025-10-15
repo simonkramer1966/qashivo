@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Phone, MessageSquare, TrendingUp, Shield, Zap, CheckCircle } from "lucide-react";
+import { Phone, MessageSquare, TrendingUp, Shield, Zap, CheckCircle, Brain, Activity } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 export default function InvestorDemo() {
@@ -15,6 +15,25 @@ export default function InvestorDemo() {
   const [smsPhone, setSmsPhone] = useState("");
   const [demoResults, setDemoResults] = useState<any>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Poll for demo results
+  useEffect(() => {
+    if (!leadId) return;
+
+    const pollInterval = setInterval(async () => {
+      try {
+        const response = await fetch(`/api/investor/lead/${leadId}/results`);
+        if (response.ok) {
+          const results = await response.json();
+          setDemoResults(results);
+        }
+      } catch (error) {
+        console.error("Error polling results:", error);
+      }
+    }, 3000); // Poll every 3 seconds
+
+    return () => clearInterval(pollInterval);
+  }, [leadId]);
 
   const handleLeadCapture = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -289,24 +308,96 @@ export default function InvestorDemo() {
           )}
 
           {/* Demo Results */}
-          {demoResults && (
-            <Card className="mt-8 p-8 bg-green-900/20 backdrop-blur-md border-green-400/30">
-              <h3 className="text-2xl font-bold text-white mb-6">AI Analysis Results</h3>
-              <div className="grid md:grid-cols-3 gap-6">
-                <div>
-                  <p className="text-sm text-gray-400">Intent Detected</p>
-                  <p className="text-xl font-bold text-white">{demoResults.intent}</p>
+          {demoResults && (demoResults.voiceDemoCompleted || demoResults.smsDemoCompleted) && (
+            <div className="mt-8 space-y-6">
+              <h3 className="text-3xl font-bold text-white text-center mb-6">
+                <Brain className="inline-block w-8 h-8 mr-2 text-[#17B6C3]" />
+                Real-Time AI Analysis
+              </h3>
+
+              {/* Voice Call Results */}
+              {demoResults.voiceDemoCompleted && demoResults.voiceDemoResults && (
+                <Card className="p-8 bg-gradient-to-br from-purple-900/20 to-blue-900/20 backdrop-blur-md border-purple-400/30" data-testid="card-voice-results">
+                  <div className="flex items-center gap-3 mb-6">
+                    <Phone className="w-6 h-6 text-purple-400" />
+                    <h4 className="text-2xl font-bold text-white">Voice Call Analysis</h4>
+                  </div>
+                  <div className="grid md:grid-cols-3 gap-6 mb-6">
+                    <div>
+                      <p className="text-sm text-gray-400">Intent Detected</p>
+                      <p className="text-xl font-bold text-white capitalize" data-testid="text-voice-intent">
+                        {demoResults.voiceDemoResults.intent}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-400">Sentiment</p>
+                      <p className="text-xl font-bold text-white capitalize" data-testid="text-voice-sentiment">
+                        {demoResults.voiceDemoResults.sentiment}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-400">Confidence</p>
+                      <p className="text-xl font-bold text-white" data-testid="text-voice-confidence">
+                        {demoResults.voiceDemoResults.confidence}%
+                      </p>
+                    </div>
+                  </div>
+                  {demoResults.voiceDemoResults.transcript && (
+                    <div className="mt-4 p-4 bg-black/30 rounded-lg">
+                      <p className="text-sm text-gray-400 mb-2">Transcript</p>
+                      <p className="text-white text-sm">{demoResults.voiceDemoResults.transcript}</p>
+                    </div>
+                  )}
+                </Card>
+              )}
+
+              {/* SMS Results */}
+              {demoResults.smsDemoCompleted && demoResults.smsDemoResults && (
+                <Card className="p-8 bg-gradient-to-br from-green-900/20 to-teal-900/20 backdrop-blur-md border-green-400/30" data-testid="card-sms-results">
+                  <div className="flex items-center gap-3 mb-6">
+                    <MessageSquare className="w-6 h-6 text-green-400" />
+                    <h4 className="text-2xl font-bold text-white">SMS Response Analysis</h4>
+                  </div>
+                  <div className="grid md:grid-cols-3 gap-6 mb-6">
+                    <div>
+                      <p className="text-sm text-gray-400">Intent Detected</p>
+                      <p className="text-xl font-bold text-white capitalize" data-testid="text-sms-intent">
+                        {demoResults.smsDemoResults.intent}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-400">Sentiment</p>
+                      <p className="text-xl font-bold text-white capitalize" data-testid="text-sms-sentiment">
+                        {demoResults.smsDemoResults.sentiment}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-400">Confidence</p>
+                      <p className="text-xl font-bold text-white" data-testid="text-sms-confidence">
+                        {demoResults.smsDemoResults.confidence}%
+                      </p>
+                    </div>
+                  </div>
+                  {demoResults.smsDemoResults.responseText && (
+                    <div className="mt-4 p-4 bg-black/30 rounded-lg">
+                      <p className="text-sm text-gray-400 mb-2">Customer Response</p>
+                      <p className="text-white">{demoResults.smsDemoResults.responseText}</p>
+                    </div>
+                  )}
+                </Card>
+              )}
+
+              {/* Action Banner */}
+              <Card className="p-6 bg-[#17B6C3]/20 backdrop-blur-md border-[#17B6C3]/40">
+                <div className="flex items-center gap-4">
+                  <Activity className="w-8 h-8 text-[#17B6C3]" />
+                  <div>
+                    <p className="text-white font-bold">This is what Qashivo does for every interaction</p>
+                    <p className="text-gray-300 text-sm">Automated intent detection, sentiment analysis, and intelligent next-action recommendations</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-sm text-gray-400">Sentiment</p>
-                  <p className="text-xl font-bold text-white">{demoResults.sentiment}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-400">Confidence</p>
-                  <p className="text-xl font-bold text-white">{demoResults.confidence}%</p>
-                </div>
-              </div>
-            </Card>
+              </Card>
+            </div>
           )}
         </div>
       </section>

@@ -17321,32 +17321,143 @@ ${tenant.name}
     }
   });
 
-  // Webhook for voice call completion
+  // Webhook for voice call completion (from Retell)
   app.post("/api/investor/webhook/voice", async (req, res) => {
     try {
-      const { call_id, transcript, analysis } = req.body;
+      const { call_id, transcript, call } = req.body;
       
-      // TODO: Process voice call results and update lead
-      // Extract intent, sentiment from transcript
+      console.log('📞 Voice webhook received:', { call_id, transcript: transcript?.substring(0, 100) });
       
-      res.json({ success: true });
+      // Find lead by call metadata
+      const callMetadata = call?.metadata || {};
+      const leadId = callMetadata.leadId;
+      
+      if (!leadId) {
+        console.log('⚠️ No lead ID in call metadata');
+        return res.json({ success: true });
+      }
+      
+      // Extract intent and sentiment using OpenAI
+      const OpenAI = (await import('openai')).default;
+      const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+      
+      const transcriptText = transcript || call?.transcript || 'No transcript available';
+      
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [{
+          role: "system",
+          content: "Analyze this call transcript and extract: 1) Intent (payment_plan, dispute, promise_to_pay, general_query, unknown), 2) Sentiment (positive, neutral, negative, cooperative, hostile), 3) Confidence score (0-100). Return JSON only."
+        }, {
+          role: "user",
+          content: transcriptText
+        }],
+        response_format: { type: "json_object" }
+      });
+      
+      const analysis = JSON.parse(completion.choices[0].message.content || '{}');
+      
+      // Update lead with voice demo results
+      await storage.updateInvestorLead(leadId, {
+        voiceDemoCompleted: true,
+        voiceDemoResults: {
+          callId: call_id,
+          transcript: transcriptText,
+          intent: analysis.intent || 'unknown',
+          sentiment: analysis.sentiment || 'neutral',
+          confidence: analysis.confidence || 50,
+          analyzedAt: new Date().toISOString()
+        }
+      });
+      
+      console.log('✅ Voice analysis saved:', analysis);
+      
+      res.json({ success: true, analysis });
     } catch (error) {
       console.error("Error processing voice webhook:", error);
       res.status(500).json({ message: "Failed to process voice webhook" });
     }
   });
 
-  // Webhook for SMS response
+  // Webhook for SMS response (from Vonage)
   app.post("/api/investor/webhook/sms", async (req, res) => {
     try {
-      const { from, text } = req.body;
+      const { from, text, to } = req.body;
       
-      // TODO: Process SMS response and extract intent/sentiment
+      console.log('📱 SMS webhook received:', { from, text });
       
-      res.json({ success: true });
+      if (!text) {
+        return res.json({ success: true });
+      }
+      
+      // Find lead by phone number
+      const leads = await db.select().from(investorLeads).where(eq(investorLeads.phone, from));
+      const lead = leads[0];
+      
+      if (!lead) {
+        console.log('⚠️ No lead found for phone:', from);
+        return res.json({ success: true });
+      }
+      
+      // Extract intent and sentiment using OpenAI
+      const OpenAI = (await import('openai')).default;
+      const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+      
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [{
+          role: "system",
+          content: "Analyze this SMS response and extract: 1) Intent (payment_plan, dispute, promise_to_pay, paid, general_query, unknown), 2) Sentiment (positive, neutral, negative, cooperative, hostile), 3) Confidence score (0-100). Return JSON only."
+        }, {
+          role: "user",
+          content: text
+        }],
+        response_format: { type: "json_object" }
+      });
+      
+      const analysis = JSON.parse(completion.choices[0].message.content || '{}');
+      
+      // Update lead with SMS demo results
+      await storage.updateInvestorLead(lead.id, {
+        smsDemoCompleted: true,
+        smsDemoResults: {
+          fromPhone: from,
+          responseText: text,
+          intent: analysis.intent || 'unknown',
+          sentiment: analysis.sentiment || 'neutral',
+          confidence: analysis.confidence || 50,
+          analyzedAt: new Date().toISOString()
+        }
+      });
+      
+      console.log('✅ SMS analysis saved:', analysis);
+      
+      res.json({ success: true, analysis });
     } catch (error) {
       console.error("Error processing SMS webhook:", error);
       res.status(500).json({ message: "Failed to process SMS webhook" });
+    }
+  });
+
+  // Get investor lead demo results
+  app.get("/api/investor/lead/:leadId/results", async (req, res) => {
+    try {
+      const { leadId } = req.params;
+      const lead = await storage.getInvestorLead(leadId);
+      
+      if (!lead) {
+        return res.status(404).json({ message: "Lead not found" });
+      }
+      
+      res.json({
+        voiceDemoCompleted: lead.voiceDemoCompleted,
+        smsDemoCompleted: lead.smsDemoCompleted,
+        voiceDemoResults: lead.voiceDemoResults,
+        smsDemoResults: lead.smsDemoResults
+      });
+    } catch (error) {
+      console.error("Error fetching demo results:", error);
+      res.status(500).json({ message: "Failed to fetch demo results" });
     }
   });
 
