@@ -13,7 +13,7 @@ import dashboardScreenshot from "@assets/Screenshot 2025-10-13 at 13.19.17_17605
 import investorDeckPdf from "@assets/Qashivo - Investor Deck_1760520688174.pdf";
 import introVideo from "@assets/QashivoIntro (3)_1760557075207.mp4";
 
-// Phone number sanitization function
+// Phone number sanitization function  
 const sanitizePhoneNumber = (phone: string, countryCode: string): string => {
   // Remove all spaces, dashes, parentheses, and other formatting
   let cleaned = phone.replace(/[\s\-\(\)\.]/g, '');
@@ -42,8 +42,13 @@ const sanitizePhoneNumber = (phone: string, countryCode: string): string => {
     cleaned = cleaned.substring(1);
   }
   
-  // Combine with country code
-  return `${countryCode}${cleaned}`;
+  // Combine with country code - ensure no duplicate country code
+  const result = `${countryCode}${cleaned}`;
+  
+  // Debug log for troubleshooting
+  console.log('📱 Phone sanitization:', { original: phone, countryCode, cleaned, result });
+  
+  return result;
 };
 
 const COUNTRY_CODES = [
