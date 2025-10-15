@@ -9922,6 +9922,69 @@ Payment required immediately to avoid collection action. Contact us NOW.`
 
       // Extract metadata to find tenant and contact
       const metadata = webhookData.metadata || {};
+      
+      // Check if this is an investor demo call - route to investor webhook
+      if (metadata.type === 'investor_demo' && metadata.leadId) {
+        console.log(`📞 Routing investor demo call to investor webhook. Lead ID: ${metadata.leadId}`);
+        
+        // Forward to investor webhook handler
+        try {
+          const { call_id, transcript, call } = req.body;
+          const leadId = metadata.leadId;
+          
+          // Extract intent and sentiment using OpenAI
+          const OpenAI = (await import('openai')).default;
+          const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+          
+          const transcriptText = transcript || call?.transcript || 'No transcript available';
+          
+          const completion = await openai.chat.completions.create({
+            model: "gpt-4o-mini",
+            messages: [{
+              role: "system",
+              content: `Analyze this debt collection AI call transcript and extract detailed insights:
+1) Primary Intent: payment_plan, dispute, promise_to_pay, general_query, or unknown
+2) Sentiment: positive, neutral, negative, cooperative, or hostile
+3) Confidence Score: 0-100 (how confident are you in the intent detection)
+4) Key Insights: Array of 2-3 key findings from the conversation
+5) Action Items: Array of recommended next steps
+6) Summary: 1-2 sentence summary of the call outcome
+
+Return only JSON with keys: intent, sentiment, confidence, keyInsights, actionItems, summary`
+            }, {
+              role: "user",
+              content: transcriptText
+            }],
+            response_format: { type: "json_object" }
+          });
+          
+          const analysis = JSON.parse(completion.choices[0].message.content || '{}');
+          
+          // Update lead with voice demo results
+          await storage.updateInvestorLead(leadId, {
+            voiceDemoCompleted: true,
+            voiceDemoResults: {
+              callId: call_id,
+              transcript: transcriptText,
+              intent: analysis.intent || 'unknown',
+              sentiment: analysis.sentiment || 'neutral',
+              confidence: analysis.confidence || 50,
+              keyInsights: analysis.keyInsights || [],
+              actionItems: analysis.actionItems || [],
+              summary: analysis.summary || 'Call completed',
+              callDuration: call?.duration || 0,
+              analyzedAt: new Date().toISOString()
+            }
+          });
+          
+          console.log('✅ Investor demo voice analysis saved:', analysis);
+          return res.json({ success: true, analysis });
+        } catch (error) {
+          console.error("Error processing investor demo call:", error);
+          return res.status(500).json({ message: "Failed to process investor demo call" });
+        }
+      }
+      
       const tenantId = metadata.tenantId || metadata.tenant_id;
       const contactId = metadata.contactId || metadata.contact_id;
       const invoiceId = metadata.invoiceId || metadata.invoice_id;

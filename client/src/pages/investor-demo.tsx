@@ -44,34 +44,40 @@ export default function InvestorDemo() {
     return () => clearInterval(pollInterval);
   }, [leadId]);
 
-  // Auto-open results dialog when new results arrive
+  // Auto-update results when they arrive
   useEffect(() => {
     if (!demoResults) return;
 
-    // Check if voice demo completed
+    // Update voice results if available
     if (demoResults.voiceDemoCompleted && demoResults.voiceDemoResults) {
       setCurrentResults(demoResults.voiceDemoResults);
       setResultsType("voice");
-      setResultsDialogOpen(true);
       
-      toast({
-        title: "AI Analysis Complete",
-        description: "View the results of the voice call analysis",
-      });
+      // Only open dialog and show toast if it's not already open
+      if (!resultsDialogOpen) {
+        setResultsDialogOpen(true);
+        toast({
+          title: "AI Analysis Complete",
+          description: "View the results of the voice call analysis",
+        });
+      }
     }
     
-    // Check if SMS demo completed
+    // Update SMS results if available
     if (demoResults.smsDemoCompleted && demoResults.smsDemoResults) {
       setCurrentResults(demoResults.smsDemoResults);
       setResultsType("sms");
-      setResultsDialogOpen(true);
       
-      toast({
-        title: "AI Analysis Complete",
-        description: "View the results of the SMS analysis",
-      });
+      // Only open dialog and show toast if it's not already open
+      if (!resultsDialogOpen) {
+        setResultsDialogOpen(true);
+        toast({
+          title: "AI Analysis Complete",
+          description: "View the results of the SMS analysis",
+        });
+      }
     }
-  }, [demoResults]);
+  }, [demoResults, resultsDialogOpen]);
 
   const handleLeadCapture = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -139,6 +145,19 @@ export default function InvestorDemo() {
       
       if (!response.ok) throw new Error("Failed to initiate call");
       
+      // Open results dialog immediately with "analyzing" state
+      setCurrentResults({
+        intent: "analyzing",
+        sentiment: "listening",
+        confidence: 0,
+        keyInsights: ["AI is listening to the conversation..."],
+        actionItems: ["Analysis will appear in real-time"],
+        summary: "Live call in progress - AI analysis will populate as the conversation develops",
+        transcript: ""
+      });
+      setResultsType("voice");
+      setResultsDialogOpen(true);
+      
       toast({
         title: "Initiating AI Voice Call",
         description: "You'll receive a call in a few seconds...",
@@ -181,6 +200,19 @@ export default function InvestorDemo() {
       });
       
       if (!response.ok) throw new Error("Failed to send SMS");
+      
+      // Open results dialog immediately with "waiting" state
+      setCurrentResults({
+        intent: "waiting",
+        sentiment: "pending",
+        confidence: 0,
+        keyInsights: ["Waiting for your SMS reply..."],
+        actionItems: ["AI will analyze your response instantly"],
+        summary: "SMS sent - Reply to see real-time AI intent detection and sentiment analysis",
+        responseText: ""
+      });
+      setResultsType("sms");
+      setResultsDialogOpen(true);
       
       toast({
         title: "SMS Sent!",
