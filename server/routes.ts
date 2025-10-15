@@ -9910,10 +9910,17 @@ Payment required immediately to avoid collection action. Contact us NOW.`
       // Retell sends data nested in a 'call' object
       const webhookData = req.body.call || req.body;
       const retellCallId = webhookData.call_id;
+      const eventType = req.body.event;
 
       if (!retellCallId) {
         console.error("Missing call_id in webhook. Payload:", JSON.stringify(req.body, null, 2));
         return res.status(400).json({ message: "Missing call_id in webhook" });
+      }
+
+      // Only process call_ended events for analysis (they have the full transcript)
+      if (eventType !== 'call_ended') {
+        console.log(`⏭️ Skipping ${eventType} event - waiting for call_ended for transcript`);
+        return res.json({ success: true, message: `Event ${eventType} acknowledged` });
       }
 
       // Process webhook data using RetellService helper
