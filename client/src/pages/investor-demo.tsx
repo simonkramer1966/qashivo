@@ -157,9 +157,11 @@ export default function InvestorDemo() {
                 AI That Turns Late Payments Into{" "}
                 <span className="text-[#17B6C3]">Automated Cashflow</span>
               </h1>
-              <p className="text-xl text-gray-600 mb-8 leading-relaxed">
+              <p className="text-xl text-gray-600 mb-4 leading-relaxed">
                 The UK's first AI-powered credit control platform built on statutory rights. 
-                Transforming the £4.8B late payment crisis into predictable revenue.{" "}
+                Transforming the £4.8B late payment crisis into predictable revenue.
+              </p>
+              <p className="text-xl text-gray-600 mb-8 leading-relaxed">
                 <strong>We're not just automating credit control. We're creating a learning brain for SME finance.</strong>
               </p>
               
