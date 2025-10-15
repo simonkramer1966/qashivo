@@ -382,7 +382,7 @@ export default function InvestorDemo() {
                   </div>
                 </div>
                 <p className="text-gray-700 mb-6">
-                  Receive an AI-powered collection call. Watch as our AI analyzes your responses in real-time, 
+                  Receive an AI-powered collection call. Our AI analyzes your responses in real-time, 
                   detecting intent, sentiment, and commitment to pay.
                 </p>
                 <div className="space-y-4">
