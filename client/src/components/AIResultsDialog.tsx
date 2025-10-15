@@ -1,4 +1,4 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Sparkles, Brain, TrendingUp, CheckCircle2, AlertCircle, MessageSquare, Phone, UserCheck, Search, PhoneCall } from "lucide-react";
@@ -143,9 +143,9 @@ export function AIResultsDialog({ open, onOpenChange, results, type }: AIResults
               <DialogTitle className="text-2xl font-bold text-white" data-testid="text-dialog-title">
                 {dialogTitle}
               </DialogTitle>
-              <p className="text-sm text-slate-400 mt-1" data-testid="text-analysis-type">
+              <DialogDescription className="text-sm text-slate-400 mt-1" data-testid="text-analysis-type">
                 {type === "voice" ? "Voice Call" : "SMS"} Intelligence Report
-              </p>
+              </DialogDescription>
             </div>
           </div>
         </DialogHeader>
