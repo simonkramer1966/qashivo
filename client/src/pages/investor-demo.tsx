@@ -895,9 +895,6 @@ export default function InvestorDemo() {
               Download Full Deck
             </Button>
           </div>
-          <p className="text-blue-100 mt-8 text-sm">
-            Raising £1.5mn seed round | 20% allocated to strategic investors
-          </p>
         </div>
       </section>
 
