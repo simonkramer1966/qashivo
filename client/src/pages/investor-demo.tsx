@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { SiXero, SiStripe, SiOpenai } from "react-icons/si";
 import qashivoLogo from "@assets/Main Nexus Logo copy_1756923544828.png";
 import dashboardScreenshot from "@assets/Screenshot 2025-10-13 at 13.19.17_1760519077630.png";
+import investorDeckPdf from "@assets/Qashivo - Investor Deck_1760520688174.pdf";
 
 export default function InvestorDemo() {
   const { toast } = useToast();
@@ -678,6 +679,14 @@ export default function InvestorDemo() {
             <Button
               variant="outline"
               className="border-2 border-white bg-transparent text-white hover:bg-white hover:text-[#17B6C3] text-xl px-12 py-7"
+              onClick={() => {
+                const link = document.createElement('a');
+                link.href = investorDeckPdf;
+                link.download = 'Qashivo-Investor-Deck.pdf';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+              }}
               data-testid="button-download-deck"
             >
               Download Full Deck
