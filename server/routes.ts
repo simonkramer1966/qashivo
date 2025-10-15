@@ -17443,7 +17443,7 @@ Return only JSON with keys: intent, sentiment, confidence, keyInsights, actionIt
       const analysis = JSON.parse(completion.choices[0].message.content || '{}');
       
       // Update lead with voice demo results
-      await storage.updateInvestorLead(leadId, {
+      const updatedLead = await storage.updateInvestorLead(leadId, {
         voiceDemoCompleted: true,
         voiceDemoResults: {
           callId: call_id,
@@ -17460,6 +17460,16 @@ Return only JSON with keys: intent, sentiment, confidence, keyInsights, actionIt
       });
       
       console.log('✅ Voice analysis saved:', analysis);
+      
+      // Broadcast results via WebSocket for instant updates
+      if ((app as any).broadcastDemoResults) {
+        (app as any).broadcastDemoResults(leadId, {
+          voiceDemoCompleted: updatedLead.voiceDemoCompleted,
+          smsDemoCompleted: updatedLead.smsDemoCompleted,
+          voiceDemoResults: updatedLead.voiceDemoResults,
+          smsDemoResults: updatedLead.smsDemoResults
+        });
+      }
       
       res.json({ success: true, analysis });
     } catch (error) {
