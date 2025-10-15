@@ -4,6 +4,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Phone, MessageSquare, TrendingUp, Shield, Zap, CheckCircle, Brain, Activity, ArrowRight, Clock, DollarSign, Users, BarChart3, Target, Rocket } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { SiXero, SiStripe, SiOpenai, SiQuickbooks } from "react-icons/si";
@@ -79,6 +81,14 @@ export default function InvestorDemo() {
   const [currentResults, setCurrentResults] = useState<any>(null);
   const [resultsType, setResultsType] = useState<"voice" | "sms">("voice");
   const lastShownResultsRef = useRef<string>("");
+  
+  // Investment call dialog state
+  const [investmentDialogOpen, setInvestmentDialogOpen] = useState(false);
+  const [investorName, setInvestorName] = useState("");
+  const [investorPhone, setInvestorPhone] = useState("");
+  const [investorEmail, setInvestorEmail] = useState("");
+  const [isHighNetWorth, setIsHighNetWorth] = useState(false);
+  const [acknowledgesRisk, setAcknowledgesRisk] = useState(false);
 
   useEffect(() => {
     if (!leadId) return;
@@ -326,6 +336,68 @@ export default function InvestorDemo() {
     }
   };
 
+  const handleInvestmentCall = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // Validate form
+    if (!investorName || !investorPhone || !investorEmail) {
+      toast({
+        title: "Missing Information",
+        description: "Please fill in all fields",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (!isHighNetWorth || !acknowledgesRisk) {
+      toast({
+        title: "Compliance Required",
+        description: "Please confirm all compliance requirements",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    setIsSubmitting(true);
+    
+    try {
+      const response = await fetch("/api/investor/schedule-call", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: investorName,
+          phone: investorPhone,
+          email: investorEmail,
+          isHighNetWorth,
+          acknowledgesRisk
+        }),
+      });
+      
+      if (!response.ok) throw new Error("Failed to schedule call");
+      
+      toast({
+        title: "Call Scheduled Successfully!",
+        description: "Our team will contact you within 24 hours to discuss the investment opportunity.",
+      });
+      
+      // Reset form and close dialog
+      setInvestorName("");
+      setInvestorPhone("");
+      setInvestorEmail("");
+      setIsHighNetWorth(false);
+      setAcknowledgesRisk(false);
+      setInvestmentDialogOpen(false);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to schedule call. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-white">
       {/* Sticky Header */}
@@ -342,6 +414,7 @@ export default function InvestorDemo() {
           </div>
           <Button 
             className="bg-[#17B6C3] hover:bg-[#1396A1] text-white"
+            onClick={() => setInvestmentDialogOpen(true)}
             data-testid="button-header-cta"
           >
             Schedule Investment Call
@@ -823,6 +896,7 @@ export default function InvestorDemo() {
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
             <Button
               className="bg-white text-[#17B6C3] hover:bg-gray-100 text-xl px-12 py-7 shadow-xl"
+              onClick={() => setInvestmentDialogOpen(true)}
               data-testid="button-schedule-call"
             >
               Schedule Investment Call
@@ -861,6 +935,103 @@ export default function InvestorDemo() {
         results={currentResults}
         type={resultsType}
       />
+
+      {/* Investment Call Dialog */}
+      <Dialog open={investmentDialogOpen} onOpenChange={setInvestmentDialogOpen}>
+        <DialogContent className="sm:max-w-[500px] bg-white">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold text-gray-900">Schedule Investment Call</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleInvestmentCall} className="space-y-5 pt-4">
+            <div className="space-y-2">
+              <Label htmlFor="investor-name" className="text-gray-700 font-medium">Full Name</Label>
+              <Input
+                id="investor-name"
+                type="text"
+                value={investorName}
+                onChange={(e) => setInvestorName(e.target.value)}
+                placeholder="John Smith"
+                className="bg-white border-gray-300"
+                data-testid="input-investor-name"
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="investor-phone" className="text-gray-700 font-medium">Phone Number</Label>
+              <Input
+                id="investor-phone"
+                type="tel"
+                value={investorPhone}
+                onChange={(e) => setInvestorPhone(e.target.value)}
+                placeholder="+44 7715 254857"
+                className="bg-white border-gray-300"
+                data-testid="input-investor-phone"
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="investor-email" className="text-gray-700 font-medium">Email Address</Label>
+              <Input
+                id="investor-email"
+                type="email"
+                value={investorEmail}
+                onChange={(e) => setInvestorEmail(e.target.value)}
+                placeholder="john@example.com"
+                className="bg-white border-gray-300"
+                data-testid="input-investor-email"
+                required
+              />
+            </div>
+
+            <div className="border-t border-gray-200 pt-4 space-y-4">
+              <p className="text-sm font-semibold text-gray-900">Investment Compliance</p>
+              
+              <div className="flex items-start gap-3">
+                <Checkbox
+                  id="high-net-worth"
+                  checked={isHighNetWorth}
+                  onCheckedChange={(checked) => setIsHighNetWorth(checked as boolean)}
+                  className="mt-1"
+                  data-testid="checkbox-high-net-worth"
+                />
+                <Label 
+                  htmlFor="high-net-worth" 
+                  className="text-sm text-gray-700 leading-tight cursor-pointer"
+                >
+                  I confirm I am a FCA High Net Worth investor and meet the eligibility requirements for SEIS investments
+                </Label>
+              </div>
+
+              <div className="flex items-start gap-3">
+                <Checkbox
+                  id="risk-acknowledgment"
+                  checked={acknowledgesRisk}
+                  onCheckedChange={(checked) => setAcknowledgesRisk(checked as boolean)}
+                  className="mt-1"
+                  data-testid="checkbox-risk-acknowledgment"
+                />
+                <Label 
+                  htmlFor="risk-acknowledgment" 
+                  className="text-sm text-gray-700 leading-tight cursor-pointer"
+                >
+                  I understand that investing in early-stage companies carries significant risk and I could lose <strong>ALL</strong> of my investment
+                </Label>
+              </div>
+            </div>
+
+            <Button 
+              type="submit" 
+              className="w-full bg-[#17B6C3] hover:bg-[#1396A1] text-white text-lg py-6"
+              disabled={isSubmitting || !investorName || !investorPhone || !investorEmail || !isHighNetWorth || !acknowledgesRisk}
+              data-testid="button-submit-investment-call"
+            >
+              {isSubmitting ? "Scheduling..." : "Schedule Call"}
+            </Button>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

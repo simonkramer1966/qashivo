@@ -17637,6 +17637,49 @@ Return only JSON with keys: intent, sentiment, confidence, keyInsights, actionIt
     }
   });
 
+  // Schedule investment call
+  app.post("/api/investor/schedule-call", async (req, res) => {
+    try {
+      const { name, phone, email, isHighNetWorth, acknowledgesRisk } = req.body;
+      
+      // Validate required fields
+      if (!name || !phone || !email || !isHighNetWorth || !acknowledgesRisk) {
+        return res.status(400).json({ message: "All fields and compliance confirmations are required" });
+      }
+      
+      // Store investment call request
+      const callRequest = await storage.createInvestmentCallRequest({
+        name,
+        phone,
+        email,
+        isHighNetWorth,
+        acknowledgesRisk,
+        requestedAt: new Date().toISOString(),
+        status: 'pending'
+      });
+      
+      console.log('📞 Investment call scheduled:', callRequest);
+      
+      // TODO: Send notification to team (email/Slack)
+      // For now, just log it
+      console.log('💼 Investment call request received:', {
+        name,
+        phone,
+        email,
+        compliance: { isHighNetWorth, acknowledgesRisk }
+      });
+      
+      res.json({ 
+        success: true, 
+        message: "Investment call scheduled successfully",
+        callRequest 
+      });
+    } catch (error) {
+      console.error("Error scheduling investment call:", error);
+      res.status(500).json({ message: "Failed to schedule investment call" });
+    }
+  });
+
   // ==================== END INVESTOR DEMO API ====================
 
   const httpServer = createServer(app);

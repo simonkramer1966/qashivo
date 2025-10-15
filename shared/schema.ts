@@ -3837,3 +3837,28 @@ export const insertInvestorLeadSchema = createInsertSchema(investorLeads).omit({
 
 export type InvestorLead = typeof investorLeads.$inferSelect;
 export type InsertInvestorLead = z.infer<typeof insertInvestorLeadSchema>;
+
+// Investment Call Requests - for scheduling investment calls with compliance
+export const investmentCallRequests = pgTable("investment_call_requests", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull(),
+  phone: varchar("phone").notNull(),
+  email: varchar("email").notNull(),
+  isHighNetWorth: boolean("is_high_net_worth").notNull().default(false),
+  acknowledgesRisk: boolean("acknowledges_risk").notNull().default(false),
+  status: varchar("status").notNull().default('pending'), // pending, contacted, completed, cancelled
+  requestedAt: timestamp("requested_at").defaultNow(),
+  contactedAt: timestamp("contacted_at"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertInvestmentCallRequestSchema = createInsertSchema(investmentCallRequests).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InvestmentCallRequest = typeof investmentCallRequests.$inferSelect;
+export type InsertInvestmentCallRequest = z.infer<typeof insertInvestmentCallRequestSchema>;

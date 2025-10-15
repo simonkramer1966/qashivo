@@ -126,6 +126,9 @@ import {
   investorLeads,
   type InvestorLead,
   type InsertInvestorLead,
+  investmentCallRequests,
+  type InvestmentCallRequest,
+  type InsertInvestmentCallRequest,
   tenantMetadata,
   type SubscriptionPlan,
   type InsertSubscriptionPlan,
@@ -575,6 +578,9 @@ export interface IStorage {
   getInvestorLead(id: string): Promise<InvestorLead | undefined>;
   getInvestorLeadByEmail(email: string): Promise<InvestorLead | undefined>;
   updateInvestorLead(id: string, updates: Partial<InsertInvestorLead>): Promise<InvestorLead>;
+  
+  // Investment Call Request operations - for scheduling investment calls
+  createInvestmentCallRequest(request: InsertInvestmentCallRequest): Promise<InvestmentCallRequest>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -4914,6 +4920,12 @@ export class DatabaseStorage implements IStorage {
       .where(eq(investorLeads.id, id))
       .returning();
     return lead;
+  }
+
+  // Investment Call Request operations - for scheduling investment calls
+  async createInvestmentCallRequest(requestData: InsertInvestmentCallRequest): Promise<InvestmentCallRequest> {
+    const [request] = await db.insert(investmentCallRequests).values(requestData).returning();
+    return request;
   }
 }
 
