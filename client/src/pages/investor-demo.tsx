@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Phone, MessageSquare, TrendingUp, Shield, Zap, CheckCircle, Brain, Activity, ArrowRight, Clock, DollarSign, Users, BarChart3, Target, Rocket } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { SiXero, SiStripe, SiOpenai } from "react-icons/si";
+import qashivoLogo from "@assets/Main Nexus Logo copy_1756923544828.png";
 
 export default function InvestorDemo() {
   const { toast } = useToast();
@@ -127,10 +128,12 @@ export default function InvestorDemo() {
       <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-[#17B6C3] rounded-lg flex items-center justify-center">
-              <Zap className="w-5 h-5 text-white" />
-            </div>
-            <span className="text-2xl font-bold text-gray-900">Qashivo</span>
+            <img 
+              src={qashivoLogo} 
+              alt="Qashivo Logo" 
+              className="h-10 w-auto"
+              data-testid="img-qashivo-logo"
+            />
           </div>
           <Button 
             className="bg-[#17B6C3] hover:bg-[#1396A1] text-white"
