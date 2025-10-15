@@ -17212,6 +17212,146 @@ ${tenant.name}
 
   // ==================== END PLATFORM ADMIN API ====================
 
+  // ==================== INVESTOR DEMO API (Public - No Auth) ====================
+  
+  // Create investor lead (lead capture form)
+  app.post("/api/investor/lead", async (req, res) => {
+    try {
+      const { name, email } = req.body;
+      
+      if (!name || !email) {
+        return res.status(400).json({ message: "Name and email are required" });
+      }
+      
+      // Check if lead already exists
+      const existingLead = await storage.getInvestorLeadByEmail(email);
+      if (existingLead) {
+        return res.json(existingLead);
+      }
+      
+      const lead = await storage.createInvestorLead({ name, email });
+      res.json(lead);
+    } catch (error) {
+      console.error("Error creating investor lead:", error);
+      res.status(500).json({ message: "Failed to create investor lead" });
+    }
+  });
+
+  // Trigger voice demo (Retell call)
+  app.post("/api/investor/voice-demo", async (req, res) => {
+    try {
+      const { leadId, phone } = req.body;
+      
+      if (!leadId || !phone) {
+        return res.status(400).json({ message: "Lead ID and phone are required" });
+      }
+      
+      // Update lead with phone number
+      const lead = await storage.updateInvestorLead(leadId, { phone });
+      
+      // Trigger Retell AI call with investor demo script
+      const { createUnifiedRetellCall, createStandardCollectionVariables } = await import('./utils/retellCallHelper.js');
+      
+      const callVariables = createStandardCollectionVariables({
+        customerName: lead.name,
+        companyName: "Qashivo",
+        invoiceNumber: "INV-DEMO-001",
+        invoiceAmount: "5000",
+        daysOverdue: "15",
+        customMessage: "This is a demo call to showcase Qashivo's AI voice capabilities"
+      });
+      
+      const callResult = await createUnifiedRetellCall({
+        toNumber: phone,
+        dynamicVariables: callVariables,
+        metadata: {
+          type: 'investor_demo',
+          leadId: lead.id,
+          leadName: lead.name
+        },
+        context: 'INVESTOR_DEMO'
+      });
+      
+      console.log(`📞 Investor demo call initiated for ${lead.name}:`, callResult.callId);
+      
+      res.json({ 
+        success: true, 
+        message: "Voice call initiated",
+        callId: callResult.callId
+      });
+    } catch (error) {
+      console.error("Error triggering voice demo:", error);
+      res.status(500).json({ message: "Failed to trigger voice demo" });
+    }
+  });
+
+  // Send SMS demo
+  app.post("/api/investor/sms-demo", async (req, res) => {
+    try {
+      const { leadId, phone } = req.body;
+      
+      if (!leadId || !phone) {
+        return res.status(400).json({ message: "Lead ID and phone are required" });
+      }
+      
+      // Update lead with phone number
+      const lead = await storage.updateInvestorLead(leadId, { phone });
+      
+      // Send SMS via Vonage with investor demo message
+      const { sendCustomSMS } = await import('./services/vonage.js');
+      
+      const smsMessage = `Hi ${lead.name}! 👋 This is Qashivo's AI.\n\nYou have an overdue invoice of £5,000 (15 days past due).\n\nReply:\n• PLAN - Set up payment plan\n• DISPUTE - Raise a concern\n• PAID - Confirm payment\n\nThis demonstrates our AI intent detection.`;
+      
+      const smsResult = await sendCustomSMS(phone, smsMessage);
+      
+      console.log(`📱 Investor demo SMS sent to ${lead.name}:`, smsResult);
+      
+      if (!smsResult.success) {
+        throw new Error(smsResult.error || 'Failed to send SMS');
+      }
+      
+      res.json({ 
+        success: true, 
+        message: "SMS sent",
+        messageId: smsResult.messageId
+      });
+    } catch (error) {
+      console.error("Error sending SMS demo:", error);
+      res.status(500).json({ message: "Failed to send SMS demo" });
+    }
+  });
+
+  // Webhook for voice call completion
+  app.post("/api/investor/webhook/voice", async (req, res) => {
+    try {
+      const { call_id, transcript, analysis } = req.body;
+      
+      // TODO: Process voice call results and update lead
+      // Extract intent, sentiment from transcript
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error processing voice webhook:", error);
+      res.status(500).json({ message: "Failed to process voice webhook" });
+    }
+  });
+
+  // Webhook for SMS response
+  app.post("/api/investor/webhook/sms", async (req, res) => {
+    try {
+      const { from, text } = req.body;
+      
+      // TODO: Process SMS response and extract intent/sentiment
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error processing SMS webhook:", error);
+      res.status(500).json({ message: "Failed to process SMS webhook" });
+    }
+  });
+
+  // ==================== END INVESTOR DEMO API ====================
+
   const httpServer = createServer(app);
   return httpServer;
 }

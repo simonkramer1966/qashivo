@@ -10,40 +10,97 @@ export default function InvestorDemo() {
   const { toast } = useToast();
   const [leadData, setLeadData] = useState({ name: "", email: "" });
   const [leadCaptured, setLeadCaptured] = useState(false);
+  const [leadId, setLeadId] = useState("");
   const [voicePhone, setVoicePhone] = useState("");
   const [smsPhone, setSmsPhone] = useState("");
   const [demoResults, setDemoResults] = useState<any>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleLeadCapture = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSubmitting(true);
     
-    // TODO: Save to database
-    console.log("Lead captured:", leadData);
-    setLeadCaptured(true);
-    
-    toast({
-      title: "Welcome!",
-      description: "Experience Qashivo's AI in action below",
-    });
-    
-    // Scroll to demos
-    document.getElementById('demos')?.scrollIntoView({ behavior: 'smooth' });
+    try {
+      const response = await fetch("/api/investor/lead", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(leadData),
+      });
+      
+      if (!response.ok) throw new Error("Failed to capture lead");
+      
+      const lead = await response.json();
+      setLeadId(lead.id);
+      setLeadCaptured(true);
+      
+      toast({
+        title: "Welcome!",
+        description: "Experience Qashivo's AI in action below",
+      });
+      
+      // Scroll to demos
+      setTimeout(() => {
+        document.getElementById('demos')?.scrollIntoView({ behavior: 'smooth' });
+      }, 500);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to submit. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleVoiceDemo = async () => {
-    toast({
-      title: "Initiating AI Voice Call",
-      description: "You'll receive a call in a few seconds...",
-    });
-    // TODO: Trigger Retell call
+    if (!leadId || !voicePhone) return;
+    
+    try {
+      const response = await fetch("/api/investor/voice-demo", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ leadId, phone: voicePhone }),
+      });
+      
+      if (!response.ok) throw new Error("Failed to initiate call");
+      
+      toast({
+        title: "Initiating AI Voice Call",
+        description: "You'll receive a call in a few seconds...",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to initiate call. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleSMSDemo = async () => {
-    toast({
-      title: "SMS Sent!",
-      description: "Reply to experience AI intent detection",
-    });
-    // TODO: Send SMS via Vonage
+    if (!leadId || !smsPhone) return;
+    
+    try {
+      const response = await fetch("/api/investor/sms-demo", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ leadId, phone: smsPhone }),
+      });
+      
+      if (!response.ok) throw new Error("Failed to send SMS");
+      
+      toast({
+        title: "SMS Sent!",
+        description: "Reply to experience AI intent detection",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to send SMS. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -110,10 +167,11 @@ export default function InvestorDemo() {
                 </div>
                 <Button
                   type="submit"
+                  disabled={isSubmitting}
                   className="w-full bg-[#17B6C3] hover:bg-[#1396A1] text-white text-lg py-6"
                   data-testid="button-capture-lead"
                 >
-                  See It In Action →
+                  {isSubmitting ? "Submitting..." : "See It In Action →"}
                 </Button>
               </form>
             </Card>
