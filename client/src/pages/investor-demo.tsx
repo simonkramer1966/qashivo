@@ -468,16 +468,6 @@ export default function InvestorDemo() {
       {/* Live AI Demos */}
       <section id="demos" className="py-24 px-6 bg-white">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
-            <div className="inline-block px-4 py-2 bg-purple-100 rounded-full mb-4">
-              <span className="text-purple-700 font-semibold">LIVE DEMONSTRATION</span>
-            </div>
-            <h2 className="text-4xl font-bold text-gray-900 mb-4">Experience the AI in Real-Time</h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              See how Qashivo's AI analyzes every customer interaction and extracts actionable intelligence
-            </p>
-          </div>
-
           <div className="grid lg:grid-cols-2 gap-8 mb-12">
               {/* Voice Demo */}
               <Card className="p-8 border-2 border-purple-200 bg-gradient-to-br from-purple-50 to-blue-50">
