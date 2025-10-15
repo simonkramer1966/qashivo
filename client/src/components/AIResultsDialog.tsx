@@ -75,6 +75,11 @@ export function AIResultsDialog({ open, onOpenChange, results, type }: AIResults
   const sentimentColor = sentimentColors[sentiment as keyof typeof sentimentColors] || sentimentColors.neutral;
   const IntentIcon = intentIcons[results.intent as keyof typeof intentIcons] || Brain;
   const confidenceColor = animatedConfidence >= 80 ? "text-green-400" : animatedConfidence >= 60 ? "text-blue-400" : "text-orange-400";
+  
+  // Check if analysis is still in progress
+  const inProgressStates = ["analyzing", "listening", "waiting"];
+  const isInProgress = results.intent && inProgressStates.includes(results.intent);
+  const dialogTitle = isInProgress ? "AI Analysis - In Progress" : "AI Analysis Complete";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -95,7 +100,7 @@ export function AIResultsDialog({ open, onOpenChange, results, type }: AIResults
             </div>
             <div>
               <DialogTitle className="text-2xl font-bold text-white" data-testid="text-dialog-title">
-                AI Analysis Complete
+                {dialogTitle}
               </DialogTitle>
               <p className="text-sm text-slate-400 mt-1" data-testid="text-analysis-type">
                 {type === "voice" ? "Voice Call" : "SMS"} Intelligence Report
