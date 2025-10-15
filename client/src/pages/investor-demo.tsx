@@ -393,7 +393,7 @@ export default function InvestorDemo() {
       <section className="py-24 px-6">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-gray-900 mb-4">The £2.8 Billion Problem</h2>
+            <h2 className="text-4xl font-bold text-gray-900 mb-4">The £11 Billion Problem</h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
               Late payments are killing UK SMEs. Manual credit control is inefficient, non-compliant, and emotionally draining.
             </p>
