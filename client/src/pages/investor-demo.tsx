@@ -161,53 +161,15 @@ export default function InvestorDemo() {
                 Transforming the £4.8B late payment crisis into predictable revenue.
               </p>
               
-              {!leadCaptured ? (
-                <Card className="p-6 bg-white shadow-xl border-gray-200">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                    Experience the Live Demo
-                  </h3>
-                  <form onSubmit={handleLeadCapture} className="space-y-4">
-                    <div>
-                      <Input
-                        type="text"
-                        value={leadData.name}
-                        onChange={(e) => setLeadData({ ...leadData, name: e.target.value })}
-                        placeholder="Your name"
-                        className="bg-gray-50 border-gray-300"
-                        required
-                        data-testid="input-investor-name"
-                      />
-                    </div>
-                    <div>
-                      <Input
-                        type="email"
-                        value={leadData.email}
-                        onChange={(e) => setLeadData({ ...leadData, email: e.target.value })}
-                        placeholder="Your email"
-                        className="bg-gray-50 border-gray-300"
-                        required
-                        data-testid="input-investor-email"
-                      />
-                    </div>
-                    <Button
-                      type="submit"
-                      disabled={isSubmitting}
-                      className="w-full bg-[#17B6C3] hover:bg-[#1396A1] text-white text-lg py-6"
-                      data-testid="button-capture-lead"
-                    >
-                      {isSubmitting ? "Submitting..." : "See AI in Action →"}
-                    </Button>
-                  </form>
-                </Card>
-              ) : (
-                <div className="flex items-center gap-4 p-6 bg-green-50 border border-green-200 rounded-xl">
-                  <CheckCircle className="w-8 h-8 text-green-600" />
-                  <div>
-                    <p className="font-semibold text-gray-900">Welcome, {leadData.name}!</p>
-                    <p className="text-gray-600">Scroll down to try the live AI demos</p>
-                  </div>
-                </div>
-              )}
+              <div className="flex gap-4">
+                <Button 
+                  className="bg-[#17B6C3] hover:bg-[#1396A1] text-white text-lg px-8 py-6"
+                  onClick={() => document.getElementById('demos')?.scrollIntoView({ behavior: 'smooth' })}
+                  data-testid="button-try-demo"
+                >
+                  Try Live Demo <ArrowRight className="w-5 h-5 ml-2" />
+                </Button>
+              </div>
             </div>
 
             <div className="relative">
@@ -402,8 +364,7 @@ export default function InvestorDemo() {
             </p>
           </div>
 
-          {leadCaptured && (
-            <div className="grid lg:grid-cols-2 gap-8 mb-12">
+          <div className="grid lg:grid-cols-2 gap-8 mb-12">
               {/* Voice Demo */}
               <Card className="p-8 border-2 border-purple-200 bg-gradient-to-br from-purple-50 to-blue-50">
                 <div className="flex items-center gap-3 mb-6">
@@ -482,7 +443,6 @@ export default function InvestorDemo() {
                 </div>
               </Card>
             </div>
-          )}
 
           {/* Demo Results */}
           {demoResults && (demoResults.voiceDemoCompleted || demoResults.smsDemoCompleted) && (
