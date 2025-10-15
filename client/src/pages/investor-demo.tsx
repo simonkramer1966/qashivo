@@ -685,7 +685,7 @@ export default function InvestorDemo() {
                 </div>
                 <p className="text-gray-700 mb-6">
                   Receive an AI-powered collection call. Our AI analyzes your responses in real-time, 
-                  detecting intent, sentiment, and commitment to pay.
+                  detecting intent, sentiment, and commitment to pay. Keep 'In Progress' dialog box open until after the AI Voice Call has completed.
                 </p>
                 <div className="space-y-4">
                   <div>
