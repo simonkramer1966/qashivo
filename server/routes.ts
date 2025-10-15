@@ -10237,8 +10237,63 @@ Return only JSON with keys: intent, sentiment, confidence, keyInsights, actionIt
         return res.status(400).send("Missing required fields");
       }
 
-      // Try to match contact by phone number
+      // First, check if this is an investor demo lead response
       const fromPhone = msisdn.replace(/\D/g, '');
+      const investorLeadMatches = await db.select().from(investorLeads).where(eq(investorLeads.phone, msisdn));
+      const investorLead = investorLeadMatches[0];
+      
+      if (investorLead) {
+        console.log('📊 Processing investor demo SMS response for lead:', investorLead.id);
+        
+        // Extract intent and sentiment using OpenAI
+        const OpenAI = (await import('openai')).default;
+        const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+        
+        const completion = await openai.chat.completions.create({
+          model: "gpt-4o-mini",
+          messages: [{
+            role: "system",
+            content: "Analyze this SMS response and extract: 1) Intent (payment_plan, dispute, promise_to_pay, paid, general_query, unknown), 2) Sentiment (positive, neutral, negative, cooperative, hostile), 3) Confidence score (0-100). Return JSON only."
+          }, {
+            role: "user",
+            content: text
+          }],
+          response_format: { type: "json_object" }
+        });
+        
+        const analysis = JSON.parse(completion.choices[0].message.content || '{}');
+        
+        // Update investor lead with SMS demo results
+        const updatedLead = await storage.updateInvestorLead(investorLead.id, {
+          smsDemoCompleted: true,
+          smsDemoResults: {
+            fromPhone: msisdn,
+            responseText: text,
+            intent: analysis.intent || 'unknown',
+            sentiment: analysis.sentiment || 'neutral',
+            confidence: analysis.confidence || 50,
+            analyzedAt: new Date().toISOString()
+          }
+        });
+        
+        console.log('✅ Investor demo SMS analysis saved:', analysis);
+        
+        // Broadcast results via WebSocket for instant updates
+        if ((app as any).broadcastDemoResults) {
+          (app as any).broadcastDemoResults(investorLead.id, {
+            voiceDemoCompleted: updatedLead.voiceDemoCompleted,
+            smsDemoCompleted: updatedLead.smsDemoCompleted,
+            voiceDemoResults: updatedLead.voiceDemoResults,
+            smsDemoResults: updatedLead.smsDemoResults
+          });
+          console.log('📡 Broadcasted investor demo results via WebSocket');
+        }
+        
+        // Return early - investor demo doesn't need normal contact processing
+        return res.status(200).send("OK - Investor demo processed");
+      }
+      
+      // Try to match contact by phone number
       const toPhone = to.replace(/\D/g, '');
       
       // Get all tenants and search for contact
