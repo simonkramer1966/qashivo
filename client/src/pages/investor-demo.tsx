@@ -407,7 +407,7 @@ export default function InvestorDemo() {
               <h3 className="text-2xl font-bold text-gray-900 mb-2" data-testid="text-problem-amount">£11B Lost</h3>
               <p className="text-gray-600 mb-4">Annual cost to UK SMEs from late payments</p>
               <div className="text-4xl font-bold text-red-600" data-testid="text-failures-count">14,000</div>
-              <p className="text-sm text-gray-500">Businesses fail each year</p>
+              <p className="text-sm text-gray-500">Businesses fail each year due to late payments</p>
             </Card>
 
             <Card className="p-8 border-2 border-orange-200 bg-orange-50" data-testid="card-problem-dso">
