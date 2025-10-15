@@ -75,6 +75,7 @@ function Router() {
       ) : (
         // Authenticated routes - main application
         <Switch>
+          <Route path="/investor-demo" component={InvestorDemo} />
           <Route path="/qashivo-admin" component={QashivoAdminDashboard} />
           <Route path="/partner" component={PartnerDashboard} />
           <Route path="/cashflow" component={Cashflow} />
