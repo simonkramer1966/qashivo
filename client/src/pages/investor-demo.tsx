@@ -1061,7 +1061,7 @@ export default function InvestorDemo() {
                         setFormErrors({ ...formErrors, highNetWorth: "" });
                       }
                     }}
-                    className="mt-1 flex-shrink-0"
+                    className="mt-1 flex-shrink-0 border-2 border-gray-600"
                     data-testid="checkbox-high-net-worth"
                   />
                   <Label 
@@ -1087,7 +1087,7 @@ export default function InvestorDemo() {
                         setFormErrors({ ...formErrors, risk: "" });
                       }
                     }}
-                    className="mt-1 flex-shrink-0"
+                    className="mt-1 flex-shrink-0 border-2 border-gray-600"
                     data-testid="checkbox-risk-acknowledgment"
                   />
                   <Label 
