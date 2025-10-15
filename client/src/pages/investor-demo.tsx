@@ -350,7 +350,7 @@ export default function InvestorDemo() {
                 </video>
               </div>
               
-              <div className="absolute -bottom-4 -right-4 bg-white p-4 rounded-xl shadow-lg border border-gray-200" data-testid="card-revenue-target">
+              <div className="absolute -bottom-16 -right-8 bg-white p-4 rounded-xl shadow-lg border border-gray-200" data-testid="card-revenue-target">
                 <div className="flex items-center gap-3">
                   <TrendingUp className="w-8 h-8 text-green-600" />
                   <div>
