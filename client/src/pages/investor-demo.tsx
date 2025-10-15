@@ -752,7 +752,7 @@ export default function InvestorDemo() {
                 </div>
                 <p className="text-gray-700 mb-6">
                   Reply to our SMS and watch our AI instantly extract payment intent, sentiment, 
-                  and recommended next actions from your message.
+                  and recommended next actions from your message. Keep 'In Progress' dialog box open until after the SMS response has been received.
                 </p>
                 <div className="space-y-4">
                   <div>
