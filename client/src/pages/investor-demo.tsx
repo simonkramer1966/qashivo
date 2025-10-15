@@ -909,7 +909,7 @@ export default function InvestorDemo() {
       <section className="py-24 px-6 bg-gradient-to-br from-[#17B6C3] to-teal-700">
         <div className="max-w-5xl mx-auto text-center">
           <h2 className="text-5xl font-bold text-white mb-6">
-            Join the £11B Opportunity
+            Join the £4.8B Opportunity
           </h2>
           <p className="text-2xl text-blue-100 mb-8">
             SEIS-eligible investment | 200+ SMEs on waitlist | Xero integration live
