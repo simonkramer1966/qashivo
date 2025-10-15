@@ -26,6 +26,15 @@ export default function InvestorDemo() {
   const [currentResults, setCurrentResults] = useState<any>(null);
   const [resultsType, setResultsType] = useState<"voice" | "sms">("voice");
 
+  // Auto-scroll to demos after 60 seconds
+  useEffect(() => {
+    const autoScrollTimer = setTimeout(() => {
+      document.getElementById('demos')?.scrollIntoView({ behavior: 'smooth' });
+    }, 60000); // 60 seconds
+
+    return () => clearTimeout(autoScrollTimer);
+  }, []);
+
   useEffect(() => {
     if (!leadId) return;
 
