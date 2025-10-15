@@ -110,13 +110,31 @@ export default function InvestorDemo() {
   };
 
   const handleVoiceDemo = async () => {
-    if (!leadId || !voicePhone) return;
+    if (!voicePhone) return;
     
     try {
+      // Auto-create lead if doesn't exist
+      let currentLeadId = leadId;
+      if (!currentLeadId) {
+        const leadResponse = await fetch("/api/investor/lead", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ 
+            name: voiceName || "Anonymous Investor", 
+            email: `demo-${Date.now()}@investor.demo` 
+          }),
+        });
+        
+        if (!leadResponse.ok) throw new Error("Failed to create lead");
+        const lead = await leadResponse.json();
+        currentLeadId = lead.id;
+        setLeadId(lead.id);
+      }
+      
       const response = await fetch("/api/investor/voice-demo", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ leadId, phone: voicePhone, name: voiceName }),
+        body: JSON.stringify({ leadId: currentLeadId, phone: voicePhone, name: voiceName }),
       });
       
       if (!response.ok) throw new Error("Failed to initiate call");
@@ -135,13 +153,31 @@ export default function InvestorDemo() {
   };
 
   const handleSMSDemo = async () => {
-    if (!leadId || !smsPhone) return;
+    if (!smsPhone) return;
     
     try {
+      // Auto-create lead if doesn't exist
+      let currentLeadId = leadId;
+      if (!currentLeadId) {
+        const leadResponse = await fetch("/api/investor/lead", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ 
+            name: smsName || "Anonymous Investor", 
+            email: `demo-${Date.now()}@investor.demo` 
+          }),
+        });
+        
+        if (!leadResponse.ok) throw new Error("Failed to create lead");
+        const lead = await leadResponse.json();
+        currentLeadId = lead.id;
+        setLeadId(lead.id);
+      }
+      
       const response = await fetch("/api/investor/sms-demo", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ leadId, phone: smsPhone, name: smsName }),
+        body: JSON.stringify({ leadId: currentLeadId, phone: smsPhone, name: smsName }),
       });
       
       if (!response.ok) throw new Error("Failed to send SMS");
