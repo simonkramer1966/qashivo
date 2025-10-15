@@ -17471,20 +17471,20 @@ Return only JSON with keys: intent, sentiment, confidence, keyInsights, actionIt
   // Webhook for SMS response (from Vonage)
   app.post("/api/investor/webhook/sms", async (req, res) => {
     try {
-      const { from, text, to } = req.body;
+      const { msisdn, text, to } = req.body;
       
-      console.log('📱 SMS webhook received:', { from, text });
+      console.log('📱 SMS webhook received:', { msisdn, text });
       
       if (!text) {
         return res.json({ success: true });
       }
       
-      // Find lead by phone number
-      const leads = await db.select().from(investorLeads).where(eq(investorLeads.phone, from));
+      // Find lead by phone number (msisdn is the sender's phone)
+      const leads = await db.select().from(investorLeads).where(eq(investorLeads.phone, msisdn));
       const lead = leads[0];
       
       if (!lead) {
-        console.log('⚠️ No lead found for phone:', from);
+        console.log('⚠️ No lead found for phone:', msisdn);
         return res.json({ success: true });
       }
       
@@ -17510,7 +17510,7 @@ Return only JSON with keys: intent, sentiment, confidence, keyInsights, actionIt
       await storage.updateInvestorLead(lead.id, {
         smsDemoCompleted: true,
         smsDemoResults: {
-          fromPhone: from,
+          fromPhone: msisdn,
           responseText: text,
           intent: analysis.intent || 'unknown',
           sentiment: analysis.sentiment || 'neutral',
