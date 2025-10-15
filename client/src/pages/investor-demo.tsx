@@ -404,7 +404,7 @@ export default function InvestorDemo() {
               <div className="w-12 h-12 bg-red-600 rounded-lg flex items-center justify-center mb-4">
                 <DollarSign className="w-6 h-6 text-white" />
               </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-2" data-testid="text-problem-amount">£2.8B Lost</h3>
+              <h3 className="text-2xl font-bold text-gray-900 mb-2" data-testid="text-problem-amount">£11B Lost</h3>
               <p className="text-gray-600 mb-4">Annual cost to UK SMEs from late payments</p>
               <div className="text-4xl font-bold text-red-600" data-testid="text-failures-count">50,000</div>
               <p className="text-sm text-gray-500">Businesses fail each year</p>
