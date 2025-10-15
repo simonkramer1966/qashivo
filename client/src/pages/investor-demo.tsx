@@ -7,6 +7,7 @@ import { Phone, MessageSquare, TrendingUp, Shield, Zap, CheckCircle, Brain, Acti
 import { useToast } from "@/hooks/use-toast";
 import { SiXero, SiStripe, SiOpenai } from "react-icons/si";
 import qashivoLogo from "@assets/Main Nexus Logo copy_1756923544828.png";
+import dashboardScreenshot from "@assets/Screenshot 2025-10-13 at 13.19.17_1760519077630.png";
 
 export default function InvestorDemo() {
   const { toast } = useToast();
@@ -329,12 +330,12 @@ export default function InvestorDemo() {
             </div>
 
             <div className="bg-white rounded-2xl shadow-2xl p-8 border border-gray-200">
-              <div className="aspect-video bg-gradient-to-br from-[#17B6C3]/10 to-teal-100 rounded-lg flex items-center justify-center mb-4">
-                <div className="text-center">
-                  <BarChart3 className="w-16 h-16 text-[#17B6C3] mx-auto mb-2" />
-                  <p className="text-gray-600 font-medium">Dashboard Screenshot</p>
-                  <p className="text-sm text-gray-500">Intelligent Forecast View</p>
-                </div>
+              <div className="rounded-lg overflow-hidden mb-4">
+                <img 
+                  src={dashboardScreenshot} 
+                  alt="Qashivo Dashboard - Intelligent Forecast View" 
+                  className="w-full h-auto"
+                />
               </div>
               <div className="grid grid-cols-3 gap-4">
                 <div className="text-center p-3 bg-green-50 rounded-lg" data-testid="card-solution-accuracy">
