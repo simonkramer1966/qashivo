@@ -3812,3 +3812,26 @@ export type InsertForecastSnapshot = z.infer<typeof insertForecastSnapshotSchema
 
 export type ForecastVarianceTracking = typeof forecastVarianceTracking.$inferSelect;
 export type InsertForecastVarianceTracking = z.infer<typeof insertForecastVarianceTrackingSchema>;
+
+// Investor Leads table - for investor demo VSL page
+export const investorLeads = pgTable("investor_leads", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull(),
+  email: varchar("email").notNull(),
+  phone: varchar("phone"), // Optional - if they try voice/SMS demo
+  voiceDemoCompleted: boolean("voice_demo_completed").default(false),
+  smsDemoCompleted: boolean("sms_demo_completed").default(false),
+  voiceDemoResults: jsonb("voice_demo_results"), // Intent, sentiment, transcript
+  smsDemoResults: jsonb("sms_demo_results"), // Intent, sentiment, response
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertInvestorLeadSchema = createInsertSchema(investorLeads).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InvestorLead = typeof investorLeads.$inferSelect;
+export type InsertInvestorLead = z.infer<typeof insertInvestorLeadSchema>;

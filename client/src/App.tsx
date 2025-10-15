@@ -32,6 +32,7 @@ const SignIn = lazy(() => import("@/pages/signin"));
 const Insights = lazy(() => import("@/pages/insights"));
 const ClientIntelligence = lazy(() => import("@/pages/client-intelligence"));
 const IntelligentForecast = lazy(() => import("@/pages/intelligent-forecast"));
+const InvestorDemo = lazy(() => import("@/pages/investor-demo"));
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -64,6 +65,7 @@ function Router() {
       {!isAuthenticated ? (
         // Unauthenticated routes - only signup and signin pages
         <Switch>
+          <Route path="/investor-demo" component={InvestorDemo} />
           <Route path="/partner/register" component={PartnerRegistration} />
           <Route path="/client/register" component={ClientRegistration} />
           <Route path="/signin" component={SignIn} />
