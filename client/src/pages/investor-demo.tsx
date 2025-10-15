@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Phone, MessageSquare, TrendingUp, Shield, Zap, CheckCircle, Brain, Activity, ArrowRight, Clock, DollarSign, Users, BarChart3, Target, Rocket } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { SiXero, SiStripe, SiOpenai, SiQuickbooks, SiSage } from "react-icons/si";
+import { SiXero, SiStripe, SiOpenai, SiQuickbooks } from "react-icons/si";
 import qashivoLogo from "@assets/Main Nexus Logo copy_1756923544828.png";
 import dashboardScreenshot from "@assets/Screenshot 2025-10-13 at 13.19.17_1760519077630.png";
 import investorDeckPdf from "@assets/Qashivo - Investor Deck_1760520688174.pdf";
@@ -215,10 +215,6 @@ export default function InvestorDemo() {
             <div className="flex items-center gap-2 text-gray-600">
               <SiQuickbooks className="w-8 h-8" />
               <span className="font-semibold">QuickBooks</span>
-            </div>
-            <div className="flex items-center gap-2 text-gray-600">
-              <SiSage className="w-8 h-8" />
-              <span className="font-semibold">Sage</span>
             </div>
             <div className="flex items-center gap-2 text-gray-600">
               <SiStripe className="w-8 h-8" />
