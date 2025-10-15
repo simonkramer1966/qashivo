@@ -684,7 +684,7 @@ export default function InvestorDemo() {
             </Button>
           </div>
           <p className="text-blue-100 mt-8 text-sm">
-            Raising £500K seed round | 30% allocated to strategic investors
+            Raising £1.5mn seed round | 20% allocated to strategic investors
           </p>
         </div>
       </section>
