@@ -1,4 +1,4 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogClose } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Sparkles, Brain, TrendingUp, CheckCircle2, AlertCircle, MessageSquare, Phone, UserCheck, Search, PhoneCall } from "lucide-react";
@@ -123,7 +123,7 @@ export function AIResultsDialog({ open, onOpenChange, results, type }: AIResults
   const currentAction = nextActions[results.intent as string] || nextActions.unknown;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={onOpenChange} modal={true}>
       <DialogContent 
         className="max-w-4xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 border-2 border-[#17B6C3]/30 shadow-2xl shadow-[#17B6C3]/20"
         data-testid="dialog-ai-results"
@@ -315,15 +315,27 @@ export function AIResultsDialog({ open, onOpenChange, results, type }: AIResults
             </div>
           )}
 
-          {/* Tech Badge */}
-          <div className="flex items-center justify-center gap-2 pt-4 border-t border-white/10">
-            <Badge variant="outline" className="bg-[#17B6C3]/10 border-[#17B6C3]/30 text-[#17B6C3] text-xs" data-testid="badge-tech">
-              <Sparkles className="w-3 h-3 mr-1" />
-              Powered by GPT-4o-mini
-            </Badge>
-            <Badge variant="outline" className="bg-white/5 border-white/20 text-slate-300 text-xs" data-testid="badge-realtime">
-              Real-time Analysis
-            </Badge>
+          {/* Tech Badge & Close Button */}
+          <div className="space-y-4 pt-4 border-t border-white/10">
+            <div className="flex items-center justify-center gap-2">
+              <Badge variant="outline" className="bg-[#17B6C3]/10 border-[#17B6C3]/30 text-[#17B6C3] text-xs" data-testid="badge-tech">
+                <Sparkles className="w-3 h-3 mr-1" />
+                Powered by GPT-4o-mini
+              </Badge>
+              <Badge variant="outline" className="bg-white/5 border-white/20 text-slate-300 text-xs" data-testid="badge-realtime">
+                Real-time Analysis
+              </Badge>
+            </div>
+            <div className="flex justify-center">
+              <DialogClose asChild>
+                <button 
+                  className="px-6 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors border border-white/20 hover:border-[#17B6C3]/50"
+                  data-testid="button-close-dialog"
+                >
+                  Close
+                </button>
+              </DialogClose>
+            </div>
           </div>
         </div>
       </DialogContent>
