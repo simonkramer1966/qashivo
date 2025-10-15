@@ -291,14 +291,18 @@ export default function InvestorDemo() {
             </div>
 
             <div className="relative">
-              <div className="aspect-video bg-gradient-to-br from-gray-100 to-gray-200 rounded-2xl shadow-2xl flex items-center justify-center border border-gray-300">
-                <div className="text-center">
-                  <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-[#17B6C3] flex items-center justify-center">
-                    <Zap className="w-10 h-10 text-white" />
-                  </div>
-                  <p className="text-gray-700 font-semibold text-lg">AI Avatar Video</p>
-                  <p className="text-gray-500 text-sm mt-1">Simon Kramer, Founder & CEO</p>
-                </div>
+              <div className="aspect-video rounded-2xl shadow-2xl overflow-hidden border border-gray-300">
+                <video 
+                  className="w-full h-full object-cover"
+                  controls
+                  autoPlay
+                  muted
+                  loop
+                  playsInline
+                >
+                  <source src="/attached_assets/QashivoIntro_1760528210393.mp4" type="video/mp4" />
+                  Your browser does not support the video tag.
+                </video>
               </div>
               
               <div className="absolute -bottom-8 -right-8 bg-white p-4 rounded-xl shadow-lg border border-gray-200" data-testid="card-revenue-target">
