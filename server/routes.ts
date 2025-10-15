@@ -10267,15 +10267,22 @@ Return only JSON with keys: intent, sentiment, confidence, keyInsights, actionIt
         
         const analysis = JSON.parse(completion.choices[0].message.content || '{}');
         
+        // Normalize field names (OpenAI sometimes returns inconsistent casing)
+        const normalizedAnalysis = {
+          intent: analysis.intent || analysis.Intent || 'unknown',
+          sentiment: analysis.sentiment || analysis.Sentiment || 'neutral',
+          confidence: analysis.confidence_score || analysis['Confidence score'] || analysis.confidence || 50
+        };
+        
         // Update investor lead with SMS demo results
         const updatedLead = await storage.updateInvestorLead(investorLead.id, {
           smsDemoCompleted: true,
           smsDemoResults: {
             fromPhone: msisdn,
             responseText: text,
-            intent: analysis.intent || 'unknown',
-            sentiment: analysis.sentiment || 'neutral',
-            confidence: analysis.confidence || 50,
+            intent: normalizedAnalysis.intent,
+            sentiment: normalizedAnalysis.sentiment,
+            confidence: normalizedAnalysis.confidence,
             analyzedAt: new Date().toISOString()
           }
         });
