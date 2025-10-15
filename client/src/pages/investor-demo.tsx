@@ -446,6 +446,9 @@ export default function InvestorDemo() {
                     <MessageSquare className="w-5 h-5 mr-2" />
                     Send SMS Now
                   </Button>
+                  <p className="text-sm text-gray-600 text-center">
+                    You'll receive an SMS from +44 7418 317011
+                  </p>
                 </div>
               </Card>
             </div>
