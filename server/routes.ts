@@ -10240,8 +10240,8 @@ Return only JSON with keys: intent, sentiment, confidence, keyInsights, actionIt
       // First, check if this is an investor demo lead response
       const fromPhone = msisdn.replace(/\D/g, '');
       
-      // Fetch all investor leads and match by normalized phone number
-      const allInvestorLeads = await db.select().from(investorLeads);
+      // Fetch all investor leads and match by normalized phone number, get the MOST RECENT one
+      const allInvestorLeads = await db.select().from(investorLeads).orderBy(desc(investorLeads.createdAt));
       const investorLead = allInvestorLeads.find(lead => 
         lead.phone && lead.phone.replace(/\D/g, '') === fromPhone
       );
