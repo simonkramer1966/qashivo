@@ -123,6 +123,9 @@ import {
   subscriptionPlans,
   partnerClientRelationships,
   tenantInvitations,
+  investorLeads,
+  type InvestorLead,
+  type InsertInvestorLead,
   tenantMetadata,
   type SubscriptionPlan,
   type InsertSubscriptionPlan,
@@ -566,6 +569,12 @@ export interface IStorage {
   getAllPlatformTenants(): Promise<Tenant[]>;
   getAllPlatformPartners(): Promise<Partner[]>;
   getAllPlatformRelationships(): Promise<(PartnerClientRelationship & { partnerUser: User; partnerTenant: Tenant; clientTenant: Tenant })[]>;
+  
+  // Investor Lead operations - for investor demo VSL page
+  createInvestorLead(lead: InsertInvestorLead): Promise<InvestorLead>;
+  getInvestorLead(id: string): Promise<InvestorLead | undefined>;
+  getInvestorLeadByEmail(email: string): Promise<InvestorLead | undefined>;
+  updateInvestorLead(id: string, updates: Partial<InsertInvestorLead>): Promise<InvestorLead>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -4877,6 +4886,34 @@ export class DatabaseStorage implements IStorage {
       partnerTenant: r.partnerTenant as Tenant,
       clientTenant: r.clientTenant as Tenant,
     }));
+  }
+
+  // Investor Lead operations - for investor demo VSL page
+  async createInvestorLead(leadData: InsertInvestorLead): Promise<InvestorLead> {
+    const [lead] = await db.insert(investorLeads).values(leadData).returning();
+    return lead;
+  }
+
+  async getInvestorLead(id: string): Promise<InvestorLead | undefined> {
+    const [lead] = await db.select().from(investorLeads).where(eq(investorLeads.id, id));
+    return lead;
+  }
+
+  async getInvestorLeadByEmail(email: string): Promise<InvestorLead | undefined> {
+    const [lead] = await db.select().from(investorLeads).where(eq(investorLeads.email, email));
+    return lead;
+  }
+
+  async updateInvestorLead(id: string, updates: Partial<InsertInvestorLead>): Promise<InvestorLead> {
+    const [lead] = await db
+      .update(investorLeads)
+      .set({
+        ...updates,
+        updatedAt: new Date(),
+      })
+      .where(eq(investorLeads.id, id))
+      .returning();
+    return lead;
   }
 }
 
