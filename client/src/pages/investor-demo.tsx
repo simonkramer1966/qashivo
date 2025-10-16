@@ -852,7 +852,7 @@ export default function InvestorDemo() {
               <p className="text-xl font-semibold text-gray-900 mb-2">3-Year Target (SOM)</p>
               <p className="text-gray-600" data-testid="text-som-value">£7-14M Revenue</p>
               <div className="mt-4 pt-4 border-t border-gray-200">
-                <p className="text-sm text-gray-500">200+ businesses on waitlist</p>
+                <p className="text-sm text-gray-500">200+ pre-launch inquiries</p>
               </div>
             </Card>
           </div>
@@ -872,7 +872,7 @@ export default function InvestorDemo() {
                   <Brain className="w-8 h-8 text-[#8B2635]" />
                 </div>
                 <p className="font-semibold text-gray-900 mb-2">AI Advantage</p>
-                <p className="text-sm text-gray-600">Proprietary intent detection trained on £70M+ invoice data</p>
+                <p className="text-sm text-gray-600">AI models developed using £70M+ pilot dataset</p>
               </div>
               <div className="text-center">
                 <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
