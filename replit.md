@@ -117,6 +117,22 @@ A secure administration interface for Qashivo employees to manage and monitor th
 - Frontend: `useEffect` redirect + early return for non-platform-admins
 - Multi-layer defense: API returns 403 if platformAdmin check fails, UI prevents unauthorized access
 
+### Security Architecture
+For comprehensive security documentation including authentication, authorization, data protection, and improvement recommendations, see **[SECURITY.md](./SECURITY.md)**.
+
+**Key Security Features:**
+- **Authentication**: OAuth 2.0 via Replit OIDC with PostgreSQL-backed sessions (7-day TTL)
+- **Authorization**: 50+ granular RBAC permissions across 6 categories (invoices, customers, finance, AI, reports, admin)
+- **Multi-Tenant Isolation**: Strict tenant scoping at database, middleware, and storage layers
+- **Input Validation**: Zod schemas for all API inputs, Drizzle ORM for SQL injection prevention
+- **Webhook Security**: HMAC signature verification for external integrations (Xero, Sage, QuickBooks)
+- **Platform Admin Access**: Dedicated `platformAdmin` flag with multi-layer enforcement
+
+**Security Roadmap (See SECURITY.md for details):**
+- **Priority 1**: API key encryption at rest (KMS/Key Vault), audit logging, rate limiting/DDoS protection
+- **Priority 2**: Two-factor authentication (2FA), session rotation, Content Security Policy headers
+- **Priority 3**: IP whitelisting for admins, anomaly detection, automated secrets rotation
+
 ### Feature Specifications
 
 #### Intent Analyst System
