@@ -461,7 +461,7 @@ export default function InvestorDemo() {
       </header>
 
       {/* Hero Section */}
-      <section className="relative pt-20 pb-32 px-6 bg-gradient-to-br from-blue-50 via-white to-teal-50">
+      <section className="relative pt-20 pb-32 px-6 bg-gradient-to-br from-[#0E131F]/5 via-white to-[#17B6C3]/10">
         <div className="max-w-7xl mx-auto">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div>
@@ -506,7 +506,7 @@ export default function InvestorDemo() {
               
               <div className="absolute -bottom-16 -right-8 bg-white p-4 rounded-xl shadow-lg border border-gray-200" data-testid="card-revenue-target">
                 <div className="flex items-center gap-3">
-                  <TrendingUp className="w-8 h-8 text-green-600" />
+                  <TrendingUp className="w-8 h-8 text-[#A98743]" />
                   <div>
                     <p className="text-2xl font-bold text-gray-900" data-testid="text-revenue-amount">£7-14M</p>
                     <p className="text-sm text-gray-600">3-Year Revenue Target</p>
@@ -554,33 +554,33 @@ export default function InvestorDemo() {
           </div>
 
           <div className="grid md:grid-cols-3 gap-8">
-            <Card className="p-8 border-2 border-red-200 bg-red-50" data-testid="card-problem-cost">
-              <div className="w-12 h-12 bg-red-600 rounded-lg flex items-center justify-center mb-4">
+            <Card className="p-8 border-2 border-[#8B2635]/30 bg-[#8B2635]/5" data-testid="card-problem-cost">
+              <div className="w-12 h-12 bg-[#8B2635] rounded-lg flex items-center justify-center mb-4">
                 <DollarSign className="w-6 h-6 text-white" />
               </div>
               <h3 className="text-2xl font-bold text-gray-900 mb-2" data-testid="text-problem-amount">£11B Lost</h3>
               <p className="text-gray-600 mb-4">Annual cost to UK SMEs from late payments</p>
-              <div className="text-4xl font-bold text-red-600" data-testid="text-failures-count">14,000</div>
+              <div className="text-4xl font-bold text-[#8B2635]" data-testid="text-failures-count">14,000</div>
               <p className="text-sm text-gray-500">Businesses fail each year due to late payments</p>
             </Card>
 
-            <Card className="p-8 border-2 border-orange-200 bg-orange-50" data-testid="card-problem-dso">
-              <div className="w-12 h-12 bg-orange-600 rounded-lg flex items-center justify-center mb-4">
+            <Card className="p-8 border-2 border-[#8B2635]/30 bg-[#8B2635]/5" data-testid="card-problem-dso">
+              <div className="w-12 h-12 bg-[#8B2635] rounded-lg flex items-center justify-center mb-4">
                 <Clock className="w-6 h-6 text-white" />
               </div>
               <h3 className="text-2xl font-bold text-gray-900 mb-2" data-testid="text-dso-days">64 Days</h3>
               <p className="text-gray-600 mb-4">Average DSO for UK SMEs</p>
-              <div className="text-4xl font-bold text-orange-600" data-testid="text-payment-multiplier">2x</div>
+              <div className="text-4xl font-bold text-[#8B2635]" data-testid="text-payment-multiplier">2x</div>
               <p className="text-sm text-gray-500">Payment terms exceeded</p>
             </Card>
 
-            <Card className="p-8 border-2 border-yellow-200 bg-yellow-50" data-testid="card-problem-compliance">
-              <div className="w-12 h-12 bg-yellow-600 rounded-lg flex items-center justify-center mb-4">
+            <Card className="p-8 border-2 border-[#A98743]/30 bg-[#A98743]/5" data-testid="card-problem-compliance">
+              <div className="w-12 h-12 bg-[#A98743] rounded-lg flex items-center justify-center mb-4">
                 <Shield className="w-6 h-6 text-white" />
               </div>
               <h3 className="text-2xl font-bold text-gray-900 mb-2" data-testid="text-compliance-rate">100% Must Comply</h3>
               <p className="text-gray-600 mb-4">Late Payment Act becomes mandatory</p>
-              <div className="text-4xl font-bold text-yellow-600" data-testid="text-solutions-count">0</div>
+              <div className="text-4xl font-bold text-[#A98743]" data-testid="text-solutions-count">0</div>
               <p className="text-sm text-gray-500">Current compliant solutions</p>
             </Card>
           </div>
@@ -588,7 +588,7 @@ export default function InvestorDemo() {
       </section>
 
       {/* The Solution */}
-      <section className="py-24 px-6 bg-gradient-to-br from-gray-50 to-blue-50">
+      <section className="py-24 px-6 bg-gradient-to-br from-gray-50 to-[#0E131F]/5">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-4xl font-bold text-gray-900 mb-4">The Qashivo Solution</h2>
@@ -650,16 +650,16 @@ export default function InvestorDemo() {
                 />
               </div>
               <div className="grid grid-cols-3 gap-4">
-                <div className="text-center p-3 bg-green-50 rounded-lg" data-testid="card-solution-accuracy">
-                  <p className="text-2xl font-bold text-green-600" data-testid="text-accuracy-rate">95%</p>
+                <div className="text-center p-3 bg-[#A98743]/5 rounded-lg" data-testid="card-solution-accuracy">
+                  <p className="text-2xl font-bold text-[#A98743]" data-testid="text-accuracy-rate">95%</p>
                   <p className="text-xs text-gray-600">Forecast Accuracy</p>
                 </div>
                 <div className="text-center p-3 bg-blue-50 rounded-lg" data-testid="card-solution-dso">
-                  <p className="text-2xl font-bold text-blue-600" data-testid="text-dso-reduction">-40%</p>
+                  <p className="text-2xl font-bold text-[#0E131F]" data-testid="text-dso-reduction">-40%</p>
                   <p className="text-xs text-gray-600">DSO Reduction</p>
                 </div>
-                <div className="text-center p-3 bg-purple-50 rounded-lg" data-testid="card-solution-time">
-                  <p className="text-2xl font-bold text-purple-600" data-testid="text-time-saved">85%</p>
+                <div className="text-center p-3 bg-[#8B2635]/5 rounded-lg" data-testid="card-solution-time">
+                  <p className="text-2xl font-bold text-[#8B2635]" data-testid="text-time-saved">85%</p>
                   <p className="text-xs text-gray-600">Time Saved</p>
                 </div>
               </div>
@@ -673,9 +673,9 @@ export default function InvestorDemo() {
         <div className="max-w-7xl mx-auto">
           <div className="grid lg:grid-cols-2 gap-8 mb-12">
               {/* Voice Demo */}
-              <Card className="p-8 border-2 border-purple-200 bg-gradient-to-br from-purple-50 to-blue-50">
+              <Card className="p-8 border-2 border-[#8B2635]/30 bg-gradient-to-br from-[#8B2635]/5 to-blue-50">
                 <div className="flex items-center gap-3 mb-6">
-                  <div className="p-3 bg-purple-600 rounded-xl">
+                  <div className="p-3 bg-[#8B2635] rounded-xl">
                     <Phone className="w-6 h-6 text-white" />
                   </div>
                   <div>
@@ -730,7 +730,7 @@ export default function InvestorDemo() {
                   <Button
                     onClick={handleVoiceDemo}
                     disabled={!voicePhone}
-                    className="w-full bg-purple-600 hover:bg-purple-700 text-white text-lg py-6"
+                    className="w-full bg-[#8B2635] hover:bg-purple-700 text-white text-lg py-6"
                     data-testid="button-start-voice-demo"
                   >
                     <Phone className="w-5 h-5 mr-2" />
@@ -743,9 +743,9 @@ export default function InvestorDemo() {
               </Card>
 
               {/* SMS Demo */}
-              <Card className="p-8 border-2 border-green-200 bg-gradient-to-br from-green-50 to-teal-50">
+              <Card className="p-8 border-2 border-[#A98743]/30 bg-gradient-to-br from-[#A98743]/5 to-teal-50">
                 <div className="flex items-center gap-3 mb-6">
-                  <div className="p-3 bg-green-600 rounded-xl">
+                  <div className="p-3 bg-[#A98743] rounded-xl">
                     <MessageSquare className="w-6 h-6 text-white" />
                   </div>
                   <div>
@@ -800,7 +800,7 @@ export default function InvestorDemo() {
                   <Button
                     onClick={handleSMSDemo}
                     disabled={!smsPhone}
-                    className="w-full bg-green-600 hover:bg-green-700 text-white text-lg py-6"
+                    className="w-full bg-[#A98743] hover:bg-green-700 text-white text-lg py-6"
                     data-testid="button-start-sms-demo"
                   >
                     <MessageSquare className="w-5 h-5 mr-2" />
@@ -828,8 +828,8 @@ export default function InvestorDemo() {
 
           <div className="grid md:grid-cols-3 gap-8 mb-12">
             <Card className="p-8 text-center border-2 border-blue-200 bg-white" data-testid="card-market-tam">
-              <Target className="w-12 h-12 text-blue-600 mx-auto mb-4" />
-              <div className="text-5xl font-bold text-blue-600 mb-2" data-testid="text-tam-count">2.7M</div>
+              <Target className="w-12 h-12 text-[#0E131F] mx-auto mb-4" />
+              <div className="text-5xl font-bold text-[#0E131F] mb-2" data-testid="text-tam-count">2.7M</div>
               <p className="text-xl font-semibold text-gray-900 mb-2">UK SMEs (TAM)</p>
               <p className="text-gray-600" data-testid="text-tam-value">£4.8B Total Market</p>
               <div className="mt-4 pt-4 border-t border-gray-200">
@@ -838,8 +838,8 @@ export default function InvestorDemo() {
             </Card>
 
             <Card className="p-8 text-center border-2 border-purple-200 bg-white" data-testid="card-market-sam">
-              <Users className="w-12 h-12 text-purple-600 mx-auto mb-4" />
-              <div className="text-5xl font-bold text-purple-600 mb-2" data-testid="text-sam-count">800K</div>
+              <Users className="w-12 h-12 text-[#8B2635] mx-auto mb-4" />
+              <div className="text-5xl font-bold text-[#8B2635] mb-2" data-testid="text-sam-count">800K</div>
               <p className="text-xl font-semibold text-gray-900 mb-2">Cloud Accounting (SAM)</p>
               <p className="text-gray-600" data-testid="text-sam-value">£1.4B Addressable</p>
               <div className="mt-4 pt-4 border-t border-gray-200">
@@ -862,22 +862,22 @@ export default function InvestorDemo() {
             <h3 className="text-2xl font-bold text-gray-900 mb-6 text-center">Why We'll Win</h3>
             <div className="grid md:grid-cols-3 gap-6">
               <div className="text-center">
-                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                  <Shield className="w-8 h-8 text-green-600" />
+                <div className="w-16 h-16 bg-[#A98743]/10 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <Shield className="w-8 h-8 text-[#A98743]" />
                 </div>
                 <p className="font-semibold text-gray-900 mb-2">Legal Moat</p>
                 <p className="text-sm text-gray-600">Built on the Late Payment Act - competitors can't replicate statutory compliance</p>
               </div>
               <div className="text-center">
                 <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                  <Brain className="w-8 h-8 text-purple-600" />
+                  <Brain className="w-8 h-8 text-[#8B2635]" />
                 </div>
                 <p className="font-semibold text-gray-900 mb-2">AI Advantage</p>
                 <p className="text-sm text-gray-600">Proprietary intent detection trained on £70M+ invoice data</p>
               </div>
               <div className="text-center">
                 <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                  <Zap className="w-8 h-8 text-blue-600" />
+                  <Zap className="w-8 h-8 text-[#0E131F]" />
                 </div>
                 <p className="font-semibold text-gray-900 mb-2">First Mover</p>
                 <p className="text-sm text-gray-600">No compliant AI solution exists - we own the category</p>
@@ -891,8 +891,8 @@ export default function InvestorDemo() {
       <section className="py-24 px-6 bg-white">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
-            <div className="inline-block px-4 py-2 bg-green-100 rounded-full mb-4">
-              <span className="text-green-700 font-semibold">EARLY TRACTION</span>
+            <div className="inline-block px-4 py-2 bg-[#A98743]/10 rounded-full mb-4">
+              <span className="text-[#A98743] font-semibold">EARLY TRACTION</span>
             </div>
             <h2 className="text-4xl font-bold text-gray-900 mb-4">Validated Demand</h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
@@ -901,27 +901,27 @@ export default function InvestorDemo() {
           </div>
 
           <div className="grid md:grid-cols-4 gap-6">
-            <Card className="p-6 text-center bg-gradient-to-br from-green-50 to-emerald-50 border-green-200" data-testid="card-traction-waitlist">
-              <TrendingUp className="w-10 h-10 text-green-600 mx-auto mb-3" />
-              <div className="text-4xl font-bold text-green-600 mb-1" data-testid="text-waitlist-count">200+</div>
+            <Card className="p-6 text-center bg-gradient-to-br from-[#A98743]/5 to-[#A98743]/10 border-[#A98743]/30" data-testid="card-traction-waitlist">
+              <TrendingUp className="w-10 h-10 text-[#A98743] mx-auto mb-3" />
+              <div className="text-4xl font-bold text-[#A98743] mb-1" data-testid="text-waitlist-count">200+</div>
               <p className="text-gray-700 font-medium">Waitlist Signups</p>
             </Card>
 
-            <Card className="p-6 text-center bg-gradient-to-br from-blue-50 to-cyan-50 border-blue-200" data-testid="card-traction-customers">
-              <Users className="w-10 h-10 text-blue-600 mx-auto mb-3" />
-              <div className="text-4xl font-bold text-blue-600 mb-1" data-testid="text-beta-customers">12</div>
+            <Card className="p-6 text-center bg-gradient-to-br from-[#0E131F]/5 to-[#17B6C3]/10 border-[#0E131F]/30" data-testid="card-traction-customers">
+              <Users className="w-10 h-10 text-[#0E131F] mx-auto mb-3" />
+              <div className="text-4xl font-bold text-[#0E131F] mb-1" data-testid="text-beta-customers">12</div>
               <p className="text-gray-700 font-medium">Beta Customers</p>
             </Card>
 
-            <Card className="p-6 text-center bg-gradient-to-br from-purple-50 to-pink-50 border-purple-200" data-testid="card-traction-invoices">
-              <DollarSign className="w-10 h-10 text-purple-600 mx-auto mb-3" />
-              <div className="text-4xl font-bold text-purple-600 mb-1" data-testid="text-invoices-managed">£70M+</div>
+            <Card className="p-6 text-center bg-gradient-to-br from-[#8B2635]/5 to-[#8B2635]/10 border-[#8B2635]/30" data-testid="card-traction-invoices">
+              <DollarSign className="w-10 h-10 text-[#8B2635] mx-auto mb-3" />
+              <div className="text-4xl font-bold text-[#8B2635] mb-1" data-testid="text-invoices-managed">£70M+</div>
               <p className="text-gray-700 font-medium">Invoices Managed</p>
             </Card>
 
-            <Card className="p-6 text-center bg-gradient-to-br from-orange-50 to-red-50 border-orange-200" data-testid="card-traction-dso">
-              <BarChart3 className="w-10 h-10 text-orange-600 mx-auto mb-3" />
-              <div className="text-4xl font-bold text-orange-600 mb-1" data-testid="text-avg-dso-reduction">40%</div>
+            <Card className="p-6 text-center bg-gradient-to-br from-orange-50 to-red-50 border-[#8B2635]/30" data-testid="card-traction-dso">
+              <BarChart3 className="w-10 h-10 text-[#8B2635] mx-auto mb-3" />
+              <div className="text-4xl font-bold text-[#8B2635] mb-1" data-testid="text-avg-dso-reduction">40%</div>
               <p className="text-gray-700 font-medium">Avg DSO Reduction</p>
             </Card>
           </div>
