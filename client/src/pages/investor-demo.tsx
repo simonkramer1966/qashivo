@@ -903,13 +903,13 @@ export default function InvestorDemo() {
             <Card className="p-6 text-center bg-gradient-to-br from-[#A98743]/5 to-[#A98743]/10 border-[#A98743]/30" data-testid="card-traction-waitlist">
               <TrendingUp className="w-10 h-10 text-[#A98743] mx-auto mb-3" />
               <div className="text-4xl font-bold text-[#A98743] mb-1" data-testid="text-waitlist-count">200+</div>
-              <p className="text-gray-700 font-medium">Waitlist Signups</p>
+              <p className="text-gray-700 font-medium">Product Inquiries</p>
             </Card>
 
             <Card className="p-6 text-center bg-gradient-to-br from-[#0E131F]/5 to-[#17B6C3]/10 border-[#0E131F]/30" data-testid="card-traction-customers">
               <Users className="w-10 h-10 text-[#0E131F] mx-auto mb-3" />
               <div className="text-4xl font-bold text-[#0E131F] mb-1" data-testid="text-beta-customers">12</div>
-              <p className="text-gray-700 font-medium">Beta Customers</p>
+              <p className="text-gray-700 font-medium">Pilot Participants</p>
             </Card>
 
             <Card className="p-6 text-center bg-gradient-to-br from-[#8B2635]/5 to-[#8B2635]/10 border-[#8B2635]/30" data-testid="card-traction-invoices">
@@ -934,7 +934,7 @@ export default function InvestorDemo() {
             Join the £4.8B Opportunity
           </h2>
           <p className="text-2xl text-blue-100 mb-8">
-            SEIS-eligible investment | 200+ SMEs on waitlist | Xero integration live
+            SEIS-eligible investment | 200+ market inquiries | Xero integration ready
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
             <Button
