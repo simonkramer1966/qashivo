@@ -18,6 +18,8 @@ interface AIResultsDialogProps {
     transcript?: string;
   } | null;
   type: "voice" | "sms";
+  isDemoProcessing?: boolean;
+  progressMessage?: string;
 }
 
 const sentimentColors = {
@@ -37,7 +39,7 @@ const intentIcons = {
   unknown: Brain,
 };
 
-export function AIResultsDialog({ open, onOpenChange, results, type }: AIResultsDialogProps) {
+export function AIResultsDialog({ open, onOpenChange, results, type, isDemoProcessing = false, progressMessage = "" }: AIResultsDialogProps) {
   const [animatedConfidence, setAnimatedConfidence] = useState(0);
   const [showContent, setShowContent] = useState(false);
 
@@ -122,8 +124,17 @@ export function AIResultsDialog({ open, onOpenChange, results, type }: AIResults
 
   const currentAction = nextActions[results.intent as string] || nextActions.unknown;
 
+  // Prevent closing when demo is processing
+  const handleOpenChange = (newOpen: boolean) => {
+    if (isDemoProcessing && !newOpen) {
+      // Don't allow closing while processing
+      return;
+    }
+    onOpenChange(newOpen);
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange} modal={true}>
+    <Dialog open={open} onOpenChange={handleOpenChange} modal={true}>
       <DialogContent 
         className="max-w-4xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 border-2 border-[#17B6C3]/30 shadow-2xl shadow-[#17B6C3]/20"
         data-testid="dialog-ai-results"
@@ -136,7 +147,10 @@ export function AIResultsDialog({ open, onOpenChange, results, type }: AIResults
 
         <DialogHeader className="relative">
           <div className="flex items-center gap-3 mb-4">
-            <div className="p-3 bg-[#17B6C3]/20 rounded-xl border border-[#17B6C3]/30">
+            <div className={cn(
+              "p-3 bg-[#17B6C3]/20 rounded-xl border border-[#17B6C3]/30",
+              isDemoProcessing && "animate-pulse"
+            )}>
               <Sparkles className="w-6 h-6 text-[#17B6C3]" data-testid="icon-sparkles" />
             </div>
             <div>
@@ -146,6 +160,14 @@ export function AIResultsDialog({ open, onOpenChange, results, type }: AIResults
               <DialogDescription className="text-sm text-slate-400 mt-1" data-testid="text-analysis-type">
                 {type === "voice" ? "Voice Call" : "SMS"} Intelligence Report
               </DialogDescription>
+              {isDemoProcessing && progressMessage && (
+                <div className="mt-2 flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-[#17B6C3] animate-pulse" />
+                  <p className="text-sm text-[#17B6C3] font-medium animate-pulse" data-testid="text-progress-message">
+                    {progressMessage}
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         </DialogHeader>
@@ -327,14 +349,24 @@ export function AIResultsDialog({ open, onOpenChange, results, type }: AIResults
               </Badge>
             </div>
             <div className="flex justify-center">
-              <DialogClose asChild>
+              {isDemoProcessing ? (
                 <button 
-                  className="px-6 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors border border-white/20 hover:border-[#17B6C3]/50"
-                  data-testid="button-close-dialog"
+                  disabled
+                  className="px-6 py-2 bg-white/5 text-slate-500 rounded-lg border border-white/10 cursor-not-allowed opacity-50"
+                  data-testid="button-close-dialog-disabled"
                 >
-                  Close
+                  Processing...
                 </button>
-              </DialogClose>
+              ) : (
+                <DialogClose asChild>
+                  <button 
+                    className="px-6 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors border border-white/20 hover:border-[#17B6C3]/50"
+                    data-testid="button-close-dialog"
+                  >
+                    Close
+                  </button>
+                </DialogClose>
+              )}
             </div>
           </div>
         </div>

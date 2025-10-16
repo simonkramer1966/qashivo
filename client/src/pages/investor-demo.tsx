@@ -82,6 +82,11 @@ export default function InvestorDemo() {
   const [resultsType, setResultsType] = useState<"voice" | "sms">("voice");
   const lastShownResultsRef = useRef<string>("");
   
+  // Demo processing states for progress and dialog locking
+  const [voiceProgress, setVoiceProgress] = useState<string>("");
+  const [smsProgress, setSmsProgress] = useState<string>("");
+  const [isDemoProcessing, setIsDemoProcessing] = useState(false);
+  
   // Investment call dialog state
   const [investmentDialogOpen, setInvestmentDialogOpen] = useState(false);
   const [investorFirstName, setInvestorFirstName] = useState("");
@@ -153,6 +158,8 @@ export default function InvestorDemo() {
       
       setCurrentResults(demoResults.voiceDemoResults);
       setResultsType("voice");
+      setVoiceProgress("");
+      setIsDemoProcessing(false); // Unlock dialog
       
       // Only open dialog if we haven't shown these results yet
       if (lastShownResultsRef.current !== resultKey) {
@@ -171,6 +178,8 @@ export default function InvestorDemo() {
       
       setCurrentResults(demoResults.smsDemoResults);
       setResultsType("sms");
+      setSmsProgress("");
+      setIsDemoProcessing(false); // Unlock dialog
       
       // Only open dialog if we haven't shown these results yet
       if (lastShownResultsRef.current !== resultKey) {
@@ -223,32 +232,55 @@ export default function InvestorDemo() {
   const handleVoiceDemo = async () => {
     if (!voicePhone) return;
     
+    // Immediate feedback - set progress and lock dialog
+    setVoiceProgress("Initiating...");
+    setIsDemoProcessing(true);
+    
     try {
       // Sanitize phone number
       const sanitizedPhone = sanitizePhoneNumber(voicePhone, voiceCountryCode);
       
-      // Auto-create lead if doesn't exist
+      // Progress update
+      setTimeout(() => setVoiceProgress("Connecting..."), 400);
+      
+      // Parallelize lead creation and demo setup
       let currentLeadId = leadId;
+      
+      const operations = [];
+      
+      // If no lead exists, create one in parallel
       if (!currentLeadId) {
-        const leadResponse = await fetch("/api/investor/lead", {
+        const leadPromise = fetch("/api/investor/lead", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ 
             name: voiceName || "Anonymous Investor", 
             email: `demo-${Date.now()}@investor.demo` 
           }),
+        }).then(async (res) => {
+          if (!res.ok) throw new Error("Failed to create lead");
+          const lead = await res.json();
+          currentLeadId = lead.id;
+          setLeadId(lead.id);
+          return lead.id;
         });
         
-        if (!leadResponse.ok) throw new Error("Failed to create lead");
-        const lead = await leadResponse.json();
-        currentLeadId = lead.id;
-        setLeadId(lead.id);
+        operations.push(leadPromise);
+      } else {
+        operations.push(Promise.resolve(currentLeadId));
       }
       
+      // Wait for lead ID to be available
+      const [resolvedLeadId] = await Promise.all(operations);
+      
+      // Progress update
+      setTimeout(() => setVoiceProgress("In progress..."), 800);
+      
+      // Initiate the voice call
       const response = await fetch("/api/investor/voice-demo", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ leadId: currentLeadId, phone: sanitizedPhone, name: voiceName }),
+        body: JSON.stringify({ leadId: resolvedLeadId, phone: sanitizedPhone, name: voiceName }),
       });
       
       if (!response.ok) throw new Error("Failed to initiate call");
@@ -267,10 +299,12 @@ export default function InvestorDemo() {
       setResultsDialogOpen(true);
       
       toast({
-        title: "Initiating AI Voice Call",
-        description: "You'll receive a call in a few seconds...",
+        title: "AI Voice Call Started",
+        description: "You'll receive a call shortly...",
       });
     } catch (error) {
+      setVoiceProgress("");
+      setIsDemoProcessing(false);
       toast({
         title: "Error",
         description: "Failed to initiate call. Please try again.",
@@ -282,32 +316,55 @@ export default function InvestorDemo() {
   const handleSMSDemo = async () => {
     if (!smsPhone) return;
     
+    // Immediate feedback - set progress and lock dialog
+    setSmsProgress("Initiating...");
+    setIsDemoProcessing(true);
+    
     try {
       // Sanitize phone number
       const sanitizedPhone = sanitizePhoneNumber(smsPhone, smsCountryCode);
       
-      // Auto-create lead if doesn't exist
+      // Progress update
+      setTimeout(() => setSmsProgress("Connecting..."), 400);
+      
+      // Parallelize lead creation and demo setup
       let currentLeadId = leadId;
+      
+      const operations = [];
+      
+      // If no lead exists, create one in parallel
       if (!currentLeadId) {
-        const leadResponse = await fetch("/api/investor/lead", {
+        const leadPromise = fetch("/api/investor/lead", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ 
             name: smsName || "Anonymous Investor", 
             email: `demo-${Date.now()}@investor.demo` 
           }),
+        }).then(async (res) => {
+          if (!res.ok) throw new Error("Failed to create lead");
+          const lead = await res.json();
+          currentLeadId = lead.id;
+          setLeadId(lead.id);
+          return lead.id;
         });
         
-        if (!leadResponse.ok) throw new Error("Failed to create lead");
-        const lead = await leadResponse.json();
-        currentLeadId = lead.id;
-        setLeadId(lead.id);
+        operations.push(leadPromise);
+      } else {
+        operations.push(Promise.resolve(currentLeadId));
       }
       
+      // Wait for lead ID to be available
+      const [resolvedLeadId] = await Promise.all(operations);
+      
+      // Progress update
+      setTimeout(() => setSmsProgress("In progress..."), 800);
+      
+      // Initiate the SMS
       const response = await fetch("/api/investor/sms-demo", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ leadId: currentLeadId, phone: sanitizedPhone, name: smsName }),
+        body: JSON.stringify({ leadId: resolvedLeadId, phone: sanitizedPhone, name: smsName }),
       });
       
       if (!response.ok) throw new Error("Failed to send SMS");
@@ -330,6 +387,8 @@ export default function InvestorDemo() {
         description: "Reply to experience AI intent detection",
       });
     } catch (error) {
+      setSmsProgress("");
+      setIsDemoProcessing(false);
       toast({
         title: "Error",
         description: "Failed to send SMS. Please try again.",
@@ -967,6 +1026,8 @@ export default function InvestorDemo() {
         onOpenChange={setResultsDialogOpen}
         results={currentResults}
         type={resultsType}
+        isDemoProcessing={isDemoProcessing}
+        progressMessage={resultsType === "voice" ? voiceProgress : smsProgress}
       />
 
       {/* Investment Call Dialog */}
