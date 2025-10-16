@@ -891,11 +891,11 @@ export default function InvestorDemo() {
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
             <div className="inline-block px-4 py-2 bg-[#A98743]/10 rounded-full mb-4">
-              <span className="text-[#A98743] font-semibold">EARLY TRACTION</span>
+              <span className="text-[#A98743] font-semibold">DEVELOPMENT PROGRESS</span>
             </div>
-            <h2 className="text-4xl font-bold text-gray-900 mb-4">Validated Demand</h2>
+            <h2 className="text-4xl font-bold text-gray-900 mb-4">Market Validation</h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Strong early indicators with product-market fit across multiple customer segments
+              Positive pilot feedback and strong market interest across target segments
             </p>
           </div>
 
