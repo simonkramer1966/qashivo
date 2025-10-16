@@ -17734,6 +17734,132 @@ Return only JSON with keys: intent, sentiment, confidence, keyInsights, actionIt
 
   // ==================== END INVESTOR DEMO API ====================
 
+  // ==================== DOCUMENTATION DOWNLOAD API ====================
+  
+  // Download SECURITY.md as PDF
+  app.get('/api/docs/security/download', async (req, res) => {
+    try {
+      const { mdToPdf } = await import('md-to-pdf');
+      const fs = await import('fs');
+      const path = await import('path');
+      
+      const securityMdPath = path.join(process.cwd(), 'SECURITY.md');
+      
+      // Check if file exists
+      if (!fs.existsSync(securityMdPath)) {
+        return res.status(404).json({ message: 'Security documentation not found' });
+      }
+      
+      // Convert to PDF with custom styling
+      const pdf = await mdToPdf(
+        { path: securityMdPath },
+        {
+          dest: path.join(process.cwd(), 'SECURITY.pdf'),
+          pdf_options: {
+            format: 'A4',
+            margin: {
+              top: '20mm',
+              right: '20mm',
+              bottom: '20mm',
+              left: '20mm'
+            },
+            printBackground: true
+          },
+          stylesheet: `
+            body {
+              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+              line-height: 1.6;
+              color: #333;
+              max-width: 900px;
+              margin: 0 auto;
+            }
+            h1 {
+              color: #17B6C3;
+              border-bottom: 3px solid #17B6C3;
+              padding-bottom: 10px;
+              margin-top: 30px;
+            }
+            h2 {
+              color: #2c3e50;
+              border-bottom: 2px solid #ecf0f1;
+              padding-bottom: 8px;
+              margin-top: 25px;
+            }
+            h3 {
+              color: #34495e;
+              margin-top: 20px;
+            }
+            code {
+              background: #f4f4f4;
+              padding: 2px 6px;
+              border-radius: 3px;
+              font-family: 'Courier New', Courier, monospace;
+              font-size: 0.9em;
+            }
+            pre {
+              background: #2c3e50;
+              color: #ecf0f1;
+              padding: 15px;
+              border-radius: 5px;
+              overflow-x: auto;
+              margin: 15px 0;
+            }
+            pre code {
+              background: transparent;
+              color: inherit;
+              padding: 0;
+            }
+            table {
+              border-collapse: collapse;
+              width: 100%;
+              margin: 15px 0;
+            }
+            th, td {
+              border: 1px solid #ddd;
+              padding: 12px;
+              text-align: left;
+            }
+            th {
+              background-color: #17B6C3;
+              color: white;
+            }
+            tr:nth-child(even) {
+              background-color: #f9f9f9;
+            }
+            ul, ol {
+              margin: 10px 0;
+              padding-left: 30px;
+            }
+            blockquote {
+              border-left: 4px solid #17B6C3;
+              padding-left: 15px;
+              margin: 15px 0;
+              color: #666;
+              font-style: italic;
+            }
+          `
+        }
+      );
+      
+      // Set headers for download
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', 'attachment; filename="Qashivo-Security-Documentation.pdf"');
+      
+      // Read and send the PDF
+      const pdfBuffer = fs.readFileSync(pdf.filename);
+      res.send(pdfBuffer);
+      
+      // Clean up temporary PDF file
+      fs.unlinkSync(pdf.filename);
+      
+    } catch (error) {
+      console.error('Failed to generate PDF:', error);
+      res.status(500).json({ message: 'Failed to generate PDF', error: error.message });
+    }
+  });
+
+  // ==================== END DOCUMENTATION DOWNLOAD API ====================
+
   const httpServer = createServer(app);
   
   // WebSocket server for real-time investor demo updates
