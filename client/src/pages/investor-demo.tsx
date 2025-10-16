@@ -945,11 +945,17 @@ export default function InvestorDemo() {
           <div className="flex justify-center">
             <Button
               className="bg-white text-[#17B6C3] hover:bg-gray-100 text-xl px-12 py-7 shadow-xl"
-              onClick={() => setInvestmentDialogOpen(true)}
-              data-testid="button-schedule-call"
+              onClick={() => {
+                const link = document.createElement('a');
+                link.href = investorDeckPdf;
+                link.download = 'Qashivo-Investor-Deck.pdf';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+              }}
+              data-testid="button-download-deck"
             >
-              Schedule Investment Call
-              <ArrowRight className="ml-2 w-5 h-5" />
+              Download Full Investment Deck
             </Button>
           </div>
         </div>
