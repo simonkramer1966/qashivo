@@ -964,7 +964,7 @@ export default function InvestorDemo() {
               }}
               data-testid="button-download-deck"
             >
-              Download Full Deck
+              Download Full Investment Deck
             </Button>
           </div>
         </div>
