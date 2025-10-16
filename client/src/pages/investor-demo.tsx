@@ -952,14 +952,7 @@ export default function InvestorDemo() {
           <div className="flex justify-center">
             <Button
               className="bg-white text-[#17B6C3] hover:bg-gray-100 text-xl px-12 py-7 shadow-xl"
-              onClick={() => {
-                const link = document.createElement('a');
-                link.href = investorDeckPdf;
-                link.download = 'Qashivo-Investor-Deck.pdf';
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-              }}
+              onClick={() => setInvestmentDialogOpen(true)}
               data-testid="button-download-deck"
             >
               Download Full Investment Deck
