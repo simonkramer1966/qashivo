@@ -915,13 +915,13 @@ export default function InvestorDemo() {
             <Card className="p-6 text-center bg-gradient-to-br from-[#8B2635]/5 to-[#8B2635]/10 border-[#8B2635]/30" data-testid="card-traction-invoices">
               <DollarSign className="w-10 h-10 text-[#8B2635] mx-auto mb-3" />
               <div className="text-4xl font-bold text-[#8B2635] mb-1" data-testid="text-invoices-managed">£70M+</div>
-              <p className="text-gray-700 font-medium">Invoices Managed</p>
+              <p className="text-gray-700 font-medium">Pilot Data Processed</p>
             </Card>
 
             <Card className="p-6 text-center bg-gradient-to-br from-orange-50 to-red-50 border-[#8B2635]/30" data-testid="card-traction-dso">
               <BarChart3 className="w-10 h-10 text-[#8B2635] mx-auto mb-3" />
               <div className="text-4xl font-bold text-[#8B2635] mb-1" data-testid="text-avg-dso-reduction">40%</div>
-              <p className="text-gray-700 font-medium">Avg DSO Reduction</p>
+              <p className="text-gray-700 font-medium">Trial DSO Improvement</p>
             </Card>
           </div>
         </div>
