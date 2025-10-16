@@ -33,6 +33,7 @@ const Insights = lazy(() => import("@/pages/insights"));
 const ClientIntelligence = lazy(() => import("@/pages/client-intelligence"));
 const IntelligentForecast = lazy(() => import("@/pages/intelligent-forecast"));
 const InvestorDemo = lazy(() => import("@/pages/investor-demo"));
+const InvestorDemoQashivo = lazy(() => import("@/pages/investor-demo-qashivo"));
 const InvestorCRM = lazy(() => import("@/pages/investor-crm"));
 
 function Router() {
@@ -40,8 +41,8 @@ function Router() {
   const { showSplash, setShowSplash, triggerSplash } = useSplash();
   const [location] = useLocation();
 
-  // Inactivity timer - disabled for investor demo page
-  const isInvestorDemo = location === '/investor-demo';
+  // Inactivity timer - disabled for investor demo pages
+  const isInvestorDemo = location === '/investor-demo' || location === '/investor-demo-qashivo';
   useInactivityTimer({
     timeout: 60000, // 60 seconds
     onInactive: triggerSplash,
@@ -69,6 +70,7 @@ function Router() {
         // Unauthenticated routes - only signup and signin pages
         <Switch>
           <Route path="/investor-demo" component={InvestorDemo} />
+          <Route path="/investor-demo-qashivo" component={InvestorDemoQashivo} />
           <Route path="/partner/register" component={PartnerRegistration} />
           <Route path="/client/register" component={ClientRegistration} />
           <Route path="/signin" component={SignIn} />
@@ -79,6 +81,7 @@ function Router() {
         // Authenticated routes - main application
         <Switch>
           <Route path="/investor-demo" component={InvestorDemo} />
+          <Route path="/investor-demo-qashivo" component={InvestorDemoQashivo} />
           <Route path="/investor-crm" component={InvestorCRM} />
           <Route path="/qashivo-admin" component={QashivoAdminDashboard} />
           <Route path="/partner" component={PartnerDashboard} />
