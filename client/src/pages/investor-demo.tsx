@@ -232,6 +232,9 @@ export default function InvestorDemo() {
   const handleVoiceDemo = async () => {
     if (!voicePhone) return;
     
+    // Clear any SMS results to prevent interference
+    setDemoResults(prev => prev ? {...prev, smsDemoResults: null, smsDemoCompleted: false} : null);
+    
     // Immediate feedback - set progress and lock dialog
     setVoiceProgress("Initiating...");
     setIsDemoProcessing(true);
@@ -315,6 +318,9 @@ export default function InvestorDemo() {
 
   const handleSMSDemo = async () => {
     if (!smsPhone) return;
+    
+    // Clear any Voice results to prevent interference
+    setDemoResults(prev => prev ? {...prev, voiceDemoResults: null, voiceDemoCompleted: false} : null);
     
     // Immediate feedback - set progress and lock dialog
     setSmsProgress("Initiating...");
