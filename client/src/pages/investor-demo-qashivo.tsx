@@ -929,7 +929,7 @@ export default function InvestorDemo() {
       </section>
 
       {/* Final CTA */}
-      <section className="py-24 px-6 bg-gradient-to-br from-[#0E131F] to-[#8B2635]">
+      <section className="py-24 px-6 bg-gradient-to-br from-[#17B6C3] to-teal-700">
         <div className="max-w-5xl mx-auto text-center">
           <h2 className="text-5xl font-bold text-white mb-6">
             Join the £4.8B Opportunity
