@@ -84,7 +84,8 @@ export default function InvestorDemo() {
   
   // Investment call dialog state
   const [investmentDialogOpen, setInvestmentDialogOpen] = useState(false);
-  const [investorName, setInvestorName] = useState("");
+  const [investorFirstName, setInvestorFirstName] = useState("");
+  const [investorLastName, setInvestorLastName] = useState("");
   const [investorPhone, setInvestorPhone] = useState("");
   const [investorEmail, setInvestorEmail] = useState("");
   const [isHighNetWorth, setIsHighNetWorth] = useState(false);
@@ -345,8 +346,12 @@ export default function InvestorDemo() {
     const errors: Record<string, string> = {};
     
     // Validate form fields
-    if (!investorName || investorName.trim().length < 2) {
-      errors.name = "Please enter your full name";
+    if (!investorFirstName || investorFirstName.trim().length < 2) {
+      errors.firstName = "Please enter your first name";
+    }
+    
+    if (!investorLastName || investorLastName.trim().length < 2) {
+      errors.lastName = "Please enter your last name";
     }
     
     if (!investorPhone || investorPhone.trim().length < 10) {
@@ -385,7 +390,7 @@ export default function InvestorDemo() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name: investorName.trim(),
+          name: `${investorFirstName.trim()} ${investorLastName.trim()}`,
           phone: investorPhone.trim(),
           email: investorEmail.trim(),
           isHighNetWorth,
@@ -415,7 +420,8 @@ export default function InvestorDemo() {
       });
       
       // Reset form and close dialog
-      setInvestorName("");
+      setInvestorFirstName("");
+      setInvestorLastName("");
       setInvestorPhone("");
       setInvestorEmail("");
       setIsHighNetWorth(false);
@@ -986,26 +992,50 @@ export default function InvestorDemo() {
             <DialogTitle className="text-2xl font-bold text-gray-900">Schedule Investment Call</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleInvestmentCall} className="space-y-5 pt-4">
-            <div className="space-y-2">
-              <Label htmlFor="investor-name" className="text-gray-700 font-medium">Full Name</Label>
-              <Input
-                id="investor-name"
-                type="text"
-                value={investorName}
-                onChange={(e) => {
-                  setInvestorName(e.target.value);
-                  if (formErrors.name) {
-                    setFormErrors({ ...formErrors, name: "" });
-                  }
-                }}
-                placeholder="John Smith"
-                className={`bg-white ${formErrors.name ? 'border-red-500' : 'border-gray-300'}`}
-                data-testid="input-investor-name"
-                required
-              />
-              {formErrors.name && (
-                <p className="text-xs text-red-600 mt-1">{formErrors.name}</p>
-              )}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="investor-first-name" className="text-gray-700 font-medium">First Name</Label>
+                <Input
+                  id="investor-first-name"
+                  type="text"
+                  value={investorFirstName}
+                  onChange={(e) => {
+                    setInvestorFirstName(e.target.value);
+                    if (formErrors.firstName) {
+                      setFormErrors({ ...formErrors, firstName: "" });
+                    }
+                  }}
+                  placeholder="John"
+                  className={`bg-white ${formErrors.firstName ? 'border-red-500' : 'border-gray-300'}`}
+                  data-testid="input-investor-first-name"
+                  required
+                />
+                {formErrors.firstName && (
+                  <p className="text-xs text-red-600 mt-1">{formErrors.firstName}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="investor-last-name" className="text-gray-700 font-medium">Last Name</Label>
+                <Input
+                  id="investor-last-name"
+                  type="text"
+                  value={investorLastName}
+                  onChange={(e) => {
+                    setInvestorLastName(e.target.value);
+                    if (formErrors.lastName) {
+                      setFormErrors({ ...formErrors, lastName: "" });
+                    }
+                  }}
+                  placeholder="Smith"
+                  className={`bg-white ${formErrors.lastName ? 'border-red-500' : 'border-gray-300'}`}
+                  data-testid="input-investor-last-name"
+                  required
+                />
+                {formErrors.lastName && (
+                  <p className="text-xs text-red-600 mt-1">{formErrors.lastName}</p>
+                )}
+              </div>
             </div>
 
             <div className="space-y-2">
@@ -1111,7 +1141,7 @@ export default function InvestorDemo() {
             <Button 
               type="submit" 
               className="w-full bg-[#17B6C3] hover:bg-[#1396A1] text-white text-lg py-6"
-              disabled={isSubmitting || !investorName || !investorPhone || !investorEmail || !isHighNetWorth || !acknowledgesRisk}
+              disabled={isSubmitting || !investorFirstName || !investorLastName || !investorPhone || !investorEmail || !isHighNetWorth || !acknowledgesRisk}
               data-testid="button-submit-investment-call"
             >
               {isSubmitting ? "Scheduling..." : "Schedule Call"}
