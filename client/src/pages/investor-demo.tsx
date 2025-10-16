@@ -1135,7 +1135,7 @@ export default function InvestorDemo() {
               disabled={isSubmitting || !investorFirstName || !investorLastName || !investorPhone || !investorEmail || !isHighNetWorth || !acknowledgesRisk}
               data-testid="button-submit-investment-call"
             >
-              {isSubmitting ? "Scheduling..." : "Schedule Call"}
+              {isSubmitting ? "Processing..." : "Download Full Investment Deck"}
             </Button>
           </form>
         </DialogContent>
