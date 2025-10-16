@@ -942,7 +942,7 @@ export default function InvestorDemo() {
           <p className="text-2xl text-blue-100 mb-8">
             SEIS-eligible (pending HMRC approval) | 200+ market inquiries | Xero integration ready
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+          <div className="flex justify-center">
             <Button
               className="bg-white text-[#17B6C3] hover:bg-gray-100 text-xl px-12 py-7 shadow-xl"
               onClick={() => setInvestmentDialogOpen(true)}
@@ -950,21 +950,6 @@ export default function InvestorDemo() {
             >
               Schedule Investment Call
               <ArrowRight className="ml-2 w-5 h-5" />
-            </Button>
-            <Button
-              variant="outline"
-              className="border-2 border-white bg-transparent text-white hover:bg-white hover:text-[#17B6C3] text-xl px-12 py-7"
-              onClick={() => {
-                const link = document.createElement('a');
-                link.href = investorDeckPdf;
-                link.download = 'Qashivo-Investor-Deck.pdf';
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-              }}
-              data-testid="button-download-deck"
-            >
-              Download Full Investment Deck
             </Button>
           </div>
         </div>
