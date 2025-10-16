@@ -17709,6 +17709,29 @@ Return only JSON with keys: intent, sentiment, confidence, keyInsights, actionIt
     }
   });
 
+  // Get all investment call requests (for CRM page) - owner/platform admin only
+  app.get("/api/investor/call-requests", isAuthenticated, isOwner, async (req, res) => {
+    try {
+      const callRequests = await storage.getAllInvestmentCallRequests();
+      res.json(callRequests);
+    } catch (error) {
+      console.error("Error fetching investment call requests:", error);
+      res.status(500).json({ message: "Failed to fetch investment call requests" });
+    }
+  });
+
+  // Delete investment call request (for removing test data) - owner/platform admin only
+  app.delete("/api/investor/call-requests/:id", isAuthenticated, isOwner, async (req, res) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteInvestmentCallRequest(id);
+      res.json({ success: true, message: "Investment call request deleted" });
+    } catch (error) {
+      console.error("Error deleting investment call request:", error);
+      res.status(500).json({ message: "Failed to delete investment call request" });
+    }
+  });
+
   // ==================== END INVESTOR DEMO API ====================
 
   const httpServer = createServer(app);

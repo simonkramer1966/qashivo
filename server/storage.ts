@@ -581,6 +581,8 @@ export interface IStorage {
   
   // Investment Call Request operations - for scheduling investment calls
   createInvestmentCallRequest(request: InsertInvestmentCallRequest): Promise<InvestmentCallRequest>;
+  getAllInvestmentCallRequests(): Promise<InvestmentCallRequest[]>;
+  deleteInvestmentCallRequest(id: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -4926,6 +4928,18 @@ export class DatabaseStorage implements IStorage {
   async createInvestmentCallRequest(requestData: InsertInvestmentCallRequest): Promise<InvestmentCallRequest> {
     const [request] = await db.insert(investmentCallRequests).values(requestData).returning();
     return request;
+  }
+
+  async getAllInvestmentCallRequests(): Promise<InvestmentCallRequest[]> {
+    const requests = await db
+      .select()
+      .from(investmentCallRequests)
+      .orderBy(desc(investmentCallRequests.requestedAt));
+    return requests;
+  }
+
+  async deleteInvestmentCallRequest(id: string): Promise<void> {
+    await db.delete(investmentCallRequests).where(eq(investmentCallRequests.id, id));
   }
 }
 

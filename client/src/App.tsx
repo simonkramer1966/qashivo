@@ -33,6 +33,7 @@ const Insights = lazy(() => import("@/pages/insights"));
 const ClientIntelligence = lazy(() => import("@/pages/client-intelligence"));
 const IntelligentForecast = lazy(() => import("@/pages/intelligent-forecast"));
 const InvestorDemo = lazy(() => import("@/pages/investor-demo"));
+const InvestorCRM = lazy(() => import("@/pages/investor-crm"));
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -78,6 +79,7 @@ function Router() {
         // Authenticated routes - main application
         <Switch>
           <Route path="/investor-demo" component={InvestorDemo} />
+          <Route path="/investor-crm" component={InvestorCRM} />
           <Route path="/qashivo-admin" component={QashivoAdminDashboard} />
           <Route path="/partner" component={PartnerDashboard} />
           <Route path="/cashflow" component={Cashflow} />
