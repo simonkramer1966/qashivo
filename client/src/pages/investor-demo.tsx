@@ -987,7 +987,7 @@ export default function InvestorDemo() {
       <Dialog open={investmentDialogOpen} onOpenChange={setInvestmentDialogOpen}>
         <DialogContent className="sm:max-w-[500px] bg-white">
           <DialogHeader>
-            <DialogTitle className="text-2xl font-bold text-gray-900">Schedule Investment Call</DialogTitle>
+            <DialogTitle className="text-2xl font-bold text-gray-900">Download Full Investment Deck</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleInvestmentCall} className="space-y-5 pt-4">
             <div className="grid grid-cols-2 gap-4">
