@@ -747,12 +747,9 @@ export default function InvestorDemo() {
                     <p className="text-sm text-gray-600">Real-time intent detection</p>
                   </div>
                 </div>
-                <p className="text-gray-700 mb-3">
+                <p className="text-gray-700 mb-6">
                   Receive an AI-powered collection call. Our AI analyzes your responses in real-time, 
                   detecting intent, sentiment, and commitment to pay.
-                </p>
-                <p className="text-gray-700 mb-6">
-                  Keep 'In Progress' dialog box open until after the AI Voice Call has completed.
                 </p>
                 <div className="space-y-4">
                   <div>
@@ -817,12 +814,9 @@ export default function InvestorDemo() {
                     <p className="text-sm text-gray-600">Intelligent text processing</p>
                   </div>
                 </div>
-                <p className="text-gray-700 mb-3">
+                <p className="text-gray-700 mb-6">
                   Reply to our SMS and watch our AI instantly extract payment intent, sentiment, 
                   and recommended next actions from your message.
-                </p>
-                <p className="text-gray-700 mb-6">
-                  Keep 'In Progress' dialog box open until after the SMS response has been received.
                 </p>
                 <div className="space-y-4">
                   <div>
