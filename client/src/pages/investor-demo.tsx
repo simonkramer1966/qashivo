@@ -466,7 +466,7 @@ export default function InvestorDemo() {
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div>
               <div className="inline-block px-4 py-2 bg-[#17B6C3]/10 rounded-full mb-6">
-                <span className="text-[#17B6C3] font-semibold">SEIS-Eligible Investment Opportunity</span>
+                <span className="text-[#17B6C3] font-semibold">SEIS-Eligible Investment Opportunity (pending HMRC approval)</span>
               </div>
               <h1 className="text-5xl lg:text-6xl font-bold text-gray-900 mb-6 leading-tight">
                 AI That Turns Late Payments Into{" "}
@@ -934,7 +934,7 @@ export default function InvestorDemo() {
             Join the £4.8B Opportunity
           </h2>
           <p className="text-2xl text-blue-100 mb-8">
-            SEIS-eligible investment | 200+ market inquiries | Xero integration ready
+            SEIS-eligible (pending HMRC approval) | 200+ market inquiries | Xero integration ready
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
             <Button
