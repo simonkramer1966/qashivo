@@ -17739,16 +17739,21 @@ Return only JSON with keys: intent, sentiment, confidence, keyInsights, actionIt
   // Download SECURITY.md as PDF
   app.get('/api/docs/security/download', async (req, res) => {
     try {
+      console.log('📥 PDF download requested');
       const { mdToPdf } = await import('md-to-pdf');
       const fs = await import('fs');
       const path = await import('path');
       
       const securityMdPath = path.join(process.cwd(), 'SECURITY.md');
+      console.log('📄 Looking for SECURITY.md at:', securityMdPath);
       
       // Check if file exists
       if (!fs.existsSync(securityMdPath)) {
+        console.error('❌ SECURITY.md not found at:', securityMdPath);
         return res.status(404).json({ message: 'Security documentation not found' });
       }
+      
+      console.log('✅ SECURITY.md found, generating PDF...');
       
       // Convert to PDF with custom styling
       const pdf = await mdToPdf(
@@ -17841,20 +17846,24 @@ Return only JSON with keys: intent, sentiment, confidence, keyInsights, actionIt
         }
       );
       
+      console.log('✅ PDF generated at:', pdf.filename);
+      
       // Set headers for download
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', 'attachment; filename="Qashivo-Security-Documentation.pdf"');
       
       // Read and send the PDF
       const pdfBuffer = fs.readFileSync(pdf.filename);
+      console.log('📦 PDF buffer size:', pdfBuffer.length, 'bytes');
       res.send(pdfBuffer);
       
       // Clean up temporary PDF file
       fs.unlinkSync(pdf.filename);
+      console.log('🧹 Temporary PDF cleaned up');
       
     } catch (error) {
-      console.error('Failed to generate PDF:', error);
-      res.status(500).json({ message: 'Failed to generate PDF', error: error.message });
+      console.error('❌ Failed to generate PDF:', error);
+      res.status(500).json({ message: 'Failed to generate PDF', error: (error as Error).message });
     }
   });
 

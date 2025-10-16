@@ -4,7 +4,8 @@ import { Download, FileText, Shield } from "lucide-react";
 
 export default function DocsDownload() {
   const handleDownloadSecurity = () => {
-    window.location.href = '/api/docs/security/download';
+    // Open in new tab - browser will handle download
+    window.open('/api/docs/security/download', '_blank');
   };
 
   return (
