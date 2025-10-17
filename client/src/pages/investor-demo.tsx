@@ -233,7 +233,7 @@ export default function InvestorDemo() {
     if (!voicePhone) return;
     
     // Clear any SMS results to prevent interference
-    setDemoResults(prev => prev ? {...prev, smsDemoResults: null, smsDemoCompleted: false} : null);
+    setDemoResults((prev: any) => prev ? {...prev, smsDemoResults: null, smsDemoCompleted: false} : null);
     
     // Immediate feedback - set progress and lock dialog
     setVoiceProgress("Initiating...");
@@ -320,7 +320,7 @@ export default function InvestorDemo() {
     if (!smsPhone) return;
     
     // Clear any Voice results to prevent interference
-    setDemoResults(prev => prev ? {...prev, voiceDemoResults: null, voiceDemoCompleted: false} : null);
+    setDemoResults((prev: any) => prev ? {...prev, voiceDemoResults: null, voiceDemoCompleted: false} : null);
     
     // Immediate feedback - set progress and lock dialog
     setSmsProgress("Initiating...");
