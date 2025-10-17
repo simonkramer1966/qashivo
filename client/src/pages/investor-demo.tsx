@@ -480,8 +480,8 @@ export default function InvestorDemo() {
       }
       
       toast({
-        title: "Call Scheduled Successfully!",
-        description: "Our team will contact you within 24 hours to discuss the investment opportunity.",
+        title: "Thank you for your interest.",
+        description: "Investment deck downloading now. Our team will contact you within 24 hours to answer any questions you may have.",
       });
       
       // Reset form and close dialog
