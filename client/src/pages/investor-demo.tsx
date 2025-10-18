@@ -81,6 +81,8 @@ export default function InvestorDemo() {
   const [currentResults, setCurrentResults] = useState<any>(null);
   const [resultsType, setResultsType] = useState<"voice" | "sms">("voice");
   const lastShownResultsRef = useRef<string>("");
+  const transitionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isTransitioningRef = useRef(false);
   
   // Demo processing states for progress and dialog locking
   const [voiceProgress, setVoiceProgress] = useState<string>("");
@@ -148,27 +150,65 @@ export default function InvestorDemo() {
     };
   }, [leadId]);
 
+  // Helper function to open dialog with results (avoids code duplication)
+  const openDialogWithResults = (results: any, type: "voice" | "sms", resultKey: string) => {
+    setCurrentResults(results);
+    setResultsType(type);
+    if (type === "voice") {
+      setVoiceProgress("");
+    } else {
+      setSmsProgress("");
+    }
+    setIsDemoProcessing(false);
+    lastShownResultsRef.current = resultKey;
+    isTransitioningRef.current = false;
+    setResultsDialogOpen(true);
+    
+    toast({
+      title: "AI Analysis Complete",
+      description: `View the results of the ${type === "voice" ? "voice call" : "SMS"} analysis`,
+    });
+  };
+
   // Auto-update results when they arrive
   useEffect(() => {
     if (!demoResults) return;
+
+    // Don't process if we're currently transitioning
+    if (isTransitioningRef.current) return;
 
     // Update voice results if available
     if (demoResults.voiceDemoCompleted && demoResults.voiceDemoResults) {
       const resultKey = `voice-${demoResults.voiceDemoResults.analyzedAt || Date.now()}`;
       
-      setCurrentResults(demoResults.voiceDemoResults);
-      setResultsType("voice");
-      setVoiceProgress("");
-      setIsDemoProcessing(false); // Unlock dialog
-      
-      // Only open dialog if we haven't shown these results yet
+      // Only process if we haven't shown these results yet
       if (lastShownResultsRef.current !== resultKey) {
-        lastShownResultsRef.current = resultKey;
-        setResultsDialogOpen(true);
-        toast({
-          title: "AI Analysis Complete",
-          description: "View the results of the voice call analysis",
-        });
+        // If dialog is open with different type, transition to new type
+        if (resultsDialogOpen && resultsType === "sms") {
+          // Clear any pending transition
+          if (transitionTimeoutRef.current) {
+            clearTimeout(transitionTimeoutRef.current);
+          }
+          
+          // Mark as transitioning to prevent duplicate updates
+          isTransitioningRef.current = true;
+          setResultsDialogOpen(false);
+          
+          // Wait for dialog to close before showing new one
+          transitionTimeoutRef.current = setTimeout(() => {
+            openDialogWithResults(demoResults.voiceDemoResults, "voice", resultKey);
+          }, 400);
+        } else if (resultsDialogOpen && resultsType === "voice") {
+          // Same type already open - update results without closing
+          setCurrentResults(demoResults.voiceDemoResults);
+          setVoiceProgress("");
+          setIsDemoProcessing(false);
+          lastShownResultsRef.current = resultKey;
+          // No toast for same-type updates to avoid spam
+        } else {
+          // Dialog is closed, open immediately
+          openDialogWithResults(demoResults.voiceDemoResults, "voice", resultKey);
+        }
       }
     }
     
@@ -176,22 +216,57 @@ export default function InvestorDemo() {
     if (demoResults.smsDemoCompleted && demoResults.smsDemoResults) {
       const resultKey = `sms-${demoResults.smsDemoResults.analyzedAt || Date.now()}`;
       
-      setCurrentResults(demoResults.smsDemoResults);
-      setResultsType("sms");
-      setSmsProgress("");
-      setIsDemoProcessing(false); // Unlock dialog
-      
-      // Only open dialog if we haven't shown these results yet
+      // Only process if we haven't shown these results yet
       if (lastShownResultsRef.current !== resultKey) {
-        lastShownResultsRef.current = resultKey;
-        setResultsDialogOpen(true);
-        toast({
-          title: "AI Analysis Complete",
-          description: "View the results of the SMS analysis",
-        });
+        // If dialog is open with different type, transition to new type
+        if (resultsDialogOpen && resultsType === "voice") {
+          // Clear any pending transition
+          if (transitionTimeoutRef.current) {
+            clearTimeout(transitionTimeoutRef.current);
+          }
+          
+          // Mark as transitioning to prevent duplicate updates
+          isTransitioningRef.current = true;
+          setResultsDialogOpen(false);
+          
+          // Wait for dialog to close before showing new one
+          transitionTimeoutRef.current = setTimeout(() => {
+            openDialogWithResults(demoResults.smsDemoResults, "sms", resultKey);
+          }, 400);
+        } else if (resultsDialogOpen && resultsType === "sms") {
+          // Same type already open - update results without closing
+          setCurrentResults(demoResults.smsDemoResults);
+          setSmsProgress("");
+          setIsDemoProcessing(false);
+          lastShownResultsRef.current = resultKey;
+          // No toast for same-type updates to avoid spam
+        } else {
+          // Dialog is closed, open immediately
+          openDialogWithResults(demoResults.smsDemoResults, "sms", resultKey);
+        }
       }
     }
-  }, [demoResults, toast]);
+    
+    // Cleanup function - only clear timeouts if NOT transitioning
+    // (during transition, let the timeout complete)
+    return () => {
+      if (transitionTimeoutRef.current && !isTransitioningRef.current) {
+        clearTimeout(transitionTimeoutRef.current);
+        transitionTimeoutRef.current = null;
+      }
+    };
+  }, [demoResults, toast, resultsDialogOpen, resultsType]);
+
+  // Cleanup on unmount - ensure all timeouts are cleared
+  useEffect(() => {
+    return () => {
+      if (transitionTimeoutRef.current) {
+        clearTimeout(transitionTimeoutRef.current);
+        transitionTimeoutRef.current = null;
+      }
+      isTransitioningRef.current = false;
+    };
+  }, []);
 
   const handleLeadCapture = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1022,8 +1097,15 @@ export default function InvestorDemo() {
 
       {/* AI Results Dialog */}
       <AIResultsDialog
+        key={resultsType} // Force remount when switching between voice/SMS
         open={resultsDialogOpen}
-        onOpenChange={setResultsDialogOpen}
+        onOpenChange={(open) => {
+          setResultsDialogOpen(open);
+          // Reset processing state when dialog closes
+          if (!open) {
+            setIsDemoProcessing(false);
+          }
+        }}
         results={currentResults}
         type={resultsType}
         isDemoProcessing={isDemoProcessing}
