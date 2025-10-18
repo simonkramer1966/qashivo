@@ -156,6 +156,12 @@ import {
   magicLinkTokens,
   type MagicLinkToken,
   type InsertMagicLinkToken,
+  interestLedger,
+  type InterestLedger,
+  type InsertInterestLedger,
+  disputes,
+  type Dispute,
+  type InsertDispute,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, sql, count, sum, ne, isNotNull, isNull, gte, lte, lt, or, ilike, inArray } from "drizzle-orm";
@@ -592,6 +598,12 @@ export interface IStorage {
   getMagicLinkToken(token: string, tenantId: string): Promise<(MagicLinkToken & { contact: Contact }) | undefined>;
   validateAndUseMagicLinkToken(token: string, otp: string, tenantId: string): Promise<(MagicLinkToken & { contact: Contact }) | undefined>;
   cleanupExpiredMagicLinkTokens(): Promise<void>;
+  
+  // Interest Ledger operations - for tracking invoice interest accrual
+  getInterestLedgerForInvoice(invoiceId: string, tenantId: string): Promise<InterestLedger[]>;
+  getLatestInterestLedgerForInvoice(invoiceId: string, tenantId: string): Promise<InterestLedger | undefined>;
+  createInterestLedgerEntry(entry: InsertInterestLedger): Promise<InterestLedger>;
+  updateInterestLedgerEntry(id: string, tenantId: string, updates: Partial<InsertInterestLedger>): Promise<InterestLedger>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -5020,6 +5032,55 @@ export class DatabaseStorage implements IStorage {
           isNotNull(magicLinkTokens.usedAt)
         )
       );
+  }
+
+  // Interest Ledger operations - for tracking invoice interest accrual
+  async getInterestLedgerForInvoice(invoiceId: string, tenantId: string): Promise<InterestLedger[]> {
+    const entries = await db
+      .select()
+      .from(interestLedger)
+      .where(and(
+        eq(interestLedger.invoiceId, invoiceId),
+        eq(interestLedger.tenantId, tenantId)
+      ))
+      .orderBy(desc(interestLedger.startDate));
+    
+    return entries;
+  }
+
+  async getLatestInterestLedgerForInvoice(invoiceId: string, tenantId: string): Promise<InterestLedger | undefined> {
+    const [entry] = await db
+      .select()
+      .from(interestLedger)
+      .where(and(
+        eq(interestLedger.invoiceId, invoiceId),
+        eq(interestLedger.tenantId, tenantId)
+      ))
+      .orderBy(desc(interestLedger.startDate))
+      .limit(1);
+    
+    return entry;
+  }
+
+  async createInterestLedgerEntry(entryData: InsertInterestLedger): Promise<InterestLedger> {
+    const [entry] = await db.insert(interestLedger).values(entryData).returning();
+    return entry;
+  }
+
+  async updateInterestLedgerEntry(id: string, tenantId: string, updates: Partial<InsertInterestLedger>): Promise<InterestLedger> {
+    const [entry] = await db
+      .update(interestLedger)
+      .set({
+        ...updates,
+        updatedAt: new Date(),
+      })
+      .where(and(
+        eq(interestLedger.id, id),
+        eq(interestLedger.tenantId, tenantId)
+      ))
+      .returning();
+    
+    return entry;
   }
 }
 
