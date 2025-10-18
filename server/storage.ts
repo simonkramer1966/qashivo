@@ -153,9 +153,12 @@ import {
   userContactAssignments,
   type UserContactAssignment,
   type InsertUserContactAssignment,
+  magicLinkTokens,
+  type MagicLinkToken,
+  type InsertMagicLinkToken,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, desc, sql, count, sum, ne, isNotNull, gte, lte, lt, or, ilike, inArray } from "drizzle-orm";
+import { eq, and, desc, sql, count, sum, ne, isNotNull, isNull, gte, lte, lt, or, ilike, inArray } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { getOverdueCategoryFromDueDate, getOverdueCategorySummary, categorizeOverdueStatus, calculateDaysOverdue, getOverdueCategoryRange, type OverdueCategory, type OverdueCategoryInfo } from "../shared/utils/overdueUtils";
 import crypto from "crypto";
@@ -583,6 +586,12 @@ export interface IStorage {
   createInvestmentCallRequest(request: InsertInvestmentCallRequest): Promise<InvestmentCallRequest>;
   getAllInvestmentCallRequests(): Promise<InvestmentCallRequest[]>;
   deleteInvestmentCallRequest(id: string): Promise<void>;
+  
+  // Magic Link Token operations - for debtor portal authentication
+  createMagicLinkToken(token: InsertMagicLinkToken): Promise<MagicLinkToken>;
+  getMagicLinkToken(token: string, tenantId: string): Promise<(MagicLinkToken & { contact: Contact }) | undefined>;
+  validateAndUseMagicLinkToken(token: string, otp: string, tenantId: string): Promise<(MagicLinkToken & { contact: Contact }) | undefined>;
+  cleanupExpiredMagicLinkTokens(): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -4940,6 +4949,77 @@ export class DatabaseStorage implements IStorage {
 
   async deleteInvestmentCallRequest(id: string): Promise<void> {
     await db.delete(investmentCallRequests).where(eq(investmentCallRequests.id, id));
+  }
+
+  // Magic Link Token operations - for debtor portal authentication
+  async createMagicLinkToken(tokenData: InsertMagicLinkToken): Promise<MagicLinkToken> {
+    const [token] = await db.insert(magicLinkTokens).values(tokenData).returning();
+    return token;
+  }
+
+  async getMagicLinkToken(token: string, tenantId: string): Promise<(MagicLinkToken & { contact: Contact }) | undefined> {
+    const result = await db
+      .select()
+      .from(magicLinkTokens)
+      .leftJoin(contacts, eq(magicLinkTokens.contactId, contacts.id))
+      .where(and(
+        eq(magicLinkTokens.token, token),
+        eq(magicLinkTokens.tenantId, tenantId),
+        isNull(magicLinkTokens.usedAt),
+        gte(magicLinkTokens.expiresAt, new Date()),
+        eq(magicLinkTokens.isRevoked, false)
+      ))
+      .limit(1);
+
+    if (!result[0] || !result[0].contacts) {
+      return undefined;
+    }
+
+    return {
+      ...result[0].magic_link_tokens,
+      contact: result[0].contacts,
+    };
+  }
+
+  async validateAndUseMagicLinkToken(token: string, otp: string, tenantId: string): Promise<(MagicLinkToken & { contact: Contact }) | undefined> {
+    // First, get the token with contact
+    const tokenWithContact = await this.getMagicLinkToken(token, tenantId);
+    
+    if (!tokenWithContact) {
+      return undefined;
+    }
+
+    // Verify OTP
+    if (tokenWithContact.otpCode !== otp) {
+      return undefined;
+    }
+
+    // Check OTP expiry
+    if (tokenWithContact.otpExpiresAt && tokenWithContact.otpExpiresAt < new Date()) {
+      return undefined;
+    }
+
+    // Mark token as used
+    await db
+      .update(magicLinkTokens)
+      .set({ 
+        usedAt: new Date(),
+        otpVerifiedAt: new Date(),
+      })
+      .where(eq(magicLinkTokens.id, tokenWithContact.id));
+
+    return tokenWithContact;
+  }
+
+  async cleanupExpiredMagicLinkTokens(): Promise<void> {
+    await db
+      .delete(magicLinkTokens)
+      .where(
+        or(
+          lt(magicLinkTokens.expiresAt, new Date()),
+          isNotNull(magicLinkTokens.usedAt)
+        )
+      );
   }
 }
 
