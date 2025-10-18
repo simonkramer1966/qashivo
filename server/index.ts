@@ -285,6 +285,18 @@ app.use((req, res, next) => {
     }
   }
 
+  // Initialize PTP breach detector
+  if (process.env.NODE_ENV !== 'test') {
+    try {
+      console.log("🔄 Initializing PTP breach detector...");
+      const { ptpBreachDetector } = await import("./services/ptpBreachDetector");
+      ptpBreachDetector.start();
+      console.log("✅ PTP breach detector started");
+    } catch (error) {
+      console.error("❌ Failed to initialize PTP breach detector:", error);
+    }
+  }
+
   // MVP CLEANUP: Payment predictions disabled for MVP (stub service available in API routes)
   /* if (process.env.NODE_ENV !== 'test') {
     try {
