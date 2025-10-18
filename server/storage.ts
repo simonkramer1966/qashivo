@@ -608,7 +608,9 @@ export interface IStorage {
   // Debtor Portal operations - for external debtor self-service
   getContactInvoices(contactId: string, tenantId: string): Promise<Invoice[]>;
   getInvoiceDisputes(invoiceId: string, tenantId: string): Promise<Dispute[]>;
+  getDispute(id: string, tenantId: string): Promise<Dispute | undefined>;
   createDispute(dispute: InsertDispute): Promise<Dispute>;
+  updateDispute(id: string, tenantId: string, updates: Partial<InsertDispute>): Promise<Dispute>;
   getInvoicePromisesToPay(invoiceId: string, tenantId: string): Promise<PromiseToPay[]>;
   createPromiseToPay(promise: InsertPromiseToPay): Promise<PromiseToPay>;
   createDebtorPayment(payment: InsertDebtorPayment): Promise<DebtorPayment>;
@@ -5118,8 +5120,39 @@ export class DatabaseStorage implements IStorage {
     return invoiceDisputes;
   }
 
+  async getDispute(id: string, tenantId: string): Promise<Dispute | undefined> {
+    const [dispute] = await db
+      .select()
+      .from(disputes)
+      .where(and(
+        eq(disputes.id, id),
+        eq(disputes.tenantId, tenantId)
+      ));
+    return dispute;
+  }
+
   async createDispute(disputeData: InsertDispute): Promise<Dispute> {
     const [dispute] = await db.insert(disputes).values(disputeData).returning();
+    return dispute;
+  }
+
+  async updateDispute(id: string, tenantId: string, updates: Partial<InsertDispute>): Promise<Dispute> {
+    const [dispute] = await db
+      .update(disputes)
+      .set({
+        ...updates,
+        updatedAt: new Date()
+      })
+      .where(and(
+        eq(disputes.id, id),
+        eq(disputes.tenantId, tenantId)
+      ))
+      .returning();
+    
+    if (!dispute) {
+      throw new Error(`Dispute not found with id ${id} for tenant ${tenantId}`);
+    }
+    
     return dispute;
   }
 

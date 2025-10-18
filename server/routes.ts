@@ -54,6 +54,7 @@ import {
   invoices,
   contacts,
   actions,
+  disputes,
   bankTransactions,
   seasonalPatterns,
   customerLearningProfiles,
@@ -4161,6 +4162,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         )
         .orderBy(desc(invoices.dueDate));
       
+      // Get formal disputes from debtor portal (needed for filtering)
+      const formalDisputes = await db
+        .select({
+          dispute: disputes,
+          invoice: invoices,
+          contact: contacts
+        })
+        .from(disputes)
+        .leftJoin(invoices, eq(disputes.invoiceId, invoices.id))
+        .leftJoin(contacts, eq(invoices.contactId, contacts.id))
+        .where(eq(disputes.tenantId, tenantId))
+        .orderBy(desc(disputes.createdAt));
+      
+      // Get all invoice IDs that have active disputes from the disputes table
+      const invoiceIdsWithDisputes = formalDisputes
+        .filter(({ dispute }) => dispute.status !== 'resolved')
+        .map(({ dispute }) => dispute.invoiceId);
+      
       // 1. QUERIES - actions with general_query intent
       const queries = allActions.filter(a => a.intentType === 'general_query');
       
@@ -4177,12 +4196,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         return { ...inv, contactName };
       };
-
+      
       // 2. OVERDUE INVOICES - grouped by customer
       const overdueInvoicesRaw = allInvoices.filter(inv => {
         const isOverdue = inv.status === 'overdue' && new Date(inv.dueDate) < today;
         const isInWorkflow = inv.paymentPlanId || inv.escalationFlag || inv.legalFlag;
-        const hasDispute = allActions.some(a => a.invoiceId === inv.id && a.intentType === 'dispute');
+        const hasActionDispute = allActions.some(a => a.invoiceId === inv.id && a.intentType === 'dispute');
+        const hasFormalDispute = invoiceIdsWithDisputes.includes(inv.id);
+        const hasDispute = hasActionDispute || hasFormalDispute;
         const hasPTP = allActions.some(a => a.invoiceId === inv.id && a.intentType === 'promise_to_pay');
         
         return isOverdue && !isInWorkflow && !hasDispute && !hasPTP;
@@ -4383,14 +4404,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return invoice && invoice.status === 'overdue';
       });
       
-      // 5. DISPUTES - actions with dispute intent
-      const disputes = allActions.filter(a => a.intentType === 'dispute');
+      // 5. DISPUTES - both actions with dispute intent AND formal disputes from debtor portal
+      const disputeActions = allActions.filter(a => a.intentType === 'dispute');
+      
+      // Transform formal disputes to match action format for display (formalDisputes already fetched above)
+      const transformedDisputes = formalDisputes.map(({ dispute, invoice, contact }) => ({
+        id: dispute.id,
+        tenantId: dispute.tenantId,
+        invoiceId: dispute.invoiceId,
+        contactId: invoice?.contactId || null,
+        userId: null,
+        type: 'dispute',
+        status: dispute.status,
+        subject: `Dispute: ${dispute.reason}`,
+        content: dispute.description,
+        scheduledFor: null,
+        completedAt: dispute.status === 'resolved' ? dispute.updatedAt : null,
+        metadata: {
+          disputeId: dispute.id,
+          reason: dispute.reason,
+          responseNotes: dispute.responseNotes,
+          respondedAt: dispute.respondedAt,
+          respondedBy: dispute.respondedBy
+        },
+        intentType: 'dispute',
+        intentConfidence: '1.00',
+        sentiment: 'negative',
+        hasResponse: !!dispute.respondedAt,
+        createdAt: dispute.createdAt,
+        updatedAt: dispute.updatedAt,
+        contactName: contact?.companyName || contact?.name || 'Unknown',
+        invoiceNumber: invoice?.invoiceNumber || 'N/A',
+        invoiceAmount: invoice?.amount || '0'
+      }));
+      
+      // Combine both types of disputes
+      const allDisputes = [...disputeActions, ...transformedDisputes];
       
       // 6. ON HOLD - invoices with active PTP, Payment Plan, or Dispute (paused from dunning)
       const onHoldRaw = allInvoices.filter(inv => {
         const isOverdueOrUnpaid = inv.status === 'overdue' || inv.status === 'unpaid';
         const hasPaymentPlan = inv.paymentPlanId;
-        const hasDispute = allActions.some(a => a.invoiceId === inv.id && a.intentType === 'dispute' && a.status === 'open');
+        const hasActionDispute = allActions.some(a => a.invoiceId === inv.id && a.intentType === 'dispute' && a.status === 'open');
+        const hasFormalDispute = invoiceIdsWithDisputes.includes(inv.id);
+        const hasDispute = hasActionDispute || hasFormalDispute;
         const hasPTP = allActions.some(a => a.invoiceId === inv.id && a.intentType === 'promise_to_pay');
         
         return isOverdueOrUnpaid && (hasPaymentPlan || hasDispute || hasPTP);
@@ -4401,7 +4458,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // Determine why it's on hold
         const hasPaymentPlan = inv.paymentPlanId;
-        const hasDispute = allActions.some(a => a.invoiceId === inv.id && a.intentType === 'dispute' && a.status === 'open');
+        const hasActionDispute = allActions.some(a => a.invoiceId === inv.id && a.intentType === 'dispute' && a.status === 'open');
+        const hasFormalDispute = invoiceIdsWithDisputes.includes(inv.id);
+        const hasDispute = hasActionDispute || hasFormalDispute;
         const hasPTP = allActions.some(a => a.invoiceId === inv.id && a.intentType === 'promise_to_pay');
         
         let holdReason = '';
@@ -4425,7 +4484,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         overdueInvoices: { count: overdueInvoicesRaw.length, items: overdueCustomers },
         upcomingPTP: { count: upcomingPTP.length, items: upcomingPTP },
         brokenPromises: { count: brokenPromises.length, items: brokenPromises },
-        disputes: { count: disputes.length, items: disputes },
+        disputes: { count: allDisputes.length, items: allDisputes },
         onHold: { count: onHold.length, items: onHold },
         debtRecovery: { count: debtRecovery.length, items: debtRecovery },
         legal: { count: legal.length, items: legal }
@@ -4433,6 +4492,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching action centre tabs:", error);
       res.status(500).json({ message: "Failed to fetch action centre tabs" });
+    }
+  });
+
+  // Collector response to disputes
+  app.post("/api/disputes/:disputeId/respond", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { disputeId } = req.params;
+      const { status, responseNotes } = req.body;
+
+      // Validate input
+      if (!status || !responseNotes) {
+        return res.status(400).json({ message: "Status and response notes are required" });
+      }
+
+      if (!['under_review', 'resolved', 'rejected'].includes(status)) {
+        return res.status(400).json({ message: "Invalid status. Must be under_review, resolved, or rejected" });
+      }
+
+      // Get the dispute and verify it belongs to this tenant
+      const dispute = await storage.getDispute(disputeId, user.tenantId);
+      if (!dispute) {
+        return res.status(404).json({ message: "Dispute not found" });
+      }
+
+      // Update the dispute
+      const updatedDispute = await storage.updateDispute(disputeId, user.tenantId, {
+        status,
+        responseNotes,
+        respondedBy: user.id,
+        respondedAt: new Date()
+      });
+
+      // If dispute is resolved, create a note on the invoice
+      if (status === 'resolved' || status === 'rejected') {
+        await storage.createAction(user.tenantId, {
+          invoiceId: dispute.invoiceId,
+          contactId: null,
+          userId: user.id,
+          type: 'note',
+          status: 'completed',
+          subject: `Dispute ${status}`,
+          content: `Dispute ${status} by collector. Response: ${responseNotes}`,
+          metadata: {
+            disputeId: dispute.id,
+            disputeStatus: status
+          }
+        });
+      }
+
+      res.json(updatedDispute);
+    } catch (error) {
+      console.error("Error responding to dispute:", error);
+      res.status(500).json({ message: "Failed to respond to dispute" });
     }
   });
 
