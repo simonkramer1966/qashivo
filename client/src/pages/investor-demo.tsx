@@ -81,6 +81,7 @@ export default function InvestorDemo() {
   const [currentResults, setCurrentResults] = useState<any>(null);
   const [resultsType, setResultsType] = useState<"voice" | "sms">("voice");
   const lastShownResultsRef = useRef<string>("");
+  const lastShownAtRef = useRef<number>(0); // Track timestamp of currently displayed result
   const transitionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isTransitioningRef = useRef(false);
   
@@ -151,7 +152,7 @@ export default function InvestorDemo() {
   }, [leadId]);
 
   // Helper function to open dialog with results (avoids code duplication)
-  const openDialogWithResults = (results: any, type: "voice" | "sms", resultKey: string) => {
+  const openDialogWithResults = (results: any, type: "voice" | "sms", resultKey: string, analyzedAt: number) => {
     setCurrentResults(results);
     setResultsType(type);
     if (type === "voice") {
@@ -161,6 +162,7 @@ export default function InvestorDemo() {
     }
     setIsDemoProcessing(false);
     lastShownResultsRef.current = resultKey;
+    lastShownAtRef.current = analyzedAt; // Track when this result was created
     isTransitioningRef.current = false;
     setResultsDialogOpen(true);
     
@@ -179,10 +181,19 @@ export default function InvestorDemo() {
 
     // Update voice results if available
     if (demoResults.voiceDemoCompleted && demoResults.voiceDemoResults) {
-      const resultKey = `voice-${demoResults.voiceDemoResults.analyzedAt || Date.now()}`;
+      // Convert ISO string to numeric timestamp for comparison
+      let analyzedAtMs = demoResults.voiceDemoResults.analyzedAt 
+        ? new Date(demoResults.voiceDemoResults.analyzedAt).getTime()
+        : Date.now();
+      // Guard against invalid timestamps
+      if (!Number.isFinite(analyzedAtMs)) {
+        analyzedAtMs = Date.now();
+      }
+      const resultKey = `voice-${analyzedAtMs}`;
       
-      // Only process if we haven't shown these results yet
-      if (lastShownResultsRef.current !== resultKey) {
+      // CRITICAL: Only process if this result is newer than what's currently displayed
+      // This prevents showing old voice results after SMS has completed
+      if (analyzedAtMs > lastShownAtRef.current && lastShownResultsRef.current !== resultKey) {
         // If dialog is open with different type, transition to new type
         if (resultsDialogOpen && resultsType === "sms") {
           // Clear any pending transition
@@ -196,7 +207,7 @@ export default function InvestorDemo() {
           
           // Wait for dialog to close before showing new one
           transitionTimeoutRef.current = setTimeout(() => {
-            openDialogWithResults(demoResults.voiceDemoResults, "voice", resultKey);
+            openDialogWithResults(demoResults.voiceDemoResults, "voice", resultKey, analyzedAtMs);
           }, 400);
         } else if (resultsDialogOpen && resultsType === "voice") {
           // Same type already open - update results without closing
@@ -204,20 +215,30 @@ export default function InvestorDemo() {
           setVoiceProgress("");
           setIsDemoProcessing(false);
           lastShownResultsRef.current = resultKey;
+          lastShownAtRef.current = analyzedAtMs;
           // No toast for same-type updates to avoid spam
         } else {
           // Dialog is closed, open immediately
-          openDialogWithResults(demoResults.voiceDemoResults, "voice", resultKey);
+          openDialogWithResults(demoResults.voiceDemoResults, "voice", resultKey, analyzedAtMs);
         }
       }
     }
     
     // Update SMS results if available
     if (demoResults.smsDemoCompleted && demoResults.smsDemoResults) {
-      const resultKey = `sms-${demoResults.smsDemoResults.analyzedAt || Date.now()}`;
+      // Convert ISO string to numeric timestamp for comparison
+      let analyzedAtMs = demoResults.smsDemoResults.analyzedAt 
+        ? new Date(demoResults.smsDemoResults.analyzedAt).getTime()
+        : Date.now();
+      // Guard against invalid timestamps
+      if (!Number.isFinite(analyzedAtMs)) {
+        analyzedAtMs = Date.now();
+      }
+      const resultKey = `sms-${analyzedAtMs}`;
       
-      // Only process if we haven't shown these results yet
-      if (lastShownResultsRef.current !== resultKey) {
+      // CRITICAL: Only process if this result is newer than what's currently displayed
+      // This prevents the dialog from flickering between old and new results
+      if (analyzedAtMs > lastShownAtRef.current && lastShownResultsRef.current !== resultKey) {
         // If dialog is open with different type, transition to new type
         if (resultsDialogOpen && resultsType === "voice") {
           // Clear any pending transition
@@ -231,7 +252,7 @@ export default function InvestorDemo() {
           
           // Wait for dialog to close before showing new one
           transitionTimeoutRef.current = setTimeout(() => {
-            openDialogWithResults(demoResults.smsDemoResults, "sms", resultKey);
+            openDialogWithResults(demoResults.smsDemoResults, "sms", resultKey, analyzedAtMs);
           }, 400);
         } else if (resultsDialogOpen && resultsType === "sms") {
           // Same type already open - update results without closing
@@ -239,10 +260,11 @@ export default function InvestorDemo() {
           setSmsProgress("");
           setIsDemoProcessing(false);
           lastShownResultsRef.current = resultKey;
+          lastShownAtRef.current = analyzedAtMs;
           // No toast for same-type updates to avoid spam
         } else {
           // Dialog is closed, open immediately
-          openDialogWithResults(demoResults.smsDemoResults, "sms", resultKey);
+          openDialogWithResults(demoResults.smsDemoResults, "sms", resultKey, analyzedAtMs);
         }
       }
     }
