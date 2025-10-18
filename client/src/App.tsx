@@ -36,6 +36,7 @@ const InvestorDemo = lazy(() => import("@/pages/investor-demo"));
 const InvestorDemoQashivo = lazy(() => import("@/pages/investor-demo-qashivo"));
 const InvestorCRM = lazy(() => import("@/pages/investor-crm"));
 const DocsDownload = lazy(() => import("@/pages/docs-download"));
+const DebtorPortal = lazy(() => import("@/pages/debtor-portal"));
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -72,6 +73,7 @@ function Router() {
         <Switch>
           <Route path="/investor-demo" component={InvestorDemo} />
           <Route path="/investor-demo-qashivo" component={InvestorDemoQashivo} />
+          <Route path="/debtor-portal" component={DebtorPortal} />
           <Route path="/partner/register" component={PartnerRegistration} />
           <Route path="/client/register" component={ClientRegistration} />
           <Route path="/signin" component={SignIn} />
