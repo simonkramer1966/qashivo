@@ -4,6 +4,87 @@ import { setupVite, serveStatic, log } from "./vite";
 import debtorRoutes from "./debtor-routes";
 
 const app = express();
+
+// Stripe webhook needs raw body for signature verification
+// Must come BEFORE express.json() middleware
+app.post("/api/debtor/payment/webhook", express.raw({ type: 'application/json' }), async (req, res) => {
+  try {
+    const sig = req.headers["stripe-signature"];
+    if (!sig) {
+      return res.status(400).json({ error: "Missing signature" });
+    }
+
+    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+    if (!webhookSecret) {
+      console.error("STRIPE_WEBHOOK_SECRET not configured");
+      return res.status(500).json({ error: "Webhook not configured" });
+    }
+
+    // Dynamic import to avoid circular dependencies
+    const Stripe = (await import("stripe")).default;
+    const { storage } = await import("./storage");
+    const { InterestCalculator } = await import("./services/interest-calculator");
+    
+    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", { apiVersion: "2024-12-18.acacia" });
+
+    // Verify webhook signature
+    const event = stripe.webhooks.constructEvent(
+      req.body,
+      sig,
+      webhookSecret
+    );
+
+    // Handle checkout.session.completed event
+    if (event.type === "checkout.session.completed") {
+      const session = event.data.object as any;
+      const metadata = session.metadata;
+
+      if (metadata && metadata.invoiceId && metadata.tenantId) {
+        // Record payment
+        const payment = await storage.createDebtorPayment({
+          tenantId: metadata.tenantId,
+          invoiceId: metadata.invoiceId,
+          contactId: metadata.contactId,
+          amount: metadata.totalAmount,
+          principalAmount: metadata.principalAmount,
+          interestAmount: metadata.interestAmount,
+          paymentMethod: "stripe",
+          stripeSessionId: session.id,
+          stripePaymentIntentId: session.payment_intent as string,
+          status: "completed",
+          paidAt: new Date(),
+        });
+
+        // Update invoice amount paid
+        const invoice = await storage.getInvoice(metadata.invoiceId, metadata.tenantId);
+        if (invoice) {
+          const newAmountPaid = parseFloat(invoice.amountPaid || "0") + parseFloat(metadata.principalAmount);
+          await storage.updateInvoice(metadata.invoiceId, metadata.tenantId, {
+            amountPaid: newAmountPaid.toString(),
+            status: newAmountPaid >= parseFloat(invoice.amount) ? "paid" : "partial",
+          });
+
+          // Handle partial payment - create new ledger period
+          if (newAmountPaid < parseFloat(invoice.amount)) {
+            await InterestCalculator.handlePayment(
+              invoice,
+              parseFloat(metadata.principalAmount),
+              await storage.getInvoiceDisputes(metadata.invoiceId, metadata.tenantId)
+            );
+          }
+        }
+
+        console.log("Payment processed successfully:", payment.id);
+      }
+    }
+
+    return res.json({ received: true });
+  } catch (error) {
+    console.error("Webhook error:", error);
+    return res.status(400).json({ error: "Webhook handling failed" });
+  }
+});
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 

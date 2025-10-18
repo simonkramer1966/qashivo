@@ -604,6 +604,14 @@ export interface IStorage {
   getLatestInterestLedgerForInvoice(invoiceId: string, tenantId: string): Promise<InterestLedger | undefined>;
   createInterestLedgerEntry(entry: InsertInterestLedger): Promise<InterestLedger>;
   updateInterestLedgerEntry(id: string, tenantId: string, updates: Partial<InsertInterestLedger>): Promise<InterestLedger>;
+  
+  // Debtor Portal operations - for external debtor self-service
+  getContactInvoices(contactId: string, tenantId: string): Promise<Invoice[]>;
+  getInvoiceDisputes(invoiceId: string, tenantId: string): Promise<Dispute[]>;
+  createDispute(dispute: InsertDispute): Promise<Dispute>;
+  getInvoicePromisesToPay(invoiceId: string, tenantId: string): Promise<PromiseToPay[]>;
+  createPromiseToPay(promise: InsertPromiseToPay): Promise<PromiseToPay>;
+  createDebtorPayment(payment: InsertDebtorPayment): Promise<DebtorPayment>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -5081,6 +5089,61 @@ export class DatabaseStorage implements IStorage {
       .returning();
     
     return entry;
+  }
+
+  // Debtor Portal operations - for external debtor self-service
+  async getContactInvoices(contactId: string, tenantId: string): Promise<Invoice[]> {
+    const contactInvoices = await db
+      .select()
+      .from(invoices)
+      .where(and(
+        eq(invoices.contactId, contactId),
+        eq(invoices.tenantId, tenantId)
+      ))
+      .orderBy(desc(invoices.dueDate));
+    
+    return contactInvoices;
+  }
+
+  async getInvoiceDisputes(invoiceId: string, tenantId: string): Promise<Dispute[]> {
+    const invoiceDisputes = await db
+      .select()
+      .from(disputes)
+      .where(and(
+        eq(disputes.invoiceId, invoiceId),
+        eq(disputes.tenantId, tenantId)
+      ))
+      .orderBy(desc(disputes.createdAt));
+    
+    return invoiceDisputes;
+  }
+
+  async createDispute(disputeData: InsertDispute): Promise<Dispute> {
+    const [dispute] = await db.insert(disputes).values(disputeData).returning();
+    return dispute;
+  }
+
+  async getInvoicePromisesToPay(invoiceId: string, tenantId: string): Promise<PromiseToPay[]> {
+    const promises = await db
+      .select()
+      .from(promisesToPay)
+      .where(and(
+        eq(promisesToPay.invoiceId, invoiceId),
+        eq(promisesToPay.tenantId, tenantId)
+      ))
+      .orderBy(desc(promisesToPay.createdAt));
+    
+    return promises;
+  }
+
+  async createPromiseToPay(promiseData: InsertPromiseToPay): Promise<PromiseToPay> {
+    const [promise] = await db.insert(promisesToPay).values(promiseData).returning();
+    return promise;
+  }
+
+  async createDebtorPayment(paymentData: InsertDebtorPayment): Promise<DebtorPayment> {
+    const [payment] = await db.insert(debtorPayments).values(paymentData).returning();
+    return payment;
   }
 }
 
