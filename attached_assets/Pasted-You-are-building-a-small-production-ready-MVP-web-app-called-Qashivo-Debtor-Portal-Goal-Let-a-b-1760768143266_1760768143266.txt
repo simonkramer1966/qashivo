@@ -1,0 +1,70 @@
+You are building a small, production-ready MVP web app called “Qashivo Debtor Portal”.
+
+Goal
+Let a buyer open a secure link, see what they owe (with live interest to today), either pay now, raise a dispute with evidence, or make a dated Promise-to-Pay (PTP). No payment plans in MVP.
+
+Stack
+• Backend: Node + Express (TypeScript), PostgreSQL (Prisma), JSON Web Tokens for short-lived sessions.
+• Frontend: React + Tailwind. 
+• Files: S3-compatible storage adapter.
+• Payments: single PSP via hosted checkout (stub an adapter with a fake provider; make it easy to swap).
+• Notifications: SendGrid (email), Vonage (SMS) stubs with interface + console logger.
+
+Security & auth
+• Each invite is a signed magic link token (invoice_id, buyer_id, exp ≤ 30 minutes). 
+• On open, verify token and send a one-time code by email or SMS; bind session cookie (HttpOnly, Secure).
+• Rate-limit sensitive routes. Virus-scan file metadata only (stub).
+
+Buyer UX (single page with tabs)
+• Header: Buyer name, account ref, neutral copy.
+• “Overview” tab: list of open invoices with principal, due date, accrued interest to today, total due today, and per-day accrual.
+• Actions per invoice: [Pay now], [Raise a dispute], [Make a PTP].
+• “Disputes” tab: show status timeline and evidence list; allow additional evidence upload.
+• “PTPs” tab: list active and breached PTPs.
+
+Business rules
+• Interest: daily = principal × annual_rate ÷ 365. Show running total to now. Recompute after partial payments.
+• Dispute types: quantity/price variance, goods/services defect, credit note pending, duplicate, not received, other.
+• Dispute submit requires: type, free-text summary, at least one evidence file (pdf/jpg/png), and a contact email/phone.
+• PTP requires: amount, pay date (future), method hint (card/bank), contact name. No installment plans.
+• Timers: 
+  – dispute.response_due_at = created_at + 30 days
+  – ptp.due_at as entered; mark “breached” the day after if unpaid.
+• Events to emit (console for MVP): dispute.created/updated, ptp.created/breached, payment.succeeded.
+
+Data model (Prisma)
+BuyerAccount(id, name, company_number?, emails[], phones[])
+Invoice(id, buyerId, issueDate, dueDate, principal, balance, baseRateAnnual, statutoryUpliftPct)
+InterestLedger(id, invoiceId, startDate, endDate?, rateAnnual, accruedAmount, pausedReason?)
+Dispute(id, invoiceId, type, status, summary, buyerContact, createdAt, responseDueAt, resolution?, resolutionAt?)
+Evidence(id, disputeId, filename, mime, size, checksum, uploadedBy, uploadedAt, notes?)
+PTP(id, invoiceId, amount, dueDate, channel, contactName, contactEmail?, status, breachedAt?)
+EventLog(id, actorType, actorId?, eventType, payloadJSON, createdAt)
+
+API (JSON)
+POST /auth/start {token} → {otp_sent:true}
+POST /auth/verify {token, otp} → session cookie
+GET  /portal/overview → invoices with interest_today and total_due_today
+POST /disputes {invoiceId, type, summary, buyerContact} → {disputeId}
+POST /disputes/:id/evidence (multipart)
+POST /ptp {invoiceId, amount, dueDate, channel, contactName, contactEmail}
+POST /payments/checkout {invoiceId} → {checkout_url, psp_session_id}
+POST /webhooks/payments (PSP stub) → marks payment, reduces balance, appends EventLog
+
+Frontend states
+• Empty state when no open invoices.
+• Inline validation errors and success toasts.
+• Accessibility: keyboard-first, ARIA labels, clear error copy.
+
+Acceptance criteria (MVP)
+1) Buyer arrives via magic link + OTP without creating an account.
+2) Overview shows live interest and total to settle today.
+3) Dispute can be submitted with evidence; status renders; evidence timeline visible.
+4) PTP can be created; breached state flips if not paid by due date.
+5) “Pay now” opens hosted checkout and on success the balance and interest update.
+6) All key actions write EventLog rows; sample console webhooks fire.
+
+Non-functional
+• Idempotency keys on webhooks.
+• Basic observability: request logs + error logs.
+• Seed script with 2 buyers, 3 invoices each, including one with a dispute and one with an active PTP.
