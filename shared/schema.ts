@@ -175,6 +175,12 @@ export const invoices = pgTable("invoices", {
   reminderCount: integer("reminder_count").default(0),
   nextAction: varchar("next_action"), // email, sms, call, visit
   nextActionDate: timestamp("next_action_date"),
+  
+  // Debtor portal and interest calculation fields
+  balance: decimal("balance", { precision: 10, scale: 2 }), // Current outstanding balance (computed: amount - amountPaid)
+  baseRateAnnual: decimal("base_rate_annual", { precision: 5, scale: 2 }), // Annual interest rate (e.g., 5.00 for 5%)
+  statutoryUpliftPct: decimal("statutory_uplift_pct", { precision: 5, scale: 2 }), // Statutory uplift (e.g., 8.00 for 8%)
+  
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => [
@@ -956,6 +962,147 @@ export const aiFacts = pgTable("ai_facts", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// ==================== DEBTOR PORTAL TABLES ====================
+
+// Interest Ledger - tracks daily interest accrual with pause/resume capability
+export const interestLedger = pgTable("interest_ledger", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  invoiceId: varchar("invoice_id").notNull().references(() => invoices.id),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  startDate: timestamp("start_date").notNull(),
+  endDate: timestamp("end_date"),
+  principal: decimal("principal", { precision: 10, scale: 2 }).notNull(),
+  rateAnnual: decimal("rate_annual", { precision: 5, scale: 2 }).notNull(),
+  accruedAmount: decimal("accrued_amount", { precision: 10, scale: 2 }).default("0"),
+  isPaused: boolean("is_paused").default(false),
+  pausedReason: varchar("paused_reason"),
+  pausedAt: timestamp("paused_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_interest_ledger_invoice").on(table.invoiceId),
+  index("idx_interest_ledger_tenant").on(table.tenantId),
+]);
+
+// Disputes - buyer-initiated disputes with evidence requirements
+export const disputes = pgTable("disputes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  invoiceId: varchar("invoice_id").notNull().references(() => invoices.id),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  contactId: varchar("contact_id").notNull().references(() => contacts.id),
+  type: varchar("type").notNull(),
+  status: varchar("status").notNull().default("pending"),
+  summary: text("summary").notNull(),
+  buyerContactName: varchar("buyer_contact_name").notNull(),
+  buyerContactEmail: varchar("buyer_contact_email"),
+  buyerContactPhone: varchar("buyer_contact_phone"),
+  responseDueAt: timestamp("response_due_at").notNull(),
+  respondedAt: timestamp("responded_at"),
+  respondedByUserId: varchar("responded_by_user_id").references(() => users.id),
+  resolution: text("resolution"),
+  resolutionType: varchar("resolution_type"),
+  creditNoteAmount: decimal("credit_note_amount", { precision: 10, scale: 2 }),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_disputes_invoice").on(table.invoiceId),
+  index("idx_disputes_tenant_status").on(table.tenantId, table.status),
+  index("idx_disputes_contact").on(table.contactId),
+]);
+
+// Dispute Evidence - file attachments for disputes
+export const disputeEvidence = pgTable("dispute_evidence", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  disputeId: varchar("dispute_id").notNull().references(() => disputes.id),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  filename: varchar("filename").notNull(),
+  originalFilename: varchar("original_filename").notNull(),
+  mimeType: varchar("mime_type").notNull(),
+  fileSize: integer("file_size").notNull(),
+  storageUrl: text("storage_url").notNull(),
+  uploadedBy: varchar("uploaded_by").notNull(),
+  uploadedByUserId: varchar("uploaded_by_user_id").references(() => users.id),
+  notes: text("notes"),
+  checksum: varchar("checksum"),
+  virusScanStatus: varchar("virus_scan_status").default("pending"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_dispute_evidence_dispute").on(table.disputeId),
+]);
+
+// Promises to Pay - dated commitments from debtors
+export const promisesToPay = pgTable("promises_to_pay", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  invoiceId: varchar("invoice_id").notNull().references(() => invoices.id),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  contactId: varchar("contact_id").notNull().references(() => contacts.id),
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  promisedDate: timestamp("promised_date").notNull(),
+  paymentMethod: varchar("payment_method").notNull(),
+  contactName: varchar("contact_name").notNull(),
+  contactEmail: varchar("contact_email"),
+  contactPhone: varchar("contact_phone"),
+  status: varchar("status").notNull().default("active"),
+  fulfilledAt: timestamp("fulfilled_at"),
+  fulfilledAmount: decimal("fulfilled_amount", { precision: 10, scale: 2 }),
+  breachedAt: timestamp("breached_at"),
+  notes: text("notes"),
+  createdVia: varchar("created_via").default("debtor_portal"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_ptp_invoice").on(table.invoiceId),
+  index("idx_ptp_tenant_status").on(table.tenantId, table.status),
+  index("idx_ptp_promised_date").on(table.promisedDate),
+]);
+
+// Magic Link Tokens - secure time-limited access for debtors
+export const magicLinkTokens = pgTable("magic_link_tokens", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  contactId: varchar("contact_id").notNull().references(() => contacts.id),
+  token: varchar("token").notNull().unique(),
+  purpose: varchar("purpose").notNull().default("invoice_access"),
+  invoiceIds: text("invoice_ids").array(),
+  expiresAt: timestamp("expires_at").notNull(),
+  usedAt: timestamp("used_at"),
+  isRevoked: boolean("is_revoked").default(false),
+  otpCode: varchar("otp_code"),
+  otpExpiresAt: timestamp("otp_expires_at"),
+  otpVerifiedAt: timestamp("otp_verified_at"),
+  otpAttempts: integer("otp_attempts").default(0),
+  sessionId: varchar("session_id"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_magic_link_token").on(table.token),
+  index("idx_magic_link_expires").on(table.expiresAt),
+]);
+
+// Debtor Portal Payment Transactions
+export const debtorPayments = pgTable("debtor_payments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  invoiceId: varchar("invoice_id").notNull().references(() => invoices.id),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  contactId: varchar("contact_id").notNull().references(() => contacts.id),
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  currency: varchar("currency").default("GBP"),
+  provider: varchar("provider").notNull().default("stripe"),
+  providerSessionId: varchar("provider_session_id"),
+  providerPaymentId: varchar("provider_payment_id"),
+  checkoutUrl: text("checkout_url"),
+  status: varchar("status").notNull().default("initiated"),
+  failureReason: text("failure_reason"),
+  initiatedAt: timestamp("initiated_at").defaultNow(),
+  completedAt: timestamp("completed_at"),
+  idempotencyKey: varchar("idempotency_key").unique(),
+  webhookPayload: jsonb("webhook_payload"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_debtor_payments_invoice").on(table.invoiceId),
+  index("idx_debtor_payments_status").on(table.status),
+]);
+
 // Define relations
 export const usersRelations = relations(users, ({ one, many }) => ({
   tenant: one(tenants, {
@@ -1014,6 +1161,10 @@ export const invoicesRelations = relations(invoices, ({ one, many }) => ({
   bankTransactions: many(bankTransactions),
   actions: many(actions),
   voiceCalls: many(voiceCalls),
+  interestLedger: many(interestLedger),
+  disputes: many(disputes),
+  promisesToPay: many(promisesToPay),
+  debtorPayments: many(debtorPayments),
 }));
 
 // New table relations
@@ -3769,6 +3920,94 @@ export const forecastVarianceTrackingRelations = relations(forecastVarianceTrack
   }),
 }));
 
+// Debtor Portal Relations
+export const interestLedgerRelations = relations(interestLedger, ({ one }) => ({
+  invoice: one(invoices, {
+    fields: [interestLedger.invoiceId],
+    references: [invoices.id],
+  }),
+  tenant: one(tenants, {
+    fields: [interestLedger.tenantId],
+    references: [tenants.id],
+  }),
+}));
+
+export const disputesRelations = relations(disputes, ({ one, many }) => ({
+  invoice: one(invoices, {
+    fields: [disputes.invoiceId],
+    references: [invoices.id],
+  }),
+  tenant: one(tenants, {
+    fields: [disputes.tenantId],
+    references: [tenants.id],
+  }),
+  contact: one(contacts, {
+    fields: [disputes.contactId],
+    references: [contacts.id],
+  }),
+  respondedByUser: one(users, {
+    fields: [disputes.respondedByUserId],
+    references: [users.id],
+  }),
+  evidence: many(disputeEvidence),
+}));
+
+export const disputeEvidenceRelations = relations(disputeEvidence, ({ one }) => ({
+  dispute: one(disputes, {
+    fields: [disputeEvidence.disputeId],
+    references: [disputes.id],
+  }),
+  tenant: one(tenants, {
+    fields: [disputeEvidence.tenantId],
+    references: [tenants.id],
+  }),
+  uploadedByUser: one(users, {
+    fields: [disputeEvidence.uploadedByUserId],
+    references: [users.id],
+  }),
+}));
+
+export const promisesToPayRelations = relations(promisesToPay, ({ one }) => ({
+  invoice: one(invoices, {
+    fields: [promisesToPay.invoiceId],
+    references: [invoices.id],
+  }),
+  tenant: one(tenants, {
+    fields: [promisesToPay.tenantId],
+    references: [tenants.id],
+  }),
+  contact: one(contacts, {
+    fields: [promisesToPay.contactId],
+    references: [contacts.id],
+  }),
+}));
+
+export const magicLinkTokensRelations = relations(magicLinkTokens, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [magicLinkTokens.tenantId],
+    references: [tenants.id],
+  }),
+  contact: one(contacts, {
+    fields: [magicLinkTokens.contactId],
+    references: [contacts.id],
+  }),
+}));
+
+export const debtorPaymentsRelations = relations(debtorPayments, ({ one }) => ({
+  invoice: one(invoices, {
+    fields: [debtorPayments.invoiceId],
+    references: [invoices.id],
+  }),
+  tenant: one(tenants, {
+    fields: [debtorPayments.tenantId],
+    references: [tenants.id],
+  }),
+  contact: one(contacts, {
+    fields: [debtorPayments.contactId],
+    references: [contacts.id],
+  }),
+}));
+
 // Insert schemas
 export const insertSalesForecastSchema = createInsertSchema(salesForecasts).omit({
   id: true,
@@ -3862,3 +4101,57 @@ export const insertInvestmentCallRequestSchema = createInsertSchema(investmentCa
 
 export type InvestmentCallRequest = typeof investmentCallRequests.$inferSelect;
 export type InsertInvestmentCallRequest = z.infer<typeof insertInvestmentCallRequestSchema>;
+
+// Debtor Portal Zod Schemas
+export const insertInterestLedgerSchema = createInsertSchema(interestLedger).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertDisputeSchema = createInsertSchema(disputes).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertDisputeEvidenceSchema = createInsertSchema(disputeEvidence).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertPromiseToPaySchema = createInsertSchema(promisesToPay).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertMagicLinkTokenSchema = createInsertSchema(magicLinkTokens).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertDebtorPaymentSchema = createInsertSchema(debtorPayments).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Debtor Portal Type Exports
+export type InterestLedger = typeof interestLedger.$inferSelect;
+export type InsertInterestLedger = z.infer<typeof insertInterestLedgerSchema>;
+
+export type Dispute = typeof disputes.$inferSelect;
+export type InsertDispute = z.infer<typeof insertDisputeSchema>;
+
+export type DisputeEvidence = typeof disputeEvidence.$inferSelect;
+export type InsertDisputeEvidence = z.infer<typeof insertDisputeEvidenceSchema>;
+
+export type PromiseToPay = typeof promisesToPay.$inferSelect;
+export type InsertPromiseToPay = z.infer<typeof insertPromiseToPaySchema>;
+
+export type MagicLinkToken = typeof magicLinkTokens.$inferSelect;
+export type InsertMagicLinkToken = z.infer<typeof insertMagicLinkTokenSchema>;
+
+export type DebtorPayment = typeof debtorPayments.$inferSelect;
+export type InsertDebtorPayment = z.infer<typeof insertDebtorPaymentSchema>;
