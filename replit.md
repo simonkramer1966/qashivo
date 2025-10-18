@@ -1,12 +1,11 @@
 # Nexus AR
 
 ## Overview
-Nexus AR is an AI-driven accounts receivable and debt recovery application designed to automate and optimize collection processes. Its primary goal is to improve cash flow and reduce days sales outstanding for businesses through intelligent automation, multi-channel communication, and data-driven insights for invoice management. The project aims to become a leading solution for enterprise B2B companies with complex AR processes.
+Nexus AR is an AI-driven accounts receivable and debt recovery application designed to automate and optimize collection processes. Its primary goal is to improve cash flow and reduce days sales outstanding for businesses through intelligent automation, multi-channel communication, and data-driven insights for invoice management. The project aims to become a leading solution for enterprise B2B companies with complex AR processes, focusing on intelligent automation, multi-channel communication, and data-driven insights for invoice management.
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
 
-### Data Visualization Principles
 All data visualizations must adhere to the principles espoused by **Edward Tufte** and **Stephen Few**:
 
 **Edward Tufte Principles:**
@@ -39,121 +38,27 @@ The application features a Premium Glassmorphism UI with a `bg-gradient-to-br fr
 ### Technical Implementation
 - **Frontend**: React with TypeScript (Vite), Shadcn/ui (Radix UI), Tailwind CSS, Wouter for routing, TanStack Query for state management, React Hook Form with Zod validation.
 - **Backend**: Node.js with Express.js (TypeScript ES modules), RESTful API with authentication middleware, Express sessions.
-- **Database**: PostgreSQL (Neon serverless) with Drizzle ORM and Drizzle Kit for schema management. Designed for multi-tenancy.
+- **Database**: PostgreSQL (Neon serverless) with Drizzle ORM and Drizzle Kit for schema management, designed for multi-tenancy.
 - **Authentication**: Replit Auth (OpenID Connect) via Passport.js, with PostgreSQL-backed session storage.
 - **Data Models**: Core entities include Users, Tenants, Contacts, Invoices, Actions, and Workflows, all with multi-tenant architecture and Zod validation.
 
 ### Partner Architecture (B2B2B Model)
-A three-tier hierarchy designed for accounting firms (partners) to manage multiple client businesses (tenants) with role-based access control:
-
-**Architecture Layers:**
-1. **Partners** (Accounting Firms): Top-level organizations that manage multiple client businesses
-2. **Tenants** (Client Businesses): Individual businesses served by partners
-3. **Users** (Team Members): People within tenants with specific roles and contact assignments
-
-**Database Schema:**
-- `partners`: Partner organization data (id, name, email, phone, addressLine1, addressLine2, city, state, postalCode, country, subscriptionPlanId, customPricing, isActive)
-- `users`: Extended with `partnerId` (links to partner organization) and `tenantRole` (role within tenant: admin, collector, viewer)
-- `userContactAssignments`: Maps users to contacts they manage (userId, contactId, tenantId, assignedBy, isActive)
-- `partnerClientRelationships`: Tracks partner user access to client tenants (partnerUserId, partnerTenantId, clientTenantId, accessLevel, status)
-
-**Authentication & RBAC:**
-- Extended `Express.Request.rbac` with: `isPartner`, `partnerId`, `activeTenantId`, `tenantRole`, `userRole`, `permissions`
-- Session-based tenant switching for partner users (stored in `req.session.activeTenantId`)
-- `withRBACContext` middleware detects partner users, validates tenant access, and loads appropriate context
-- Access control middleware: `requirePartnerAccess`, `requireTenantAdmin`, `enforceContactAccess`, `getContactFilter`
-- Validation: Partner tenant access verified via `storage.getPartnerTenants()`, session updated on tenant switch
-
-**API Endpoints:**
-- Context Management: `GET /api/auth/context`, `GET /api/partner/tenants`, `POST /api/partner/switch-tenant`
-- Partner CRUD: `GET /POST /PATCH /api/partners` (owner-only, Zod validated)
-- Tenant Users: `GET /api/tenants/:tenantId/users` (tenant-admin, isolation enforced)
-- Contact Assignments: `GET /POST /DELETE /api/users/:userId/assignments`, bulk operations with validation
-
-**Access Control Rules:**
-- Partners: Full visibility across all assigned tenants
-- Tenant Admins: Full access within their tenant
-- Collectors: Access only to assigned contacts
-- Data isolation enforced at middleware level with tenant ID validation
-
-**Storage Layer Methods:**
-- Partner ops: `getPartners`, `getPartner`, `createPartner`, `updatePartner`
-- Tenant access: `getPartnerTenants`, `getTenantUsers`
-- Assignment ops: `getUserContactAssignments`, `getContactAssignments`, `createUserContactAssignment`, `deleteUserContactAssignment`
-- Bulk ops: `bulkAssignContacts`, `bulkUnassignContacts`
-- Access checks: `hasContactAccess`, `getAssignedContacts`
+A three-tier hierarchy designed for accounting firms (partners) to manage multiple client businesses (tenants) with role-based access control. Key elements include partner, tenant, and user entities, extended RBAC for partner users, session-based tenant switching, and enforced data isolation through middleware.
 
 ### Platform Admin System (Qashivo Internal)
-A secure administration interface for Qashivo employees to manage and monitor the entire platform across all partners and tenants.
-
-**Access Control:**
-- `platformAdmin` boolean field in `users` table (default: false)
-- `requirePlatformAdmin` middleware enforces access at API level
-- Frontend route guard redirects non-platform-admins from `/qashivo-admin`
-- Navigation link only visible to users with `platformAdmin=true`
-
-**Platform Admin Dashboard (`/qashivo-admin`):**
-- **Overview Tab**: Platform statistics (total users, tenants, partners, relationships), user distribution by role, partner status
-- **Users Tab**: Complete list of all users across all tenants with tenant/partner associations
-- **Tenants Tab**: All tenant organizations in the system
-- **Partners Tab**: All accounting firm partners with activity status
-
-**API Endpoints (Protected by `withPlatformAdmin()`):**
-- `GET /api/platform-admin/stats`: Platform-wide statistics
-- `GET /api/platform-admin/users`: All users with filtering options
-- `GET /api/platform-admin/tenants`: All tenant organizations
-- `GET /api/platform-admin/partners`: All partner organizations
-- `GET /api/platform-admin/relationships`: All partner-client relationships
-
-**Storage Methods:**
-- `getPlatformStats()`: Returns aggregated platform metrics
-- `getAllPlatformUsers(filters?)`: Fetches all users with optional role filtering
-- `getAllPlatformTenants()`: Returns all tenant organizations
-- `getAllPlatformPartners()`: Returns all partner organizations
-- `getAllPlatformRelationships()`: Returns all partner-client relationships with joined data
-
-**Security Implementation:**
-- Backend: All routes protected by `withPlatformAdmin()` middleware (isAuthenticated + requirePlatformAdmin)
-- Frontend: `useEffect` redirect + early return for non-platform-admins
-- Multi-layer defense: API returns 403 if platformAdmin check fails, UI prevents unauthorized access
+A secure administration interface for Qashivo employees to manage and monitor the entire platform across all partners and tenants, protected by a `platformAdmin` flag and dedicated middleware. It includes dashboards for users, tenants, and partners.
 
 ### Security Architecture
-For comprehensive security documentation including authentication, authorization, data protection, and improvement recommendations, see **[SECURITY.md](./SECURITY.md)**.
-
-**Key Security Features:**
-- **Authentication**: OAuth 2.0 via Replit OIDC with PostgreSQL-backed sessions (7-day TTL)
-- **Authorization**: 50+ granular RBAC permissions across 6 categories (invoices, customers, finance, AI, reports, admin)
-- **Multi-Tenant Isolation**: Strict tenant scoping at database, middleware, and storage layers
-- **Input Validation**: Zod schemas for all API inputs, Drizzle ORM for SQL injection prevention
-- **Webhook Security**: HMAC signature verification for external integrations (Xero, Sage, QuickBooks)
-- **Platform Admin Access**: Dedicated `platformAdmin` flag with multi-layer enforcement
-
-**Security Roadmap (See SECURITY.md for details):**
-- **Priority 1**: API key encryption at rest (KMS/Key Vault), audit logging, rate limiting/DDoS protection
-- **Priority 2**: Two-factor authentication (2FA), session rotation, Content Security Policy headers
-- **Priority 3**: IP whitelisting for admins, anomaly detection, automated secrets rotation
+Focuses on robust authentication (OAuth 2.0 with Replit OIDC), granular RBAC (50+ permissions), strict multi-tenant isolation, comprehensive input validation (Zod, Drizzle ORM), and webhook security (HMAC verification). A dedicated `platformAdmin` flag enforces access to administrative functions.
 
 ### Feature Specifications
-
-#### Intent Analyst System
-An AI-powered system for inbound communication analysis with a three-layer architecture:
-1.  **Webhook Layer**: Captures inbound communications from SendGrid (email), Vonage (SMS/WhatsApp), and Retell (voice).
-2.  **AI Analysis Engine**: Uses OpenAI for intent detection with confidence scoring.
-3.  **Action Generation**: Automatically creates actions for high-confidence intents (≥60%).
-    -   **Detected Intents**: `payment_plan`, `dispute`, `promise_to_pay`, `general_query`, `unknown`.
-    -   **Key Features**: Extracts entities (amounts, dates, promises), sentiment analysis, flags low-confidence items for manual review, stores full transcript and analysis in action metadata.
-
-#### AI Voice Dialog
-Intelligent voice call initiation with personalized scripts that adapt to overdue severity. It includes four script templates (Soft Approach, Professional Follow-up, Firm Collection, Final Notice) that are auto-selected based on days overdue. Scripts use dynamic variables for personalization, include compliance features (identity verification, call recording disclosure), and capture intent via Retell webhook integration.
-
-#### Universal API Middleware
-Provides a standardized interface for accounting software integrations, handling OAuth token management, data transformation, and secure token injection. A production-ready XeroProvider is implemented.
-
-#### Workflow Engine
-A customizable workflow system for collection processes, offering pre-built templates and trackable communication actions.
-
-#### Auto-Documentation System
-An AI-powered system that keeps technical documentation synchronized with code changes. It monitors git diffs, identifies affected documentation sections, uses OpenAI to generate updates, and provides a web UI for review and approval. Documentation is stored in a structured JSON format, with a CLI tool for manual sync and version history for rollbacks.
+- **Intent Analyst System**: AI-powered system for inbound communication analysis (email, SMS, voice) using OpenAI for intent detection, sentiment analysis, and automated action generation based on confidence scores.
+- **AI Voice Dialog**: Intelligent voice call initiation with personalized scripts adapting to overdue severity, featuring dynamic variables, compliance features, and intent capture via Retell.
+- **Universal API Middleware**: Standardized interface for accounting software integrations (e.g., XeroProvider), handling OAuth, data transformation, and secure token injection.
+- **Workflow Engine**: Customizable system for collection processes with pre-built templates and trackable communication actions.
+- **Auto-Documentation System**: AI-powered system monitoring git diffs to generate and update technical documentation using OpenAI, stored in structured JSON with version history.
+- **Debtor Self-Service Portal**: Secure, customer-facing portal enabling debtors to manage invoices, submit disputes, make promises to pay, and process payments. Features include magic link + OTP authentication, live interest calculations, and Stripe integration.
+- **PTP Breach Detection Service**: Background job monitoring promises to pay, automatically flagging breaches and creating follow-up actions for collectors when commitments are not met.
 
 ## External Dependencies
 
@@ -164,6 +69,7 @@ An AI-powered system that keeps technical documentation synchronized with code c
 -   **OpenAI**: AI services for natural language processing and intent detection.
 -   **Neon**: Serverless PostgreSQL hosting.
 -   **Retell AI**: AI voice call integration.
+-   **Stripe**: Payment processing for the Debtor Self-Service Portal.
 
 ### Development Tools
 -   **Replit**: Integrated development environment.
