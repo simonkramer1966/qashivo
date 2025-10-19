@@ -86,10 +86,6 @@ const partnerNavigationItems = [
   { name: "Settings", href: "/partner/settings", icon: Settings },
 ];
 
-// Platform admin navigation items (Qashivo internal only)
-const platformAdminNavigationItems = [
-  { name: "Platform Admin", href: "/qashivo-admin", icon: Shield },
-];
 
 // Owner-only navigation items
 const ownerNavigationItems: typeof navigationItems = [];
@@ -342,14 +338,7 @@ export default function NewSidebar() {
     
     // Partner portal pages (My Qashivo) show partner management sidebar
     if (location === '/partner' || location.startsWith('/partner/')) {
-      let partnerItems = [...partnerNavigationItems];
-      
-      // Add platform admin items if user is also a platform admin
-      if ((user as any)?.platformAdmin === true) {
-        partnerItems = [...platformAdminNavigationItems, { name: "divider", href: "#", icon: null }, ...partnerItems];
-      }
-      
-      return partnerItems;
+      return partnerNavigationItems;
     }
     
     // Default: Regular Qashivo operational sidebar (for all users working in tenant context)
@@ -358,11 +347,6 @@ export default function NewSidebar() {
     // Add owner-only items if user is an owner
     if ((user as any)?.role === "owner") {
       allItems = [...allItems, ...ownerNavigationItems];
-    }
-    
-    // Add platform admin items if user is a platform admin (Qashivo internal)
-    if ((user as any)?.platformAdmin === true) {
-      allItems = [...platformAdminNavigationItems, { name: "divider", href: "#", icon: null }, ...allItems];
     }
     
     return allItems;
