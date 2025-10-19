@@ -12,7 +12,7 @@ import { InterestCalculator } from "./services/interest-calculator";
 import Stripe from "stripe";
 
 const router = Router();
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", { apiVersion: "2024-12-18.acacia" });
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", { apiVersion: "2025-08-27.basil" });
 
 // Helper function to generate 6-digit OTP
 function generateOTP(): string {
@@ -212,21 +212,21 @@ router.post("/api/debtor-auth/dev-bypass", async (req, res) => {
       return res.status(403).json({ error: "Development bypass not available in production" });
     }
 
-    // Get the current user's tenant from their session
-    const userId = req.session.passport?.user || req.user?.id;
-    
-    if (!userId) {
+    // Get the current user's ID from authenticated session
+    if (!req.user?.claims?.sub) {
       return res.status(401).json({ error: "User not authenticated" });
     }
 
+    const userId = req.user.claims.sub;
+
     // Get user to find their tenant
-    const user = await storage.getUserById(userId);
+    const user = await storage.getUser(userId);
     if (!user || !user.tenantId) {
       return res.status(404).json({ error: "User or tenant not found" });
     }
 
     // Find any contact in this tenant for testing
-    const contacts = await storage.listContacts(user.tenantId);
+    const contacts = await storage.getContacts(user.tenantId);
     
     if (!contacts || contacts.length === 0) {
       return res.status(404).json({ error: "No contacts found in tenant for testing" });
