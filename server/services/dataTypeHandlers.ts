@@ -12,6 +12,7 @@ import {
 } from "@shared/schema";
 import { eq, and, or } from "drizzle-orm";
 import { signalCollector } from "../lib/signal-collector";
+import { timerService } from "../lib/timer-service";
 
 /**
  * Data Type Handlers for Sync Operations
@@ -330,6 +331,21 @@ export class InvoicesHandler implements DataTypeHandler {
       });
 
       console.log(`📊 Triggered payment signal collection for invoice ${invoiceId} from Xero sync`);
+    }
+
+    // Create dispute window timer for new invoices (T0+25 days)
+    if (isCreate && transformedData.contactId) {
+      try {
+        await timerService.createDisputeWindowTimer(
+          transformedData.tenantId,
+          invoiceId,
+          transformedData.contactId,
+          new Date(transformedData.issueDate)
+        );
+        console.log(`⏰ Created dispute window timer for invoice ${invoiceId}`);
+      } catch (error: any) {
+        console.error('⚠️ Failed to create dispute window timer:', error.message);
+      }
     }
     
     return isCreate;

@@ -313,6 +313,18 @@ app.use((req, res, next) => {
     }
   }
 
+  // Initialize Workflow Timer Processor
+  if (process.env.NODE_ENV !== 'test') {
+    try {
+      console.log("⏰ Initializing workflow timer processor...");
+      const { workflowTimerProcessor } = await import("./jobs/workflow-timer-processor");
+      workflowTimerProcessor.start();
+      console.log("✅ Workflow timer processor started");
+    } catch (error) {
+      console.error("❌ Failed to initialize workflow timer processor:", error);
+    }
+  }
+
   // MVP CLEANUP: Payment predictions disabled for MVP (stub service available in API routes)
   /* if (process.env.NODE_ENV !== 'test') {
     try {

@@ -2427,6 +2427,114 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Pause invoice (dispute, PTP, payment plan)
+  app.post("/api/invoices/:id/pause", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { id: invoiceId } = req.params;
+      const { pauseType, reason, pausedUntil, metadata } = req.body;
+
+      // Validate pause type
+      const validPauseTypes = ['dispute', 'ptp', 'payment_plan'];
+      if (!pauseType || !validPauseTypes.includes(pauseType)) {
+        return res.status(400).json({ message: "Invalid pause type. Must be one of: dispute, ptp, payment_plan" });
+      }
+
+      if (!reason) {
+        return res.status(400).json({ message: "Pause reason is required" });
+      }
+
+      const invoice = await storage.getInvoice(invoiceId, user.tenantId);
+      if (!invoice) {
+        return res.status(404).json({ message: "Invoice not found" });
+      }
+
+      const { pauseManager } = await import('./lib/pause-manager.js');
+      
+      await pauseManager.pauseInvoice({
+        invoiceId,
+        tenantId: user.tenantId,
+        pauseType,
+        reason,
+        pausedUntil: pausedUntil ? new Date(pausedUntil) : undefined,
+        metadata: metadata || {},
+      });
+
+      res.json({ success: true, message: `Invoice paused: ${reason}` });
+    } catch (error) {
+      console.error("Error pausing invoice:", error);
+      res.status(500).json({ message: "Failed to pause invoice" });
+    }
+  });
+
+  // Resume invoice (clear pause state)
+  app.post("/api/invoices/:id/resume", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { id: invoiceId } = req.params;
+      const { reason } = req.body;
+
+      if (!reason) {
+        return res.status(400).json({ message: "Resume reason is required" });
+      }
+
+      const invoice = await storage.getInvoice(invoiceId, user.tenantId);
+      if (!invoice) {
+        return res.status(404).json({ message: "Invoice not found" });
+      }
+
+      const { pauseManager } = await import('./lib/pause-manager.js');
+      
+      await pauseManager.resumeInvoice({
+        invoiceId,
+        tenantId: user.tenantId,
+        reason,
+      });
+
+      res.json({ success: true, message: `Invoice resumed: ${reason}` });
+    } catch (error) {
+      console.error("Error resuming invoice:", error);
+      res.status(500).json({ message: "Failed to resume invoice" });
+    }
+  });
+
+  // Get invoice pause status
+  app.get("/api/invoices/:id/pause-status", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { id: invoiceId } = req.params;
+
+      const invoice = await storage.getInvoice(invoiceId, user.tenantId);
+      if (!invoice) {
+        return res.status(404).json({ message: "Invoice not found" });
+      }
+
+      const { pauseManager } = await import('./lib/pause-manager.js');
+      
+      const pauseDetails = await pauseManager.getPauseDetails(invoiceId, user.tenantId);
+
+      res.json({
+        isPaused: pauseDetails?.pauseState !== null,
+        ...pauseDetails,
+      });
+    } catch (error) {
+      console.error("Error getting pause status:", error);
+      res.status(500).json({ message: "Failed to get pause status" });
+    }
+  });
+
   // Send SMS for invoice with template selection
   app.post("/api/invoices/:id/send-sms", isAuthenticated, async (req: any, res) => {
     try {

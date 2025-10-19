@@ -119,7 +119,8 @@ export class ActionPlanner {
             eq(invoices.tenantId, tenantId),
             lte(invoices.dueDate, today),
             gte(invoices.amount, invoices.amountPaid || 0),
-            sql`${invoices.status} NOT IN ('paid', 'cancelled', 'void')`
+            sql`${invoices.status} NOT IN ('paid', 'cancelled', 'void')`,
+            sql`${invoices.pauseState} IS NULL` // Skip paused invoices (disputes, PTPs, payment plans)
           )
         );
 

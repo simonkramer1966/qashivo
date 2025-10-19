@@ -1,0 +1,137 @@
+Athena said:
+<response status="success"> <thinking> Design a state-machine workflow with explicit timers tied to due dates and the UK late-payment proposals. Define where surfaced items appear, which actions are allowed, and which approvals gate movement into PLDR and enforcement. Keep humans focused on exceptions while Qashivo automates the rest. Ground triggers in legislation and research. Provide acceptance criteria and rule pseudocode for MVP. </thinking> <main_content> **BLUF:** Below is a production-ready workflow framework for Qashivo that: tracks each invoice through clear states, uses timers from due dates and the UK consultation proposals, surfaces only exceptions to humans, pauses cleanly for PTP/PP/Disputes, and gates PLDR and Enforcement behind approvals. It is designed to demo credibly and to align with the 60-day maximum term, a 30-day dispute window, and mandatory statutory interest at 8% + BoE base rate. :contentReference[oaicite:0]{index=0} :contentReference[oaicite:1]{index=1} :contentReference[oaicite:2]{index=2} For context, default terms remain 30 days under current law; many firms face late payment and spend significant staff time chasing, which justifies our exception-first design. :contentReference[oaicite:3]{index=3} :contentReference[oaicite:4]{index=4}
+1) Canonical invoice states (single source of truth)
+
+Issued → 2. Pre-Due Active → 3. Due → 4. Late → 5. PLDR Pending → 6. PLDR Active → 7. CCJ Awarded → 8. Enforcement Pending → 9. Enforcement Active → 10. Resolved
+Parallel Pause overlays: Dispute, Promise to Pay (PTP), Payment Plan (PP). Pauses suspend timers and comms.
+
+2) Timers and legal anchors (drive surfacing and automation)
+
+T0 = Invoice Receipt. Start 30-day dispute window. If no dispute by T0+30, future disputes do not delay payment; statutory interest accrues after agreed term. Surface “Dispute window closing” at T0+25 to Exceptions.
+
+Term cap: Cap payment terms at 60 days for UK B2B. Flag and surface any term >60 as Compliance Exception on creation. Roadmap: parameter to drop cap to 45 days if enacted later.
+
+Default term reference: current framework still assumes 30-day default under the 1998 Act where applicable.
+
+Statutory interest: once Late, compute interest at 8% + BoE base. Make it non-waivable in comms logic to reflect proposal; store accruals for reporting.
+
+Reporting signal: for large debtors, track interest owed/paid for transparency and escalation logic.
+
+3) Surfacing rules: when humans should see an invoice
+
+Qashivo auto-handles routine nudges. Humans see only exceptions in dedicated queues.
+
+Exceptions Queue (primary worklist)
+
+Dispute window at T0+25 and still no acknowledgement. Action: confirm receipt, invite evidence upload to Dispute Portal.
+
+Over-cap terms (>60d) detected on creation or ingestion. Action: propose amendment; flag to account owner.
+
+Late + high value (configurable threshold), VIP customer, or broken PTP/PP. Action: manual call or supervised AI voice.
+
+Aged ≥ term+15 with no promise and risk↑. Action: candidate for PLDR review.
+
+Interest anomaly (interest suppressed or altered by debtor terms). Action: compliance check given mandatory proposal.
+
+Large-company debtor with repeated late behavior (uses payment-practice data, when available). Action: escalate note for PLDR and reporting.
+
+Approvals Hub
+
+PLDR Approval: trigger when Late and any of: aged ≥ term+30, two broken promises, dispute rejected, or risk score ≥ threshold.
+
+Enforcement Approval: trigger when CCJ Awarded + unpaid after grace (configurable 14 days).
+Record approver, reason, and evidence bundle.
+
+Pause Manager
+
+PTP/PP start → suspend comms; set watchdogs: PTP due date, PP installment cadence. On failure, auto-re-age to appropriate stage by days late and behavior class.
+
+Dispute start → route to Disputes Console. On Resolution, resume at correct stage; on Rejection, return to workflow at current age with confidence tags.
+
+4) Channel and action matrix (static vs adaptive)
+
+Static workflow: fixed cadence by bucket (e.g., Pre-Due: D-7 email, D-3 SMS, D-1 email; Late: L+1 email, L+5 SMS, L+10 call).
+
+Adaptive workflow: risk-weighted path that adjusts cadence, channel mix, and tone using payment history and sentiment. Typical shift: faster call escalation for “high-risk, low-engagement” or softer approach for “formerly reliable, first-time late.” Research supports treating only exceptions while minimizing staff time.
+
+Manual actions allowed when surfaced
+
+Add call notes, attach evidence, propose or accept PTP/PP, trigger AI Voice (Retell), Email (SendGrid), SMS (Vonage), or set PLDR/Enforcement approvals.
+
+5) UI placement for MVP
+
+Today (operator homepage): merged Exceptions Queue with filters: bucket, risk, value, customer, reason.
+
+Approvals Hub: PLDR and Enforcement with two-step approval and downloadable evidence packs.
+
+Disputes Console: unified case thread, timestamps, portal messages, evidence viewer. Dispute auto-closes if raised after 30 days without prior notice.
+
+Pause Manager: PTP/PP dashboards with watchdog timers and fail-back logic.
+
+Aged Buckets Board: Issued, Pre-Due, Due, Late, PLDR, CCJ, Enforcement with counts and totals.
+
+Compliance Lens: flags for term >60, interest suppression, large-company repeat lateness, and reporting snapshots.
+
+6) Data model essentials
+
+Invoice: id, customer_id, issue_date, receipt_date, term_days, term_capped_flag, due_date, days_late, state, risk_score, balance, interest_accrued, timers.
+
+Pause: type {Dispute|PTP|PP}, start_at, end_at, status, terms, breach_policy.
+
+Dispute: reason_code, evidence_refs, submitted_at, decision, decision_at.
+
+Approvals: type {PLDR|Enforcement}, requested_at, approver_id, decision, rationale.
+
+Comms Log: channel, content_id, outcome, sentiment.
+
+Legality: interest_basis, base_rate_snapshot, mandatory_interest_flag.
+
+7) Rules engine sketch (TypeScript-like pseudocode)
+// timers
+if (now === receipt_date.plusDays(25) && !disputeRaised) surface("Dispute window closing");
+if (term_days > 60) surface("Compliance: over-cap terms"); // UK B2B :contentReference[oaicite:18]{index=18}
+
+if (now > due_date && balance > 0) {
+  state = "Late";
+  interest_accrue(boe_base_rate + 8); // proposal baseline :contentReference[oaicite:19]{index=19}
+}
+// PLDR candidacy
+const brokenPromises = PTP.failures + PP.failures;
+if (state === "Late" && (
+    days_late >= 30 ||
+    brokenPromises >= 2 ||
+    (dispute.status === "Rejected") ||
+    risk_score >= cfg.PLRiskThreshold
+)) routeToApprovals("PLDR");
+
+// Enforcement candidacy
+if (state === "CCJ Awarded" && days_since_ccj >= cfg.EnforcementGraceDays)
+    routeToApprovals("Enforcement");
+
+// Pause behavior
+onPauseStart() { suspendComms(); freezeTimers(); }
+onPauseBreach() { resumeComms(); recalcStateByAge(); surface("Promise broken"); }
+
+8) MVP acceptance criteria
+
+State machine: every invoice shows 1 active state and zero or more pause overlays.
+
+Timers: dispute-window alerts at T0+25; auto-interest once late; cap-term flags at creation.
+
+Surfacing: operators see only items in Exceptions, Approvals, Disputes, or Pause Manager.
+
+PTP/PP: starting a plan pauses comms and timers; breach returns to correct stage by age and behavior.
+
+PLDR/Enforcement: require approval with stored reason and pack export.
+
+Reporting: interest owed and paid captured on each invoice; large-company flags visible.
+
+Comms: Retell, Vonage, SendGrid actions idempotent with webhook confirmations.
+
+9) Integration notes (Replit-friendly)
+
+Webhooks: /webhooks/retell, /webhooks/vonage, /webhooks/sendgrid with x-idempotency-key per invoice event. Retries: exponential backoff, 24-hour DLQ.
+
+Observability: event bus topics invoice.state.changed, pause.started, approval.granted, plan.breached.
+
+Privacy: Dispute evidence stored off-box (S3-compatible) with signed URLs.

@@ -181,6 +181,14 @@ export const invoices = pgTable("invoices", {
   baseRateAnnual: decimal("base_rate_annual", { precision: 5, scale: 2 }), // Annual interest rate (e.g., 5.00 for 5%)
   statutoryUpliftPct: decimal("statutory_uplift_pct", { precision: 5, scale: 2 }), // Statutory uplift (e.g., 8.00 for 8%)
   
+  // Workflow state machine fields
+  workflowState: varchar("workflow_state").default("pre_due"), // pre_due, due, late, resolved
+  pauseState: varchar("pause_state"), // null, dispute, ptp, payment_plan - overlays workflowState
+  pausedAt: timestamp("paused_at"), // When pause started
+  pausedUntil: timestamp("paused_until"), // Expected pause end (for PTP/payment plans)
+  pauseReason: text("pause_reason"), // Human-readable reason for pause
+  pauseMetadata: jsonb("pause_metadata"), // Additional pause data (promise details, dispute ID, etc.)
+  
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => [
@@ -192,6 +200,35 @@ export const invoices = pgTable("invoices", {
   index("idx_invoices_contact_id").on(table.contactId),
   index("idx_invoices_next_action_date").on(table.tenantId, table.nextActionDate),
   index("idx_invoices_payment_plan_id").on(table.paymentPlanId),
+  index("idx_invoices_workflow_state").on(table.tenantId, table.workflowState),
+  index("idx_invoices_pause_state").on(table.tenantId, table.pauseState),
+]);
+
+// Workflow Timers table - tracks timer-based exception surfacing
+export const workflowTimers = pgTable("workflow_timers", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  invoiceId: varchar("invoice_id").notNull().references(() => invoices.id, { onDelete: "cascade" }),
+  contactId: varchar("contact_id").notNull().references(() => contacts.id), // Denormalized for performance
+  
+  // Timer configuration
+  timerType: varchar("timer_type").notNull(), // dispute_window_closing, broken_promise, high_risk_late, aging_threshold
+  triggerAt: timestamp("trigger_at").notNull(), // When this timer should fire
+  
+  // Status tracking
+  status: varchar("status").notNull().default("pending"), // pending, processed, cancelled
+  processedAt: timestamp("processed_at"),
+  
+  // Metadata
+  metadata: jsonb("metadata"), // Additional timer data (threshold values, reason codes, etc.)
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_workflow_timers_tenant").on(table.tenantId),
+  index("idx_workflow_timers_invoice").on(table.invoiceId),
+  index("idx_workflow_timers_trigger").on(table.tenantId, table.triggerAt, table.status), // For querying pending timers
+  index("idx_workflow_timers_type").on(table.timerType, table.status),
 ]);
 
 // Payment Plans table
