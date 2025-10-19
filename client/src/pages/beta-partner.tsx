@@ -173,9 +173,6 @@ export default function BetaPartner() {
                   <source src={partnerVideo} type="video/mp4" />
                   Your browser does not support the video tag.
                 </video>
-                <p className="text-center text-sm text-gray-600 py-4 px-4">
-                  See how Qashivo transforms credit control for accounting practices
-                </p>
               </Card>
             </div>
           </div>
