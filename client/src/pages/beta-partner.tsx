@@ -277,6 +277,10 @@ export default function BetaPartner() {
             </p>
           </div>
 
+          <p className="text-lg text-gray-700 text-center max-w-4xl mx-auto mb-12 leading-relaxed">
+            For accounting practices, the commercial upside is immediate. Qashivo enables you to scale your credit control offering without proportional cost increases, delivering superior results while expanding your margins.
+          </p>
+
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
             <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg p-8" data-testid="card-commercial-efficiency">
               <div className="p-3 bg-[#8B2635]/10 rounded-xl w-fit mb-4">
@@ -340,7 +344,10 @@ export default function BetaPartner() {
           </div>
 
           {/* Stat Callout */}
-          <Card className="bg-gradient-to-br from-[#8B2635]/10 via-[#A98743]/10 to-[#17B6C3]/10 border-2 border-[#A98743]/30 shadow-xl p-8 max-w-4xl mx-auto" data-testid="card-practice-stats">
+          <div className="text-center mb-6">
+            <h3 className="text-2xl font-bold text-[#A98743]">Proven Profitability</h3>
+          </div>
+          <Card className="bg-gradient-to-br from-[#8B2635]/10 via-[#A98743]/10 to-[#17B6C3]/10 border-2 border-[#A98743]/30 shadow-2xl p-8 max-w-4xl mx-auto relative overflow-hidden" data-testid="card-practice-stats" style={{ boxShadow: '0 25px 50px -12px rgba(169, 135, 67, 0.25), 0 0 60px -15px rgba(169, 135, 67, 0.15)' }}>
             <div className="flex items-start gap-6">
               <div className="p-4 bg-white rounded-xl shadow-md flex-shrink-0">
                 <BarChart3 className="w-12 h-12 text-[#A98743]" />
