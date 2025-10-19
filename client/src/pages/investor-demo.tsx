@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useLocation } from "wouter";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -66,6 +67,7 @@ const COUNTRY_CODES = [
 
 export default function InvestorDemo() {
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
   const [leadData, setLeadData] = useState({ name: "", email: "" });
   const [leadCaptured, setLeadCaptured] = useState(false);
   const [leadId, setLeadId] = useState("");
@@ -615,7 +617,7 @@ export default function InvestorDemo() {
       
       toast({
         title: "Thank you for your interest.",
-        description: "Investment deck downloading now. Our team will contact you within 24 hours to answer any questions you may have.",
+        description: "Redirecting you to the full investment overview...",
       });
       
       // Reset form and close dialog
@@ -627,6 +629,11 @@ export default function InvestorDemo() {
       setAcknowledgesRisk(false);
       setFormErrors({});
       setInvestmentDialogOpen(false);
+      
+      // Redirect to investor detail page after a brief delay
+      setTimeout(() => {
+        setLocation("/investor-detail");
+      }, 1500);
     } catch (error) {
       // Only show generic error toast, form errors are already displayed inline
       if (Object.keys(formErrors).length === 0) {

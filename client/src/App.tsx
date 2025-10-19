@@ -34,6 +34,7 @@ const ClientIntelligence = lazy(() => import("@/pages/client-intelligence"));
 const IntelligentForecast = lazy(() => import("@/pages/intelligent-forecast"));
 const InvestorDemo = lazy(() => import("@/pages/investor-demo"));
 const InvestorDemoQashivo = lazy(() => import("@/pages/investor-demo-qashivo"));
+const InvestorDetail = lazy(() => import("@/pages/investor-detail"));
 const InvestorCRM = lazy(() => import("@/pages/investor-crm"));
 const DocsDownload = lazy(() => import("@/pages/docs-download"));
 const DebtorPortal = lazy(() => import("@/pages/debtor-portal"));
@@ -45,7 +46,7 @@ function Router() {
   const [location] = useLocation();
 
   // Inactivity timer - disabled for investor demo and beta partner pages
-  const isInvestorDemo = location === '/investor-demo' || location === '/investor-demo-qashivo' || location === '/beta-partner';
+  const isInvestorDemo = location === '/investor-demo' || location === '/investor-demo-qashivo' || location === '/investor-detail' || location === '/beta-partner';
   useInactivityTimer({
     timeout: 60000, // 60 seconds
     onInactive: triggerSplash,
@@ -74,6 +75,7 @@ function Router() {
         <Switch>
           <Route path="/investor-demo" component={InvestorDemo} />
           <Route path="/investor-demo-qashivo" component={InvestorDemoQashivo} />
+          <Route path="/investor-detail" component={InvestorDetail} />
           <Route path="/beta-partner" component={BetaPartner} />
           <Route path="/debtor-portal" component={DebtorPortal} />
           <Route path="/partner/register" component={PartnerRegistration} />
@@ -87,6 +89,7 @@ function Router() {
         <Switch>
           <Route path="/investor-demo" component={InvestorDemo} />
           <Route path="/investor-demo-qashivo" component={InvestorDemoQashivo} />
+          <Route path="/investor-detail" component={InvestorDetail} />
           <Route path="/beta-partner" component={BetaPartner} />
           <Route path="/investor-crm" component={InvestorCRM} />
           <Route path="/docs-download" component={DocsDownload} />
