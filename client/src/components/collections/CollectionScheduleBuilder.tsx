@@ -66,6 +66,14 @@ const scheduleSchema = z.object({
   description: z.string().optional(),
   isDefault: z.boolean().default(false),
   isActive: z.boolean().default(true),
+  schedulerType: z.enum(["static", "adaptive"]).default("static"),
+  adaptiveSettings: z.object({
+    targetDSO: z.coerce.number().min(1).max(365).default(45),
+    urgencyFactor: z.coerce.number().min(0).max(2).default(0.5),
+    quietHours: z.tuple([z.coerce.number().min(0).max(23), z.coerce.number().min(0).max(23)]).default([22, 8]),
+    maxDailyTouches: z.coerce.number().min(1).max(10).default(3),
+    minGapHours: z.coerce.number().min(1).max(168).default(24),
+  }).optional(),
   scheduleSteps: z.array(z.object({
     id: z.string(),
     order: z.number(),
@@ -109,6 +117,14 @@ export default function CollectionScheduleBuilder({ className }: CollectionSched
       description: "",
       isDefault: false,
       isActive: true,
+      schedulerType: "static",
+      adaptiveSettings: {
+        targetDSO: 45,
+        urgencyFactor: 0.5,
+        quietHours: [22, 8],
+        maxDailyTouches: 3,
+        minGapHours: 24,
+      },
       scheduleSteps: [],
     },
   });
@@ -209,6 +225,20 @@ export default function CollectionScheduleBuilder({ className }: CollectionSched
       description: schedule.description || "",
       isDefault: Boolean(schedule.isDefault),
       isActive: Boolean(schedule.isActive),
+      schedulerType: (schedule.schedulerType as "static" | "adaptive") || "static",
+      adaptiveSettings: schedule.adaptiveSettings ? {
+        targetDSO: (schedule.adaptiveSettings as any).targetDSO || 45,
+        urgencyFactor: (schedule.adaptiveSettings as any).urgencyFactor || 0.5,
+        quietHours: (schedule.adaptiveSettings as any).quietHours || [22, 8],
+        maxDailyTouches: (schedule.adaptiveSettings as any).maxDailyTouches || 3,
+        minGapHours: (schedule.adaptiveSettings as any).minGapHours || 24,
+      } : {
+        targetDSO: 45,
+        urgencyFactor: 0.5,
+        quietHours: [22, 8],
+        maxDailyTouches: 3,
+        minGapHours: 24,
+      },
     });
     setSteps(Array.isArray(schedule.scheduleSteps) ? schedule.scheduleSteps : []);
     setIsDialogOpen(true);
@@ -635,16 +665,213 @@ export default function CollectionScheduleBuilder({ className }: CollectionSched
 
               <Separator />
 
-              {/* Workflow Builder */}
+              {/* Scheduler Type Toggle */}
               <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold">Workflow Steps</h3>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-gray-600">
-                      {steps.length} steps • {calculateTotalDelay(steps)} total duration
-                    </span>
+                <FormField
+                  control={form.control}
+                  name="schedulerType"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-base font-semibold">Scheduler Type</FormLabel>
+                      <FormControl>
+                        <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg">
+                          <div className="flex items-center space-x-2">
+                            <input
+                              type="radio"
+                              id="static"
+                              value="static"
+                              checked={field.value === "static"}
+                              onChange={() => field.onChange("static")}
+                              className="rounded-full"
+                              data-testid="radio-scheduler-static"
+                            />
+                            <label htmlFor="static" className="text-sm font-medium cursor-pointer">
+                              Static Schedule
+                              <p className="text-xs text-gray-600 font-normal">Fixed timing based on days overdue</p>
+                            </label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <input
+                              type="radio"
+                              id="adaptive"
+                              value="adaptive"
+                              checked={field.value === "adaptive"}
+                              onChange={() => field.onChange("adaptive")}
+                              className="rounded-full"
+                              data-testid="radio-scheduler-adaptive"
+                            />
+                            <label htmlFor="adaptive" className="text-sm font-medium cursor-pointer">
+                              Adaptive Scheduler 🧠
+                              <p className="text-xs text-gray-600 font-normal">AI-powered timing based on customer behavior</p>
+                            </label>
+                          </div>
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* Adaptive Settings Panel */}
+                {form.watch("schedulerType") === "adaptive" && (
+                  <div className="space-y-4 p-4 bg-blue-50/50 rounded-lg border border-blue-200">
+                    <h4 className="text-sm font-semibold text-blue-900">Adaptive Scheduler Configuration</h4>
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="adaptiveSettings.targetDSO"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Target DSO (Days)</FormLabel>
+                            <FormControl>
+                              <Input 
+                                type="number" 
+                                {...field}
+                                onChange={e => field.onChange(Number(e.target.value))}
+                                placeholder="45" 
+                                data-testid="input-target-dso"
+                              />
+                            </FormControl>
+                            <p className="text-xs text-gray-600">Portfolio-wide DSO target</p>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="adaptiveSettings.maxDailyTouches"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Max Daily Touches</FormLabel>
+                            <FormControl>
+                              <Input 
+                                type="number" 
+                                {...field}
+                                onChange={e => field.onChange(Number(e.target.value))}
+                                placeholder="3" 
+                                data-testid="input-max-daily-touches"
+                              />
+                            </FormControl>
+                            <p className="text-xs text-gray-600">Maximum contacts per day</p>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="adaptiveSettings.minGapHours"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Min Gap (Hours)</FormLabel>
+                            <FormControl>
+                              <Input 
+                                type="number" 
+                                {...field}
+                                onChange={e => field.onChange(Number(e.target.value))}
+                                placeholder="24" 
+                                data-testid="input-min-gap-hours"
+                              />
+                            </FormControl>
+                            <p className="text-xs text-gray-600">Minimum hours between contacts</p>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="adaptiveSettings.urgencyFactor"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Urgency Factor</FormLabel>
+                            <FormControl>
+                              <Input 
+                                type="number" 
+                                step="0.1"
+                                {...field}
+                                onChange={e => field.onChange(Number(e.target.value))}
+                                placeholder="0.5" 
+                                data-testid="input-urgency-factor"
+                              />
+                            </FormControl>
+                            <p className="text-xs text-gray-600">Portfolio urgency (0-2)</p>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="adaptiveSettings.quietHours.0"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Quiet Hours Start (24h)</FormLabel>
+                            <FormControl>
+                              <Input 
+                                type="number" 
+                                {...field}
+                                onChange={e => field.onChange(Number(e.target.value))}
+                                placeholder="22" 
+                                min="0"
+                                max="23"
+                                data-testid="input-quiet-hours-start"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="adaptiveSettings.quietHours.1"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Quiet Hours End (24h)</FormLabel>
+                            <FormControl>
+                              <Input 
+                                type="number" 
+                                {...field}
+                                onChange={e => field.onChange(Number(e.target.value))}
+                                placeholder="8" 
+                                min="0"
+                                max="23"
+                                data-testid="input-quiet-hours-end"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
+                    <div className="bg-blue-100 p-3 rounded-md">
+                      <p className="text-xs text-blue-900">
+                        <strong>ℹ️ Adaptive Scheduler:</strong> Uses AI to determine optimal contact timing and channel based on customer payment behavior, channel responsiveness, and portfolio DSO targets.
+                      </p>
+                    </div>
                   </div>
-                </div>
+                )}
+              </div>
+
+              <Separator />
+
+              {/* Workflow Builder */}
+              {form.watch("schedulerType") === "static" && (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-semibold">Workflow Steps</h3>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-gray-600">
+                        {steps.length} steps • {calculateTotalDelay(steps)} total duration
+                      </span>
+                    </div>
+                  </div>
 
                 {/* Add Step Buttons */}
                 <div className="flex flex-wrap gap-2 p-4 bg-gray-50 rounded-lg">
@@ -824,7 +1051,8 @@ export default function CollectionScheduleBuilder({ className }: CollectionSched
                     </div>
                   )}
                 </div>
-              </div>
+                </div>
+              )}
 
               <div className="flex gap-2 pt-6">
                 <Button
