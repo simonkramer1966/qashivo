@@ -5454,6 +5454,232 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Compliance Audit Endpoint - Check for policy violations
+  app.get("/api/admin/compliance-report", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { policyDecisions, contactOutcomes } = await import("@shared/schema");
+      const { and: andOp, eq: eqOp, gte: gteOp, sql: sqlFunc } = await import("drizzle-orm");
+      
+      // Look back 30 days
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+      // Query frequency cap violations
+      const frequencyCapViolations = await db
+        .select()
+        .from(policyDecisions)
+        .where(
+          andOp(
+            eqOp(policyDecisions.tenantId, user.tenantId),
+            eqOp(policyDecisions.guardStatus, 'blocked'),
+            gteOp(policyDecisions.createdAt, thirtyDaysAgo)
+          )
+        )
+        .limit(10);
+
+      // Query quiet hours breaches (would need quiet hours logic implemented)
+      const quietHoursBreaches: any[] = []; // Placeholder for quiet hours violations
+
+      // Count total policy decisions
+      const totalDecisionsResult = await db
+        .select({ count: sqlFunc<number>`count(*)` })
+        .from(policyDecisions)
+        .where(
+          andOp(
+            eqOp(policyDecisions.tenantId, user.tenantId),
+            gteOp(policyDecisions.createdAt, thirtyDaysAgo)
+          )
+        );
+      
+      const totalDecisions = Number(totalDecisionsResult[0]?.count || 0);
+      const blockedCount = frequencyCapViolations.length;
+      const allowedCount = totalDecisions - blockedCount;
+      
+      // Calculate compliance rate
+      const complianceRate = totalDecisions > 0 
+        ? (allowedCount / totalDecisions * 100).toFixed(1)
+        : '100.0';
+
+      res.json({
+        summary: {
+          totalDecisions,
+          allowedCount,
+          blockedCount,
+          complianceRate: parseFloat(complianceRate),
+          periodDays: 30,
+        },
+        violations: {
+          frequencyCap: {
+            count: frequencyCapViolations.length,
+            examples: frequencyCapViolations.map(v => ({
+              id: v.id,
+              contactId: v.contactId,
+              invoiceId: v.invoiceId,
+              reason: v.guardReason,
+              timestamp: v.createdAt,
+            })),
+          },
+          quietHours: {
+            count: quietHoursBreaches.length,
+            examples: quietHoursBreaches,
+          },
+        },
+        insights: {
+          mostBlockedReason: frequencyCapViolations.length > 0 
+            ? 'frequency_cap_exceeded'
+            : null,
+          peakViolationHour: null, // Would require time-based analysis
+        },
+      });
+    } catch (error) {
+      console.error("Error generating compliance report:", error);
+      res.status(500).json({ message: "Failed to generate compliance report" });
+    }
+  });
+
+  // Channel Analytics Endpoint - Show channel effectiveness and A/B test results
+  app.get("/api/admin/analytics/channels", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { contactOutcomes, policyDecisions } = await import("@shared/schema");
+      const { eq: eqOp, sql: sqlFunc, gte: gteOp, inArray: inArrayOp } = await import("drizzle-orm");
+      
+      const { timeRange = '30d' } = req.query;
+      
+      // Calculate time window
+      const daysAgo = parseInt(timeRange.replace('d', ''), 10);
+      const cutoffDate = new Date();
+      cutoffDate.setDate(cutoffDate.getDate() - daysAgo);
+
+      // Aggregate outcomes by channel
+      const channelStats = await db
+        .select({
+          channel: contactOutcomes.channel,
+          outcome: contactOutcomes.outcome,
+          count: sqlFunc<number>`count(*)`,
+        })
+        .from(contactOutcomes)
+        .where(
+          and(
+            eqOp(contactOutcomes.tenantId, user.tenantId),
+            gteOp(contactOutcomes.eventTimestamp, cutoffDate)
+          )
+        )
+        .groupBy(contactOutcomes.channel, contactOutcomes.outcome);
+
+      // Aggregate outcomes by A/B variant
+      const variantStats = await db
+        .select({
+          variant: policyDecisions.experimentVariant,
+          count: sqlFunc<number>`count(*)`,
+          avgScore: sqlFunc<number>`avg(${policyDecisions.score})`,
+        })
+        .from(policyDecisions)
+        .where(
+          and(
+            eqOp(policyDecisions.tenantId, user.tenantId),
+            gteOp(policyDecisions.createdAt, cutoffDate)
+          )
+        )
+        .groupBy(policyDecisions.experimentVariant);
+
+      // Calculate channel metrics
+      const successOutcomes = ['delivered', 'opened', 'clicked', 'answered', 'completed'];
+      
+      const calculateChannelMetrics = (channel: string) => {
+        const channelData = channelStats.filter(s => s.channel === channel);
+        const totalSent = channelData.reduce((sum, s) => sum + Number(s.count), 0);
+        const successCount = channelData
+          .filter(s => successOutcomes.includes(s.outcome))
+          .reduce((sum, s) => sum + Number(s.count), 0);
+        
+        return {
+          totalSent,
+          responseRate: totalSent > 0 ? (successCount / totalSent) * 100 : 0,
+        };
+      };
+
+      // Calculate A/B test metrics
+      const adaptiveData = variantStats.find(v => v.variant === 'ADAPTIVE');
+      const staticData = variantStats.find(v => v.variant === 'STATIC');
+
+      const adaptiveActions = Number(adaptiveData?.count || 0);
+      const staticActions = Number(staticData?.count || 0);
+      
+      // Response rate approximation (would need to join with outcomes for precise calculation)
+      const adaptiveRate = adaptiveActions > 0 ? Number(adaptiveData?.avgScore || 0) * 100 : 0;
+      const staticRate = staticActions > 0 ? Number(staticData?.avgScore || 0) * 100 : 0;
+      
+      const lift = staticRate > 0 ? ((adaptiveRate - staticRate) / staticRate) * 100 : 0;
+
+      res.json({
+        channels: {
+          email: calculateChannelMetrics('email'),
+          sms: calculateChannelMetrics('sms'),
+          voice: calculateChannelMetrics('voice'),
+        },
+        abTest: {
+          adaptive: {
+            totalActions: adaptiveActions,
+            responseRate: adaptiveRate,
+            avgDaysToPayment: 0, // Would need payment data to calculate
+          },
+          static: {
+            totalActions: staticActions,
+            responseRate: staticRate,
+            avgDaysToPayment: 0, // Would need payment data to calculate
+          },
+          lift,
+        },
+        overdueBands: {
+          // Overdue bands would require joining with invoices table
+          '0-30': { count: 0, responseRate: 0 },
+          '31-60': { count: 0, responseRate: 0 },
+          '61-90': { count: 0, responseRate: 0 },
+          '90+': { count: 0, responseRate: 0 },
+        },
+      });
+    } catch (error) {
+      console.error("Error fetching channel analytics:", error);
+      res.status(500).json({ message: "Failed to fetch channel analytics" });
+    }
+  });
+
+  // Contact Outcomes Endpoint - Show all webhook outcomes
+  app.get("/api/admin/outcomes", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { contactOutcomes } = await import("@shared/schema");
+      const { eq: eqOp, desc: descFunc } = await import("drizzle-orm");
+      
+      // Fetch recent outcomes
+      const outcomes = await db
+        .select()
+        .from(contactOutcomes)
+        .where(eqOp(contactOutcomes.tenantId, user.tenantId))
+        .orderBy(descFunc(contactOutcomes.eventTimestamp))
+        .limit(100);
+
+      res.json(outcomes);
+    } catch (error) {
+      console.error("Error fetching outcomes:", error);
+      res.status(500).json({ message: "Failed to fetch outcomes" });
+    }
+  });
+
   // Priority Management Endpoints
   app.post("/api/action-centre/priority/refresh", isAuthenticated, async (req: any, res) => {
     try {

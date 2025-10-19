@@ -39,6 +39,8 @@ const InvestorCRM = lazy(() => import("@/pages/investor-crm"));
 const DocsDownload = lazy(() => import("@/pages/docs-download"));
 const DebtorPortal = lazy(() => import("@/pages/debtor-portal"));
 const BetaPartner = lazy(() => import("@/pages/beta-partner"));
+const AdminAnalytics = lazy(() => import("@/pages/admin-analytics"));
+const AdminOutcomes = lazy(() => import("@/pages/admin-outcomes"));
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -95,6 +97,8 @@ function Router() {
           <Route path="/investor-crm" component={InvestorCRM} />
           <Route path="/docs-download" component={DocsDownload} />
           <Route path="/qashivo-admin" component={QashivoAdminDashboard} />
+          <Route path="/admin/analytics" component={AdminAnalytics} />
+          <Route path="/admin/outcomes" component={AdminOutcomes} />
           <Route path="/partner" component={PartnerDashboard} />
           <Route path="/cashflow" component={Cashflow} />
           <Route path="/intelligent-forecast" component={IntelligentForecast} />
