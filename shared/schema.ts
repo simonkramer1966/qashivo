@@ -585,6 +585,11 @@ export const workflows = pgTable("workflows", {
   successRate: decimal("success_rate", { precision: 5, scale: 2 }),
   estimatedCost: decimal("estimated_cost", { precision: 8, scale: 2 }), // Cost per execution
   testScenarios: jsonb("test_scenarios"), // Saved test scenarios
+  
+  // Adaptive Scheduler Settings
+  schedulerType: varchar("scheduler_type").default("static"), // "static" | "adaptive"
+  adaptiveSettings: jsonb("adaptive_settings"), // { targetDSO: number, urgencyFactor: number, quietHours: [start, end], maxDailyTouches: number }
+  
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -681,6 +686,54 @@ export const aiAgentConfigs = pgTable("ai_agent_configs", {
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
+
+// Customer Behavior Signals for Adaptive Scheduler
+export const customerBehaviorSignals = pgTable("customer_behavior_signals", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  contactId: varchar("contact_id").notNull().references(() => contacts.id, { onDelete: "cascade" }),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  
+  // Payment behavior stats
+  medianDaysToPay: decimal("median_days_to_pay", { precision: 8, scale: 2 }),
+  p75DaysToPay: decimal("p75_days_to_pay", { precision: 8, scale: 2 }), // 75th percentile
+  volatility: decimal("volatility", { precision: 8, scale: 4 }), // Standard deviation of payment lags
+  trend: decimal("trend", { precision: 8, scale: 4 }), // Positive = getting slower, negative = getting faster
+  
+  // Channel response rates (0.00 to 1.00)
+  emailOpenRate: decimal("email_open_rate", { precision: 3, scale: 2 }),
+  emailClickRate: decimal("email_click_rate", { precision: 3, scale: 2 }),
+  emailReplyRate: decimal("email_reply_rate", { precision: 3, scale: 2 }),
+  smsReplyRate: decimal("sms_reply_rate", { precision: 3, scale: 2 }),
+  callAnswerRate: decimal("call_answer_rate", { precision: 3, scale: 2 }),
+  whatsappReplyRate: decimal("whatsapp_reply_rate", { precision: 3, scale: 2 }),
+  
+  // Amount sensitivity (stores JSON with amount buckets and avg days to pay)
+  amountSensitivity: jsonb("amount_sensitivity"), // { "<1000": 10, "1000-5000": 15, ">5000": 25 }
+  
+  // Seasonality effects (0-6 for weekday, stores avg modifier per day)
+  weekdayEffect: jsonb("weekday_effect"), // [0.9, 1.0, 1.1, 1.0, 0.95, 0.8, 0.7] for Sun-Sat
+  monthEffect: jsonb("month_effect"), // Seasonal patterns by month
+  
+  // Risk markers
+  disputeCount: integer("dispute_count").default(0),
+  partialPaymentCount: integer("partial_payment_count").default(0),
+  promiseBreachCount: integer("promise_breach_count").default(0),
+  
+  // Segment priors for cold start (when customer is new)
+  segment: varchar("segment"), // "small_business", "enterprise", "freelancer", etc.
+  segmentPriors: jsonb("segment_priors"), // { pPayBase: 0.02, expectedDaysToPay: 14 }
+  
+  // Sample size for confidence
+  invoiceCount: integer("invoice_count").default(0), // How many invoices used to calculate these stats
+  lastPaymentDate: timestamp("last_payment_date"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_behavior_contact").on(table.contactId),
+  index("idx_behavior_tenant").on(table.tenantId),
+  unique("behavior_contact_unique").on(table.contactId)
+]);
 
 // RBAC System Tables
 
@@ -2012,6 +2065,12 @@ export const insertAiAgentConfigSchema = createInsertSchema(aiAgentConfigs).omit
   updatedAt: true,
 });
 
+export const insertCustomerBehaviorSignalSchema = createInsertSchema(customerBehaviorSignals).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export const insertChannelAnalyticsSchema = createInsertSchema(channelAnalytics).omit({
   id: true,
   createdAt: true,
@@ -2185,6 +2244,8 @@ export type InsertEscalationRule = z.infer<typeof insertEscalationRuleSchema>;
 export type EscalationRule = typeof escalationRules.$inferSelect;
 export type InsertAiAgentConfig = z.infer<typeof insertAiAgentConfigSchema>;
 export type AiAgentConfig = typeof aiAgentConfigs.$inferSelect;
+export type InsertCustomerBehaviorSignal = z.infer<typeof insertCustomerBehaviorSignalSchema>;
+export type CustomerBehaviorSignal = typeof customerBehaviorSignals.$inferSelect;
 export type InsertChannelAnalytics = z.infer<typeof insertChannelAnalyticsSchema>;
 export type ChannelAnalytics = typeof channelAnalytics.$inferSelect;
 export type InsertRetellConfiguration = z.infer<typeof insertRetellConfigurationSchema>;
