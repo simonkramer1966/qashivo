@@ -368,10 +368,6 @@ export default function ActionCentre() {
         return tabData.disputes.items;
       case 'onHold':
         return tabData.onHold.items;
-      case 'debtRecovery':
-        return tabData.debtRecovery.items;
-      case 'legal':
-        return tabData.legal.items;
       default:
         return [];
     }
@@ -412,8 +408,7 @@ export default function ActionCentre() {
       // Exception filter (for actions with exceptionType in metadata)
       const exceptionType = item.metadata?.exceptionType;
       const matchesException = exceptionFilters.length === 0 || 
-        !exceptionType || 
-        exceptionFilters.includes(exceptionType);
+        (exceptionType && exceptionFilters.includes(exceptionType));
       
       return matchesSearch && matchesDirection && matchesChannel && matchesIntent && matchesStatus && matchesException;
     });
