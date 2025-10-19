@@ -9,7 +9,7 @@ import { HandshakeIcon, TrendingUp, Rocket, Users, Star, Award, Calendar, CheckC
 import { useToast } from "@/hooks/use-toast";
 import { SiXero, SiStripe, SiOpenai, SiQuickbooks } from "react-icons/si";
 import qashivoLogo from "@assets/Main Nexus Logo copy_1756923544828.png";
-import introVideo from "@assets/QashivoIntro v2_1760794779482.mp4";
+import partnerVideo from "@assets/Partner v1_1760867099574.mp4";
 
 export default function BetaPartner() {
   const { toast } = useToast();
@@ -211,11 +211,11 @@ export default function BetaPartner() {
                   }}
                   data-testid="video-intro"
                 >
-                  <source src={introVideo} type="video/mp4" />
+                  <source src={partnerVideo} type="video/mp4" />
                   Your browser does not support the video tag.
                 </video>
                 <p className="text-center text-sm text-gray-600 mt-4">
-                  See Qashivo in action - 2 minute product overview
+                  See how Qashivo transforms credit control for accounting practices
                 </p>
               </Card>
             </div>
