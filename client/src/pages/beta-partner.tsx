@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import { HandshakeIcon, TrendingUp, Rocket, Users, Star, Award, Calendar, CheckCircle, Target, Zap, Shield } from "lucide-react";
+import { HandshakeIcon, TrendingUp, Rocket, Users, Star, Award, Calendar, CheckCircle, Target, Zap, Shield, Clock, DollarSign, BarChart3 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { SiXero, SiStripe, SiOpenai, SiQuickbooks } from "react-icons/si";
 import qashivoLogo from "@assets/Main Nexus Logo copy_1756923544828.png";
@@ -267,8 +267,99 @@ export default function BetaPartner() {
         </div>
       </section>
 
-      {/* Beta Program Benefits */}
+      {/* Commercial Benefits for Your Practice */}
       <section className="py-24 px-6 bg-white/60 backdrop-blur-sm">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl font-bold text-gray-900 mb-4">Grow Your Credit Control Practice</h2>
+            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+              Transform your service delivery and profitability with AI-powered credit control
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
+            <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg p-8" data-testid="card-commercial-efficiency">
+              <div className="p-3 bg-[#8B2635]/10 rounded-xl w-fit mb-4">
+                <Clock className="w-8 h-8 text-[#8B2635]" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-3">Resource Efficiency</h3>
+              <p className="text-gray-600">
+                Deliver credit control for 3x more clients with the same team size. AI automation handles routine collections while your team focuses on complex cases.
+              </p>
+            </Card>
+
+            <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg p-8" data-testid="card-commercial-time">
+              <div className="p-3 bg-[#A98743]/10 rounded-xl w-fit mb-4">
+                <Zap className="w-8 h-8 text-[#A98743]" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-3">85% Time Savings</h3>
+              <p className="text-gray-600">
+                Eliminate manual collection tasks. Free your team from repetitive follow-ups to focus on high-value advisory services and client relationships.
+              </p>
+            </Card>
+
+            <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg p-8" data-testid="card-commercial-expansion">
+              <div className="p-3 bg-[#17B6C3]/10 rounded-xl w-fit mb-4">
+                <Rocket className="w-8 h-8 text-[#17B6C3]" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-3">Practice Expansion</h3>
+              <p className="text-gray-600">
+                Transform credit control from cost center to profit center. Scale your service delivery without proportional headcount increases.
+              </p>
+            </Card>
+
+            <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg p-8" data-testid="card-commercial-results">
+              <div className="p-3 bg-[#8B2635]/10 rounded-xl w-fit mb-4">
+                <TrendingUp className="w-8 h-8 text-[#8B2635]" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-3">Client Cashflow Results</h3>
+              <p className="text-gray-600">
+                Deliver 30-40% DSO reduction for your clients. Become the hero who fixes their cash crisis and proves measurable ROI on your services.
+              </p>
+            </Card>
+
+            <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg p-8" data-testid="card-commercial-reputation">
+              <div className="p-3 bg-[#A98743]/10 rounded-xl w-fit mb-4">
+                <Award className="w-8 h-8 text-[#A98743]" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-3">Enhanced Reputation</h3>
+              <p className="text-gray-600">
+                Position as an innovative, tech-forward practice. Offer cutting-edge AI solutions that traditional competitors can't match.
+              </p>
+            </Card>
+
+            <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg p-8" data-testid="card-commercial-fees">
+              <div className="p-3 bg-[#17B6C3]/10 rounded-xl w-fit mb-4">
+                <DollarSign className="w-8 h-8 text-[#17B6C3]" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-3">Higher Fees</h3>
+              <p className="text-gray-600">
+                Justify premium pricing with data-driven insights, intelligent forecasting, and measurable ROI. Move from hourly billing to value-based pricing.
+              </p>
+            </Card>
+          </div>
+
+          {/* Stat Callout */}
+          <Card className="bg-gradient-to-br from-[#8B2635]/10 via-[#A98743]/10 to-[#17B6C3]/10 border-2 border-[#A98743]/30 shadow-xl p-8 max-w-4xl mx-auto" data-testid="card-practice-stats">
+            <div className="flex items-start gap-6">
+              <div className="p-4 bg-white rounded-xl shadow-md flex-shrink-0">
+                <BarChart3 className="w-12 h-12 text-[#A98743]" />
+              </div>
+              <div>
+                <h3 className="text-2xl font-bold text-gray-900 mb-3">
+                  40% Higher Margins on Collection Services
+                </h3>
+                <p className="text-lg text-gray-700 leading-relaxed">
+                  Accounting practices using AI-powered credit control report significantly higher profit margins, faster client onboarding, and increased client retention. The combination of automation efficiency and premium positioning creates a compelling competitive advantage.
+                </p>
+              </div>
+            </div>
+          </Card>
+        </div>
+      </section>
+
+      {/* Beta Partnership Benefits */}
+      <section className="py-24 px-6">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-4xl font-bold text-gray-900 mb-4">Beta Partnership Benefits</h2>
