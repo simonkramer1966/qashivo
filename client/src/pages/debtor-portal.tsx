@@ -76,22 +76,25 @@ export default function DebtorPortal() {
   });
 
   // Get debtor overview (all invoices with interest)
-  const { data: invoices = [], isLoading: invoicesLoading } = useQuery<Invoice[]>({
+  const { data: invoicesData, isLoading: invoicesLoading } = useQuery<Invoice[]>({
     queryKey: ["/api/debtor/overview"],
     enabled: authStatus?.authenticated,
   });
+  const invoices = invoicesData || [];
 
   // Get all disputes
-  const { data: disputes = [], isLoading: disputesLoading } = useQuery<Dispute[]>({
+  const { data: disputesData, isLoading: disputesLoading } = useQuery<Dispute[]>({
     queryKey: ["/api/debtor/disputes"],
     enabled: authStatus?.authenticated,
   });
+  const disputes = disputesData || [];
 
   // Get all promises to pay
-  const { data: promises = [], isLoading: promisesLoading } = useQuery<PromiseToPay[]>({
+  const { data: promisesData, isLoading: promisesLoading } = useQuery<PromiseToPay[]>({
     queryKey: ["/api/debtor/promises"],
     enabled: authStatus?.authenticated,
   });
+  const promises = promisesData || [];
 
   // Verify OTP mutation
   const verifyMutation = useMutation({
