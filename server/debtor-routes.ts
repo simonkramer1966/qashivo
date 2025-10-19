@@ -204,6 +204,69 @@ router.post("/api/debtor-auth/logout", async (req, res) => {
   }
 });
 
+// Development bypass - auto-authenticate for testing
+router.post("/api/debtor-auth/dev-bypass", async (req, res) => {
+  try {
+    // Only allow in development
+    if (process.env.NODE_ENV === 'production') {
+      return res.status(403).json({ error: "Development bypass not available in production" });
+    }
+
+    // Get the current user's tenant from their session
+    const userId = req.session.passport?.user || req.user?.id;
+    
+    if (!userId) {
+      return res.status(401).json({ error: "User not authenticated" });
+    }
+
+    // Get user to find their tenant
+    const user = await storage.getUserById(userId);
+    if (!user || !user.tenantId) {
+      return res.status(404).json({ error: "User or tenant not found" });
+    }
+
+    // Find any contact in this tenant for testing
+    const contacts = await storage.listContacts(user.tenantId);
+    
+    if (!contacts || contacts.length === 0) {
+      return res.status(404).json({ error: "No contacts found in tenant for testing" });
+    }
+
+    // Use the first contact for development access
+    const testContact = contacts[0];
+
+    // Create debtor session
+    req.session.debtorAuth = {
+      contactId: testContact.id,
+      tenantId: user.tenantId,
+      tokenId: 'dev-bypass',
+      authenticatedAt: new Date().toISOString(),
+    };
+
+    await new Promise<void>((resolve, reject) => {
+      req.session.save((err) => {
+        if (err) reject(err);
+        else resolve();
+      });
+    });
+
+    console.log(`🔧 Development bypass: Authenticated as contact ${testContact.name} (${testContact.id})`);
+
+    return res.json({
+      success: true,
+      contact: testContact,
+      _dev: {
+        message: "Development bypass - authenticated automatically",
+        contactId: testContact.id,
+        tenantId: user.tenantId,
+      }
+    });
+  } catch (error) {
+    console.error("Error in dev bypass:", error);
+    return res.status(500).json({ error: "Development bypass failed" });
+  }
+});
+
 // ==================== DEBTOR PORTAL API ====================
 
 // Get debtor overview (all invoices with live interest calculations)

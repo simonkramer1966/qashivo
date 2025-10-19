@@ -114,6 +114,27 @@ export default function DebtorPortal() {
     },
   });
 
+  // Development bypass mutation
+  const devBypassMutation = useMutation({
+    mutationFn: async () => {
+      return await apiRequest("POST", "/api/debtor-auth/dev-bypass");
+    },
+    onSuccess: () => {
+      toast({
+        title: "Development Access Granted",
+        description: "Bypassing authentication for development",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/debtor-auth/check"] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Bypass failed",
+        description: error.message || "Development bypass not available",
+        variant: "destructive",
+      });
+    },
+  });
+
   // Logout mutation
   const logoutMutation = useMutation({
     mutationFn: async () => {
@@ -182,6 +203,19 @@ export default function DebtorPortal() {
                 Please use the secure link sent to your email or phone
               </CardDescription>
             </CardHeader>
+            <CardContent>
+              <Button
+                onClick={() => devBypassMutation.mutate()}
+                className="w-full bg-amber-500 hover:bg-amber-600 text-white"
+                disabled={devBypassMutation.isPending}
+                data-testid="button-dev-bypass"
+              >
+                {devBypassMutation.isPending ? "Authenticating..." : "🔧 Development Access"}
+              </Button>
+              <p className="text-xs text-gray-500 text-center mt-2">
+                Development mode only - bypasses authentication
+              </p>
+            </CardContent>
           </Card>
         </div>
       );
