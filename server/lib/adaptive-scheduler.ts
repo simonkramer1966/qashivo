@@ -12,6 +12,7 @@
 
 import { addHours, isBefore, differenceInDays } from "date-fns";
 import type { CustomerBehaviorSignal } from "@shared/schema";
+import { eventBus } from "./event-bus";
 
 export type Channel = "email" | "sms" | "whatsapp" | "call";
 
@@ -56,6 +57,12 @@ export interface TouchCandidate {
     friction: number;
     risk: number;
     urgency: number;
+  };
+  explainability?: {
+    factor1: string;
+    factor2: string;
+    factor3: string;
+    policyVersion: string;
   };
 }
 
@@ -113,13 +120,21 @@ export function scheduleNextTouch(
       const score = α * pPay - β * friction - γ * risk + δ * urgency;
       
       const reasoning = buildReasoning(channel, hours, { pPay, friction, risk, urgency });
+      const explainability = explainTopFactors(
+        { pPay, friction, risk, urgency },
+        { α, β, γ, δ },
+        invoice,
+        customer,
+        channel
+      );
       
       candidates.push({
         time,
         channel,
         score,
         reasoning,
-        breakdown: { pPay, friction, risk, urgency }
+        breakdown: { pPay, friction, risk, urgency },
+        explainability
       });
     }
   }
@@ -294,6 +309,60 @@ function respectsGap(
 }
 
 /**
+ * Explain top 3 factors driving this decision
+ * Returns structured explainability data for logging
+ */
+function explainTopFactors(
+  breakdown: { pPay: number; friction: number; risk: number; urgency: number },
+  weights: { α: number; β: number; γ: number; δ: number },
+  invoice: InvoiceContext,
+  customer: CustomerContext,
+  channel: Channel
+): { factor1: string; factor2: string; factor3: string; policyVersion: string } {
+  const { pPay, friction, risk, urgency } = breakdown;
+  const { α, β, γ, δ } = weights;
+  
+  // Calculate weighted contributions
+  const contributions = [
+    { 
+      name: `Days overdue: ${invoice.ageDays}`,
+      value: δ * urgency,
+      category: 'urgency'
+    },
+    { 
+      name: `Payment probability: ${(pPay * 100).toFixed(0)}%`,
+      value: α * pPay,
+      category: 'behavior'
+    },
+    { 
+      name: `${channel.toUpperCase()} effectiveness: ${((1 - friction) * 100).toFixed(0)}%`,
+      value: -β * friction,
+      category: 'channel'
+    },
+    { 
+      name: `Amount: £${invoice.amount.toFixed(0)}`,
+      value: α * pPay * 0.3, // Approximate contribution from amount
+      category: 'amount'
+    },
+    { 
+      name: `Compliance risk: ${(risk * 100).toFixed(0)}%`,
+      value: -γ * risk,
+      category: 'risk'
+    }
+  ];
+  
+  // Sort by absolute value of contribution
+  contributions.sort((a, b) => Math.abs(b.value) - Math.abs(a.value));
+  
+  return {
+    factor1: contributions[0]?.name || '',
+    factor2: contributions[1]?.name || '',
+    factor3: contributions[2]?.name || '',
+    policyVersion: 'v1.0' // Track policy version for A/B testing and rollback
+  };
+}
+
+/**
  * Build human-readable reasoning for this touch recommendation
  */
 function buildReasoning(
@@ -372,3 +441,121 @@ export const SEGMENT_PRIORS: Record<string, { pPayBase: number; expectedDaysToPa
     expectedDaysToPay: 30
   }
 };
+
+/**
+ * Log policy decision to event bus for explainability and audit
+ */
+export async function logPolicyDecision(params: {
+  tenantId: string;
+  contactId?: string;
+  invoiceId?: string;
+  actionId?: string;
+  candidate: TouchCandidate | null;
+  guardBlocked?: boolean;
+  guardReason?: string;
+  experimentVariant?: string;
+}): Promise<void> {
+  const { tenantId, contactId, invoiceId, actionId, candidate, guardBlocked, guardReason, experimentVariant } = params;
+  
+  if (candidate) {
+    // Decision: contact recommended
+    await eventBus.publish({
+      type: 'policy.decision',
+      tenantId,
+      contactId,
+      invoiceId,
+      actionId,
+      policyVersion: candidate.explainability?.policyVersion || 'v1.0',
+      experimentVariant,
+      decisionType: 'contact_now',
+      channel: candidate.channel,
+      score: candidate.score,
+      factors: {
+        factor1: candidate.explainability?.factor1,
+        factor2: candidate.explainability?.factor2,
+        factor3: candidate.explainability?.factor3,
+      },
+      scoreBreakdown: {
+        pPay: candidate.breakdown.pPay,
+        friction: candidate.breakdown.friction,
+        risk: candidate.breakdown.risk,
+        urgency: candidate.breakdown.urgency,
+      },
+      guardStatus: guardBlocked ? 'blocked' : 'allowed',
+      guardReason,
+      decisionContext: {
+        scheduledTime: candidate.time.toISOString(),
+        reasoning: candidate.reasoning,
+      },
+    });
+  } else {
+    // Decision: no action (all channels blocked or max touches reached)
+    await eventBus.publish({
+      type: 'policy.decision',
+      tenantId,
+      contactId,
+      invoiceId,
+      actionId,
+      policyVersion: 'v1.0',
+      experimentVariant,
+      decisionType: 'wait',
+      guardStatus: 'blocked',
+      guardReason: guardReason || 'no_valid_candidates',
+      factors: {},
+      decisionContext: {},
+    });
+  }
+}
+
+/**
+ * Check frequency cap: max N contacts per debtor per M days
+ * Returns true if contact is allowed, false if cap exceeded
+ */
+export async function checkFrequencyCap(params: {
+  tenantId: string;
+  contactId: string;
+  maxTouches: number; // e.g., 3
+  windowDays: number; // e.g., 7
+}): Promise<{ allowed: boolean; reason?: string; currentCount?: number }> {
+  const { tenantId, contactId, maxTouches, windowDays } = params;
+  
+  try {
+    // Import here to avoid circular dependencies
+    const { db } = await import("../db");
+    const { contactOutcomes } = await import("@shared/schema");
+    const { and, eq, gte, sql } = await import("drizzle-orm");
+    
+    // Calculate window start date
+    const windowStart = new Date();
+    windowStart.setDate(windowStart.getDate() - windowDays);
+    
+    // Count contact attempts in window
+    const result = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(contactOutcomes)
+      .where(
+        and(
+          eq(contactOutcomes.tenantId, tenantId),
+          eq(contactOutcomes.contactId, contactId),
+          eq(contactOutcomes.eventType, 'contact.attempted'),
+          gte(contactOutcomes.eventTimestamp, windowStart)
+        )
+      );
+    
+    const currentCount = Number(result[0]?.count || 0);
+    
+    if (currentCount >= maxTouches) {
+      return {
+        allowed: false,
+        reason: `frequency_cap_exceeded (${currentCount}/${maxTouches} in ${windowDays} days)`,
+        currentCount,
+      };
+    }
+    
+    return { allowed: true, currentCount };
+  } catch (error) {
+    console.error('Error checking frequency cap:', error);
+    // Fail open - allow contact if cap check fails
+    return { allowed: true };
+  }
+}
