@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -23,40 +23,6 @@ export default function BetaPartner() {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
-  
-  // Video autoplay state
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const [isVideoPlaying, setIsVideoPlaying] = useState(false);
-
-  // Lock scroll until video plays
-  useEffect(() => {
-    const originalOverflow = document.body.style.overflow;
-    
-    if (!isVideoPlaying) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = originalOverflow;
-    }
-    
-    return () => {
-      document.body.style.overflow = originalOverflow;
-    };
-  }, [isVideoPlaying]);
-
-  // Autoplay video with 1 second delay (start muted to satisfy browser policies)
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (videoRef.current) {
-        videoRef.current.muted = true;
-        videoRef.current.play().catch((error) => {
-          console.log('Video autoplay blocked by browser:', error);
-          setIsVideoPlaying(true);
-        });
-      }
-    }, 1000);
-
-    return () => clearTimeout(timer);
-  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -199,16 +165,9 @@ export default function BetaPartner() {
             <div className="relative">
               <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-xl p-4 overflow-hidden">
                 <video
-                  ref={videoRef}
                   className="w-full rounded-lg"
                   controls
                   playsInline
-                  onPlay={() => {
-                    if (videoRef.current) {
-                      videoRef.current.muted = false;
-                    }
-                    setIsVideoPlaying(true);
-                  }}
                   data-testid="video-intro"
                 >
                   <source src={partnerVideo} type="video/mp4" />
