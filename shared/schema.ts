@@ -558,6 +558,9 @@ export const actions = pgTable("actions", {
   // Response tracking (for outbound communications)
   hasResponse: boolean("has_response").default(false),
   
+  // Experimentation tracking (A/B testing)
+  experimentVariant: varchar("experiment_variant"), // STATIC, ADAPTIVE, etc.
+  
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => [
@@ -605,6 +608,85 @@ export const inboundMessages = pgTable("inbound_messages", {
   index("idx_inbound_tenant").on(table.tenantId),
   index("idx_inbound_contact").on(table.contactId),
   index("idx_inbound_analyzed").on(table.intentAnalyzed),
+]);
+
+// Contact Outcomes - unified log of all contact attempt outcomes
+export const contactOutcomes = pgTable("contact_outcomes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  contactId: varchar("contact_id").references(() => contacts.id),
+  invoiceId: varchar("invoice_id").references(() => invoices.id),
+  actionId: varchar("action_id").references(() => actions.id),
+  
+  // Idempotency
+  idempotencyKey: varchar("idempotency_key").notNull().unique(), // Prevents duplicate webhook processing
+  
+  // Event identification
+  eventType: varchar("event_type").notNull(), // contact.attempted, contact.outcome, payment.recorded, promise.created, promise.breached
+  
+  // Channel and outcome
+  channel: varchar("channel"), // email, sms, whatsapp, voice
+  outcome: varchar("outcome"), // sent, delivered, opened, clicked, replied, answered, bounced, failed, paid
+  
+  // Payload
+  payload: jsonb("payload").notNull(), // Full event data
+  
+  // Provider metadata
+  providerMessageId: varchar("provider_message_id"), // SendGrid/Vonage/Retell message ID
+  providerStatus: varchar("provider_status"),
+  
+  // Timestamps
+  eventTimestamp: timestamp("event_timestamp").notNull(), // When event occurred
+  createdAt: timestamp("created_at").defaultNow(), // When we logged it
+}, (table) => [
+  index("idx_contact_outcomes_tenant").on(table.tenantId),
+  index("idx_contact_outcomes_contact").on(table.contactId),
+  index("idx_contact_outcomes_invoice").on(table.invoiceId),
+  index("idx_contact_outcomes_action").on(table.actionId),
+  index("idx_contact_outcomes_event_type").on(table.eventType),
+  index("idx_contact_outcomes_timestamp").on(table.tenantId, table.eventTimestamp),
+]);
+
+// Policy Decisions - explainable decision log for adaptive scheduler
+export const policyDecisions = pgTable("policy_decisions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  contactId: varchar("contact_id").references(() => contacts.id),
+  invoiceId: varchar("invoice_id").references(() => invoices.id),
+  actionId: varchar("action_id").references(() => actions.id),
+  
+  // Policy context
+  policyVersion: varchar("policy_version").notNull(), // v1, v2, etc. for rollback capability
+  experimentVariant: varchar("experiment_variant"), // STATIC, ADAPTIVE
+  
+  // Decision
+  decisionType: varchar("decision_type").notNull(), // contact_now, wait, escalate, pause
+  channel: varchar("channel"), // Recommended channel
+  score: decimal("score", { precision: 5, scale: 2 }), // Overall priority score
+  
+  // Explainability - top factors
+  factor1: varchar("factor_1"), // e.g., "Days overdue: 45"
+  factor2: varchar("factor_2"), // e.g., "Amount: £5,000"
+  factor3: varchar("factor_3"), // e.g., "SMS effectiveness: 28%"
+  
+  // Score breakdown
+  scoreBreakdown: jsonb("score_breakdown"), // { urgency: 72, behavior: 45, channel: 28, risk: 10 }
+  
+  // Guardrails
+  guardStatus: varchar("guard_status"), // allowed, blocked
+  guardReason: varchar("guard_reason"), // quiet_hours, frequency_cap, paused, consent
+  
+  // Full decision context
+  decisionContext: jsonb("decision_context"), // Complete input state for replayability
+  
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_policy_decisions_tenant").on(table.tenantId),
+  index("idx_policy_decisions_contact").on(table.contactId),
+  index("idx_policy_decisions_invoice").on(table.invoiceId),
+  index("idx_policy_decisions_action").on(table.actionId),
+  index("idx_policy_decisions_variant").on(table.experimentVariant),
+  index("idx_policy_decisions_timestamp").on(table.tenantId, table.createdAt),
 ]);
 
 // Workflows table for collection processes
@@ -2067,6 +2149,16 @@ export const insertInboundMessageSchema = createInsertSchema(inboundMessages).om
   updatedAt: true,
 });
 
+export const insertContactOutcomeSchema = createInsertSchema(contactOutcomes).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertPolicyDecisionSchema = createInsertSchema(policyDecisions).omit({
+  id: true,
+  createdAt: true,
+});
+
 export const insertWorkflowSchema = createInsertSchema(workflows).omit({
   id: true,
   createdAt: true,
@@ -2272,6 +2364,10 @@ export type InsertAction = z.infer<typeof insertActionSchema>;
 export type Action = typeof actions.$inferSelect;
 export type InsertInboundMessage = z.infer<typeof insertInboundMessageSchema>;
 export type InboundMessage = typeof inboundMessages.$inferSelect;
+export type InsertContactOutcome = z.infer<typeof insertContactOutcomeSchema>;
+export type ContactOutcome = typeof contactOutcomes.$inferSelect;
+export type InsertPolicyDecision = z.infer<typeof insertPolicyDecisionSchema>;
+export type PolicyDecision = typeof policyDecisions.$inferSelect;
 export type InsertWorkflow = z.infer<typeof insertWorkflowSchema>;
 export type Workflow = typeof workflows.$inferSelect;
 export type InsertWorkflowNode = z.infer<typeof insertWorkflowNodeSchema>;
