@@ -163,9 +163,9 @@ export default function BetaPartner() {
             </div>
 
             <div className="relative">
-              <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-xl p-4 overflow-hidden">
+              <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-xl overflow-hidden">
                 <video
-                  className="w-full rounded-lg"
+                  className="w-full"
                   controls
                   playsInline
                   data-testid="video-intro"
@@ -173,7 +173,7 @@ export default function BetaPartner() {
                   <source src={partnerVideo} type="video/mp4" />
                   Your browser does not support the video tag.
                 </video>
-                <p className="text-center text-sm text-gray-600 mt-4">
+                <p className="text-center text-sm text-gray-600 py-4 px-4">
                   See how Qashivo transforms credit control for accounting practices
                 </p>
               </Card>
