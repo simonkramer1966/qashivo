@@ -17851,6 +17851,64 @@ Return only JSON with keys: intent, sentiment, confidence, keyInsights, actionIt
 
   // ==================== END INVESTOR DEMO API ====================
 
+  // ==================== BETA PARTNER API ====================
+  
+  // Submit beta partner interest form
+  app.post("/api/beta-partner/submit", async (req, res) => {
+    try {
+      const { firmName, contactName, email, phone, practiceDescription, ndaAccepted } = req.body;
+      
+      // Validation
+      if (!firmName || !contactName || !email || !phone || !practiceDescription) {
+        return res.status(400).json({ message: "All fields are required" });
+      }
+      
+      if (!ndaAccepted) {
+        return res.status(400).json({ message: "NDA must be accepted" });
+      }
+      
+      // Store beta partner lead using investor leads table with special type
+      const leadData = {
+        name: `${firmName} - ${contactName}`,
+        email,
+        phone,
+        voiceName: contactName, // Store contact name
+        smsName: firmName, // Store firm name
+        voiceDemoCompleted: false, // Use as flag to indicate beta partner lead
+        smsDemoCompleted: false,
+        voiceDemoResults: {
+          firmName,
+          contactName,
+          practiceDescription,
+          ndaAccepted,
+          submittedAt: new Date().toISOString(),
+          type: 'beta_partner'
+        } as any
+      };
+      
+      const lead = await storage.createInvestorLead(leadData);
+      
+      console.log('🤝 Beta partner interest received:', {
+        id: lead.id,
+        firmName,
+        contactName,
+        email,
+        timestamp: new Date().toISOString()
+      });
+      
+      res.json({ 
+        success: true, 
+        message: "Beta partner interest submitted successfully",
+        leadId: lead.id
+      });
+    } catch (error) {
+      console.error("Error submitting beta partner interest:", error);
+      res.status(500).json({ message: "Failed to submit beta partner interest" });
+    }
+  });
+
+  // ==================== END BETA PARTNER API ====================
+
   // ==================== DOCUMENTATION DOWNLOAD API ====================
   
   // Download SECURITY.md as PDF
