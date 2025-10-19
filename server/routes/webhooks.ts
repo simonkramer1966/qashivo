@@ -71,6 +71,16 @@ export function registerWebhookRoutes(app: Express) {
 
       console.log(`✅ Inbound email stored: ${message.id}`);
 
+      // Record email reply signal
+      const { signalCollector } = await import("../lib/signal-collector");
+      signalCollector.recordChannelEvent({
+        contactId: contact.id,
+        tenantId: contact.tenantId,
+        channel: 'email',
+        eventType: 'replied',
+        timestamp: new Date(),
+      }).catch(err => console.error('Failed to record email signal:', err));
+
       // Trigger intent analysis asynchronously
       intentAnalyst.processInboundMessage(message.id).catch(err => 
         console.error('❌ Intent analysis error:', err)
@@ -138,6 +148,16 @@ export function registerWebhookRoutes(app: Express) {
         .returning();
 
       console.log(`✅ Inbound SMS stored: ${message.id}`);
+
+      // Record SMS reply signal
+      const { signalCollector } = await import("../lib/signal-collector");
+      signalCollector.recordChannelEvent({
+        contactId: contact.id,
+        tenantId: contact.tenantId,
+        channel: 'sms',
+        eventType: 'replied',
+        timestamp: new Date(),
+      }).catch(err => console.error('Failed to record SMS signal:', err));
 
       // Trigger intent analysis
       intentAnalyst.processInboundMessage(message.id).catch(err => 
@@ -207,6 +227,16 @@ export function registerWebhookRoutes(app: Express) {
         .returning();
 
       console.log(`✅ Inbound WhatsApp stored: ${msg.id}`);
+
+      // Record WhatsApp reply signal
+      const { signalCollector } = await import("../lib/signal-collector");
+      signalCollector.recordChannelEvent({
+        contactId: contact.id,
+        tenantId: contact.tenantId,
+        channel: 'whatsapp',
+        eventType: 'replied',
+        timestamp: new Date(),
+      }).catch(err => console.error('Failed to record WhatsApp signal:', err));
 
       // Trigger intent analysis
       intentAnalyst.processInboundMessage(msg.id).catch(err => 
@@ -294,6 +324,16 @@ export function registerWebhookRoutes(app: Express) {
         .returning();
 
       console.log(`✅ Voice transcript stored: ${message.id}`);
+
+      // Record call answered signal (if we got a transcript, call was answered)
+      const { signalCollector } = await import("../lib/signal-collector");
+      signalCollector.recordChannelEvent({
+        contactId: contact.id,
+        tenantId: contact.tenantId,
+        channel: 'call',
+        eventType: 'answered',
+        timestamp: new Date(),
+      }).catch(err => console.error('Failed to record voice call signal:', err));
 
       // Trigger intent analysis
       intentAnalyst.processInboundMessage(message.id).catch(err => 
