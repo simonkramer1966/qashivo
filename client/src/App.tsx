@@ -91,6 +91,7 @@ function Router() {
           <Route path="/investor-demo-qashivo" component={InvestorDemoQashivo} />
           <Route path="/investor-detail" component={InvestorDetail} />
           <Route path="/beta-partner" component={BetaPartner} />
+          <Route path="/debtor-portal" component={DebtorPortal} />
           <Route path="/investor-crm" component={InvestorCRM} />
           <Route path="/docs-download" component={DocsDownload} />
           <Route path="/qashivo-admin" component={QashivoAdminDashboard} />
