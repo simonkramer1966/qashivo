@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,7 @@ import { HandshakeIcon, TrendingUp, Rocket, Users, Star, Award, Calendar, CheckC
 import { useToast } from "@/hooks/use-toast";
 import { SiXero, SiStripe, SiOpenai, SiQuickbooks } from "react-icons/si";
 import qashivoLogo from "@assets/Main Nexus Logo copy_1756923544828.png";
+import introVideo from "@assets/QashivoIntro v2_1760794779482.mp4";
 
 export default function BetaPartner() {
   const { toast } = useToast();
@@ -22,6 +23,40 @@ export default function BetaPartner() {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  
+  // Video autoplay state
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [isVideoPlaying, setIsVideoPlaying] = useState(false);
+
+  // Lock scroll until video plays
+  useEffect(() => {
+    const originalOverflow = document.body.style.overflow;
+    
+    if (!isVideoPlaying) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = originalOverflow;
+    }
+    
+    return () => {
+      document.body.style.overflow = originalOverflow;
+    };
+  }, [isVideoPlaying]);
+
+  // Autoplay video with 1 second delay (start muted to satisfy browser policies)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (videoRef.current) {
+        videoRef.current.muted = true;
+        videoRef.current.play().catch((error) => {
+          console.log('Video autoplay blocked by browser:', error);
+          setIsVideoPlaying(true);
+        });
+      }
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -162,42 +197,26 @@ export default function BetaPartner() {
             </div>
 
             <div className="relative">
-              <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-xl p-8">
-                <div className="flex items-center gap-4 mb-6">
-                  <div className="p-4 bg-[#17B6C3]/10 rounded-xl">
-                    <HandshakeIcon className="w-12 h-12 text-[#17B6C3]" />
-                  </div>
-                  <div>
-                    <h3 className="text-2xl font-bold text-gray-900">Beta Partnership</h3>
-                    <p className="text-gray-600">5-Month Development Journey</p>
-                  </div>
-                </div>
-                
-                <div className="space-y-4">
-                  <div className="flex items-start gap-3">
-                    <CheckCircle className="w-5 h-5 text-[#17B6C3] mt-1 flex-shrink-0" />
-                    <p className="text-gray-700">100% free lifetime core access for all introduced clients</p>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <CheckCircle className="w-5 h-5 text-[#17B6C3] mt-1 flex-shrink-0" />
-                    <p className="text-gray-700">Enhanced affiliate revenue on all client upgrades</p>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <CheckCircle className="w-5 h-5 text-[#17B6C3] mt-1 flex-shrink-0" />
-                    <p className="text-gray-700">Direct influence on product roadmap</p>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <CheckCircle className="w-5 h-5 text-[#17B6C3] mt-1 flex-shrink-0" />
-                    <p className="text-gray-700">First-mover advantage pre-Accountex 2026</p>
-                  </div>
-                </div>
-
-                <div className="mt-8 p-4 bg-[#A98743]/10 rounded-lg">
-                  <p className="text-sm text-gray-700 text-center">
-                    <strong>Exclusive Opportunity</strong><br />
-                    Limited to 1 Strategic Partner
-                  </p>
-                </div>
+              <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-xl p-4 overflow-hidden">
+                <video
+                  ref={videoRef}
+                  className="w-full rounded-lg"
+                  controls
+                  playsInline
+                  onPlay={() => {
+                    if (videoRef.current) {
+                      videoRef.current.muted = false;
+                    }
+                    setIsVideoPlaying(true);
+                  }}
+                  data-testid="video-intro"
+                >
+                  <source src={introVideo} type="video/mp4" />
+                  Your browser does not support the video tag.
+                </video>
+                <p className="text-center text-sm text-gray-600 mt-4">
+                  See Qashivo in action - 2 minute product overview
+                </p>
               </Card>
             </div>
           </div>
@@ -570,6 +589,68 @@ export default function BetaPartner() {
                     <p className="text-gray-600">Looking for a strategic partnership, not just a software vendor. Interested in growing together.</p>
                   </div>
                 </div>
+              </div>
+            </Card>
+          </div>
+        </div>
+      </section>
+
+      {/* Beta Partnership Reminder - Final CTA */}
+      <section className="py-24 px-6 bg-white/60 backdrop-blur-sm">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-12">
+            <h2 className="text-4xl font-bold text-gray-900 mb-4">Join as Our Strategic Partner</h2>
+            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+              This exclusive opportunity is limited to one accounting firm. Secure your position today.
+            </p>
+          </div>
+
+          <div className="max-w-2xl mx-auto">
+            <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-xl p-8">
+              <div className="flex items-center gap-4 mb-6">
+                <div className="p-4 bg-[#17B6C3]/10 rounded-xl">
+                  <HandshakeIcon className="w-12 h-12 text-[#17B6C3]" />
+                </div>
+                <div>
+                  <h3 className="text-2xl font-bold text-gray-900">Beta Partnership</h3>
+                  <p className="text-gray-600">5-Month Development Journey</p>
+                </div>
+              </div>
+              
+              <div className="space-y-4">
+                <div className="flex items-start gap-3">
+                  <CheckCircle className="w-5 h-5 text-[#17B6C3] mt-1 flex-shrink-0" />
+                  <p className="text-gray-700">100% free lifetime core access for all introduced clients</p>
+                </div>
+                <div className="flex items-start gap-3">
+                  <CheckCircle className="w-5 h-5 text-[#17B6C3] mt-1 flex-shrink-0" />
+                  <p className="text-gray-700">Enhanced affiliate revenue on all client upgrades</p>
+                </div>
+                <div className="flex items-start gap-3">
+                  <CheckCircle className="w-5 h-5 text-[#17B6C3] mt-1 flex-shrink-0" />
+                  <p className="text-gray-700">Direct influence on product roadmap</p>
+                </div>
+                <div className="flex items-start gap-3">
+                  <CheckCircle className="w-5 h-5 text-[#17B6C3] mt-1 flex-shrink-0" />
+                  <p className="text-gray-700">First-mover advantage pre-Accountex 2026</p>
+                </div>
+              </div>
+
+              <div className="mt-8 p-4 bg-[#A98743]/10 rounded-lg">
+                <p className="text-sm text-gray-700 text-center">
+                  <strong>Exclusive Opportunity</strong><br />
+                  Limited to 1 Strategic Partner
+                </p>
+              </div>
+
+              <div className="mt-6 text-center">
+                <Button 
+                  className="bg-[#17B6C3] hover:bg-[#1396A1] text-white text-lg px-8 py-6 w-full"
+                  onClick={() => document.getElementById('apply')?.scrollIntoView({ behavior: 'smooth' })}
+                  data-testid="button-partnership-apply"
+                >
+                  Apply Now
+                </Button>
               </div>
             </Card>
           </div>
