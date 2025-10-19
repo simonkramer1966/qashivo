@@ -21,7 +21,10 @@ import {
   AlertCircle,
   HelpCircle,
   ArrowUp,
-  ArrowDown
+  ArrowDown,
+  Pause,
+  FileText,
+  ShieldAlert
 } from "lucide-react";
 import NewSidebar from "@/components/layout/new-sidebar";
 import BottomNav from "@/components/layout/bottom-nav";
@@ -121,6 +124,7 @@ export default function ActionCentre() {
   const [channelFilters, setChannelFilters] = useState<string[]>([]);
   const [intentFilters, setIntentFilters] = useState<string[]>([]);
   const [statusFilters, setStatusFilters] = useState<string[]>([]);
+  const [exceptionFilters, setExceptionFilters] = useState<string[]>([]);
   
 
   const { data: actions = [], isLoading } = useQuery<Action[]>({
@@ -228,6 +232,75 @@ export default function ActionCentre() {
     return <Badge variant="outline" className={config.className}>{config.label}</Badge>;
   };
 
+  const getExceptionBadge = (exceptionType: string | null) => {
+    if (!exceptionType) return null;
+    
+    const exceptionConfig = {
+      "Dispute Window Closing": { 
+        label: "Dispute Window Closing", 
+        icon: Clock, 
+        className: "bg-amber-100 text-amber-800 border-amber-200" 
+      },
+      "Broken Promise": { 
+        label: "Broken Promise", 
+        icon: AlertTriangle, 
+        className: "bg-red-100 text-red-800 border-red-200" 
+      },
+      "High Risk Late": { 
+        label: "High Risk Late", 
+        icon: ShieldAlert, 
+        className: "bg-purple-100 text-purple-800 border-purple-200" 
+      },
+    };
+
+    const config = exceptionConfig[exceptionType as keyof typeof exceptionConfig];
+    if (!config) return null;
+
+    const Icon = config.icon;
+    return (
+      <Badge className={`${config.className} flex items-center gap-1 text-xs font-semibold`}>
+        <Icon className="h-3 w-3" />
+        {config.label}
+      </Badge>
+    );
+  };
+
+  const getPauseStateBadge = (pauseState: string | null, pauseReason?: string | null) => {
+    if (!pauseState) return null;
+    
+    const pauseConfig = {
+      dispute: { 
+        label: pauseReason || "Dispute", 
+        icon: AlertCircle, 
+        className: "bg-red-50 text-red-700 border-red-300" 
+      },
+      ptp: { 
+        label: pauseReason || "Promise to Pay", 
+        icon: CheckCircle2, 
+        className: "bg-green-50 text-green-700 border-green-300" 
+      },
+      payment_plan: { 
+        label: pauseReason || "Payment Plan", 
+        icon: DollarSign, 
+        className: "bg-blue-50 text-blue-700 border-blue-300" 
+      },
+    };
+
+    const config = pauseConfig[pauseState as keyof typeof pauseConfig];
+    if (!config) return null;
+
+    const Icon = config.icon;
+    return (
+      <div className="flex items-center gap-1.5">
+        <Pause className="h-3.5 w-3.5 text-slate-500" />
+        <Badge className={`${config.className} flex items-center gap-1 text-xs border`}>
+          <Icon className="h-3 w-3" />
+          {config.label}
+        </Badge>
+      </div>
+    );
+  };
+
   const getActionIcon = (type: string) => {
     switch (type) {
       case 'email': return <Mail className="h-4 w-4 text-white" />;
@@ -309,7 +382,8 @@ export default function ActionCentre() {
       const matchesSearch = !searchQuery || 
         item.subject?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         item.content?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.invoiceNumber?.toLowerCase().includes(searchQuery.toLowerCase());
+        item.invoiceNumber?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.contactName?.toLowerCase().includes(searchQuery.toLowerCase());
       
       // Direction filter (only for actions, not invoices)
       const isInbound = item.metadata?.direction === 'inbound';
@@ -335,9 +409,15 @@ export default function ActionCentre() {
         (statusFilters.includes('needs_action') && needsAction) ||
         (statusFilters.includes('resolved') && isResolved);
       
-      return matchesSearch && matchesDirection && matchesChannel && matchesIntent && matchesStatus;
+      // Exception filter (for actions with exceptionType in metadata)
+      const exceptionType = item.metadata?.exceptionType;
+      const matchesException = exceptionFilters.length === 0 || 
+        !exceptionType || 
+        exceptionFilters.includes(exceptionType);
+      
+      return matchesSearch && matchesDirection && matchesChannel && matchesIntent && matchesStatus && matchesException;
     });
-  }, [currentTabItems, searchQuery, directionFilters, channelFilters, intentFilters, statusFilters]);
+  }, [currentTabItems, searchQuery, directionFilters, channelFilters, intentFilters, statusFilters, exceptionFilters]);
 
   // Determine if current tab shows invoices or actions
   const isInvoiceTab = activeTab === 'overdue';
@@ -458,6 +538,68 @@ export default function ActionCentre() {
               </div>
             </div>
           </div>
+
+          {/* Exception Type Filters */}
+          {(activeTab === 'overdue' || activeTab === 'brokenPromises' || activeTab === 'disputes') && (
+            <div className="mb-6">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-sm font-medium text-slate-600">Exception Alerts:</span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => toggleFilter(exceptionFilters, "Dispute Window Closing", setExceptionFilters)}
+                  className={`${
+                    exceptionFilters.includes("Dispute Window Closing")
+                      ? 'bg-amber-100 text-amber-800 border-amber-300 hover:bg-amber-200'
+                      : 'hover:bg-slate-50'
+                  }`}
+                  data-testid="filter-exception-dispute-window"
+                >
+                  <Clock className="h-4 w-4 mr-1" />
+                  Dispute Window
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => toggleFilter(exceptionFilters, "Broken Promise", setExceptionFilters)}
+                  className={`${
+                    exceptionFilters.includes("Broken Promise")
+                      ? 'bg-red-100 text-red-800 border-red-300 hover:bg-red-200'
+                      : 'hover:bg-slate-50'
+                  }`}
+                  data-testid="filter-exception-broken-promise"
+                >
+                  <AlertTriangle className="h-4 w-4 mr-1" />
+                  Broken Promise
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => toggleFilter(exceptionFilters, "High Risk Late", setExceptionFilters)}
+                  className={`${
+                    exceptionFilters.includes("High Risk Late")
+                      ? 'bg-purple-100 text-purple-800 border-purple-300 hover:bg-purple-200'
+                      : 'hover:bg-slate-50'
+                  }`}
+                  data-testid="filter-exception-high-risk"
+                >
+                  <ShieldAlert className="h-4 w-4 mr-1" />
+                  High Risk
+                </Button>
+                {exceptionFilters.length > 0 && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setExceptionFilters([])}
+                    className="text-slate-500 hover:text-slate-700"
+                    data-testid="button-clear-exception-filters"
+                  >
+                    Clear
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Action List */}
           <div className={isInvoiceTab || isPTPTab || isOnHoldTab ? "" : "card-apple overflow-hidden"}>
@@ -621,7 +763,7 @@ export default function ActionCentre() {
             ) : isInvoiceTab ? (
               // Customer table format (grouped by customer)
               <div className="bg-white border-t border-b border-slate-200 overflow-hidden">
-                <div className="max-h-[600px] overflow-y-auto" style={{ display: 'grid', gridTemplateColumns: '2fr 1.5fr 0.8fr 1fr 1fr 1.2fr 1fr 1.2fr 1.2fr' }}>
+                <div className="max-h-[600px] overflow-y-auto" style={{ display: 'grid', gridTemplateColumns: '2fr 1.5fr 0.8fr 1fr 1fr 1.2fr 1fr 1.5fr 1.2fr 1.2fr' }}>
                   {/* Table Header */}
                   <div className="contents">
                     <div className="px-8 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10">Customer</div>
@@ -631,6 +773,7 @@ export default function ActionCentre() {
                     <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 text-right">Last Contact</div>
                     <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 text-center">Payment Trend</div>
                     <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 text-center">Next Action</div>
+                    <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 text-center">Status</div>
                     <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 text-right">Days Overdue</div>
                     <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10">Assigned to</div>
                   </div>
@@ -725,6 +868,20 @@ export default function ActionCentre() {
                           <Badge className="bg-[#17B6C3]/10 text-[#17B6C3] border-[#17B6C3]/20 text-xs">
                             {customer.nextAction}
                           </Badge>
+                        </div>
+
+                        {/* Pause State/Status */}
+                        <div 
+                          className="px-4 py-2 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center justify-center"
+                          onClick={() => setSelectedCustomer(customer)}
+                        >
+                          {customer.pauseState ? (
+                            getPauseStateBadge(customer.pauseState, customer.pauseReason)
+                          ) : customer.metadata?.exceptionType ? (
+                            getExceptionBadge(customer.metadata.exceptionType)
+                          ) : (
+                            <span className="text-xs text-slate-400">Active</span>
+                          )}
                         </div>
 
                         {/* Days Overdue (Oldest) */}
@@ -895,6 +1052,7 @@ export default function ActionCentre() {
                                 {item.invoiceNumber && <span className="text-[#17B6C3] flex-shrink-0">{item.invoiceNumber}</span>}
                                 {item.invoiceAmount && <span className="font-medium text-slate-900 flex-shrink-0">{formatCurrency(parseFloat(item.invoiceAmount))}</span>}
                                 <div className="flex items-center gap-2 flex-shrink-0">
+                                  {item.metadata?.exceptionType && getExceptionBadge(item.metadata.exceptionType)}
                                   {item.intentType && getIntentBadge(item.intentType)}
                                   {item.sentiment && getSentimentBadge(item.sentiment)}
                                   {!isInbound && (
