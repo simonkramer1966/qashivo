@@ -364,7 +364,7 @@ export default function BetaPartner() {
 
           {/* Stat Callout */}
           <div className="text-center mb-6">
-            <h3 className="text-2xl font-bold text-[#A98743]">Proven Profitability</h3>
+            <h3 className="text-2xl font-bold text-[#A98743]">The Profitability Opportunity</h3>
           </div>
           <Card className="bg-gradient-to-br from-[#8B2635]/10 via-[#A98743]/10 to-[#17B6C3]/10 border-2 border-[#A98743]/30 shadow-2xl p-8 max-w-4xl mx-auto relative overflow-hidden" data-testid="card-practice-stats" style={{ boxShadow: '0 25px 50px -12px rgba(169, 135, 67, 0.25), 0 0 60px -15px rgba(169, 135, 67, 0.15)' }}>
             <div className="flex items-start gap-6">
@@ -373,10 +373,10 @@ export default function BetaPartner() {
               </div>
               <div>
                 <h3 className="text-2xl font-bold text-gray-900 mb-3">
-                  40% Higher Margins on Collection Services
+                  Transform Your Practice Economics
                 </h3>
                 <p className="text-lg text-gray-700 leading-relaxed">
-                  Accounting practices using AI-powered credit control report significantly higher profit margins, faster client onboarding, and increased client retention. The combination of automation efficiency and premium positioning creates a compelling competitive advantage.
+                  By automating routine collection tasks, accounting practices can deliver credit control services to 3x more clients with the same team. Industry analysis suggests this efficiency gain, combined with premium positioning for AI-powered solutions, can drive margin improvements of 40% or more on collection services while accelerating client onboarding and improving retention.
                 </p>
               </div>
             </div>
