@@ -352,6 +352,162 @@ export function registerWebhookRoutes(app: Express) {
   });
 
   /**
+   * SendGrid Event Webhook (Outbound Email Tracking)
+   * Tracks: delivered, opened, clicked, bounced, dropped, etc.
+   * https://docs.sendgrid.com/for-developers/tracking-events/event
+   */
+  app.post("/api/webhooks/sendgrid/events", async (req: Request, res: Response) => {
+    try {
+      const events = Array.isArray(req.body) ? req.body : [req.body];
+      const { eventBus } = await import("../lib/event-bus");
+      
+      for (const event of events) {
+        const { 
+          event: eventType,
+          email,
+          sg_message_id,
+          timestamp,
+          tenant_id, // Custom arg we'll add when sending
+          action_id,
+          contact_id,
+          invoice_id
+        } = event;
+
+        if (!tenant_id) continue;
+
+        const idempotencyKey = eventBus.generateIdempotencyKey(
+          tenant_id,
+          'contact.outcome',
+          sg_message_id || `${email}-${timestamp}`
+        );
+
+        await eventBus.publishContactOutcome({
+          type: 'contact.outcome',
+          tenantId: tenant_id,
+          contactId: contact_id,
+          invoiceId: invoice_id,
+          actionId: action_id,
+          idempotencyKey,
+          channel: 'email',
+          outcome: eventType, // delivered, open, click, bounce, etc.
+          providerMessageId: sg_message_id,
+          payload: event,
+          eventTimestamp: new Date(timestamp * 1000),
+        }).catch(err => console.error('Failed to log SendGrid outcome:', err));
+      }
+
+      res.status(200).json({ message: 'Events processed' });
+    } catch (error) {
+      console.error('❌ SendGrid events webhook error:', error);
+      res.status(500).json({ error: 'Processing failed' });
+    }
+  });
+
+  /**
+   * Vonage Delivery Receipt Webhook (Outbound SMS/WhatsApp Tracking)
+   * https://developer.vonage.com/en/messaging/sms/guides/delivery-receipts
+   */
+  app.post("/api/webhooks/vonage/delivery-receipt", async (req: Request, res: Response) => {
+    try {
+      const {
+        msisdn, // Recipient phone
+        to, // Sender
+        status, // delivered, failed, expired, etc.
+        'message-id': messageId,
+        'message-timestamp': timestamp,
+        'client-ref': clientRef // We'll use this to store tenant_id:action_id:contact_id
+      } = req.body;
+
+      if (!clientRef) {
+        return res.status(200).json({ message: 'No client ref' });
+      }
+
+      // Parse client ref: "tenant_id:action_id:contact_id:invoice_id"
+      const [tenantId, actionId, contactId, invoiceId] = clientRef.split(':');
+      
+      const { eventBus } = await import("../lib/event-bus");
+      const idempotencyKey = eventBus.generateIdempotencyKey(
+        tenantId,
+        'contact.outcome',
+        messageId
+      );
+
+      await eventBus.publishContactOutcome({
+        type: 'contact.outcome',
+        tenantId,
+        contactId,
+        invoiceId,
+        actionId,
+        idempotencyKey,
+        channel: 'sms', // Could be whatsapp based on message type
+        outcome: status, // delivered, failed, expired
+        providerMessageId: messageId,
+        providerStatus: status,
+        payload: req.body,
+        eventTimestamp: new Date(timestamp || Date.now()),
+      }).catch(err => console.error('Failed to log Vonage outcome:', err));
+
+      res.status(200).json({ message: 'Receipt processed' });
+    } catch (error) {
+      console.error('❌ Vonage delivery receipt webhook error:', error);
+      res.status(500).json({ error: 'Processing failed' });
+    }
+  });
+
+  /**
+   * Retell Call Status Webhook (Outbound Voice Tracking)
+   * https://docs.retellai.com/api-references/register-call
+   */
+  app.post("/api/webhooks/retell/call-status", async (req: Request, res: Response) => {
+    try {
+      const {
+        call_id,
+        call_status, // registered, ongoing, ended
+        call_analysis, // { user_sentiment, call_successful, etc. }
+        metadata // { tenant_id, action_id, contact_id, invoice_id }
+      } = req.body;
+
+      if (!metadata?.tenant_id) {
+        return res.status(200).json({ message: 'No metadata' });
+      }
+
+      const { eventBus } = await import("../lib/event-bus");
+      const idempotencyKey = eventBus.generateIdempotencyKey(
+        metadata.tenant_id,
+        'contact.outcome',
+        `${call_id}-${call_status}`
+      );
+
+      // Map Retell status to our outcome
+      const outcomeMap: Record<string, string> = {
+        registered: 'initiated',
+        ongoing: 'answered',
+        ended: call_analysis?.call_successful ? 'completed' : 'failed'
+      };
+
+      await eventBus.publishContactOutcome({
+        type: 'contact.outcome',
+        tenantId: metadata.tenant_id,
+        contactId: metadata.contact_id,
+        invoiceId: metadata.invoice_id,
+        actionId: metadata.action_id,
+        idempotencyKey,
+        channel: 'voice',
+        outcome: outcomeMap[call_status] || call_status,
+        providerMessageId: call_id,
+        providerStatus: call_status,
+        payload: { ...req.body, sentiment: call_analysis?.user_sentiment },
+        eventTimestamp: new Date(),
+      }).catch(err => console.error('Failed to log Retell outcome:', err));
+
+      res.status(200).json({ message: 'Status processed' });
+    } catch (error) {
+      console.error('❌ Retell call status webhook error:', error);
+      res.status(500).json({ error: 'Processing failed' });
+    }
+  });
+
+  /**
    * Webhook status endpoint for testing
    */
   app.get("/api/webhooks/status", (req: Request, res: Response) => {
