@@ -233,8 +233,8 @@ export class XeroSyncService {
       for (const cachedInv of collectionRelevant) {
         try {
           // Find or create contact
-          const contactXeroId = cachedInv.contact?.ContactID;
-          const contactName = cachedInv.contact?.Name;
+          const contactXeroId = (cachedInv.contact as any)?.ContactID;
+          const contactName = (cachedInv.contact as any)?.Name;
 
           if (!contactXeroId) {
             console.warn(`⚠️  Skipping invoice ${cachedInv.invoiceNumber} - no contact ID`);

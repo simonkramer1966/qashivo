@@ -25,7 +25,7 @@ app.post("/api/debtor/payment/webhook", express.raw({ type: 'application/json' }
     const { storage } = await import("./storage");
     const { InterestCalculator } = await import("./services/interest-calculator");
     
-    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", { apiVersion: "2024-12-18.acacia" });
+    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", { apiVersion: "2025-08-27.basil" });
 
     // Verify webhook signature
     const event = stripe.webhooks.constructEvent(
@@ -59,10 +59,26 @@ app.post("/api/debtor/payment/webhook", express.raw({ type: 'application/json' }
         const invoice = await storage.getInvoice(metadata.invoiceId, metadata.tenantId);
         if (invoice) {
           const newAmountPaid = parseFloat(invoice.amountPaid || "0") + parseFloat(metadata.principalAmount);
+          const isPaid = newAmountPaid >= parseFloat(invoice.amount);
+          
           await storage.updateInvoice(metadata.invoiceId, metadata.tenantId, {
             amountPaid: newAmountPaid.toString(),
-            status: newAmountPaid >= parseFloat(invoice.amount) ? "paid" : "partial",
+            status: isPaid ? "paid" : "partial",
+            paidDate: isPaid ? new Date() : invoice.paidDate,
           });
+
+          // Collect behavioral signal from payment
+          const { signalCollector } = await import("./lib/signal-collector");
+          await signalCollector.recordPaymentEvent({
+            contactId: metadata.contactId,
+            tenantId: metadata.tenantId,
+            invoiceId: metadata.invoiceId,
+            amountPaid: parseFloat(metadata.principalAmount),
+            invoiceAmount: parseFloat(invoice.amount),
+            dueDate: new Date(invoice.dueDate),
+            paidDate: new Date(),
+            isPartial: !isPaid,
+          }).catch(err => console.error('Failed to record payment signal:', err));
 
           // Handle partial payment - create new ledger period
           if (newAmountPaid < parseFloat(invoice.amount)) {
