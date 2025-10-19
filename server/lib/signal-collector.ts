@@ -49,34 +49,35 @@ export class SignalCollector {
       // Get or create behavior signal record
       let signal = await this.getOrCreateSignal(event.contactId, event.tenantId);
 
-      // Fetch all paid invoices for this contact to recalculate stats
+      // Fetch all invoices with ANY payment (full or partial) for this contact
       const paidInvoices = await db
         .select({
           amount: invoices.amount,
           dueDate: invoices.dueDate,
           paidDate: invoices.paidDate,
           amountPaid: invoices.amountPaid,
+          createdAt: invoices.createdAt,
         })
         .from(invoices)
         .where(
           and(
             eq(invoices.contactId, event.contactId),
             eq(invoices.tenantId, event.tenantId),
-            sql`${invoices.paidDate} IS NOT NULL`
+            sql`CAST(COALESCE(${invoices.amountPaid}, '0') AS DECIMAL) > 0` // Any payment made
           )
         )
-        .orderBy(desc(invoices.paidDate))
-        .limit(100); // Last 100 paid invoices for stats
+        .orderBy(desc(sql`COALESCE(${invoices.paidDate}, ${invoices.createdAt})`))
+        .limit(100); // Last 100 invoices with payments
 
       if (paidInvoices.length === 0) {
         console.log(`⚠️ No paid invoices found for contact ${event.contactId}`);
         return;
       }
 
-      // Calculate payment lags
+      // Calculate payment lags (use paidDate if full payment, otherwise use current date for partial)
       const paymentLags = paidInvoices.map((inv: any) => {
         const due = new Date(inv.dueDate!);
-        const paid = new Date(inv.paidDate!);
+        const paid = inv.paidDate ? new Date(inv.paidDate) : new Date(); // Use current date for partials
         return Math.floor((paid.getTime() - due.getTime()) / (1000 * 60 * 60 * 24));
       });
 
@@ -95,6 +96,9 @@ export class SignalCollector {
         (inv: any) => parseFloat(inv.amountPaid || '0') < parseFloat(inv.amount || '0')
       ).length;
 
+      // Find the most recent payment date (could be from event or latest invoice)
+      const latestPaymentDate = event.paidDate || new Date();
+
       // Update signal record
       await db
         .update(customerBehaviorSignals)
@@ -106,7 +110,7 @@ export class SignalCollector {
           amountSensitivity,
           partialPaymentCount,
           invoiceCount: paidInvoices.length,
-          lastPaymentDate: event.paidDate,
+          lastPaymentDate: latestPaymentDate,
           updatedAt: new Date(),
         })
         .where(eq(customerBehaviorSignals.contactId, event.contactId));
@@ -135,12 +139,16 @@ export class SignalCollector {
       // Get or create behavior signal record
       await this.getOrCreateSignal(event.contactId, event.tenantId);
 
-      // Query actions for this contact to calculate response rates
-      const channelActions = await db
+      // Import inboundMessages and actions tables
+      const { inboundMessages } = await import("../../shared/schema");
+
+      // Query both outbound actions AND inbound messages for complete picture
+      const outboundActions = await db
         .select({
           type: actions.type,
           status: actions.status,
           metadata: actions.metadata,
+          createdAt: actions.createdAt,
         })
         .from(actions)
         .where(
@@ -149,20 +157,48 @@ export class SignalCollector {
             eq(actions.tenantId, event.tenantId)
           )
         )
-        .limit(500); // Last 500 actions
+        .limit(500); // Last 500 outbound actions
 
-      // Calculate response rates by channel
-      const emailActions = channelActions.filter((a: any) => a.type === 'email');
-      const smsActions = channelActions.filter((a: any) => a.type === 'sms');
-      const whatsappActions = channelActions.filter((a: any) => a.type === 'whatsapp');
-      const callActions = channelActions.filter((a: any) => ['call', 'voice', 'ai_voice'].includes(a.type || ''));
+      const inboundReplies = await db
+        .select({
+          channel: inboundMessages.channel,
+          createdAt: inboundMessages.createdAt,
+        })
+        .from(inboundMessages)
+        .where(
+          and(
+            eq(inboundMessages.contactId, event.contactId),
+            eq(inboundMessages.tenantId, event.tenantId)
+          )
+        )
+        .limit(500); // Last 500 inbound messages
 
-      const emailOpenRate = this.calculateRate(emailActions, 'opened');
-      const emailClickRate = this.calculateRate(emailActions, 'clicked');
-      const emailReplyRate = this.calculateRate(emailActions, 'replied');
-      const smsReplyRate = this.calculateRate(smsActions, 'replied');
-      const whatsappReplyRate = this.calculateRate(whatsappActions, 'replied');
-      const callAnswerRate = this.calculateRate(callActions, 'answered');
+      // Calculate response rates combining actions and inbound messages
+      const emailSent = outboundActions.filter((a: any) => a.type === 'email').length;
+      const smsSent = outboundActions.filter((a: any) => a.type === 'sms').length;
+      const whatsappSent = outboundActions.filter((a: any) => a.type === 'whatsapp').length;
+      const callsMade = outboundActions.filter((a: any) => ['call', 'voice', 'ai_voice'].includes(a.type || '')).length;
+
+      const emailReplies = inboundReplies.filter((m: any) => m.channel === 'email').length;
+      const smsReplies = inboundReplies.filter((m: any) => m.channel === 'sms').length;
+      const whatsappReplies = inboundReplies.filter((m: any) => m.channel === 'whatsapp').length;
+      const voiceReplies = inboundReplies.filter((m: any) => m.channel === 'voice').length;
+
+      // Calculate email specific metrics from action metadata
+      const emailOpened = outboundActions.filter((a: any) => 
+        a.type === 'email' && a.metadata?.opened === true
+      ).length;
+      const emailClicked = outboundActions.filter((a: any) => 
+        a.type === 'email' && a.metadata?.clicked === true
+      ).length;
+
+      // Calculate rates (replies are from inbound messages)
+      const emailOpenRate = emailSent > 0 ? parseFloat((emailOpened / emailSent).toFixed(2)) : 0;
+      const emailClickRate = emailSent > 0 ? parseFloat((emailClicked / emailSent).toFixed(2)) : 0;
+      const emailReplyRate = emailSent > 0 ? parseFloat((emailReplies / emailSent).toFixed(2)) : 0;
+      const smsReplyRate = smsSent > 0 ? parseFloat((smsReplies / smsSent).toFixed(2)) : 0;
+      const whatsappReplyRate = whatsappSent > 0 ? parseFloat((whatsappReplies / whatsappSent).toFixed(2)) : 0;
+      const callAnswerRate = callsMade > 0 ? parseFloat((voiceReplies / callsMade).toFixed(2)) : 0;
 
       // Update signal record
       await db
@@ -365,10 +401,11 @@ export class SignalCollector {
       '>20000': [],
     };
 
-    invoices.forEach(inv => {
+    invoices.forEach((inv: any) => {
       const amount = parseFloat(inv.amount || '0');
       const due = new Date(inv.dueDate!);
-      const paid = new Date(inv.paidDate!);
+      // Use paidDate if available (full payment), otherwise use current date (partial payment)
+      const paid = inv.paidDate ? new Date(inv.paidDate) : new Date();
       const daysToPay = Math.floor((paid.getTime() - due.getTime()) / (1000 * 60 * 60 * 24));
 
       if (amount < 1000) buckets['<1000'].push(daysToPay);
