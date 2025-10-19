@@ -1522,6 +1522,11 @@ export const collectionSchedules = pgTable("collection_schedules", {
   averageDaysToPayment: decimal("average_days_to_payment", { precision: 5, scale: 1 }),
   totalCustomersAssigned: integer("total_customers_assigned").default(0),
   sendingSettings: jsonb("sending_settings"), // Time zones, sending windows, holiday settings
+  
+  // Adaptive Scheduler Settings
+  schedulerType: varchar("scheduler_type").default("static"), // "static" | "adaptive"
+  adaptiveSettings: jsonb("adaptive_settings"), // { targetDSO: number, urgencyFactor: number, quietHours: [start, end], maxDailyTouches: number }
+  
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
