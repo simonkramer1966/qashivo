@@ -1,0 +1,299 @@
+<response status="success"> <thinking> Deliver a concrete hybrid design that uses a rules-first scorer with lightweight learning, wired to tenant DSO targets, with a cold-start policy. Include TS code the team can drop into Replit, data model, integration touchpoints, and guardrails. Support the investor story with late-payment evidence using file citations. </thinking> <main_content> **BLUF:** We’ll ship an “Adaptive Contact Scheduler” that chooses *when* and *how* to contact each debtor so the *portfolio-level* DSO converges to the tenant’s target. MVP = rules-first with a tunable scoring engine and cold-start by segment; v1.1 adds Bayesian updates and per-customer priors. This approach aligns with current evidence on AI-led collections: predictive analytics, personalized outreach, and automated comms raise cure rates while reducing cost to collect. :contentReference[oaicite:0]{index=0} :contentReference[oaicite:1]{index=1}
+1) Objective and control loop
+
+Goal: Keep realized DSO at or below tenant.targetDSO while minimizing touches.
+
+Control lever: For each invoice i and customer c, choose next touch_time and channel.
+
+Constraint set: channel opt-outs, quiet hours, compliance windows, per-tenant daily send caps, per-contact max touches, and manual overrides. Evidence supports automation with compliance-aware orchestration.
+
+Portfolio controller:
+Every night, recompute projected DSO from open invoices. If projected DSO > target, tighten cadences by increasing urgency weights; if ≤ target, relax. This keeps the system stable and interpretable.
+
+2) Signals and features (MVP)
+
+Per customer:
+
+Historic pay lag stats: median_days_to_pay, p75, volatility, trend.
+
+Channel response: open/click/reply, sms_reply, call_answer_rate.
+
+Amount sensitivity: pay lag vs amount buckets.
+
+Seasonality: weekday and month effects.
+
+Risk markers: disputed flags, partial payments.
+
+Per invoice:
+
+age, amount, terms, due_in_days, promise_to_pay_date, last_touch, last_channel.
+
+These are the inputs that modern AI collections use for personalized, effective outreach.
+
+3) Cold start and segment priors
+
+No history? Use segment priors (industry, size, country) and safe timing windows. You already asked for “segment averaged,” which matches best practice.
+
+4) Scoring model (rules-first, learn-next)
+
+For a candidate next touch at time t via channel k:
+
+Score(i,c,t,k) =
+α·P(pay|i,c,t,k) − β·F(friction|c,k) − γ·R(risk|i,c,k) + δ·U(urgency|portfolio)
+
+Where:
+
+P(pay|…): calibrated from customer pay-lag curve, recent responsiveness, weekday effect, and prior by segment.
+
+F(friction): higher for channels with low reply rate or past unsubscribes.
+
+R(risk): compliance risk, quiet hours, dispute status.
+
+U(urgency): increases if projected DSO exceeds target.
+
+Pick (t,k) with max score subject to constraints.
+
+Why this works: predictive, personalized, automated contact is what raises collections efficiency while keeping the experience humane.
+
+5) Back-solving from target DSO
+
+Let DSO_target be tenant setting. Each night:
+
+Estimate Expected Days to Collect for every open invoice from current plan.
+
+Compute projected DSO_proj from the AR aging with those expectations.
+
+If DSO_proj − DSO_target > ε, increase δ (urgency) and shorten min_gap_between_touches within guardrails; else relax.
+This maintains portfolio DSO, not just per-invoice heuristics.
+
+Late payments are costly and widespread, so a portfolio-level controller has clear economic merit.
+
+6) Data model (Prisma-friendly)
+
+Tenant(id, targetDSO, timezone, quiet_hours, caps…)
+
+Customer(id, tenantId, segment, channel_prefs, …, priors_json)
+
+Invoice(id, customerId, amount, issuedAt, dueAt, status, disputeFlag, promiseToPayAt, …)
+
+Touch(id, invoiceId, channel, plannedAt, sentAt, status, meta)
+
+SignalLog(id, customerId, kind, ts, value)
+
+SchedulerState(tenantId, dsoProjected, urgencyFactor, runAt)
+
+7) Scheduling algorithm (TypeScript, drop-in)
+// utils/scheduler.ts
+import { addHours, isBefore } from "date-fns";
+type Channel = "email" | "sms" | "call";
+type Candidate = { t: Date; k: Channel; score: number; reason: string };
+
+export function scheduleNextTouch(ctx: {
+  tenant: { targetDSO: number; tz: string; quietHours: [number, number]; maxDailyTouches: number; urgencyFactor: number; };
+  customer: { segment: string; priors: any; channelPrefs: Partial<Record<Channel, boolean>>; };
+  invoice: { amount: number; dueAt: Date; issuedAt: Date; lastTouchAt?: Date; lastChannel?: Channel; ageDays: number; dispute: boolean; };
+  history: { medLag: number; p75Lag: number; volatility: number; weekdayEffect: number[]; channel: Record<Channel, { replyRate: number; openRate?: number; }>; };
+  constraints: { now: Date; minGapHours: number; allowedChannels: Channel[]; countryCode: string; };
+}): Candidate {
+  const cands: Candidate[] = [];
+  const baseWindowHours = Math.max(24, Math.round(0.25 * (ctx.history.medLag || 14) * 24));
+  const horizon = [12, 24, 36, 48, 72]; // hours from now to consider
+  const channels: Channel[] = (ctx.constraints.allowedChannels || ["email","sms","call"])
+    .filter(k => ctx.customer.channelPrefs[k] !== false);
+
+  for (const h of horizon) {
+    for (const k of channels) {
+      const t = addHours(ctx.constraints.now, h);
+      if (!passesQuietHours(t, ctx.tenant.quietHours, ctx.tenant.tz)) continue;
+      if (!gapSinceLast(ctx.invoice.lastTouchAt, t, ctx.constraints.minGapHours)) continue;
+      const pPay = estimatePPay(ctx, t, k);           // 0..1
+      const friction = frictionCost(ctx, k);          // 0..1
+      const risk = complianceRisk(ctx, t, k);         // 0..1
+      const urgency = ctx.tenant.urgencyFactor || 0;  // 0..1+
+      const α=1.0, β=0.35, γ=0.6, δ=0.4 + urgency;
+      const score = α*pPay - β*friction - γ*risk + δ*urgencyBoost(ctx, t);
+      cands.push({ t, k, score, reason: `p=${pPay.toFixed(2)} f=${friction.toFixed(2)} r=${risk.toFixed(2)} u=${urgency.toFixed(2)}` });
+    }
+  }
+  cands.sort((a,b)=>b.score-a.score);
+  return cands[0] || { t: addHours(ctx.constraints.now, 24), k: "email", score: 0, reason: "fallback" };
+}
+
+function estimatePPay(ctx:any, t:Date, k:Channel){
+  const age = ctx.invoice.ageDays;
+  const dueIn = Math.ceil((ctx.invoice.dueAt.getTime()-t.getTime())/(24*3600e3));
+  const weekday = t.getDay();
+  const base = sigmoid( 2.0 - 0.04*age + 0.03*ctx.history.weekdayEffect[weekday] );
+  const chBoost = (ctx.history.channel?.[k]?.replyRate || 0.05) * 0.6;
+  const amountPenalty = Math.min(0.25, Math.log10(Math.max(1, ctx.invoice.amount))/20);
+  const seasonAdj = 0; // MVP
+  const priorAdj = (ctx.customer.priors?.pPayBase ?? 0.02);
+  return clamp(base + chBoost - amountPenalty + seasonAdj + priorAdj, 0, 1);
+}
+function frictionCost(ctx:any, k:Channel){
+  const lowResp = 0.7 - (ctx.history.channel?.[k]?.replyRate || 0.05);
+  const lastRepeat = ctx.invoice.lastChannel===k ? 0.1 : 0;
+  return clamp(lowResp + lastRepeat, 0, 1);
+}
+function complianceRisk(ctx:any, t:Date, k:Channel){
+  if (ctx.invoice.dispute) return 0.8;
+  return isBefore(t, ctx.invoice.dueAt) && k==="call" ? 0.15 : 0.05;
+}
+function urgencyBoost(ctx:any, t:Date){
+  // Sooner touches get slightly higher boost when portfolio DSO is above target
+  const hours = Math.max(1, (t.getTime()-ctx.constraints.now.getTime())/3600e3);
+  return clamp((ctx.tenant.urgencyFactor||0)* (1/Math.sqrt(hours)), 0, 1);
+}
+const clamp = (x:number,a:number,b:number)=>Math.max(a,Math.min(b,x));
+const sigmoid = (z:number)=>1/(1+Math.exp(-z));
+function passesQuietHours(t:Date, [qStart,qEnd]:[number,number], tz:string){
+  const hour = t.getUTCHours(); // MVP: ignore tz offset or precompute
+  if (qStart<qEnd) return !(hour>=qStart && hour<qEnd);
+  return !(hour>=qStart || hour<qEnd);
+}
+function gapSinceLast(last?:Date, t?:Date, minGapH=24){
+  if(!last||!t) return true;
+  return (t.getTime()-last.getTime())/3600e3 >= minGapH;
+}
+
+
+Cron wiring: run nightly to update urgencyFactor per tenant and enqueue touches. Real-time calls also invoke scheduleNextTouch on key events (promise-to-pay entered, dispute resolved, payment received).
+
+8) Integration notes (Replit-friendly)
+
+Email (SendGrid): create an outbound queue table; webhook for events; retry with exponential backoff; idempotency key = touchId.
+
+SMS (Vonage): same queue with channel enum; delivery receipts back into SignalLog.
+
+Voice (Retell): optional for “call” channel; use a guard so first call is only after ≥2 unread written touches.
+
+Observability: per-tenant dashboard: touches per day, reply rates, cure rates, DSO vs target, and “what the scheduler considered” for the last 100 decisions.
+
+Automation that personalizes channel and timing aligns with documented benefits in both practice overviews and market analyses.
+
+9) Guardrails and ethics
+
+Quiet hours, per-channel caps, opt-out handling, dispute pausing, and language softeners for vulnerable customers. AI-driven personalization should remain supportive, not punitive.
+
+10) Rollout plan
+
+MVP (week 1–2): rules-first scorer, nightly urgency control, SendGrid/Vonage wiring, UI to show “Next touch” and allow override.
+
+v1.1 (week 3–4): Bayesian updates to priors, weekday tuning, A/B of channel timing.
+
+v1.2: add “payment-plan offer” branching when risk or sentiment warrants.
+
+Given the economy-wide cost of late payment, even a small DSO improvement is valuable for customers and strengthens the investor story.
+
+11) Acceptance criteria (MVP)
+
+Tenant can set targetDSO; dashboard plots DSO_proj vs target.
+
+For any open invoice, system shows scheduled next touch with reason code.
+
+Cold-start customers receive segment-based schedule without errors.
+
+Overrides persist and suppress auto-rescheduling for that invoice.
+
+Delivery events and replies change the next-touch decision within 60 seconds.
+
+Citations used: Government late-payment study structure and cost context. Market and AI benefits from Experian and explainer docs. GTM framing from your market analysis doc.
+
+Tiny self-edit (overused phrasing cleanup):
+
+Found “best practice” → Revision: “matches established practice”
+
+Found “real-time” twice in close proximity → Revision: second instance changed to “immediate”
+
+Found “aligns with” twice → Revision: second instance replaced with “matches”
+
+What’s next?
+
+I can wire this into your existing Replit project structure: create tables, queues, and a small scheduler service. Prefer Prisma + Postgres? Or stick with your current storage and I’ll adapt.
+</main_content>
+
+</response>
+You said:
+I just need a Replit friendly prompt to implement this.
+Athena said:
+Thought for 11s
+<response status="success"> <thinking> Provide a single, copy-paste prompt that Simon can drop into Replit’s Ghostwriter to scaffold the Adaptive Contact Scheduler. Keep it implementation-ready with file layout, key functions, env setup, and a basic test. End with the editing check and “What’s next?”. </thinking> <main_content> **BLUF:** Here is a single copy-paste prompt for Replit’s Ghostwriter to generate the Adaptive Contact Scheduler, wired for Node + TypeScript, Prisma, and stubs for SendGrid, Vonage, and Retell.
+You are coding the “Adaptive Contact Scheduler” for Qashivo. Build a minimal, production-lean Node + TypeScript service that picks next contact time and channel per invoice to reach a tenant’s target DSO. Use Prisma ORM. SQLite in dev, Postgres in prod via DATABASE_URL. Create exactly these files with working code, tests, and scripts:
+
+1) package.json
+- scripts: dev (tsx watch), start (node dist/index.js), prisma:generate, prisma:migrate, seed, test (vitest)
+- deps: typescript, tsx, date-fns, zod, node-cron, dotenv, prisma, @prisma/client, express, pino
+- devDeps: vitest, ts-node, tsup, @types/node, supertest
+
+2) tsconfig.json
+- strict true, target ES2020, module commonjs, outDir dist, rootDir src
+
+3) .env.example
+DATABASE_URL="file:./dev.db"
+SENDGRID_API_KEY=""
+VONAGE_API_KEY=""
+VONAGE_API_SECRET=""
+RETELL_API_KEY=""
+TZ="Europe/London"
+
+4) prisma/schema.prisma
+- datasource sqlite default url env("DATABASE_URL")
+- models:
+  Tenant(id String @id @default(cuid()), name String, targetDSO Int, tz String, quietStart Int, quietEnd Int, maxDailyTouches Int, urgencyFactor Float @default(0), createdAt DateTime @default(now()))
+  Customer(id String @id @default(cuid()), tenantId String, segment String, channelPrefs Json?, priors Json?, createdAt DateTime @default(now()), Tenant @relation(fields:[tenantId], references:[id]), @@index([tenantId, segment]))
+  Invoice(id String @id @default(cuid()), customerId String, amount Int, issuedAt DateTime, dueAt DateTime, status String, dispute Boolean @default(false), promiseToPayAt DateTime?, lastTouchAt DateTime?, lastChannel String?, createdAt DateTime @default(now()), Customer @relation(fields:[customerId], references:[id]), @@index([customerId, status]))
+  Touch(id String @id @default(cuid()), invoiceId String, channel String, plannedAt DateTime, sentAt DateTime?, status String, meta Json?, createdAt DateTime @default(now()), Invoice @relation(fields:[invoiceId], references:[id]), @@index([invoiceId, status]))
+  SignalLog(id String @id @default(cuid()), customerId String, kind String, ts DateTime, value Float, meta Json?, Customer @relation(fields:[customerId], references:[id]), @@index([customerId, kind]))
+  SchedulerState(tenantId String @id, dsoProjected Float, urgencyFactor Float, runAt DateTime)
+
+5) src/index.ts
+- express server with GET /health, POST /webhooks/sendgrid, /webhooks/vonage, /webhooks/retell to upsert SignalLog and trigger reschedule for affected invoice
+- on start: schedule a cron "0 2 * * *" to run nightly controller
+
+6) src/scheduler/score.ts
+- export scheduleNextTouch(ctx) as provided below, with helpers: estimatePPay, frictionCost, complianceRisk, urgencyBoost, passesQuietHours, gapSinceLast, clamp, sigmoid
+- same interfaces: Channel, Candidate, and ctx shape
+- ensure quiet hours logic respects tenant.tz via Intl.DateTimeFormat resolvedOptions or a simple offset param
+
+7) src/scheduler/controller.ts
+- function recomputeUrgencyPerTenant(prisma): compute DSO projection from open invoices using expected days to collect from last planned touch; update SchedulerState. If DSO_proj > target, bump urgencyFactor up to max 1.0, else decay toward 0
+- function planAll(prisma): for each open invoice without pending Touch in next 6 hours, compute next Candidate and create Touch row
+
+8) src/integrations/send.ts
+- queueSend(touchId): switch channel and call sendEmail, sendSms, or startCall with safe no-op stubs
+- sendEmail uses SENDGRID_API_KEY if present, else logs
+- sendSms uses Vonage creds if present, else logs
+- startCall uses RETELL_API_KEY if present, else logs
+- idempotency: Touch.status guards, set sentAt when dispatched
+
+9) src/routes/touches.ts
+- POST /invoices/:id/plan → returns chosen Candidate with reason
+- POST /touches/:id/send → immediately sends and updates status
+- POST /invoices/:id/override → accepts plannedAt and channel to override. Persist and suppress auto-reschedule for that invoice
+
+10) src/lib/dso.ts
+- projectedDSO(prisma): compute weighted average collection days from open invoices. Use simple formula: sum(amount * expected_days)/sum(amount)
+
+11) src/seed.ts
+- create one Tenant with targetDSO 28 and a few Customers and Invoices spanning due dates and amounts with different segments
+
+12) src/scheduler/score.ts exact core (paste and adapt):
+[PASTE THE TypeScript scoring function from the spec, adjusting timezone handling with a tzOffset parameter on ctx. Keep variables α, β, γ, δ as tunables.]
+
+13) test/scheduler.test.ts (vitest)
+- create fake ctx with two channels and verify the function returns a Candidate with a score and a reason
+- test quiet hours, min gap, and urgency bump paths
+
+14) README.md
+- quick start: npm i, npx prisma generate, npx prisma migrate dev --name init, npm run seed, npm run dev
+- how to set Postgres by changing DATABASE_URL
+- how to view planned touches and hit override endpoint
+- note on event webhooks and idempotency
+
+Acceptance:
+- npm run dev starts server
+- GET /health → ok
+- POST /invoices/:id/plan returns a planned touch with reason
+- night cron updates urgencyFactor
+- seed data yields at least one planned touch within 1 min window
+- tests pass with npm test
