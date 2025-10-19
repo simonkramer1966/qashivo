@@ -11,6 +11,7 @@ import {
   exchangeRates
 } from "@shared/schema";
 import { eq, and, or } from "drizzle-orm";
+import { signalCollector } from "../lib/signal-collector";
 
 /**
  * Data Type Handlers for Sync Operations
@@ -286,6 +287,9 @@ export class InvoicesHandler implements DataTypeHandler {
         eq(invoices[providerIdField], providerId)
       ));
 
+    let invoiceId: string;
+    let isCreate = false;
+
     if (existingInvoice) {
       // Update existing invoice
       await db
@@ -296,12 +300,39 @@ export class InvoicesHandler implements DataTypeHandler {
         })
         .where(eq(invoices.id, existingInvoice.id));
       
-      return false; // Updated
+      invoiceId = existingInvoice.id;
+      isCreate = false;
     } else {
       // Create new invoice
-      await db.insert(invoices).values(transformedData);
-      return true; // Created
+      const [newInvoice] = await db.insert(invoices).values(transformedData).returning();
+      invoiceId = newInvoice.id;
+      isCreate = true;
     }
+
+    // Trigger signal collection if invoice has payment data (Xero sync)
+    const hasPaymentData = 
+      (transformedData.amountPaid && parseFloat(transformedData.amountPaid) > 0) || 
+      transformedData.paidDate;
+
+    if (hasPaymentData && transformedData.contactId) {
+      // Trigger signal collection asynchronously
+      signalCollector.recordPaymentEvent({
+        contactId: transformedData.contactId,
+        tenantId: transformedData.tenantId,
+        invoiceId: invoiceId,
+        amountPaid: parseFloat(transformedData.amountPaid || '0'),
+        invoiceAmount: parseFloat(transformedData.amount),
+        dueDate: new Date(transformedData.dueDate),
+        paidDate: transformedData.paidDate ? new Date(transformedData.paidDate) : new Date(),
+        isPartial: parseFloat(transformedData.amountPaid || '0') < parseFloat(transformedData.amount),
+      }).catch((err: Error) => {
+        console.error('❌ Failed to record payment signal from Xero sync:', err);
+      });
+
+      console.log(`📊 Triggered payment signal collection for invoice ${invoiceId} from Xero sync`);
+    }
+    
+    return isCreate;
   }
 
   private getProviderIdField(provider: string): string {

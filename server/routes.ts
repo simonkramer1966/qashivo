@@ -227,6 +227,7 @@ import { ForecastEngine, type ForecastConfig, type ForecastScenario } from "../s
 import { subscriptionService } from "./services/subscriptionService";
 import { businessAnalyticsService } from "./services/businessAnalytics";
 import { clientPartnerService } from "./services/clientPartnerService";
+import { signalCollector } from "./lib/signal-collector";
 
 // Initialize Stripe (lazy initialization - only fails when actually used)
 let stripe: Stripe | null = null;
@@ -2369,6 +2370,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         paidDate: new Date(),
         amountPaid: invoice.amount,
       });
+
+      // Trigger signal collection for manual payment
+      signalCollector.recordPaymentEvent({
+        contactId: invoice.contactId,
+        tenantId: user.tenantId,
+        invoiceId: invoice.id,
+        amountPaid: parseFloat(invoice.amount),
+        invoiceAmount: parseFloat(invoice.amount),
+        dueDate: new Date(invoice.dueDate!),
+        paidDate: new Date(),
+        isPartial: false,
+      }).catch((err: Error) => {
+        console.error('❌ Failed to record payment signal from manual mark-paid:', err);
+      });
+
+      console.log(`📊 Triggered payment signal collection for invoice ${invoice.id} from manual mark-paid`);
 
       // Send thank you SMS if contact has a phone number
       if (contact.phone) {
