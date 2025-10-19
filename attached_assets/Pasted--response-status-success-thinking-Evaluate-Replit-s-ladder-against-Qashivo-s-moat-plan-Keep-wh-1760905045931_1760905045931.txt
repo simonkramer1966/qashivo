@@ -1,0 +1,293 @@
+<response status="success"> <thinking> Evaluate Replit’s ladder against Qashivo’s moat plan. Keep what works, patch gaps: legal coupling, governance, privacy, experimentation, and tenancy-scaled learning. Provide crisp next steps with acceptance criteria so Simon can move now. Keep tone professional, slightly human, and avoid rigid symmetry. </thinking> <main_content> **BLUF:** The ladder is solid and directionally right. To make it moat-building for Qashivo, hard-wire outcomes logging, policy explainability, legal execution hooks, and cross-tenant privacy-safe learning from day one. Then climb Levels 1 to 5 with guardrails, not just clever math.
+
+What’s strong
+
+Clear path from rules to bandits.
+
+Practical logging schema and segment-first thinking.
+
+Focus on action selection rather than model vanity.
+
+What is missing for a moat
+
+Legal coupling: Each scheduling decision must influence PLDR, CCJ packs, and approvals. If timing shortens legal paths, the value compounds.
+
+Governance: Versioned policies, replayable decisions, and rollback.
+
+Privacy and tenancy: Cross-tenant learning must use aggregates or DP so larger clients will opt in.
+
+Experiment hygiene: Frequency caps, quiet hours, and stop rules to prevent over-contact.
+
+Operator trust: Every action needs “why now” plus the three top factors.
+
+Adjusted ladder for Qashivo
+
+Level 1.5: Guardrailed scoring. Add consent checks, quiet hours, channel caps, and dispute pauses inside the scorer. Expose “why now” in the UI.
+
+Level 2.5: Evidence bundling. Outcomes log feeds auto-built PLDR evidence packs and dispute dossiers.
+
+Level 3.5: Policy lab. A/B harness with pre-set power, cold-start priors from payer graph, and automatic rollback on lift drop.
+
+Risks to watch
+
+Data sparsity per tenant. Mitigation: warm-start with network priors.
+
+Provider noise. Mitigation: idempotency keys, retries, outcome normalization.
+
+Goodhart effects. Mitigation: rotate exploration budget and monitor side metrics like complaint rate.
+
+Action plan next 2 sprints
+
+Sprint 1: Feature logging and explainability
+
+Ship event schema for contact, reply, promise, breach, dispute, payment.
+
+Add “why now” with top three features and policy version.
+
+Accept: 95 percent of decisions carry explanation; dashboard shows channel response rates by days-late and amount.
+
+Sprint 2: Multi-factor scoring with guardrails
+
+Implement Level 1 score plus consent, caps, quiet hours, and dispute pause.
+
+Route top 10 percent by score to Exceptions Queue; the rest stay automated.
+
+Accept: Contact attempts per paid invoice drops by 10 percent versus baseline in a two-week A/B.
+
+Optional fast follow
+
+Seed the payer graph keys now so Levels 3 to 5 learn from day one.
+
+Start building PLDR pack generation that pulls directly from the outcomes log.
+
+Bottom line: Adopt the ladder, but lace it with trust, legality, and network learning so progress equals defensibility, not just sophistication.
+
+What’s next? I can turn Sprint 1 and Sprint 2 into granular tickets with owners, acceptance tests, and Replit-ready code stubs.
+
+Self-edit
+
+Slip: “table stakes” would have been easy here.
+Fix: “baseline capability.”
+</main_content>
+
+</response>
+You said:
+please do
+Athena said:
+Thought for 4 seconds
+<response status="success"> <thinking> Create actionable Sprint 1 and Sprint 2 tickets with IDs, owners, acceptance criteria, and Node/TypeScript stubs that run in Replit. Cover event schema, logging, explainability, scorer with guardrails, routing to Exceptions Queue, and basic A/B harness. Keep it concise yet complete. Close with a prompt for next steps. </thinking> <main_content> **BLUF:** Below are ready-to-build tickets for Sprint 1 and Sprint 2 that set up outcome logging, explainability, and a guardrailed multi-factor scorer. Each ticket includes acceptance criteria and code stubs you can paste into Replit.
+Sprint 1: Feature logging and explainability (1 week)
+
+S1-T01 Event schema and topics
+
+Owner: Simon, then TBD Dev
+
+Desc: Define unified event schema and publish to an in-app event bus. Topics: contact.attempted, contact.outcome, payment.recorded, promise.created, promise.breached, dispute.opened, dispute.resolved, policy.decision.
+
+Accept: JSON schema validated in CI; events replayable in local harness; sample payloads stored.
+
+Tech notes: Use a lightweight Kafka substitute in Replit, or an in-memory bus with append-only log.
+
+// src/events/schema.ts
+export type ContactAttempted = {
+  event: "contact.attempted";
+  ts: string;
+  tenantId: string;
+  invoiceId: string;
+  debtor: { companyNumber?: string; domain?: string; phone?: string; email?: string };
+  channel: "email" | "sms" | "voice";
+  context: { daysOverdue: number; amount: number; timeOfDay: string };
+  decision: { policyVersion: string; whyNow: string[]; score?: number };
+  idempotencyKey: string;
+};
+
+// Add types for other events similarly
+
+
+S1-T02 Outcomes logger with idempotency
+
+Owner: TBD Dev
+
+Desc: Create /webhooks/retell, /webhooks/vonage, /webhooks/sendgrid that upsert contact.outcome.
+
+Accept: Duplicate POST with same x-idempotency-key is ignored; 99 percent of webhook posts persist within 2 seconds in local tests.
+
+Tech notes: Store to sqlite table contact_outcomes.
+
+// src/webhooks/sendgrid.ts
+import express from "express";
+import { upsertOutcome } from "../stores/outcomes";
+export const router = express.Router();
+router.post("/", async (req, res) => {
+  const key = req.header("x-idempotency-key");
+  if (!key) return res.status(400).send("missing key");
+  const exists = await upsertOutcome(key, req.body); // upsert on key
+  res.status(exists ? 200 : 201).send("ok");
+});
+
+
+S1-T03 Decision logger and explainability payload
+
+Owner: Simon
+
+Desc: When the scheduler chooses a touch, emit policy.decision with policyVersion and top three factors.
+
+Accept: 95 percent of scheduled touches have whyNow populated; decision log view shows sortable table by factor.
+
+Tech notes: Add a simple viewer at /admin/decisions.
+
+// src/policy/emitDecision.ts
+export function emitDecision(params: { invoiceId: string; score: number; factors: string[]; policyVersion: string; ctx: any }) {
+  bus.publish({
+    event: "policy.decision",
+    ts: new Date().toISOString(),
+    invoiceId: params.invoiceId,
+    decision: { policyVersion: params.policyVersion, whyNow: params.factors.slice(0,3), score: params.score },
+    context: params.ctx,
+  });
+}
+
+
+S1-T04 Channel response dashboard
+
+Owner: TBD Dev, Jamie for copy
+
+Desc: Build a minimal dashboard: response rate by channel versus days overdue and amount bands.
+
+Accept: For seed data, chart renders within 1 second; filters for channel and overdue band work.
+
+Tech notes: Use a simple REST endpoint that aggregates from contact_outcomes.
+
+S1-T05 Quiet hours, consent, and pause hooks
+
+Owner: Simon
+
+Desc: Add guards that block scheduling if within quiet hours, if no consent for channel, or if dispute.opened or active promise exists.
+
+Accept: Audit report shows zero touches sent inside quiet hours; paused invoices do not receive touches.
+
+Tech notes: Config via QUIET_HOURS=20:00-08:00, per-tenant overrides.
+
+// src/policy/guards.ts
+export function guardCheck(ctx: { now: Date; consent: Record<string, boolean>; quietHours: [string,string]; paused: boolean }) {
+  if (ctx.paused) return { allowed: false, reason: "paused" };
+  const [start,end] = ctx.quietHours;
+  const t = ctx.now.toTimeString().slice(0,5);
+  if ((start < end && t >= start && t < end) || (start > end && (t >= start || t < end))) {
+    return { allowed: false, reason: "quiet_hours" };
+  }
+  return { allowed: true };
+}
+
+Sprint 2: Multi-factor scoring with guardrails and routing (1 week)
+
+S2-T01 Scoring function v1
+
+Owner: Simon
+
+Desc: Implement urgency score with tunables and negative weights for good payers and active disputes.
+
+Accept: Unit tests cover boundary cases; score monotonic in days overdue and amount.
+
+Tech notes: Central config file with sane defaults.
+
+// src/policy/score.ts
+export type ScoreInputs = { daysOverdue: number; amount: number; daysSinceLastContact: number; reliability: number; hasActiveDispute: boolean };
+export function computeScore(i: ScoreInputs, w = { d:1.5, a:0.3/1000, l:0.5, r:-1.0, disp:-10 }) {
+  let s = i.daysOverdue * w.d + i.amount * w.a + i.daysSinceLastContact * w.l + i.reliability * w.r;
+  if (i.hasActiveDispute) s += w.disp;
+  return Math.max(0, s);
+}
+
+
+S2-T02 Guardrailed scheduler
+
+Owner: TBD Dev
+
+Desc: Combine computeScore with guardCheck, select channel by simple heuristic, emit policy.decision, then enqueue contact.
+
+Accept: 100 percent of emissions carry policy version, factors, and idempotency keys; blocked decisions show reason.
+
+Tech notes: Start with “pick best historical channel” fallback.
+
+// src/policy/schedule.ts
+export function schedule(ctx: any) {
+  const guard = guardCheck(ctx);
+  if (!guard.allowed) return emitDecision({ invoiceId: ctx.invoiceId, score: 0, factors: [guard.reason], policyVersion: "v1", ctx });
+  const score = computeScore(ctx.inputs);
+  const factors = explainFactors(ctx.inputs); // returns e.g. ["daysOverdue:45","amount:5000","reliability:0.3"]
+  const channel = pickChannel(ctx.history);
+  enqueueContact({ invoiceId: ctx.invoiceId, channel, idempotencyKey: mkKey(ctx, channel) });
+  emitDecision({ invoiceId: ctx.invoiceId, score, factors, policyVersion: "v1", ctx });
+}
+
+
+S2-T03 Exceptions Queue routing
+
+Owner: Simon
+
+Desc: Route top decile by score to Exceptions Queue, others remain automated. Provide filters for value, risk, and reason.
+
+Accept: At least 10 percent of active invoices appear in Exceptions; clicking an item shows decision log and last outcomes.
+
+Tech notes: Simple /exceptions React page backed by /api/exceptions.
+
+S2-T04 A/B baseline vs adaptive
+
+Owner: Simon, Jamie on copy tone
+
+Desc: Randomly assign invoices to Static baseline or Adaptive v1 for two weeks.
+
+Accept: Metrics tracked: contact attempts per paid invoice, promise honor rate, days to first engagement. Report renders daily.
+
+Tech notes: Sticky assignment by invoiceId % 2.
+
+// src/ab/assign.ts
+export function variantFor(invoiceId: string) {
+  return parseInt(invoiceId.slice(-2), 16) % 2 === 0 ? "ADAPTIVE" : "STATIC";
+}
+
+
+S2-T05 Compliance and audit report
+
+Owner: Angela
+
+Desc: Weekly report: quiet hours breaches, consent violations, pause violations, duplicate touches.
+
+Accept: Zero breaches in seeded tests; downloadable CSV and PDF.
+
+S2-T06 Operator “why now” UI
+
+Owner: TBD Dev
+
+Desc: In invoice sidebar, show score, top three factors, guard status, and policy version.
+
+Accept: Median time to understand a decision under 5 seconds in operator test.
+
+Shared infrastructure and config
+
+Secrets: SENDGRID_KEY, VONAGE_KEY, RETELL_KEY, DB_URL.
+
+Env: QUIET_HOURS, MAX_TOUCHES_PER_7D, POLICY_VERSION=v1, TOP_DECILE_THRESHOLD=0.9.
+
+Observability: Console logger now, move to structured logs later.
+
+Data: SQLite for MVP, with a simple migration script.
+
+Milestone acceptance for the two sprints
+
+95 percent of scheduled touches include an explanation and idempotency key.
+
+Exceptions Queue shows the top decile with clear reasons.
+
+A/B report compares adaptive versus static on three KPIs and updates daily.
+
+No quiet hours or consent breaches in audit.
+
+End to end, event to decision, under 5 minutes in 95 percent of cases.
+
+Optional fast follow
+
+Seed payer graph keys in the event payloads now: companyNumber, domain, phone, email.
+
+Begin PLDR evidence bundle generator that pulls from outcomes and decisions.

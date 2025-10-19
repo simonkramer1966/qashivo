@@ -1,0 +1,176 @@
+<response status="success"> <thinking> Group moat requirements into data, decisioning, execution, compliance, lock-in, partnerships, metrics, and engineering foundations. Attach crisp acceptance criteria so Simon can turn them into backlog items for the MVP and beyond. Keep tone professional, add small human touches, avoid em dashes, and include a final self-edit. </thinking> <main_content> **BLUF:** Adaptive scheduling becomes a moat only when it compounds proprietary outcomes data, explainable decisioning, tight legal execution, and switching costs. Below is a requirements list with acceptance tests so we can build that compound advantage, not just clever timing.
+A) Data and identity foundation
+
+Debtor identity resolution
+
+Requirement: Deterministic keys using company number, domain, phone, and emails with fuzzy fallback.
+
+Accept: Duplicate rate under 2 percent in a seeded test set; merge events produce a single history.
+
+Payer graph and outcomes log
+
+Requirement: Cross-tenant, privacy-preserving graph linking entities to channel responses, promises, disputes, and payments.
+
+Accept: For a new tenant, cold-start policies reach within 10 percent of median engagement rates in the first 30 days.
+
+Feature store with lineage
+
+Requirement: Central features such as days late, historic reliability, last engagement, contactability score, and dispute propensity, each with timestamp and source.
+
+Accept: Every model input is traceable to events; reproducible features for any invoice at any past time.
+
+Real-time signals
+
+Requirement: Stream ingestion for reply webhooks, call outcomes, bounces, and payments.
+
+Accept: Policy updates applied within 5 minutes from signal arrival in 95 percent of cases.
+
+B) Decisioning and learning
+
+Explainable policy engine
+
+Requirement: Rules first, model second. Each decision shows the top three factors and policy version.
+
+Accept: Operators can view “why this touch now” in under three clicks; decisions are reproducible in backtests.
+
+Experimentation
+
+Requirement: A/B and contextual bandits for cadence, channel, and copy. Guardrails for frequency caps and quiet hours.
+
+Accept: Experiments auto-stop on pre-set power; no more than 2 percent of touches breach caps in audit.
+
+Cold-start and warm-start
+
+Requirement: New tenants start with network priors, then shift to tenant-specific policies as data accrues.
+
+Accept: Automatic handover when tenant has 500 qualified events, with lift over priors measured weekly.
+
+Drift and fairness monitoring
+
+Requirement: Monitor engagement drift, payment cycle changes, and model bias against protected proxies.
+
+Accept: Alerts fire when lift drops 20 percent or more for any segment; mitigation playbook exists.
+
+C) Execution coupling that creates real consequences
+
+One-click PLDR, CCJ, enforcement pathways
+
+Requirement: Generate evidence bundles from the outcomes log, then push to partner APIs or document packs.
+
+Accept: Pack creation under 60 seconds with zero missing fields in a set of 50 test invoices.
+
+Idempotent comms orchestration
+
+Requirement: Retell, Vonage, SendGrid actions with idempotency keys, retries, and outcome capture.
+
+Accept: Duplicate-touch rate below 0.5 percent during provider latency tests.
+
+Contact policy guardrails
+
+Requirement: Respect opt-outs, quiet hours, per-channel frequency, and PECR-style consent records.
+
+Accept: Automated compliance report shows zero violations in weekly audits.
+
+Human-in-the-loop
+
+Requirement: Manual approvals and overrides at surfaced points with full audit chain.
+
+Accept: Median approval time under 5 minutes; every override has reason, evidence, and policy diff.
+
+D) Trust, privacy, and governance
+
+Privacy-preserving aggregation
+
+Requirement: Cross-tenant learning uses aggregates or differentially private stats, never raw PII.
+
+Accept: External red team cannot reidentify any debtor from shared metrics.
+
+Model governance
+
+Requirement: Versioned models, rollbacks, risk reviews, and sign-offs for policy changes.
+
+Accept: Any historic decision is reproducible with its model and features.
+
+Data retention and rights
+
+Requirement: Clear retention by event type, delete and export workflows.
+
+Accept: Data access request can be fulfilled within 7 days using a documented runbook.
+
+E) Lock-in through daily-use workflows
+
+Exceptions Queue as operating record
+
+Requirement: Adaptive decisions feed the one place operators work, with notes, evidence, and approvals.
+
+Accept: 80 percent of operator actions originate from surfaced items in a 30-day cohort.
+
+Disputes Console and Approvals Hub
+
+Requirement: Disputes, PLDR, and enforcement use the same event stream and evidence store.
+
+Accept: If a tenant leaves, they lose the full audit and decision context unless exported as read-only bundles, which keeps perceived value inside Qashivo.
+
+Benchmarking
+
+Requirement: “Similar firms” metrics and policy suggestions.
+
+Accept: Tenants that opt in see at least a 5 percent lift within 60 days versus their pre-benchmark baseline.
+
+F) Partner network effects
+
+Legal and enforcement partners
+
+Requirement: Standardised packs, SLAs, and callbacks for status and costs.
+
+Accept: Time from PLDR approval to partner acceptance under 1 business day for 90 percent of cases.
+
+Payments and settlement hooks
+
+Requirement: Immediate pay links, partial payments, and plan set-up embedded in comms.
+
+Accept: Share of contacts leading to a payment attempt rises at least 10 percent after enablement.
+
+G) Moat KPIs and proof
+
+Network-lift KPI
+
+Requirement: Measure lift that comes specifically from cross-tenant learning, not just tenant history.
+
+Accept: Persistent lift remains after debtor mix changes.
+
+Cold-start advantage KPI
+
+Requirement: Track gap to steady-state for new tenants.
+
+Accept: Gap closes within 30 days in most cohorts.
+
+Switching friction KPI
+
+Requirement: Share of tenants using Disputes Console, Approvals Hub, and partner packs.
+
+Accept: More than 70 percent of touches and escalations rely on Qashivo-only artifacts.
+
+H) Engineering foundations
+
+Event schema and SLAs
+
+Requirement: Unified schema for contact, reply, promise, breach, dispute, payment, and legal status with latency targets.
+
+Accept: 95th percentile decision latency under 2 seconds; end-to-end from event to policy under 5 minutes.
+
+Observability and backtesting
+
+Requirement: Decision logs, replay harness, and counterfactual evaluator.
+
+Accept: We can replay the last 90 days and estimate alternative cadences within a 2 percent error band.
+
+MVP cut for the demo
+
+Build items 1, 2, 3, 5, 10, 11, 12, 16, 17, 24, 25.
+
+Show two screens: Exceptions Queue and Approvals Hub.
+
+Run a head-to-head: Static baseline versus Adaptive v1 on contact attempts per paid invoice, promise honour rate, and days to first meaningful engagement.
+
+Assumptions: UK PECR-style constraints apply to outbound; partners will accept our pack formats; tenants consent to aggregated learning. If any of that is off, I can adjust.
