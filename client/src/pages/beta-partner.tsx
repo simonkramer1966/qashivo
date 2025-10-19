@@ -148,7 +148,7 @@ export default function BetaPartner() {
                 You're invited to become our exclusive strategic partner through our 5-month development journey from MVP to Full Production ahead of Accountex 2026.
               </p>
               <p className="text-xl text-gray-700 mb-8 leading-relaxed">
-                <strong>Limited to 1 accounting firm.</strong> Shape the product with us and gain lifetime core access for all your clients.
+                Shape the product with us and gain lifetime core access for all your clients.
               </p>
               
               <div className="flex gap-4">
