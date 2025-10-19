@@ -8,7 +8,7 @@ Welcome to the Qashivo documentation. This index organizes all technical documen
 
 ## 📚 Documentation Overview
 
-This project maintains 6 comprehensive markdown documentation files covering architecture, security, features, and developer guidance. Use this index to navigate to the right document for your needs.
+This project maintains 8 comprehensive markdown documentation files covering architecture, security, features, and developer guidance. Use this index to navigate to the right document for your needs.
 
 ---
 
@@ -91,6 +91,40 @@ This project maintains 6 comprehensive markdown documentation files covering arc
 
 ## ⚙️ Feature Documentation
 
+### [SCHEDULER.md](./SCHEDULER.md)
+**Purpose:** Complete specification for the Adaptive Collection Scheduler and intelligent contact optimization  
+**When to use:** Working on collection scheduling, adaptive algorithms, workflow automation, or DSO optimization  
+**Update when:** Modifying scoring engine, adding scheduling modes, changing behavioral signals usage, or updating action planning  
+**Key sections:**
+- Dual scheduling modes (Static vs Adaptive)
+- Scoring engine algorithm and weighting
+- Signal collector integration
+- Cold-start strategy with segment priors
+- Database schema (collection schedules, behavior signals)
+- API endpoints and configuration guide
+- Performance considerations and monitoring
+
+**Size:** 1,044 lines
+
+---
+
+### [PAYMENT_SIGNALS.md](./PAYMENT_SIGNALS.md)
+**Purpose:** Deep dive into behavioral signal collection system for payment and communication analytics  
+**When to use:** Working on signal collection, payment tracking, channel analytics, or data integrations  
+**Update when:** Adding payment sources, modifying signal calculations, integrating new webhooks, or changing statistical methods  
+**Key sections:**
+- Signal Collector service architecture
+- Payment signal sources (Stripe, Xero, manual mark-paid)
+- Channel signal sources (SendGrid, Vonage, Retell)
+- Statistical calculations (median, P75, volatility, trend, amount sensitivity)
+- Database schema (customerBehaviorSignals table)
+- Signal refresh job for historical data
+- API endpoints and monitoring
+
+**Size:** 1,156 lines
+
+---
+
 ### [DISPUTE_SYSTEM.md](./DISPUTE_SYSTEM.md)
 **Purpose:** Comprehensive specification for the debtor dispute management system  
 **When to use:** Working on dispute features, debtor portal, or collector workflows  
@@ -149,6 +183,16 @@ This project maintains 6 comprehensive markdown documentation files covering arc
 → See [SECURITY.md](./SECURITY.md) for debtor authentication  
 → See [PAGES_MAP.md](./PAGES_MAP.md) for debtor portal routes
 
+### "I need to work on the collection scheduler"
+→ See [SCHEDULER.md](./SCHEDULER.md) for adaptive scheduling algorithms  
+→ See [PAYMENT_SIGNALS.md](./PAYMENT_SIGNALS.md) for behavioral signal collection  
+→ See [DEVELOPER_HANDOVER.md](./DEVELOPER_HANDOVER.md) for API integration patterns
+
+### "I need to integrate payment or communication webhooks"
+→ See [PAYMENT_SIGNALS.md](./PAYMENT_SIGNALS.md) for webhook integration guide  
+→ See [SECURITY.md](./SECURITY.md) for webhook security (HMAC verification)  
+→ See [SCHEDULER.md](./SCHEDULER.md) for how signals feed the scheduler
+
 ### "I'm conducting a security review"
 → See [SECURITY.md](./SECURITY.md) for security architecture and threat mitigation  
 → See [PARTNER_HIERARCHY.md](./PARTNER_HIERARCHY.md) for data isolation patterns  
@@ -193,6 +237,11 @@ This project maintains 6 comprehensive markdown documentation files covering arc
 2. [replit.md](./replit.md) - UI/UX guidelines (glassmorphism, Tufte principles)
 3. [DISPUTE_SYSTEM.md](./DISPUTE_SYSTEM.md) - Feature UI specifications
 
+### For Data/ML Engineers
+1. [PAYMENT_SIGNALS.md](./PAYMENT_SIGNALS.md) - Behavioral analytics and signal collection
+2. [SCHEDULER.md](./SCHEDULER.md) - Scoring algorithms and adaptive optimization
+3. [DEVELOPER_HANDOVER.md](./DEVELOPER_HANDOVER.md) - Database patterns and API design
+
 ### For Product/Business Stakeholders
 1. [replit.md](./replit.md) - Project overview and business model
 2. [PARTNER_HIERARCHY.md](./PARTNER_HIERARCHY.md) - B2B2B partnership model
@@ -210,6 +259,9 @@ When making changes to the project, update the relevant documentation:
 - **Adding new features** → Create feature spec (like [DISPUTE_SYSTEM.md](./DISPUTE_SYSTEM.md))
 - **Changing architecture** → Update [replit.md](./replit.md)
 - **Developer patterns** → Update [DEVELOPER_HANDOVER.md](./DEVELOPER_HANDOVER.md)
+- **Modifying scheduler/scoring** → Update [SCHEDULER.md](./SCHEDULER.md)
+- **Changing signal collection** → Update [PAYMENT_SIGNALS.md](./PAYMENT_SIGNALS.md)
+- **Adding payment/webhook integrations** → Update [PAYMENT_SIGNALS.md](./PAYMENT_SIGNALS.md)
 
 ---
 
