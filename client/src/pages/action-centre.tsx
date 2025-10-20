@@ -821,7 +821,7 @@ export default function ActionCentre() {
                     <div className="text-xs font-medium text-slate-600 uppercase tracking-wide">Priority</div>
                     <div className="text-xs font-medium text-slate-600 uppercase tracking-wide">Recommended</div>
                     <div className="text-xs font-medium text-slate-600 uppercase tracking-wide">Exceptions</div>
-                    <div className="text-xs font-medium text-slate-600 uppercase tracking-wide text-center">•••</div>
+                    <div className="text-xs font-medium text-slate-600 uppercase tracking-wide text-center">Actions</div>
                   </div>
 
                   {/* List Rows - Dense 48px height, glassmorphism on hover */}
