@@ -44,6 +44,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { NextActionCell } from "@/components/action-centre/NextActionCell";
+import { deriveExceptionTags } from "@/lib/action-centre-helpers";
 
 interface Action {
   id: string;
@@ -756,147 +758,105 @@ export default function ActionCentre() {
                 </div>
               </div>
             ) : isInvoiceTab ? (
-              // Customer table format (grouped by customer)
-              <div className="bg-white border-t border-b border-slate-200 overflow-hidden">
-                <div className="max-h-[600px] overflow-y-auto" style={{ display: 'grid', gridTemplateColumns: '2fr 1.5fr 0.8fr 1fr 1fr 1.2fr 1fr 1.5fr 1.2fr 1.2fr' }}>
+              // Adaptive Actions Queue (Sprint 2: transformed to show pending actions)
+              <div className="bg-white border border-slate-200 rounded-lg overflow-hidden shadow-sm">
+                <div className="max-h-[600px] overflow-y-auto">
                   {/* Table Header */}
-                  <div className="contents">
-                    <div className="px-8 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10">Customer</div>
-                    <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 text-right">Total Outstanding</div>
-                    <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 text-right">#Inv's</div>
-                    <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 text-right">Last Payment</div>
-                    <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 text-right">Last Contact</div>
-                    <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 text-center">Payment Trend</div>
-                    <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 text-center">Next Action</div>
-                    <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 text-center">Status</div>
-                    <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 text-right">Days Overdue</div>
-                    <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10">Assigned to</div>
+                  <div className="grid grid-cols-[2fr_1.2fr_0.8fr_1.8fr_1.2fr_1fr] bg-gradient-to-r from-slate-50 to-slate-100 border-b border-slate-200 sticky top-0 z-10">
+                    <div className="px-6 py-3 text-xs font-semibold text-slate-700 uppercase tracking-wide">Customer</div>
+                    <div className="px-4 py-3 text-xs font-semibold text-slate-700 uppercase tracking-wide text-right">Outstanding</div>
+                    <div className="px-4 py-3 text-xs font-semibold text-slate-700 uppercase tracking-wide text-center">Priority</div>
+                    <div className="px-4 py-3 text-xs font-semibold text-slate-700 uppercase tracking-wide">Recommended Action</div>
+                    <div className="px-4 py-3 text-xs font-semibold text-slate-700 uppercase tracking-wide text-center">Exceptions</div>
+                    <div className="px-4 py-3 text-xs font-semibold text-slate-700 uppercase tracking-wide">Assigned To</div>
                   </div>
 
                   {/* Table Rows */}
-                  {filteredActions.map((customer: any) => {
-                    const daysOverdue = Math.floor((new Date().getTime() - new Date(customer.oldestDueDate).getTime()) / (1000 * 3600 * 24));
+                  {filteredActions.map((action: any) => {
+                    const exceptions = deriveExceptionTags(action);
+                    const priority = action.metadata?.recommended?.priority || action.metadata?.priority || 50;
+                    const bundledCount = action.metadata?.invoiceCount || 1;
+                    const totalOutstanding = action.invoiceAmount || action.metadata?.totalAmount || 0;
 
                     return (
                       <div
-                        key={customer.contactId}
-                        className="contents"
-                        data-testid={`customer-item-${customer.contactId}`}
+                        key={action.id}
+                        className="grid grid-cols-[2fr_1.2fr_0.8fr_1.8fr_1.2fr_1fr] border-b border-slate-100 hover:bg-gradient-to-r hover:from-blue-50/30 hover:to-teal-50/30 transition-all duration-200"
+                        data-testid={`action-row-${action.id}`}
                       >
                         {/* Customer */}
-                        <div 
-                          className="px-8 py-2 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center min-w-0"
-                          onClick={() => setSelectedCustomer(customer)}
-                        >
-                          <p className="font-semibold text-sm text-slate-900 truncate">
-                            {customer.contactName || 'Unknown Customer'}
-                          </p>
+                        <div className="px-6 py-4 flex items-center min-w-0">
+                          <div className="min-w-0">
+                            <p className="font-semibold text-sm text-slate-900 truncate">
+                              {action.contactName || 'Unknown Customer'}
+                            </p>
+                            {bundledCount > 1 && (
+                              <p className="text-xs text-slate-500 mt-0.5">
+                                {bundledCount} invoices bundled
+                              </p>
+                            )}
+                          </div>
                         </div>
 
-                        {/* Total Outstanding */}
-                        <div 
-                          className="px-4 py-2 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center justify-end"
-                          onClick={() => setSelectedCustomer(customer)}
-                        >
+                        {/* Outstanding Amount */}
+                        <div className="px-4 py-4 flex items-center justify-end">
                           <p className="font-semibold text-sm text-slate-900">
-                            {formatCurrency(customer.totalOutstanding)}
+                            {formatCurrency(Number(totalOutstanding))}
                           </p>
                         </div>
 
-                        {/* # Invoices */}
-                        <div 
-                          className="px-4 py-2 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center justify-end"
-                          onClick={() => setSelectedCustomer(customer)}
-                        >
-                          <p className="text-sm text-slate-900">
-                            {customer.invoiceCount}
-                          </p>
-                        </div>
-
-                        {/* Last Payment */}
-                        <div 
-                          className="px-4 py-2 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center justify-end"
-                          onClick={() => setSelectedCustomer(customer)}
-                        >
-                          <p className="text-sm text-slate-700">
-                            {formatDateShort(customer.lastPaymentDate)}
-                          </p>
-                        </div>
-
-                        {/* Last Contact */}
-                        <div 
-                          className="px-4 py-2 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center justify-end"
-                          onClick={() => setSelectedCustomer(customer)}
-                        >
-                          <p className="text-sm text-slate-700">
-                            {formatDateShort(customer.lastContactDate)}
-                          </p>
-                        </div>
-
-                        {/* Payment Trend */}
-                        <div 
-                          className="px-4 py-2 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center justify-center"
-                          onClick={() => setSelectedCustomer(customer)}
-                        >
-                          {customer.paymentTrend === 'improving' && (
-                            <Badge className="bg-green-100 text-green-800 border-green-200 text-xs">
-                              Improving
-                            </Badge>
-                          )}
-                          {customer.paymentTrend === 'stable' && (
-                            <Badge className="bg-blue-100 text-blue-800 border-blue-200 text-xs">
-                              Stable
-                            </Badge>
-                          )}
-                          {customer.paymentTrend === 'declining' && (
-                            <Badge className="bg-red-100 text-red-800 border-red-200 text-xs">
-                              Declining
-                            </Badge>
-                          )}
-                        </div>
-
-                        {/* Next Action */}
-                        <div 
-                          className="px-4 py-2 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center justify-center"
-                          onClick={() => setSelectedCustomer(customer)}
-                        >
-                          <Badge className="bg-[#17B6C3]/10 text-[#17B6C3] border-[#17B6C3]/20 text-xs">
-                            {customer.nextAction}
+                        {/* Priority Score */}
+                        <div className="px-4 py-4 flex items-center justify-center">
+                          <Badge 
+                            variant="outline" 
+                            className={`text-xs font-semibold ${
+                              priority > 70 
+                                ? 'bg-green-50 text-green-700 border-green-300' 
+                                : priority > 40
+                                ? 'bg-blue-50 text-blue-700 border-blue-300'
+                                : 'bg-gray-50 text-gray-700 border-gray-300'
+                            }`}
+                            data-testid={`priority-badge-${action.id}`}
+                          >
+                            {priority.toFixed(0)}
                           </Badge>
                         </div>
 
-                        {/* Pause State/Status */}
-                        <div 
-                          className="px-4 py-2 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center justify-center"
-                          onClick={() => setSelectedCustomer(customer)}
-                        >
-                          {customer.pauseState ? (
-                            getPauseStateBadge(customer.pauseState, customer.pauseReason)
-                          ) : customer.metadata?.exceptionType ? (
-                            getExceptionBadge(customer.metadata.exceptionType)
+                        {/* Recommended Action (NextActionCell) */}
+                        <div className="px-4 py-4 flex items-center">
+                          <NextActionCell action={action} />
+                        </div>
+
+                        {/* Exceptions */}
+                        <div className="px-4 py-4 flex items-center justify-center">
+                          {exceptions.length > 0 ? (
+                            <div className="flex flex-wrap gap-1 justify-center">
+                              {exceptions.slice(0, 2).map((tag, idx) => (
+                                <Badge 
+                                  key={idx}
+                                  variant="outline" 
+                                  className="text-xs bg-amber-50 text-amber-700 border-amber-300"
+                                  data-testid={`exception-badge-${action.id}-${idx}`}
+                                >
+                                  {tag}
+                                </Badge>
+                              ))}
+                              {exceptions.length > 2 && (
+                                <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700 border-amber-300">
+                                  +{exceptions.length - 2}
+                                </Badge>
+                              )}
+                            </div>
                           ) : (
-                            <span className="text-xs text-slate-400">Active</span>
+                            <span className="text-xs text-slate-400">-</span>
                           )}
                         </div>
 
-                        {/* Days Overdue (Oldest) */}
-                        <div 
-                          className="px-4 py-2 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center justify-end"
-                          onClick={() => setSelectedCustomer(customer)}
-                        >
-                          <p className="text-sm font-medium text-red-600">
-                            {daysOverdue} days
-                          </p>
-                        </div>
-
-                        {/* Assigned to */}
-                        <div 
-                          className="px-4 py-2 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center"
-                          onClick={() => setSelectedCustomer(customer)}
-                        >
-                          {customer.assignedToUserName ? (
+                        {/* Assigned To */}
+                        <div className="px-4 py-4 flex items-center">
+                          {action.assignedTo ? (
                             <p className="text-sm text-slate-700 truncate">
-                              {customer.assignedToUserName}
+                              {action.assignedTo}
                             </p>
                           ) : (
                             <p className="text-sm text-slate-400">Unassigned</p>
