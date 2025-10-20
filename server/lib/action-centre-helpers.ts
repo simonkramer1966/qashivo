@@ -5,7 +5,7 @@
  * for the adaptive Action Centre UI.
  */
 
-import type { CustomerBehaviorSignals } from "@shared/schema";
+import type { CustomerBehaviorSignal } from "@shared/schema";
 
 export interface ExceptionTagsInput {
   invoice: {
@@ -15,7 +15,7 @@ export interface ExceptionTagsInput {
     disputeStatus?: string | null;
     collectionOverride?: string | null;
   };
-  signals: CustomerBehaviorSignals | null;
+  signals: CustomerBehaviorSignal | null;
   contact: {
     id: string;
     name: string;
@@ -65,7 +65,7 @@ export function deriveExceptionTags(input: ExceptionTagsInput): string[] {
   }
   
   // Broken promise exception
-  if (signals && signals.promiseBreachCount > 0) {
+  if (signals && (signals.promiseBreachCount ?? 0) > 0) {
     tags.push("Broken Promise");
   }
   
@@ -83,12 +83,12 @@ export function deriveExceptionTags(input: ExceptionTagsInput): string[] {
   
   // Channel blocked exception (low response rates across all channels)
   if (signals) {
-    const emailRate = parseFloat(signals.emailReplyRate || '0');
-    const smsRate = parseFloat(signals.smsReplyRate || '0');
-    const whatsappRate = parseFloat(signals.whatsappReplyRate || '0');
-    const voiceRate = parseFloat(signals.voiceAnswerRate || '0');
+    const emailRate = parseFloat(signals.emailReplyRate?.toString() || '0');
+    const smsRate = parseFloat(signals.smsReplyRate?.toString() || '0');
+    const whatsappRate = parseFloat(signals.whatsappReplyRate?.toString() || '0');
+    const callRate = parseFloat(signals.callAnswerRate?.toString() || '0');
     
-    const maxRate = Math.max(emailRate, smsRate, whatsappRate, voiceRate);
+    const maxRate = Math.max(emailRate, smsRate, whatsappRate, callRate);
     if (maxRate < 0.1) { // Less than 10% response on best channel
       tags.push("Channel Blocked");
     }
@@ -114,7 +114,7 @@ export function translateReasons(
     amount: string;
     dueDate: Date | string;
   },
-  signals: CustomerBehaviorSignals | null,
+  signals: CustomerBehaviorSignal | null,
   score: ScoringResult,
   urgencyFactor: number
 ): Reason[] {
@@ -138,10 +138,10 @@ export function translateReasons(
   // Channel preference (if we have signal data)
   if (signals && score.bestChannel) {
     const channelRates = {
-      email: parseFloat(signals.emailReplyRate || '0'),
-      sms: parseFloat(signals.smsReplyRate || '0'),
-      whatsapp: parseFloat(signals.whatsappReplyRate || '0'),
-      voice: parseFloat(signals.voiceAnswerRate || '0')
+      email: parseFloat(signals.emailReplyRate?.toString() || '0'),
+      sms: parseFloat(signals.smsReplyRate?.toString() || '0'),
+      whatsapp: parseFloat(signals.whatsappReplyRate?.toString() || '0'),
+      voice: parseFloat(signals.callAnswerRate?.toString() || '0')
     };
     
     const bestRate = channelRates[score.bestChannel as keyof typeof channelRates] || 0;

@@ -685,6 +685,18 @@ export async function planAdaptiveActions(
 
     console.log(`[PLAN] Found ${overdueInvoices.length} overdue invoices`);
 
+    // Sprint 1: Group invoices by contact for safe bundling
+    const invoicesByContact = new Map<string, typeof overdueInvoices>();
+    for (const item of overdueInvoices) {
+      const contactId = item.contact.id;
+      if (!invoicesByContact.has(contactId)) {
+        invoicesByContact.set(contactId, []);
+      }
+      invoicesByContact.get(contactId)!.push(item);
+    }
+
+    console.log(`[PLAN] Grouped into ${invoicesByContact.size} unique contacts`);
+
     let invoicesProcessed = 0;
     let actionsCreated = 0;
     const skipped = {
@@ -694,123 +706,169 @@ export async function planAdaptiveActions(
       recentAction: 0,
     };
 
-    for (const { invoice, contact, behavior } of overdueInvoices) {
-      try {
-        invoicesProcessed++;
+    // Process each contact (may have multiple invoices)
+    for (const [contactId, contactInvoices] of invoicesByContact) {
+      const { contact, behavior } = contactInvoices[0]; // Same contact for all
+      
+      // Score all invoices for this contact
+      const scoredInvoices = [];
+      
+      for (const { invoice } of contactInvoices) {
+        try {
+          invoicesProcessed++;
 
-        // Skip disputed or flagged invoices
-        if (invoice.escalationFlag || invoice.legalFlag) {
-          skipped.disputed++;
-          continue;
-        }
+          // Skip disputed or flagged invoices
+          if (invoice.escalationFlag || invoice.legalFlag) {
+            skipped.disputed++;
+            continue;
+          }
 
-        // Check for existing actions in next 6 hours
-        const sixHoursFromNow = addHours(today, 6);
-        const existingActions = await db
-          .select()
-          .from(actions)
-          .where(
-            and(
-              eq(actions.tenantId, tenantId),
-              eq(actions.invoiceId, invoice.id),
-              gte(actions.scheduledFor, today),
-              lte(actions.scheduledFor, sixHoursFromNow)
+          // Check for existing actions in next 6 hours
+          const sixHoursFromNow = addHours(today, 6);
+          const existingActions = await db
+            .select()
+            .from(actions)
+            .where(
+              and(
+                eq(actions.tenantId, tenantId),
+                eq(actions.invoiceId, invoice.id),
+                gte(actions.scheduledFor, today),
+                lte(actions.scheduledFor, sixHoursFromNow)
+              )
             )
-          )
-          .limit(1);
+            .limit(1);
 
-        if (existingActions.length > 0) {
-          skipped.recentAction++;
-          continue;
-        }
+          if (existingActions.length > 0) {
+            skipped.recentAction++;
+            continue;
+          }
 
-        // Build context for scheduler
-        const dueDate = new Date(invoice.dueDate);
-        const issueDate = new Date(invoice.issueDate);
-        const ageDays = Math.ceil(
-          (today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24)
-        );
-
-        const ctx: ScheduleActionContext = {
-          tenantId,
-          settings: adaptiveSettings,
-          customer: {
-            segment: "default",
-            channelPrefs: {
-              email: !!contact.email,
-              sms: !!contact.phone,
-              whatsapp: false,
-              call: !!contact.phone,
-            },
-            behavior: behavior || undefined,
-          },
-          invoice: {
-            amount: Number(invoice.amount || 0),
-            dueAt: dueDate,
-            issuedAt: issueDate,
-            ageDays,
-            dispute: false,
-            lastTouchAt: invoice.lastReminderSent
-              ? new Date(invoice.lastReminderSent)
-              : undefined,
-            lastChannel: undefined,
-          },
-          constraints: {
-            now: today,
-            minGapHours: 24,
-            allowedChannels: ["email", "sms", "call"] as Channel[],
-            timezone: "Europe/London",
-            hasOverride: false,
-            maxDailyTouchesPerCustomer: 2,
-          },
-        };
-
-        // Get recommendation from adaptive scheduler
-        const recommendation = scheduleNextAction(ctx);
-
-        if (!recommendation) {
-          skipped.lowPriority++;
-          continue;
-        }
-
-        if (recommendation.priority < minScoreThreshold) {
-          skipped.lowPriority++;
-          console.log(
-            `[PLAN] tenant=${tenantId} invoice=${invoice.invoiceNumber} ch=${recommendation.channel} ` +
-            `score=${recommendation.priority.toFixed(1)} < ${minScoreThreshold} (skipped)`
+          // Build context for scheduler
+          const dueDate = new Date(invoice.dueDate);
+          const issueDate = new Date(invoice.issueDate);
+          const ageDays = Math.ceil(
+            (today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24)
           );
-          continue;
+
+          const ctx: ScheduleActionContext = {
+            tenantId,
+            settings: adaptiveSettings,
+            customer: {
+              segment: "default",
+              channelPrefs: {
+                email: !!contact.email,
+                sms: !!contact.phone,
+                whatsapp: false,
+                call: !!contact.phone,
+              },
+              behavior: behavior || undefined,
+            },
+            invoice: {
+              amount: Number(invoice.amount || 0),
+              dueAt: dueDate,
+              issuedAt: issueDate,
+              ageDays,
+              dispute: false,
+              lastTouchAt: invoice.lastReminderSent
+                ? new Date(invoice.lastReminderSent)
+                : undefined,
+              lastChannel: undefined,
+            },
+            constraints: {
+              now: today,
+              minGapHours: 24,
+              allowedChannels: ["email", "sms", "call"] as Channel[],
+              timezone: "Europe/London",
+              hasOverride: false,
+              maxDailyTouchesPerCustomer: 2,
+            },
+          };
+
+          // Get recommendation from adaptive scheduler
+          const recommendation = scheduleNextAction(ctx);
+
+          if (!recommendation) {
+            skipped.lowPriority++;
+            continue;
+          }
+
+          if (recommendation.priority < minScoreThreshold) {
+            skipped.lowPriority++;
+            console.log(
+              `[PLAN] tenant=${tenantId} invoice=${invoice.invoiceNumber} ch=${recommendation.channel} ` +
+              `score=${recommendation.priority.toFixed(1)} < ${minScoreThreshold} (skipped)`
+            );
+            continue;
+          }
+
+          // Store scored invoice for bundling
+          scoredInvoices.push({
+            invoice,
+            recommendation,
+          });
+        } catch (error) {
+          console.error(`[PLAN] Error processing invoice ${invoice.id}:`, error);
         }
+      }
 
-        // Create action
-        await db.insert(actions).values({
-          tenantId,
-          contactId: invoice.contactId,
-          invoiceId: invoice.id,
-          type: recommendation.channel || "email",
-          status: "scheduled",
-          scheduledFor: recommendation.suggestedDate || addHours(today, 24),
-          subject: `Payment reminder for invoice ${invoice.invoiceNumber}`,
-          content: `Your invoice ${invoice.invoiceNumber} is overdue.`,
-          metadata: {
-            adaptiveScheduler: true,
-            priority: recommendation.priority,
-            reasoning: recommendation.reasoning,
-            scheduleId,
-          },
-          source: "automated",
-        });
+      // Sprint 1: Create ONE bundled action for all invoices from this contact
+      if (scoredInvoices.length > 0) {
+        try {
+          // Use the highest priority recommendation
+          const highestPriority = scoredInvoices.reduce((max, curr) =>
+            curr.recommendation.priority > max.recommendation.priority ? curr : max
+          );
 
-        actionsCreated++;
+          const invoiceIds = scoredInvoices.map(si => si.invoice.id);
+          const invoiceNumbers = scoredInvoices.map(si => si.invoice.invoiceNumber).join(', ');
+          const totalAmount = scoredInvoices.reduce((sum, si) => sum + Number(si.invoice.amount || 0), 0);
 
-        console.log(
-          `[PLAN] tenant=${tenantId} invoice=${invoice.invoiceNumber} ` +
-          `ch=${recommendation.channel} ` +
-          `at=${recommendation.suggestedDate?.toISOString()} ` +
-          `score=${recommendation.priority.toFixed(1)}`
-        );
-      } catch (error) {
-        console.error(`[PLAN] Error processing invoice ${invoice.id}:`, error);
+          // Create bundled action with all invoice IDs
+          await db.insert(actions).values({
+            tenantId,
+            contactId,
+            invoiceId: highestPriority.invoice.id, // Primary invoice for compatibility
+            invoiceIds, // Sprint 1: Bundled invoice IDs
+            type: highestPriority.recommendation.channel || "email",
+            status: "pending", // Changed from "scheduled" to "pending" for Action Centre review
+            scheduledFor: highestPriority.recommendation.suggestedDate || addHours(today, 24),
+            subject: invoiceIds.length > 1
+              ? `Payment reminder for ${invoiceIds.length} overdue invoices`
+              : `Payment reminder for invoice ${highestPriority.invoice.invoiceNumber}`,
+            content: invoiceIds.length > 1
+              ? `You have ${invoiceIds.length} overdue invoices (${invoiceNumbers}) totalling ${formatCurrency(totalAmount)}.`
+              : `Your invoice ${highestPriority.invoice.invoiceNumber} is overdue.`,
+            metadata: {
+              adaptiveScheduler: true,
+              priority: highestPriority.recommendation.priority,
+              reasoning: highestPriority.recommendation.reasoning,
+              scheduleId,
+              bundled: invoiceIds.length > 1,
+              invoiceCount: invoiceIds.length,
+            },
+            // Sprint 1: New adaptive action fields
+            recommendedAt: today,
+            recommendedBy: "adaptive",
+            recommended: {
+              channel: highestPriority.recommendation.channel,
+              sendAt: highestPriority.recommendation.suggestedDate || addHours(today, 24),
+              priority: highestPriority.recommendation.priority,
+              reasons: [], // Will be populated by translateReasons helper
+            },
+            source: "automated",
+          });
+
+          actionsCreated++;
+
+          console.log(
+            `[PLAN] tenant=${tenantId} contact=${contact.name} ` +
+            `bundled=${invoiceIds.length} invoices ` +
+            `ch=${highestPriority.recommendation.channel} ` +
+            `score=${highestPriority.recommendation.priority.toFixed(1)}`
+          );
+        } catch (error) {
+          console.error(`[PLAN] Error creating bundled action for contact ${contactId}:`, error);
+        }
       }
     }
 
