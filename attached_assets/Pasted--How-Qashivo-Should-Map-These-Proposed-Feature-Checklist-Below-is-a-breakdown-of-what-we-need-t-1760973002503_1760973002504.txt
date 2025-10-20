@@ -1,0 +1,17 @@
+🛠 How Qashivo Should Map These – Proposed Feature Checklist
+
+Below is a breakdown of what we need to ensure is built, or is planned, in Qashivo — to fully cover Kolleno’s automation scope and ideally differentiate.
+
+Capability	Does Qashivo currently support it?	Actions required
+Centralised collections workspace (single view of invoices, customers, communications)	We have the Action Centre / Dashboard concept	Ensure UI supports unified timeline, includes email/phone logs, and customer-level view not just invoice.
+Customisable workflow automation (dunning sequences, multichannel)	We have adaptive scheduler & workflow automation planned	Build a workflow builder UI: triggers (invoice overdue X days, risk band, promise broken), actions (email/SMS/task/auto-escalation).
+Multichannel outreach (email, SMS, perhaps phone/SMS)	Email yes; SMS/voice maybe planned	Add SMS channel, perhaps integration with voice/IVR or link to external calling stack; ensure templates with variable substitution.
+Branded payment portal & flexible payment options	We have Qollect portal in roadmap	Prioritise: live portal with pay-link, dispute logging, PTP (promise to pay) options, multiple channels (card, GoCardless, bank transfer).
+Auto-reconciliation & cash application	Partially via ledger integration	Build matching engine: import bank/GoCardless/Stripe data, auto-match to invoices, flag exceptions.
+Dispute/deduction workflows	Not yet complete	Build a module for splitting disputed amounts, logging evidence, routing tasks, integrating with workflows.
+Credit & risk monitoring	Some capability in forecast engine	Add credit score/monitoring module: connect to credit bureau, auto-alert when customer risk crosses threshold; dashboards.
+ERP/data integrations	Xero planned, others roadmap	Ensure connector layer is built (see earlier discussion) so that NetSuite, Sage Intacct, Dynamics are next; ingest custom fields and multi-entity data.
+Analytics & live reporting	Forecasting engine in pipeline	Build real-time DSO dashboard, automation % metrics (e.g., % of invoices where reminder sent automatically), lift metrics (what changed).
+Task & team collaboration	Action Centre for controllers planned	Add task management: assign tasks, notes, history, escalate if overdue; integrate with workflows.
+Trigger-based automation engine	Planning for Bayesian scheduler	Ensure event engine can trigger on: invoice created, payment applied, promise broken, contact changed, risk band changed, time delay.
+AI/ML enhancements (tone, channel, timing)	We have Bayesian + ML planned	Implement learning loop: track outcomes, feed back into scheduler; add explainability so user sees “why” the system chose that tone/time.
