@@ -47,6 +47,36 @@ import {
 import { NextActionCell } from "@/components/action-centre/NextActionCell";
 import { deriveExceptionTags } from "@/lib/action-centre-helpers";
 import { Checkbox } from "@/components/ui/checkbox";
+import { KebabMenu } from "@/components/action-centre/KebabMenu";
+
+// Helper to get recommended action label without rendering full component
+const getRecommendedActionLabel = (action: any) => {
+  const CHANNEL_LABELS: Record<string, string> = {
+    email: "Email",
+    sms: "SMS",
+    whatsapp: "WhatsApp",
+    voice: "Call",
+    manual_call: "Call"
+  };
+  
+  const formatTime = (dateStr: string | null) => {
+    if (!dateStr) return "now";
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diffHours = Math.round((date.getTime() - now.getTime()) / (1000 * 60 * 60));
+    
+    if (diffHours < 0) return "overdue";
+    if (diffHours === 0) return "now";
+    if (diffHours < 24) return `in ${diffHours}h`;
+    const diffDays = Math.round(diffHours / 24);
+    return `in ${diffDays}d`;
+  };
+  
+  const channelLabel = CHANNEL_LABELS[action.type] || "Email";
+  const timeLabel = formatTime(action.scheduledFor);
+  
+  return `${channelLabel} ${timeLabel}`;
+};
 
 interface Action {
   id: string;
@@ -982,238 +1012,115 @@ export default function ActionCentre() {
                 </div>
               </div>
             ) : isInvoiceTab ? (
-              // Adaptive Actions Queue (Sprint 2: transformed to show pending actions)
-              <div className="bg-white border border-slate-200 rounded-lg overflow-hidden shadow-sm">
-                <div className="max-h-[600px] overflow-x-auto overflow-y-auto">
-                  {/* Table Header with Sorting */}
-                  <div className="grid grid-cols-[auto_2fr_1fr_0.8fr_1.5fr_1fr_1fr_2fr] bg-gradient-to-r from-slate-50 to-slate-100 border-b border-slate-200 sticky top-0 z-10" style={{ minWidth: '1400px' }}>
-                    <div className="px-4 py-3 flex items-center justify-center">
-                      <Checkbox
-                        checked={selectedActions.size === filteredActions.length && filteredActions.length > 0}
-                        onCheckedChange={toggleSelectAll}
-                        data-testid="checkbox-select-all"
-                      />
-                    </div>
-                    <button 
-                      onClick={() => {
-                        if (sortBy === 'customer') {
-                          setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
-                        } else {
-                          setSortBy('customer');
-                          setSortDirection('asc');
-                        }
-                      }}
-                      className="px-6 py-3 text-xs font-semibold text-slate-700 uppercase tracking-wide hover:bg-slate-100 text-left flex items-center gap-1"
-                      data-testid="sort-customer"
-                    >
-                      Customer
-                      {sortBy === 'customer' && (
-                        sortDirection === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
-                      )}
-                    </button>
-                    <button 
-                      onClick={() => {
-                        if (sortBy === 'outstanding') {
-                          setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
-                        } else {
-                          setSortBy('outstanding');
-                          setSortDirection('desc');
-                        }
-                      }}
-                      className="px-4 py-3 text-xs font-semibold text-slate-700 uppercase tracking-wide hover:bg-slate-100 text-right flex items-center justify-end gap-1"
-                      data-testid="sort-outstanding"
-                    >
-                      Outstanding
-                      {sortBy === 'outstanding' && (
-                        sortDirection === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
-                      )}
-                    </button>
-                    <button 
-                      onClick={() => {
-                        if (sortBy === 'priority') {
-                          setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
-                        } else {
-                          setSortBy('priority');
-                          setSortDirection('desc');
-                        }
-                      }}
-                      className="px-4 py-3 text-xs font-semibold text-slate-700 uppercase tracking-wide hover:bg-slate-100 text-center flex items-center justify-center gap-1"
-                      data-testid="sort-priority"
-                    >
-                      Priority
-                      {sortBy === 'priority' && (
-                        sortDirection === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
-                      )}
-                    </button>
-                    <div className="px-4 py-3 text-xs font-semibold text-slate-700 uppercase tracking-wide">Recommended Action</div>
-                    <button 
-                      onClick={() => {
-                        if (sortBy === 'exceptions') {
-                          setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
-                        } else {
-                          setSortBy('exceptions');
-                          setSortDirection('desc');
-                        }
-                      }}
-                      className="px-4 py-3 text-xs font-semibold text-slate-700 uppercase tracking-wide hover:bg-slate-100 text-center flex items-center justify-center gap-1 bg-amber-50/50 border-l-2 border-amber-400"
-                      data-testid="sort-exceptions"
-                    >
-                      Exceptions {sortBy === 'exceptions' && '⚠️'}
-                      {sortBy === 'exceptions' && (
-                        sortDirection === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
-                      )}
-                    </button>
-                    <div className="px-4 py-3 text-xs font-semibold text-slate-700 uppercase tracking-wide">Assigned To</div>
-                    <div className="px-4 py-3 text-xs font-semibold text-slate-700 uppercase tracking-wide text-center">Actions</div>
+              // Overdue List View - Glassmorphism + Tufte/Few Principles
+              <div className="bg-white/80 backdrop-blur-sm border border-white/50 rounded-lg overflow-hidden shadow-lg">
+                <div className="max-h-[600px] overflow-y-auto">
+                  {/* List Header - Minimal styling per Tufte/Few */}
+                  <div className="grid grid-cols-[minmax(220px,1.5fr)_minmax(100px,0.7fr)_minmax(80px,0.5fr)_minmax(180px,1fr)_minmax(160px,0.9fr)_56px] items-center gap-3 px-4 py-2 bg-white/60 backdrop-blur-md border-b border-slate-200/50 sticky top-0 z-10">
+                    <div className="text-xs font-medium text-slate-600 uppercase tracking-wide">Customer</div>
+                    <div className="text-xs font-medium text-slate-600 uppercase tracking-wide text-right">Outstanding</div>
+                    <div className="text-xs font-medium text-slate-600 uppercase tracking-wide">Priority</div>
+                    <div className="text-xs font-medium text-slate-600 uppercase tracking-wide">Recommended</div>
+                    <div className="text-xs font-medium text-slate-600 uppercase tracking-wide">Exceptions</div>
+                    <div className="text-xs font-medium text-slate-600 uppercase tracking-wide text-center">•••</div>
                   </div>
 
-                  {/* Table Rows */}
+                  {/* List Rows - Dense 48px height, glassmorphism on hover */}
                   {filteredActions.map((action: any) => {
                     const exceptions = deriveExceptionTags(action);
                     const priority = action.metadata?.recommended?.priority || action.metadata?.priority || 50;
                     const bundledCount = action.invoiceCount || action.metadata?.invoiceCount || 1;
                     const totalOutstanding = action.totalOutstanding || action.invoiceAmount || action.metadata?.totalAmount || 0;
+                    
+                    // Convert priority score to label
+                    const priorityLabel = priority > 70 ? 'High' : priority > 40 ? 'Medium' : 'Low';
+                    const priorityColor = priority > 70 ? 'bg-rose-100 text-rose-700' : priority > 40 ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-700';
 
                     return (
                       <div
                         key={action.id}
-                        className="grid grid-cols-[auto_2fr_1fr_0.8fr_1.5fr_1fr_1fr_2fr] border-b border-slate-100 hover:bg-gradient-to-r hover:from-blue-50/30 hover:to-teal-50/30 transition-all duration-200"
+                        className="grid grid-cols-[minmax(220px,1.5fr)_minmax(100px,0.7fr)_minmax(80px,0.5fr)_minmax(180px,1fr)_minmax(160px,0.9fr)_56px] items-center gap-3 px-4 py-3 border-b border-slate-100/50 hover:bg-gradient-to-r hover:from-[#17B6C3]/5 hover:to-teal-50/30 transition-all duration-150"
                         data-testid={`action-row-${action.id}`}
-                        style={{ minWidth: '1400px' }}
                       >
-                        {/* Checkbox */}
-                        <div className="px-4 py-4 flex items-center justify-center">
-                          <Checkbox
-                            checked={selectedActions.has(action.id)}
-                            onCheckedChange={() => toggleSelection(action.id)}
-                            data-testid={`checkbox-action-${action.id}`}
-                          />
-                        </div>
-
-                        {/* Customer */}
-                        <div className="px-6 py-4 flex items-center min-w-0">
-                          <div className="min-w-0">
-                            <p className="font-semibold text-sm text-slate-900 truncate">
-                              {action.contactName || 'Unknown Customer'}
-                            </p>
-                            {bundledCount > 1 && (
-                              <p className="text-xs text-slate-500 mt-0.5">
-                                {bundledCount} invoices bundled
-                              </p>
-                            )}
+                        {/* Customer + Bundled Info */}
+                        <div className="min-w-0">
+                          <div className="truncate font-medium text-sm text-slate-900">
+                            {action.contactName || 'Unknown Customer'}
                           </div>
+                          {bundledCount > 1 && (
+                            <div className="text-xs text-slate-500 mt-0.5">
+                              {bundledCount} invoices bundled
+                            </div>
+                          )}
                         </div>
 
                         {/* Outstanding Amount */}
-                        <div className="px-4 py-4 flex items-center justify-end">
-                          <p className="font-semibold text-sm text-slate-900">
-                            {formatCurrency(Number(totalOutstanding))}
-                          </p>
+                        <div className="font-semibold text-sm text-slate-900 tabular-nums text-right">
+                          {formatCurrency(Number(totalOutstanding))}
                         </div>
 
-                        {/* Priority Score */}
-                        <div className="px-4 py-4 flex items-center justify-center">
-                          <Badge 
-                            variant="outline" 
-                            className={`text-xs font-semibold ${
-                              priority > 70 
-                                ? 'bg-green-50 text-green-700 border-green-300' 
-                                : priority > 40
-                                ? 'bg-blue-50 text-blue-700 border-blue-300'
-                                : 'bg-gray-50 text-gray-700 border-gray-300'
-                            }`}
-                            data-testid={`priority-badge-${action.id}`}
+                        {/* Priority Chip */}
+                        <div>
+                          <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${priorityColor}`}>
+                            {priorityLabel}
+                          </span>
+                        </div>
+
+                        {/* Recommended Action - Quick-approve on click */}
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => {
+                              toast({
+                                title: "Action Approved",
+                                description: "Collection actions will proceed as scheduled",
+                              });
+                            }}
+                            className="px-3 py-1.5 rounded-full text-xs font-medium bg-[#17B6C3] text-white shadow-sm hover:bg-[#1396A1] transition-colors"
+                            data-testid={`quick-approve-${action.id}`}
                           >
-                            {priority.toFixed(0)}
-                          </Badge>
-                        </div>
-
-                        {/* Recommended Action (NextActionCell) */}
-                        <div className="px-4 py-4 flex items-center">
-                          <NextActionCell action={action} />
+                            {getRecommendedActionLabel(action)}
+                          </button>
                         </div>
 
                         {/* Exceptions */}
-                        <div className="px-4 py-4 flex items-center justify-center">
+                        <div className="flex flex-wrap gap-1">
                           {exceptions.length > 0 ? (
-                            <div className="flex flex-wrap gap-1 justify-center">
-                              {exceptions.slice(0, 2).map((tag, idx) => (
-                                <Badge 
-                                  key={idx}
-                                  variant="outline" 
-                                  className="text-xs bg-amber-50 text-amber-700 border-amber-300"
-                                  data-testid={`exception-badge-${action.id}-${idx}`}
-                                >
-                                  {tag}
-                                </Badge>
-                              ))}
-                              {exceptions.length > 2 && (
-                                <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700 border-amber-300">
-                                  +{exceptions.length - 2}
-                                </Badge>
-                              )}
-                            </div>
+                            exceptions.slice(0, 2).map((tag, idx) => (
+                              <span 
+                                key={idx}
+                                className="text-[11px] px-2 py-0.5 rounded-full bg-orange-50 text-orange-700 border border-orange-200"
+                                data-testid={`exception-badge-${action.id}-${idx}`}
+                              >
+                                {tag}
+                              </span>
+                            ))
                           ) : (
-                            <span className="text-xs text-slate-400">-</span>
+                            <span className="text-xs text-slate-400">—</span>
+                          )}
+                          {exceptions.length > 2 && (
+                            <span className="text-[11px] px-2 py-0.5 rounded-full bg-orange-50 text-orange-700 border border-orange-200">
+                              +{exceptions.length - 2}
+                            </span>
                           )}
                         </div>
 
-                        {/* Assigned To */}
-                        <div className="px-4 py-4 flex items-center">
-                          {action.assignedTo ? (
-                            <p className="text-sm text-slate-700 truncate">
-                              {action.assignedTo}
-                            </p>
-                          ) : (
-                            <p className="text-sm text-slate-400">Unassigned</p>
-                          )}
-                        </div>
-
-                        {/* Action Buttons */}
-                        <div className="px-4 py-4 flex items-center justify-center gap-1.5">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              setSelectedCustomer(action);
-                              setComposerOpen(true);
-                            }}
-                            className="h-7 px-2.5 text-xs bg-[#17B6C3]/10 hover:bg-[#17B6C3]/20 text-[#17B6C3] border border-[#17B6C3]/30"
-                            data-testid={`button-compose-${action.id}`}
-                          >
-                            <MessageSquare className="h-3.5 w-3.5 mr-1" />
-                            Compose
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
+                        {/* Kebab Menu - Sticky on right */}
+                        <div className="justify-self-end">
+                          <KebabMenu
+                            onCompose={() => setSelectedCustomer(action)}
+                            onApprove={() => {
                               toast({
                                 title: "Customer Approved",
                                 description: "Collection actions will proceed as scheduled",
                               });
                             }}
-                            className="h-7 px-2.5 text-xs bg-green-50 hover:bg-green-100 text-green-700 border border-green-200"
-                            data-testid={`button-approve-${action.id}`}
-                          >
-                            <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
-                            Approve
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
+                            onSnooze={() => {
                               toast({
                                 title: "Customer Snoozed",
                                 description: "Actions paused for 7 days",
                               });
                             }}
-                            className="h-7 px-2.5 text-xs bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200"
-                            data-testid={`button-snooze-${action.id}`}
-                          >
-                            <Clock className="h-3.5 w-3.5 mr-1" />
-                            Snooze
-                          </Button>
+                          />
                         </div>
                       </div>
                     );
