@@ -357,6 +357,11 @@ export default function ActionCentre() {
     return 'upcoming';
   };
 
+  // Determine if current tab shows invoices or actions
+  const isInvoiceTab = activeTab === 'overdue';
+  const isOnHoldTab = activeTab === 'onHold';
+  const isPTPTab = activeTab === 'upcomingPTP';
+
   // Get items for active tab
   const currentTabItems = useMemo(() => {
     if (!tabData) return [];
@@ -435,10 +440,11 @@ export default function ActionCentre() {
         (statusFilters.includes('needs_action') && needsAction) ||
         (statusFilters.includes('resolved') && isResolved);
       
-      // Exception filter (for actions with exceptionType in metadata)
-      const exceptionType = item.metadata?.exceptionType;
-      const matchesException = exceptionFilters.length === 0 || 
-        (exceptionType && exceptionFilters.includes(exceptionType));
+      // Exception filter (Sprint 2: use deriveExceptionTags for adaptive actions)
+      const matchesException = exceptionFilters.length === 0 || (() => {
+        const exceptions = deriveExceptionTags(item);
+        return exceptionFilters.some(filter => exceptions.includes(filter));
+      })();
       
       return matchesSearch && matchesDirection && matchesChannel && matchesIntent && matchesStatus && matchesException;
     });
@@ -463,11 +469,6 @@ export default function ActionCentre() {
 
     return filtered;
   }, [currentTabItems, searchQuery, directionFilters, channelFilters, intentFilters, statusFilters, exceptionFilters, sortBy, sortDirection, isInvoiceTab]);
-
-  // Determine if current tab shows invoices or actions
-  const isInvoiceTab = activeTab === 'overdue';
-  const isOnHoldTab = activeTab === 'onHold';
-  const isPTPTab = activeTab === 'upcomingPTP';
 
   return (
     <div className="flex h-screen bg-white">
@@ -584,24 +585,27 @@ export default function ActionCentre() {
             </div>
           </div>
 
-          {/* Exception Type Filters */}
-          {(activeTab === 'overdue' || activeTab === 'brokenPromises' || activeTab === 'disputes') && (
-            <div className="mb-6">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-sm font-medium text-slate-600">Exception Alerts:</span>
+          {/* Exception Type Filters - Sprint 2: Enhanced for adaptive scheduler */}
+          {activeTab === 'overdue' && (
+            <div className="mb-6 bg-gradient-to-r from-amber-50/50 to-orange-50/50 border border-amber-200/50 rounded-lg p-4">
+              <div className="flex items-center gap-3 flex-wrap">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4 text-amber-600" />
+                  <span className="text-sm font-semibold text-slate-700">Exception Filters:</span>
+                </div>
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => toggleFilter(exceptionFilters, "Dispute Window Closing", setExceptionFilters)}
+                  onClick={() => toggleFilter(exceptionFilters, "Dispute", setExceptionFilters)}
                   className={`${
-                    exceptionFilters.includes("Dispute Window Closing")
-                      ? 'bg-amber-100 text-amber-800 border-amber-300 hover:bg-amber-200'
-                      : 'hover:bg-slate-50'
+                    exceptionFilters.includes("Dispute")
+                      ? 'bg-red-100 text-red-800 border-red-300 hover:bg-red-200 shadow-sm'
+                      : 'bg-white hover:bg-red-50 border-slate-200'
                   }`}
-                  data-testid="filter-exception-dispute-window"
+                  data-testid="filter-exception-dispute"
                 >
-                  <Clock className="h-4 w-4 mr-1" />
-                  Dispute Window
+                  <AlertCircle className="h-3.5 w-3.5 mr-1.5" />
+                  Dispute
                 </Button>
                 <Button
                   variant="outline"
@@ -609,37 +613,65 @@ export default function ActionCentre() {
                   onClick={() => toggleFilter(exceptionFilters, "Broken Promise", setExceptionFilters)}
                   className={`${
                     exceptionFilters.includes("Broken Promise")
-                      ? 'bg-red-100 text-red-800 border-red-300 hover:bg-red-200'
-                      : 'hover:bg-slate-50'
+                      ? 'bg-orange-100 text-orange-800 border-orange-300 hover:bg-orange-200 shadow-sm'
+                      : 'bg-white hover:bg-orange-50 border-slate-200'
                   }`}
                   data-testid="filter-exception-broken-promise"
                 >
-                  <AlertTriangle className="h-4 w-4 mr-1" />
+                  <AlertTriangle className="h-3.5 w-3.5 mr-1.5" />
                   Broken Promise
                 </Button>
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => toggleFilter(exceptionFilters, "High Risk Late", setExceptionFilters)}
+                  onClick={() => toggleFilter(exceptionFilters, "High Value", setExceptionFilters)}
                   className={`${
-                    exceptionFilters.includes("High Risk Late")
-                      ? 'bg-purple-100 text-purple-800 border-purple-300 hover:bg-purple-200'
-                      : 'hover:bg-slate-50'
+                    exceptionFilters.includes("High Value")
+                      ? 'bg-purple-100 text-purple-800 border-purple-300 hover:bg-purple-200 shadow-sm'
+                      : 'bg-white hover:bg-purple-50 border-slate-200'
                   }`}
-                  data-testid="filter-exception-high-risk"
+                  data-testid="filter-exception-high-value"
                 >
-                  <ShieldAlert className="h-4 w-4 mr-1" />
-                  High Risk
+                  <DollarSign className="h-3.5 w-3.5 mr-1.5" />
+                  High Value
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => toggleFilter(exceptionFilters, "Low Signal", setExceptionFilters)}
+                  className={`${
+                    exceptionFilters.includes("Low Signal")
+                      ? 'bg-blue-100 text-blue-800 border-blue-300 hover:bg-blue-200 shadow-sm'
+                      : 'bg-white hover:bg-blue-50 border-slate-200'
+                  }`}
+                  data-testid="filter-exception-low-signal"
+                >
+                  <HelpCircle className="h-3.5 w-3.5 mr-1.5" />
+                  Low Signal
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => toggleFilter(exceptionFilters, "Channel Blocked", setExceptionFilters)}
+                  className={`${
+                    exceptionFilters.includes("Channel Blocked")
+                      ? 'bg-slate-100 text-slate-800 border-slate-300 hover:bg-slate-200 shadow-sm'
+                      : 'bg-white hover:bg-slate-50 border-slate-200'
+                  }`}
+                  data-testid="filter-exception-channel-blocked"
+                >
+                  <XCircle className="h-3.5 w-3.5 mr-1.5" />
+                  Channel Blocked
                 </Button>
                 {exceptionFilters.length > 0 && (
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => setExceptionFilters([])}
-                    className="text-slate-500 hover:text-slate-700"
+                    className="text-slate-600 hover:text-slate-900 hover:bg-white/50 ml-auto"
                     data-testid="button-clear-exception-filters"
                   >
-                    Clear
+                    Clear All ({exceptionFilters.length})
                   </Button>
                 )}
               </div>
