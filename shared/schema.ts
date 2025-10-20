@@ -811,6 +811,43 @@ export const communicationTemplates = pgTable("communication_templates", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Global Template Library (Sprint 3: curated templates maintained by Qashivo)
+export const globalTemplates = pgTable("global_templates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  code: varchar("code").notNull().unique(), // e.g., "friendly_reminder", "ptp_today"
+  channel: varchar("channel").notNull(), // "email", "sms", "voice"
+  tone: varchar("tone").notNull(), // "friendly", "firm", "legal"
+  locale: varchar("locale").notNull().default("en-GB"),
+  version: varchar("version").notNull().default("1.0.0"), // semver
+  subject: varchar("subject"), // For email templates
+  body: text("body").notNull(), // Template content with handlebars/mustache syntax
+  requiredVars: text("required_vars").array().notNull().default([]), // ['first_name','invoice_total','wallet_url']
+  complianceFlags: text("compliance_flags").array().default([]), // ['final_notice','legal_ready']
+  status: varchar("status").notNull().default("active"), // "active", "deprecated"
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Tenant Template Library (Sprint 3: tenant-specific copies for customization)
+export const tenantTemplates = pgTable("tenant_templates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
+  sourceGlobalId: varchar("source_global_id").references(() => globalTemplates.id), // Link to origin for diffing
+  sourceVersion: varchar("source_version"), // Version of global template this was cloned from
+  code: varchar("code").notNull(), // Keep original code for mapping
+  channel: varchar("channel").notNull(), // "email", "sms", "voice"
+  tone: varchar("tone").notNull(), // "friendly", "firm", "legal"
+  locale: varchar("locale").notNull().default("en-GB"),
+  subject: varchar("subject"), // For email templates
+  body: text("body").notNull(), // Template content with handlebars/mustache syntax
+  requiredVars: text("required_vars").array().notNull().default([]), // ['first_name','invoice_total','wallet_url']
+  complianceFlags: text("compliance_flags").array().default([]), // ['final_notice','legal_ready']
+  isLocked: boolean("is_locked").default(false), // True for tenant "protected" variants
+  status: varchar("status").notNull().default("active"), // "active", "archived"
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Channel escalation rules
 export const escalationRules = pgTable("escalation_rules", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -2227,6 +2264,18 @@ export const insertCommunicationTemplateSchema = createInsertSchema(communicatio
   updatedAt: true,
 });
 
+export const insertGlobalTemplateSchema = createInsertSchema(globalTemplates).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertTenantTemplateSchema = createInsertSchema(tenantTemplates).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export const insertEscalationRuleSchema = createInsertSchema(escalationRules).omit({
   id: true,
   createdAt: true,
@@ -2420,6 +2469,10 @@ export type InsertWorkflowTemplate = z.infer<typeof insertWorkflowTemplateSchema
 export type WorkflowTemplate = typeof workflowTemplates.$inferSelect;
 export type InsertCommunicationTemplate = z.infer<typeof insertCommunicationTemplateSchema>;
 export type CommunicationTemplate = typeof communicationTemplates.$inferSelect;
+export type InsertGlobalTemplate = z.infer<typeof insertGlobalTemplateSchema>;
+export type GlobalTemplate = typeof globalTemplates.$inferSelect;
+export type InsertTenantTemplate = z.infer<typeof insertTenantTemplateSchema>;
+export type TenantTemplate = typeof tenantTemplates.$inferSelect;
 export type InsertEscalationRule = z.infer<typeof insertEscalationRuleSchema>;
 export type EscalationRule = typeof escalationRules.$inferSelect;
 export type InsertAiAgentConfig = z.infer<typeof insertAiAgentConfigSchema>;

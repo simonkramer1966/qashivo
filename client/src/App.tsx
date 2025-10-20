@@ -41,6 +41,7 @@ const DebtorPortal = lazy(() => import("@/pages/debtor-portal"));
 const BetaPartner = lazy(() => import("@/pages/beta-partner"));
 const AdminAnalytics = lazy(() => import("@/pages/admin-analytics"));
 const AdminOutcomes = lazy(() => import("@/pages/admin-outcomes"));
+const Dashboard = lazy(() => import("@/pages/dashboard"));
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -100,6 +101,7 @@ function Router() {
           <Route path="/admin/analytics" component={AdminAnalytics} />
           <Route path="/admin/outcomes" component={AdminOutcomes} />
           <Route path="/partner" component={PartnerDashboard} />
+          <Route path="/dashboard" component={Dashboard} />
           <Route path="/cashflow" component={Cashflow} />
           <Route path="/intelligent-forecast" component={IntelligentForecast} />
           <Route path="/contacts" component={Contacts} />

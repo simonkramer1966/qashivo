@@ -228,6 +228,7 @@ import { subscriptionService } from "./services/subscriptionService";
 import { businessAnalyticsService } from "./services/businessAnalytics";
 import { clientPartnerService } from "./services/clientPartnerService";
 import { signalCollector } from "./lib/signal-collector";
+import { getDashboardMetrics } from "./services/metricsService";
 
 // Initialize Stripe (lazy initialization - only fails when actually used)
 let stripe: Stripe | null = null;
@@ -424,6 +425,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       console.error('Failed to update partner:', error);
       res.status(500).json({ message: 'Failed to update partner' });
+    }
+  });
+
+  // Dashboard Metrics Endpoint (Sprint 3)
+  app.get('/api/metrics', isAuthenticated, async (req, res) => {
+    try {
+      const user = await storage.getUser((req as any).user.claims.sub);
+      if (!user || !user.tenantId) {
+        return res.status(404).json({ message: 'User or tenant not found' });
+      }
+
+      const metrics = await getDashboardMetrics(user.tenantId);
+      res.json(metrics);
+    } catch (error) {
+      console.error('Failed to get dashboard metrics:', error);
+      res.status(500).json({ message: 'Failed to retrieve metrics' });
     }
   });
 
