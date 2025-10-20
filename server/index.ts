@@ -334,6 +334,7 @@ app.use((req, res, next) => {
       const { planAdaptiveActions } = await import("./services/actionPlanner");
       const { workflows } = await import("@shared/schema");
       const { eq, and } = await import("drizzle-orm");
+      const { db } = await import("./db");
       
       // Nightly urgency recomputation (2am daily)
       cron.default.schedule("0 2 * * *", async () => {

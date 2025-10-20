@@ -13659,6 +13659,144 @@ ${tenant.name}
     }
   });
 
+  // Portfolio Health Monitoring (DSO Controller)
+  app.get('/health/portfolio', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.tenantId) {
+        return res.status(400).json({ error: 'No tenant found' });
+      }
+
+      const { projectedDSO } = await import('./lib/dso');
+      const { schedulerState, workflows } = await import('@shared/schema');
+
+      // Get all adaptive workflows for this tenant
+      const adaptiveWorkflows = await db
+        .select({
+          workflowId: workflows.id,
+          workflowName: workflows.name,
+          targetDSO: workflows.adaptiveSettings,
+        })
+        .from(workflows)
+        .where(
+          and(
+            eq(workflows.tenantId, user.tenantId),
+            eq(workflows.schedulerType, 'adaptive'),
+            eq(workflows.isActive, true)
+          )
+        );
+
+      const results = [];
+      for (const workflow of adaptiveWorkflows) {
+        // Get scheduler state
+        const state = await db
+          .select()
+          .from(schedulerState)
+          .where(
+            and(
+              eq(schedulerState.tenantId, user.tenantId),
+              eq(schedulerState.scheduleId, workflow.workflowId)
+            )
+          )
+          .limit(1);
+
+        const currentState = state[0];
+        const settings = (workflow.targetDSO as any) || {};
+        const targetDSO = Number(settings.targetDSO || 45);
+
+        // Calculate current projected DSO
+        const projected = await projectedDSO(user.tenantId);
+
+        results.push({
+          scheduleId: workflow.workflowId,
+          scheduleName: workflow.workflowName,
+          projectedDSO: projected,
+          targetDSO,
+          urgencyFactor: currentState?.urgencyFactor || 0.5,
+          delta: projected - targetDSO,
+          lastUpdated: currentState?.updatedAt || null,
+        });
+      }
+
+      res.json({
+        tenantId: user.tenantId,
+        schedules: results,
+        summary: {
+          avgProjectedDSO: results.length > 0
+            ? results.reduce((sum, r) => sum + r.projectedDSO, 0) / results.length
+            : 0,
+          avgTargetDSO: results.length > 0
+            ? results.reduce((sum, r) => sum + r.targetDSO, 0) / results.length
+            : 0,
+        },
+      });
+    } catch (error: any) {
+      console.error('Portfolio health error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Manual Invoice Override
+  app.post('/api/invoices/:id/override', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.tenantId) {
+        return res.status(400).json({ error: 'No tenant found' });
+      }
+
+      const { id } = req.params;
+      const { reason, action } = req.body;
+
+      if (!reason || !action) {
+        return res.status(400).json({ error: 'reason and action are required' });
+      }
+
+      // Get invoice
+      const invoice = await db
+        .select()
+        .from(invoices)
+        .where(
+          and(
+            eq(invoices.id, id),
+            eq(invoices.tenantId, user.tenantId)
+          )
+        )
+        .limit(1);
+
+      if (invoice.length === 0) {
+        return res.status(404).json({ error: 'Invoice not found' });
+      }
+
+      // Update invoice metadata with override
+      const currentMetadata = (invoice[0].metadata as any) || {};
+      const updatedMetadata = {
+        ...currentMetadata,
+        manualOverride: {
+          userId,
+          reason,
+          action,
+          timestamp: new Date().toISOString(),
+        },
+      };
+
+      await db
+        .update(invoices)
+        .set({ metadata: updatedMetadata })
+        .where(eq(invoices.id, id));
+
+      res.json({
+        success: true,
+        invoiceId: id,
+        override: updatedMetadata.manualOverride,
+      });
+    } catch (error: any) {
+      console.error('Invoice override error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // ==================== ANALYTICS ENDPOINTS ====================
 
   // 1. Cash Flow Forecast - 90-day projections with confidence intervals
