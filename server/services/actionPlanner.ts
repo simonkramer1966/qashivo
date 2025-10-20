@@ -600,3 +600,233 @@ export class ActionPlanner {
 
 // Export singleton instance
 export const actionPlanner = new ActionPlanner();
+
+/**
+ * NEW: Plan adaptive actions using the composite scoring scheduler
+ * This is the spec-aligned implementation for DSO-driven portfolio control
+ */
+import { scheduleNextAction, type ScheduleActionContext } from "../lib/adaptive-scheduler";
+import { workflows } from "@shared/schema";
+import { addHours } from "date-fns";
+
+export async function planAdaptiveActions(
+  tenantId: string,
+  scheduleId: string
+): Promise<{
+  invoicesProcessed: number;
+  actionsCreated: number;
+  skipped: {
+    disputed: number;
+    override: number;
+    lowPriority: number;
+    recentAction: number;
+  };
+}> {
+  console.log(`[PLAN] Planning adaptive actions for tenant ${tenantId}, schedule ${scheduleId}`);
+
+  try {
+    // Get workflow settings
+    const workflow = await db
+      .select({
+        id: workflows.id,
+        adaptiveSettings: workflows.adaptiveSettings,
+      })
+      .from(workflows)
+      .where(
+        and(
+          eq(workflows.id, scheduleId),
+          eq(workflows.tenantId, tenantId),
+          eq(workflows.schedulerType, "adaptive"),
+          eq(workflows.isActive, true)
+        )
+      )
+      .limit(1);
+
+    if (workflow.length === 0) {
+      console.log(`[PLAN] No active adaptive workflow found: ${scheduleId}`);
+      return {
+        invoicesProcessed: 0,
+        actionsCreated: 0,
+        skipped: { disputed: 0, override: 0, lowPriority: 0, recentAction: 0 },
+      };
+    }
+
+    const settings = (workflow[0].adaptiveSettings as any) || {};
+    const adaptiveSettings: AdaptiveSettings = {
+      targetDSO: Number(settings.targetDSO || 45),
+      urgencyFactor: Number(settings.urgencyFactor || 0.5),
+      quietHours: settings.quietHours || [22, 8],
+      maxDailyTouches: Number(settings.maxDailyTouches || 3),
+    };
+
+    const minScoreThreshold = Number(settings.minScoreThreshold || 40);
+
+    // Get overdue invoices with behavior signals
+    const today = new Date();
+    const overdueInvoices = await db
+      .select({
+        invoice: invoices,
+        contact: contacts,
+        behavior: customerBehaviorSignals,
+      })
+      .from(invoices)
+      .innerJoin(contacts, eq(invoices.contactId, contacts.id))
+      .leftJoin(
+        customerBehaviorSignals,
+        eq(customerBehaviorSignals.contactId, contacts.id)
+      )
+      .where(
+        and(
+          eq(invoices.tenantId, tenantId),
+          lte(invoices.dueDate, today),
+          sql`${invoices.status} NOT IN ('paid', 'cancelled')`
+        )
+      );
+
+    console.log(`[PLAN] Found ${overdueInvoices.length} overdue invoices`);
+
+    let invoicesProcessed = 0;
+    let actionsCreated = 0;
+    const skipped = {
+      disputed: 0,
+      override: 0,
+      lowPriority: 0,
+      recentAction: 0,
+    };
+
+    for (const { invoice, contact, behavior } of overdueInvoices) {
+      try {
+        invoicesProcessed++;
+
+        // Skip disputed or flagged invoices
+        if (invoice.escalationFlag || invoice.legalFlag) {
+          skipped.disputed++;
+          continue;
+        }
+
+        // Check for existing actions in next 6 hours
+        const sixHoursFromNow = addHours(today, 6);
+        const existingActions = await db
+          .select()
+          .from(actions)
+          .where(
+            and(
+              eq(actions.tenantId, tenantId),
+              eq(actions.invoiceId, invoice.id),
+              gte(actions.scheduledFor, today),
+              lte(actions.scheduledFor, sixHoursFromNow)
+            )
+          )
+          .limit(1);
+
+        if (existingActions.length > 0) {
+          skipped.recentAction++;
+          continue;
+        }
+
+        // Build context for scheduler
+        const dueDate = new Date(invoice.dueDate);
+        const issueDate = new Date(invoice.issueDate);
+        const ageDays = Math.ceil(
+          (today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24)
+        );
+
+        const ctx: ScheduleActionContext = {
+          tenantId,
+          settings: adaptiveSettings,
+          customer: {
+            segment: "default",
+            channelPrefs: {
+              email: !!contact.email,
+              sms: !!contact.phone,
+              whatsapp: false,
+              call: !!contact.phone,
+            },
+            behavior: behavior || undefined,
+          },
+          invoice: {
+            amount: Number(invoice.amount || 0),
+            dueAt: dueDate,
+            issuedAt: issueDate,
+            ageDays,
+            dispute: false,
+            lastTouchAt: invoice.lastReminderSent
+              ? new Date(invoice.lastReminderSent)
+              : undefined,
+            lastChannel: undefined,
+          },
+          constraints: {
+            now: today,
+            minGapHours: 24,
+            allowedChannels: ["email", "sms", "call"] as Channel[],
+            timezone: "Europe/London",
+            hasOverride: false,
+            maxDailyTouchesPerCustomer: 2,
+          },
+        };
+
+        // Get recommendation from adaptive scheduler
+        const recommendation = scheduleNextAction(ctx);
+
+        if (!recommendation) {
+          skipped.lowPriority++;
+          continue;
+        }
+
+        if (recommendation.priority < minScoreThreshold) {
+          skipped.lowPriority++;
+          console.log(
+            `[PLAN] tenant=${tenantId} invoice=${invoice.invoiceNumber} ch=${recommendation.channel} ` +
+            `score=${recommendation.priority.toFixed(1)} < ${minScoreThreshold} (skipped)`
+          );
+          continue;
+        }
+
+        // Create action
+        await db.insert(actions).values({
+          tenantId,
+          contactId: invoice.contactId,
+          invoiceId: invoice.id,
+          type: recommendation.channel || "email",
+          status: "scheduled",
+          scheduledFor: recommendation.suggestedDate || addHours(today, 24),
+          subject: `Payment reminder for invoice ${invoice.invoiceNumber}`,
+          content: `Your invoice ${invoice.invoiceNumber} is overdue.`,
+          metadata: {
+            adaptiveScheduler: true,
+            priority: recommendation.priority,
+            reasoning: recommendation.reasoning,
+            scheduleId,
+          },
+          source: "automated",
+        });
+
+        actionsCreated++;
+
+        console.log(
+          `[PLAN] tenant=${tenantId} invoice=${invoice.invoiceNumber} ` +
+          `ch=${recommendation.channel} ` +
+          `at=${recommendation.suggestedDate?.toISOString()} ` +
+          `score=${recommendation.priority.toFixed(1)}`
+        );
+      } catch (error) {
+        console.error(`[PLAN] Error processing invoice ${invoice.id}:`, error);
+      }
+    }
+
+    console.log(
+      `[PLAN] Complete: ${invoicesProcessed} processed, ${actionsCreated} created, ` +
+      `${skipped.disputed} disputed, ${skipped.lowPriority} low priority, ` +
+      `${skipped.recentAction} recent action`
+    );
+
+    return {
+      invoicesProcessed,
+      actionsCreated,
+      skipped,
+    };
+  } catch (error) {
+    console.error(`[PLAN] Error planning actions for tenant ${tenantId}:`, error);
+    throw error;
+  }
+}
