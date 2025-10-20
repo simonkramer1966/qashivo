@@ -290,13 +290,13 @@ export function NextActionCell({ action }: { action: Action }) {
         open={isComposerOpen}
         onOpenChange={setIsComposerOpen}
         contact={{
-          id: action.id,
+          id: action.id || 'demo-contact',
           name: action.contactName || "[Demo Contact]",
           email: `${(action.contactName || 'contact').toLowerCase().replace(/\s+/g, '.')}@example.com`,
           phone: "[Demo Phone]",
         }}
         invoice={{
-          id: action.invoiceIds?.[0] || `inv-${action.id.slice(0, 8)}`,
+          id: action.invoiceIds?.[0] || `inv-${(action.id || 'demo').slice(0, 8)}`,
           invoiceNumber: `[Demo INV-${String(Math.floor(Math.random() * 1000)).padStart(3, '0')}]`,
           amount: "[Demo £X,XXX.XX]",
           dueDate: new Date().toISOString(),
