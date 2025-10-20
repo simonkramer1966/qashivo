@@ -46,6 +46,7 @@ import {
 } from "@/components/ui/tooltip";
 import { NextActionCell } from "@/components/action-centre/NextActionCell";
 import { deriveExceptionTags } from "@/lib/action-centre-helpers";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface Action {
   id: string;
@@ -132,6 +133,10 @@ export default function ActionCentre() {
   const [sortBy, setSortBy] = useState<'exceptions' | 'priority' | 'outstanding' | 'customer'>('exceptions');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   
+  // Bulk operations state
+  const [selectedActions, setSelectedActions] = useState<Set<string>>(new Set());
+  const [bulkAssignUser, setBulkAssignUser] = useState<string>('');
+  
 
   const { data: actions = [], isLoading } = useQuery<Action[]>({
     queryKey: ['/api/actions'],
@@ -184,6 +189,88 @@ export default function ActionCentre() {
       });
     },
   });
+
+  // Bulk approve mutation
+  const bulkApproveMutation = useMutation({
+    mutationFn: async (actionIds: string[]) => {
+      await Promise.all(
+        actionIds.map(id =>
+          fetch(`/api/actions/${id}/approve`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+          })
+        )
+      );
+    },
+    onSuccess: (_data, actionIds) => {
+      toast({
+        title: "Actions approved",
+        description: `${actionIds.length} action(s) scheduled successfully`,
+      });
+      setSelectedActions(new Set());
+      queryClient.invalidateQueries({ queryKey: ['/api/actions'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/action-centre/tabs'] });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to approve actions",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Bulk assign mutation
+  const bulkAssignMutation = useMutation({
+    mutationFn: async ({ actionIds, userId }: { actionIds: string[]; userId: string }) => {
+      await Promise.all(
+        actionIds.map(id =>
+          fetch(`/api/actions/${id}/assign`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ assignedTo: userId }),
+          })
+        )
+      );
+    },
+    onSuccess: (_data, { actionIds }) => {
+      toast({
+        title: "Actions assigned",
+        description: `${actionIds.length} action(s) assigned successfully`,
+      });
+      setSelectedActions(new Set());
+      setBulkAssignUser('');
+      queryClient.invalidateQueries({ queryKey: ['/api/actions'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/action-centre/tabs'] });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to assign actions",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Toggle selection helper
+  const toggleSelection = (actionId: string) => {
+    const newSelection = new Set(selectedActions);
+    if (newSelection.has(actionId)) {
+      newSelection.delete(actionId);
+    } else {
+      newSelection.add(actionId);
+    }
+    setSelectedActions(newSelection);
+  };
+
+  // Select all helper
+  const toggleSelectAll = () => {
+    if (selectedActions.size === filteredActions.length) {
+      setSelectedActions(new Set());
+    } else {
+      setSelectedActions(new Set(filteredActions.map((a: any) => a.id)));
+    }
+  };
 
   const getIntentBadge = (intentType: string | null) => {
     if (!intentType) return null;
@@ -585,6 +672,63 @@ export default function ActionCentre() {
             </div>
           </div>
 
+          {/* Bulk Operations Toolbar - Sprint 2 */}
+          {activeTab === 'overdue' && selectedActions.size > 0 && (
+            <div className="mb-4 bg-gradient-to-r from-[#17B6C3]/10 to-teal-100/50 border border-[#17B6C3]/30 rounded-lg p-4 animate-in slide-in-from-top-2">
+              <div className="flex items-center gap-4 flex-wrap">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="h-5 w-5 text-[#17B6C3]" />
+                  <span className="text-sm font-semibold text-slate-900">
+                    {selectedActions.size} action{selectedActions.size !== 1 && 's'} selected
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 ml-auto">
+                  <Button
+                    size="sm"
+                    onClick={() => bulkApproveMutation.mutate(Array.from(selectedActions))}
+                    disabled={bulkApproveMutation.isPending}
+                    className="bg-green-600 hover:bg-green-700 text-white"
+                    data-testid="button-bulk-approve"
+                  >
+                    <CheckCircle2 className="h-4 w-4 mr-1.5" />
+                    {bulkApproveMutation.isPending ? 'Approving...' : 'Approve All'}
+                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="text"
+                      placeholder="User ID..."
+                      value={bulkAssignUser}
+                      onChange={(e) => setBulkAssignUser(e.target.value)}
+                      className="w-32 h-9 text-sm"
+                      data-testid="input-bulk-assign-user"
+                    />
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => bulkAssignMutation.mutate({ 
+                        actionIds: Array.from(selectedActions), 
+                        userId: bulkAssignUser 
+                      })}
+                      disabled={!bulkAssignUser || bulkAssignMutation.isPending}
+                      data-testid="button-bulk-assign"
+                    >
+                      {bulkAssignMutation.isPending ? 'Assigning...' : 'Assign'}
+                    </Button>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setSelectedActions(new Set())}
+                    className="text-slate-600 hover:text-slate-900"
+                    data-testid="button-clear-selection"
+                  >
+                    Clear Selection
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Exception Type Filters - Sprint 2: Enhanced for adaptive scheduler */}
           {activeTab === 'overdue' && (
             <div className="mb-6 bg-gradient-to-r from-amber-50/50 to-orange-50/50 border border-amber-200/50 rounded-lg p-4">
@@ -842,7 +986,14 @@ export default function ActionCentre() {
               <div className="bg-white border border-slate-200 rounded-lg overflow-hidden shadow-sm">
                 <div className="max-h-[600px] overflow-y-auto">
                   {/* Table Header with Sorting */}
-                  <div className="grid grid-cols-[2fr_1.2fr_0.8fr_1.8fr_1.2fr_1fr] bg-gradient-to-r from-slate-50 to-slate-100 border-b border-slate-200 sticky top-0 z-10">
+                  <div className="grid grid-cols-[auto_2fr_1.2fr_0.8fr_1.8fr_1.2fr_1fr] bg-gradient-to-r from-slate-50 to-slate-100 border-b border-slate-200 sticky top-0 z-10">
+                    <div className="px-4 py-3 flex items-center justify-center">
+                      <Checkbox
+                        checked={selectedActions.size === filteredActions.length && filteredActions.length > 0}
+                        onCheckedChange={toggleSelectAll}
+                        data-testid="checkbox-select-all"
+                      />
+                    </div>
                     <button 
                       onClick={() => {
                         if (sortBy === 'customer') {
@@ -925,9 +1076,18 @@ export default function ActionCentre() {
                     return (
                       <div
                         key={action.id}
-                        className="grid grid-cols-[2fr_1.2fr_0.8fr_1.8fr_1.2fr_1fr] border-b border-slate-100 hover:bg-gradient-to-r hover:from-blue-50/30 hover:to-teal-50/30 transition-all duration-200"
+                        className="grid grid-cols-[auto_2fr_1.2fr_0.8fr_1.8fr_1.2fr_1fr] border-b border-slate-100 hover:bg-gradient-to-r hover:from-blue-50/30 hover:to-teal-50/30 transition-all duration-200"
                         data-testid={`action-row-${action.id}`}
                       >
+                        {/* Checkbox */}
+                        <div className="px-4 py-4 flex items-center justify-center">
+                          <Checkbox
+                            checked={selectedActions.has(action.id)}
+                            onCheckedChange={() => toggleSelection(action.id)}
+                            data-testid={`checkbox-action-${action.id}`}
+                          />
+                        </div>
+
                         {/* Customer */}
                         <div className="px-6 py-4 flex items-center min-w-0">
                           <div className="min-w-0">
