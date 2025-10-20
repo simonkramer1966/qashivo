@@ -36,6 +36,8 @@ import {
   paymentPlans,
   paymentPlanSchedules,
   paymentPlanInvoices,
+  globalTemplates,
+  tenantTemplates,
   type User,
   type UpsertUser,
   type Tenant,
@@ -105,6 +107,10 @@ import {
   type ExchangeRate,
   type InsertExchangeRate,
   type OutstandingInvoiceSummary,
+  type GlobalTemplate,
+  type InsertGlobalTemplate,
+  type TenantTemplate,
+  type InsertTenantTemplate,
   actionItems,
   actionLogs,
   paymentPromises,
@@ -252,6 +258,12 @@ export interface IStorage {
   createCommunicationTemplate(template: InsertCommunicationTemplate): Promise<CommunicationTemplate>;
   updateCommunicationTemplate(id: string, tenantId: string, updates: Partial<InsertCommunicationTemplate>): Promise<CommunicationTemplate>;
   deleteCommunicationTemplate(id: string, tenantId: string): Promise<void>;
+  
+  // Sprint 3: Global/Tenant Template operations (hybrid architecture)
+  getGlobalTemplates(filters?: { channel?: string; tone?: string }): Promise<GlobalTemplate[]>;
+  getTenantTemplates(tenantId: string, filters?: { channel?: string; tone?: string }): Promise<TenantTemplate[]>;
+  createTenantTemplate(template: InsertTenantTemplate): Promise<TenantTemplate>;
+  updateTenantTemplate(id: string, tenantId: string, updates: Partial<InsertTenantTemplate>): Promise<TenantTemplate>;
   
   getAiAgentConfigs(tenantId: string, filters?: { type?: string }): Promise<AiAgentConfig[]>;
   createAiAgentConfig(config: InsertAiAgentConfig): Promise<AiAgentConfig>;
@@ -1773,6 +1785,59 @@ export class DatabaseStorage implements IStorage {
     await db
       .delete(communicationTemplates)
       .where(and(eq(communicationTemplates.id, id), eq(communicationTemplates.tenantId, tenantId)));
+  }
+
+  // Sprint 3: Global/Tenant Template operations
+  async getGlobalTemplates(filters?: { channel?: string; tone?: string }): Promise<GlobalTemplate[]> {
+    const conditions = [eq(globalTemplates.status, 'active')];
+
+    if (filters?.channel) {
+      conditions.push(eq(globalTemplates.channel, filters.channel));
+    }
+    if (filters?.tone) {
+      conditions.push(eq(globalTemplates.tone, filters.tone));
+    }
+
+    return await db
+      .select()
+      .from(globalTemplates)
+      .where(and(...conditions))
+      .orderBy(globalTemplates.channel, globalTemplates.tone);
+  }
+
+  async getTenantTemplates(tenantId: string, filters?: { channel?: string; tone?: string }): Promise<TenantTemplate[]> {
+    const conditions = [eq(tenantTemplates.tenantId, tenantId)];
+
+    if (filters?.channel) {
+      conditions.push(eq(tenantTemplates.channel, filters.channel));
+    }
+    if (filters?.tone) {
+      conditions.push(eq(tenantTemplates.tone, filters.tone));
+    }
+
+    return await db
+      .select()
+      .from(tenantTemplates)
+      .where(and(...conditions))
+      .orderBy(tenantTemplates.channel, tenantTemplates.tone);
+  }
+
+  async createTenantTemplate(templateData: InsertTenantTemplate): Promise<TenantTemplate> {
+    const [template] = await db.insert(tenantTemplates).values(templateData).returning();
+    return template;
+  }
+
+  async updateTenantTemplate(
+    id: string,
+    tenantId: string,
+    updates: Partial<InsertTenantTemplate>
+  ): Promise<TenantTemplate> {
+    const [template] = await db
+      .update(tenantTemplates)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(and(eq(tenantTemplates.id, id), eq(tenantTemplates.tenantId, tenantId)))
+      .returning();
+    return template;
   }
 
   async getAiAgentConfigs(

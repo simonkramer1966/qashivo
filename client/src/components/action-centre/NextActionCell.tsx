@@ -46,6 +46,7 @@ import {
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { getActionReasons, deriveExceptionTags, type Reason } from "@/lib/action-centre-helpers";
+import { ComposerDrawer } from "@/components/composer-drawer";
 
 interface Action {
   id: string;
@@ -86,16 +87,8 @@ const REASON_ICONS = {
 
 export function NextActionCell({ action }: { action: Action }) {
   const { toast } = useToast();
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isComposerOpen, setIsComposerOpen] = useState(false);
   const [isSnoozeDialogOpen, setIsSnoozeDialogOpen] = useState(false);
-  
-  // Edit form state
-  const [editChannel, setEditChannel] = useState(action.type);
-  const [editSendAt, setEditSendAt] = useState(
-    action.scheduledFor ? new Date(action.scheduledFor).toISOString().slice(0, 16) : ""
-  );
-  const [editSubject, setEditSubject] = useState(action.subject || "");
-  const [editContent, setEditContent] = useState(action.content || "");
   
   // Snooze form state
   const [snoozeUntil, setSnoozeUntil] = useState("");
@@ -110,20 +103,6 @@ export function NextActionCell({ action }: { action: Action }) {
     },
     onError: () => {
       toast({ title: "Error", description: "Failed to approve action", variant: "destructive" });
-    },
-  });
-
-  // Edit mutation
-  const editMutation = useMutation({
-    mutationFn: (data: { channel: string; sendAt: string; subject: string; content: string }) =>
-      apiRequest("PATCH", `/api/actions/${action.id}/edit`, data),
-    onSuccess: () => {
-      toast({ title: "Action updated", description: "Changes saved successfully" });
-      queryClient.invalidateQueries({ queryKey: ['/api/actions'] });
-      setIsEditDialogOpen(false);
-    },
-    onError: () => {
-      toast({ title: "Error", description: "Failed to update action", variant: "destructive" });
     },
   });
 
@@ -165,15 +144,6 @@ export function NextActionCell({ action }: { action: Action }) {
 
   const handleApprove = () => {
     approveMutation.mutate();
-  };
-
-  const handleEdit = () => {
-    editMutation.mutate({
-      channel: editChannel,
-      sendAt: editSendAt,
-      subject: editSubject,
-      content: editContent,
-    });
   };
 
   const handleSnooze = () => {
@@ -295,11 +265,11 @@ export function NextActionCell({ action }: { action: Action }) {
             variant="ghost"
             size="sm"
             className="h-8 gap-1 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-            onClick={() => setIsEditDialogOpen(true)}
+            onClick={() => setIsComposerOpen(true)}
             data-testid={`button-edit-${action.id}`}
           >
             <Edit3 className="h-4 w-4" />
-            <span className="text-xs">Edit</span>
+            <span className="text-xs">Compose</span>
           </Button>
           
           <Button
@@ -315,81 +285,31 @@ export function NextActionCell({ action }: { action: Action }) {
         </div>
       )}
 
-      {/* Edit Dialog */}
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="sm:max-w-[500px]" data-testid={`dialog-edit-${action.id}`}>
-          <DialogHeader>
-            <DialogTitle>Edit Action</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="edit-channel">Channel</Label>
-              <Select value={editChannel} onValueChange={setEditChannel}>
-                <SelectTrigger id="edit-channel" data-testid="select-channel">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="email">Email</SelectItem>
-                  <SelectItem value="sms">SMS</SelectItem>
-                  <SelectItem value="whatsapp">WhatsApp</SelectItem>
-                  <SelectItem value="voice">Call</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="edit-sendAt">Send At</Label>
-              <Input
-                id="edit-sendAt"
-                type="datetime-local"
-                value={editSendAt}
-                onChange={(e) => setEditSendAt(e.target.value)}
-                data-testid="input-sendAt"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="edit-subject">Subject</Label>
-              <Input
-                id="edit-subject"
-                value={editSubject}
-                onChange={(e) => setEditSubject(e.target.value)}
-                placeholder="Email subject or SMS preview"
-                data-testid="input-subject"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="edit-content">Content</Label>
-              <Textarea
-                id="edit-content"
-                value={editContent}
-                onChange={(e) => setEditContent(e.target.value)}
-                placeholder="Message content"
-                rows={4}
-                data-testid="textarea-content"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setIsEditDialogOpen(false)}
-              data-testid="button-cancel-edit"
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleEdit}
-              disabled={editMutation.isPending}
-              className="bg-[#17B6C3] hover:bg-[#1396A1]"
-              data-testid="button-save-edit"
-            >
-              Save Changes
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Composer Drawer (Sprint 3 - replaces Edit Dialog) */}
+      <ComposerDrawer
+        open={isComposerOpen}
+        onOpenChange={setIsComposerOpen}
+        contact={{
+          id: action.id,
+          name: action.contactName || "[Demo Contact]",
+          email: `${(action.contactName || 'contact').toLowerCase().replace(/\s+/g, '.')}@example.com`,
+          phone: "[Demo Phone]",
+        }}
+        invoice={{
+          id: action.invoiceIds?.[0] || `inv-${action.id.slice(0, 8)}`,
+          invoiceNumber: `[Demo INV-${String(Math.floor(Math.random() * 1000)).padStart(3, '0')}]`,
+          amount: "[Demo £X,XXX.XX]",
+          dueDate: new Date().toISOString(),
+        }}
+        onSend={(channel, template, customizations) => {
+          toast({
+            title: "Message sent",
+            description: `${template.code} via ${channel} scheduled successfully`,
+          });
+          setIsComposerOpen(false);
+          queryClient.invalidateQueries({ queryKey: ['/api/actions'] });
+        }}
+      />
 
       {/* Snooze Dialog */}
       <Dialog open={isSnoozeDialogOpen} onOpenChange={setIsSnoozeDialogOpen}>

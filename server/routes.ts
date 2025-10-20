@@ -444,6 +444,104 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Template API Routes (Sprint 3: Global/Tenant hybrid architecture)
+  app.get('/api/templates/global', isAuthenticated, async (req, res) => {
+    try {
+      const { channel, tone } = req.query;
+      const templates = await storage.getGlobalTemplates({ 
+        channel: channel as string | undefined, 
+        tone: tone as string | undefined 
+      });
+      res.json(templates);
+    } catch (error) {
+      console.error('Failed to get global templates:', error);
+      res.status(500).json({ message: 'Failed to retrieve global templates' });
+    }
+  });
+
+  app.get('/api/templates/tenant', isAuthenticated, async (req, res) => {
+    try {
+      const user = await storage.getUser((req as any).user.claims.sub);
+      if (!user) {
+        console.error('GET /api/templates/tenant: User not found for authenticated request');
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+      if (!user.tenantId) {
+        console.error(`GET /api/templates/tenant: User ${user.id} has no tenantId`);
+        return res.status(403).json({ message: 'User not associated with a tenant' });
+      }
+
+      const { channel, tone } = req.query;
+      const templates = await storage.getTenantTemplates(user.tenantId, {
+        channel: channel as string | undefined,
+        tone: tone as string | undefined
+      });
+      res.json(templates);
+    } catch (error) {
+      console.error('Failed to get tenant templates:', error);
+      res.status(500).json({ message: 'Failed to retrieve tenant templates' });
+    }
+  });
+
+  app.post('/api/templates/tenant', isAuthenticated, async (req, res) => {
+    try {
+      const user = await storage.getUser((req as any).user.claims.sub);
+      if (!user) {
+        console.error('POST /api/templates/tenant: User not found for authenticated request');
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+      if (!user.tenantId) {
+        console.error(`POST /api/templates/tenant: User ${user.id} has no tenantId`);
+        return res.status(403).json({ message: 'User not associated with a tenant' });
+      }
+
+      const templateData = insertTenantTemplateSchema.parse({
+        ...req.body,
+        tenantId: user.tenantId
+      });
+
+      const template = await storage.createTenantTemplate(templateData);
+      res.status(201).json(template);
+    } catch (error) {
+      console.error('Failed to create tenant template:', error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: 'Invalid template data', errors: error.errors });
+      }
+      res.status(500).json({ message: 'Failed to create tenant template' });
+    }
+  });
+
+  app.patch('/api/templates/tenant/:id', isAuthenticated, async (req, res) => {
+    try {
+      const user = await storage.getUser((req as any).user.claims.sub);
+      if (!user) {
+        console.error('PATCH /api/templates/tenant/:id: User not found for authenticated request');
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+      if (!user.tenantId) {
+        console.error(`PATCH /api/templates/tenant/:id: User ${user.id} has no tenantId`);
+        return res.status(403).json({ message: 'User not associated with a tenant' });
+      }
+
+      const updateData = insertTenantTemplateSchema
+        .omit({ tenantId: true, id: true, sourceGlobalId: true, sourceVersion: true })
+        .partial()
+        .parse(req.body);
+      const template = await storage.updateTenantTemplate(req.params.id, user.tenantId, updateData);
+      if (!template) {
+        console.error(`PATCH /api/templates/tenant/:id: Template ${req.params.id} not found for tenant ${user.tenantId}`);
+        return res.status(404).json({ message: 'Template not found or access denied' });
+      }
+      res.json(template);
+    } catch (error) {
+      console.error('Failed to update tenant template:', error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: 'Invalid template data', errors: error.errors });
+      }
+      res.status(500).json({ message: 'Failed to update tenant template' });
+    }
+  });
+
   // Tenant User Management Routes
   // Import RBAC middleware  
   const { withRBACContext, requireTenantAdmin, enforceContactAccess, getContactFilter } = await import('./middleware/rbac');
