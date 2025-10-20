@@ -1,0 +1,180 @@
+UI isn;t good you have to scroll to the right to see the compose, approve etc. buttons.  wouldn't it be better to access these buttons via a ... menu on the right and display the overdue data as a list?
+ChatGPT said:
+Thought for 18s
+
+You’re right—the actions shouldn’t force a sideways scroll. Let’s switch to a list-first layout with a right-edge “•••” (kebab) menu and keep the table only for XL screens.
+
+What to change
+
+Default layout = list (cards/rows), not a wide table. Each row shows the essentials on one line; actions live in a kebab menu at far right.
+
+Responsive rules:
+
+<1280px: list only (no horizontal scroll).
+
+≥1280px: show a compact table; still keep a kebab so actions are consistent.
+
+One-tap actions: Kebab menu with: Compose, Approve, Edit, Snooze, Escalate, Assign, View Timeline.
+
+Inline facts in the row (no extra columns):
+
+Customer + badge “4 invoices bundled”
+
+Outstanding (formatted)
+
+Priority chip (High/Med/Low)
+
+Recommended action chip (e.g., “Email now”, “Call today 10:00”)
+
+Exception chips (if any)
+
+Right-aligned kebab (sticky)
+
+Interaction model
+
+Tap row anywhere = quick-select highlight; Enter opens the kebab menu.
+
+Compose opens the drawer; Approve sends/schedules and animates the row out.
+
+Optional quick-approve: click the Recommended chip itself (power users).
+
+Keep “why?” as a tiny link under the Recommended chip (expands inline).
+
+Implementation steps (fast)
+
+Switch table to CSS grid list
+
+Grid cols: [name|meta] [money] [priority] [recommended] [exceptions] [menu]
+
+Auto-wrap long names; truncate gracefully.
+
+Add kebab menu component with consistent actions.
+
+Make the right edge sticky so the kebab never scrolls off on XL screens.
+
+Hide non-critical columns under 1280px and surface their values inline.
+
+Keyboard & a11y: kebab is a <button aria-haspopup="menu"> with arrow-key navigation.
+
+Minimal TSX you can paste
+// components/ActionCentre/ActionRow.tsx
+import { useState } from "react";
+
+export function ActionRow({
+  row,
+  onCompose, onApprove, onEdit, onSnooze, onEscalate, onAssign, onTimeline
+}: {
+  row: {
+    id: string;
+    customer: string;
+    invoicesBundled: number;
+    outstanding: number;            // pence or cents -> format UI
+    priority: "High"|"Medium"|"Low";
+    recommended: { label: string }; // e.g., "Email now", "Call today 10:00"
+    exceptions: string[];           // ["Broken Promise","High Value"]
+  };
+  onCompose: (id:string)=>void;
+  onApprove: (id:string)=>Promise<void>;
+  onEdit: (id:string)=>void;
+  onSnooze: (id:string)=>Promise<void>;
+  onEscalate: (id:string)=>void;
+  onAssign: (id:string)=>void;
+  onTimeline: (id:string)=>void;
+}) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className="grid items-center gap-3 px-4 py-3 border-b
+                    grid-cols-[minmax(220px,1.5fr)_minmax(90px,0.7fr)_minmax(80px,0.5fr)_minmax(160px,0.9fr)_minmax(160px,0.9fr)_40px]
+                    lg:grid-cols-[minmax(260px,1.6fr)_minmax(120px,0.7fr)_minmax(90px,0.5fr)_minmax(220px,0.9fr)_minmax(220px,0.9fr)_40px]
+                    ">
+      {/* Customer + bundled */}
+      <div className="min-w-0">
+        <div className="truncate font-medium">{row.customer}</div>
+        <div className="text-xs text-slate-500">{row.invoicesBundled} invoices bundled</div>
+      </div>
+
+      {/* Outstanding */}
+      <div className="font-semibold tabular-nums">{formatGBP(row.outstanding)}</div>
+
+      {/* Priority */}
+      <div>
+        <span className={`text-xs px-2 py-1 rounded-full ${
+          row.priority==="High" ? "bg-rose-100 text-rose-700" :
+          row.priority==="Medium" ? "bg-amber-100 text-amber-700" :
+          "bg-slate-100 text-slate-700"
+        }`}>{row.priority}</span>
+      </div>
+
+      {/* Recommended action with optional quick-approve */}
+      <div className="flex items-center gap-2">
+        <button
+          className="px-3 py-1.5 rounded-full text-sm bg-sky-600 text-white shadow-sm"
+          onClick={()=>onApprove(row.id)}
+          title="Quick approve"
+        >
+          {row.recommended.label}
+        </button>
+        <button className="text-xs underline text-slate-600" onClick={()=>onCompose(row.id)}>compose</button>
+      </div>
+
+      {/* Exceptions */}
+      <div className="flex flex-wrap gap-1">
+        {row.exceptions?.map(tag=>(
+          <span key={tag} className="text-[11px] px-2 py-0.5 rounded-full bg-orange-50 text-orange-700 border border-orange-200">
+            {tag}
+          </span>
+        ))}
+        {(!row.exceptions || row.exceptions.length===0) && <span className="text-xs text-slate-400">—</span>}
+      </div>
+
+      {/* Kebab menu (sticky at right on wide screens) */}
+      <div className="justify-self-end sticky right-0 bg-white">
+        <div className="relative">
+          <button aria-haspopup="menu" aria-expanded={open}
+                  className="w-8 h-8 rounded-full hover:bg-slate-100"
+                  onClick={()=>setOpen(v=>!v)}>⋯</button>
+          {open && (
+            <ul role="menu"
+                className="absolute right-0 mt-2 w-44 bg-white border rounded-xl shadow-lg text-sm z-10">
+              <li><button role="menuitem" className="w-full px-3 py-2 text-left hover:bg-slate-50" onClick={()=>onCompose(row.id)}>Compose</button></li>
+              <li><button role="menuitem" className="w-full px-3 py-2 text-left hover:bg-slate-50" onClick={()=>onApprove(row.id)}>Approve</button></li>
+              <li><button role="menuitem" className="w-full px-3 py-2 text-left hover:bg-slate-50" onClick={()=>onEdit(row.id)}>Edit</button></li>
+              <li><button role="menuitem" className="w-full px-3 py-2 text-left hover:bg-slate-50" onClick={()=>onSnooze(row.id)}>Snooze</button></li>
+              <li><button role="menuitem" className="w-full px-3 py-2 text-left hover:bg-slate-50 text-rose-700" onClick={()=>onEscalate(row.id)}>Escalate</button></li>
+              <li><button role="menuitem" className="w-full px-3 py-2 text-left hover:bg-slate-50" onClick={()=>onAssign(row.id)}>Assign…</button></li>
+              <li><button role="menuitem" className="w-full px-3 py-2 text-left hover:bg-slate-50" onClick={()=>onTimeline(row.id)}>View timeline</button></li>
+            </ul>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function formatGBP(penceOrSmallestUnit:number){
+  const pounds = penceOrSmallestUnit/100;
+  return pounds >= 1_000_000 ? `£${(pounds/1_000_000).toFixed(2)}m` :
+         pounds >= 1_000 ? `£${(pounds/1_000).toFixed(2)}k` :
+         `£${pounds.toFixed(2)}`;
+}
+
+Small UX polish to ship with it
+
+Row density: 44–48px height. You’ll fit ~20 rows per screen.
+
+Sticky header & sticky kebab: actions always visible.
+
+Hover affordance: subtle row highlight; show a faint divider to keep scan lines.
+
+Empty states: show “No exceptions in this view” with a one-click to “All Overdue”.
+
+Why this will feel better
+
+No horizontal scroll.
+
+Actions are always “right where your mouse already is.”
+
+The same pattern works on desktop and laptop screens.
+
+You can still power-use: quick-approve via recommended chip; deep actions via kebab.
