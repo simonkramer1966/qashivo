@@ -22,10 +22,12 @@ Most routine collections happen automatically in the background. You only see wh
 
 ---
 
-## Understanding the Tabs
+## Understanding the Two Views
 
-### 1. **Queries Tab** 
-**Why debtors appear here:** Customers have sent inbound communication (email, SMS, WhatsApp, or voicemail) that the AI has analyzed.
+### 1. **Queries View** 
+**Purpose:** Process inbound customer communication that needs immediate attention.
+
+**What appears here:** Customers who have sent messages (email, SMS, WhatsApp, voicemail) that the AI has analyzed.
 
 **What you see:**
 - Customer messages with AI-detected **intent** (payment promise, dispute, query, complaint)
@@ -33,89 +35,51 @@ Most routine collections happen automatically in the background. You only see wh
 - Recommended next actions based on the content
 
 **When to act:**
-- Customer disputes an invoice → Route to Disputes tab or adjust invoice
-- Customer promises payment → Log the promise (creates PTP record)
+- Customer disputes an invoice → Log dispute (adds "Disputed" exception in Actions view)
+- Customer promises payment → Log the promise (adds "Active PTP" exception in Actions view)
 - Customer asks a question → Respond via Compose
+
+**Note:** Queries are **additive**—processing a query doesn't remove the customer from the Actions view. Once you respond or log the outcome, the query is marked resolved.
 
 ---
 
-### 2. **Overdue Tab** (Current View)
-**Why debtors appear here:** They have unpaid invoices past their due date, and the AI has recommended a collection action.
+### 2. **Actions View** (Main Collection Workspace)
+**Purpose:** All collection actions in one unified list, filterable by exception type.
+
+**What appears here:** Every customer with overdue invoices, regardless of their status (standard overdue, active PTP, broken promise, disputed, on hold, etc.).
 
 **What you see:**
-- One row per customer (with multiple overdue invoices bundled together)
+- One row per customer (multiple overdue invoices bundled)
 - Total outstanding amount
 - **AI-recommended action** (e.g., "Email in 2h" or "SMS now")
 - **Priority level** based on amount, days overdue, and payment history
-- **Exceptions** like "First overdue" or "VIP customer" that might need special handling
+- **Exception badges** that show special circumstances
+
+**The Power of Exception Filters:**
+
+Instead of navigating multiple tabs, you filter down to exactly what you need:
+
+| Filter | Shows | Use Case |
+|--------|-------|----------|
+| **No filters** | All overdue customers | Daily review of full portfolio |
+| **Active PTP** | Upcoming payment promises | Monitor commitments due in next 7 days |
+| **Broken Promise** | Missed PTP deadlines | Escalate customers who broke commitments |
+| **Disputed** | Contested invoices | Resolve disputes before resuming collections |
+| **On Hold** | Paused collections | Review holds, resume when appropriate |
+| **First Overdue** | First-time late payments | Gentle approach for good customers |
+| **VIP Customer** | Strategic accounts | Personalize communication |
+| **High Value** | Material amounts | Focus on high-impact collections |
+
+**Combining filters:** Click multiple exception types to create powerful views:
+- "Broken Promise" + "High Value" → Priority escalations
+- "Active PTP" + "VIP Customer" → High-touch promise monitoring
+- "Disputed" + "Long Overdue" → Complex cases needing resolution
 
 **When to act:**
 - **Approve** if the AI recommendation looks good
 - **Compose** to customize the message
 - **Snooze** if you know they're about to pay
 - **Assign** to a specialist collector for complex cases
-
----
-
-### 3. **Upcoming PTP Tab**
-**Why debtors appear here:** Customers have made a **Promise to Pay (PTP)** that's coming due in the next 7 days.
-
-**What you see:**
-- Customers with active payment promises
-- Promised payment date and amount
-- Reminder actions scheduled before the due date
-
-**When to act:**
-- Review promises approaching due dates
-- Send courtesy reminders (AI suggests timing)
-- Escalate if customer history shows frequent broken promises
-
----
-
-### 4. **Broken Promises Tab**
-**Why debtors appear here:** Customers missed a **Promise to Pay** deadline without making the payment.
-
-**What you see:**
-- Customers who broke commitments
-- Original promise details (date, amount)
-- How many times they've broken promises before
-- Escalated follow-up actions (often more urgent tone)
-
-**When to act:**
-- **Approve escalated actions** (stronger language, phone calls)
-- **Assign to senior collector** for repeat offenders
-- **Mark as disputed** if there's a legitimate reason for non-payment
-
----
-
-### 5. **Disputes Tab**
-**Why debtors appear here:** Customers have formally disputed an invoice (via inbound message flagged as "dispute" intent, or manually logged).
-
-**What you see:**
-- Disputed invoices with reason codes
-- Customer's dispute message/explanation
-- Supporting documentation (if uploaded)
-- Collection actions are **paused** until resolved
-
-**When to act:**
-- **Investigate** the dispute (check delivery proof, contract terms, etc.)
-- **Resolve** by adjusting invoice or confirming it's valid
-- **Resume collections** once dispute is settled
-
----
-
-### 6. **On Hold Tab**
-**Why debtors appear here:** Collections have been manually paused for specific reasons (legal dispute, payment plan in progress, bankruptcy, etc.).
-
-**What you see:**
-- Customers with active collection holds
-- Hold reason and who placed it
-- Hold expiry date (if temporary)
-
-**When to act:**
-- **Review holds** regularly to ensure they're still valid
-- **Resume collections** when hold reason expires
-- **Extend hold** if circumstances require it
 
 ---
 
@@ -212,29 +176,34 @@ Most routine collections happen automatically in the background. You only see wh
 
 **1. Start with Queries (5-10 min)**
 - Process new inbound messages
-- Log payment promises → creates PTPs
-- Route disputes → moves to Disputes tab
+- Log payment promises → adds "Active PTP" exception
+- Log disputes → adds "Disputed" exception
 - Answer questions via Compose
 
-**2. Review Overdue (15-20 min)**
-- Scan for **red exception badges** (high priority)
+**2. Review High-Priority Actions (15-20 min)**
+- Switch to **Actions view**
+- Filter by exceptions: "Broken Promise", "Disputed", "High Value"
+- Scan for **red exception badges** (urgent items)
 - **Bulk approve** routine actions that look good
 - **Compose custom messages** for VIP/sensitive accounts
 - **Snooze** items with known temporary delays
 
-**3. Check Broken Promises (5 min)**
-- Approve escalated follow-ups
-- Call repeat offenders personally
-- Assign difficult cases to specialists
-
-**4. Monitor Disputes (as needed)**
-- Investigate new disputes daily
-- Resolve or escalate within 48 hours
-- Update customers on status
-
-**5. Review Upcoming PTPs (weekly)**
-- Ensure reminders are scheduled
+**3. Check Active PTPs (5 min)**
+- Filter by "Active PTP"
+- Review promises due in next 2-3 days
+- Send courtesy reminders if needed
 - Flag high-risk promises for closer monitoring
+
+**4. Process Standard Overdue (10-15 min)**
+- Clear exception filters (view all)
+- Sort by Priority or Outstanding Amount
+- Bulk approve AI recommendations for routine cases
+- Focus on "First Overdue" customers (be gentle)
+
+**5. Weekly Reviews**
+- Filter by "On Hold" → verify holds are still valid
+- Filter by "Disputed" → chase unresolved disputes
+- Review "Broken Promise" trends → identify serial offenders
 
 ---
 
