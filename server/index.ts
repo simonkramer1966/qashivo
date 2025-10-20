@@ -325,6 +325,56 @@ app.use((req, res, next) => {
     }
   }
 
+  // Initialize Portfolio Controller (DSO-driven urgency adjustment)
+  if (process.env.NODE_ENV !== 'test') {
+    try {
+      console.log("📊 Initializing portfolio controller...");
+      const cron = await import("node-cron");
+      const { runNightly } = await import("./services/portfolioController");
+      const { planAdaptiveActions } = await import("./services/actionPlanner");
+      const { workflows } = await import("@shared/schema");
+      const { eq, and } = await import("drizzle-orm");
+      
+      // Nightly urgency recomputation (2am daily)
+      cron.default.schedule("0 2 * * *", async () => {
+        try {
+          console.log("🌙 Running nightly portfolio controller...");
+          await runNightly();
+          console.log("✅ Nightly portfolio controller complete");
+        } catch (error) {
+          console.error("❌ Portfolio controller error:", error);
+        }
+      });
+      
+      // Action planning every 6 hours
+      cron.default.schedule("0 */6 * * *", async () => {
+        try {
+          console.log("📋 Running 6-hour action planning...");
+          const adaptiveWorkflows = await db
+            .select({ id: workflows.id, tenantId: workflows.tenantId })
+            .from(workflows)
+            .where(
+              and(
+                eq(workflows.schedulerType, "adaptive"),
+                eq(workflows.isActive, true)
+              )
+            );
+          
+          for (const workflow of adaptiveWorkflows) {
+            await planAdaptiveActions(workflow.tenantId, workflow.id);
+          }
+          console.log("✅ Action planning complete");
+        } catch (error) {
+          console.error("❌ Action planning error:", error);
+        }
+      });
+      
+      console.log("✅ Portfolio controller cron jobs started (2am nightly, 6h planning)");
+    } catch (error) {
+      console.error("❌ Failed to initialize portfolio controller:", error);
+    }
+  }
+
   // MVP CLEANUP: Payment predictions disabled for MVP (stub service available in API routes)
   /* if (process.env.NODE_ENV !== 'test') {
     try {
