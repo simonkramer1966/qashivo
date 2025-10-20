@@ -20,6 +20,11 @@ import {
 } from "../lib/adaptive-scheduler";
 import { differenceInDays } from "date-fns";
 
+// Utility: Format currency for display
+function formatCurrency(amount: number): string {
+  return new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' }).format(amount);
+}
+
 interface ScheduleStep {
   daysTrigger: number;
   actionType: 'email' | 'sms' | 'whatsapp' | 'voice' | 'manual_call';
@@ -707,7 +712,7 @@ export async function planAdaptiveActions(
     };
 
     // Process each contact (may have multiple invoices)
-    for (const [contactId, contactInvoices] of invoicesByContact) {
+    for (const [contactId, contactInvoices] of Array.from(invoicesByContact.entries())) {
       const { contact, behavior } = contactInvoices[0]; // Same contact for all
       
       // Score all invoices for this contact

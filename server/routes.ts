@@ -4913,6 +4913,333 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ============================================================================
+  // Action Centre Triage Endpoints (Sprint 1)
+  // ============================================================================
+
+  // Approve action - move from pending to scheduled (collector approves AI recommendation)
+  app.post("/api/actions/:id/approve", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { id } = req.params;
+
+      // Get existing action
+      const existingAction = await db
+        .select()
+        .from(actions)
+        .where(and(eq(actions.id, id), eq(actions.tenantId, user.tenantId)))
+        .limit(1);
+
+      if (!existingAction.length) {
+        return res.status(404).json({ message: "Action not found" });
+      }
+
+      const action = existingAction[0];
+
+      // Update status to scheduled and record who approved
+      await db
+        .update(actions)
+        .set({
+          status: "scheduled",
+          approvedBy: user.id,
+          approvedAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .where(eq(actions.id, id));
+
+      console.log(`✅ Action ${id} approved by ${user.firstName} ${user.lastName}`);
+
+      res.json({ 
+        message: "Action approved and scheduled",
+        actionId: id
+      });
+    } catch (error) {
+      console.error("Error approving action:", error);
+      res.status(500).json({ message: "Failed to approve action" });
+    }
+  });
+
+  // Edit action - collector overrides AI recommendation
+  app.patch("/api/actions/:id/edit", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { id } = req.params;
+      const { channel, sendAt, subject, content } = req.body;
+
+      // Get existing action
+      const existingAction = await db
+        .select()
+        .from(actions)
+        .where(and(eq(actions.id, id), eq(actions.tenantId, user.tenantId)))
+        .limit(1);
+
+      if (!existingAction.length) {
+        return res.status(404).json({ message: "Action not found" });
+      }
+
+      const action = existingAction[0];
+
+      // Build override object tracking what was changed
+      const override: any = {};
+      if (channel && channel !== action.type) {
+        override.channel = channel;
+      }
+      if (sendAt && sendAt !== action.scheduledFor?.toISOString()) {
+        override.sendAt = new Date(sendAt);
+      }
+      if (subject && subject !== action.subject) {
+        override.subject = subject;
+      }
+      if (content && content !== action.content) {
+        override.content = content;
+      }
+
+      // Update action with overrides
+      await db
+        .update(actions)
+        .set({
+          type: channel || action.type,
+          scheduledFor: sendAt ? new Date(sendAt) : action.scheduledFor,
+          subject: subject || action.subject,
+          content: content || action.content,
+          override: override,
+          overriddenBy: user.id,
+          overriddenAt: new Date(),
+          status: "scheduled", // Move to scheduled after edit
+          updatedAt: new Date(),
+        })
+        .where(eq(actions.id, id));
+
+      console.log(`✏️ Action ${id} edited by ${user.firstName} ${user.lastName}`);
+
+      res.json({ 
+        message: "Action updated successfully",
+        actionId: id,
+        override
+      });
+    } catch (error) {
+      console.error("Error editing action:", error);
+      res.status(500).json({ message: "Failed to edit action" });
+    }
+  });
+
+  // Snooze action - delay to a later time
+  app.post("/api/actions/:id/snooze", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { id } = req.params;
+      const { snoozeUntil, reason } = req.body;
+
+      if (!snoozeUntil) {
+        return res.status(400).json({ message: "snoozeUntil is required" });
+      }
+
+      const snoozeDate = new Date(snoozeUntil);
+      if (isNaN(snoozeDate.getTime()) || snoozeDate <= new Date()) {
+        return res.status(400).json({ message: "Invalid snoozeUntil date (must be in future)" });
+      }
+
+      // Get existing action
+      const existingAction = await db
+        .select()
+        .from(actions)
+        .where(and(eq(actions.id, id), eq(actions.tenantId, user.tenantId)))
+        .limit(1);
+
+      if (!existingAction.length) {
+        return res.status(404).json({ message: "Action not found" });
+      }
+
+      // Update action with snooze
+      await db
+        .update(actions)
+        .set({
+          scheduledFor: snoozeDate,
+          status: "snoozed",
+          snoozedBy: user.id,
+          snoozedAt: new Date(),
+          snoozedUntil: snoozeDate,
+          snoozedReason: reason || null,
+          updatedAt: new Date(),
+        })
+        .where(eq(actions.id, id));
+
+      console.log(`⏰ Action ${id} snoozed until ${snoozeDate.toISOString()} by ${user.firstName} ${user.lastName}`);
+
+      res.json({ 
+        message: "Action snoozed",
+        actionId: id,
+        snoozedUntil: snoozeDate
+      });
+    } catch (error) {
+      console.error("Error snoozing action:", error);
+      res.status(500).json({ message: "Failed to snooze action" });
+    }
+  });
+
+  // Escalate action - flag for manual handling
+  app.post("/api/actions/:id/escalate", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { id } = req.params;
+      const { reason } = req.body;
+
+      // Get existing action
+      const existingAction = await db
+        .select()
+        .from(actions)
+        .where(and(eq(actions.id, id), eq(actions.tenantId, user.tenantId)))
+        .limit(1);
+
+      if (!existingAction.length) {
+        return res.status(404).json({ message: "Action not found" });
+      }
+
+      // Update action status to escalated
+      await db
+        .update(actions)
+        .set({
+          status: "escalated",
+          escalatedBy: user.id,
+          escalatedAt: new Date(),
+          escalationReason: reason || null,
+          updatedAt: new Date(),
+        })
+        .where(eq(actions.id, id));
+
+      console.log(`🚨 Action ${id} escalated by ${user.firstName} ${user.lastName}`);
+
+      res.json({ 
+        message: "Action escalated for manual handling",
+        actionId: id
+      });
+    } catch (error) {
+      console.error("Error escalating action:", error);
+      res.status(500).json({ message: "Failed to escalate action" });
+    }
+  });
+
+  // Assign action - assign to a specific collector
+  app.patch("/api/actions/:id/assign", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { id } = req.params;
+      const { assignedTo } = req.body;
+
+      if (!assignedTo) {
+        return res.status(400).json({ message: "assignedTo userId is required" });
+      }
+
+      // Get existing action
+      const existingAction = await db
+        .select()
+        .from(actions)
+        .where(and(eq(actions.id, id), eq(actions.tenantId, user.tenantId)))
+        .limit(1);
+
+      if (!existingAction.length) {
+        return res.status(404).json({ message: "Action not found" });
+      }
+
+      // Update action with assignment
+      await db
+        .update(actions)
+        .set({
+          assignedTo,
+          assignedAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .where(eq(actions.id, id));
+
+      console.log(`👤 Action ${id} assigned to user ${assignedTo}`);
+
+      res.json({ 
+        message: "Action assigned successfully",
+        actionId: id,
+        assignedTo
+      });
+    } catch (error) {
+      console.error("Error assigning action:", error);
+      res.status(500).json({ message: "Failed to assign action" });
+    }
+  });
+
+  // Feedback - record outcome for learning loop
+  app.post("/api/actions/:id/feedback", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { id } = req.params;
+      const { outcome, rating, comment } = req.body;
+
+      if (!outcome) {
+        return res.status(400).json({ message: "outcome is required (paid, promised, disputed, no_response, etc.)" });
+      }
+
+      // Get existing action
+      const existingAction = await db
+        .select()
+        .from(actions)
+        .where(and(eq(actions.id, id), eq(actions.tenantId, user.tenantId)))
+        .limit(1);
+
+      if (!existingAction.length) {
+        return res.status(404).json({ message: "Action not found" });
+      }
+
+      // Record feedback
+      await db
+        .update(actions)
+        .set({
+          feedbackOutcome: outcome,
+          feedbackRating: rating || null,
+          feedbackComment: comment || null,
+          feedbackAt: new Date(),
+          feedbackBy: user.id,
+          updatedAt: new Date(),
+        })
+        .where(eq(actions.id, id));
+
+      console.log(`📊 Feedback recorded for action ${id}: outcome=${outcome}, rating=${rating}`);
+
+      res.json({ 
+        message: "Feedback recorded successfully",
+        actionId: id,
+        feedback: { outcome, rating, comment }
+      });
+    } catch (error) {
+      console.error("Error recording feedback:", error);
+      res.status(500).json({ message: "Failed to record feedback" });
+    }
+  });
+
+  // ============================================================================
+  // End Action Centre Triage Endpoints
+  // ============================================================================
+
   // AI suggestions
   app.post("/api/ai/suggestions", isAuthenticated, async (req: any, res) => {
     try {
