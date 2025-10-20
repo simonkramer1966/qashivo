@@ -1,0 +1,158 @@
+Love it—great momentum. For an investor demo, I’d prioritize A + D, with a dash of C (auto-escalation). That combo proves business impact (DSO ↓, automation ↑) and shows the product’s “wow” at the point of contact. We can stage B later for ops maturity.
+
+Sprint 3 proposal (2-week, demo-focused)
+1) Option A — Real-time Monitoring Dashboard (Investor Mode)
+
+Goal: Visually prove the adaptive lift vs. static schedules.
+
+Key tiles (top row)
+
+DSO (Actual vs Target): big number + sparkline; delta since last 30 days.
+
+Automation Rate: % of comms sent without human intervention.
+
+Cure Rate (7/14/30d): % of overdue invoices cured within windows.
+
+Collector Load: actions per collector/day (for credibility).
+
+Middle row (charts)
+
+Adaptive vs Static Lift: side-by-side bars:
+
+Cure rate uplift (%)
+
+Average days to pay (−X days)
+
+Touches per cure (−Y%)
+
+Exceptions Over Time: stacked area by type (Dispute, Promise, High Value, Low Signal).
+
+Bottom row (funnel)
+
+From Overdue → Cured:
+
+Overdue → Planned → Sent → Responded → Paid
+
+Conversion % at each stage.
+
+Behind the tiles – simple, demo-safe formulas
+
+DSO_actual: weighted avg of (due→paid) days on paid invoices in window.
+
+DSO_projected: current AR weighted by expected days (your controller).
+
+Automation %: auto_sent / (auto_sent + agent_sent).
+
+Lift: (Adaptive metric – Static baseline) / Static baseline.
+
+Baseline: your “static mode” cohort or last month prior to adaptive switch.
+
+Deliverables
+
+/dashboard route with live cards + charts (dummy data fallback so it never looks empty).
+
+/api/metrics endpoint returning JSON for all tiles and charts.
+
+A “Baseline switch” control (Static vs Adaptive) to animate the difference.
+
+Acceptance
+
+Loads <1s on demo data.
+
+No blank states; graceful placeholders.
+
+Tooltips with one-line plain-English definitions.
+
+2) Option D — Enhanced Debtor Communication (the “wow”)
+
+Goal: Show personalization, speed, and quality in comms.
+
+Composer drawer (from Action Centre)
+
+Channel tabs: Email / SMS / Voice
+
+Template picker with search and tags (Friendly reminder, Promise confirmation, Dispute follow-up).
+
+Personalization chips: {first_name}, {invoice_total}, {oldest_due_days}, {ptp_date}, {wallet_url}.
+
+Preview pane: renders merged content and shows “send at” time respecting quiet hours.
+
+Voice: show short call script with variable highlights.
+
+Template library
+
+Seed 6 templates (Friendly nudge; “PTP today?”; High-value escalate; Dispute receipt; Promise broken; Final notice).
+
+Each template stores: channel, tone (“friendly”, “firm”), compliance flags, and required variables (guardrails).
+
+History timeline
+
+Per customer: left rail with date/time; right cards for Email/SMS/Voice with status (delivered, replied, answered), and payment events. Quick filter chips.
+
+Deliverables
+
+/<customerId>/comms timeline view and a drawer invoked from Action Centre.
+
+/api/templates CRUD (with versioning) and preview endpoint that merges sample data.
+
+Guardrails: prevent send if required variables missing; show fix prompts.
+
+Acceptance
+
+Select action → composer opens in <200ms.
+
+Template preview updates on keystroke.
+
+Send respects tenant quiet hours and shows the adjusted time.
+
+3) Small but mighty from Option C — Auto-Escalation
+
+Goal: Prove “no babysitting” with one visible rule.
+
+Rule v1
+
+If PTP missed by > 48h and priority ≥ 70 → create Escalation action to “Call today after 10:00” and tag “Broken Promise”.
+
+If email bounce or SMS blocked → auto-switch next channel and tag “Channel Blocked”.
+
+Deliverables
+
+Rule engine stub: rules/runEscalations.ts invoked post-planner and hourly.
+
+Unit tests for both rules.
+
+Acceptance
+
+With a test toggle, demo the rule firing and surfacing in the Action Centre automatically.
+
+What makes investors lean in
+
+A top-line DSO delta they can read in 2 seconds.
+
+Automation rate that screams margin expansion.
+
+Side-by-side lift proving the AI isn’t cosmetic.
+
+A comms experience that feels fast, tailored, and safe (quiet hours, variables, guardrails).
+
+One auto-escalation that shows the system “drives itself.”
+
+Build plan & effort splits
+
+Week 1
+
+Metrics API + Dashboard skeleton (cards + 2 charts).
+
+Composer drawer + Template library read-only + Preview.
+
+Auto-escalation rule engine stub + PTP rule.
+
+Week 2
+
+Dashboard polish (tooltips, baselines, demo seed).
+
+Template CRUD + variable guards + timeline view.
+
+Channel-blocked rule + unit tests.
+
+Demo script & “reset demo data” command.

@@ -1,0 +1,97 @@
+Short answer: use a hybrid.
+
+Recommendation
+
+Global defaults (seed pack): Ship the 6 templates as global, curated, and legally reviewed. They’re immediately usable by every new tenant.
+
+Tenant-level copies (customizable): On first use—or at tenant creation—clone the global templates into the tenant’s library so they can edit safely without affecting others.
+
+Optional “locked” templates: Allow a few compliance-critical templates to be global-only (read-only) if you need guaranteed wording.
+
+Why this model works
+
+Speed to first value: every tenant has working templates on day one.
+
+Safety: edits are isolated per tenant; global updates don’t overwrite tenant custom work.
+
+Governance: you can push new global versions and let tenants opt-in via a compare/diff.
+
+Future-proof: supports industry packs (e.g., construction, SaaS) as additional global sets.
+
+Minimal schema (additive)
+// Global catalog (curated by Qashivo)
+GlobalTemplate {
+  id: string
+  code: string            // e.g., "friendly_reminder"
+  channel: 'email'|'sms'|'voice'
+  tone: 'friendly'|'firm'|'legal'
+  locale: 'en-GB'
+  version: string         // semver "1.0.0"
+  subject?: string
+  body: string            // handlebars/mustache
+  requiredVars: string[]  // ['first_name','invoice_total','wallet_url']
+  complianceFlags: string[] // ['final_notice','legal_ready'] etc.
+  status: 'active'|'deprecated'
+  createdAt, updatedAt
+}
+
+// Tenant-local copy
+TenantTemplate {
+  id: string
+  tenantId: string
+  sourceGlobalId?: string   // link to origin for diffing
+  sourceVersion?: string
+  code: string              // keep original code for mapping
+  channel: 'email'|'sms'|'voice'
+  tone: 'friendly'|'firm'|'legal'
+  locale: 'en-GB'
+  subject?: string
+  body: string
+  requiredVars: string[]
+  complianceFlags: string[]
+  isLocked: boolean         // true for tenant "protected" variants
+  status: 'active'|'archived'
+  createdAt, updatedAt
+}
+
+Seeding & lifecycle
+
+Bootstrap: Seed 6 GlobalTemplate rows.
+
+Tenant creation: Clone all 6 into TenantTemplate (status: active, sourceGlobalId set).
+
+Editing: Edits happen only on TenantTemplate.
+
+Global updates: Add a new global version (e.g., 1.1.0). In the UI, show “Update available” on tenant copies with a diff & apply flow (accept all, or cherry-pick).
+
+Fallback: If a tenant deletes a template, keep a “Restore from global” action.
+
+Guardrails in the composer
+
+Validate requiredVars before sending; block with a clear fix prompt.
+
+Respect complianceFlags (e.g., require manager approval for “final_notice” if you want).
+
+Locale awareness (default en-GB; allow per-tenant locale override).
+
+API sketch
+GET  /api/templates/global                // list seed pack(s)
+POST /api/templates/tenant/clone          // clone from global -> tenant
+GET  /api/templates/tenant                // list tenant templates
+PUT  /api/templates/tenant/:id            // update tenant template
+POST /api/templates/tenant/:id/restore    // restore from its sourceGlobalId
+GET  /api/templates/tenant/:id/diff       // show diff vs latest global version
+
+Nice-to-haves (later)
+
+A/B variants at tenant level (variant: 'A'|'B', weight).
+
+Per-segment overrides (late_payer vs early_payer).
+
+Performance stats per template (open/reply/cure rate) to guide optimization.
+
+Industry packs: additional GlobalTemplate sets a tenant can import with one click.
+
+TL;DR
+
+Seed global templates for reliability and speed; clone to tenant for safe customization, with a diffable upgrade path when global templates improve.
