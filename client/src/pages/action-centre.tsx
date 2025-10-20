@@ -1064,6 +1064,7 @@ export default function ActionCentre() {
                       )}
                     </button>
                     <div className="px-4 py-3 text-xs font-semibold text-slate-700 uppercase tracking-wide">Assigned To</div>
+                    <div className="px-4 py-3 text-xs font-semibold text-slate-700 uppercase tracking-wide text-center">Actions</div>
                   </div>
 
                   {/* Table Rows */}
@@ -1076,7 +1077,7 @@ export default function ActionCentre() {
                     return (
                       <div
                         key={action.id}
-                        className="grid grid-cols-[auto_2fr_1.2fr_0.8fr_1.8fr_1.2fr_1fr] border-b border-slate-100 hover:bg-gradient-to-r hover:from-blue-50/30 hover:to-teal-50/30 transition-all duration-200"
+                        className="grid grid-cols-[auto_2fr_1.2fr_0.8fr_1.8fr_1.2fr_1fr_1.5fr] border-b border-slate-100 hover:bg-gradient-to-r hover:from-blue-50/30 hover:to-teal-50/30 transition-all duration-200"
                         data-testid={`action-row-${action.id}`}
                       >
                         {/* Checkbox */}
@@ -1165,6 +1166,23 @@ export default function ActionCentre() {
                           ) : (
                             <p className="text-sm text-slate-400">Unassigned</p>
                           )}
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div className="px-4 py-4 flex items-center justify-center gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedCustomer(action);
+                              setComposerOpen(true);
+                            }}
+                            className="h-8 px-3 text-xs bg-[#17B6C3]/10 hover:bg-[#17B6C3]/20 text-[#17B6C3] border border-[#17B6C3]/30"
+                            data-testid={`button-compose-${action.id}`}
+                          >
+                            <MessageSquare className="h-3.5 w-3.5 mr-1" />
+                            Compose
+                          </Button>
                         </div>
                       </div>
                     );
