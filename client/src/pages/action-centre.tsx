@@ -128,6 +128,10 @@ export default function ActionCentre() {
   const [statusFilters, setStatusFilters] = useState<string[]>([]);
   const [exceptionFilters, setExceptionFilters] = useState<string[]>([]);
   
+  // Sorting state for adaptive actions table
+  const [sortBy, setSortBy] = useState<'exceptions' | 'priority' | 'outstanding' | 'customer'>('exceptions');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+  
 
   const { data: actions = [], isLoading } = useQuery<Action[]>({
     queryKey: ['/api/actions'],
@@ -375,8 +379,32 @@ export default function ActionCentre() {
     }
   }, [tabData, activeTab]);
 
+  // Exception-first sorting for adaptive actions
+  const getSortValue = (item: any, sortKey: string) => {
+    const exceptions = deriveExceptionTags(item);
+    const priority = item.metadata?.recommended?.priority || item.metadata?.priority || 50;
+    const outstanding = Number(item.invoiceAmount || item.metadata?.totalAmount || 0);
+
+    switch (sortKey) {
+      case 'exceptions':
+        // Exception-first: Dispute=300, Broken Promise=200, High Value=100, none=0
+        if (exceptions.includes('Dispute')) return 300;
+        if (exceptions.includes('Broken Promise')) return 200;
+        if (exceptions.includes('High Value')) return 100;
+        return priority; // Fall back to priority if no major exceptions
+      case 'priority':
+        return priority;
+      case 'outstanding':
+        return outstanding;
+      case 'customer':
+        return (item.contactName || '').toLowerCase();
+      default:
+        return 0;
+    }
+  };
+
   const filteredActions = useMemo(() => {
-    return currentTabItems.filter((item: any) => {
+    const filtered = currentTabItems.filter((item: any) => {
       const matchesSearch = !searchQuery || 
         item.subject?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         item.content?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -414,7 +442,27 @@ export default function ActionCentre() {
       
       return matchesSearch && matchesDirection && matchesChannel && matchesIntent && matchesStatus && matchesException;
     });
-  }, [currentTabItems, searchQuery, directionFilters, channelFilters, intentFilters, statusFilters, exceptionFilters]);
+
+    // Apply sorting for overdue/actions tab
+    if (isInvoiceTab && filtered.length > 0) {
+      return filtered.sort((a, b) => {
+        const aValue = getSortValue(a, sortBy);
+        const bValue = getSortValue(b, sortBy);
+        
+        if (typeof aValue === 'string' && typeof bValue === 'string') {
+          return sortDirection === 'asc' 
+            ? aValue.localeCompare(bValue)
+            : bValue.localeCompare(aValue);
+        }
+        
+        return sortDirection === 'asc' 
+          ? (aValue as number) - (bValue as number)
+          : (bValue as number) - (aValue as number);
+      });
+    }
+
+    return filtered;
+  }, [currentTabItems, searchQuery, directionFilters, channelFilters, intentFilters, statusFilters, exceptionFilters, sortBy, sortDirection, isInvoiceTab]);
 
   // Determine if current tab shows invoices or actions
   const isInvoiceTab = activeTab === 'overdue';
@@ -761,13 +809,77 @@ export default function ActionCentre() {
               // Adaptive Actions Queue (Sprint 2: transformed to show pending actions)
               <div className="bg-white border border-slate-200 rounded-lg overflow-hidden shadow-sm">
                 <div className="max-h-[600px] overflow-y-auto">
-                  {/* Table Header */}
+                  {/* Table Header with Sorting */}
                   <div className="grid grid-cols-[2fr_1.2fr_0.8fr_1.8fr_1.2fr_1fr] bg-gradient-to-r from-slate-50 to-slate-100 border-b border-slate-200 sticky top-0 z-10">
-                    <div className="px-6 py-3 text-xs font-semibold text-slate-700 uppercase tracking-wide">Customer</div>
-                    <div className="px-4 py-3 text-xs font-semibold text-slate-700 uppercase tracking-wide text-right">Outstanding</div>
-                    <div className="px-4 py-3 text-xs font-semibold text-slate-700 uppercase tracking-wide text-center">Priority</div>
+                    <button 
+                      onClick={() => {
+                        if (sortBy === 'customer') {
+                          setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+                        } else {
+                          setSortBy('customer');
+                          setSortDirection('asc');
+                        }
+                      }}
+                      className="px-6 py-3 text-xs font-semibold text-slate-700 uppercase tracking-wide hover:bg-slate-100 text-left flex items-center gap-1"
+                      data-testid="sort-customer"
+                    >
+                      Customer
+                      {sortBy === 'customer' && (
+                        sortDirection === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                      )}
+                    </button>
+                    <button 
+                      onClick={() => {
+                        if (sortBy === 'outstanding') {
+                          setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+                        } else {
+                          setSortBy('outstanding');
+                          setSortDirection('desc');
+                        }
+                      }}
+                      className="px-4 py-3 text-xs font-semibold text-slate-700 uppercase tracking-wide hover:bg-slate-100 text-right flex items-center justify-end gap-1"
+                      data-testid="sort-outstanding"
+                    >
+                      Outstanding
+                      {sortBy === 'outstanding' && (
+                        sortDirection === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                      )}
+                    </button>
+                    <button 
+                      onClick={() => {
+                        if (sortBy === 'priority') {
+                          setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+                        } else {
+                          setSortBy('priority');
+                          setSortDirection('desc');
+                        }
+                      }}
+                      className="px-4 py-3 text-xs font-semibold text-slate-700 uppercase tracking-wide hover:bg-slate-100 text-center flex items-center justify-center gap-1"
+                      data-testid="sort-priority"
+                    >
+                      Priority
+                      {sortBy === 'priority' && (
+                        sortDirection === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                      )}
+                    </button>
                     <div className="px-4 py-3 text-xs font-semibold text-slate-700 uppercase tracking-wide">Recommended Action</div>
-                    <div className="px-4 py-3 text-xs font-semibold text-slate-700 uppercase tracking-wide text-center">Exceptions</div>
+                    <button 
+                      onClick={() => {
+                        if (sortBy === 'exceptions') {
+                          setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+                        } else {
+                          setSortBy('exceptions');
+                          setSortDirection('desc');
+                        }
+                      }}
+                      className="px-4 py-3 text-xs font-semibold text-slate-700 uppercase tracking-wide hover:bg-slate-100 text-center flex items-center justify-center gap-1 bg-amber-50/50 border-l-2 border-amber-400"
+                      data-testid="sort-exceptions"
+                    >
+                      Exceptions {sortBy === 'exceptions' && '⚠️'}
+                      {sortBy === 'exceptions' && (
+                        sortDirection === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                      )}
+                    </button>
                     <div className="px-4 py-3 text-xs font-semibold text-slate-700 uppercase tracking-wide">Assigned To</div>
                   </div>
 
