@@ -1,0 +1,91 @@
+<response status="success"> <thinking> Deliver a single copy-paste Ghostwriter prompt that upgrades the generated scheduler to a target-DSO controlled, constraint-aware engine with clear files, diffs, tests, and acceptance checks. Keep terse and Replit-ready. </thinking> <main_content> **BLUF:** Paste the prompt below into Replit’s Ghostwriter. It will *modify* your existing project to add the target DSO control loop, quiet hours, urgency factor, cold-start priors, API routes, and tests. It assumes your files and names match the doc you shared.
+You are enhancing the Adaptive Collection Scheduler already scaffolded in this repo. Keep Node + TypeScript. Do not remove existing endpoints. Add the following, file by file. Write complete code, not stubs. Keep code clean and runnable.
+
+GOALS
+1) Portfolio control: nightly controller that adjusts an urgencyFactor per tenant so projected DSO tracks tenant adaptiveSettings.targetDSO.
+2) Scoring upgrade: move from flat weights to a composite with P(pay), friction, risk, and urgency. Keep the current data model.
+3) Constraint safety: quiet hours, per-customer daily touch cap, channel allow-list, dispute pause, override protection.
+4) Cold-start: use SEGMENT_PRIORS when signals are missing or stale.
+5) Observability: reason string for every decision and a health route that exposes current urgencyFactor and projected DSO per tenant.
+6) Tests: unit tests for scoring and controller.
+
+CHANGES
+
+A) server/lib/adaptive-scheduler.ts
+- Export: scheduleNextAction(ctx) → {priority, channel, suggestedDate, reasoning}
+- Implement Score(i,c,t,k) = α·Ppay − β·Friction − γ·Risk + δ·UrgencyBoost
+  - Ppay: sigmoid over age, weekday effect (basic), channel replyRate, amount penalty (log10 bucket), prior baseline from segment
+  - Friction: inverse of historical replyRate for channel, small repeat-channel penalty
+  - Risk: 0.8 when dispute, 0.15 for calls before due date, 0.05 default
+  - UrgencyBoost: (tenant.urgencyFactor) * 1/sqrt(hours_from_now), capped 0..1
+  - Choose over a small horizon: now+12h, 24h, 36h, 48h, 72h
+- Respect:
+  - quietHoursStart/quietHoursEnd (tenant timezone naive is fine for MVP)
+  - min gap since last contact (24h default; add constant)
+  - maxDailyTouches per customer
+  - channelPreferences allow-list
+- Return a reasoning string with p, f, r, u numeric parts and chosen time.
+
+B) server/services/actionPlanner.ts
+- planAdaptiveActions(tenantId, scheduleId):
+  1. Load overdue invoices and join customerBehaviorSignals if present.
+  2. For each invoice, build ctx (tenant settings + signals + invoice facts).
+  3. Call scheduleNextAction to get recommendation.
+  4. Create an action if priority ≥ minScoreThreshold and no future action exists in next 6h.
+- Guard: if invoice is disputed or an override exists, skip planning.
+
+C) server/lib/dso.ts  (create)
+- projectedDSO(prisma, tenantId):
+  - For each open invoice: expectedDays = if promiseToPay exists then distance from today else expected from signals or priors; amount weighted.
+  - Return sum(amount * expectedDays)/sum(amount). If no open invoices, return 0.
+
+D) server/services/portfolioController.ts  (create)
+- recomputeUrgency(prisma, tenantId):
+  - Read schedule adaptiveSettings.targetDSO.
+  - Let dsoProj = projectedDSO(...)
+  - If dsoProj > targetDSO + 1, increase urgencyFactor toward 1.0 by 0.1 steps. If < targetDSO − 1, decrease toward 0 by 0.1. Persist on the schedule row or a small SchedulerState row.
+- Export runNightly(): iterate active adaptive schedules across tenants, update urgency, then call planAdaptiveActions.
+
+E) Cron wiring
+- In server/index.ts add a cron that runs runNightly at "0 2 * * *" and a lightweight run every 6 hours for planning only.
+
+F) API
+- POST /api/adaptive-scheduler/calculate-actions remains, but now includes `controller`: { urgencyFactor, dsoProjected, targetDSO } in response.
+- GET  /health/portfolio?tenantId=... returns {tenantId, dsoProjected, targetDSO, urgencyFactor, timestamp}
+- POST /api/invoices/:id/override persists {suggestedDate, channel, reason, userId}; planner skips when present.
+
+G) Cold-start
+- If no customerBehaviorSignals or sample size < 3, merge SEGMENT_PRIORS[segmentPrior || "moderate"] into ctx.
+
+H) Validation
+- Use zod where inputs arrive from HTTP. Ensure minScoreThreshold defaults to 40 if not set.
+
+I) Logging
+- For each planned action log one line: 
+  [PLAN] tenant=.. invoice=.. ch=.. at=.. score=.. parts={p:..,f:..,r:..,u:..}
+
+J) Tests (vitest)
+- test/adaptive-scheduler.test.ts:
+  - selects SMS when smsReplyRate > emailReplyRate and not in quiet hours
+  - respects min gap since last touch
+  - increases near-term preference when urgencyFactor rises
+- test/portfolio-controller.test.ts:
+  - raises urgencyFactor when projected DSO exceeds target by >1
+  - lowers urgencyFactor when below target by >1
+
+K) Small schema tweak (if you have a SchedulerState or schedule storage)
+- If not present, add a tiny table `scheduler_state(tenantId, scheduleId, dsoProjected, urgencyFactor, updatedAt)` and upsert per run.
+
+L) Acceptance script
+- Add npm scripts: "test", "plan:once" (runs planAdaptiveActions for a demo tenant), "controller:once" (runs recomputeUrgency for all tenants).
+- Update README with curl examples:
+  - GET /health/portfolio?tenantId=T1
+  - POST /api/adaptive-scheduler/calculate-actions {tenantId, scheduleId}
+
+After coding, run:
+- npm i
+- npm run test
+- curl http://localhost:3000/health/portfolio?tenantId=demo
+- POST calculate-actions and verify actions are created.
+
+Deliverables: fully working code with the above files, passing tests, and clear logs. Keep functions pure where reasonable and avoid global state.

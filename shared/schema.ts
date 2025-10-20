@@ -689,6 +689,28 @@ export const policyDecisions = pgTable("policy_decisions", {
   index("idx_policy_decisions_timestamp").on(table.tenantId, table.createdAt),
 ]);
 
+// Scheduler State table for portfolio-level urgency control
+export const schedulerState = pgTable("scheduler_state", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  scheduleId: varchar("schedule_id"), // Can reference collectionSchedules or workflows
+  
+  // Portfolio metrics
+  dsoProjected: decimal("dso_projected", { precision: 7, scale: 2 }), // Projected days sales outstanding
+  urgencyFactor: decimal("urgency_factor", { precision: 3, scale: 2 }).default("0.50"), // 0.0 to 1.0
+  
+  // Last computation metadata
+  lastComputedAt: timestamp("last_computed_at"),
+  computationMetadata: jsonb("computation_metadata"), // { openInvoices: count, totalValue: amount, avgDaysOverdue: n }
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_scheduler_state_tenant").on(table.tenantId),
+  index("idx_scheduler_state_schedule").on(table.scheduleId),
+  unique("unique_tenant_schedule").on(table.tenantId, table.scheduleId),
+]);
+
 // Workflows table for collection processes
 export const workflows = pgTable("workflows", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -2159,6 +2181,12 @@ export const insertPolicyDecisionSchema = createInsertSchema(policyDecisions).om
   createdAt: true,
 });
 
+export const insertSchedulerStateSchema = createInsertSchema(schedulerState).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export const insertWorkflowSchema = createInsertSchema(workflows).omit({
   id: true,
   createdAt: true,
@@ -2368,6 +2396,8 @@ export type InsertContactOutcome = z.infer<typeof insertContactOutcomeSchema>;
 export type ContactOutcome = typeof contactOutcomes.$inferSelect;
 export type InsertPolicyDecision = z.infer<typeof insertPolicyDecisionSchema>;
 export type PolicyDecision = typeof policyDecisions.$inferSelect;
+export type InsertSchedulerState = z.infer<typeof insertSchedulerStateSchema>;
+export type SchedulerState = typeof schedulerState.$inferSelect;
 export type InsertWorkflow = z.infer<typeof insertWorkflowSchema>;
 export type Workflow = typeof workflows.$inferSelect;
 export type InsertWorkflowNode = z.infer<typeof insertWorkflowNodeSchema>;
