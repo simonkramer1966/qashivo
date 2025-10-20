@@ -150,7 +150,7 @@ export default function ActionCentre() {
   const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
   
   // Workflow-based filter (main tabs)
-  const [activeTab, setActiveTab] = useState<'queries' | 'overdue' | 'upcomingPTP' | 'brokenPromises' | 'disputes' | 'onHold'>('overdue');
+  const [activeTab, setActiveTab] = useState<'queries' | 'actions'>('actions');
   
   // Multi-select toggle filters
   const [directionFilters, setDirectionFilters] = useState<string[]>([]);
@@ -474,10 +474,8 @@ export default function ActionCentre() {
     return 'upcoming';
   };
 
-  // Determine if current tab shows invoices or actions
-  const isInvoiceTab = activeTab === 'overdue';
-  const isOnHoldTab = activeTab === 'onHold';
-  const isPTPTab = activeTab === 'upcomingPTP';
+  // Determine if current tab shows actions (unified view)
+  const isActionsTab = activeTab === 'actions';
 
   // Get items for active tab
   const currentTabItems = useMemo(() => {
@@ -486,16 +484,8 @@ export default function ActionCentre() {
     switch (activeTab) {
       case 'queries':
         return tabData.queries.items;
-      case 'overdue':
-        return tabData.overdueInvoices.items;
-      case 'upcomingPTP':
-        return tabData.upcomingPTP.items;
-      case 'brokenPromises':
-        return tabData.brokenPromises.items;
-      case 'disputes':
-        return tabData.disputes.items;
-      case 'onHold':
-        return tabData.onHold.items;
+      case 'actions':
+        return tabData.overdueInvoices.items; // Unified actions view
       default:
         return [];
     }
@@ -567,7 +557,7 @@ export default function ActionCentre() {
     });
 
     // Apply sorting for overdue/actions tab
-    if (isInvoiceTab && filtered.length > 0) {
+    if (isActionsTab && filtered.length > 0) {
       return filtered.sort((a, b) => {
         const aValue = getSortValue(a, sortBy);
         const bValue = getSortValue(b, sortBy);
@@ -585,7 +575,7 @@ export default function ActionCentre() {
     }
 
     return filtered;
-  }, [currentTabItems, searchQuery, directionFilters, channelFilters, intentFilters, statusFilters, exceptionFilters, sortBy, sortDirection, isInvoiceTab]);
+  }, [currentTabItems, searchQuery, directionFilters, channelFilters, intentFilters, statusFilters, exceptionFilters, sortBy, sortDirection, isActionsTab]);
 
   return (
     <div className="flex h-screen bg-white">
@@ -602,12 +592,12 @@ export default function ActionCentre() {
         />
         
         <div className="container-apple py-4 sm:py-6 lg:py-8">
-          {/* Workflow Tabs */}
+          {/* Workflow Tabs - Simplified to Queries + Actions */}
           <div className="mb-6">
-            <div className="flex gap-2 p-1 bg-slate-100 rounded-lg">
+            <div className="flex gap-2 p-1 bg-slate-100 rounded-lg max-w-md">
               <button
                 onClick={() => setActiveTab('queries')}
-                className={`flex-1 px-3 py-2 rounded-md text-xs sm:text-sm font-medium transition-all ${
+                className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-all ${
                   activeTab === 'queries'
                     ? 'bg-[#17B6C3] text-white shadow-sm'
                     : 'bg-transparent text-slate-600 hover:bg-white/50'
@@ -619,68 +609,16 @@ export default function ActionCentre() {
               </button>
               
               <button
-                onClick={() => setActiveTab('overdue')}
-                className={`flex-1 px-3 py-2 rounded-md text-xs sm:text-sm font-medium transition-all ${
-                  activeTab === 'overdue'
+                onClick={() => setActiveTab('actions')}
+                className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-all ${
+                  activeTab === 'actions'
                     ? 'bg-[#17B6C3] text-white shadow-sm'
                     : 'bg-transparent text-slate-600 hover:bg-white/50'
                 }`}
-                data-testid="tab-overdue"
+                data-testid="tab-actions"
               >
-                <span>Overdue</span>
-                {tabData && <span className={`ml-2 px-1.5 py-0.5 rounded-full text-xs ${activeTab === 'overdue' ? 'bg-white/20' : 'bg-slate-200'}`}>{tabData.overdueInvoices.count}</span>}
-              </button>
-              
-              <button
-                onClick={() => setActiveTab('upcomingPTP')}
-                className={`flex-1 px-3 py-2 rounded-md text-xs sm:text-sm font-medium transition-all ${
-                  activeTab === 'upcomingPTP'
-                    ? 'bg-[#17B6C3] text-white shadow-sm'
-                    : 'bg-transparent text-slate-600 hover:bg-white/50'
-                }`}
-                data-testid="tab-upcoming-ptp"
-              >
-                <span>Upcoming PTP</span>
-                {tabData && <span className={`ml-2 px-1.5 py-0.5 rounded-full text-xs ${activeTab === 'upcomingPTP' ? 'bg-white/20' : 'bg-slate-200'}`}>{tabData.upcomingPTP.count}</span>}
-              </button>
-              
-              <button
-                onClick={() => setActiveTab('brokenPromises')}
-                className={`flex-1 px-3 py-2 rounded-md text-xs sm:text-sm font-medium transition-all ${
-                  activeTab === 'brokenPromises'
-                    ? 'bg-[#17B6C3] text-white shadow-sm'
-                    : 'bg-transparent text-slate-600 hover:bg-white/50'
-                }`}
-                data-testid="tab-broken-promises"
-              >
-                <span>Broken Promises</span>
-                {tabData && <span className={`ml-2 px-1.5 py-0.5 rounded-full text-xs ${activeTab === 'brokenPromises' ? 'bg-white/20' : 'bg-slate-200'}`}>{tabData.brokenPromises.count}</span>}
-              </button>
-              
-              <button
-                onClick={() => setActiveTab('disputes')}
-                className={`flex-1 px-3 py-2 rounded-md text-xs sm:text-sm font-medium transition-all ${
-                  activeTab === 'disputes'
-                    ? 'bg-[#17B6C3] text-white shadow-sm'
-                    : 'bg-transparent text-slate-600 hover:bg-white/50'
-                }`}
-                data-testid="tab-disputes"
-              >
-                <span>Disputes</span>
-                {tabData && <span className={`ml-2 px-1.5 py-0.5 rounded-full text-xs ${activeTab === 'disputes' ? 'bg-white/20' : 'bg-slate-200'}`}>{tabData.disputes.count}</span>}
-              </button>
-              
-              <button
-                onClick={() => setActiveTab('onHold')}
-                className={`flex-1 px-3 py-2 rounded-md text-xs sm:text-sm font-medium transition-all ${
-                  activeTab === 'onHold'
-                    ? 'bg-[#17B6C3] text-white shadow-sm'
-                    : 'bg-transparent text-slate-600 hover:bg-white/50'
-                }`}
-                data-testid="tab-on-hold"
-              >
-                <span>On Hold</span>
-                {tabData && <span className={`ml-2 px-1.5 py-0.5 rounded-full text-xs ${activeTab === 'onHold' ? 'bg-white/20' : 'bg-slate-200'}`}>{tabData.onHold.count}</span>}
+                <span>Actions</span>
+                {tabData && <span className={`ml-2 px-1.5 py-0.5 rounded-full text-xs ${activeTab === 'actions' ? 'bg-white/20' : 'bg-slate-200'}`}>{tabData.overdueInvoices.count}</span>}
               </button>
             </div>
           </div>
@@ -703,7 +641,7 @@ export default function ActionCentre() {
           </div>
 
           {/* Bulk Operations Toolbar - Sprint 2 */}
-          {activeTab === 'overdue' && selectedActions.size > 0 && (
+          {activeTab === 'actions' && selectedActions.size > 0 && (
             <div className="mb-4 bg-gradient-to-r from-[#17B6C3]/10 to-teal-100/50 border border-[#17B6C3]/30 rounded-lg p-4 animate-in slide-in-from-top-2">
               <div className="flex items-center gap-4 flex-wrap">
                 <div className="flex items-center gap-2">
@@ -760,7 +698,7 @@ export default function ActionCentre() {
           )}
 
           {/* Exception Type Filters - Sprint 2: Enhanced for adaptive scheduler */}
-          {activeTab === 'overdue' && (
+          {activeTab === 'actions' && (
             <div className="mb-6 bg-gradient-to-r from-amber-50/50 to-orange-50/50 border border-amber-200/50 rounded-lg p-4">
               <div className="flex items-center gap-3 flex-wrap">
                 <div className="flex items-center gap-2">
@@ -853,7 +791,7 @@ export default function ActionCentre() {
           )}
 
           {/* Action List */}
-          <div className={isInvoiceTab || isPTPTab || isOnHoldTab ? "" : "card-apple overflow-hidden"}>
+          <div className={isActionsTab ? "" : "card-apple overflow-hidden"}>
             {isLoading ? (
               // Loading skeleton
               <div className="divide-y divide-slate-100">
@@ -872,146 +810,7 @@ export default function ActionCentre() {
                     : 'No actions found'}
                 </p>
               </div>
-            ) : isPTPTab ? (
-              // PTP table format
-              <div className="bg-white border-t border-b border-slate-200 overflow-hidden">
-                <div className="max-h-[600px] overflow-y-auto" style={{ display: 'grid', gridTemplateColumns: '2fr 1.2fr 1.2fr 1fr 1fr 1fr 1.5fr 1fr' }}>
-                  {/* Table Header */}
-                  <div className="contents">
-                    <div className="px-8 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10">Customer</div>
-                    <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10">Invoice No</div>
-                    <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 text-right">Amount Promised</div>
-                    <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10">Date Promised</div>
-                    <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 text-center">Days Until</div>
-                    <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 text-right">Total Invoice</div>
-                    <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 text-center">Source</div>
-                    <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 text-center">Confidence</div>
-                  </div>
-
-                  {/* Table Rows */}
-                  {filteredActions.map((ptp: any) => {
-                    const daysUntil = ptp.daysUntil || 0;
-                    const isUrgent = daysUntil <= 2;
-                    const isComingSoon = daysUntil > 2 && daysUntil <= 7;
-                    
-                    return (
-                      <div
-                        key={ptp.id}
-                        className="contents"
-                        data-testid={`ptp-item-${ptp.id}`}
-                      >
-                        {/* Customer */}
-                        <div 
-                          className="px-8 py-2 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center min-w-0"
-                          onClick={() => ptp.invoiceId && setLocation(`/invoices/${ptp.invoiceId}`)}
-                        >
-                          <p className="font-semibold text-sm text-slate-900 truncate">
-                            {ptp.contactName || 'Unknown Customer'}
-                          </p>
-                        </div>
-
-                        {/* Invoice No */}
-                        <div 
-                          className="px-4 py-2 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center"
-                          onClick={() => ptp.invoiceId && setLocation(`/invoices/${ptp.invoiceId}`)}
-                        >
-                          <p className="text-sm text-[#17B6C3] font-medium">
-                            {ptp.invoiceNumber || 'N/A'}
-                          </p>
-                        </div>
-
-                        {/* Amount Promised */}
-                        <div 
-                          className="px-4 py-2 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center justify-end"
-                          onClick={() => ptp.invoiceId && setLocation(`/invoices/${ptp.invoiceId}`)}
-                        >
-                          <p className={`font-semibold text-sm ${ptp.promisedAmount && parseFloat(ptp.promisedAmount) === parseFloat(ptp.invoiceAmount) ? 'text-green-700' : 'text-slate-900'}`}>
-                            {ptp.promisedAmount ? formatCurrency(parseFloat(ptp.promisedAmount)) : formatCurrency(parseFloat(ptp.invoiceAmount))}
-                          </p>
-                        </div>
-
-                        {/* Date Promised */}
-                        <div 
-                          className="px-4 py-2 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center"
-                          onClick={() => ptp.invoiceId && setLocation(`/invoices/${ptp.invoiceId}`)}
-                        >
-                          <p className="text-sm text-slate-700">
-                            {ptp.promisedDate ? formatDateShort(ptp.promisedDate) : 'N/A'}
-                          </p>
-                        </div>
-
-                        {/* Days Until */}
-                        <div 
-                          className="px-4 py-2 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center justify-center"
-                          onClick={() => ptp.invoiceId && setLocation(`/invoices/${ptp.invoiceId}`)}
-                        >
-                          <Badge 
-                            className={`text-xs ${
-                              isUrgent 
-                                ? 'bg-red-100 text-red-800 border-red-200' 
-                                : isComingSoon 
-                                ? 'bg-amber-100 text-amber-800 border-amber-200' 
-                                : 'bg-green-100 text-green-800 border-green-200'
-                            }`}
-                          >
-                            {daysUntil === 0 ? 'Today' : daysUntil === 1 ? '1 day' : `${daysUntil} days`}
-                          </Badge>
-                        </div>
-
-                        {/* Total Invoice */}
-                        <div 
-                          className="px-4 py-2 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center justify-end"
-                          onClick={() => ptp.invoiceId && setLocation(`/invoices/${ptp.invoiceId}`)}
-                        >
-                          <p className="text-sm text-slate-500">
-                            {formatCurrency(parseFloat(ptp.invoiceAmount))}
-                          </p>
-                        </div>
-
-                        {/* Source */}
-                        <div 
-                          className="px-4 py-2 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center justify-center"
-                          onClick={() => ptp.invoiceId && setLocation(`/invoices/${ptp.invoiceId}`)}
-                        >
-                          <Badge 
-                            className={`text-xs ${
-                              ptp.source === 'Inbound Email' ? 'bg-blue-100 text-blue-800 border-blue-200' :
-                              ptp.source === 'Inbound SMS' ? 'bg-purple-100 text-purple-800 border-purple-200' :
-                              ptp.source === 'Voice Call' ? 'bg-green-100 text-green-800 border-green-200' :
-                              'bg-slate-100 text-slate-800 border-slate-200'
-                            }`}
-                          >
-                            {ptp.source || 'Manual'}
-                          </Badge>
-                        </div>
-
-                        {/* Confidence */}
-                        <div 
-                          className="px-4 py-2 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center justify-center"
-                          onClick={() => ptp.invoiceId && setLocation(`/invoices/${ptp.invoiceId}`)}
-                        >
-                          {ptp.confidence ? (
-                            ptp.confidence >= 60 ? (
-                              <Badge className="bg-green-100 text-green-800 border-green-200 text-xs flex items-center gap-1">
-                                <CheckCircle2 className="h-3 w-3" />
-                                High
-                              </Badge>
-                            ) : (
-                              <Badge className="bg-amber-100 text-amber-800 border-amber-200 text-xs flex items-center gap-1">
-                                <AlertTriangle className="h-3 w-3" />
-                                Review
-                              </Badge>
-                            )
-                          ) : (
-                            <span className="text-slate-400 text-sm">-</span>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            ) : isInvoiceTab ? (
+            ) : isActionsTab ? (
               // Overdue List View - Glassmorphism + Tufte/Few Principles
               <div className="bg-white/80 backdrop-blur-sm border border-white/50 rounded-lg overflow-hidden shadow-lg">
                 <div className="max-h-[600px] overflow-y-auto">
@@ -1121,97 +920,6 @@ export default function ActionCentre() {
                               });
                             }}
                           />
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            ) : isOnHoldTab ? (
-              // On Hold invoices table format
-              <div className="bg-white border-t border-b border-slate-200 overflow-hidden">
-                <div className="max-h-[600px] overflow-y-auto" style={{ display: 'grid', gridTemplateColumns: '2fr 1.2fr 1.2fr 1fr 1.2fr' }}>
-                  {/* Table Header */}
-                  <div className="contents">
-                    <div className="px-8 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10">Customer</div>
-                    <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10">Invoice No</div>
-                    <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 text-right">Amount</div>
-                    <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10">Due Date</div>
-                    <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 text-center">Hold Reason</div>
-                  </div>
-
-                  {/* Table Rows */}
-                  {filteredActions.map((invoice: any) => {
-                    const daysOverdue = invoice.dueDate ? Math.floor((new Date().getTime() - new Date(invoice.dueDate).getTime()) / (1000 * 3600 * 24)) : 0;
-                    
-                    return (
-                      <div
-                        key={invoice.id}
-                        className="contents"
-                        data-testid={`onhold-invoice-${invoice.id}`}
-                      >
-                        {/* Customer */}
-                        <div 
-                          className="px-8 py-2 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center min-w-0"
-                          onClick={() => setLocation(`/invoices/${invoice.id}`)}
-                        >
-                          <p className="font-semibold text-sm text-slate-900 truncate">
-                            {invoice.contactName || 'Unknown Customer'}
-                          </p>
-                        </div>
-
-                        {/* Invoice No */}
-                        <div 
-                          className="px-4 py-2 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center"
-                          onClick={() => setLocation(`/invoices/${invoice.id}`)}
-                        >
-                          <p className="text-sm text-[#17B6C3] font-medium">
-                            {invoice.invoiceNumber || 'N/A'}
-                          </p>
-                        </div>
-
-                        {/* Amount */}
-                        <div 
-                          className="px-4 py-2 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center justify-end"
-                          onClick={() => setLocation(`/invoices/${invoice.id}`)}
-                        >
-                          <p className="font-semibold text-sm text-slate-900">
-                            {formatCurrency(parseFloat(invoice.amount || '0'))}
-                          </p>
-                        </div>
-
-                        {/* Due Date */}
-                        <div 
-                          className="px-4 py-2 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center"
-                          onClick={() => setLocation(`/invoices/${invoice.id}`)}
-                        >
-                          <div>
-                            <p className="text-sm text-slate-700">
-                              {formatDateShort(invoice.dueDate)}
-                            </p>
-                            {daysOverdue > 0 && (
-                              <p className="text-xs text-red-600">
-                                {daysOverdue} days overdue
-                              </p>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Hold Reason */}
-                        <div 
-                          className="px-4 py-2 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center justify-center"
-                          onClick={() => setLocation(`/invoices/${invoice.id}`)}
-                        >
-                          <Badge 
-                            className={`text-xs ${
-                              invoice.holdReason === 'Payment Plan' ? 'bg-blue-100 text-blue-800 border-blue-200' :
-                              invoice.holdReason === 'Dispute' ? 'bg-red-100 text-red-800 border-red-200' :
-                              invoice.holdReason === 'Promise to Pay' ? 'bg-green-100 text-green-800 border-green-200' :
-                              'bg-slate-100 text-slate-800 border-slate-200'
-                            }`}
-                          >
-                            {invoice.holdReason || 'On Hold'}
-                          </Badge>
                         </div>
                       </div>
                     );
