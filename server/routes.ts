@@ -4437,16 +4437,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return { ...inv, contactName };
       };
       
-      // 2. OVERDUE INVOICES - grouped by customer
+      // 2. ALL OVERDUE INVOICES - grouped by customer (unified Actions view)
+      // No longer filter out PTPs, disputes, etc. - let frontend exception filters handle that
       const overdueInvoicesRaw = allInvoices.filter(inv => {
         const isOverdue = inv.status === 'overdue' && new Date(inv.dueDate) < today;
-        const isInWorkflow = inv.paymentPlanId || inv.escalationFlag || inv.legalFlag;
-        const hasActionDispute = allActions.some(a => a.invoiceId === inv.id && a.intentType === 'dispute');
-        const hasFormalDispute = invoiceIdsWithDisputes.includes(inv.id);
-        const hasDispute = hasActionDispute || hasFormalDispute;
-        const hasPTP = allActions.some(a => a.invoiceId === inv.id && a.intentType === 'promise_to_pay');
+        // Exclude only legal/debt recovery (they have dedicated workflows)
+        const isInSpecialWorkflow = inv.escalationFlag || inv.legalFlag;
         
-        return isOverdue && !isInWorkflow && !hasDispute && !hasPTP;
+        return isOverdue && !isInSpecialWorkflow;
       });
       
       // Group overdue invoices by customer
