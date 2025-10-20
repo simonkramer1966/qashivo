@@ -984,9 +984,9 @@ export default function ActionCentre() {
             ) : isInvoiceTab ? (
               // Adaptive Actions Queue (Sprint 2: transformed to show pending actions)
               <div className="bg-white border border-slate-200 rounded-lg overflow-hidden shadow-sm">
-                <div className="max-h-[600px] overflow-y-auto">
+                <div className="max-h-[600px] overflow-x-auto overflow-y-auto">
                   {/* Table Header with Sorting */}
-                  <div className="grid grid-cols-[auto_2fr_1.2fr_0.8fr_1.8fr_1.2fr_1fr] bg-gradient-to-r from-slate-50 to-slate-100 border-b border-slate-200 sticky top-0 z-10">
+                  <div className="grid grid-cols-[auto_2fr_1fr_0.8fr_1.5fr_1fr_1fr_2fr] bg-gradient-to-r from-slate-50 to-slate-100 border-b border-slate-200 sticky top-0 z-10" style={{ minWidth: '1400px' }}>
                     <div className="px-4 py-3 flex items-center justify-center">
                       <Checkbox
                         checked={selectedActions.size === filteredActions.length && filteredActions.length > 0}
@@ -1077,8 +1077,9 @@ export default function ActionCentre() {
                     return (
                       <div
                         key={action.id}
-                        className="grid grid-cols-[auto_2fr_1.2fr_0.8fr_1.8fr_1.2fr_1fr_1.5fr] border-b border-slate-100 hover:bg-gradient-to-r hover:from-blue-50/30 hover:to-teal-50/30 transition-all duration-200"
+                        className="grid grid-cols-[auto_2fr_1fr_0.8fr_1.5fr_1fr_1fr_2fr] border-b border-slate-100 hover:bg-gradient-to-r hover:from-blue-50/30 hover:to-teal-50/30 transition-all duration-200"
                         data-testid={`action-row-${action.id}`}
+                        style={{ minWidth: '1400px' }}
                       >
                         {/* Checkbox */}
                         <div className="px-4 py-4 flex items-center justify-center">
@@ -1169,7 +1170,7 @@ export default function ActionCentre() {
                         </div>
 
                         {/* Action Buttons */}
-                        <div className="px-4 py-4 flex items-center justify-center gap-2">
+                        <div className="px-4 py-4 flex items-center justify-center gap-1.5">
                           <Button
                             variant="ghost"
                             size="sm"
@@ -1177,11 +1178,41 @@ export default function ActionCentre() {
                               setSelectedCustomer(action);
                               setComposerOpen(true);
                             }}
-                            className="h-8 px-3 text-xs bg-[#17B6C3]/10 hover:bg-[#17B6C3]/20 text-[#17B6C3] border border-[#17B6C3]/30"
+                            className="h-7 px-2.5 text-xs bg-[#17B6C3]/10 hover:bg-[#17B6C3]/20 text-[#17B6C3] border border-[#17B6C3]/30"
                             data-testid={`button-compose-${action.id}`}
                           >
                             <MessageSquare className="h-3.5 w-3.5 mr-1" />
                             Compose
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              toast({
+                                title: "Customer Approved",
+                                description: "Collection actions will proceed as scheduled",
+                              });
+                            }}
+                            className="h-7 px-2.5 text-xs bg-green-50 hover:bg-green-100 text-green-700 border border-green-200"
+                            data-testid={`button-approve-${action.id}`}
+                          >
+                            <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
+                            Approve
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              toast({
+                                title: "Customer Snoozed",
+                                description: "Actions paused for 7 days",
+                              });
+                            }}
+                            className="h-7 px-2.5 text-xs bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200"
+                            data-testid={`button-snooze-${action.id}`}
+                          >
+                            <Clock className="h-3.5 w-3.5 mr-1" />
+                            Snooze
                           </Button>
                         </div>
                       </div>
