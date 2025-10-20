@@ -1070,8 +1070,8 @@ export default function ActionCentre() {
                   {filteredActions.map((action: any) => {
                     const exceptions = deriveExceptionTags(action);
                     const priority = action.metadata?.recommended?.priority || action.metadata?.priority || 50;
-                    const bundledCount = action.metadata?.invoiceCount || 1;
-                    const totalOutstanding = action.invoiceAmount || action.metadata?.totalAmount || 0;
+                    const bundledCount = action.invoiceCount || action.metadata?.invoiceCount || 1;
+                    const totalOutstanding = action.totalOutstanding || action.invoiceAmount || action.metadata?.totalAmount || 0;
 
                     return (
                       <div
