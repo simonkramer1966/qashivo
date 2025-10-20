@@ -45,6 +45,8 @@ export interface SchedulerConstraints {
   minGapHours: number; // Min hours between touches
   allowedChannels: Channel[];
   timezone: string; // Tenant timezone
+  hasOverride?: boolean; // Manual override exists - skip auto-scheduling
+  maxDailyTouchesPerCustomer?: number; // Max daily touches for this specific customer
 }
 
 export interface TouchCandidate {
@@ -67,6 +69,57 @@ export interface TouchCandidate {
 }
 
 /**
+ * Main scheduling function wrapper - matches spec signature
+ * Alias for scheduleNextTouch with context mapping
+ */
+export interface ScheduleActionContext {
+  tenantId: string;
+  settings: AdaptiveSettings;
+  customer: CustomerContext;
+  invoice: InvoiceContext;
+  constraints: SchedulerConstraints;
+  todaysTouchCount?: number;
+  todaysCustomerTouchCount?: number;
+}
+
+export function scheduleNextAction(ctx: ScheduleActionContext): {
+  priority: number;
+  channel: Channel | null;
+  suggestedDate: Date | null;
+  reasoning: string;
+} | null {
+  // Guard: Skip if manual override exists
+  if (ctx.constraints.hasOverride) {
+    return null;
+  }
+  
+  // Guard: Skip if invoice is disputed (handle manually)
+  if (ctx.invoice.dispute) {
+    return null;
+  }
+  
+  const candidate = scheduleNextTouch(
+    ctx.settings,
+    ctx.customer,
+    ctx.invoice,
+    ctx.constraints,
+    ctx.todaysTouchCount,
+    ctx.todaysCustomerTouchCount
+  );
+  
+  if (!candidate) {
+    return null;
+  }
+  
+  return {
+    priority: candidate.score,
+    channel: candidate.channel,
+    suggestedDate: candidate.time,
+    reasoning: candidate.reasoning,
+  };
+}
+
+/**
  * Main scheduling function - determines optimal next touch
  * Returns null if no valid candidates (e.g., all channels blocked, max touches reached)
  */
@@ -75,13 +128,30 @@ export function scheduleNextTouch(
   customer: CustomerContext,
   invoice: InvoiceContext,
   constraints: SchedulerConstraints,
-  todaysTouchCount = 0 // Number of touches already sent today for this workflow
+  todaysTouchCount = 0, // Number of touches already sent today for this workflow
+  todaysCustomerTouchCount = 0 // Number of touches already sent today for this specific customer
 ): TouchCandidate | null {
   const candidates: TouchCandidate[] = [];
   
-  // Enforce maxDailyTouches limit
+  // Guard: Manual override exists - skip auto-scheduling
+  if (constraints.hasOverride) {
+    return null;
+  }
+  
+  // Guard: Invoice is disputed - require manual handling
+  if (invoice.dispute) {
+    return null;
+  }
+  
+  // Enforce maxDailyTouches limit (workflow level)
   if (todaysTouchCount >= settings.maxDailyTouches) {
     return null; // Hit daily limit for this workflow
+  }
+  
+  // Enforce per-customer daily touch cap
+  if (constraints.maxDailyTouchesPerCustomer && 
+      todaysCustomerTouchCount >= constraints.maxDailyTouchesPerCustomer) {
+    return null; // Hit daily limit for this customer
   }
   
   // Time horizons to consider (hours from now)
