@@ -1,0 +1,271 @@
+Love that feedback — it’s spot-on. Let’s turn it into shippable changes you can drop into Replit now. Below is a tight “do this, paste that” pack: tiny schema tweaks, endpoints, and a minimal React cell that delivers the exception-first UX, clear CTA, explainability popover, inline triage, batching (safe rules), and a thumbs up/down loop.
+
+1) Data & schema (additive, safe to migrate)
+
+Add ownership, SLA tracking, and feedback to your actions table.
+
+// Prisma-style (adjust to your ORM)
+model Action {
+  id             String   @id @default(cuid())
+  tenantId       String
+  contactId      String
+  invoiceIds     String[] // bundled invoices
+  recommendedAt  DateTime
+  recommendedBy  String   // "adaptive" | "manual"
+  recommended    Json     // { channel, sendAt, priority, reasons[] }
+  status         String   // "pending" | "approved" | "sent" | "snoozed" | "escalated" | "cancelled"
+  override       Json?    // { channel?, sendAt?, note? } if agent edited
+  assignedTo     String?  // userId
+  assignedAt     DateTime?
+  firstSeenAt    DateTime @default(now()) // for SLA clock
+  feedback       String?  // "up" | "down"
+  feedbackNote   String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  // indexes you’ll want:
+  @@index([tenantId, status])
+  @@index([tenantId, assignedTo, status])
+}
+
+
+Add a lightweight exception flag per action (derived, not stored) on the server:
+
+exceptionTags: string[] (e.g., ["Broken Promise","High Value","Low Signal"])
+
+2) API endpoints (thin, idempotent)
+
+POST /api/actions/:id/approve → uses override if present, transitions to approved, enqueues send.
+
+POST /api/actions/:id/edit → upserts override and returns updated preview.
+
+POST /api/actions/:id/snooze → body: { until: ISO, reason? } → status snoozed.
+
+POST /api/actions/:id/escalate → body: { queue: "Legal"|"Hardship"|..., note? } → status escalated.
+
+POST /api/actions/:id/assign → { userId }.
+
+POST /api/actions/:id/feedback → { value: "up"|"down", note? }.
+
+Safety: reject approve if within tenant quiet hours; log and auto-move send time to first safe slot.
+
+3) Planner: safe bundling rules
+
+In your action planner, before creating actions:
+
+// group per contact
+const groups = by(contactId, overdueInvoices);
+// if >1 invoice for same contact, create ONE Action with all invoiceIds
+// only batch across different contacts when channel+sendAt are identical (rare)
+
+4) Exception-first view logic
+
+Default filter: exceptionsOnly=true.
+
+Group sections: Dispute, Broken Promise, High Value, Low Signal, Channel Blocked, Repeated Non-Response.
+
+Save user’s last filter in local storage per tenant.
+
+Priority bands (from Replit’s note):
+
+High ≥ 70 (red dot), Medium 50–69 (amber), Low 40–49 (grey). Sort: Priority desc → Days Overdue desc.
+
+5) Minimal React cell you can paste
+
+This replaces the “Call” link with: primary CTA, why? popover, inline triage, thumbs, and safe batching hook.
+
+// components/ActionCentre/NextActionCell.tsx
+import { useState } from "react";
+
+type Reason = { label: string }; // plain english lines
+type ActionRow = {
+  id: string;
+  priority: number; // 0..100
+  recommended: { channel: "email"|"sms"|"voice"; sendAt: string; };
+  reasons: Reason[]; // 1-3 bullets, plain english
+  exceptionTags: string[];
+  slaAgeMinutes: number; // from firstSeenAt
+};
+
+export default function NextActionCell({
+  row,
+  onApprove,
+  onEdit,
+  onSnooze,
+  onEscalate,
+  onFeedback
+}: {
+  row: ActionRow;
+  onApprove: (id: string) => Promise<void>;
+  onEdit: (id: string) => void;         // open side drawer
+  onSnooze: (id: string, until: string) => Promise<void>;
+  onEscalate: (id: string) => void;     // open escalate modal
+  onFeedback: (id: string, val: "up"|"down") => Promise<void>;
+}) {
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState<null | "approve" | "snooze">(null);
+
+  const label = labelFromRec(row.recommended); // e.g., "Call today after 10:00" or "Send SMS tomorrow 10:00"
+  const isHigh = row.priority >= 70;
+
+  return (
+    <div className="flex items-start gap-2">
+      <button
+        className={`px-3 py-1.5 rounded-2xl text-sm font-medium shadow-sm
+          ${isHigh ? "bg-emerald-600 text-white" : "bg-slate-800 text-white"}`}
+        disabled={busy!==null}
+        onClick={async ()=>{
+          setBusy("approve");
+          await onApprove(row.id);
+          setBusy(null);
+        }}
+        aria-label={`Approve next action: ${label}`}
+      >
+        {busy==="approve" ? "Scheduling…" : label}
+      </button>
+
+      <button
+        className="text-sky-700 underline text-xs mt-2"
+        onClick={()=>setOpen(v=>!v)}
+        aria-expanded={open}
+        aria-controls={`why-${row.id}`}
+      >
+        why?
+      </button>
+
+      {/* Inline triage */}
+      <div className="ml-auto flex gap-2">
+        <button className="text-xs px-2 py-1 rounded bg-slate-200" onClick={()=>onEdit(row.id)}>Edit</button>
+        <button
+          className="text-xs px-2 py-1 rounded bg-slate-200"
+          disabled={busy!==null}
+          onClick={async()=>{
+            setBusy("snooze");
+            const until = nextBusinessMorningISO(); // implement per tenant tz
+            await onSnooze(row.id, until);
+            setBusy(null);
+          }}
+        >Snooze</button>
+        <button className="text-xs px-2 py-1 rounded bg-rose-100 text-rose-700" onClick={()=>onEscalate(row.id)}>Escalate</button>
+      </div>
+
+      {/* Thumbs feedback */}
+      <div className="flex items-center gap-1 pl-2">
+        <button className="text-xs" aria-label="Good recommendation" onClick={()=>onFeedback(row.id,"up")}>👍</button>
+        <button className="text-xs" aria-label="Poor recommendation" onClick={()=>onFeedback(row.id,"down")}>👎</button>
+      </div>
+
+      {/* Explainability popover (simple) */}
+      {open && (
+        <div id={`why-${row.id}`} className="absolute z-10 mt-6 w-64 rounded-xl border bg-white p-3 shadow-lg">
+          <ul className="text-xs text-slate-700 space-y-1">
+            {row.reasons.slice(0,3).map((r,i)=><li key={i}>• {r.label}</li>)}
+          </ul>
+          <div className="mt-2 flex items-center justify-between">
+            <div className="text-[10px] text-slate-500">
+              Priority: {row.priority >= 70 ? "High" : row.priority >= 50 ? "Medium" : "Low"}
+            </div>
+            {row.slaAgeMinutes>1440 && <span className="text-[10px] text-amber-600">SLA &gt; 24h</span>}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function labelFromRec(r:{channel:string; sendAt:string}) {
+  const dt = new Date(r.sendAt);
+  const when = humanizeTime(dt); // “today after 10:00”, “tomorrow 09:30”
+  const verb = r.channel==="voice" ? "Call" : r.channel==="sms" ? "Send SMS" : "Send email";
+  return `${verb} ${when}`;
+}
+function humanizeTime(dt:Date){ /* stub: format relative day + HH:mm */ return `tomorrow ${pad(dt.getHours())}:${pad(dt.getMinutes())}` }
+function nextBusinessMorningISO(){ /* stub for snooze */ return new Date(Date.now()+24*3600e3).toISOString(); }
+const pad=(n:number)=>String(n).padStart(2,"0");
+
+
+Row reasons (plain English, never raw numbers)
+
+“45 days overdue (usually ~30 days).”
+
+“Usually responds to SMS.”
+
+“Portfolio urgency is high today.”
+
+6) Table & grouping tweaks (quick CSS/JS)
+
+Compact density: reduce row height to ~40–44px.
+
+Sticky columns: first (“Customer”) and last (“Next Action”).
+
+Group by exception tags: render collapsible sections; default expand those with most items.
+
+Replace “—”:
+
+Last Payment: “Never”, “>90d”, or “Today ✓”.
+
+Last Contact: “Never”, or “3d ago”.
+
+7) Keyboard shortcuts (safe mode)
+
+Require Ctrl/Cmd modifiers to avoid accidental triggers:
+
+Cmd/Ctrl + A → Approve
+
+Cmd/Ctrl + E → Edit
+
+Cmd/Ctrl + S → Snooze
+
+Cmd/Ctrl + ↑/↓ → move selection
+
+8) Feedback loop wiring (tiny)
+
+On thumbs: POST /api/actions/:id/feedback.
+Server effect:
+
+feedback='up' → +small boost to that channel’s replyRate for this contact.
+
+feedback='down' → small decay; log a “human-preferred channel” note.
+
+Store feedbackNote when agents add context (“Prefers WhatsApp”).
+
+9) Default exception presets (including Low Signal)
+{
+  "exceptionPresets": [
+    { "id":"compliance", "label":"Disputes & Holds", "tags":["Dispute","Compliance Hold"] },
+    { "id":"promise", "label":"Broken Promises", "tags":["Broken Promise"] },
+    { "id":"value", "label":"High Value Today", "tags":["High Value"] },
+    { "id":"low-signal", "label":"Low Signal", "tags":["Low Signal"] },
+    { "id":"no-response", "label":"No Response (x3)", "tags":["Repeated Non-Response"] }
+  ],
+  "defaults": { "exceptionsOnly": true, "preset": "value" }
+}
+
+10) What to ship this week (fastest path)
+
+Sprint 1
+
+Exception column + default exceptions-only filter
+
+Priority column + sort
+
+Replace “Call” with CTA button + “why?” popover
+
+Inline Approve/Edit/Snooze/Escalate
+
+Safe bundling (same contact)
+
+Sprint 2
+
+Ownership (assign/unassign)
+
+SLA badge (clock from firstSeenAt)
+
+Feedback thumbs + API
+
+Sprint 3
+
+Manager toggle (Confidence, Reason code)
+
+Keyboard shortcuts with Ctrl/Cmd
+
+Formatting polish & toasts

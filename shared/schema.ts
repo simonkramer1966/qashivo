@@ -540,7 +540,7 @@ export const actions = pgTable("actions", {
   contactId: varchar("contact_id").references(() => contacts.id),
   userId: varchar("user_id").references(() => users.id),
   type: varchar("type").notNull(), // email, sms, call, whatsapp, payment, note, workflow_start, workflow_step
-  status: varchar("status").notNull().default("pending"), // pending, scheduled, executing, completed, failed, cancelled
+  status: varchar("status").notNull().default("pending"), // pending, scheduled, executing, completed, failed, cancelled, approved, sent, snoozed, escalated
   subject: varchar("subject"),
   content: text("content"),
   scheduledFor: timestamp("scheduled_for"),
@@ -560,6 +560,18 @@ export const actions = pgTable("actions", {
   
   // Experimentation tracking (A/B testing)
   experimentVariant: varchar("experiment_variant"), // STATIC, ADAPTIVE, etc.
+  
+  // Sprint 1: Adaptive Action Centre fields
+  invoiceIds: text("invoice_ids").array(), // Bundled invoices for same contact
+  recommendedAt: timestamp("recommended_at"), // When AI recommended this action
+  recommendedBy: varchar("recommended_by"), // "adaptive" | "manual" | "workflow"
+  recommended: jsonb("recommended"), // {channel, sendAt, priority, reasons[]}
+  override: jsonb("override"), // {channel?, sendAt?, note?} if agent edited
+  assignedTo: varchar("assigned_to").references(() => users.id), // Agent ownership
+  assignedAt: timestamp("assigned_at"), // When assigned
+  firstSeenAt: timestamp("first_seen_at").defaultNow(), // For SLA tracking
+  feedback: varchar("feedback"), // "up" | "down" for reinforcement learning
+  feedbackNote: text("feedback_note"), // Agent notes on recommendation quality
   
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),

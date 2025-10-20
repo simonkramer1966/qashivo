@@ -1,0 +1,168 @@
+Got it. I’m looking at your Action Centre screen (the Overdue tab with exception chips and a table of customers). Here’s how I’d tune the UI/UX so agents can smash through exceptions and pull DSO down fast.
+
+What to change (priority first)
+
+Make exceptions pop, everything else fade
+
+Add a left “Exception” column with compact chips: Dispute, Broken Promise, High Value, Low Signal, Channel Blocked.
+
+Default filter: Exceptions only. Add a toggle “Show all overdue” for edge cases.
+
+Group rows by exception type (collapsible sections), so agents can batch-handle similar work.
+
+Replace “Call” links with one clear CTA
+
+Convert “Next Action” into a primary button with verb + time:
+“Call today after 10:00”
+
+Right below it, a tiny “why?” link that expands to 2–3 plain reasons:
+
+“9 days overdue”
+
+“Usually replies to SMS, but 2 emails ignored”
+
+“Amount higher than normal”
+
+Keep detailed score numbers for manager view only.
+
+Inline triage controls, no page hops
+
+Add four micro-buttons per row: Approve, Edit, Snooze, Escalate.
+
+“Edit” opens a side drawer (not a new page) with channel choice, send time, and template.
+
+“Approve” sends immediately (or schedules) and animates the row out of the list.
+
+Batch the obvious
+
+Multi-select rows and “Approve N actions” when the same channel/timing is recommended.
+
+Smart batching: if multiple invoices for the same customer are selected, auto-bundle into one contact (less noise, better experience).
+
+Surface the true priority, not just ‘Days Overdue’
+
+Add a Priority column (High/Med/Low) driven by the adaptive score and value-at-risk. Color with subtle dot badges.
+
+Sort default: Priority desc, then Days Overdue desc.
+(Right now every row looks equal; it’s not.)
+
+Action density = speed
+
+Make the table compact density (reduce vertical whitespace) with sticky header and sticky “Next Action” column on the right.
+
+Keyboard shortcuts:
+
+↑/↓ move between rows
+
+A = Approve, E = Edit, S = Snooze, X = Escalate
+
+Enter = open drawer
+
+Fix the “—” dead zones
+
+“Last Payment” and “Last Contact” show “—“. Use helpful states:
+
+“Never” (grey)
+
+“>90d” (warning)
+
+“Today” (green tick)
+Empty fields slow decisions.
+
+Agent focus & ownership
+
+Add an “Assigned to” avatar chip. Quick-assign from a dropdown in-row.
+
+Filter “My queue” vs “Unassigned” with counts.
+
+SLA badge if row is sitting >24h since recommended action.
+
+Exception toggles that mean something
+
+Your chips (Dispute Window, Broken Promise, High Risk) are good—add mutual exclusivity presets:
+
+“Compliance holds”
+
+“Promises at risk”
+
+“High value today”
+
+Save the user’s last filter as default.
+
+Microcopy & formatting
+
+Use UK currency formatting with narrow spacing (e.g., £3.53m not long strings).
+
+“Payment Trend: Declining” → icon+word: ▼ Declining (red), ▬ Flat (grey), ▲ Improving (green).
+
+“Days Overdue” in red is good; also show due date on hover.
+
+Outcome feedback loop
+
+After approving, show a tiny toast:
+“SMS scheduled for Tue 10:00 – respects quiet hours.”
+
+Add a success counter at the top: “12 actions approved (avg priority 72)”.
+
+Manager oversight without clutter
+
+Toggle in header: “Manager view”. Adds two columns:
+
+Confidence (Low/Med/High)
+
+Reason code (high-value, low-signal, non-response…)
+Agents don’t need this; leads do.
+
+Suggested layout tweaks
+
+Header bar: Tabs (Overdue/Upcoming PTP/Disputes/On Hold) + Exception filter presets + Search. Put counts on presets, not just tabs.
+
+Table columns (left→right):
+Exception | Customer | Total Outstanding | #Inv | Priority | Last Payment | Last Contact | Trend | Days Overdue | Assigned | Next Action
+
+Row affordances: Hover reveals mini-toolbar (Approve/Edit/Snooze/Escalate). Keep “Next Action” button always visible.
+
+The 30-minute “quick wins”
+
+Turn “Call” text into a button with the exact instruction and add the “why?” popover.
+
+Compact table density and sticky “Next Action” column.
+
+Add Priority column (High/Med/Low) + default sort by Priority then Days Overdue.
+
+Replace “—” with “Never/Today/>90d”.
+
+Multi-select + “Approve all” for same recommended action.
+
+Copy you can use
+
+Next Action button: “Send SMS tomorrow 10:00”
+
+Why popover (max 3 bullets):
+• “9 days overdue”
+• “Usually replies to SMS”
+• “Higher-than-usual amount”
+
+Snooze options: “Later today”, “Tomorrow”, “Next week”, “Custom…”
+
+Escalate modal: “Send to Legal queue” / “Mark dispute” / “Flag hardship”
+
+Accessibility & clarity
+
+Ensure button contrast meets WCAG AA.
+
+Badge colors paired with icons (not color alone).
+
+Focus ring on row and buttons for keyboard users.
+
+Announce toast updates for screen readers.
+
+Success metrics to watch
+
+Action Centre throughput: actions approved per hour per agent.
+
+Override rate: % of edited vs approved-as-recommended actions (should drop over time).
+
+Time-to-first-action after an exception appears.
+
+DSO delta for Action-Centre-touched customers vs auto-handled.
