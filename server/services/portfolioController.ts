@@ -15,8 +15,10 @@ import { projectedDSO, getDSOMetadata } from "../lib/dso";
  * 
  * Logic:
  * - If projected DSO > target DSO + 1: increase urgency toward 1.0 by 0.1 steps
- * - If projected DSO < target DSO - 1: decrease urgency toward 0.0 by 0.1 steps
+ * - If projected DSO < target DSO - 1: decrease urgency toward 0.1 by 0.1 steps
  * - Otherwise: keep current urgency
+ * 
+ * Bounds: urgency ∈ [0.1, 1.0] to prevent automation shutdown
  */
 export async function recomputeUrgency(
   tenantId: string,
@@ -96,8 +98,8 @@ export async function recomputeUrgency(
         `increasing urgency ${previousUrgency.toFixed(2)} → ${newUrgency.toFixed(2)}`
       );
     } else if (dsoProj < targetDSO - 1) {
-      // Ahead of target - decrease urgency
-      newUrgency = Math.max(0.0, previousUrgency - 0.1);
+      // Ahead of target - decrease urgency (bounded at 0.1 to prevent automation shutdown)
+      newUrgency = Math.max(0.1, previousUrgency - 0.1);
       adjusted = true;
       console.log(
         `[Portfolio Controller] Tenant ${tenantId}: DSO ${dsoProj} < target ${targetDSO}, ` +
