@@ -4437,14 +4437,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return { ...inv, contactName };
       };
       
-      // 2. ALL OVERDUE INVOICES - grouped by customer (unified Actions view)
+      // 2. OVERDUE INVOICES - grouped by customer (stage = 'overdue')
       // No longer filter out PTPs, disputes, etc. - let frontend exception filters handle that
       const overdueInvoicesRaw = allInvoices.filter(inv => {
         const isOverdue = inv.status === 'overdue' && new Date(inv.dueDate) < today;
-        // Exclude only legal/debt recovery (they have dedicated workflows)
-        const isInSpecialWorkflow = inv.escalationFlag || inv.legalFlag;
+        const isOverdueStage = !inv.stage || inv.stage === 'overdue';
         
-        return isOverdue && !isInSpecialWorkflow;
+        return isOverdue && isOverdueStage;
       });
       
       // Group overdue invoices by customer
@@ -4709,13 +4708,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return { ...enriched, holdReason };
       }));
       
-      // 7. DEBT RECOVERY - invoices with escalation flag
-      const debtRecoveryRaw = allInvoices.filter(inv => inv.escalationFlag === true);
+      // 7. DEBT RECOVERY - invoices with stage = 'debt_recovery'
+      const debtRecoveryRaw = allInvoices.filter(inv => inv.stage === 'debt_recovery');
       const debtRecovery = await Promise.all(debtRecoveryRaw.map(enrichInvoice));
       
-      // 8. LEGAL - invoices with legal flag
-      const legalRaw = allInvoices.filter(inv => inv.legalFlag === true);
-      const legal = await Promise.all(legalRaw.map(enrichInvoice));
+      // 8. ENFORCEMENT - invoices with stage = 'enforcement'
+      const enforcementRaw = allInvoices.filter(inv => inv.stage === 'enforcement');
+      const enforcement = await Promise.all(enforcementRaw.map(enrichInvoice));
       
       res.json({
         queries: { count: queries.length, items: queries },
@@ -4725,7 +4724,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         disputes: { count: allDisputes.length, items: allDisputes },
         onHold: { count: onHold.length, items: onHold },
         debtRecovery: { count: debtRecovery.length, items: debtRecovery },
-        legal: { count: legal.length, items: legal }
+        enforcement: { count: enforcement.length, items: enforcement }
       });
     } catch (error) {
       console.error("Error fetching action centre tabs:", error);

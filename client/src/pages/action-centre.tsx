@@ -150,7 +150,7 @@ export default function ActionCentre() {
   const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
   
   // Workflow-based filter (main tabs)
-  const [activeTab, setActiveTab] = useState<'queries' | 'actions'>('actions');
+  const [activeTab, setActiveTab] = useState<'queries' | 'overdue' | 'debt_recovery' | 'enforcement'>('overdue');
   
   // Multi-select toggle filters
   const [directionFilters, setDirectionFilters] = useState<string[]>([]);
@@ -475,7 +475,7 @@ export default function ActionCentre() {
   };
 
   // Determine if current tab shows actions (unified view)
-  const isActionsTab = activeTab === 'actions';
+  const isActionsTab = activeTab !== 'queries';
 
   // Get items for active tab
   const currentTabItems = useMemo(() => {
@@ -484,8 +484,12 @@ export default function ActionCentre() {
     switch (activeTab) {
       case 'queries':
         return tabData.queries.items;
-      case 'actions':
-        return tabData.overdueInvoices.items; // Unified actions view
+      case 'overdue':
+        return tabData.overdueInvoices.items;
+      case 'debt_recovery':
+        return tabData.debtRecovery?.items || [];
+      case 'enforcement':
+        return tabData.enforcement?.items || [];
       default:
         return [];
     }
@@ -592,9 +596,9 @@ export default function ActionCentre() {
         />
         
         <div className="container-apple py-4 sm:py-6 lg:py-8">
-          {/* Workflow Tabs - Simplified to Queries + Actions */}
+          {/* Workflow Tabs - 4-tab system: Queries, Overdue, Debt Recovery, Enforcement */}
           <div className="mb-6">
-            <div className="flex gap-2 p-1 bg-slate-100 rounded-lg max-w-md">
+            <div className="flex gap-2 p-1 bg-slate-100 rounded-lg">
               <button
                 onClick={() => setActiveTab('queries')}
                 className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-all ${
@@ -609,16 +613,42 @@ export default function ActionCentre() {
               </button>
               
               <button
-                onClick={() => setActiveTab('actions')}
+                onClick={() => setActiveTab('overdue')}
                 className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-all ${
-                  activeTab === 'actions'
+                  activeTab === 'overdue'
                     ? 'bg-[#17B6C3] text-white shadow-sm'
                     : 'bg-transparent text-slate-600 hover:bg-white/50'
                 }`}
-                data-testid="tab-actions"
+                data-testid="tab-overdue"
               >
-                <span>Actions</span>
-                {tabData && <span className={`ml-2 px-1.5 py-0.5 rounded-full text-xs ${activeTab === 'actions' ? 'bg-white/20' : 'bg-slate-200'}`}>{tabData.overdueInvoices.count}</span>}
+                <span>Overdue</span>
+                {tabData && <span className={`ml-2 px-1.5 py-0.5 rounded-full text-xs ${activeTab === 'overdue' ? 'bg-white/20' : 'bg-slate-200'}`}>{tabData.overdueInvoices.count}</span>}
+              </button>
+              
+              <button
+                onClick={() => setActiveTab('debt_recovery')}
+                className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-all ${
+                  activeTab === 'debt_recovery'
+                    ? 'bg-[#17B6C3] text-white shadow-sm'
+                    : 'bg-transparent text-slate-600 hover:bg-white/50'
+                }`}
+                data-testid="tab-debt-recovery"
+              >
+                <span>Debt Recovery</span>
+                {tabData && tabData.debtRecovery && <span className={`ml-2 px-1.5 py-0.5 rounded-full text-xs ${activeTab === 'debt_recovery' ? 'bg-white/20' : 'bg-slate-200'}`}>{tabData.debtRecovery.count || 0}</span>}
+              </button>
+              
+              <button
+                onClick={() => setActiveTab('enforcement')}
+                className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-all ${
+                  activeTab === 'enforcement'
+                    ? 'bg-[#17B6C3] text-white shadow-sm'
+                    : 'bg-transparent text-slate-600 hover:bg-white/50'
+                }`}
+                data-testid="tab-enforcement"
+              >
+                <span>Enforcement</span>
+                {tabData && tabData.enforcement && <span className={`ml-2 px-1.5 py-0.5 rounded-full text-xs ${activeTab === 'enforcement' ? 'bg-white/20' : 'bg-slate-200'}`}>{tabData.enforcement.count || 0}</span>}
               </button>
             </div>
           </div>
@@ -641,7 +671,7 @@ export default function ActionCentre() {
           </div>
 
           {/* Bulk Operations Toolbar - Sprint 2 */}
-          {activeTab === 'actions' && selectedActions.size > 0 && (
+          {activeTab === 'overdue' && selectedActions.size > 0 && (
             <div className="mb-4 bg-gradient-to-r from-[#17B6C3]/10 to-teal-100/50 border border-[#17B6C3]/30 rounded-lg p-4 animate-in slide-in-from-top-2">
               <div className="flex items-center gap-4 flex-wrap">
                 <div className="flex items-center gap-2">
@@ -697,8 +727,8 @@ export default function ActionCentre() {
             </div>
           )}
 
-          {/* Exception Type Filters - Sprint 2: Enhanced for adaptive scheduler */}
-          {activeTab === 'actions' && (
+          {/* Exception Type Filters - Only in Overdue tab */}
+          {activeTab === 'overdue' && (
             <div className="mb-6 bg-gradient-to-r from-amber-50/50 to-orange-50/50 border border-amber-200/50 rounded-lg p-4">
               <div className="flex items-center gap-3 flex-wrap">
                 <div className="flex items-center gap-2">
