@@ -989,24 +989,45 @@ export default function ActionCentre() {
                           isInbound ? 'border-l-4 border-l-[#17B6C3]' : 'border-l-4 border-l-transparent'
                         }`}
                         onClick={() => {
-                          // In Queries tab, open ResponseDrawer for inbound queries
-                          if (activeTab === 'queries' && isInbound) {
-                            setSelectedQuery({
-                              id: item.id,
-                              contactName: item.contactName || 'Unknown',
+                          // Open appropriate drawer based on tab
+                          if (activeTab === 'queries') {
+                            if (isInbound) {
+                              // Queries tab (inbound): open ResponseDrawer
+                              setSelectedQuery({
+                                id: item.id,
+                                contactName: item.contactName || 'Unknown',
+                                email: item.metadata?.email,
+                                phone: item.metadata?.phone,
+                                channel: item.type,
+                                subject: item.subject,
+                                message: item.content || '',
+                                intent: item.intentType,
+                                sentiment: item.sentiment,
+                                createdAt: item.createdAt,
+                              });
+                              setIsResponseDrawerOpen(true);
+                            } else if (item.invoiceId) {
+                              // Queries tab (outbound/resolved): navigate to invoice details
+                              setLocation(`/invoices/${item.invoiceId}`);
+                            }
+                          } else {
+                            // Collection tabs: open ActionDrawer
+                            const totalOutstanding = item.metadata?.invoices?.reduce((sum: number, inv: any) => 
+                              sum + parseFloat(inv.amount || '0'), 0
+                            ) || parseFloat(item.invoiceAmount || '0');
+                            
+                            setSelectedActionCustomer({
+                              contactName: item.contactName || 'Unknown Customer',
+                              contactId: item.contactId,
                               email: item.metadata?.email,
                               phone: item.metadata?.phone,
-                              channel: item.type,
-                              subject: item.subject,
-                              message: item.content || '',
-                              intent: item.intentType,
-                              sentiment: item.sentiment,
-                              createdAt: item.createdAt,
+                              totalOutstanding: totalOutstanding,
+                              oldestInvoiceDueDate: item.metadata?.oldestDueDate || '',
+                              daysOverdue: item.metadata?.daysOverdue || 0,
+                              invoices: item.metadata?.invoices || [],
+                              stage: activeTab as 'overdue' | 'debt_recovery' | 'enforcement',
                             });
-                            setIsResponseDrawerOpen(true);
-                          } else if (item.invoiceId) {
-                            // For other tabs, navigate to invoice details
-                            setLocation(`/invoices/${item.invoiceId}`);
+                            setIsActionDrawerOpen(true);
                           }
                         }}
                         data-testid={`action-item-${item.id}`}
