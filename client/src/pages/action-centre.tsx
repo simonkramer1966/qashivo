@@ -188,7 +188,7 @@ export default function ActionCentre() {
     disputes: { count: number; items: any[] };
     onHold: { count: number; items: any[] };
     debtRecovery: { count: number; items: any[] };
-    legal: { count: number; items: any[] };
+    enforcement: { count: number; items: any[] };
   }>({
     queryKey: ['/api/action-centre/tabs'],
     refetchInterval: 15000, // Auto-refresh every 15 seconds
@@ -482,6 +482,9 @@ export default function ActionCentre() {
 
   // Determine if current tab shows actions (unified view)
   const isActionsTab = activeTab !== 'queries';
+  
+  // Determine which tabs show grid view (debt recovery & enforcement only)
+  const showGridView = activeTab === 'debt_recovery' || activeTab === 'enforcement';
 
   // Get items for active tab
   const currentTabItems = useMemo(() => {
@@ -846,8 +849,8 @@ export default function ActionCentre() {
                     : 'No actions found'}
                 </p>
               </div>
-            ) : isActionsTab ? (
-              // Overdue List View - Glassmorphism + Tufte/Few Principles
+            ) : showGridView ? (
+              // Grid View (Debt Recovery & Enforcement) - Glassmorphism + Tufte/Few Principles
               <div className="bg-white/80 backdrop-blur-sm border border-white/50 rounded-lg overflow-hidden shadow-lg">
                 <div className="max-h-[600px] overflow-y-auto">
                   {/* List Header - Minimal styling per Tufte/Few */}
@@ -953,7 +956,7 @@ export default function ActionCentre() {
                                 oldestInvoiceDueDate: action.metadata?.oldestDueDate || '',
                                 daysOverdue: action.metadata?.daysOverdue || 0,
                                 invoices: action.metadata?.invoices || [],
-                                stage: activeTab === 'overdue' ? 'overdue' : activeTab === 'debt_recovery' ? 'debt_recovery' : 'enforcement',
+                                stage: activeTab === 'debt_recovery' ? 'debt_recovery' : 'enforcement',
                               });
                               setIsActionDrawerOpen(true);
                             }}
