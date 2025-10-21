@@ -1064,27 +1064,36 @@ export default function ActionCentre() {
                                 </div>
                               )}
                               
-                              <div className="flex items-center gap-3 text-sm">
-                                {item.contactName && <span className="text-slate-700 truncate">{item.contactName}</span>}
-                                {item.invoiceNumber && <span className="text-[#17B6C3] flex-shrink-0">{item.invoiceNumber}</span>}
-                                {item.invoiceAmount && <span className="font-medium text-slate-900 flex-shrink-0">{formatCurrency(parseFloat(item.invoiceAmount))}</span>}
-                                <div className="flex items-center gap-2 flex-shrink-0">
-                                  {item.metadata?.exceptionType && getExceptionBadge(item.metadata.exceptionType)}
-                                  {item.intentType && getIntentBadge(item.intentType)}
-                                  {item.sentiment && getSentimentBadge(item.sentiment)}
-                                  {!isInbound && (
-                                    item.hasResponse ? (
-                                      <Badge className="bg-green-100 text-green-800 border-green-200 flex items-center gap-1 text-xs">
-                                        <CheckCircle2 className="h-3 w-3" />
-                                        Responded
-                                      </Badge>
-                                    ) : (
-                                      <Badge variant="outline" className="text-slate-500 flex items-center gap-1 text-xs">
-                                        <XCircle className="h-3 w-3" />
-                                        No Response
-                                      </Badge>
-                                    )
-                                  )}
+                              <div className="space-y-1">
+                                {/* Company/Customer Name - Bold at top */}
+                                {item.contactName && (
+                                  <div className="font-semibold text-sm text-slate-900 truncate">
+                                    {item.contactName}
+                                  </div>
+                                )}
+                                
+                                {/* Invoice details and badges below */}
+                                <div className="flex items-center gap-3 text-sm">
+                                  {item.invoiceNumber && <span className="text-[#17B6C3] flex-shrink-0">{item.invoiceNumber}</span>}
+                                  {item.invoiceAmount && <span className="font-medium text-slate-900 flex-shrink-0">{formatCurrency(parseFloat(item.invoiceAmount))}</span>}
+                                  <div className="flex items-center gap-2 flex-shrink-0">
+                                    {item.metadata?.exceptionType && getExceptionBadge(item.metadata.exceptionType)}
+                                    {item.intentType && getIntentBadge(item.intentType)}
+                                    {item.sentiment && getSentimentBadge(item.sentiment)}
+                                    {!isInbound && (
+                                      item.hasResponse ? (
+                                        <Badge className="bg-green-100 text-green-800 border-green-200 flex items-center gap-1 text-xs">
+                                          <CheckCircle2 className="h-3 w-3" />
+                                          Responded
+                                        </Badge>
+                                      ) : (
+                                        <Badge variant="outline" className="text-slate-500 flex items-center gap-1 text-xs">
+                                          <XCircle className="h-3 w-3" />
+                                          No Response
+                                        </Badge>
+                                      )
+                                    )}
+                                  </div>
                                 </div>
                               </div>
                             </div>
