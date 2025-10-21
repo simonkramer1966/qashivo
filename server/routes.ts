@@ -4051,6 +4051,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Enrich actions with contact and invoice info
       const enrichedActions = await Promise.all(
         actionsData.map(async (action) => {
+          let companyName = null;
           let contactName = null;
           let invoiceNumber = null;
           let invoiceAmount = null;
@@ -4060,7 +4061,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             try {
               const contact = await storage.getContact(action.contactId, user.tenantId);
               if (contact) {
-                contactName = contact.companyName || contact.name || null;
+                companyName = contact.companyName || null;
+                contactName = contact.name || null;
               }
             } catch (e) {
               // Contact not found, skip
@@ -4082,6 +4084,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           return {
             ...action,
+            companyName,
             contactName,
             invoiceNumber,
             invoiceAmount
@@ -4124,6 +4127,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Enrich with contact and invoice info first (needed for search)
       const enrichedActions = await Promise.all(
         filteredActions.map(async (action) => {
+          let companyName = null;
           let contactName = null;
           let invoiceNumber = null;
           let invoiceAmount = null;
@@ -4132,7 +4136,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             try {
               const contact = await storage.getContact(action.contactId, user.tenantId);
               if (contact) {
-                contactName = contact.companyName || contact.name || null;
+                companyName = contact.companyName || null;
+                contactName = contact.name || null;
               }
             } catch (e) {
               // Contact not found
@@ -4153,6 +4158,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           return {
             ...action,
+            companyName,
             contactName,
             invoiceNumber,
             invoiceAmount
@@ -4160,11 +4166,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         })
       );
 
-      // Apply customer filter (contactId param contains contactName from frontend)
+      // Apply customer filter (contactId param may contain either companyName or contactName)
       let filteredByCustomer = enrichedActions;
       if (contactId) {
         filteredByCustomer = enrichedActions.filter(action => 
-          action.contactName === contactId
+          action.companyName === contactId || action.contactName === contactId
         );
       }
 
@@ -4175,6 +4181,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         searchedActions = filteredByCustomer.filter(action => 
           action.subject?.toLowerCase().includes(searchLower) ||
           action.content?.toLowerCase().includes(searchLower) ||
+          action.companyName?.toLowerCase().includes(searchLower) ||
           action.contactName?.toLowerCase().includes(searchLower) ||
           action.invoiceNumber?.toLowerCase().includes(searchLower)
         );
@@ -4811,18 +4818,20 @@ Guidelines:
       // 1. QUERIES - actions with general_query intent
       const queries = allActions.filter(a => a.intentType === 'general_query');
       
-      // Helper function to enrich invoice with contact name (company name)
+      // Helper function to enrich invoice with contact info
       const enrichInvoice = async (inv: any) => {
+        let companyName = '';
         let contactName = '';
         try {
           const contact = await storage.getContact(inv.contactId, tenantId);
           if (contact) {
-            contactName = contact.companyName || contact.name;
+            companyName = contact.companyName || '';
+            contactName = contact.name || '';
           }
         } catch (e) {
           // Contact not found
         }
-        return { ...inv, contactName };
+        return { ...inv, companyName, contactName };
       };
       
       // 2. OVERDUE INVOICES - grouped by customer (stage = 'overdue')
@@ -4842,12 +4851,14 @@ Guidelines:
         
         if (!customerGroups.has(contactId)) {
           // Get contact info
+          let companyName = '';
           let contactName = '';
           let contact = null;
           try {
             contact = await storage.getContact(contactId, tenantId);
             if (contact) {
-              contactName = contact.companyName || contact.name;
+              companyName = contact.companyName || '';
+              contactName = contact.name || '';
             }
           } catch (e) {
             // Contact not found
@@ -4929,6 +4940,7 @@ Guidelines:
           
           customerGroups.set(contactId, {
             contactId,
+            companyName,
             contactName,
             contact, // Include full contact for dialog
             totalOutstanding: 0,
@@ -4977,6 +4989,7 @@ Guidelines:
         
         // Get invoice details
         let invoice = null;
+        let companyName = '';
         let contactName = '';
         if (action.invoiceId) {
           invoice = allInvoices.find(inv => inv.id === action.invoiceId);
@@ -4984,7 +4997,8 @@ Guidelines:
             try {
               const contact = await storage.getContact(invoice.contactId, tenantId);
               if (contact) {
-                contactName = contact.companyName || contact.name;
+                companyName = contact.companyName || '';
+                contactName = contact.name || '';
               }
             } catch (e) {
               // Contact not found
@@ -5008,6 +5022,7 @@ Guidelines:
         
         return {
           ...action,
+          companyName,
           contactName,
           invoiceNumber: invoice?.invoiceNumber || 'N/A',
           invoiceAmount: invoice?.amount || '0',
@@ -5058,7 +5073,8 @@ Guidelines:
         hasResponse: !!dispute.respondedAt,
         createdAt: dispute.createdAt,
         updatedAt: dispute.updatedAt,
-        contactName: contact?.companyName || contact?.name || 'Unknown',
+        companyName: contact?.companyName || '',
+        contactName: contact?.name || '',
         invoiceNumber: invoice?.invoiceNumber || 'N/A',
         invoiceAmount: invoice?.amount || '0'
       }));

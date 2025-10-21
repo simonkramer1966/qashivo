@@ -99,6 +99,7 @@ interface Action {
   hasResponse: boolean;
   createdAt: string;
   updatedAt: string;
+  companyName?: string | null;
   contactName?: string | null;
   invoiceNumber?: string | null;
   invoiceAmount?: string | null;
@@ -882,9 +883,24 @@ export default function ActionCentre() {
                       >
                         {/* Customer + Bundled Info */}
                         <div className="min-w-0">
-                          <div className="truncate font-medium text-sm text-slate-900">
-                            {action.contactName || 'Unknown Customer'}
-                          </div>
+                          {/* Company Name - Bold */}
+                          {action.companyName && (
+                            <div className="truncate font-medium text-sm text-slate-900">
+                              {action.companyName}
+                            </div>
+                          )}
+                          {/* Contact Person Name - Below company if available */}
+                          {action.contactName && (
+                            <div className="truncate text-xs text-slate-600 mt-0.5">
+                              {action.contactName}
+                            </div>
+                          )}
+                          {/* Fallback if both are empty */}
+                          {!action.companyName && !action.contactName && (
+                            <div className="truncate font-medium text-sm text-slate-900">
+                              Unknown Customer
+                            </div>
+                          )}
                           {bundledCount > 1 && (
                             <div className="text-xs text-slate-500 mt-0.5">
                               {bundledCount} invoices bundled
@@ -1065,10 +1081,21 @@ export default function ActionCentre() {
                               )}
                               
                               <div className="space-y-1">
-                                {/* Company/Customer Name - Bold at top */}
-                                {item.contactName && (
-                                  <div className="font-semibold text-sm text-slate-900 truncate">
-                                    {item.contactName}
+                                {/* Company Name and Contact Person */}
+                                {(item.companyName || item.contactName) && (
+                                  <div className="space-y-0.5">
+                                    {/* Company Name - Bold at top */}
+                                    {item.companyName && (
+                                      <div className="font-semibold text-sm text-slate-900 truncate">
+                                        {item.companyName}
+                                      </div>
+                                    )}
+                                    {/* Contact Person Name - Below company */}
+                                    {item.contactName && (
+                                      <div className="text-xs text-slate-600 truncate">
+                                        {item.contactName}
+                                      </div>
+                                    )}
                                   </div>
                                 )}
                                 
