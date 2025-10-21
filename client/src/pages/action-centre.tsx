@@ -48,6 +48,8 @@ import { NextActionCell } from "@/components/action-centre/NextActionCell";
 import { deriveExceptionTags } from "@/lib/action-centre-helpers";
 import { Checkbox } from "@/components/ui/checkbox";
 import { KebabMenu } from "@/components/action-centre/KebabMenu";
+import { ResponseDrawer } from "@/components/action-centre/ResponseDrawer";
+import { ActionDrawer } from "@/components/action-centre/ActionDrawer";
 
 // Helper to get recommended action label without rendering full component
 const getRecommendedActionLabel = (action: any) => {
@@ -148,6 +150,10 @@ export default function ActionCentre() {
   const [searchQuery, setSearchQuery] = useState("");
   const { toast } = useToast();
   const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
+  const [selectedQuery, setSelectedQuery] = useState<any>(null);
+  const [isResponseDrawerOpen, setIsResponseDrawerOpen] = useState(false);
+  const [selectedActionCustomer, setSelectedActionCustomer] = useState<any>(null);
+  const [isActionDrawerOpen, setIsActionDrawerOpen] = useState(false);
   
   // Workflow-based filter (main tabs)
   const [activeTab, setActiveTab] = useState<'queries' | 'overdue' | 'debt_recovery' | 'enforcement'>('overdue');
@@ -936,7 +942,21 @@ export default function ActionCentre() {
                         {/* Kebab Menu - Sticky on right */}
                         <div className="justify-self-end">
                           <KebabMenu
-                            onCompose={() => setSelectedCustomer(action)}
+                            onCompose={() => {
+                              // Open ActionDrawer with customer details
+                              setSelectedActionCustomer({
+                                contactName: action.contactName || 'Unknown Customer',
+                                contactId: action.contactId,
+                                email: action.metadata?.email,
+                                phone: action.metadata?.phone,
+                                totalOutstanding: totalOutstanding,
+                                oldestInvoiceDueDate: action.metadata?.oldestDueDate || '',
+                                daysOverdue: action.metadata?.daysOverdue || 0,
+                                invoices: action.metadata?.invoices || [],
+                                stage: activeTab === 'overdue' ? 'overdue' : activeTab === 'debt_recovery' ? 'debt_recovery' : 'enforcement',
+                              });
+                              setIsActionDrawerOpen(true);
+                            }}
                             onApprove={() => {
                               toast({
                                 title: "Customer Approved",
@@ -968,7 +988,27 @@ export default function ActionCentre() {
                         className={`p-4 hover:bg-slate-50 cursor-pointer transition-colors ${
                           isInbound ? 'border-l-4 border-l-[#17B6C3]' : 'border-l-4 border-l-transparent'
                         }`}
-                        onClick={() => item.invoiceId && setLocation(`/invoices/${item.invoiceId}`)}
+                        onClick={() => {
+                          // In Queries tab, open ResponseDrawer for inbound queries
+                          if (activeTab === 'queries' && isInbound) {
+                            setSelectedQuery({
+                              id: item.id,
+                              contactName: item.contactName || 'Unknown',
+                              email: item.metadata?.email,
+                              phone: item.metadata?.phone,
+                              channel: item.type,
+                              subject: item.subject,
+                              message: item.content || '',
+                              intent: item.intentType,
+                              sentiment: item.sentiment,
+                              createdAt: item.createdAt,
+                            });
+                            setIsResponseDrawerOpen(true);
+                          } else if (item.invoiceId) {
+                            // For other tabs, navigate to invoice details
+                            setLocation(`/invoices/${item.invoiceId}`);
+                          }
+                        }}
                         data-testid={`action-item-${item.id}`}
                       >
                         <div className="flex items-center justify-between gap-4">
@@ -1045,6 +1085,20 @@ export default function ActionCentre() {
         customer={selectedCustomer}
         open={!!selectedCustomer}
         onOpenChange={(open) => !open && setSelectedCustomer(null)}
+      />
+      
+      {/* Response Drawer (for Queries tab) */}
+      <ResponseDrawer
+        open={isResponseDrawerOpen}
+        onOpenChange={setIsResponseDrawerOpen}
+        query={selectedQuery}
+      />
+      
+      {/* Action Drawer (for Overdue/Debt Recovery/Enforcement tabs) */}
+      <ActionDrawer
+        open={isActionDrawerOpen}
+        onOpenChange={setIsActionDrawerOpen}
+        customer={selectedActionCustomer}
       />
     </div>
   );

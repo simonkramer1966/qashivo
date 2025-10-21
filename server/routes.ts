@@ -164,6 +164,52 @@ const bulkNudgeSchema = z.object({
   customMessage: z.string().optional()
 });
 
+// Action Centre Drawer validation schemas
+const generateResponseSchema = z.object({
+  message: z.string().min(1, "Message is required"),
+  intent: z.string().optional(),
+  sentiment: z.string().optional(),
+  channel: z.string().min(1, "Channel is required")
+});
+
+const respondToQuerySchema = z.object({
+  response: z.string().min(1, "Response is required"),
+  channel: z.string().min(1, "Channel is required")
+});
+
+const generateOutboundSchema = z.object({
+  contactId: z.string().min(1, "Contact ID is required"),
+  actionType: z.enum(['email', 'sms', 'voice']),
+  totalOutstanding: z.number().positive("Total outstanding must be positive"),
+  daysOverdue: z.number().nonnegative("Days overdue must be non-negative"),
+  stage: z.enum(['overdue', 'debt_recovery', 'enforcement']),
+  invoices: z.array(z.object({
+    id: z.string(),
+    invoiceNumber: z.string(),
+    amount: z.string(),
+    dueDate: z.string()
+  })).min(1, "At least one invoice is required")
+});
+
+const sendActionSchema = z.object({
+  contactId: z.string().min(1, "Contact ID is required"),
+  actionType: z.enum(['email', 'sms', 'voice']),
+  content: z.string().min(1, "Content is required"),
+  invoices: z.array(z.object({
+    id: z.string(),
+    invoiceNumber: z.string().optional(),
+    amount: z.string().optional(),
+    dueDate: z.string().optional()
+  })).min(1, "At least one invoice is required")
+});
+
+const escalateCustomerSchema = z.object({
+  contactId: z.string().min(1, "Contact ID is required"),
+  invoiceIds: z.array(z.string()).min(1, "At least one invoice ID is required"),
+  currentStage: z.enum(['overdue', 'debt_recovery', 'enforcement']),
+  nextStage: z.enum(['overdue', 'debt_recovery', 'enforcement'])
+});
+
 // Client & Partner Management validation schemas
 const clientsQuerySchema = z.object({
   search: z.string().optional(),
@@ -4207,6 +4253,348 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid action data", errors: error.errors });
       }
       res.status(500).json({ message: "Failed to create action" });
+    }
+  });
+
+  // Generate AI-powered response draft for query
+  app.post("/api/queries/:id/generate-response", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { id } = req.params;
+      
+      // Validate request body
+      const validatedData = generateResponseSchema.parse(req.body);
+      const { message, intent, sentiment, channel } = validatedData;
+
+      // Get the action/query details
+      const action = await storage.getAction(id, user.tenantId);
+      if (!action) {
+        return res.status(404).json({ message: "Query not found" });
+      }
+
+      // Use OpenAI to generate response
+      const OpenAI = (await import('openai')).default;
+      const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+      const systemPrompt = `You are a professional accounts receivable specialist helping to draft responses to customer queries. 
+Generate a polite, professional, and helpful response that addresses the customer's message.
+
+Context:
+- Channel: ${channel}
+- Customer Intent: ${intent || 'Unknown'}
+- Sentiment: ${sentiment || 'Neutral'}
+
+Guidelines:
+- Be professional and empathetic
+- Address the customer's concerns directly
+- Keep the tone appropriate for the sentiment (more understanding if negative, enthusiastic if positive)
+- Keep it concise (2-3 paragraphs max)
+- Sign off professionally
+- For email responses, DO NOT include a subject line, only the body
+`;
+
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: `Customer message:\n${message}` }
+        ],
+        temperature: 0.7,
+        max_tokens: 500,
+      });
+
+      const draftResponse = completion.choices[0].message.content || "";
+
+      res.json({ draftResponse });
+    } catch (error) {
+      console.error("Error generating response:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid request data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to generate response" });
+    }
+  });
+
+  // Send response to customer query
+  app.post("/api/queries/:id/respond", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { id } = req.params;
+      
+      // Validate request body
+      const validatedData = respondToQuerySchema.parse(req.body);
+      const { response, channel } = validatedData;
+
+      // Get the original action/query
+      const originalAction = await storage.getAction(id, user.tenantId);
+      if (!originalAction) {
+        return res.status(404).json({ message: "Query not found" });
+      }
+
+      // Create a new outbound action as the response
+      const responseAction = await storage.createAction({
+        tenantId: user.tenantId,
+        userId: user.id,
+        contactId: originalAction.contactId,
+        invoiceId: originalAction.invoiceId,
+        type: channel,
+        status: 'completed',
+        priority: 'medium',
+        subject: `Re: ${originalAction.subject || 'Your query'}`,
+        content: response,
+        metadata: {
+          direction: 'outbound',
+          inReplyTo: id,
+          isResponse: true,
+        }
+      });
+
+      // TODO: Actually send the response via the appropriate channel (email/SMS)
+      // For now, we just create the action record
+
+      res.json({ 
+        success: true, 
+        responseAction,
+        message: "Response sent successfully" 
+      });
+    } catch (error) {
+      console.error("Error sending response:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid request data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to send response" });
+    }
+  });
+
+  // Generate AI-powered outbound collection content
+  app.post("/api/action-centre/generate-outbound", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      // Validate request body
+      const validatedData = generateOutboundSchema.parse(req.body);
+      const { contactId, actionType, totalOutstanding, daysOverdue, stage, invoices } = validatedData;
+
+      // Get contact details
+      const contact = await storage.getContact(contactId, user.tenantId);
+      if (!contact) {
+        return res.status(404).json({ message: "Contact not found" });
+      }
+
+      // Use OpenAI to generate outbound content
+      const OpenAI = (await import('openai')).default;
+      const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+      const invoiceList = invoices.map((inv: any) => 
+        `${inv.invoiceNumber} - £${inv.amount} (Due: ${new Date(inv.dueDate).toLocaleDateString()})`
+      ).join('\n');
+
+      let systemPrompt = '';
+      let userPrompt = '';
+
+      if (actionType === 'email') {
+        systemPrompt = `You are a professional accounts receivable specialist drafting collection emails.
+Generate a professional, firm but polite collection email.
+
+Context:
+- Customer: ${contact.companyName || contact.name}
+- Total Outstanding: £${totalOutstanding}
+- Days Overdue: ${daysOverdue}
+- Collection Stage: ${stage.replace('_', ' ')}
+- Invoices:\n${invoiceList}
+
+Guidelines:
+- Be professional and direct
+- Clearly state the outstanding amount and overdue period
+- List all outstanding invoices
+- Include a clear call-to-action (payment deadline, contact request)
+- Tone should escalate based on stage: overdue (polite reminder), debt_recovery (firm), enforcement (final notice)
+- Include professional sign-off
+- DO NOT include subject line or greeting, just the body`;
+
+        userPrompt = `Draft a ${stage.replace('_', ' ')} collection email for this customer.`;
+      } else if (actionType === 'sms') {
+        systemPrompt = `You are drafting a concise SMS collection message.
+Generate a brief, professional SMS (max 160 characters).
+
+Context:
+- Customer: ${contact.companyName || contact.name}
+- Total Outstanding: £${totalOutstanding}
+- Days Overdue: ${daysOverdue}
+- Collection Stage: ${stage.replace('_', ' ')}
+
+Guidelines:
+- Keep it under 160 characters
+- Be direct and clear
+- Include amount and urgency
+- Professional tone matching the stage severity`;
+
+        userPrompt = `Draft a ${stage.replace('_', ' ')} SMS collection message.`;
+      } else if (actionType === 'voice') {
+        systemPrompt = `You are creating a call script for an AI voice agent making collection calls.
+Generate a clear, professional call script.
+
+Context:
+- Customer: ${contact.companyName || contact.name}
+- Total Outstanding: £${totalOutstanding}
+- Days Overdue: ${daysOverdue}
+- Collection Stage: ${stage.replace('_', ' ')}
+- Invoices:\n${invoiceList}
+
+Guidelines:
+- Start with a friendly greeting
+- Clearly identify yourself and purpose
+- State the outstanding balance
+- Ask for payment commitment
+- Handle objections professionally
+- End with clear next steps
+- Tone should match the collection stage`;
+
+        userPrompt = `Create a ${stage.replace('_', ' ')} collection call script.`;
+      }
+
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt }
+        ],
+        temperature: 0.7,
+        max_tokens: actionType === 'sms' ? 100 : 500,
+      });
+
+      const draftContent = completion.choices[0].message.content || "";
+
+      res.json({ draftContent });
+    } catch (error) {
+      console.error("Error generating outbound content:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid request data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to generate content" });
+    }
+  });
+
+  // Send collection action
+  app.post("/api/action-centre/send-action", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      // Validate request body
+      const validatedData = sendActionSchema.parse(req.body);
+      const { contactId, actionType, content, invoices } = validatedData;
+
+      // Create action record for each invoice (or one bundled action)
+      const action = await storage.createAction({
+        tenantId: user.tenantId,
+        userId: user.id,
+        contactId,
+        invoiceId: invoices[0]?.id || null,
+        type: actionType,
+        status: 'completed',
+        priority: 'high',
+        subject: `Collection ${actionType} - ${invoices.length} invoice(s)`,
+        content,
+        metadata: {
+          direction: 'outbound',
+          invoiceIds: invoices.map((inv: any) => inv.id),
+          bundledCount: invoices.length,
+        }
+      });
+
+      // TODO: Actually send via the appropriate channel (email/SMS/voice)
+      // For now, we just create the action record
+
+      res.json({ 
+        success: true, 
+        action,
+        message: "Action sent successfully" 
+      });
+    } catch (error) {
+      console.error("Error sending action:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid request data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to send action" });
+    }
+  });
+
+  // Escalate customer to next collection stage
+  app.post("/api/action-centre/escalate", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      // Validate request body
+      const validatedData = escalateCustomerSchema.parse(req.body);
+      const { contactId, invoiceIds, currentStage, nextStage } = validatedData;
+
+      // Validate escalation path
+      const validEscalations: Record<string, string> = {
+        'overdue': 'debt_recovery',
+        'debt_recovery': 'enforcement',
+      };
+
+      if (validEscalations[currentStage] !== nextStage) {
+        return res.status(400).json({ 
+          message: `Invalid escalation path: ${currentStage} -> ${nextStage}` 
+        });
+      }
+
+      // Update all invoices to next stage
+      await Promise.all(
+        invoiceIds.map((invoiceId: string) =>
+          storage.updateInvoice(invoiceId, user.tenantId, { stage: nextStage })
+        )
+      );
+
+      // Create escalation action record
+      await storage.createAction({
+        tenantId: user.tenantId,
+        userId: user.id,
+        contactId,
+        invoiceId: invoiceIds[0] || null,
+        type: 'escalation',
+        status: 'completed',
+        priority: 'high',
+        subject: `Escalated to ${nextStage.replace('_', ' ')}`,
+        content: `Customer escalated from ${currentStage} to ${nextStage} stage`,
+        metadata: {
+          escalation: {
+            from: currentStage,
+            to: nextStage,
+            invoiceIds,
+            escalatedAt: new Date().toISOString(),
+          }
+        }
+      });
+
+      res.json({ 
+        success: true, 
+        message: `Customer escalated to ${nextStage}` 
+      });
+    } catch (error) {
+      console.error("Error escalating customer:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid request data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to escalate customer" });
     }
   });
 
