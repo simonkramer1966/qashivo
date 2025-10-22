@@ -1,9 +1,9 @@
 import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle 
-} from "@/components/ui/dialog";
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle
+} from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -55,27 +55,27 @@ export function CustomerOverdueDialog({ customer, open, onOpenChange }: Customer
 
   return (
     <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-5xl max-h-[90vh] p-0 flex flex-col">
+      <Sheet open={open} onOpenChange={onOpenChange}>
+        <SheetContent side="right" className="w-full sm:max-w-2xl p-0 flex flex-col">
           {/* Header - Customer Summary */}
-          <div className="bg-white px-6 pt-6 pb-4 border-b rounded-t-lg">
-            <DialogHeader>
-              <div className="flex items-start justify-between gap-4 pr-8">
+          <div className="bg-white px-6 pt-6 pb-4 border-b">
+            <SheetHeader>
+              <div className="flex items-start justify-between gap-4">
                 <div className="flex-1">
-                  <DialogTitle className="text-2xl font-bold mb-2">
+                  <SheetTitle className="text-2xl font-bold mb-2">
                     {customer.contactName || 'Unknown Customer'}
-                  </DialogTitle>
-                  <div className="flex flex-wrap items-center gap-3 text-sm text-slate-600">
-                    <span className="flex items-center gap-1">
+                  </SheetTitle>
+                  <div className="flex flex-col gap-2 text-sm text-slate-600">
+                    <span className="flex items-center gap-2">
                       <Mail className="h-4 w-4" />
                       {contact?.email || 'No email'}
                     </span>
-                    <span className="flex items-center gap-1">
+                    <span className="flex items-center gap-2">
                       <Phone className="h-4 w-4" />
                       {contact?.phone || 'No phone'}
                     </span>
                     {contact?.address && (
-                      <span className="flex items-center gap-1">
+                      <span className="flex items-center gap-2">
                         <MapPin className="h-4 w-4" />
                         {contact.address}
                       </span>
@@ -83,14 +83,14 @@ export function CustomerOverdueDialog({ customer, open, onOpenChange }: Customer
                   </div>
                 </div>
               </div>
-            </DialogHeader>
+            </SheetHeader>
           </div>
 
           {/* Scrollable Content */}
           <ScrollArea className="flex-1 px-6">
             <div className="py-6 space-y-6">
               {/* Outstanding Summary */}
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 gap-3">
                 <div className="bg-gradient-to-br from-red-50 to-red-100 p-4 rounded-lg border border-red-200">
                   <p className="text-xs font-medium text-red-700 mb-1">Total Outstanding</p>
                   <p className="text-2xl font-bold text-red-900">{formatCurrency(customer.totalOutstanding)}</p>
@@ -110,7 +110,7 @@ export function CustomerOverdueDialog({ customer, open, onOpenChange }: Customer
               {/* Communication Actions */}
               <div>
                 <h3 className="text-sm font-semibold text-slate-900 mb-3">Chase Outstanding Balance</h3>
-                <div className="grid grid-cols-5 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                   <Button 
                     variant="outline" 
                     className="flex items-center gap-2 justify-start"
@@ -164,7 +164,7 @@ export function CustomerOverdueDialog({ customer, open, onOpenChange }: Customer
                   </Button>
                   <Button 
                     variant="outline" 
-                    className="flex items-center gap-2 justify-start"
+                    className="flex items-center gap-2 justify-start col-span-2 sm:col-span-1"
                     onClick={() => {
                       // Use first invoice for AI voice call
                       if (customer.invoices?.length > 0) {
@@ -186,15 +186,15 @@ export function CustomerOverdueDialog({ customer, open, onOpenChange }: Customer
               <div>
                 <h3 className="text-sm font-semibold text-slate-900 mb-3">Invoice Breakdown</h3>
                 <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
-                  <div className="max-h-[300px] overflow-y-auto">
+                  <div className="max-h-[400px] overflow-y-auto">
                     <table className="w-full">
                       <thead className="bg-slate-50 border-b border-slate-200 sticky top-0">
                         <tr>
-                          <th className="px-4 py-2 text-left text-xs font-semibold text-slate-600">Invoice #</th>
-                          <th className="px-4 py-2 text-right text-xs font-semibold text-slate-600">Amount</th>
-                          <th className="px-4 py-2 text-right text-xs font-semibold text-slate-600">Days Overdue</th>
-                          <th className="px-4 py-2 text-right text-xs font-semibold text-slate-600">Due Date</th>
-                          <th className="px-4 py-2"></th>
+                          <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600">Invoice #</th>
+                          <th className="px-3 py-2 text-right text-xs font-semibold text-slate-600">Amount</th>
+                          <th className="px-3 py-2 text-right text-xs font-semibold text-slate-600 hidden sm:table-cell">Days Overdue</th>
+                          <th className="px-3 py-2 text-right text-xs font-semibold text-slate-600 hidden sm:table-cell">Due Date</th>
+                          <th className="px-3 py-2"></th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100">
@@ -202,19 +202,19 @@ export function CustomerOverdueDialog({ customer, open, onOpenChange }: Customer
                           const invDaysOverdue = Math.floor((new Date().getTime() - new Date(invoice.dueDate).getTime()) / (1000 * 3600 * 24));
                           return (
                             <tr key={invoice.id} className="hover:bg-slate-50">
-                              <td className="px-4 py-3 text-sm font-medium text-slate-900">
+                              <td className="px-3 py-3 text-sm font-medium text-slate-900">
                                 {invoice.invoiceNumber}
                               </td>
-                              <td className="px-4 py-3 text-sm font-semibold text-slate-900 text-right">
+                              <td className="px-3 py-3 text-sm font-semibold text-slate-900 text-right">
                                 {formatCurrency(parseFloat(invoice.amount || 0))}
                               </td>
-                              <td className="px-4 py-3 text-sm font-medium text-red-600 text-right">
+                              <td className="px-3 py-3 text-sm font-medium text-red-600 text-right hidden sm:table-cell">
                                 {invDaysOverdue} days
                               </td>
-                              <td className="px-4 py-3 text-sm text-slate-600 text-right">
+                              <td className="px-3 py-3 text-sm text-slate-600 text-right hidden sm:table-cell">
                                 {new Date(invoice.dueDate).toLocaleDateString()}
                               </td>
-                              <td className="px-4 py-3 text-right">
+                              <td className="px-3 py-3 text-right">
                                 <Button
                                   variant="ghost"
                                   size="sm"
@@ -236,8 +236,8 @@ export function CustomerOverdueDialog({ customer, open, onOpenChange }: Customer
               </div>
             </div>
           </ScrollArea>
-        </DialogContent>
-      </Dialog>
+        </SheetContent>
+      </Sheet>
 
       {/* SMS Dialog */}
       {selectedInvoice && (
