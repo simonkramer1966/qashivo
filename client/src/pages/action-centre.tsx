@@ -996,150 +996,180 @@ export default function ActionCentre() {
                 </div>
               </div>
             ) : (
-              <div className="divide-y divide-slate-100">
+              <div className="max-h-[600px] overflow-y-auto" style={{ display: 'grid', gridTemplateColumns: activeTab === 'queries' ? '0.5fr 0.3fr 2fr 1.5fr 1fr 1fr 0.3fr' : '0.5fr 2fr 1fr 1fr 1fr 1fr 0.3fr' }}>
+                {/* Table Header */}
+                <div className="contents">
+                  {activeTab === 'queries' ? (
+                    <>
+                      <div className="px-4 h-12 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 flex items-center justify-center"></div>
+                      <div className="px-4 h-12 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 flex items-center justify-center"></div>
+                      <div className="px-4 h-12 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 flex items-center">Subject</div>
+                      <div className="px-4 h-12 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 flex items-center">Customer</div>
+                      <div className="px-4 h-12 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 flex items-center">Date</div>
+                      <div className="px-4 h-12 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 flex items-center">Status</div>
+                      <div className="px-4 h-12 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 flex items-center"></div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="px-4 h-12 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 flex items-center justify-center"></div>
+                      <div className="px-4 h-12 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 flex items-center">Customer</div>
+                      <div className="px-4 h-12 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 flex items-center">Invoice #</div>
+                      <div className="px-4 h-12 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 text-right flex items-center justify-end">Amount</div>
+                      <div className="px-4 h-12 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 text-right flex items-center justify-end">Days Overdue</div>
+                      <div className="px-4 h-12 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 flex items-center">Status</div>
+                      <div className="px-4 h-12 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 flex items-center"></div>
+                    </>
+                  )}
+                </div>
+
+                {/* Table Rows */}
                 {filteredActions.map((item: any) => {
-                  // Render action list item
                   const isInbound = item.metadata?.direction === 'inbound';
                   const exceptions = deriveExceptionTags(item);
-                    
-                    return (
-                      <div 
-                        key={item.id} 
-                        className={`p-4 hover:bg-slate-50 cursor-pointer transition-colors ${
-                          isInbound ? 'border-l-4 border-l-[#17B6C3]' : 'border-l-4 border-l-transparent'
-                        }`}
-                        onClick={() => {
-                          // Open appropriate drawer based on tab
-                          if (activeTab === 'queries') {
-                            if (isInbound) {
-                              // Queries tab (inbound): open ResponseDrawer
-                              setSelectedQuery({
-                                id: item.id,
-                                contactName: item.contactName || 'Unknown',
-                                email: item.metadata?.email,
-                                phone: item.metadata?.phone,
-                                channel: item.type,
-                                subject: item.subject,
-                                message: item.content || '',
-                                intent: item.intentType,
-                                sentiment: item.sentiment,
-                                createdAt: item.createdAt,
-                              });
-                              setIsResponseDrawerOpen(true);
-                            } else if (item.invoiceId) {
-                              // Queries tab (outbound/resolved): navigate to invoice details
-                              setLocation(`/invoices/${item.invoiceId}`);
-                            }
-                          } else {
-                            // Collection tabs: open ActionDrawer
-                            const totalOutstanding = item.metadata?.invoices?.reduce((sum: number, inv: any) => 
-                              sum + parseFloat(inv.amount || '0'), 0
-                            ) || parseFloat(item.invoiceAmount || '0');
-                            
-                            setSelectedActionCustomer({
-                              contactName: item.contactName || 'Unknown Customer',
-                              contactId: item.contactId,
-                              email: item.metadata?.email,
-                              phone: item.metadata?.phone,
-                              totalOutstanding: totalOutstanding,
-                              oldestInvoiceDueDate: item.metadata?.oldestDueDate || '',
-                              daysOverdue: item.metadata?.daysOverdue || 0,
-                              invoices: item.metadata?.invoices || [],
-                              stage: activeTab as 'overdue' | 'debt_recovery' | 'enforcement',
-                            });
-                            setIsActionDrawerOpen(true);
-                          }
-                        }}
-                        data-testid={`action-item-${item.id}`}
-                      >
-                        <div className="flex items-center justify-between gap-4">
-                          <div className="flex items-center gap-3 flex-1 min-w-0">
-                            <div className={`p-2 rounded-lg flex-shrink-0 ${getChannelColor(item.type)}`}>
+                  
+                  const handleClick = () => {
+                    if (activeTab === 'queries') {
+                      if (isInbound) {
+                        setSelectedQuery({
+                          id: item.id,
+                          contactName: item.contactName || 'Unknown',
+                          email: item.metadata?.email,
+                          phone: item.metadata?.phone,
+                          channel: item.type,
+                          subject: item.subject,
+                          message: item.content || '',
+                          intent: item.intentType,
+                          sentiment: item.sentiment,
+                          createdAt: item.createdAt,
+                        });
+                        setIsResponseDrawerOpen(true);
+                      } else if (item.invoiceId) {
+                        setLocation(`/invoices/${item.invoiceId}`);
+                      }
+                    } else {
+                      const totalOutstanding = item.metadata?.invoices?.reduce((sum: number, inv: any) => 
+                        sum + parseFloat(inv.amount || '0'), 0
+                      ) || parseFloat(item.invoiceAmount || '0');
+                      
+                      setSelectedActionCustomer({
+                        contactName: item.contactName || 'Unknown Customer',
+                        contactId: item.contactId,
+                        email: item.metadata?.email,
+                        phone: item.metadata?.phone,
+                        totalOutstanding: totalOutstanding,
+                        oldestInvoiceDueDate: item.metadata?.oldestDueDate || '',
+                        daysOverdue: item.metadata?.daysOverdue || 0,
+                        invoices: item.metadata?.invoices || [],
+                        stage: activeTab as 'overdue' | 'debt_recovery' | 'enforcement',
+                      });
+                      setIsActionDrawerOpen(true);
+                    }
+                  };
+                  
+                  return (
+                    <div 
+                      key={item.id} 
+                      className={`contents ${isInbound ? '[&>div]:border-l-4 [&>div]:border-l-[#17B6C3]' : ''}`}
+                      data-testid={`action-item-${item.id}`}
+                    >
+                      {activeTab === 'queries' ? (
+                        <>
+                          {/* Channel Icon */}
+                          <div className="px-4 h-12 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center justify-center" onClick={handleClick}>
+                            <div className={`p-1.5 rounded-lg ${getChannelColor(item.type)}`}>
                               {getActionIcon(item.type)}
                             </div>
-                            
-                            <div className={`p-1 rounded flex-shrink-0 ${isInbound ? 'bg-[#17B6C3]' : 'bg-slate-400'}`}>
+                          </div>
+
+                          {/* Direction Icon */}
+                          <div className="px-4 h-12 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center justify-center" onClick={handleClick}>
+                            <div className={`p-1 rounded ${isInbound ? 'bg-[#17B6C3]' : 'bg-slate-400'}`}>
                               {isInbound ? (
                                 <ArrowDown className="h-3 w-3 text-white" data-testid="icon-inbound" />
                               ) : (
                                 <ArrowUp className="h-3 w-3 text-white" data-testid="icon-outbound" />
                               )}
                             </div>
-                            
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-3 mb-1">
-                                <h4 className="font-semibold text-slate-900 truncate">
-                                  {item.subject || 'No subject'}
-                                </h4>
-                                <span className="text-xs text-slate-500 flex-shrink-0">{getSmartTimestamp(item.createdAt)}</span>
-                              </div>
-                              
-                              {/* Show message content for inbound actions */}
-                              {isInbound && item.content && (
-                                <div className="text-sm text-slate-600 italic mb-2 border-l-2 border-slate-300 pl-3">
-                                  "{item.content}"
-                                </div>
-                              )}
-                              
-                              <div className="space-y-1">
-                                {/* Company Name and Contact Person */}
-                                {(item.companyName || item.contactName) && (
-                                  <div className="space-y-0.5">
-                                    {/* Company Name - Bold at top */}
-                                    {item.companyName && (
-                                      <div className="font-semibold text-sm text-slate-900 truncate">
-                                        {item.companyName}
-                                      </div>
-                                    )}
-                                    {/* Contact Person Name - Below company */}
-                                    {item.contactName && (
-                                      <div className="text-xs text-slate-600 truncate">
-                                        {item.contactName}
-                                      </div>
-                                    )}
-                                  </div>
-                                )}
-                                
-                                {/* Invoice details and badges below */}
-                                <div className="flex items-center gap-3 text-sm">
-                                  {item.invoiceNumber && <span className="text-[#17B6C3] flex-shrink-0">{item.invoiceNumber}</span>}
-                                  {item.invoiceAmount && <span className="font-medium text-slate-900 flex-shrink-0">{formatCurrency(parseFloat(item.invoiceAmount))}</span>}
-                                  <div className="flex items-center gap-2 flex-wrap flex-shrink-0">
-                                    {/* Exception badges - derived from metadata */}
-                                    {exceptions.map((tag, idx) => (
-                                      <span 
-                                        key={idx}
-                                        className="text-[11px] px-2 py-0.5 rounded-full bg-orange-50 text-orange-700 border border-orange-200"
-                                        data-testid={`exception-badge-${item.id}-${idx}`}
-                                      >
-                                        {tag}
-                                      </span>
-                                    ))}
-                                    {item.intentType && getIntentBadge(item.intentType)}
-                                    {item.sentiment && getSentimentBadge(item.sentiment)}
-                                    {!isInbound && (
-                                      item.hasResponse ? (
-                                        <Badge className="bg-green-100 text-green-800 border-green-200 flex items-center gap-1 text-xs">
-                                          <CheckCircle2 className="h-3 w-3" />
-                                          Responded
-                                        </Badge>
-                                      ) : (
-                                        <Badge variant="outline" className="text-slate-500 flex items-center gap-1 text-xs">
-                                          <XCircle className="h-3 w-3" />
-                                          No Response
-                                        </Badge>
-                                      )
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
+                          </div>
+
+                          {/* Subject */}
+                          <div className="px-4 h-12 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center min-w-0" onClick={handleClick}>
+                            <p className="font-semibold text-sm text-slate-900 truncate">{item.subject || 'No subject'}</p>
+                          </div>
+
+                          {/* Customer */}
+                          <div className="px-4 h-12 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center min-w-0" onClick={handleClick}>
+                            <div className="min-w-0">
+                              {item.companyName && <p className="font-semibold text-sm text-slate-900 truncate">{item.companyName}</p>}
+                              {item.contactName && <p className="text-xs text-slate-600 truncate">{item.contactName}</p>}
                             </div>
                           </div>
-                          
-                          <ChevronRight className="h-5 w-5 text-slate-400 flex-shrink-0" />
-                        </div>
-                      </div>
-                    );
+
+                          {/* Date */}
+                          <div className="px-4 h-12 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center" onClick={handleClick}>
+                            <span className="text-sm text-slate-700">{getSmartTimestamp(item.createdAt)}</span>
+                          </div>
+
+                          {/* Status */}
+                          <div className="px-4 h-12 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center gap-2" onClick={handleClick}>
+                            {item.intentType && getIntentBadge(item.intentType)}
+                            {item.sentiment && getSentimentBadge(item.sentiment)}
+                          </div>
+
+                          {/* Chevron */}
+                          <div className="px-4 h-12 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center justify-center" onClick={handleClick}>
+                            <ChevronRight className="h-5 w-5 text-slate-400" />
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          {/* Channel Icon */}
+                          <div className="px-4 h-12 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center justify-center" onClick={handleClick}>
+                            <div className={`p-1.5 rounded-lg ${getChannelColor(item.type)}`}>
+                              {getActionIcon(item.type)}
+                            </div>
+                          </div>
+
+                          {/* Customer */}
+                          <div className="px-4 h-12 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center min-w-0" onClick={handleClick}>
+                            <div className="min-w-0">
+                              {item.companyName && <p className="font-semibold text-sm text-slate-900 truncate">{item.companyName}</p>}
+                              {item.contactName && <p className="text-xs text-slate-600 truncate">{item.contactName}</p>}
+                            </div>
+                          </div>
+
+                          {/* Invoice Number */}
+                          <div className="px-4 h-12 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center" onClick={handleClick}>
+                            <span className="text-sm text-[#17B6C3] font-medium">{item.invoiceNumber || '—'}</span>
+                          </div>
+
+                          {/* Amount */}
+                          <div className="px-4 h-12 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center justify-end" onClick={handleClick}>
+                            <span className="font-bold text-sm text-slate-900">{item.invoiceAmount ? formatCurrency(parseFloat(item.invoiceAmount)) : '—'}</span>
+                          </div>
+
+                          {/* Days Overdue */}
+                          <div className="px-4 h-12 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center justify-end" onClick={handleClick}>
+                            <span className="text-sm text-slate-700">{item.metadata?.daysOverdue || 0}d</span>
+                          </div>
+
+                          {/* Status / Badges */}
+                          <div className="px-4 h-12 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center gap-1" onClick={handleClick}>
+                            {exceptions.length > 0 && (
+                              <span className="text-[11px] px-2 py-0.5 rounded-full bg-orange-50 text-orange-700 border border-orange-200">
+                                {exceptions[0]}
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Chevron */}
+                          <div className="px-4 h-12 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center justify-center" onClick={handleClick}>
+                            <ChevronRight className="h-5 w-5 text-slate-400" />
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  );
                 })}
               </div>
             )}
