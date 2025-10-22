@@ -304,12 +304,18 @@ export default function ActionCentre() {
     setSelectedActions(newSelection);
   };
 
-  // Select all helper
+  // Select all helper (for current page)
   const toggleSelectAll = () => {
-    if (selectedActions.size === filteredActions.length) {
-      setSelectedActions(new Set());
+    if (selectedActions.size === paginatedActions.length && paginatedActions.every((a: any) => selectedActions.has(a.id))) {
+      // Deselect all on current page
+      const newSelection = new Set(selectedActions);
+      paginatedActions.forEach((a: any) => newSelection.delete(a.id));
+      setSelectedActions(newSelection);
     } else {
-      setSelectedActions(new Set(filteredActions.map((a: any) => a.id)));
+      // Select all on current page
+      const newSelection = new Set(selectedActions);
+      paginatedActions.forEach((a: any) => newSelection.add(a.id));
+      setSelectedActions(newSelection);
     }
   };
 
@@ -595,6 +601,18 @@ export default function ActionCentre() {
     return filtered;
   }, [currentTabItems, searchQuery, directionFilters, channelFilters, intentFilters, statusFilters, exceptionFilters, sortBy, sortDirection, isActionsTab]);
 
+  // Pagination calculations
+  const totalActions = filteredActions.length;
+  const totalPages = Math.ceil(totalActions / limit);
+  const startIndex = (page - 1) * limit;
+  const endIndex = startIndex + limit;
+  const paginatedActions = filteredActions.slice(startIndex, endIndex);
+
+  // Reset page when filters change
+  useEffect(() => {
+    setPage(1);
+  }, [searchQuery, directionFilters, channelFilters, intentFilters, statusFilters, exceptionFilters, activeTab]);
+
   return (
     <div className="flex h-screen bg-white">
       {/* Desktop Sidebar */}
@@ -667,9 +685,14 @@ export default function ActionCentre() {
             </div>
           </div>
 
-          {/* Search Bar */}
+          {/* Search Bar + Pagination Controls */}
           <div className="mb-6">
-            <div className="flex items-center gap-3">
+            {/* Desktop: Search + Pagination on same row */}
+            <div className="hidden sm:flex items-center gap-3 mb-4">
+              <p className="text-sm text-slate-600 whitespace-nowrap">
+                {totalActions} action{totalActions !== 1 ? 's' : ''}
+              </p>
+              
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" />
                 <Input
@@ -681,6 +704,119 @@ export default function ActionCentre() {
                   data-testid="input-search-actions"
                 />
               </div>
+
+              {/* Pagination Controls - Desktop */}
+              {totalPages > 1 && (
+                <div className="flex gap-2 items-center">
+                  <Button
+                    onClick={() => setPage(Math.max(1, page - 1))}
+                    disabled={page === 1}
+                    variant="outline"
+                    size="sm"
+                    className="h-9"
+                    data-testid="button-prev-page"
+                  >
+                    Previous
+                  </Button>
+                  
+                  <div className="flex gap-1">
+                    {Array.from({ length: totalPages }, (_, i) => i + 1)
+                      .filter(pageNum => {
+                        return Math.abs(pageNum - page) <= 1 || pageNum === 1 || pageNum === totalPages;
+                      })
+                      .map((pageNum, idx, arr) => (
+                        <div key={pageNum} className="flex gap-1 items-center">
+                          {idx > 0 && arr[idx - 1] !== pageNum - 1 && <span className="text-slate-400">...</span>}
+                          <Button
+                            onClick={() => setPage(pageNum)}
+                            variant={page === pageNum ? "default" : "outline"}
+                            size="sm"
+                            className={`h-9 min-w-[36px] ${page === pageNum ? 'bg-[#17B6C3] hover:bg-[#1396A1]' : ''}`}
+                            data-testid={`button-page-${pageNum}`}
+                          >
+                            {pageNum}
+                          </Button>
+                        </div>
+                      ))}
+                  </div>
+                  
+                  <Button
+                    onClick={() => setPage(Math.min(totalPages, page + 1))}
+                    disabled={page === totalPages}
+                    variant="outline"
+                    size="sm"
+                    className="h-9"
+                    data-testid="button-next-page"
+                  >
+                    Next
+                  </Button>
+                </div>
+              )}
+            </div>
+
+            {/* Mobile: Search and Pagination stacked */}
+            <div className="sm:hidden space-y-3">
+              <p className="text-sm text-slate-600">
+                {totalActions} action{totalActions !== 1 ? 's' : ''}
+              </p>
+              
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" />
+                <Input
+                  type="text"
+                  placeholder="Search..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="input-apple pl-10"
+                  data-testid="input-search-actions-mobile"
+                />
+              </div>
+
+              {/* Pagination Controls - Mobile */}
+              {totalPages > 1 && (
+                <div className="flex gap-2 items-center justify-between">
+                  <Button
+                    onClick={() => setPage(Math.max(1, page - 1))}
+                    disabled={page === 1}
+                    variant="outline"
+                    size="sm"
+                    className="h-9"
+                    data-testid="button-prev-page-mobile"
+                  >
+                    Previous
+                  </Button>
+                  
+                  <div className="flex gap-1">
+                    {Array.from({ length: totalPages }, (_, i) => i + 1)
+                      .filter(pageNum => {
+                        return Math.abs(pageNum - page) <= 1;
+                      })
+                      .map((pageNum) => (
+                        <Button
+                          key={pageNum}
+                          onClick={() => setPage(pageNum)}
+                          variant={page === pageNum ? "default" : "outline"}
+                          size="sm"
+                          className={`h-9 min-w-[36px] ${page === pageNum ? 'bg-[#17B6C3] hover:bg-[#1396A1]' : ''}`}
+                          data-testid={`button-page-${pageNum}-mobile`}
+                        >
+                          {pageNum}
+                        </Button>
+                      ))}
+                  </div>
+                  
+                  <Button
+                    onClick={() => setPage(Math.min(totalPages, page + 1))}
+                    disabled={page === totalPages}
+                    variant="outline"
+                    size="sm"
+                    className="h-9"
+                    data-testid="button-next-page-mobile"
+                  >
+                    Next
+                  </Button>
+                </div>
+              )}
             </div>
           </div>
 
@@ -845,7 +981,7 @@ export default function ActionCentre() {
                   </div>
                 ))}
               </div>
-            ) : filteredActions.length === 0 ? (
+            ) : totalActions === 0 ? (
               <div className="p-8 text-center">
                 <AlertTriangle className="h-12 w-12 mx-auto mb-3 text-slate-400" />
                 <p className="text-slate-600">
@@ -869,7 +1005,7 @@ export default function ActionCentre() {
                   </div>
 
                   {/* List Rows - Dense 48px height, glassmorphism on hover */}
-                  {filteredActions.map((action: any) => {
+                  {paginatedActions.map((action: any) => {
                     const exceptions = deriveExceptionTags(action);
                     const priority = action.metadata?.recommended?.priority || action.metadata?.priority || 50;
                     const bundledCount = action.invoiceCount || action.metadata?.invoiceCount || 1;
@@ -1027,7 +1163,7 @@ export default function ActionCentre() {
                 </div>
 
                 {/* Table Rows */}
-                {filteredActions.map((item: any) => {
+                {paginatedActions.map((item: any) => {
                   const isInbound = item.metadata?.direction === 'inbound';
                   const exceptions = deriveExceptionTags(item);
                   
