@@ -425,13 +425,13 @@ export default function Customers() {
                 <div className="max-h-[600px] overflow-y-auto" style={{ display: 'grid', gridTemplateColumns: '2fr 1.5fr 1.5fr 0.8fr 1fr 1fr 1fr' }}>
                   {/* Table Header */}
                   <div className="contents">
-                    <div className="px-8 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10">Customer</div>
-                    <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 text-right">Outstanding</div>
-                    <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 text-right">Overdue</div>
-                    <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 text-right">ADPD</div>
-                    <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 text-right">Last Contact</div>
-                    <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 text-right">Last Payment</div>
-                    <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 text-right">Risk</div>
+                    <div className="px-8 h-12 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 flex items-center">Customer</div>
+                    <div className="px-4 h-12 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 text-right flex items-center justify-end">Outstanding</div>
+                    <div className="px-4 h-12 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 text-right flex items-center justify-end">Overdue</div>
+                    <div className="px-4 h-12 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 text-right flex items-center justify-end">ADPD</div>
+                    <div className="px-4 h-12 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 text-right flex items-center justify-end">Last Contact</div>
+                    <div className="px-4 h-12 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 text-right flex items-center justify-end">Last Payment</div>
+                    <div className="px-4 h-12 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 text-right flex items-center justify-end">Risk</div>
                   </div>
 
                   {/* Table Rows */}
@@ -443,7 +443,7 @@ export default function Customers() {
                     >
                       {/* Customer */}
                       <div 
-                        className="px-8 py-2 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center min-w-0"
+                        className="px-8 h-12 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center min-w-0"
                         onClick={() => {
                           setSelectedContact(contact);
                           setShowCustomerDetail(true);
@@ -461,7 +461,7 @@ export default function Customers() {
 
                       {/* Outstanding */}
                       <div 
-                        className="px-4 py-2 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center justify-end"
+                        className="px-4 h-12 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center justify-end"
                         onClick={() => {
                           setSelectedContact(contact);
                           setShowCustomerDetail(true);
@@ -474,7 +474,7 @@ export default function Customers() {
 
                       {/* Overdue */}
                       <div 
-                        className="px-4 py-2 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center justify-end"
+                        className="px-4 h-12 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center justify-end"
                         onClick={() => {
                           setSelectedContact(contact);
                           setShowCustomerDetail(true);
@@ -491,7 +491,7 @@ export default function Customers() {
 
                       {/* ADPD - Average Days Past Due */}
                       <div 
-                        className="px-4 py-2 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center justify-end"
+                        className="px-4 h-12 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center justify-end"
                         onClick={() => {
                           setSelectedContact(contact);
                           setShowCustomerDetail(true);
@@ -508,7 +508,7 @@ export default function Customers() {
 
                       {/* Last Contact */}
                       <div 
-                        className="px-4 py-2 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center justify-end"
+                        className="px-4 h-12 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center justify-end"
                         onClick={() => {
                           setSelectedContact(contact);
                           setShowCustomerDetail(true);
@@ -521,7 +521,7 @@ export default function Customers() {
 
                       {/* Last Payment */}
                       <div 
-                        className="px-4 py-2 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center justify-end"
+                        className="px-4 h-12 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center justify-end"
                         onClick={() => {
                           setSelectedContact(contact);
                           setShowCustomerDetail(true);
@@ -534,7 +534,7 @@ export default function Customers() {
 
                       {/* Risk Badge */}
                       <div 
-                        className="px-4 py-2 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center justify-end"
+                        className="px-4 h-12 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center justify-end"
                         onClick={() => {
                           setSelectedContact(contact);
                           setShowCustomerDetail(true);

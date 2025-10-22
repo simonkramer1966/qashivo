@@ -490,13 +490,13 @@ export default function Invoices() {
                 <div className="max-h-[600px] overflow-y-auto" style={{ display: 'grid', gridTemplateColumns: '1.8fr 1fr 1fr 1fr 1fr 1fr auto' }}>
                 {/* Table Header */}
                 <div className="contents">
-                  <div className="px-8 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10">Customer</div>
-                  <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10">Invoice #</div>
-                  <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 text-right">Amount</div>
-                  <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 text-right">{statusFilter === 'paid' ? 'Paid Date' : 'Due Date'}</div>
-                  <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 text-right">Exp. Date</div>
-                  <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 text-right">Status</div>
-                  <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10"></div>
+                  <div className="px-8 h-12 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 flex items-center">Customer</div>
+                  <div className="px-4 h-12 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 flex items-center">Invoice #</div>
+                  <div className="px-4 h-12 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 text-right flex items-center justify-end">Amount</div>
+                  <div className="px-4 h-12 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 text-right flex items-center justify-end">{statusFilter === 'paid' ? 'Paid Date' : 'Due Date'}</div>
+                  <div className="px-4 h-12 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 text-right flex items-center justify-end">Exp. Date</div>
+                  <div className="px-4 h-12 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 text-right flex items-center justify-end">Status</div>
+                  <div className="px-4 h-12 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 flex items-center"></div>
                 </div>
 
                 {/* Table Rows */}
@@ -525,7 +525,7 @@ export default function Invoices() {
                     >
                       {/* Customer */}
                       <div 
-                        className="px-8 py-2 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center min-w-0"
+                        className="px-8 h-12 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center min-w-0"
                         onClick={() => setSelectedInvoice(invoice)}
                       >
                         <p className="font-semibold text-sm text-slate-900 truncate">
@@ -535,7 +535,7 @@ export default function Invoices() {
 
                       {/* Invoice Number */}
                       <div 
-                        className="px-4 py-2 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center"
+                        className="px-4 h-12 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center"
                         onClick={() => setSelectedInvoice(invoice)}
                       >
                         <p className="text-sm font-medium text-slate-900">{invoice.invoiceNumber}</p>
@@ -543,7 +543,7 @@ export default function Invoices() {
 
                       {/* Amount */}
                       <div 
-                        className="px-4 py-2 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center justify-end gap-2"
+                        className="px-4 h-12 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center justify-end gap-2"
                         onClick={() => setSelectedInvoice(invoice)}
                       >
                         <p className="font-bold text-sm text-slate-900">
@@ -556,7 +556,7 @@ export default function Invoices() {
 
                       {/* Due Date / Paid Date */}
                       <div 
-                        className="px-4 py-2 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center justify-end"
+                        className="px-4 h-12 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center justify-end"
                         onClick={() => setSelectedInvoice(invoice)}
                       >
                         <p className="text-sm text-slate-700">
@@ -569,7 +569,7 @@ export default function Invoices() {
 
                       {/* Exp. Date */}
                       <div 
-                        className="px-4 py-2 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center justify-end"
+                        className="px-4 h-12 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center justify-end"
                         onClick={() => setSelectedInvoice(invoice)}
                       >
                         <p className="text-sm text-slate-700">
@@ -579,7 +579,7 @@ export default function Invoices() {
 
                       {/* Status */}
                       <div 
-                        className="px-4 py-2 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center justify-end"
+                        className="px-4 h-12 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center justify-end"
                         onClick={() => setSelectedInvoice(invoice)}
                       >
                         {invoice.status === 'paid' ? (
@@ -594,7 +594,7 @@ export default function Invoices() {
                       </div>
 
                       {/* 3-dot menu */}
-                      <div className="px-4 py-2 border-b border-slate-100 hover:bg-slate-50 transition-colors flex items-center justify-center">
+                      <div className="px-4 h-12 border-b border-slate-100 hover:bg-slate-50 transition-colors flex items-center justify-center">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button

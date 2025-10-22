@@ -112,33 +112,37 @@ export default function RecentInvoices() {
               </thead>
               <tbody className="divide-y divide-border">
                 {recentInvoices.map((invoice: any) => (
-                  <tr key={invoice.id} data-testid={`row-recent-invoice-${invoice.id}`}>
-                    <td className="py-4">
-                      <div className="font-medium text-foreground" data-testid={`text-invoice-number-${invoice.id}`}>
-                        {invoice.invoiceNumber}
-                      </div>
-                      <div className="text-sm text-muted-foreground" data-testid={`text-issue-date-${invoice.id}`}>
-                        {formatDate(invoice.issueDate)}
-                      </div>
-                    </td>
-                    <td className="py-4">
-                      <div className="font-medium text-foreground" data-testid={`text-contact-name-${invoice.id}`}>
-                        {invoice.contact?.name || 'Unknown Contact'}
-                      </div>
-                      <div className="text-sm text-muted-foreground" data-testid={`text-contact-email-${invoice.id}`}>
-                        {invoice.contact?.email || 'No email'}
+                  <tr key={invoice.id} data-testid={`row-recent-invoice-${invoice.id}`} className="h-12">
+                    <td className="h-12 py-0">
+                      <div className="flex flex-col justify-center h-12">
+                        <div className="font-medium text-foreground leading-tight" data-testid={`text-invoice-number-${invoice.id}`}>
+                          {invoice.invoiceNumber}
+                        </div>
+                        <div className="text-xs text-muted-foreground leading-tight" data-testid={`text-issue-date-${invoice.id}`}>
+                          {formatDate(invoice.issueDate)}
+                        </div>
                       </div>
                     </td>
-                    <td className="py-4 font-medium text-foreground" data-testid={`text-amount-${invoice.id}`}>
+                    <td className="h-12 py-0">
+                      <div className="flex flex-col justify-center h-12">
+                        <div className="font-medium text-foreground leading-tight truncate" data-testid={`text-contact-name-${invoice.id}`}>
+                          {invoice.contact?.name || 'Unknown Contact'}
+                        </div>
+                        <div className="text-xs text-muted-foreground leading-tight truncate" data-testid={`text-contact-email-${invoice.id}`}>
+                          {invoice.contact?.email || 'No email'}
+                        </div>
+                      </div>
+                    </td>
+                    <td className="h-12 align-middle font-medium text-foreground" data-testid={`text-amount-${invoice.id}`}>
                       ${Number(invoice.amount).toLocaleString()}
                     </td>
-                    <td className="py-4 text-sm text-foreground" data-testid={`text-due-date-${invoice.id}`}>
+                    <td className="h-12 align-middle text-sm text-foreground" data-testid={`text-due-date-${invoice.id}`}>
                       {formatDate(invoice.dueDate)}
                     </td>
-                    <td className="py-4">
+                    <td className="h-12 align-middle">
                       {getStatusBadge(invoice.status)}
                     </td>
-                    <td className="py-4">
+                    <td className="h-12 align-middle">
                       <div className="flex space-x-2">
                         {invoice.contact?.email && (
                           <Button 
