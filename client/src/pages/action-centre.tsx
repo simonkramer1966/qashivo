@@ -1136,7 +1136,7 @@ export default function ActionCentre() {
                 </div>
               </div>
             ) : (
-              <div className="max-h-[600px] overflow-y-auto" style={{ display: 'grid', gridTemplateColumns: activeTab === 'queries' ? '0.5fr 0.3fr 2fr 1.5fr 1fr 1fr 0.3fr' : '0.5fr 2fr 1fr 1fr 1fr 1fr 0.3fr' }}>
+              <div className="max-h-[600px] overflow-y-auto" style={{ display: 'grid', gridTemplateColumns: activeTab === 'queries' ? '0.5fr 0.3fr 2fr 1.5fr 1fr 1fr 0.3fr' : '2fr 1fr 1fr 1fr 1fr 0.3fr' }}>
                 {/* Table Header */}
                 <div className="contents">
                   {activeTab === 'queries' ? (
@@ -1151,7 +1151,6 @@ export default function ActionCentre() {
                     </>
                   ) : (
                     <>
-                      <div className="px-4 h-12 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 flex items-center justify-center"></div>
                       <div className="px-4 h-12 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 flex items-center">Customer</div>
                       <div className="px-4 h-12 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 flex items-center">Invoice #</div>
                       <div className="px-4 h-12 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 text-right flex items-center justify-end">Amount</div>
@@ -1263,13 +1262,6 @@ export default function ActionCentre() {
                         </>
                       ) : (
                         <>
-                          {/* Channel Icon */}
-                          <div className="px-4 h-12 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center justify-center" onClick={handleClick}>
-                            <div className={`p-1.5 rounded-lg ${getChannelColor(item.type)}`}>
-                              {getActionIcon(item.type)}
-                            </div>
-                          </div>
-
                           {/* Customer */}
                           <div className="px-4 h-12 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center min-w-0" onClick={handleClick}>
                             <div className="min-w-0">
