@@ -156,6 +156,10 @@ export default function ActionCentre() {
   const [selectedActionCustomer, setSelectedActionCustomer] = useState<any>(null);
   const [isActionDrawerOpen, setIsActionDrawerOpen] = useState(false);
   
+  // Pagination state
+  const [page, setPage] = useState(1);
+  const limit = 20;
+  
   // Workflow-based filter (main tabs)
   const [activeTab, setActiveTab] = useState<'queries' | 'overdue' | 'debt_recovery' | 'enforcement'>('overdue');
   
