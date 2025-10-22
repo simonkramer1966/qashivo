@@ -1,0 +1,200 @@
+<response status="success"> <thinking> Provide a concise, investor-grade specification framework tailored to Qashivo’s MVP, aligned to SME credit control and the UK late-payment context, with clear artifacts, acceptance criteria, and Phase 2 hooks (Qompliance/Qollect). Ground a few justifying stats in the provided research. End with immediate next steps. </thinking> <main_content> **BLUF:** Here is a practical, CTO-friendly framework you can use to produce the full Specification & Requirements for Qashivo. It’s structured so you can fill it in section-by-section, produce sign-off artifacts, and keep Phase 2 in sight without overbuilding the MVP.
+0) Cover Page & Control
+
+Title, version, date, editors, approvals.
+
+Document control: change log, open decisions, risks.
+
+1) Product Vision & Objectives
+
+One-sentence vision for Qashivo.
+
+Business outcomes for MVP (e.g., reduce DSO, raise promise-to-pay rate, automate X% of chasing).
+
+Why now: evidence that late payments materially harm UK SMEs and the wider economy, so a focused tool adds real value (e.g., ~£11bn annual economic cost; ~14k closures/yr).
+
+North-star metrics and guardrails (cash recovered, hours saved, complaint rate, compliance flags).
+
+2) Scope & Phasing
+
+Phase 1 (MVP, by 24 Oct 2025): credit control automation, forecasting, comms, dashboards, embedded spot-finance discovery.
+
+Phase 2 (Qompliance/Qollect): dispute workflows, legal pack generation, handoff to collectors, ethical collections automation.
+
+Out-of-scope (now): full ledger, payroll, payments processing, in-house lending.
+
+3) Market & Users (condensed evidence pack)
+
+Problem summary: staff time chasing, cash tied up, survival risk for a subset of SMEs.
+
+Primary personas: owner-operators in construction and professional services; accounting practice admins managing multiple clients.
+
+TAM/SAM snapshot from your internal market analysis (for CTO context and prioritization).
+
+Competitive notes (why AI-first matters; simple setup, deep Xero).
+
+4) Key Use Cases & User Stories
+
+For each, include: trigger, happy path, alternates, acceptance criteria.
+
+Connect accounting platform (Xero first; QBO/Sage later).
+
+Ingest & normalize AR (invoices, credit notes, contacts, terms).
+
+Prioritize who to chase today (risk/propensity scoring; promises-to-pay).
+
+Sequence outreach (email, SMS, voice bot; templates; throttling).
+
+Negotiate & log outcomes (payment plans, dispute flags).
+
+Forecast cash (scenario view; sensitivity to terms and expected cure).
+
+Embedded finance offers (surface when safe; log declines).
+
+Team workflows (assignment, SLAs, audit log).
+
+Accounting-practice multi-client hub (role-based access, branding).
+
+Compliance & consent (GDPR, comms preferences, rate limits).
+
+5) Functional Requirements (FRD)
+
+Organized by capability, with inputs, processing, outputs.
+
+Data ingestion & sync
+
+Xero OAuth2, webhooks/poll sync; idempotency keys; 5-minute near-real-time targets.
+
+Segmentation & scoring
+
+Features: aging buckets, historic behavior, invoice value, sentiment from replies; model outputs: probability-to-pay, next best action.
+
+AI justification: predictive analytics help target the right accounts and select effective tactics.
+
+Comms Orchestrator
+
+Channels: SendGrid (email), Vonage (SMS), Retell (voice flows).
+
+Personalization rules; quiet hours; frequency caps; opt-outs; multilingual templates.
+
+Customer-friendly AI engagement improves repayment and experience.
+
+AI assistants
+
+Draft empathetic reminders; classify replies; sentiment routing; propose payment plans.
+
+Automations free staff for complex cases and reduce errors.
+
+Payment plan & portal
+
+Self-serve plans; card/Bank transfer handoff; status webhooks; hardship flows.
+
+Digital negotiation increases cures and reduces hostility.
+
+Dispute & compliance
+
+Capture disputes, evidence upload, pause timers; audit trail; regulator-ready exports.
+
+Policy engine to enforce local collection rules.
+
+Dashboards & reporting
+
+Today’s actions, promises-to-pay, forecasted receipts, recovery funnels; export CSV/PDF.
+
+Admin
+
+Roles (Owner, Manager, Collector, Accountant), orgs, branding, billing.
+
+6) Non-Functional Requirements (NFR)
+
+Security & Privacy: OAuth2/OIDC, SSO, field-level encryption at rest, secrets management, audit trails, DPA, GDPR lawful bases, data minimization.
+
+Compliance: contact hours, channel limits, consent tracking, content risk checks; evidence logs for disputes. AI should assist rather than harass.
+
+Performance: ingest 100k invoices/hr; comms throughput 50 msgs/sec burst; P95 API < 300 ms.
+
+Availability: 99.9% app; 99.99% data store; RPO ≤ 15 min; RTO ≤ 60 min.
+
+Observability: structured logs, traces, alerting on sync lag, comms failures, model drift.
+
+Accessibility: WCAG 2.1 AA flows for critical tasks.
+
+7) Data Model (high-level)
+
+Entities: Organization, User, Customer, Invoice, Payment, Promise, Communication, Case, PaymentPlan, Dispute, ScoreSnapshot, Event.
+
+Key relationships and retention rules (e.g., comms metadata retained; message bodies minimized).
+
+8) Integrations & APIs
+
+Accounting: Xero first (auth, scopes, webhooks, rate-limit strategy).
+
+Comms: SendGrid (retry, suppression), Vonage (DLR webhooks, opt-out), Retell (voice scripts, call outcomes).
+
+Public APIs: REST/GraphQL for partners; webhooks for events.
+
+Idempotency, retries, backoff everywhere.
+
+Sandbox & test data packs for partners.
+
+9) AI/ML Specification
+
+Models: propensity-to-pay classification; next-best-action policy; intent/sentiment NLP on replies.
+
+Data: feature store schema; drift monitoring; bias checks; human-in-the-loop review queues.
+
+Governance: model cards; rollback plan; red-team prompts; PII handling.
+
+Rationale: AI in collections improves efficiency, decisions, and customer experience when used ethically.
+
+10) UI/UX Flows (MVP screens)
+
+Inbox (prioritized debtors), Customer 360, Sequence Builder, Payment Plan Wizard, Forecast, Settings.
+
+Describe component trees and state transitions. Mobile for notifications; desktop for work.
+
+11) Metrics & KPIs
+
+Core: DSO delta, cash collected, promise-to-pay rate, cure rate by cohort, hours saved, dispute rate, complaint rate.
+
+Leading indicators: website conversion, trial→paid, activation within 7 days. Use your internal KPI baselines to set targets.
+
+12) Compliance Notes (UK focus for MVP)
+
+Reference late-payment environment and the need for transparent, fair practices; keep exports and audit data ready.
+
+13) Release Plan & Environments
+
+Alpha (private) → Beta (sector cohorts) → GA (UK).
+
+Environments, feature flags, migration plan, rollback.
+
+14) Test Strategy
+
+Unit, contract, integration (Xero/SendGrid/Vonage/Retell), e2e happy paths and edge cases.
+
+Synthetic debtor datasets for scenario tests; comms deliverability tests; AI safety tests.
+
+15) Risks & Mitigations
+
+Integration rate limits, messaging compliance, AI misclassification, change management for accountants, data residency.
+
+16) Appendices
+
+Glossary; templates (email/SMS/voice); legal pack structure; model cards; sample export specs.
+
+Quick-fill Checklists (copy into the doc)
+
+Acceptance criteria per epic: data accuracy thresholds, latency, compliance behaviors, UX success rates.
+
+Go/no-go gates: beta satisfaction ≥ 80%; sync error rate ≤ 0.2%; first-30-day cure uplift vs baseline.
+
+Ethics: clear channels, empathetic defaults, hardship paths. Using AI should reduce pressure and improve fairness.
+
+Why this framework will land with a CTO
+
+It ties requirements to measurable business impact and to the real, evidenced market problem (time spent chasing, closures, economy-wide cost).
+
+It specifies crisp NFRs, integration contracts, and AI governance, which keeps Phase 2 extensible without delaying MVP.
+
+It builds in compliance-aware comms and ethical automation patterns from day one.
