@@ -1000,6 +1000,7 @@ export default function ActionCentre() {
                 {filteredActions.map((item: any) => {
                   // Render action list item
                   const isInbound = item.metadata?.direction === 'inbound';
+                  const exceptions = deriveExceptionTags(item);
                     
                     return (
                       <div 
@@ -1103,8 +1104,17 @@ export default function ActionCentre() {
                                 <div className="flex items-center gap-3 text-sm">
                                   {item.invoiceNumber && <span className="text-[#17B6C3] flex-shrink-0">{item.invoiceNumber}</span>}
                                   {item.invoiceAmount && <span className="font-medium text-slate-900 flex-shrink-0">{formatCurrency(parseFloat(item.invoiceAmount))}</span>}
-                                  <div className="flex items-center gap-2 flex-shrink-0">
-                                    {item.metadata?.exceptionType && getExceptionBadge(item.metadata.exceptionType)}
+                                  <div className="flex items-center gap-2 flex-wrap flex-shrink-0">
+                                    {/* Exception badges - derived from metadata */}
+                                    {exceptions.map((tag, idx) => (
+                                      <span 
+                                        key={idx}
+                                        className="text-[11px] px-2 py-0.5 rounded-full bg-orange-50 text-orange-700 border border-orange-200"
+                                        data-testid={`exception-badge-${item.id}-${idx}`}
+                                      >
+                                        {tag}
+                                      </span>
+                                    ))}
                                     {item.intentType && getIntentBadge(item.intentType)}
                                     {item.sentiment && getSentimentBadge(item.sentiment)}
                                     {!isInbound && (
