@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle 
-} from "@/components/ui/dialog";
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle
+} from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -104,16 +104,16 @@ export function CustomerDetailDialog({ contact, open, onOpenChange }: CustomerDe
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] p-0 flex flex-col">
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent side="right" className="w-full sm:max-w-2xl p-0 flex flex-col">
         {/* Header - Customer Summary */}
-        <div className="bg-white px-6 pt-6 pb-4 border-b rounded-t-lg">
-          <DialogHeader>
-            <div className="flex items-start justify-between gap-4 pr-8">
+        <div className="bg-white px-6 pt-6 pb-4 border-b">
+          <SheetHeader>
+            <div className="flex items-start justify-between gap-4">
               <div className="flex-1">
-                <DialogTitle className="text-2xl font-bold mb-2">
+                <SheetTitle className="text-2xl font-bold mb-2">
                   {contact.companyName || contact.name}
-                </DialogTitle>
+                </SheetTitle>
                 <div className="flex flex-wrap items-center gap-3 text-sm text-slate-600">
                   <span>{outstandingInvoices.length} Outstanding Invoice{outstandingInvoices.length !== 1 ? 's' : ''}</span>
                   <span>•</span>
@@ -130,11 +130,11 @@ export function CustomerDetailDialog({ contact, open, onOpenChange }: CustomerDe
                 </div>
               </div>
             </div>
-          </DialogHeader>
+          </SheetHeader>
         </div>
 
         {/* Scrollable Content */}
-        <ScrollArea className="flex-1">
+        <ScrollArea className="flex-1 px-6">
           <div className="p-6">
 
             {/* Contact Information */}
@@ -312,7 +312,7 @@ export function CustomerDetailDialog({ contact, open, onOpenChange }: CustomerDe
         </ScrollArea>
 
         {/* Footer Actions - Fixed outside ScrollArea */}
-        <div className="bg-white px-6 py-4 border-t rounded-b-lg">
+        <div className="bg-white px-6 py-4 border-t">
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
             <Button 
               variant="outline" 
@@ -365,7 +365,7 @@ export function CustomerDetailDialog({ contact, open, onOpenChange }: CustomerDe
             </Button>
           </div>
         </div>
-      </DialogContent>
+      </SheetContent>
 
       {/* AR Contact Edit Dialog */}
       <EditARContactDialog
@@ -373,6 +373,6 @@ export function CustomerDetailDialog({ contact, open, onOpenChange }: CustomerDe
         onOpenChange={setEditAROpen}
         contact={contact}
       />
-    </Dialog>
+    </Sheet>
   );
 }
