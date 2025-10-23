@@ -11253,12 +11253,10 @@ Payment required immediately to avoid collection action. Contact us NOW.`
           
           // Extract disconnection reason
           const disconnectionReason = webhookData.disconnection_reason || call?.disconnection_reason;
-          const wasTerminatedByCustomer = disconnectionReason && (
-            disconnectionReason.includes('user') || 
-            disconnectionReason.includes('customer') ||
-            disconnectionReason.includes('hangup') ||
-            disconnectionReason === 'call_hangup'
-          );
+          // Only flag as customer-terminated if user explicitly hung up (not agent completion)
+          const wasTerminatedByCustomer = disconnectionReason === 'user_hangup' || 
+            disconnectionReason === 'user_hung_up' ||
+            (disconnectionReason && disconnectionReason.includes('user') && disconnectionReason.includes('hangup'));
           
           console.log(`📞 Call disconnection reason: ${disconnectionReason}, terminated by customer: ${wasTerminatedByCustomer}`);
           
