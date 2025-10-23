@@ -731,8 +731,8 @@ export default function InvestorDemo() {
           </div>
 
           <div className="grid md:grid-cols-3 gap-8">
-            <Card className="p-8 border-2 border-[#8B2635]/30 bg-[#8B2635]/5" data-testid="card-problem-cost">
-              <div className="w-12 h-12 bg-[#8B2635] rounded-lg flex items-center justify-center mb-4">
+            <Card className="p-8 border-2 border-[#8B2635]/30 bg-[#8B2635]/5 text-center" data-testid="card-problem-cost">
+              <div className="w-12 h-12 bg-[#8B2635] rounded-lg flex items-center justify-center mb-4 mx-auto">
                 <DollarSign className="w-6 h-6 text-white" />
               </div>
               <h3 className="text-2xl font-bold text-gray-900 mb-2" data-testid="text-problem-amount">£11B Lost</h3>
@@ -741,8 +741,8 @@ export default function InvestorDemo() {
               <p className="text-sm text-gray-500">Businesses fail each year due to late payments</p>
             </Card>
 
-            <Card className="p-8 border-2 border-[#8B2635]/30 bg-[#8B2635]/5" data-testid="card-problem-dso">
-              <div className="w-12 h-12 bg-[#8B2635] rounded-lg flex items-center justify-center mb-4">
+            <Card className="p-8 border-2 border-[#8B2635]/30 bg-[#8B2635]/5 text-center" data-testid="card-problem-dso">
+              <div className="w-12 h-12 bg-[#8B2635] rounded-lg flex items-center justify-center mb-4 mx-auto">
                 <Clock className="w-6 h-6 text-white" />
               </div>
               <h3 className="text-2xl font-bold text-gray-900 mb-2" data-testid="text-dso-days">64 Days</h3>
@@ -751,8 +751,8 @@ export default function InvestorDemo() {
               <p className="text-sm text-gray-500">Payment terms exceeded</p>
             </Card>
 
-            <Card className="p-8 border-2 border-[#A98743]/30 bg-[#A98743]/5" data-testid="card-problem-compliance">
-              <div className="w-12 h-12 bg-[#A98743] rounded-lg flex items-center justify-center mb-4">
+            <Card className="p-8 border-2 border-[#A98743]/30 bg-[#A98743]/5 text-center" data-testid="card-problem-compliance">
+              <div className="w-12 h-12 bg-[#A98743] rounded-lg flex items-center justify-center mb-4 mx-auto">
                 <Shield className="w-6 h-6 text-white" />
               </div>
               <h3 className="text-2xl font-bold text-gray-900 mb-2" data-testid="text-compliance-rate">100% Must Comply</h3>
