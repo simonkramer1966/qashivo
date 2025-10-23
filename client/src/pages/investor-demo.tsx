@@ -170,7 +170,7 @@ export default function InvestorDemo() {
       console.log('🔌 WebSocket disconnected');
     };
 
-    // Fallback polling every 5 seconds (reduced from 3s since we have WebSocket)
+    // Fallback polling every 1.5 seconds for fast updates (websockets unreliable in production multi-instance)
     const pollInterval = setInterval(async () => {
       try {
         const response = await fetch(`/api/investor/lead/${leadId}/results`);
@@ -181,7 +181,7 @@ export default function InvestorDemo() {
       } catch (error) {
         console.error("Error polling results:", error);
       }
-    }, 5000);
+    }, 1500);
 
     return () => {
       ws.close();
