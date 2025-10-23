@@ -159,8 +159,9 @@ export default function PartnerRegistration() {
         <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-xl">
           <CardHeader className="text-center">
             <CardTitle className="text-xl font-bold text-slate-900">Create Your Partner Account</CardTitle>
-            <CardDescription>
-              Tell us about your business and start helping clients recover revenue
+            <CardDescription className="space-y-1">
+              <span className="block">It takes about 2 minutes.</span>
+              <span className="block">Tell us about your business and start helping clients recover revenue</span>
             </CardDescription>
           </CardHeader>
           <CardContent className="p-8">
