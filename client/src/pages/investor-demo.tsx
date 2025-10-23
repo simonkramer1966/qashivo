@@ -618,8 +618,8 @@ export default function InvestorDemo() {
     <div className="min-h-screen bg-white">
       {/* Sticky Header */}
       <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-6 py-6">
-          <div className="flex flex-col items-center gap-4">
+        <div className="max-w-7xl mx-auto px-6 py-4">
+          <div className="flex items-center justify-center">
             <div className="flex items-center gap-3">
               <img 
                 src={qashivoLogo} 
@@ -629,6 +629,15 @@ export default function InvestorDemo() {
               />
               <span className="text-2xl font-bold text-gray-900">Qashivo</span>
             </div>
+          </div>
+        </div>
+      </header>
+
+      {/* Hero Section */}
+      <section className="relative pt-20 pb-32 px-6 bg-gradient-to-br from-[#0E131F]/5 via-white to-[#17B6C3]/10">
+        <div className="max-w-7xl mx-auto">
+          {/* CTA Button - Centered between header and content */}
+          <div className="flex justify-center mb-12">
             <Button 
               className="bg-[#17B6C3] hover:bg-[#1396A1] text-white"
               onClick={() => setInvestmentDialogOpen(true)}
@@ -637,12 +646,7 @@ export default function InvestorDemo() {
               Download Full Investment Deck
             </Button>
           </div>
-        </div>
-      </header>
 
-      {/* Hero Section */}
-      <section className="relative pt-20 pb-32 px-6 bg-gradient-to-br from-[#0E131F]/5 via-white to-[#17B6C3]/10">
-        <div className="max-w-7xl mx-auto">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div className="text-center lg:text-left">
               <div className="inline-block px-4 py-2 bg-[#17B6C3]/10 rounded-full mb-6">
