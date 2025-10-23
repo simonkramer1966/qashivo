@@ -182,15 +182,6 @@ export default function Customers() {
               />
             </div>
 
-            <Button
-              onClick={() => setShowAddCustomerDialog(true)}
-              className="bg-[#17B6C3] hover:bg-[#1396A1] flex-shrink-0"
-              data-testid="button-add-customer"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Add Customer
-            </Button>
-
             {/* Pagination Controls */}
             {pagination.totalPages > 1 && (
               <div className="flex gap-2 items-center">
@@ -248,25 +239,16 @@ export default function Customers() {
               {pagination.total} customer{pagination.total !== 1 ? 's' : ''}
             </p>
             
-            <div className="flex gap-3">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" />
-                <Input
-                  type="text"
-                  placeholder="Search customers..."
-                  value={search}
-                  onChange={(e) => handleSearchChange(e.target.value)}
-                  className="input-apple pl-10"
-                  data-testid="input-search-customers"
-                />
-              </div>
-              <Button
-                onClick={() => setShowAddCustomerDialog(true)}
-                className="bg-[#17B6C3] hover:bg-[#1396A1] flex-shrink-0"
-                data-testid="button-add-customer"
-              >
-                <Plus className="h-4 w-4" />
-              </Button>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" />
+              <Input
+                type="text"
+                placeholder="Search customers..."
+                value={search}
+                onChange={(e) => handleSearchChange(e.target.value)}
+                className="input-apple pl-10"
+                data-testid="input-search-customers"
+              />
             </div>
 
             {/* Mobile: Pagination Controls */}
