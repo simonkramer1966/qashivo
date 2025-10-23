@@ -675,7 +675,7 @@ export default function InvestorDemo() {
       <section className="relative pt-20 pb-32 px-6 bg-gradient-to-br from-[#0E131F]/5 via-white to-[#17B6C3]/10">
         <div className="max-w-7xl mx-auto">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
-            <div>
+            <div className="text-center lg:text-left">
               <div className="inline-block px-4 py-2 bg-[#17B6C3]/10 rounded-full mb-6">
                 <span className="text-[#17B6C3] font-semibold">SEIS-Eligible Investment Opportunity (pending HMRC approval)</span>
               </div>
@@ -691,7 +691,7 @@ export default function InvestorDemo() {
                 <strong>We're not just automating credit control. We're creating a learning brain for SME finance.</strong>
               </p>
               
-              <div className="flex gap-4">
+              <div className="flex gap-4 justify-center lg:justify-start">
                 <Button 
                   className="bg-[#17B6C3] hover:bg-[#1396A1] text-white text-lg px-8 py-6"
                   onClick={() => document.getElementById('demos')?.scrollIntoView({ behavior: 'smooth' })}
