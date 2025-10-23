@@ -471,51 +471,99 @@ app.use((req, res, next) => {
       const filename = req.params.filename;
       const range = req.headers.range;
       
-      // Download file from object storage
-      const result = await objectStorageClient.downloadAsBytes(`public/${filename}`);
+      console.log(`📹 Video request for ${filename} from ${req.headers['user-agent']?.substring(0, 50)}`);
+      console.log(`📹 Range header: ${range || 'none'}`);
+      
+      // Download file from object storage with error handling
+      let result;
+      try {
+        result = await objectStorageClient.downloadAsBytes(`public/${filename}`);
+      } catch (downloadError) {
+        console.error('❌ Object Storage download failed:', downloadError);
+        return res.status(500).send('Failed to download from object storage');
+      }
       
       if (result.error) {
-        console.error('Error from object storage:', result.error);
+        console.error('❌ Object Storage error:', result.error);
         return res.status(404).send('File not found in object storage');
+      }
+      
+      if (!result.value || !result.value[0]) {
+        console.error('❌ Empty response from Object Storage');
+        return res.status(500).send('Invalid response from object storage');
       }
       
       const fileBuffer = result.value[0];
       const fileSize = fileBuffer.length;
+      
+      console.log(`✅ File loaded: ${fileSize} bytes`);
       
       // CORS headers for Safari compatibility
       res.setHeader('Access-Control-Allow-Origin', '*');
       res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
       res.setHeader('Access-Control-Expose-Headers', 'Content-Length, Content-Range, Accept-Ranges');
       
-      // Set common headers
+      // Set common headers (Safari-compatible)
       res.setHeader('Content-Type', 'video/mp4');
       res.setHeader('Accept-Ranges', 'bytes');
       res.setHeader('Cache-Control', 'public, max-age=86400');
       
       // Handle Range requests (required for video seeking, especially Safari)
       if (range) {
+        // Safari-compatible range parsing
         const match = range.match(/bytes=(\d+)-(\d*)/);
         if (!match) {
-          return res.status(416).send('Invalid range');
+          console.error('❌ Invalid range format:', range);
+          res.setHeader('Content-Range', `bytes */${fileSize}`);
+          return res.status(416).send('Range Not Satisfiable');
         }
         
         const start = parseInt(match[1], 10);
-        const end = match[2] ? Math.min(parseInt(match[2], 10), fileSize - 1) : Math.min(start + 1024 * 1024 - 1, fileSize - 1); // 1MB chunks
+        let end = match[2] ? parseInt(match[2], 10) : fileSize - 1;
+        
+        // Validate range values
+        if (isNaN(start) || start < 0 || start >= fileSize) {
+          console.error('❌ Invalid start position:', start);
+          res.setHeader('Content-Range', `bytes */${fileSize}`);
+          return res.status(416).send('Range Not Satisfiable');
+        }
+        
+        // Ensure end is within bounds
+        end = Math.min(end, fileSize - 1);
+        
+        // Safari fix: If no end specified or end too far, limit chunk size for initial requests
+        if (!match[2] || (end - start) > 10 * 1024 * 1024) {
+          end = Math.min(start + 10 * 1024 * 1024 - 1, fileSize - 1); // 10MB max chunks
+        }
+        
         const chunkSize = (end - start) + 1;
+        
+        if (chunkSize <= 0) {
+          console.error('❌ Invalid chunk size:', chunkSize);
+          res.setHeader('Content-Range', `bytes */${fileSize}`);
+          return res.status(416).send('Range Not Satisfiable');
+        }
+        
+        console.log(`📤 Sending bytes ${start}-${end}/${fileSize} (${chunkSize} bytes)`);
+        
         const chunk = fileBuffer.subarray(start, end + 1);
         
         res.status(206);
         res.setHeader('Content-Range', `bytes ${start}-${end}/${fileSize}`);
-        res.setHeader('Content-Length', chunkSize);
+        res.setHeader('Content-Length', chunkSize.toString());
         res.send(chunk);
       } else {
-        // No range requested, send entire file
-        res.setHeader('Content-Length', fileSize);
+        // No range requested - Safari sometimes does this first
+        console.log(`📤 Sending full file (${fileSize} bytes)`);
+        res.setHeader('Content-Length', fileSize.toString());
         res.status(200).send(fileBuffer);
       }
-    } catch (error) {
-      console.error('Error serving media file from object storage:', error);
-      res.status(500).send('Error serving file');
+    } catch (error: any) {
+      console.error('❌ Fatal error serving media:', error.message || error);
+      console.error(error.stack);
+      if (!res.headersSent) {
+        res.status(500).send('Internal server error');
+      }
     }
   });
 
