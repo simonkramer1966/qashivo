@@ -9,7 +9,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useMutation } from '@tanstack/react-query';
-import { Loader2, CheckCircle, Users, Clock, CreditCard } from 'lucide-react';
+import { Loader2, CheckCircle, Users, Clock, CreditCard, Headset } from 'lucide-react';
 
 const partnerRegistrationSchema = z.object({
   companyName: z.string().min(2, 'Company name must be at least 2 characters'),
@@ -127,10 +127,10 @@ export default function PartnerRegistration() {
           <Card className="bg-white/70 backdrop-blur-md border-0 shadow-xl">
             <CardContent className="p-6 text-center">
               <div className="p-2 bg-[#17B6C3]/10 rounded-lg w-12 h-12 mx-auto mb-4 flex items-center justify-center">
-                <Clock className="h-6 w-6 text-[#17B6C3]" />
+                <Headset className="h-6 w-6 text-[#17B6C3]" />
               </div>
-              <h3 className="font-bold text-slate-900 mb-2">30-Day Free Trial</h3>
-              <p className="text-sm text-slate-600">No credit card required. Full access to all partner features.</p>
+              <h3 className="font-bold text-slate-900 mb-2">Priority Onboarding Support</h3>
+              <p className="text-sm text-slate-600">Setup with a specialist, best-practice templates, and quick wins in week one.</p>
             </CardContent>
           </Card>
           
