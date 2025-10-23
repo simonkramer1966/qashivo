@@ -634,7 +634,7 @@ export default function InvestorDemo() {
       </header>
 
       {/* Hero Section */}
-      <section className="relative pt-20 pb-32 px-6 bg-gradient-to-br from-[#0E131F]/5 via-white to-[#17B6C3]/10">
+      <section className="relative pt-12 md:pt-20 pb-16 md:pb-32 px-6 bg-gradient-to-br from-[#0E131F]/5 via-white to-[#17B6C3]/10">
         <div className="max-w-7xl mx-auto">
           {/* CTA Button - Centered between header and content */}
           <div className="flex justify-center mb-12">
@@ -700,7 +700,7 @@ export default function InvestorDemo() {
       </section>
 
       {/* Trust Signals */}
-      <section className="py-12 px-6 border-y border-gray-200 bg-gray-50">
+      <section className="py-6 md:py-12 px-6 border-y border-gray-200 bg-gray-50">
         <div className="max-w-7xl mx-auto">
           <p className="text-center text-sm text-gray-500 mb-6">BUILT WITH ENTERPRISE-GRADE INTEGRATIONS</p>
           <div className="flex items-center justify-center gap-12 flex-wrap">
@@ -725,7 +725,7 @@ export default function InvestorDemo() {
       </section>
 
       {/* The Problem */}
-      <section className="py-24 px-6">
+      <section className="py-12 md:py-24 px-6">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-4xl font-bold text-gray-900 mb-4">The £11 Billion Problem</h2>
@@ -769,7 +769,7 @@ export default function InvestorDemo() {
       </section>
 
       {/* The Solution */}
-      <section className="py-24 px-6 bg-gradient-to-br from-gray-50 to-[#0E131F]/5">
+      <section className="py-12 md:py-24 px-6 bg-gradient-to-br from-gray-50 to-[#0E131F]/5">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-4xl font-bold text-gray-900 mb-4">The Qashivo Solution</h2>
@@ -849,7 +849,7 @@ export default function InvestorDemo() {
       </section>
 
       {/* Live AI Demos */}
-      <section id="demos" className="py-24 px-6 bg-white">
+      <section id="demos" className="py-12 md:py-24 px-6 bg-white">
         <div className="max-w-7xl mx-auto">
           <div className="grid lg:grid-cols-2 gap-8 mb-12">
               {/* Voice Demo */}
@@ -991,7 +991,7 @@ export default function InvestorDemo() {
       </section>
 
       {/* Market Opportunity */}
-      <section className="py-24 px-6 bg-gradient-to-br from-blue-50 to-purple-50">
+      <section className="py-12 md:py-24 px-6 bg-gradient-to-br from-blue-50 to-purple-50">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-4xl font-bold text-gray-900 mb-4">A £4.8B Market Made Mandatory by Law</h2>
@@ -1062,7 +1062,7 @@ export default function InvestorDemo() {
       </section>
 
       {/* Traction */}
-      <section className="py-24 px-6 bg-white">
+      <section className="py-12 md:py-24 px-6 bg-white">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
             <div className="inline-block px-4 py-2 bg-[#A98743]/10 rounded-full mb-4">
@@ -1103,7 +1103,7 @@ export default function InvestorDemo() {
       </section>
 
       {/* Final CTA */}
-      <section className="py-24 px-6 bg-gradient-to-br from-[#17B6C3] to-teal-700">
+      <section className="py-12 md:py-24 px-6 bg-gradient-to-br from-[#17B6C3] to-teal-700">
         <div className="max-w-5xl mx-auto text-center">
           <h2 className="text-5xl font-bold text-white mb-6">
             Join the £4.8B Opportunity
