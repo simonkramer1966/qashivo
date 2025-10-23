@@ -418,7 +418,9 @@ app.use((req, res, next) => {
 
   // Serve static assets from attached_assets folder
   // Must be before Vite setup to avoid catch-all route interference
-  app.use('/attached_assets', express.static(path.resolve(import.meta.dirname, '..', 'attached_assets')));
+  const attachedAssetsPath = path.join(process.cwd(), 'attached_assets');
+  console.log(`📁 Serving attached_assets from: ${attachedAssetsPath}`);
+  app.use('/attached_assets', express.static(attachedAssetsPath));
 
   // importantly only setup vite in development and after
   // setting up all the other routes so the catch-all route
