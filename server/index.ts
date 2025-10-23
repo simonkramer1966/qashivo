@@ -105,9 +105,6 @@ app.post("/api/debtor/payment/webhook", express.raw({ type: 'application/json' }
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-// Serve static assets from attached_assets folder
-app.use('/attached_assets', express.static(path.resolve(import.meta.dirname, '..', 'attached_assets')));
-
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
@@ -418,6 +415,10 @@ app.use((req, res, next) => {
     res.status(status).json({ message });
     throw err;
   });
+
+  // Serve static assets from attached_assets folder
+  // Must be before Vite setup to avoid catch-all route interference
+  app.use('/attached_assets', express.static(path.resolve(import.meta.dirname, '..', 'attached_assets')));
 
   // importantly only setup vite in development and after
   // setting up all the other routes so the catch-all route
