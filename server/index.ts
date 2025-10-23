@@ -429,6 +429,15 @@ app.use((req, res, next) => {
     const { Client } = await import('@replit/object-storage');
     const objectStorageClient = new Client();
     
+    // OPTIONS preflight handler for CORS (Safari requires this)
+    app.options('/media/:filename', (req, res) => {
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
+      res.setHeader('Access-Control-Allow-Headers', 'Range, Content-Type');
+      res.setHeader('Access-Control-Max-Age', '86400');
+      res.status(204).end();
+    });
+    
     // HEAD request support for video preflight checks
     app.head('/media/:filename', async (req, res) => {
       try {
@@ -440,6 +449,12 @@ app.use((req, res, next) => {
         }
         
         const fileBuffer = result.value[0];
+        
+        // CORS headers for Safari compatibility
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
+        res.setHeader('Access-Control-Expose-Headers', 'Content-Length, Content-Range, Accept-Ranges');
+        
         res.setHeader('Content-Type', 'video/mp4');
         res.setHeader('Accept-Ranges', 'bytes');
         res.setHeader('Content-Length', fileBuffer.length);
@@ -467,6 +482,11 @@ app.use((req, res, next) => {
         
         const fileBuffer = result.value[0];
         const fileSize = fileBuffer.length;
+        
+        // CORS headers for Safari compatibility
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
+        res.setHeader('Access-Control-Expose-Headers', 'Content-Length, Content-Range, Accept-Ranges');
         
         // Set common headers
         res.setHeader('Content-Type', 'video/mp4');
