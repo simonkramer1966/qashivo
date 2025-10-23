@@ -299,7 +299,7 @@ export default function PartnerRegistration() {
                       Creating Your Account...
                     </>
                   ) : (
-                    'Start Free Trial'
+                    'Create Your Account'
                   )}
                 </Button>
                 
