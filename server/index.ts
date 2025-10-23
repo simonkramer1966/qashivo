@@ -422,19 +422,42 @@ app.use((req, res, next) => {
   console.log(`📁 Serving attached_assets from: ${attachedAssetsPath}`);
   app.use('/attached_assets', express.static(attachedAssetsPath));
   
-  // Custom route to serve video from object storage using Replit Object Storage client
+  // Custom route to serve video from object storage with Range request support
   const objectStoragePath = process.env.PUBLIC_OBJECT_SEARCH_PATHS?.split(',')[0];
   if (objectStoragePath) {
     console.log(`📦 Serving object storage from: ${objectStoragePath} at /media`);
     const { Client } = await import('@replit/object-storage');
     const objectStorageClient = new Client();
     
+    // HEAD request support for video preflight checks
+    app.head('/media/:filename', async (req, res) => {
+      try {
+        const filename = req.params.filename;
+        const result = await objectStorageClient.downloadAsBytes(`public/${filename}`);
+        
+        if (result.error) {
+          return res.status(404).end();
+        }
+        
+        const fileBuffer = result.value[0];
+        res.setHeader('Content-Type', 'video/mp4');
+        res.setHeader('Accept-Ranges', 'bytes');
+        res.setHeader('Content-Length', fileBuffer.length);
+        res.setHeader('Cache-Control', 'public, max-age=86400');
+        res.status(200).end();
+      } catch (error) {
+        console.error('HEAD request error:', error);
+        res.status(500).end();
+      }
+    });
+    
+    // GET request with Range support for video streaming
     app.get('/media/:filename', async (req, res) => {
       try {
         const filename = req.params.filename;
-        console.log(`📦 Fetching file from object storage: public/${filename}`);
+        const range = req.headers.range;
         
-        // Download file as bytes from object storage
+        // Download file from object storage
         const result = await objectStorageClient.downloadAsBytes(`public/${filename}`);
         
         if (result.error) {
@@ -443,14 +466,34 @@ app.use((req, res, next) => {
         }
         
         const fileBuffer = result.value[0];
+        const fileSize = fileBuffer.length;
         
-        // Set appropriate headers for video
+        // Set common headers
         res.setHeader('Content-Type', 'video/mp4');
-        res.setHeader('Content-Length', fileBuffer.length);
         res.setHeader('Accept-Ranges', 'bytes');
+        res.setHeader('Cache-Control', 'public, max-age=86400');
         
-        // Send the file
-        res.send(fileBuffer);
+        // Handle Range requests (required for video seeking, especially Safari)
+        if (range) {
+          const match = range.match(/bytes=(\d+)-(\d*)/);
+          if (!match) {
+            return res.status(416).send('Invalid range');
+          }
+          
+          const start = parseInt(match[1], 10);
+          const end = match[2] ? Math.min(parseInt(match[2], 10), fileSize - 1) : Math.min(start + 1024 * 1024 - 1, fileSize - 1); // 1MB chunks
+          const chunkSize = (end - start) + 1;
+          const chunk = fileBuffer.subarray(start, end + 1);
+          
+          res.status(206);
+          res.setHeader('Content-Range', `bytes ${start}-${end}/${fileSize}`);
+          res.setHeader('Content-Length', chunkSize);
+          res.send(chunk);
+        } else {
+          // No range requested, send entire file
+          res.setHeader('Content-Length', fileSize);
+          res.status(200).send(fileBuffer);
+        }
       } catch (error) {
         console.error('Error serving media file from object storage:', error);
         res.status(500).send('Error serving file');

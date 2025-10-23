@@ -1,0 +1,71 @@
+<response status="success"> <thinking> Likely root cause: your published site is static, so the Express route is not running in production. Even if Express runs, your route must support HTTP Range (206) for browsers, especially Safari. Provide two clear fixes: 1) serve the video via an object storage public or signed URL on a static deployment, or 2) switch to a server deployment and upgrade the /media route to stream with Range, HEAD, and caching. Include precise steps and a robust code sample. </thinking> <main_content> BLUF: The video works in dev because Express is running locally. Your published site is probably a static deployment where the Express server is not active, so `/media/*` returns 404. If you do run the server in prod, the route also needs proper byte-range streaming. Pick one of these paths.
+
+Option A — Keep static hosting, serve from Object Storage directly
+
+Make the object public or generate a time-limited signed URL for public/QashivoIntrov2.mp4.
+
+Set <video src="https://<object-host>/public/QashivoIntrov2.mp4" controls preload="metadata">.
+
+Add crossorigin="anonymous" only if your object host uses a separate domain, and allow CORS on the bucket.
+
+Prefer a CDN URL if available. This avoids server code and large asset deploys.
+
+Option B — Run Express in production and stream correctly
+
+Deploy as an app with your Node server, not as static.
+
+Place the media route before any SPA fallback.
+
+Implement Range, HEAD, and caching headers.
+
+Example Express route sketch:
+
+app.get('/media/:filename', async (req, res) => {
+  const filename = req.params.filename;
+  const range = req.headers.range;
+
+  // If your SDK supports ranged reads, use it. Example:
+  // const { body, size, mime } = await objectStorageClient.get(`public/${filename}`, { range });
+  // Fallback: fetch full bytes and slice in memory (works for ~30MB, not ideal).
+
+  const result = await objectStorageClient.downloadAsBytes(`public/${filename}`);
+  if (result.error) return res.sendStatus(404);
+  const buf = result.value[0];
+  const size = buf.length;
+
+  res.setHeader('Content-Type', 'video/mp4');
+  res.setHeader('Accept-Ranges', 'bytes');
+  res.setHeader('Cache-Control', 'public, max-age=86400');
+
+  if (!range) {
+    res.setHeader('Content-Length', size);
+    return res.status(200).send(buf);
+  }
+
+  const m = range.match(/bytes=(\d+)-(\d*)/);
+  const start = parseInt(m[1], 10);
+  const end = m[2] ? Math.min(parseInt(m[2], 10), size - 1) : Math.min(start + 1024 * 1024 - 1, size - 1); // 1MB chunks
+  const chunk = buf.subarray(start, end + 1);
+
+  res.status(206);
+  res.setHeader('Content-Range', `bytes ${start}-${end}/${size}`);
+  res.setHeader('Content-Length', chunk.length);
+  res.send(chunk);
+});
+
+app.head('/media/:filename', async (req, res) => {
+  // Return headers only, same as above without body
+  res.setHeader('Content-Type', 'video/mp4');
+  res.setHeader('Accept-Ranges', 'bytes');
+  res.setHeader('Content-Length', /* file size */);
+  res.sendStatus(200);
+});
+
+
+Quick checks
+• If static deploy: open /media/QashivoIntrov2.mp4 in production. If you see a 404 HTML page, Express is not running.
+• If server deploy: run curl -I https://<prod>/media/QashivoIntrov2.mp4 and confirm 206 with Accept-Ranges and Content-Range.
+• Safari can be picky; without 206 it often refuses to play.
+
+Recommendation
+Fastest path today is Option A with a public or signed Object Storage URL. If you need auth-gated access, go with Option B and run the server in production.
