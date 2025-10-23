@@ -45,6 +45,7 @@ export function CustomerOverdueDialog({ customer, open, onOpenChange }: Customer
   const [aiVoiceDialogOpen, setAiVoiceDialogOpen] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<any>(null);
   const [commsOpen, setCommsOpen] = useState(false);
+  const [invoicesOpen, setInvoicesOpen] = useState(true);
   
   // Fetch tenant information for organization name
   const { data: tenant } = useQuery<{ id: string; name: string }>({
@@ -265,58 +266,69 @@ export function CustomerOverdueDialog({ customer, open, onOpenChange }: Customer
 
               <Separator />
 
-              {/* Invoice Breakdown */}
-              <div>
-                <h3 className="text-sm font-semibold text-slate-900 mb-3">Invoice Breakdown</h3>
-                <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
-                  <div className="max-h-[400px] overflow-y-auto">
-                    <table className="w-full">
-                      <thead className="bg-slate-50 border-b border-slate-200 sticky top-0">
-                        <tr>
-                          <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600">Invoice #</th>
-                          <th className="px-3 py-2 text-right text-xs font-semibold text-slate-600">Amount</th>
-                          <th className="px-3 py-2 text-right text-xs font-semibold text-slate-600 hidden sm:table-cell">Days Overdue</th>
-                          <th className="px-3 py-2 text-right text-xs font-semibold text-slate-600 hidden sm:table-cell">Due Date</th>
-                          <th className="px-3 py-2"></th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100">
-                        {customer.invoices?.map((invoice: any) => {
-                          const invDaysOverdue = Math.floor((new Date().getTime() - new Date(invoice.dueDate).getTime()) / (1000 * 3600 * 24));
-                          return (
-                            <tr key={invoice.id} className="hover:bg-slate-50">
-                              <td className="px-3 py-3 text-sm font-medium text-slate-900">
-                                {invoice.invoiceNumber}
-                              </td>
-                              <td className="px-3 py-3 text-sm font-semibold text-slate-900 text-right">
-                                {formatCurrency(parseFloat(invoice.amount || 0))}
-                              </td>
-                              <td className="px-3 py-3 text-sm font-medium text-red-600 text-right hidden sm:table-cell">
-                                {invDaysOverdue} days
-                              </td>
-                              <td className="px-3 py-3 text-sm text-slate-600 text-right hidden sm:table-cell">
-                                {new Date(invoice.dueDate).toLocaleDateString()}
-                              </td>
-                              <td className="px-3 py-3 text-right">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => {
-                                    onOpenChange(false);
-                                    setLocation(`/invoices/${invoice.id}`);
-                                  }}
-                                >
-                                  <ChevronRight className="h-4 w-4" />
-                                </Button>
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
+              {/* Invoice Breakdown - Collapsible */}
+              <Collapsible open={invoicesOpen} onOpenChange={setInvoicesOpen}>
+                <CollapsibleTrigger className="flex items-center justify-between w-full p-3 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors" data-testid="button-toggle-invoices-overdue">
+                  <h3 className="text-sm font-semibold text-slate-900">Invoice Breakdown ({customer.invoices?.length || 0})</h3>
+                  {invoicesOpen ? (
+                    <ChevronUp className="h-4 w-4 text-slate-600" />
+                  ) : (
+                    <ChevronDown className="h-4 w-4 text-slate-600" />
+                  )}
+                </CollapsibleTrigger>
+                
+                <CollapsibleContent className="mt-3">
+                  <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
+                    <div className="max-h-[400px] overflow-y-auto">
+                      <table className="w-full">
+                        <thead className="bg-slate-50 border-b border-slate-200 sticky top-0">
+                          <tr>
+                            <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600">Invoice #</th>
+                            <th className="px-3 py-2 text-right text-xs font-semibold text-slate-600">Amount</th>
+                            <th className="px-3 py-2 text-right text-xs font-semibold text-slate-600 hidden sm:table-cell">Days Overdue</th>
+                            <th className="px-3 py-2 text-right text-xs font-semibold text-slate-600 hidden sm:table-cell">Due Date</th>
+                            <th className="px-3 py-2"></th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                          {customer.invoices?.map((invoice: any) => {
+                            const invDaysOverdue = Math.floor((new Date().getTime() - new Date(invoice.dueDate).getTime()) / (1000 * 3600 * 24));
+                            return (
+                              <tr key={invoice.id} className="hover:bg-slate-50" data-testid={`invoice-row-${invoice.id}`}>
+                                <td className="px-3 py-3 text-sm font-medium text-slate-900" data-testid={`text-invoice-number-${invoice.id}`}>
+                                  {invoice.invoiceNumber}
+                                </td>
+                                <td className="px-3 py-3 text-sm font-semibold text-slate-900 text-right" data-testid={`text-invoice-amount-${invoice.id}`}>
+                                  {formatCurrency(parseFloat(invoice.amount || 0))}
+                                </td>
+                                <td className="px-3 py-3 text-sm font-medium text-red-600 text-right hidden sm:table-cell" data-testid={`text-invoice-overdue-days-${invoice.id}`}>
+                                  {invDaysOverdue} days
+                                </td>
+                                <td className="px-3 py-3 text-sm text-slate-600 text-right hidden sm:table-cell" data-testid={`text-invoice-due-date-${invoice.id}`}>
+                                  {new Date(invoice.dueDate).toLocaleDateString()}
+                                </td>
+                                <td className="px-3 py-3 text-right">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => {
+                                      onOpenChange(false);
+                                      setLocation(`/invoices/${invoice.id}`);
+                                    }}
+                                    data-testid={`button-view-invoice-${invoice.id}`}
+                                  >
+                                    <ChevronRight className="h-4 w-4" />
+                                  </Button>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
-                </div>
-              </div>
+                </CollapsibleContent>
+              </Collapsible>
             </div>
           </ScrollArea>
         </SheetContent>

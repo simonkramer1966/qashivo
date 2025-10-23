@@ -67,6 +67,7 @@ export function CustomerDetailDialog({ contact, open, onOpenChange }: CustomerDe
   const { formatCurrency } = useCurrency();
   const [editAROpen, setEditAROpen] = useState(false);
   const [commsOpen, setCommsOpen] = useState(false);
+  const [invoicesOpen, setInvoicesOpen] = useState(true);
 
   // Fetch invoices for this contact
   const { data: invoicesData } = useQuery<{ invoices: Invoice[] }>({
@@ -236,47 +237,58 @@ export function CustomerDetailDialog({ contact, open, onOpenChange }: CustomerDe
               </div>
             )}
 
-            {/* Outstanding Invoices */}
-            <div className="mb-4">
-              <h3 className="font-semibold text-slate-900 mb-3">Outstanding Invoices</h3>
-              {outstandingInvoices.length === 0 ? (
-                <div className="p-4 bg-emerald-50 rounded-lg text-center">
-                  <p className="text-sm text-emerald-700">No outstanding invoices</p>
-                </div>
-              ) : (
-                <div className="space-y-2 max-h-[400px] overflow-y-auto">
-                  {outstandingInvoices.map((invoice) => {
-                    const daysOverdue = getDaysOverdue(invoice.dueDate);
-                    const outstanding = invoice.amount - invoice.amountPaid;
-                    
-                    return (
-                      <div 
-                        key={invoice.id} 
-                        className="flex items-center justify-between p-3 bg-slate-50 hover:bg-slate-100 rounded-lg transition-colors"
-                      >
-                        <div className="flex items-center gap-3 flex-1">
-                          <div className="flex-1">
-                            <p className="text-sm font-medium text-slate-900">{invoice.invoiceNumber}</p>
-                            <p className="text-xs text-slate-500">
-                              Due {new Date(invoice.dueDate).toLocaleDateString()}
-                            </p>
+            {/* Outstanding Invoices - Collapsible */}
+            <Collapsible open={invoicesOpen} onOpenChange={setInvoicesOpen} className="mb-4">
+              <CollapsibleTrigger className="flex items-center justify-between w-full p-3 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors" data-testid="button-toggle-invoices">
+                <h3 className="font-semibold text-slate-900">Outstanding Invoices ({outstandingInvoices.length})</h3>
+                {invoicesOpen ? (
+                  <ChevronUp className="h-4 w-4 text-slate-600" />
+                ) : (
+                  <ChevronDown className="h-4 w-4 text-slate-600" />
+                )}
+              </CollapsibleTrigger>
+              
+              <CollapsibleContent className="mt-3">
+                {outstandingInvoices.length === 0 ? (
+                  <div className="p-4 bg-emerald-50 rounded-lg text-center">
+                    <p className="text-sm text-emerald-700">No outstanding invoices</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2 max-h-[400px] overflow-y-auto">
+                    {outstandingInvoices.map((invoice) => {
+                      const daysOverdue = getDaysOverdue(invoice.dueDate);
+                      const outstanding = invoice.amount - invoice.amountPaid;
+                      
+                      return (
+                        <div 
+                          key={invoice.id} 
+                          className="flex items-center justify-between p-3 bg-slate-50 hover:bg-slate-100 rounded-lg transition-colors"
+                          data-testid={`invoice-item-${invoice.id}`}
+                        >
+                          <div className="flex items-center gap-3 flex-1">
+                            <div className="flex-1">
+                              <p className="text-sm font-medium text-slate-900" data-testid={`text-invoice-number-${invoice.id}`}>{invoice.invoiceNumber}</p>
+                              <p className="text-xs text-slate-500" data-testid={`text-invoice-due-${invoice.id}`}>
+                                Due {new Date(invoice.dueDate).toLocaleDateString()}
+                              </p>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-sm font-semibold text-slate-900" data-testid={`text-invoice-amount-${invoice.id}`}>{formatCurrency(outstanding)}</p>
+                              {daysOverdue > 0 && (
+                                <p className="text-xs text-red-600" data-testid={`text-invoice-overdue-${invoice.id}`}>{daysOverdue} days overdue</p>
+                              )}
+                            </div>
                           </div>
-                          <div className="text-right">
-                            <p className="text-sm font-semibold text-slate-900">{formatCurrency(outstanding)}</p>
-                            {daysOverdue > 0 && (
-                              <p className="text-xs text-red-600">{daysOverdue} days overdue</p>
-                            )}
-                          </div>
+                          {daysOverdue > 0 && (
+                            <AlertCircle className="h-4 w-4 text-red-500 ml-2" />
+                          )}
                         </div>
-                        {daysOverdue > 0 && (
-                          <AlertCircle className="h-4 w-4 text-red-500 ml-2" />
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </CollapsibleContent>
+            </Collapsible>
 
             {/* Communications History - Collapsible */}
             <Collapsible open={commsOpen} onOpenChange={setCommsOpen} className="mb-4">
