@@ -717,7 +717,7 @@ export default function InvestorDemo() {
                     }
                   }}
                 >
-                  <source src="https://objstore.replit.com/replit-objstore-2d093fe9-78a8-45b9-8f74-a4a89d8ea11e/public/QashivoIntrov2.mp4" type="video/mp4" />
+                  <source src="/public/QashivoIntrov2.mp4" type="video/mp4" />
                   Your browser does not support the video tag.
                 </video>
               </div>

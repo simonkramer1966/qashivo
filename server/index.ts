@@ -416,11 +416,18 @@ app.use((req, res, next) => {
     throw err;
   });
 
-  // Serve static assets from attached_assets folder
+  // Serve static assets from attached_assets folder and object storage
   // Must be before Vite setup to avoid catch-all route interference
   const attachedAssetsPath = path.join(process.cwd(), 'attached_assets');
   console.log(`📁 Serving attached_assets from: ${attachedAssetsPath}`);
   app.use('/attached_assets', express.static(attachedAssetsPath));
+  
+  // Serve object storage public folder
+  const objectStoragePath = process.env.PUBLIC_OBJECT_SEARCH_PATHS?.split(',')[0];
+  if (objectStoragePath) {
+    console.log(`📦 Serving object storage from: ${objectStoragePath}`);
+    app.use('/public', express.static(objectStoragePath));
+  }
 
   // importantly only setup vite in development and after
   // setting up all the other routes so the catch-all route
