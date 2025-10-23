@@ -11304,7 +11304,7 @@ Return only JSON with keys: intent, sentiment, confidence, keyInsights, actionIt
           }
           
           // Update lead with voice demo results
-          await storage.updateInvestorLead(leadId, {
+          const updatedLead = await storage.updateInvestorLead(leadId, {
             voiceDemoCompleted: true,
             voiceDemoResults: {
               callId: call_id,
@@ -11323,6 +11323,18 @@ Return only JSON with keys: intent, sentiment, confidence, keyInsights, actionIt
           });
           
           console.log('✅ Investor demo voice analysis saved:', analysis);
+          
+          // Broadcast results via WebSocket for instant dialog update
+          if ((app as any).broadcastDemoResults) {
+            (app as any).broadcastDemoResults(leadId, {
+              voiceDemoCompleted: updatedLead.voiceDemoCompleted,
+              smsDemoCompleted: updatedLead.smsDemoCompleted,
+              voiceDemoResults: updatedLead.voiceDemoResults,
+              smsDemoResults: updatedLead.smsDemoResults
+            });
+            console.log('📡 Broadcasted voice demo results to frontend via WebSocket');
+          }
+          
           return res.json({ success: true, analysis });
         } catch (error) {
           console.error("Error processing investor demo call:", error);
