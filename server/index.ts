@@ -422,11 +422,11 @@ app.use((req, res, next) => {
   console.log(`📁 Serving attached_assets from: ${attachedAssetsPath}`);
   app.use('/attached_assets', express.static(attachedAssetsPath));
   
-  // Serve object storage public folder
+  // Serve object storage public folder at /media to avoid conflict with Vite's /public
   const objectStoragePath = process.env.PUBLIC_OBJECT_SEARCH_PATHS?.split(',')[0];
   if (objectStoragePath) {
-    console.log(`📦 Serving object storage from: ${objectStoragePath}`);
-    app.use('/public', express.static(objectStoragePath));
+    console.log(`📦 Serving object storage from: ${objectStoragePath} at /media`);
+    app.use('/media', express.static(objectStoragePath));
   }
 
   // importantly only setup vite in development and after
