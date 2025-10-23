@@ -423,103 +423,101 @@ app.use((req, res, next) => {
   app.use('/attached_assets', express.static(attachedAssetsPath));
   
   // Custom route to serve video from object storage with Range request support
-  const objectStoragePath = process.env.PUBLIC_OBJECT_SEARCH_PATHS?.split(',')[0];
-  if (objectStoragePath) {
-    console.log(`📦 Serving object storage from: ${objectStoragePath} at /media`);
-    const { Client } = await import('@replit/object-storage');
-    const objectStorageClient = new Client();
-    
-    // OPTIONS preflight handler for CORS (Safari requires this)
-    app.options('/media/:filename', (req, res) => {
+  // Always set up Object Storage SDK routes (works in both dev and production)
+  console.log(`📦 Initializing Object Storage video streaming at /media`);
+  const { Client } = await import('@replit/object-storage');
+  const objectStorageClient = new Client();
+  
+  // OPTIONS preflight handler for CORS (Safari requires this)
+  app.options('/media/:filename', (req, res) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Range, Content-Type');
+    res.setHeader('Access-Control-Max-Age', '86400');
+    res.status(204).end();
+  });
+  
+  // HEAD request support for video preflight checks
+  app.head('/media/:filename', async (req, res) => {
+    try {
+      const filename = req.params.filename;
+      const result = await objectStorageClient.downloadAsBytes(`public/${filename}`);
+      
+      if (result.error) {
+        return res.status(404).end();
+      }
+      
+      const fileBuffer = result.value[0];
+      
+      // CORS headers for Safari compatibility
       res.setHeader('Access-Control-Allow-Origin', '*');
       res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
-      res.setHeader('Access-Control-Allow-Headers', 'Range, Content-Type');
-      res.setHeader('Access-Control-Max-Age', '86400');
-      res.status(204).end();
-    });
-    
-    // HEAD request support for video preflight checks
-    app.head('/media/:filename', async (req, res) => {
-      try {
-        const filename = req.params.filename;
-        const result = await objectStorageClient.downloadAsBytes(`public/${filename}`);
-        
-        if (result.error) {
-          return res.status(404).end();
-        }
-        
-        const fileBuffer = result.value[0];
-        
-        // CORS headers for Safari compatibility
-        res.setHeader('Access-Control-Allow-Origin', '*');
-        res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
-        res.setHeader('Access-Control-Expose-Headers', 'Content-Length, Content-Range, Accept-Ranges');
-        
-        res.setHeader('Content-Type', 'video/mp4');
-        res.setHeader('Accept-Ranges', 'bytes');
-        res.setHeader('Content-Length', fileBuffer.length);
-        res.setHeader('Cache-Control', 'public, max-age=86400');
-        res.status(200).end();
-      } catch (error) {
-        console.error('HEAD request error:', error);
-        res.status(500).end();
+      res.setHeader('Access-Control-Expose-Headers', 'Content-Length, Content-Range, Accept-Ranges');
+      
+      res.setHeader('Content-Type', 'video/mp4');
+      res.setHeader('Accept-Ranges', 'bytes');
+      res.setHeader('Content-Length', fileBuffer.length);
+      res.setHeader('Cache-Control', 'public, max-age=86400');
+      res.status(200).end();
+    } catch (error) {
+      console.error('HEAD request error:', error);
+      res.status(500).end();
+    }
+  });
+  
+  // GET request with Range support for video streaming
+  app.get('/media/:filename', async (req, res) => {
+    try {
+      const filename = req.params.filename;
+      const range = req.headers.range;
+      
+      // Download file from object storage
+      const result = await objectStorageClient.downloadAsBytes(`public/${filename}`);
+      
+      if (result.error) {
+        console.error('Error from object storage:', result.error);
+        return res.status(404).send('File not found in object storage');
       }
-    });
-    
-    // GET request with Range support for video streaming
-    app.get('/media/:filename', async (req, res) => {
-      try {
-        const filename = req.params.filename;
-        const range = req.headers.range;
-        
-        // Download file from object storage
-        const result = await objectStorageClient.downloadAsBytes(`public/${filename}`);
-        
-        if (result.error) {
-          console.error('Error from object storage:', result.error);
-          return res.status(404).send('File not found in object storage');
+      
+      const fileBuffer = result.value[0];
+      const fileSize = fileBuffer.length;
+      
+      // CORS headers for Safari compatibility
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
+      res.setHeader('Access-Control-Expose-Headers', 'Content-Length, Content-Range, Accept-Ranges');
+      
+      // Set common headers
+      res.setHeader('Content-Type', 'video/mp4');
+      res.setHeader('Accept-Ranges', 'bytes');
+      res.setHeader('Cache-Control', 'public, max-age=86400');
+      
+      // Handle Range requests (required for video seeking, especially Safari)
+      if (range) {
+        const match = range.match(/bytes=(\d+)-(\d*)/);
+        if (!match) {
+          return res.status(416).send('Invalid range');
         }
         
-        const fileBuffer = result.value[0];
-        const fileSize = fileBuffer.length;
+        const start = parseInt(match[1], 10);
+        const end = match[2] ? Math.min(parseInt(match[2], 10), fileSize - 1) : Math.min(start + 1024 * 1024 - 1, fileSize - 1); // 1MB chunks
+        const chunkSize = (end - start) + 1;
+        const chunk = fileBuffer.subarray(start, end + 1);
         
-        // CORS headers for Safari compatibility
-        res.setHeader('Access-Control-Allow-Origin', '*');
-        res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
-        res.setHeader('Access-Control-Expose-Headers', 'Content-Length, Content-Range, Accept-Ranges');
-        
-        // Set common headers
-        res.setHeader('Content-Type', 'video/mp4');
-        res.setHeader('Accept-Ranges', 'bytes');
-        res.setHeader('Cache-Control', 'public, max-age=86400');
-        
-        // Handle Range requests (required for video seeking, especially Safari)
-        if (range) {
-          const match = range.match(/bytes=(\d+)-(\d*)/);
-          if (!match) {
-            return res.status(416).send('Invalid range');
-          }
-          
-          const start = parseInt(match[1], 10);
-          const end = match[2] ? Math.min(parseInt(match[2], 10), fileSize - 1) : Math.min(start + 1024 * 1024 - 1, fileSize - 1); // 1MB chunks
-          const chunkSize = (end - start) + 1;
-          const chunk = fileBuffer.subarray(start, end + 1);
-          
-          res.status(206);
-          res.setHeader('Content-Range', `bytes ${start}-${end}/${fileSize}`);
-          res.setHeader('Content-Length', chunkSize);
-          res.send(chunk);
-        } else {
-          // No range requested, send entire file
-          res.setHeader('Content-Length', fileSize);
-          res.status(200).send(fileBuffer);
-        }
-      } catch (error) {
-        console.error('Error serving media file from object storage:', error);
-        res.status(500).send('Error serving file');
+        res.status(206);
+        res.setHeader('Content-Range', `bytes ${start}-${end}/${fileSize}`);
+        res.setHeader('Content-Length', chunkSize);
+        res.send(chunk);
+      } else {
+        // No range requested, send entire file
+        res.setHeader('Content-Length', fileSize);
+        res.status(200).send(fileBuffer);
       }
-    });
-  }
+    } catch (error) {
+      console.error('Error serving media file from object storage:', error);
+      res.status(500).send('Error serving file');
+    }
+  });
 
   // importantly only setup vite in development and after
   // setting up all the other routes so the catch-all route
