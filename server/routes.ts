@@ -11251,6 +11251,17 @@ Payment required immediately to avoid collection action. Contact us NOW.`
           const { call_id, transcript, call } = req.body;
           const leadId = metadata.leadId;
           
+          // Extract disconnection reason
+          const disconnectionReason = webhookData.disconnection_reason || call?.disconnection_reason;
+          const wasTerminatedByCustomer = disconnectionReason && (
+            disconnectionReason.includes('user') || 
+            disconnectionReason.includes('customer') ||
+            disconnectionReason.includes('hangup') ||
+            disconnectionReason === 'call_hangup'
+          );
+          
+          console.log(`📞 Call disconnection reason: ${disconnectionReason}, terminated by customer: ${wasTerminatedByCustomer}`);
+          
           // Extract intent and sentiment using OpenAI
           const OpenAI = (await import('openai')).default;
           const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
@@ -11262,12 +11273,14 @@ Payment required immediately to avoid collection action. Contact us NOW.`
             messages: [{
               role: "system",
               content: `Analyze this debt collection AI call transcript and extract detailed insights:
-1) Primary Intent: payment_plan, dispute, promise_to_pay, general_query, or unknown
+1) Primary Intent: payment_plan, dispute, promise_to_pay, general_query, call_terminated, or unknown
 2) Sentiment: positive, neutral, negative, cooperative, or hostile
 3) Confidence Score: 0-100 (how confident are you in the intent detection)
 4) Key Insights: Array of 2-3 key findings from the conversation
 5) Action Items: Array of recommended next steps
 6) Summary: 1-2 sentence summary of the call outcome
+
+${wasTerminatedByCustomer ? '\nNote: The customer terminated this call early. Reflect this in your analysis and recommend a callback.' : ''}
 
 Return only JSON with keys: intent, sentiment, confidence, keyInsights, actionItems, summary`
             }, {
@@ -11278,6 +11291,17 @@ Return only JSON with keys: intent, sentiment, confidence, keyInsights, actionIt
           });
           
           const analysis = JSON.parse(completion.choices[0].message.content || '{}');
+          
+          // If call was terminated by customer, override intent and add to insights
+          if (wasTerminatedByCustomer) {
+            analysis.intent = 'call_terminated';
+            analysis.keyInsights = analysis.keyInsights || [];
+            analysis.keyInsights.unshift('Customer terminated the call before completion');
+            analysis.actionItems = analysis.actionItems || [];
+            if (!analysis.actionItems.some((item: string) => item.toLowerCase().includes('callback'))) {
+              analysis.actionItems.unshift('Schedule callback to complete conversation');
+            }
+          }
           
           // Update lead with voice demo results
           await storage.updateInvestorLead(leadId, {
@@ -11292,6 +11316,8 @@ Return only JSON with keys: intent, sentiment, confidence, keyInsights, actionIt
               actionItems: analysis.actionItems || [],
               summary: analysis.summary || 'Call completed',
               callDuration: call?.duration || 0,
+              disconnectionReason: disconnectionReason,
+              terminatedByCustomer: wasTerminatedByCustomer,
               analyzedAt: new Date().toISOString()
             }
           });

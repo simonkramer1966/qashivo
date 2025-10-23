@@ -1,7 +1,7 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogClose } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Sparkles, Brain, TrendingUp, CheckCircle2, AlertCircle, MessageSquare, Phone, UserCheck, Search, PhoneCall } from "lucide-react";
+import { Sparkles, Brain, TrendingUp, CheckCircle2, AlertCircle, MessageSquare, Phone, UserCheck, Search, PhoneCall, PhoneOff } from "lucide-react";
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 
@@ -16,6 +16,8 @@ interface AIResultsDialogProps {
     actionItems?: string[];
     summary?: string;
     transcript?: string;
+    terminatedByCustomer?: boolean;
+    disconnectionReason?: string;
   } | null;
   type: "voice" | "sms";
   isDemoProcessing?: boolean;
@@ -36,6 +38,7 @@ const intentIcons = {
   promise_to_pay: CheckCircle2,
   general_query: MessageSquare,
   paid: CheckCircle2,
+  call_terminated: PhoneOff,
   unknown: Brain,
 };
 
@@ -119,6 +122,13 @@ export function AIResultsDialog({ open, onOpenChange, results, type, isDemoProce
       description: "General query detected - automated call to understand and address customer question",
       color: "from-blue-500/20 to-blue-500/5 border-blue-500/40",
       type: "AI Clarification"
+    },
+    call_terminated: {
+      icon: PhoneOff,
+      title: "Callback Recommended",
+      description: "Call was terminated by customer before completion - follow-up call recommended to continue conversation",
+      color: "from-orange-500/20 to-orange-500/5 border-orange-500/40",
+      type: "Follow-up Required"
     }
   };
 
@@ -176,6 +186,28 @@ export function AIResultsDialog({ open, onOpenChange, results, type, isDemoProce
           "relative space-y-6 transition-all duration-700 max-h-[70vh] overflow-y-auto pr-2 custom-scrollbar",
           showContent ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
         )}>
+          {/* Call Terminated Warning Banner */}
+          {results.terminatedByCustomer && (
+            <div className="p-4 bg-gradient-to-r from-orange-500/20 via-orange-500/10 to-transparent border-l-4 border-orange-500 rounded-r-xl animate-pulse" data-testid="banner-call-terminated">
+              <div className="flex items-start gap-3">
+                <PhoneOff className="w-5 h-5 text-orange-400 flex-shrink-0 mt-0.5" />
+                <div>
+                  <h3 className="text-sm font-semibold text-orange-400 mb-1 uppercase tracking-wide" data-testid="text-terminated-title">
+                    Call Terminated by Customer
+                  </h3>
+                  <p className="text-sm text-white/80" data-testid="text-terminated-message">
+                    The customer ended the call before it was completed. A follow-up call is recommended to continue the conversation.
+                  </p>
+                  {results.disconnectionReason && (
+                    <p className="text-xs text-slate-400 mt-2" data-testid="text-disconnection-reason">
+                      Reason: {results.disconnectionReason.replace(/_/g, ' ')}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+          
           {/* Primary Metrics Grid */}
           <div className="grid grid-cols-3 gap-4">
             {/* Intent Card */}
