@@ -101,42 +101,9 @@ export default function InvestorDemo() {
   const [acknowledgesRisk, setAcknowledgesRisk] = useState(false);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   
-  // Video autoplay state
+  // Video ref
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isVideoPlaying, setIsVideoPlaying] = useState(false);
-
-  // Lock scroll until video plays
-  useEffect(() => {
-    // Store original overflow value
-    const originalOverflow = document.body.style.overflow;
-    
-    if (!isVideoPlaying) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = originalOverflow;
-    }
-    
-    return () => {
-      document.body.style.overflow = originalOverflow;
-    };
-  }, [isVideoPlaying]);
-
-  // Autoplay video with 1 second delay (start muted to satisfy browser policies)
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (videoRef.current) {
-        // Start muted for autoplay to work (onPlay handler will unmute)
-        videoRef.current.muted = true;
-        videoRef.current.play().catch((error) => {
-          console.log('Video autoplay blocked by browser:', error);
-          // Unlock scroll even if autoplay fails - user can manually click play
-          setIsVideoPlaying(true);
-        });
-      }
-    }, 1000);
-
-    return () => clearTimeout(timer);
-  }, []);
 
   useEffect(() => {
     if (!leadId) return;
