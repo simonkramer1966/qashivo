@@ -422,11 +422,40 @@ app.use((req, res, next) => {
   console.log(`📁 Serving attached_assets from: ${attachedAssetsPath}`);
   app.use('/attached_assets', express.static(attachedAssetsPath));
   
-  // Serve object storage public folder at /media to avoid conflict with Vite's /public
+  // Custom route to serve video from object storage using Replit Object Storage client
   const objectStoragePath = process.env.PUBLIC_OBJECT_SEARCH_PATHS?.split(',')[0];
   if (objectStoragePath) {
     console.log(`📦 Serving object storage from: ${objectStoragePath} at /media`);
-    app.use('/media', express.static(objectStoragePath));
+    const { Client } = await import('@replit/object-storage');
+    const objectStorageClient = new Client();
+    
+    app.get('/media/:filename', async (req, res) => {
+      try {
+        const filename = req.params.filename;
+        console.log(`📦 Fetching file from object storage: public/${filename}`);
+        
+        // Download file as bytes from object storage
+        const result = await objectStorageClient.downloadAsBytes(`public/${filename}`);
+        
+        if (result.error) {
+          console.error('Error from object storage:', result.error);
+          return res.status(404).send('File not found in object storage');
+        }
+        
+        const fileBuffer = result.value[0];
+        
+        // Set appropriate headers for video
+        res.setHeader('Content-Type', 'video/mp4');
+        res.setHeader('Content-Length', fileBuffer.length);
+        res.setHeader('Accept-Ranges', 'bytes');
+        
+        // Send the file
+        res.send(fileBuffer);
+      } catch (error) {
+        console.error('Error serving media file from object storage:', error);
+        res.status(500).send('Error serving file');
+      }
+    });
   }
 
   // importantly only setup vite in development and after
