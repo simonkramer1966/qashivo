@@ -717,7 +717,7 @@ export default function InvestorDemo() {
                     }
                   }}
                 >
-                  <source src="/QashivoIntrov2.mp4" type="video/mp4" />
+                  <source src="/media/QashivoIntrov2.mp4" type="video/mp4" />
                   Your browser does not support the video tag.
                 </video>
               </div>
