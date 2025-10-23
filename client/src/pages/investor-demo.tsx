@@ -14,7 +14,6 @@ import { AIResultsDialog } from "@/components/AIResultsDialog";
 import qashivoLogo from "@assets/Main Nexus Logo copy_1756923544828.png";
 import dashboardScreenshot from "@assets/Screenshot 2025-10-13 at 13.19.17_1760519077630.png";
 import investorDeckPdf from "@assets/Qashivo - Investor Deck_1760520688174.pdf";
-import introVideo from "@assets/QashivoIntro v2_1760794779482.mp4";
 
 // Phone number sanitization function  
 const sanitizePhoneNumber = (phone: string, countryCode: string): string => {
@@ -718,7 +717,7 @@ export default function InvestorDemo() {
                     }
                   }}
                 >
-                  <source src={introVideo} type="video/mp4" />
+                  <source src="/attached_assets/QashivoIntro v2_1760794779482.mp4" type="video/mp4" />
                   Your browser does not support the video tag.
                 </video>
               </div>

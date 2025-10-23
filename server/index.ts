@@ -1,4 +1,5 @@
 import express, { type Request, Response, NextFunction } from "express";
+import path from "path";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import debtorRoutes from "./debtor-routes";
@@ -103,6 +104,9 @@ app.post("/api/debtor/payment/webhook", express.raw({ type: 'application/json' }
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+
+// Serve static assets from attached_assets folder
+app.use('/attached_assets', express.static(path.resolve(import.meta.dirname, '..', 'attached_assets')));
 
 app.use((req, res, next) => {
   const start = Date.now();
