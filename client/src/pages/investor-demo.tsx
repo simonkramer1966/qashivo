@@ -721,16 +721,6 @@ export default function InvestorDemo() {
                   Your browser does not support the video tag.
                 </video>
               </div>
-              
-              <div className="absolute -bottom-16 -right-8 bg-white p-4 rounded-xl shadow-lg border border-gray-200" data-testid="card-revenue-target">
-                <div className="flex items-center gap-3">
-                  <TrendingUp className="w-8 h-8 text-[#A98743]" />
-                  <div>
-                    <p className="text-2xl font-bold text-gray-900" data-testid="text-revenue-amount">£7-14M</p>
-                    <p className="text-sm text-gray-600">3-Year Revenue Target</p>
-                  </div>
-                </div>
-              </div>
             </div>
           </div>
         </div>
