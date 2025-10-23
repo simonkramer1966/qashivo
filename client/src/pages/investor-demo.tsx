@@ -618,23 +618,25 @@ export default function InvestorDemo() {
     <div className="min-h-screen bg-white">
       {/* Sticky Header */}
       <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <img 
-              src={qashivoLogo} 
-              alt="Qashivo Logo" 
-              className="h-10 w-auto"
-              data-testid="img-qashivo-logo"
-            />
-            <span className="text-2xl font-bold text-gray-900">Qashivo</span>
+        <div className="max-w-7xl mx-auto px-6 py-6">
+          <div className="flex flex-col items-center gap-4">
+            <div className="flex items-center gap-3">
+              <img 
+                src={qashivoLogo} 
+                alt="Qashivo Logo" 
+                className="h-10 w-auto"
+                data-testid="img-qashivo-logo"
+              />
+              <span className="text-2xl font-bold text-gray-900">Qashivo</span>
+            </div>
+            <Button 
+              className="bg-[#17B6C3] hover:bg-[#1396A1] text-white"
+              onClick={() => setInvestmentDialogOpen(true)}
+              data-testid="button-header-cta"
+            >
+              Download Full Investment Deck
+            </Button>
           </div>
-          <Button 
-            className="bg-[#17B6C3] hover:bg-[#1396A1] text-white"
-            onClick={() => setInvestmentDialogOpen(true)}
-            data-testid="button-header-cta"
-          >
-            Download Full Investment Deck
-          </Button>
         </div>
       </header>
 
