@@ -100,7 +100,9 @@ export default function Homepage() {
             </div>
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Trusted by UK SMEs and finance professionals.</h2>
             <p className="text-lg md:text-xl text-gray-600 max-w-4xl mx-auto leading-relaxed">
-              Qashivo's intelligent automation platform combines multi-channel invoice chasing (SMS, email, AI voice) with predictive cashflow forecasting. Seamlessly integrates with Xero, QuickBooks & Sage to recover your £21,400 average outstanding debt—without the awkward conversations.
+              Meet your polite-but-persistent credit controller.<br />
+              Qashivo automates SMS, email and AI voice as well as advanced predictive cashflow forecasting.<br />
+              One click from Xero, QuickBooks or Sage to your outstanding invoices ... without the awkward phone calls.
             </p>
           </div>
 
