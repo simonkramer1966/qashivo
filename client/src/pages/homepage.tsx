@@ -102,7 +102,7 @@ export default function Homepage() {
             <p className="text-lg md:text-xl text-gray-600 max-w-4xl mx-auto leading-relaxed">
               Meet your polite-but-persistent credit controller.<br />
               Qashivo automates SMS, email and AI voice as well as advanced predictive cashflow forecasting.<br />
-              One click from Xero, QuickBooks or Sage to your outstanding invoices ... without the awkward phone calls.
+              One click from Xero, QuickBooks or Sage to collect your outstanding invoices ... without the awkward phone calls.
             </p>
           </div>
 
