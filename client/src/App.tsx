@@ -42,6 +42,7 @@ const BetaPartner = lazy(() => import("@/pages/beta-partner"));
 const AdminAnalytics = lazy(() => import("@/pages/admin-analytics"));
 const AdminOutcomes = lazy(() => import("@/pages/admin-outcomes"));
 const Dashboard = lazy(() => import("@/pages/dashboard"));
+const Homepage = lazy(() => import("@/pages/homepage"));
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -76,6 +77,7 @@ function Router() {
       {!isAuthenticated ? (
         // Unauthenticated routes - only signup and signin pages
         <Switch>
+          <Route path="/homepage" component={Homepage} />
           <Route path="/investor-demo" component={InvestorDemo} />
           <Route path="/investor-demo-qashivo" component={InvestorDemoQashivo} />
           <Route path="/investor-detail" component={InvestorDetail} />
@@ -90,6 +92,7 @@ function Router() {
       ) : (
         // Authenticated routes - main application
         <Switch>
+          <Route path="/homepage" component={Homepage} />
           <Route path="/investor-demo" component={InvestorDemo} />
           <Route path="/investor-demo-qashivo" component={InvestorDemoQashivo} />
           <Route path="/investor-detail" component={InvestorDetail} />
