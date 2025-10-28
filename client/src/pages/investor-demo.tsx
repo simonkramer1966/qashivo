@@ -691,7 +691,7 @@ export default function InvestorDemo() {
             </div>
 
             {/* Form */}
-            <div id="dataroom-form" className="relative space-y-4">
+            <div id="dataroom-form" className="relative space-y-2">
               <h3 className="text-2xl font-bold text-[#17B6C3] text-center">
                 Access Investment Dataroom
               </h3>
