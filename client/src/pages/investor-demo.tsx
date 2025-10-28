@@ -678,7 +678,7 @@ export default function InvestorDemo() {
 
               {/* Compelling Copy Section */}
               <div>
-                <h3 className="text-2xl font-bold text-gray-900 mb-4">
+                <h3 className="text-3xl font-bold text-gray-900 mb-4">
                   The Future of B2B Credit Control
                 </h3>
                 <p className="text-gray-700 leading-relaxed">
