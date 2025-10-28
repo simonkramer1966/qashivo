@@ -655,10 +655,10 @@ export default function InvestorDemo() {
             <div className="flex gap-4 justify-center">
               <Button 
                 className="bg-[#17B6C3] hover:bg-[#1396A1] text-white text-lg px-8 py-6"
-                onClick={() => document.getElementById('demos')?.scrollIntoView({ behavior: 'smooth' })}
-                data-testid="button-try-demo"
+                onClick={() => document.getElementById('dataroom-form')?.scrollIntoView({ behavior: 'smooth' })}
+                data-testid="button-access-dataroom"
               >
-                Try Live Demo <ArrowRight className="w-5 h-5 ml-2" />
+                Access Investment Dataroom <ArrowRight className="w-5 h-5 ml-2" />
               </Button>
             </div>
           </div>
@@ -701,7 +701,7 @@ export default function InvestorDemo() {
             </div>
 
             {/* Form */}
-            <div className="relative space-y-4">
+            <div id="dataroom-form" className="relative space-y-4">
               <h3 className="text-2xl font-bold text-gray-900 text-center">
                 Access Investment Dataroom
               </h3>
