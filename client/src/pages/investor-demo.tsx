@@ -681,10 +681,13 @@ export default function InvestorDemo() {
                 <h3 className="text-3xl font-bold text-gray-900 mb-4">
                   The Future of B2B Credit Control
                 </h3>
-                <p className="text-gray-700 leading-relaxed">
+                <p className="text-gray-700 leading-relaxed mb-4">
                   This is more than automation; it's intelligent learning that gets smarter with every interaction. 
                   Our AI doesn't just send reminders; it detects intent, predicts payment behavior, and creates 
-                  statutory-compliant escalation paths automatically. The result? <strong>40% faster collections</strong>, 
+                  statutory-compliant escalation paths automatically.
+                </p>
+                <p className="text-gray-700 leading-relaxed">
+                  The result? <strong>40% faster collections</strong>, 
                   <strong>95% forecast accuracy</strong>, and <strong>zero manual intervention</strong>.
                 </p>
               </div>
