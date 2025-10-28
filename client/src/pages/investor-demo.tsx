@@ -654,34 +654,37 @@ export default function InvestorDemo() {
             </Button>
           </div>
 
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
-            <div className="text-center lg:text-left">
-              <div className="inline-block px-4 py-2 bg-[#17B6C3]/10 rounded-full mb-6">
-                <span className="text-[#17B6C3] font-semibold">SEIS-Eligible Investment Opportunity (pending HMRC approval)</span>
-              </div>
-              <h1 className="text-5xl lg:text-6xl font-bold text-gray-900 mb-6 leading-tight">
-                AI That Turns Late Payments Into{" "}
-                <span className="text-[#17B6C3]">Automated Cashflow</span>
-              </h1>
-              <p className="text-xl text-gray-600 mb-4 leading-relaxed">
-                The UK's first AI-powered credit control platform built on statutory rights. 
-                Transforming the £11B late payment crisis into predictable revenue.
-              </p>
-              <p className="text-xl text-gray-600 mb-8 leading-relaxed">
-                <strong>We're not just automating credit control. We're creating a learning brain for SME finance.</strong>
-              </p>
-              
-              <div className="flex gap-4 justify-center lg:justify-start">
-                <Button 
-                  className="bg-[#17B6C3] hover:bg-[#1396A1] text-white text-lg px-8 py-6"
-                  onClick={() => document.getElementById('demos')?.scrollIntoView({ behavior: 'smooth' })}
-                  data-testid="button-try-demo"
-                >
-                  Try Live Demo <ArrowRight className="w-5 h-5 ml-2" />
-                </Button>
-              </div>
+          {/* Centered Hero Content */}
+          <div className="text-center mb-12">
+            <div className="inline-block px-4 py-2 bg-[#17B6C3]/10 rounded-full mb-6">
+              <span className="text-[#17B6C3] font-semibold">SEIS-Eligible Investment Opportunity (pending HMRC approval)</span>
             </div>
+            <h1 className="text-5xl lg:text-6xl font-bold text-gray-900 mb-6 leading-tight">
+              AI That Turns Late Payments Into{" "}
+              <span className="text-[#17B6C3]">Automated Cashflow</span>
+            </h1>
+            <p className="text-xl text-gray-600 mb-4 leading-relaxed max-w-4xl mx-auto">
+              The UK's first AI-powered credit control platform built on statutory rights. 
+              Transforming the £11B late payment crisis into predictable revenue.
+            </p>
+            <p className="text-xl text-gray-600 mb-8 leading-relaxed max-w-4xl mx-auto">
+              <strong>We're not just automating credit control. We're creating a learning brain for SME finance.</strong>
+            </p>
+            
+            <div className="flex gap-4 justify-center">
+              <Button 
+                className="bg-[#17B6C3] hover:bg-[#1396A1] text-white text-lg px-8 py-6"
+                onClick={() => document.getElementById('demos')?.scrollIntoView({ behavior: 'smooth' })}
+                data-testid="button-try-demo"
+              >
+                Try Live Demo <ArrowRight className="w-5 h-5 ml-2" />
+              </Button>
+            </div>
+          </div>
 
+          {/* Two-column layout: Video left, Form right */}
+          <div className="grid lg:grid-cols-2 gap-8 items-start">
+            {/* Video */}
             <div className="relative">
               <div className="aspect-video rounded-2xl shadow-2xl overflow-hidden border border-gray-300">
                 <video 
@@ -700,6 +703,29 @@ export default function InvestorDemo() {
                   <source src="/media/QashivoIntrov2.mp4" type="video/mp4" />
                   Your browser does not support the video tag.
                 </video>
+              </div>
+            </div>
+
+            {/* Form */}
+            <div className="relative">
+              <div className="rounded-2xl shadow-2xl overflow-hidden border border-gray-300 bg-white" style={{ minHeight: '544px' }}>
+                <iframe
+                  src="https://api.leadconnectorhq.com/widget/form/NRFTMQnqftGVqumexWwm"
+                  style={{ width: '100%', height: '100%', minHeight: '544px', border: 'none', borderRadius: '3px' }}
+                  id="inline-NRFTMQnqftGVqumexWwm" 
+                  data-layout="{'id':'INLINE'}"
+                  data-trigger-type="alwaysShow"
+                  data-trigger-value=""
+                  data-activation-type="alwaysActivated"
+                  data-activation-value=""
+                  data-deactivation-type="neverDeactivate"
+                  data-deactivation-value=""
+                  data-form-name="Qashivo.ai form page for dataroom"
+                  data-height="544"
+                  data-layout-iframe-id="inline-NRFTMQnqftGVqumexWwm"
+                  data-form-id="NRFTMQnqftGVqumexWwm"
+                  title="Qashivo.ai form page for dataroom"
+                />
               </div>
             </div>
           </div>
