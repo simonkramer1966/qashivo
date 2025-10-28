@@ -648,7 +648,7 @@ export default function InvestorDemo() {
               The UK's first AI-powered credit control platform built on statutory rights. 
               Transforming the £11B late payment crisis into predictable revenue.
             </p>
-            <p className="text-xl text-gray-600 mb-[20px] leading-relaxed max-w-4xl mx-auto">
+            <p className="text-xl text-gray-600 mb-[40px] leading-relaxed max-w-4xl mx-auto">
               <strong>We're not just automating credit control. We're creating a learning brain for SME finance.</strong>
             </p>
           </div>
