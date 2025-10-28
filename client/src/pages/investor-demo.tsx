@@ -695,10 +695,10 @@ export default function InvestorDemo() {
               <h3 className="text-2xl font-bold text-[#17B6C3] text-center">
                 Access Investment Dataroom
               </h3>
-              <div className="rounded-2xl shadow-2xl overflow-hidden bg-white" style={{ minHeight: '625px' }}>
+              <div className="rounded-2xl shadow-2xl overflow-hidden bg-white" style={{ minHeight: '620px' }}>
                 <iframe
                   src="https://api.leadconnectorhq.com/widget/form/NRFTMQnqftGVqumexWwm"
-                  style={{ width: '100%', height: '100%', minHeight: '625px', border: 'none', borderRadius: '3px' }}
+                  style={{ width: '100%', height: '100%', minHeight: '620px', border: 'none', borderRadius: '3px' }}
                   id="inline-NRFTMQnqftGVqumexWwm" 
                   data-layout="{'id':'INLINE'}"
                   data-trigger-type="alwaysShow"
@@ -708,7 +708,7 @@ export default function InvestorDemo() {
                   data-deactivation-type="neverDeactivate"
                   data-deactivation-value=""
                   data-form-name="Qashivo.ai form page for dataroom"
-                  data-height="625"
+                  data-height="620"
                   data-layout-iframe-id="inline-NRFTMQnqftGVqumexWwm"
                   data-form-id="NRFTMQnqftGVqumexWwm"
                   title="Qashivo.ai form page for dataroom"
