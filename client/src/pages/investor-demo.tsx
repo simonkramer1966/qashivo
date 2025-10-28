@@ -11,7 +11,7 @@ import { Phone, MessageSquare, TrendingUp, Shield, Zap, CheckCircle, Brain, Acti
 import { useToast } from "@/hooks/use-toast";
 import { SiXero, SiStripe, SiOpenai, SiQuickbooks } from "react-icons/si";
 import { AIResultsDialog } from "@/components/AIResultsDialog";
-import qashivoLogo from "@assets/Main Nexus Logo copy_1756923544828.png";
+import qashivoLogo from "@assets/WhatsApp Image 2025-10-28 at 12.49.53_1761652236575.jpeg";
 import dashboardScreenshot from "@assets/Screenshot 2025-10-13 at 13.19.17_1760519077630.png";
 import investorDeckPdf from "@assets/Qashivo - Investor Deck_1760520688174.pdf";
 
