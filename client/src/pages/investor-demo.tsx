@@ -684,7 +684,7 @@ export default function InvestorDemo() {
           {/* Two-column layout: Video left, Form right */}
           <div className="grid lg:grid-cols-2 gap-8 items-start">
             {/* Video */}
-            <div className="relative">
+            <div className="relative space-y-6">
               <div className="aspect-video rounded-2xl shadow-2xl overflow-hidden border border-gray-300">
                 <video 
                   ref={videoRef}
@@ -702,6 +702,19 @@ export default function InvestorDemo() {
                   <source src="/media/QashivoIntrov2.mp4" type="video/mp4" />
                   Your browser does not support the video tag.
                 </video>
+              </div>
+
+              {/* Compelling Copy Section */}
+              <div className="bg-white/70 backdrop-blur-md rounded-2xl p-8 border border-white/50 shadow-xl">
+                <h3 className="text-2xl font-bold text-gray-900 mb-4">
+                  The Future of B2B Collections
+                </h3>
+                <p className="text-gray-700 leading-relaxed">
+                  This is more than automation—it's intelligent learning that gets smarter with every interaction. 
+                  Our AI doesn't just send reminders; it detects intent, predicts payment behavior, and creates 
+                  statutory-compliant escalation paths automatically. The result? <strong>40% faster collections</strong>, 
+                  <strong>95% forecast accuracy</strong>, and <strong>zero manual intervention</strong>.
+                </p>
               </div>
             </div>
 
