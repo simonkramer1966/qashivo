@@ -619,7 +619,7 @@ export default function InvestorDemo() {
       {/* Sticky Header */}
       <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-6 py-4">
-          <div className="flex items-center justify-center">
+          <div className="flex items-center justify-start">
             <div className="flex items-center gap-3">
               <img 
                 src={qashivoLogo} 
