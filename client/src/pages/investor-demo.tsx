@@ -1162,11 +1162,11 @@ export default function InvestorDemo() {
           </p>
           <div className="flex justify-center">
             <Button
-              className="bg-white text-[#17B6C3] hover:bg-gray-100 text-xl px-12 py-7 shadow-xl"
-              onClick={() => setInvestmentDialogOpen(true)}
-              data-testid="button-download-deck"
+              className="bg-[#A98743] hover:bg-[#8B7035] text-white text-xl px-12 py-7 shadow-xl"
+              onClick={() => document.getElementById('dataroom-form')?.scrollIntoView({ behavior: 'smooth' })}
+              data-testid="button-access-dataroom-footer"
             >
-              Download Full Investment Deck
+              Access Investment Dataroom
             </Button>
           </div>
         </div>
