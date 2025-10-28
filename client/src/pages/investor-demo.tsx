@@ -659,7 +659,7 @@ export default function InvestorDemo() {
               <span className="text-[#17B6C3] font-semibold">SEIS-Eligible Investment Opportunity (pending HMRC approval)</span>
             </div>
             <h1 className="text-5xl lg:text-6xl font-bold text-gray-900 mb-6 leading-tight">
-              AI That Turns Late Payments Into{" "}
+              AI That Turns Late Payments Into<br />
               <span className="text-[#17B6C3]">Automated Cashflow</span>
             </h1>
             <p className="text-xl text-gray-600 mb-4 leading-relaxed max-w-4xl mx-auto">
