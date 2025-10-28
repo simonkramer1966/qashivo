@@ -700,7 +700,7 @@ export default function InvestorDemo() {
                   The Future of B2B Credit Control
                 </h3>
                 <p className="text-gray-700 leading-relaxed">
-                  This is more than automation—it's intelligent learning that gets smarter with every interaction. 
+                  This is more than automation; it's intelligent learning that gets smarter with every interaction. 
                   Our AI doesn't just send reminders; it detects intent, predicts payment behavior, and creates 
                   statutory-compliant escalation paths automatically. The result? <strong>40% faster collections</strong>, 
                   <strong>95% forecast accuracy</strong>, and <strong>zero manual intervention</strong>.
