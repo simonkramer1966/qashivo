@@ -619,7 +619,7 @@ export default function InvestorDemo() {
       {/* Sticky Header */}
       <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-6 py-4">
-          <div className="flex items-center justify-center md:justify-between">
+          <div className="flex items-center justify-center">
             <div className="flex items-center gap-3">
               <img 
                 src={qashivoLogo} 
@@ -628,13 +628,6 @@ export default function InvestorDemo() {
                 data-testid="img-qashivo-logo"
               />
             </div>
-            <Button 
-              className="hidden md:block bg-[#17B6C3] hover:bg-[#1396A1] text-white"
-              onClick={() => setInvestmentDialogOpen(true)}
-              data-testid="button-header-cta"
-            >
-              Download Full Investment Deck
-            </Button>
           </div>
         </div>
       </header>
@@ -642,17 +635,6 @@ export default function InvestorDemo() {
       {/* Hero Section */}
       <section className="relative pt-12 md:pt-20 pb-16 md:pb-32 px-6 bg-gradient-to-br from-[#0E131F]/5 via-white to-[#17B6C3]/10">
         <div className="max-w-7xl mx-auto">
-          {/* CTA Button - Centered between header and content (mobile only) */}
-          <div className="flex justify-center mb-12 md:hidden">
-            <Button 
-              className="bg-[#17B6C3] hover:bg-[#1396A1] text-white"
-              onClick={() => setInvestmentDialogOpen(true)}
-              data-testid="button-header-cta-mobile"
-            >
-              Download Full Investment Deck
-            </Button>
-          </div>
-
           {/* Centered Hero Content */}
           <div className="text-center mb-12">
             <div className="inline-block px-4 py-2 bg-[#17B6C3]/10 rounded-full mb-6">
