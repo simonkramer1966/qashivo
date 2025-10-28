@@ -633,7 +633,7 @@ export default function InvestorDemo() {
       </header>
 
       {/* Hero Section */}
-      <section className="relative pt-12 md:pt-20 pb-16 md:pb-32 px-6 bg-gradient-to-br from-[#0E131F]/5 via-white to-[#17B6C3]/10">
+      <section className="relative pt-12 md:pt-20 pb-20 px-6 bg-gradient-to-br from-[#0E131F]/5 via-white to-[#17B6C3]/10">
         <div className="max-w-7xl mx-auto">
           {/* Centered Hero Content */}
           <div className="text-center mb-12">
