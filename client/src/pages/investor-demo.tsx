@@ -655,7 +655,15 @@ export default function InvestorDemo() {
             <div className="flex gap-4 justify-center">
               <Button 
                 className="bg-[#17B6C3] hover:bg-[#1396A1] text-white text-lg px-8 py-6"
-                onClick={() => document.getElementById('dataroom-form')?.scrollIntoView({ behavior: 'smooth' })}
+                onClick={() => {
+                  const element = document.getElementById('dataroom-form');
+                  if (element) {
+                    const headerOffset = 100; // Account for sticky header + some padding
+                    const elementPosition = element.getBoundingClientRect().top;
+                    const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+                    window.scrollTo({ top: offsetPosition, behavior: 'smooth' });
+                  }
+                }}
                 data-testid="button-access-dataroom"
               >
                 Access Investment Dataroom <ArrowRight className="w-5 h-5 ml-2" />
@@ -1163,7 +1171,15 @@ export default function InvestorDemo() {
           <div className="flex justify-center">
             <Button
               className="bg-[#A98743] hover:bg-[#8B7035] text-white text-xl px-12 py-7 shadow-xl"
-              onClick={() => document.getElementById('dataroom-form')?.scrollIntoView({ behavior: 'smooth' })}
+              onClick={() => {
+                const element = document.getElementById('dataroom-form');
+                if (element) {
+                  const headerOffset = 100; // Account for sticky header + some padding
+                  const elementPosition = element.getBoundingClientRect().top;
+                  const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+                  window.scrollTo({ top: offsetPosition, behavior: 'smooth' });
+                }
+              }}
               data-testid="button-access-dataroom-footer"
             >
               Access Investment Dataroom
