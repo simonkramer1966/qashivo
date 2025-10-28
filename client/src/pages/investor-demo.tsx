@@ -705,9 +705,9 @@ export default function InvestorDemo() {
               </div>
 
               {/* Compelling Copy Section */}
-              <div className="bg-white/70 backdrop-blur-md rounded-2xl p-8 border border-white/50 shadow-xl">
+              <div>
                 <h3 className="text-2xl font-bold text-gray-900 mb-4">
-                  The Future of B2B Collections
+                  The Future of B2B Credit Control
                 </h3>
                 <p className="text-gray-700 leading-relaxed">
                   This is more than automation—it's intelligent learning that gets smarter with every interaction. 
