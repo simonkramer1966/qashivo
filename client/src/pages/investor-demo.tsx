@@ -698,7 +698,7 @@ export default function InvestorDemo() {
               <h3 className="text-2xl font-bold text-[#17B6C3] text-center">
                 Access Investment Dataroom
               </h3>
-              <div className="rounded-2xl shadow-2xl overflow-hidden bg-white" style={{ height: '580px' }}>
+              <div className="rounded-2xl shadow-2xl overflow-hidden bg-white" style={{ height: '570px' }}>
                 <iframe
                   src="https://api.leadconnectorhq.com/widget/form/NRFTMQnqftGVqumexWwm"
                   style={{ width: '100%', height: '620px', border: 'none', borderRadius: '3px', marginTop: '-40px' }}
