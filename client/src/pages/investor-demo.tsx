@@ -627,7 +627,6 @@ export default function InvestorDemo() {
                 className="h-10 w-auto"
                 data-testid="img-qashivo-logo"
               />
-              <span className="text-2xl font-bold text-gray-900">Qashivo</span>
             </div>
             <Button 
               className="hidden md:block bg-[#17B6C3] hover:bg-[#1396A1] text-white"
@@ -708,7 +707,7 @@ export default function InvestorDemo() {
 
             {/* Form */}
             <div className="relative">
-              <div className="rounded-2xl shadow-2xl overflow-hidden border border-gray-300 bg-white" style={{ minHeight: '544px' }}>
+              <div className="rounded-2xl shadow-2xl overflow-hidden bg-white" style={{ minHeight: '544px' }}>
                 <iframe
                   src="https://api.leadconnectorhq.com/widget/form/NRFTMQnqftGVqumexWwm"
                   style={{ width: '100%', height: '100%', minHeight: '544px', border: 'none', borderRadius: '3px' }}
