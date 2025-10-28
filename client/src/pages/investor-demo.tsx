@@ -701,7 +701,10 @@ export default function InvestorDemo() {
             </div>
 
             {/* Form */}
-            <div className="relative">
+            <div className="relative space-y-4">
+              <h3 className="text-2xl font-bold text-gray-900 text-center">
+                Access Investment Dataroom
+              </h3>
               <div className="rounded-2xl shadow-2xl overflow-hidden bg-white" style={{ minHeight: '544px' }}>
                 <iframe
                   src="https://api.leadconnectorhq.com/widget/form/NRFTMQnqftGVqumexWwm"
