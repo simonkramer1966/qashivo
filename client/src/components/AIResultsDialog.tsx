@@ -104,10 +104,10 @@ export function AIResultsDialog({ open, onOpenChange, results, type, isDemoProce
     },
     dispute: {
       icon: UserCheck,
-      title: "Human Escalation Created",
-      description: "Dispute flagged for personal follow-up to preserve customer relationship and resolve concerns",
+      title: "Dispute Raised - Acknowledge & Send 'Dispute Resolution' Link",
+      description: "Send customer the dispute resolution link to address their concerns",
       color: "from-amber-500/20 to-amber-500/5 border-amber-500/40",
-      type: "Human Required"
+      type: "Action Required"
     },
     unknown: {
       icon: PhoneCall,
