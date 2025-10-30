@@ -104,8 +104,8 @@ export function AIResultsDialog({ open, onOpenChange, results, type, isDemoProce
     },
     dispute: {
       icon: UserCheck,
-      title: "Dispute Raised - Acknowledge & Send 'Dispute Resolution' Link",
-      description: "Send customer the dispute resolution link to address their concerns",
+      title: "Dispute Raised",
+      description: "Send customer the dispute resolution link to acknowledge and begin resolution process",
       color: "from-amber-500/20 to-amber-500/5 border-amber-500/40",
       type: "Action Required"
     },
