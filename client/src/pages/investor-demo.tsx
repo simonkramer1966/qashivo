@@ -891,35 +891,16 @@ export default function InvestorDemo() {
                   detecting intent, sentiment, and commitment to pay.
                 </p>
                 <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <Label className="text-gray-700 font-medium">First Name</Label>
-                      <Input
-                        type="text"
-                        value={voiceName.split(' ')[0] || ''}
-                        onChange={(e) => {
-                          const lastName = voiceName.split(' ').slice(1).join(' ');
-                          setVoiceName(lastName ? `${e.target.value} ${lastName}` : e.target.value);
-                        }}
-                        placeholder="John"
-                        className="mt-1 bg-white border-gray-300"
-                        data-testid="input-voice-first-name"
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-gray-700 font-medium">Last Name</Label>
-                      <Input
-                        type="text"
-                        value={voiceName.split(' ').slice(1).join(' ') || ''}
-                        onChange={(e) => {
-                          const firstName = voiceName.split(' ')[0] || '';
-                          setVoiceName(`${firstName} ${e.target.value}`.trim());
-                        }}
-                        placeholder="Smith"
-                        className="mt-1 bg-white border-gray-300"
-                        data-testid="input-voice-last-name"
-                      />
-                    </div>
+                  <div>
+                    <Label className="text-gray-700 font-medium">Your Name</Label>
+                    <Input
+                      type="text"
+                      value={voiceName}
+                      onChange={(e) => setVoiceName(e.target.value)}
+                      placeholder="John Smith"
+                      className="mt-1 bg-white border-gray-300"
+                      data-testid="input-voice-name"
+                    />
                   </div>
                   <div>
                     <Label className="text-gray-700 font-medium">Your Phone Number</Label>
