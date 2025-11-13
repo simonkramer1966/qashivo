@@ -8,7 +8,7 @@ import {
   type CreditSignals,
   type TradingProfile,
 } from "./services/creditScoringService";
-import { setupAuth, isAuthenticated, isOwner } from "./replitAuth";
+import { setupAuth, isAuthenticated, isOwner } from "./auth";
 import { 
   insertContactSchema,
   insertContactNoteSchema, 

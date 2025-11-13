@@ -525,3 +525,43 @@ export class SendGridEmailService extends EmailService {
     );
   }
 }
+
+export async function sendPasswordResetEmail(email: string, resetToken: string): Promise<void> {
+  const resetUrl = `${process.env.APP_URL || 'http://localhost:5000'}/reset-password?token=${resetToken}`;
+  
+  const config: EmailServiceConfig = {
+    provider: 'sendgrid',
+    apiKey: process.env.SENDGRID_API_KEY || 'default_key',
+    defaultFrom: {
+      email: process.env.SENDGRID_FROM_EMAIL || 'no-reply@qashivo.com',
+      name: process.env.SENDGRID_FROM_NAME || 'Qashivo'
+    },
+    maxRetries: 3,
+    retryDelay: 1000
+  };
+  
+  const emailService = new SendGridEmailService(config);
+  
+  await emailService.sendEmail({
+    to: [{ email }],
+    subject: 'Reset Your Password',
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #17B6C3;">Reset Your Password</h2>
+        <p>You requested to reset your password. Click the link below to create a new password:</p>
+        <p style="margin: 20px 0;">
+          <a href="${resetUrl}" style="background-color: #17B6C3; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block;">
+            Reset Password
+          </a>
+        </p>
+        <p style="color: #666; font-size: 14px;">
+          This link will expire in 1 hour. If you didn't request this, you can safely ignore this email.
+        </p>
+        <p style="color: #666; font-size: 14px;">
+          Or copy this link: <a href="${resetUrl}">${resetUrl}</a>
+        </p>
+      </div>
+    `,
+    text: `Reset Your Password\n\nYou requested to reset your password. Click the link below to create a new password:\n\n${resetUrl}\n\nThis link will expire in 1 hour. If you didn't request this, you can safely ignore this email.`
+  });
+}
