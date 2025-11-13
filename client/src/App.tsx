@@ -43,6 +43,10 @@ const AdminAnalytics = lazy(() => import("@/pages/admin-analytics"));
 const AdminOutcomes = lazy(() => import("@/pages/admin-outcomes"));
 const Dashboard = lazy(() => import("@/pages/dashboard"));
 const Homepage = lazy(() => import("@/pages/homepage"));
+const Login = lazy(() => import("@/pages/Login"));
+const Signup = lazy(() => import("@/pages/Signup"));
+const PasswordResetRequest = lazy(() => import("@/pages/PasswordReset").then(m => ({ default: m.PasswordResetRequest })));
+const PasswordResetConfirm = lazy(() => import("@/pages/PasswordReset").then(m => ({ default: m.PasswordResetConfirm })));
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -85,9 +89,13 @@ function Router() {
           <Route path="/debtor-portal" component={DebtorPortal} />
           <Route path="/partner/register" component={PartnerRegistration} />
           <Route path="/client/register" component={ClientRegistration} />
+          <Route path="/login" component={Login} />
+          <Route path="/signup" component={Signup} />
+          <Route path="/forgot-password" component={PasswordResetRequest} />
+          <Route path="/reset-password" component={PasswordResetConfirm} />
           <Route path="/signin" component={SignIn} />
-          <Route path="/" component={SignIn} />
-          <Route path="/:rest*" component={SignIn} />
+          <Route path="/" component={Login} />
+          <Route path="/:rest*" component={Login} />
         </Switch>
       ) : (
         // Authenticated routes - main application
