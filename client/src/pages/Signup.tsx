@@ -27,7 +27,7 @@ const signupSchema = z.object({
 
 type SignupForm = z.infer<typeof signupSchema>;
 
-export function Signup() {
+export default function Signup() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
 
