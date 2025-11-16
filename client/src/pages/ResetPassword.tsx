@@ -44,13 +44,9 @@ export default function ResetPassword() {
 
   const confirmResetMutation = useMutation({
     mutationFn: async (data: ConfirmResetForm) => {
-      return await apiRequest("/api/password-reset/confirm", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          token,
-          newPassword: data.newPassword,
-        }),
+      return await apiRequest("POST", "/api/password-reset/confirm", {
+        token,
+        newPassword: data.newPassword,
       });
     },
     onSuccess: () => {

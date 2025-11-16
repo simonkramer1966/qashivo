@@ -87,16 +87,13 @@ export default function Onboarding() {
 
   const createCustomerMutation = useMutation({
     mutationFn: async () => {
-      const response = await apiRequest("/api/contacts", {
-        method: "POST",
-        body: JSON.stringify({
-          name: formData.companyName,
-          email: formData.email,
-          phone: formData.phone,
-          address: formData.address,
-          creditLimit: creditCheckResult?.recommendedLimit || 0,
-          notes: `${formData.notes}\n\nCredit Score: ${creditCheckResult?.score || "N/A"}\nRisk Level: ${creditCheckResult?.riskLevel || "N/A"}\nBusiness Registration: ${formData.businessRegistrationNumber}\nYears in Business: ${formData.yearsInBusiness}\nAnnual Revenue: £${formData.annualRevenue}`
-        })
+      const response = await apiRequest("POST", "/api/contacts", {
+        name: formData.companyName,
+        email: formData.email,
+        phone: formData.phone,
+        address: formData.address,
+        creditLimit: creditCheckResult?.recommendedLimit || 0,
+        notes: `${formData.notes}\n\nCredit Score: ${creditCheckResult?.score || "N/A"}\nRisk Level: ${creditCheckResult?.riskLevel || "N/A"}\nBusiness Registration: ${formData.businessRegistrationNumber}\nYears in Business: ${formData.yearsInBusiness}\nAnnual Revenue: £${formData.annualRevenue}`
       });
       return response;
     },

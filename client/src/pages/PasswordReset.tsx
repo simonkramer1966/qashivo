@@ -47,11 +47,7 @@ export function PasswordResetRequest() {
 
   const requestResetMutation = useMutation({
     mutationFn: async (data: RequestResetForm) => {
-      return await apiRequest("/api/password-reset/request", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
+      return await apiRequest("POST", "/api/password-reset/request", data);
     },
     onSuccess: () => {
       setEmailSent(true);
@@ -170,13 +166,9 @@ export function PasswordResetConfirm() {
 
   const confirmResetMutation = useMutation({
     mutationFn: async (data: ConfirmResetForm) => {
-      return await apiRequest("/api/password-reset/confirm", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          token,
-          newPassword: data.newPassword,
-        }),
+      return await apiRequest("POST", "/api/password-reset/confirm", {
+        token,
+        newPassword: data.newPassword,
       });
     },
     onSuccess: () => {
