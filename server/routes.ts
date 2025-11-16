@@ -302,7 +302,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get current auth context (user info, role, active tenant)
   app.get('/api/auth/context', isAuthenticated, async (req, res) => {
     try {
-      const user = await storage.getUser((req as any).user.claims.sub);
+      const user = await storage.getUser((req as any).user.id);
       if (!user) {
         return res.status(404).json({ message: 'User not found' });
       }
@@ -341,7 +341,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get accessible tenants for partner users
   app.get('/api/partner/tenants', isAuthenticated, async (req, res) => {
     try {
-      const user = await storage.getUser((req as any).user.claims.sub);
+      const user = await storage.getUser((req as any).user.id);
       if (!user) {
         return res.status(404).json({ message: 'User not found' });
       }
@@ -361,7 +361,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Switch active tenant for partner users
   app.post('/api/partner/switch-tenant', isAuthenticated, async (req, res) => {
     try {
-      const user = await storage.getUser((req as any).user.claims.sub);
+      const user = await storage.getUser((req as any).user.id);
       if (!user) {
         return res.status(404).json({ message: 'User not found' });
       }
@@ -477,7 +477,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Dashboard Metrics Endpoint (Sprint 3)
   app.get('/api/metrics', isAuthenticated, async (req, res) => {
     try {
-      const user = await storage.getUser((req as any).user.claims.sub);
+      const user = await storage.getUser((req as any).user.id);
       if (!user || !user.tenantId) {
         return res.status(404).json({ message: 'User or tenant not found' });
       }
@@ -507,7 +507,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/templates/tenant', isAuthenticated, async (req, res) => {
     try {
-      const user = await storage.getUser((req as any).user.claims.sub);
+      const user = await storage.getUser((req as any).user.id);
       if (!user) {
         console.error('GET /api/templates/tenant: User not found for authenticated request');
         return res.status(401).json({ message: 'Authentication required' });
@@ -531,7 +531,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/templates/tenant', isAuthenticated, async (req, res) => {
     try {
-      const user = await storage.getUser((req as any).user.claims.sub);
+      const user = await storage.getUser((req as any).user.id);
       if (!user) {
         console.error('POST /api/templates/tenant: User not found for authenticated request');
         return res.status(401).json({ message: 'Authentication required' });
@@ -559,7 +559,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch('/api/templates/tenant/:id', isAuthenticated, async (req, res) => {
     try {
-      const user = await storage.getUser((req as any).user.claims.sub);
+      const user = await storage.getUser((req as any).user.id);
       if (!user) {
         console.error('PATCH /api/templates/tenant/:id: User not found for authenticated request');
         return res.status(401).json({ message: 'Authentication required' });
@@ -761,7 +761,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { sendEmail, DEFAULT_FROM_EMAIL } = await import("./services/sendgrid");
       
-      const user = await storage.getUser((req as any).user.claims.sub);
+      const user = await storage.getUser((req as any).user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -1291,7 +1291,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Mock data generation (for demo purposes)
   app.post('/api/mock-data/generate', isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -1312,7 +1312,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Seed payment behavior customers (good payer vs bad payer)
   app.post('/api/mock-data/seed-payment-behavior', isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -1334,7 +1334,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Clean up contacts endpoint - remove old Xero contacts and keep only 80 mock clients
   app.post('/api/contacts/cleanup', isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -1503,7 +1503,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { id: clientTenantId } = req.params;
       const { partnerId } = assignPartnerSchema.parse(req.body);
       
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user) {
         return res.status(401).json({ message: "User not found" });
       }
@@ -1526,7 +1526,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Admin endpoint for comprehensive 3-year dataset generation
   app.post('/api/admin/seed/mock-dataset', isAuthenticated, isOwner, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -1835,13 +1835,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     console.log('🔍 /api/auth/user endpoint hit');
     
     // Check if user is actually authenticated (without demo bypass)
-    if (!req.isAuthenticated() || !req.user?.claims?.sub) {
+    if (!req.isAuthenticated() || !req.user?.id) {
       console.log('🔍 User not authenticated, returning null');
       return res.json(null); // Return null for unauthenticated users
     }
     
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       console.log('🔍 Looking up authenticated user with ID:', userId);
       const user = await storage.getUser(userId);
       console.log('🔍 Found user:', !!user);
@@ -1855,7 +1855,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Recent Activity endpoint
   app.get("/api/dashboard/recent-activity", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -1997,7 +1997,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Top Debtors endpoint
   app.get("/api/dashboard/top-debtors", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -2047,7 +2047,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Dashboard metrics
   app.get("/api/dashboard/metrics", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -2070,7 +2070,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Dashboard leaderboards - Best/Worst Payers and Top Outstanding
   app.get("/api/dashboard/leaderboards", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -2226,7 +2226,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Interest calculation endpoint
   app.get("/api/invoices/interest-summary", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -2314,7 +2314,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Invoice routes - Optimized with server-side filtering
   app.get("/api/invoices", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
@@ -2419,7 +2419,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/invoices/overdue", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -2434,7 +2434,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/invoices/overdue-categories", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -2449,7 +2449,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/invoices/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -2468,7 +2468,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Hold invoice endpoint
   app.put("/api/invoices/:id/hold", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -2487,7 +2487,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Unhold invoice endpoint
   app.put("/api/invoices/:id/unhold", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -2506,7 +2506,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Mark invoice as paid and send thank you SMS
   app.post("/api/invoices/:id/mark-paid", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -2591,7 +2591,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Pause invoice (dispute, PTP, payment plan)
   app.post("/api/invoices/:id/pause", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -2635,7 +2635,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Resume invoice (clear pause state)
   app.post("/api/invoices/:id/resume", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -2670,7 +2670,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get invoice pause status
   app.get("/api/invoices/:id/pause-status", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -2699,7 +2699,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Send SMS for invoice with template selection
   app.post("/api/invoices/:id/send-sms", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -2824,7 +2824,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Initiate AI voice call for invoice
   app.post("/api/invoices/:id/initiate-voice-call", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -2971,7 +2971,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get outstanding invoices for a specific contact (for payment plan creation)
   app.get("/api/invoices/outstanding/:contactId", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -2990,7 +2990,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/invoices", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -3014,7 +3014,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Apply for invoice finance advance
   app.post("/api/invoices/:invoiceId/apply-advance", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -3088,7 +3088,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Accept insurance coverage for an invoice
   app.post("/api/invoices/:invoiceId/accept-insurance", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -3138,7 +3138,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Contact routes
   app.get("/api/contacts", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -3335,7 +3335,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get individual contact by ID
   app.get("/api/contacts/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -3358,7 +3358,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Update AR contact details (collections-specific overlay)
   app.patch("/api/contacts/:id/ar-details", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -3401,7 +3401,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // New endpoint for contacts with significantly overdue invoices (>30 days)
   app.get("/api/contacts/overdue", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -3440,7 +3440,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/contacts", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -3466,7 +3466,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Calculate credit score and recommendation
   app.post("/api/contacts/credit-check", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -3492,7 +3492,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Approve and save credit decision
   app.post("/api/contacts/:contactId/approve-credit", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -3528,7 +3528,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get PRS summary for a contact
   app.get("/api/contacts/:contactId/prs", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -3571,7 +3571,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get all promises for a contact
   app.get("/api/contacts/:contactId/promises", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -3592,7 +3592,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Evaluate a promise outcome
   app.post("/api/promises/:promiseId/evaluate", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -3612,7 +3612,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         status,
         actualPaymentDate: actualPaymentDate ? new Date(actualPaymentDate) : undefined,
         actualPaymentAmount,
-        evaluatedByUserId: req.user.claims.sub,
+        evaluatedByUserId: req.user.id,
         notes,
       });
       
@@ -3626,7 +3626,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get all open promises for evaluation
   app.get("/api/promises/open", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -3645,7 +3645,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Sync contact to Xero with risk band
   app.post("/api/contacts/:contactId/sync-to-xero", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -3678,7 +3678,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Contact Notes routes
   app.get("/api/contacts/:contactId/notes", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -3701,7 +3701,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/contacts/:contactId/notes", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -3756,7 +3756,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Customer Detail: Get learning profile
   app.get("/api/contacts/:contactId/learning-profile", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -3804,7 +3804,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Customer Detail: Get payment statistics
   app.get("/api/contacts/:contactId/payment-stats", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -3881,7 +3881,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Customer Detail: Get action history
   app.get("/api/contacts/:contactId/actions", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -3915,7 +3915,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Customer Detail: Get customer rating (Good/Average/Poor)
   app.get("/api/contacts/:contactId/rating", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -4040,7 +4040,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Action routes
   app.get("/api/actions", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -4102,7 +4102,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get paginated actions with search and filtering (for Comms tab)
   app.get("/api/actions/all", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -4211,7 +4211,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get contact history for a specific invoice
   app.get("/api/invoices/:invoiceId/contact-history", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -4241,7 +4241,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/actions", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -4266,7 +4266,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Generate AI-powered response draft for query
   app.post("/api/queries/:id/generate-response", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -4329,7 +4329,7 @@ Guidelines:
   // Send response to customer query
   app.post("/api/queries/:id/respond", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -4384,7 +4384,7 @@ Guidelines:
   // Generate AI-powered outbound collection content
   app.post("/api/action-centre/generate-outbound", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -4496,7 +4496,7 @@ Guidelines:
   // Send collection action
   app.post("/api/action-centre/send-action", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -4543,7 +4543,7 @@ Guidelines:
   // Escalate customer to next collection stage
   app.post("/api/action-centre/escalate", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -4608,7 +4608,7 @@ Guidelines:
   // Manual call capture with promise tracking
   app.post("/api/calls/manual", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -4741,7 +4741,7 @@ Guidelines:
   // Get categorized items for Action Centre tabs
   app.get("/api/action-centre/tabs", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -5139,7 +5139,7 @@ Guidelines:
   // Collector response to disputes
   app.post("/api/disputes/:disputeId/respond", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -5197,7 +5197,7 @@ Guidelines:
   // Get inbound messages with intent analysis
   app.get("/api/inbound-messages", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -5219,7 +5219,7 @@ Guidelines:
   // Demo: Compress schedule into 5-minute window for investor demo
   app.post("/api/demo/compress-schedule", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -5330,7 +5330,7 @@ Guidelines:
   // Demo: Cleanup demo actions
   app.delete("/api/demo/cleanup/:sessionId", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -5362,7 +5362,7 @@ Guidelines:
   // Schedule manual action with specific time
   app.post("/api/actions/schedule", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -5436,7 +5436,7 @@ Guidelines:
   // Approve action - move from pending to scheduled (collector approves AI recommendation)
   app.post("/api/actions/:id/approve", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -5482,7 +5482,7 @@ Guidelines:
   // Edit action - collector overrides AI recommendation
   app.patch("/api/actions/:id/edit", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -5550,7 +5550,7 @@ Guidelines:
   // Snooze action - delay to a later time
   app.post("/api/actions/:id/snooze", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -5608,7 +5608,7 @@ Guidelines:
   // Escalate action - flag for manual handling
   app.post("/api/actions/:id/escalate", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -5654,7 +5654,7 @@ Guidelines:
   // Assign action - assign to a specific collector
   app.patch("/api/actions/:id/assign", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -5703,7 +5703,7 @@ Guidelines:
   // Feedback - record outcome for learning loop
   app.post("/api/actions/:id/feedback", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -5759,7 +5759,7 @@ Guidelines:
   // AI suggestions
   app.post("/api/ai/suggestions", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -5801,7 +5801,7 @@ Guidelines:
   // Generate email draft
   app.post("/api/ai/email-draft", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -5841,7 +5841,7 @@ Guidelines:
   // Send reminder email using template-based system
   app.post("/api/communications/send-email", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -5950,7 +5950,7 @@ Guidelines:
   // Send SMS reminder
   app.post("/api/communications/send-sms", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -6005,7 +6005,7 @@ Guidelines:
   // Test Communication Routes
   app.post("/api/test/email", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -6059,7 +6059,7 @@ Guidelines:
 
   app.post("/api/test/sms", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -6114,7 +6114,7 @@ Guidelines:
   // Debug endpoint to create test action items with proper due dates
   app.post("/api/action-centre/create-test-items", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -6179,7 +6179,7 @@ Guidelines:
   // Smart Queue Management with ML Prioritization
   app.get("/api/action-centre/queue", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -6233,7 +6233,7 @@ Guidelines:
 
   app.get("/api/action-centre/metrics", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -6300,7 +6300,7 @@ Guidelines:
   // Compliance Audit Endpoint - Check for policy violations
   app.get("/api/admin/compliance-report", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -6388,7 +6388,7 @@ Guidelines:
   // Channel Analytics Endpoint - Show channel effectiveness and A/B test results
   app.get("/api/admin/analytics/channels", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -6500,7 +6500,7 @@ Guidelines:
   // Contact Outcomes Endpoint - Show all webhook outcomes
   app.get("/api/admin/outcomes", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -6526,7 +6526,7 @@ Guidelines:
   // Priority Management Endpoints
   app.post("/api/action-centre/priority/refresh", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -6573,7 +6573,7 @@ Guidelines:
 
   app.get("/api/action-centre/queue-insights", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -6651,7 +6651,7 @@ Guidelines:
 
   app.get("/api/action-centre/contact/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -6782,7 +6782,7 @@ Guidelines:
   // Action Item Management
   app.post("/api/action-items", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -6816,7 +6816,7 @@ Guidelines:
 
   app.get("/api/action-items/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -6837,7 +6837,7 @@ Guidelines:
 
   app.patch("/api/action-items/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -6868,7 +6868,7 @@ Guidelines:
 
   app.post("/api/action-items/:id/complete", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -6903,7 +6903,7 @@ Guidelines:
 
   app.post("/api/action-items/:id/snooze", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -6939,7 +6939,7 @@ Guidelines:
   // Action Logging
   app.get("/api/action-items/:id/logs", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -6956,7 +6956,7 @@ Guidelines:
 
   app.post("/api/action-items/:id/logs", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -6983,7 +6983,7 @@ Guidelines:
   // Communication History
   app.get("/api/communications/history", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -7021,7 +7021,7 @@ Guidelines:
   // Payment Promises
   app.post("/api/payment-promises", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -7059,7 +7059,7 @@ Guidelines:
 
   app.patch("/api/payment-promises/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -7081,7 +7081,7 @@ Guidelines:
   // Payment Plan API endpoints
   app.post("/api/payment-plans", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -7183,7 +7183,7 @@ Guidelines:
 
   app.get("/api/payment-plans", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -7204,7 +7204,7 @@ Guidelines:
 
   app.get("/api/payment-plans/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -7227,7 +7227,7 @@ Guidelines:
   // Check if invoices already have active payment plans
   app.post("/api/payment-plans/check-duplicates", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -7255,7 +7255,7 @@ Guidelines:
   // Activity Log API endpoints
   app.get("/api/activity-logs", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -7281,7 +7281,7 @@ Guidelines:
 
   app.get("/api/activity-logs/stats", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -7296,7 +7296,7 @@ Guidelines:
 
   app.post("/api/activity-logs", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -7325,7 +7325,7 @@ Guidelines:
   // Wallet API endpoints
   app.get("/api/wallet/transactions", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -7349,7 +7349,7 @@ Guidelines:
 
   app.get("/api/wallet/transactions/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -7368,7 +7368,7 @@ Guidelines:
 
   app.post("/api/wallet/transactions", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -7394,7 +7394,7 @@ Guidelines:
 
   app.get("/api/wallet/balance", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -7409,7 +7409,7 @@ Guidelines:
 
   app.get("/api/wallet/summary", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -7425,7 +7425,7 @@ Guidelines:
   // Bulk Operations
   app.post("/api/action-items/bulk/complete", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -7478,7 +7478,7 @@ Guidelines:
 
   app.post("/api/action-items/bulk/assign", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -7531,7 +7531,7 @@ Guidelines:
 
   app.post("/api/action-items/bulk/nudge", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -7599,7 +7599,7 @@ Guidelines:
 
   app.post("/api/test/voice", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -7699,7 +7699,7 @@ Guidelines:
   // Voice Call Outcome Update API - For MCP tools
   app.put("/api/voice-calls/:id/outcome", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -7758,7 +7758,7 @@ Guidelines:
   // Voice Calls List API - For call logs page
   app.get("/api/voice-calls", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -7788,7 +7788,7 @@ Guidelines:
   // Voice Call Retrieval API - For MCP tools to find calls
   app.get("/api/voice-calls/:retellCallId", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -7816,7 +7816,7 @@ Guidelines:
   // Workflow routes
   app.get("/api/workflows", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -7831,7 +7831,7 @@ Guidelines:
 
   app.post("/api/workflows", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -7857,7 +7857,7 @@ Guidelines:
   // Communication Templates
   app.get("/api/collections/templates", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -7873,7 +7873,7 @@ Guidelines:
 
   app.post("/api/collections/templates", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -7896,7 +7896,7 @@ Guidelines:
 
   app.put("/api/collections/templates/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -7917,7 +7917,7 @@ Guidelines:
 
   app.delete("/api/collections/templates/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -8002,7 +8002,7 @@ Guidelines:
   // Preview Email Endpoint
   app.post("/api/communications/preview-email", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -8072,7 +8072,7 @@ Guidelines:
   // Preview SMS Endpoint
   app.post("/api/communications/preview-sms", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -8138,7 +8138,7 @@ Guidelines:
   // Preview Voice Endpoint
   app.post("/api/communications/preview-voice", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -8204,7 +8204,7 @@ Guidelines:
   // Enhanced template management
   app.get("/api/collections/templates/by-category/:category", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -8221,7 +8221,7 @@ Guidelines:
 
   app.get("/api/collections/templates/high-performing", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -8241,7 +8241,7 @@ Guidelines:
 
   app.post("/api/collections/templates/ai-generate", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -8525,7 +8525,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
   // Email senders management
   app.get("/api/collections/email-senders", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -8540,7 +8540,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
 
   app.post("/api/collections/email-senders", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -8560,7 +8560,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
 
   app.put("/api/collections/email-senders/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -8576,7 +8576,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
 
   app.delete("/api/collections/email-senders/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -8597,7 +8597,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
   // Collection schedules management
   app.get("/api/collections/schedules", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -8612,7 +8612,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
 
   app.post("/api/collections/schedules", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -8670,7 +8670,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
 
   app.put("/api/collections/schedules/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -8701,7 +8701,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
 
   app.delete("/api/collections/schedules/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -8722,7 +8722,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
   // Customer schedule assignments
   app.get("/api/collections/customer-assignments", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -8738,7 +8738,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
 
   app.post("/api/collections/customer-assignments", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -8758,7 +8758,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
 
   app.delete("/api/collections/customer-assignments/:contactId", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -8778,7 +8778,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
 
   app.get("/api/collections/customer-assignments/:contactId/active", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -8795,7 +8795,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
   // Assign all customers to default schedule
   app.post("/api/collections/assign-all-to-default", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -8868,7 +8868,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
   // Collections Automation
   app.get("/api/collections/automation/check", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -8884,7 +8884,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
 
   app.get("/api/collections/automation/status", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -8900,7 +8900,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
 
   app.put("/api/collections/automation/status", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -8922,7 +8922,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
   // Communication Mode Management
   app.get("/api/communications/mode", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -8946,7 +8946,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
 
   app.put("/api/communications/mode", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -8985,7 +8985,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
   // Nudge invoice to next action (legacy endpoint with invoiceId as path parameter)
   app.post("/api/collections/nudge/:invoiceId", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -9020,7 +9020,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
   // New nudge endpoint with invoiceId in request body and action execution
   app.post("/api/collections/nudge", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -9252,7 +9252,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
 
   app.post("/api/collections/scheduler/run-now", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -9276,7 +9276,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
   // Send single invoice email
   app.post("/api/invoices/:invoiceId/send-email", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -9379,7 +9379,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
   // New dropdown email endpoints
   app.post("/api/invoices/:invoiceId/send-email/:actionType", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -9522,7 +9522,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
   // New dropdown SMS endpoints
   app.post("/api/invoices/:invoiceId/send-sms/:actionType", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -9582,7 +9582,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
   // Send customer summary email
   app.post("/api/contacts/:contactId/send-summary-email", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -9710,7 +9710,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
   // AI Agent Configurations
   app.get("/api/collections/ai-agents", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -9726,7 +9726,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
 
   app.post("/api/collections/ai-agents", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -9750,7 +9750,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
   // Escalation Rules
   app.get("/api/collections/escalation-rules", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -9765,7 +9765,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
 
   app.post("/api/collections/escalation-rules", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -9789,7 +9789,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
   // Channel Analytics
   app.get("/api/collections/analytics", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -9810,7 +9810,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
   // Collections Dashboard Metrics
   app.get("/api/collections/dashboard", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -9826,7 +9826,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
   // Workflow Templates
   app.get("/api/collections/workflow-templates", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -9842,7 +9842,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
 
   app.post("/api/collections/workflow-templates/:templateId/clone", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -9861,7 +9861,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
   // AI Learning and Optimization Routes
   app.get("/api/collections/ai-learning/insights", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -9879,7 +9879,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
 
   app.post("/api/collections/ai-learning/record-outcome", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -9924,7 +9924,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
 
   app.get("/api/collections/ai-learning/customer-profile/:contactId", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -9944,7 +9944,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
 
   app.post("/api/collections/ai-learning/optimize-actions", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -9996,7 +9996,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
   // Predictive Payment Modeling
   app.post("/api/ml/payment-predictions/analyze", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -10045,7 +10045,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
   // Get payment predictions for specific invoices (optimized for filtered views)
   app.get("/api/ml/payment-predictions/filtered", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -10110,7 +10110,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
 
   app.get("/api/ml/payment-predictions/:contactId", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -10139,7 +10139,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
   // Get payment predictions for all invoices (for invoice list integration)
   app.get("/api/ml/payment-predictions/bulk/invoices", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -10200,7 +10200,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
   // Generate bulk payment predictions for all outstanding invoices
   app.post("/api/ml/payment-predictions/generate-bulk", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -10230,7 +10230,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
   // Backfill missing payment predictions for overdue invoices
   app.post("/api/ml/payment-predictions/backfill-overdue", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -10261,7 +10261,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
   // Dynamic Risk Scoring
   app.post("/api/ml/risk-scoring/calculate", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -10284,7 +10284,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
 
   app.get("/api/ml/risk-scoring/scores", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -10303,7 +10303,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
 
   app.get("/api/ml/risk-scoring/analytics", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -10322,7 +10322,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
   // Calculate bulk risk scores for all customers
   app.post("/api/ml/risk-scoring/calculate-bulk", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -10409,7 +10409,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
   // Customer Segmentation
   app.post("/api/ml/customer-segmentation/analyze", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -10427,7 +10427,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
 
   app.get("/api/ml/customer-segmentation/segments", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -10445,7 +10445,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
 
   app.get("/api/ml/customer-segmentation/assignments", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -10464,7 +10464,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
   // Seasonal Pattern Recognition
   app.post("/api/ml/seasonal-patterns/analyze", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -10482,7 +10482,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
 
   app.get("/api/ml/seasonal-patterns/patterns", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -10504,7 +10504,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
 
   app.get("/api/ml/seasonal-patterns/multiplier", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -10528,7 +10528,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
   // Retell AI Voice Calling Routes
   app.get("/api/retell/configuration", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -10543,7 +10543,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
 
   app.post("/api/retell/configuration", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -10566,7 +10566,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
 
   app.post("/api/retell/call", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -10664,7 +10664,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
   // AI-Enhanced Retell Call endpoint
   app.post("/api/retell/ai-call", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -11037,7 +11037,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
 
   app.get("/api/retell/calls", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -11099,7 +11099,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
   // Retell Agents endpoints
   app.get("/api/retell/agents", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -11114,7 +11114,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
 
   app.post("/api/retell/agents", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -11154,7 +11154,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
   // Retell Phone Numbers endpoints
   app.get("/api/retell/phone-numbers", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -11169,7 +11169,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
 
   app.post("/api/retell/phone-numbers/purchase", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -11519,7 +11519,7 @@ Return only JSON with keys: intent, sentiment, confidence, keyInsights, actionIt
   // Send SMS via Vonage
   app.post("/api/vonage/send-sms", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -11792,7 +11792,7 @@ Return only JSON with keys: intent, sentiment, confidence, keyInsights, actionIt
   // Get all voice workflows for a tenant
   app.get("/api/voice/workflows", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -11814,7 +11814,7 @@ Return only JSON with keys: intent, sentiment, confidence, keyInsights, actionIt
   // Get a specific voice workflow by ID
   app.get("/api/voice/workflows/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -11836,7 +11836,7 @@ Return only JSON with keys: intent, sentiment, confidence, keyInsights, actionIt
   // Create a new voice workflow
   app.post("/api/voice/workflows", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -11863,7 +11863,7 @@ Return only JSON with keys: intent, sentiment, confidence, keyInsights, actionIt
   // Update a voice workflow
   app.put("/api/voice/workflows/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -11882,7 +11882,7 @@ Return only JSON with keys: intent, sentiment, confidence, keyInsights, actionIt
   // Delete a voice workflow
   app.delete("/api/voice/workflows/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -12027,7 +12027,7 @@ Return only JSON with keys: intent, sentiment, confidence, keyInsights, actionIt
   // Get all voice message templates for a tenant
   app.get("/api/voice/templates", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -12049,7 +12049,7 @@ Return only JSON with keys: intent, sentiment, confidence, keyInsights, actionIt
   // Get a specific voice message template by ID
   app.get("/api/voice/templates/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -12071,7 +12071,7 @@ Return only JSON with keys: intent, sentiment, confidence, keyInsights, actionIt
   // Create a new voice message template
   app.post("/api/voice/templates", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -12098,7 +12098,7 @@ Return only JSON with keys: intent, sentiment, confidence, keyInsights, actionIt
   // Update a voice message template
   app.put("/api/voice/templates/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -12117,7 +12117,7 @@ Return only JSON with keys: intent, sentiment, confidence, keyInsights, actionIt
   // Delete a voice message template
   app.delete("/api/voice/templates/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -12134,7 +12134,7 @@ Return only JSON with keys: intent, sentiment, confidence, keyInsights, actionIt
   // Quick Demo Setup Route for Retell AI
   app.post("/api/demo/setup-retell", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -12185,7 +12185,7 @@ Return only JSON with keys: intent, sentiment, confidence, keyInsights, actionIt
   // Profile and subscription management routes
   app.get("/api/profile/subscription", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
@@ -12246,7 +12246,7 @@ Return only JSON with keys: intent, sentiment, confidence, keyInsights, actionIt
 
   app.post("/api/profile/create-subscription", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
@@ -12293,7 +12293,7 @@ Return only JSON with keys: intent, sentiment, confidence, keyInsights, actionIt
 
   app.post("/api/profile/cancel-subscription", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.stripeSubscriptionId) {
         return res.status(400).json({ message: "No active subscription found" });
       }
@@ -12316,7 +12316,7 @@ Return only JSON with keys: intent, sentiment, confidence, keyInsights, actionIt
 
   app.post("/api/profile/reactivate-subscription", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.stripeSubscriptionId) {
         return res.status(400).json({ message: "No subscription found" });
       }
@@ -12339,7 +12339,7 @@ Return only JSON with keys: intent, sentiment, confidence, keyInsights, actionIt
   // Xero integration routes
   app.get("/api/xero/auth-url", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -12359,7 +12359,7 @@ Return only JSON with keys: intent, sentiment, confidence, keyInsights, actionIt
   // Disconnect from Xero
   app.post("/api/xero/disconnect", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(401).json({ message: "No tenant ID found" });
       }
@@ -12663,7 +12663,7 @@ Return only JSON with keys: intent, sentiment, confidence, keyInsights, actionIt
 
   app.post("/api/xero/sync", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -12793,7 +12793,7 @@ Return only JSON with keys: intent, sentiment, confidence, keyInsights, actionIt
   // Xero sync endpoints
   app.post("/api/xero/sync", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -12828,7 +12828,7 @@ Return only JSON with keys: intent, sentiment, confidence, keyInsights, actionIt
   // Separate endpoints for individual syncing (optional)
   app.post("/api/xero/sync/contacts", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -12861,7 +12861,7 @@ Return only JSON with keys: intent, sentiment, confidence, keyInsights, actionIt
 
   app.post("/api/xero/sync/invoices", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -12894,7 +12894,7 @@ Return only JSON with keys: intent, sentiment, confidence, keyInsights, actionIt
   // Get cached invoices endpoint (replaces live Xero calls)
   app.get("/api/xero/invoices/cached", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -12924,7 +12924,7 @@ Return only JSON with keys: intent, sentiment, confidence, keyInsights, actionIt
   // Get sync settings
   app.get("/api/xero/sync/settings", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -12944,7 +12944,7 @@ Return only JSON with keys: intent, sentiment, confidence, keyInsights, actionIt
   // Update sync settings
   app.put("/api/xero/sync/settings", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -13017,7 +13017,7 @@ Return only JSON with keys: intent, sentiment, confidence, keyInsights, actionIt
   // Tenant settings endpoints
   app.get('/api/tenant', isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -13037,7 +13037,7 @@ Return only JSON with keys: intent, sentiment, confidence, keyInsights, actionIt
   // Get accessible tenants for organization dropdown (Enhanced for Partner-Client System)
   app.get("/api/user/accessible-tenants", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
@@ -13130,7 +13130,7 @@ Return only JSON with keys: intent, sentiment, confidence, keyInsights, actionIt
       });
       
       const { tenantId } = switchTenantSchema.parse(req.body);
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       
       if (!user) {
         return res.status(404).json({ message: "User not found" });
@@ -13207,7 +13207,7 @@ Return only JSON with keys: intent, sentiment, confidence, keyInsights, actionIt
 
   app.put('/api/tenant/settings', isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -13362,7 +13362,7 @@ Return only JSON with keys: intent, sentiment, confidence, keyInsights, actionIt
   // Get user type for smart routing
   app.get('/api/user/type', isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -13402,7 +13402,7 @@ Return only JSON with keys: intent, sentiment, confidence, keyInsights, actionIt
   // Stripe subscription route
   app.post('/api/create-subscription', isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user) {
         return res.status(401).json({ message: "User not found" });
       }
@@ -13458,7 +13458,7 @@ Return only JSON with keys: intent, sentiment, confidence, keyInsights, actionIt
   // Get subscription status
   app.get('/api/subscription/status', isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user) {
         return res.status(401).json({ message: "User not found" });
       }
@@ -13482,7 +13482,7 @@ Return only JSON with keys: intent, sentiment, confidence, keyInsights, actionIt
   // Cancel subscription
   app.post('/api/subscription/cancel', isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.stripeSubscriptionId) {
         return res.status(400).json({ message: "No subscription found" });
       }
@@ -13692,7 +13692,7 @@ Return only JSON with keys: intent, sentiment, confidence, keyInsights, actionIt
   // Send Invoice PDF by Email - Direct API endpoint for testing
   app.post("/api/invoices/send-pdf-email", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -13870,7 +13870,7 @@ ${tenant.name}
   // AI Facts endpoints - Knowledge base for AI CFO
   app.get('/api/ai-facts', isAuthenticated, async (req, res) => {
     try {
-      const user = await storage.getUser((req.user as any).claims.sub);
+      const user = await storage.getUser((req.user as any).id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -13897,7 +13897,7 @@ ${tenant.name}
 
   app.post('/api/ai-facts', isAuthenticated, async (req, res) => {
     try {
-      const user = await storage.getUser((req.user as any).claims.sub);
+      const user = await storage.getUser((req.user as any).id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -13927,7 +13927,7 @@ ${tenant.name}
 
   app.delete('/api/ai-facts/:id', isAuthenticated, async (req, res) => {
     try {
-      const user = await storage.getUser((req.user as any).claims.sub);
+      const user = await storage.getUser((req.user as any).id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -13947,8 +13947,8 @@ ${tenant.name}
       const { message, conversationHistory = [] } = req.body;
       
       // Get user with tenant info (same as invoices endpoint)
-      const user = await storage.getUser((req.user as any).claims.sub);
-      console.log(`🔍 AI CFO Debug: User ID: ${(req.user as any).claims.sub}, User found: ${!!user}, TenantId: ${user?.tenantId}`);
+      const user = await storage.getUser((req.user as any).id);
+      console.log(`🔍 AI CFO Debug: User ID: ${(req.user as any).id}, User found: ${!!user}, TenantId: ${user?.tenantId}`);
       
       if (!user?.tenantId) {
         console.log(`❌ AI CFO Debug: No tenant ID found for user!`);
@@ -14213,7 +14213,7 @@ ${tenant.name}
   // Health Dashboard API endpoints
   app.get('/api/health/dashboard', isAuthenticated, async (req, res) => {
     try {
-      const userId = (req as any).user.claims.sub;
+      const userId = (req as any).user.id;
       const user = await storage.getUser(userId);
       if (!user?.tenantId) {
         return res.status(400).json({ error: 'No tenant found' });
@@ -14340,7 +14340,7 @@ ${tenant.name}
 
   app.get('/api/health/invoice/:invoiceId', isAuthenticated, async (req, res) => {
     try {
-      const userId = (req as any).user.claims.sub;
+      const userId = (req as any).user.id;
       const user = await storage.getUser(userId);
       if (!user?.tenantId) {
         return res.status(400).json({ error: 'No tenant found' });
@@ -14390,7 +14390,7 @@ ${tenant.name}
 
   app.post('/api/health/bulk-analyze', isAuthenticated, async (req, res) => {
     try {
-      const userId = (req as any).user.claims.sub;
+      const userId = (req as any).user.id;
       const user = await storage.getUser(userId);
       if (!user?.tenantId) {
         return res.status(400).json({ error: 'No tenant found' });
@@ -14484,7 +14484,7 @@ ${tenant.name}
 
   app.get('/api/health/analytics/trends', isAuthenticated, async (req, res) => {
     try {
-      const userId = (req as any).user.claims.sub;
+      const userId = (req as any).user.id;
       const user = await storage.getUser(userId);
       if (!user?.tenantId) {
         return res.status(400).json({ error: 'No tenant found' });
@@ -14540,7 +14540,7 @@ ${tenant.name}
   // Portfolio Health Monitoring (DSO Controller)
   app.get('/health/portfolio', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const user = await storage.getUser(userId);
       if (!user?.tenantId) {
         return res.status(400).json({ error: 'No tenant found' });
@@ -14618,7 +14618,7 @@ ${tenant.name}
   // Manual Invoice Override
   app.post('/api/invoices/:id/override', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const user = await storage.getUser(userId);
       if (!user?.tenantId) {
         return res.status(400).json({ error: 'No tenant found' });
@@ -14680,7 +14680,7 @@ ${tenant.name}
   // 1. Cash Flow Forecast - 90-day projections with confidence intervals
   app.get('/api/analytics/cashflow-forecast', isAuthenticated, async (req, res) => {
     try {
-      const user = await storage.getUser((req as any).user.claims.sub);
+      const user = await storage.getUser((req as any).user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -14770,7 +14770,7 @@ ${tenant.name}
   // 2. Aging Analysis - breakdown by age buckets
   app.get('/api/analytics/aging-analysis', isAuthenticated, async (req, res) => {
     try {
-      const user = await storage.getUser((req as any).user.claims.sub);
+      const user = await storage.getUser((req as any).user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -14869,7 +14869,7 @@ ${tenant.name}
   // 3. Collection Performance - method effectiveness analysis
   app.get('/api/analytics/collection-performance', isAuthenticated, async (req, res) => {
     try {
-      const user = await storage.getUser((req as any).user.claims.sub);
+      const user = await storage.getUser((req as any).user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -14969,7 +14969,7 @@ ${tenant.name}
   // 4. Customer Risk Matrix - portfolio health analysis
   app.get('/api/analytics/customer-risk-matrix', isAuthenticated, async (req, res) => {
     try {
-      const user = await storage.getUser((req as any).user.claims.sub);
+      const user = await storage.getUser((req as any).user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -15122,7 +15122,7 @@ ${tenant.name}
   // 5. Automation Performance Analytics - comprehensive automation metrics and ROI analysis
   app.get('/api/analytics/automation-performance', isAuthenticated, async (req, res) => {
     try {
-      const user = await storage.getUser((req as any).user.claims.sub);
+      const user = await storage.getUser((req as any).user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -15722,7 +15722,7 @@ ${tenant.name}
   // Unified accounting status endpoint
   app.get('/api/accounting/status', isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -15807,7 +15807,7 @@ ${tenant.name}
   // Provider health check
   app.get('/api/providers/health', isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -15857,7 +15857,7 @@ ${tenant.name}
   app.get('/api/providers/connect/:provider', isAuthenticated, async (req: any, res) => {
     try {
       const { provider: providerName } = req.params;
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
@@ -15892,7 +15892,7 @@ ${tenant.name}
   app.post('/api/providers/disconnect/:provider', isAuthenticated, async (req: any, res) => {
     try {
       const { provider: providerName } = req.params;
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
@@ -15926,7 +15926,7 @@ ${tenant.name}
   app.post('/api/providers/sync/:provider', isAuthenticated, async (req: any, res) => {
     try {
       const { provider: providerName } = req.params;
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
@@ -15977,7 +15977,7 @@ ${tenant.name}
       const { provider: providerName } = req.params;
       const { endpoint, options } = req.body;
       
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -16152,7 +16152,7 @@ ${tenant.name}
    */
   app.get('/api/accounting/bills', isAuthenticated, async (req, res) => {
     try {
-      const user = await storage.getUser((req as any).user.claims.sub);
+      const user = await storage.getUser((req as any).user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -16200,7 +16200,7 @@ ${tenant.name}
    */
   app.get('/api/accounting/bills/:id', isAuthenticated, async (req, res) => {
     try {
-      const user = await storage.getUser((req as any).user.claims.sub);
+      const user = await storage.getUser((req as any).user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -16223,7 +16223,7 @@ ${tenant.name}
    */
   app.post('/api/accounting/bills', isAuthenticated, async (req, res) => {
     try {
-      const user = await storage.getUser((req as any).user.claims.sub);
+      const user = await storage.getUser((req as any).user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -16250,7 +16250,7 @@ ${tenant.name}
    */
   app.put('/api/accounting/bills/:id', isAuthenticated, async (req, res) => {
     try {
-      const user = await storage.getUser((req as any).user.claims.sub);
+      const user = await storage.getUser((req as any).user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -16273,7 +16273,7 @@ ${tenant.name}
    */
   app.delete('/api/accounting/bills/:id', isAuthenticated, async (req, res) => {
     try {
-      const user = await storage.getUser((req as any).user.claims.sub);
+      const user = await storage.getUser((req as any).user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -16294,7 +16294,7 @@ ${tenant.name}
    */
   app.get('/api/accounting/bank-accounts', isAuthenticated, async (req, res) => {
     try {
-      const user = await storage.getUser((req as any).user.claims.sub);
+      const user = await storage.getUser((req as any).user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -16322,7 +16322,7 @@ ${tenant.name}
    */
   app.get('/api/accounting/bank-accounts/:id', isAuthenticated, async (req, res) => {
     try {
-      const user = await storage.getUser((req as any).user.claims.sub);
+      const user = await storage.getUser((req as any).user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -16345,7 +16345,7 @@ ${tenant.name}
    */
   app.post('/api/accounting/bank-accounts', isAuthenticated, async (req, res) => {
     try {
-      const user = await storage.getUser((req as any).user.claims.sub);
+      const user = await storage.getUser((req as any).user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -16372,7 +16372,7 @@ ${tenant.name}
    */
   app.put('/api/accounting/bank-accounts/:id', isAuthenticated, async (req, res) => {
     try {
-      const user = await storage.getUser((req as any).user.claims.sub);
+      const user = await storage.getUser((req as any).user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -16395,7 +16395,7 @@ ${tenant.name}
    */
   app.delete('/api/accounting/bank-accounts/:id', isAuthenticated, async (req, res) => {
     try {
-      const user = await storage.getUser((req as any).user.claims.sub);
+      const user = await storage.getUser((req as any).user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -16416,7 +16416,7 @@ ${tenant.name}
    */
   app.get('/api/accounting/bank-transactions', isAuthenticated, async (req, res) => {
     try {
-      const user = await storage.getUser((req as any).user.claims.sub);
+      const user = await storage.getUser((req as any).user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -16477,7 +16477,7 @@ ${tenant.name}
    */
   app.get('/api/accounting/bank-transactions/:id', isAuthenticated, async (req, res) => {
     try {
-      const user = await storage.getUser((req as any).user.claims.sub);
+      const user = await storage.getUser((req as any).user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -16500,7 +16500,7 @@ ${tenant.name}
    */
   app.post('/api/accounting/bank-transactions', isAuthenticated, async (req, res) => {
     try {
-      const user = await storage.getUser((req as any).user.claims.sub);
+      const user = await storage.getUser((req as any).user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -16527,7 +16527,7 @@ ${tenant.name}
    */
   app.put('/api/accounting/bank-transactions/:id', isAuthenticated, async (req, res) => {
     try {
-      const user = await storage.getUser((req as any).user.claims.sub);
+      const user = await storage.getUser((req as any).user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -16552,7 +16552,7 @@ ${tenant.name}
    */
   app.get('/api/accounting/budgets', isAuthenticated, async (req, res) => {
     try {
-      const user = await storage.getUser((req as any).user.claims.sub);
+      const user = await storage.getUser((req as any).user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -16590,7 +16590,7 @@ ${tenant.name}
    */
   app.get('/api/accounting/budgets/:id', isAuthenticated, async (req, res) => {
     try {
-      const user = await storage.getUser((req as any).user.claims.sub);
+      const user = await storage.getUser((req as any).user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -16613,7 +16613,7 @@ ${tenant.name}
    */
   app.post('/api/accounting/budgets', isAuthenticated, async (req, res) => {
     try {
-      const user = await storage.getUser((req as any).user.claims.sub);
+      const user = await storage.getUser((req as any).user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -16641,7 +16641,7 @@ ${tenant.name}
    */
   app.put('/api/accounting/budgets/:id', isAuthenticated, async (req, res) => {
     try {
-      const user = await storage.getUser((req as any).user.claims.sub);
+      const user = await storage.getUser((req as any).user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -16664,7 +16664,7 @@ ${tenant.name}
    */
   app.delete('/api/accounting/budgets/:id', isAuthenticated, async (req, res) => {
     try {
-      const user = await storage.getUser((req as any).user.claims.sub);
+      const user = await storage.getUser((req as any).user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -16683,7 +16683,7 @@ ${tenant.name}
    */
   app.post('/api/accounting/budgets/:id/lines', isAuthenticated, async (req, res) => {
     try {
-      const user = await storage.getUser((req as any).user.claims.sub);
+      const user = await storage.getUser((req as any).user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -16791,7 +16791,7 @@ ${tenant.name}
    */
   app.get('/api/cashflow/forecast', isAuthenticated, async (req, res) => {
     try {
-      const user = await storage.getUser((req as any).user.claims.sub);
+      const user = await storage.getUser((req as any).user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -16906,7 +16906,7 @@ ${tenant.name}
    */
   app.post('/api/cashflow/scenarios', isAuthenticated, async (req, res) => {
     try {
-      const user = await storage.getUser((req as any).user.claims.sub);
+      const user = await storage.getUser((req as any).user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -16990,7 +16990,7 @@ ${tenant.name}
    */
   app.get('/api/cashflow/metrics', isAuthenticated, async (req, res) => {
     try {
-      const user = await storage.getUser((req as any).user.claims.sub);
+      const user = await storage.getUser((req as any).user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -17090,7 +17090,7 @@ ${tenant.name}
    */
   app.post('/api/cashflow/optimize', isAuthenticated, async (req, res) => {
     try {
-      const user = await storage.getUser((req as any).user.claims.sub);
+      const user = await storage.getUser((req as any).user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -17169,7 +17169,7 @@ ${tenant.name}
    */
   app.get('/api/forecast/ard', isAuthenticated, async (req, res) => {
     try {
-      const user = await storage.getUser((req as any).user.claims.sub);
+      const user = await storage.getUser((req as any).user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -17189,7 +17189,7 @@ ${tenant.name}
    */
   app.post('/api/forecast/ard/calculate', isAuthenticated, async (req, res) => {
     try {
-      const user = await storage.getUser((req as any).user.claims.sub);
+      const user = await storage.getUser((req as any).user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -17210,7 +17210,7 @@ ${tenant.name}
    */
   app.get('/api/forecast/ard/history', isAuthenticated, async (req, res) => {
     try {
-      const user = await storage.getUser((req as any).user.claims.sub);
+      const user = await storage.getUser((req as any).user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -17231,7 +17231,7 @@ ${tenant.name}
    */
   app.get('/api/forecast/ard/trend', isAuthenticated, async (req, res) => {
     try {
-      const user = await storage.getUser((req as any).user.claims.sub);
+      const user = await storage.getUser((req as any).user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -17251,7 +17251,7 @@ ${tenant.name}
    */
   app.get('/api/forecast/sales', isAuthenticated, async (req, res) => {
     try {
-      const user = await storage.getUser((req as any).user.claims.sub);
+      const user = await storage.getUser((req as any).user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -17281,7 +17281,7 @@ ${tenant.name}
    */
   app.post('/api/forecast/sales', isAuthenticated, async (req, res) => {
     try {
-      const user = await storage.getUser((req as any).user.claims.sub);
+      const user = await storage.getUser((req as any).user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -17312,7 +17312,7 @@ ${tenant.name}
    */
   app.post('/api/forecast/sales/batch', isAuthenticated, async (req, res) => {
     try {
-      const user = await storage.getUser((req as any).user.claims.sub);
+      const user = await storage.getUser((req as any).user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -17342,7 +17342,7 @@ ${tenant.name}
    */
   app.get('/api/forecast/sales/cash-inflows', isAuthenticated, async (req, res) => {
     try {
-      const user = await storage.getUser((req as any).user.claims.sub);
+      const user = await storage.getUser((req as any).user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -17364,7 +17364,7 @@ ${tenant.name}
    */
   app.post('/api/forecast/sales/generate-defaults', isAuthenticated, async (req, res) => {
     try {
-      const user = await storage.getUser((req as any).user.claims.sub);
+      const user = await storage.getUser((req as any).user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -17384,7 +17384,7 @@ ${tenant.name}
    */
   app.get('/api/forecast/irregular-buffer', isAuthenticated, async (req, res) => {
     try {
-      const user = await storage.getUser((req as any).user.claims.sub);
+      const user = await storage.getUser((req as any).user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -17411,7 +17411,7 @@ ${tenant.name}
    */
   app.get('/api/forecast/irregular-buffer/recommended-beta', isAuthenticated, async (req, res) => {
     try {
-      const user = await storage.getUser((req as any).user.claims.sub);
+      const user = await storage.getUser((req as any).user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -17765,7 +17765,7 @@ ${tenant.name}
   // Get partner's client relationships
   app.get("/api/partner/clients", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
@@ -17786,7 +17786,7 @@ ${tenant.name}
   // Get client's partner relationships (for client dashboard)
   app.get("/api/client/partners", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -17804,7 +17804,7 @@ ${tenant.name}
     try {
       const { relationshipId } = req.params;
       const { reason } = req.body;
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       
       if (!user) {
         return res.status(404).json({ message: "User not found" });
@@ -17838,7 +17838,7 @@ ${tenant.name}
   // Create tenant invitation (client invites partner)
   app.post("/api/invitations/create", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -17892,7 +17892,7 @@ ${tenant.name}
   // Get tenant invitations for current tenant
   app.get("/api/invitations/outgoing", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -17908,7 +17908,7 @@ ${tenant.name}
   // Get incoming invitations for partner (by email)
   app.get("/api/invitations/incoming", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.email) {
         return res.status(400).json({ message: "User email not found" });
       }
@@ -17926,7 +17926,7 @@ ${tenant.name}
     try {
       const { invitationId } = req.params;
       const { responseMessage } = req.body;
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       
       if (!user) {
         return res.status(404).json({ message: "User not found" });
@@ -17971,7 +17971,7 @@ ${tenant.name}
     try {
       const { invitationId } = req.params;
       const { responseMessage } = req.body;
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       
       if (!user) {
         return res.status(404).json({ message: "User not found" });
@@ -18009,7 +18009,7 @@ ${tenant.name}
   // Get tenant metadata (subscription info, etc.)
   app.get("/api/tenant/metadata", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -18025,7 +18025,7 @@ ${tenant.name}
   // Update tenant metadata
   app.put("/api/tenant/metadata", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -18086,7 +18086,7 @@ ${tenant.name}
   // POST /api/subscription/subscribe - Subscribe tenant to a plan
   app.post("/api/subscription/subscribe", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -18153,7 +18153,7 @@ ${tenant.name}
   // GET /api/subscription/usage - Get current billing usage for partners
   app.get("/api/subscription/usage", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -18174,7 +18174,7 @@ ${tenant.name}
   // POST /api/subscription/upgrade-downgrade - Change subscription plans
   app.post("/api/subscription/upgrade-downgrade", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -18217,7 +18217,7 @@ ${tenant.name}
   // POST /api/subscription/update-partner-billing - Update partner billing based on client count
   app.post("/api/subscription/update-partner-billing", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -18241,7 +18241,7 @@ ${tenant.name}
   // GET /api/subscription/status - Get current subscription status
   app.get("/api/subscription/status", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -18387,7 +18387,7 @@ ${tenant.name}
   // Get client list with behavioral statistics
   app.get("/api/client-intelligence/clients", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -18470,7 +18470,7 @@ ${tenant.name}
   // Get detailed client behavioral analytics - REWRITTEN FROM SCRATCH
   app.get("/api/client-intelligence/clients/:contactId", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -18577,7 +18577,7 @@ ${tenant.name}
   // Get client journey timeline (interactions, payments, segment changes)
   app.get("/api/client-intelligence/clients/:contactId/journey", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const user = await storage.getUser(req.user.id);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
