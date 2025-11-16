@@ -258,12 +258,20 @@ const createDemoUserSession = async (req: any) => {
       password: hashedPassword,
       tenantId: demoTenant.id, // Use the actual tenant ID
       role: "owner", // Give owner permissions for full access
+      platformAdmin: true, // Grant platform admin access in development mode
     });
     console.log("✅ Created demo user for development mode");
   }
   
   // Inject demo session (don't override Passport methods)
   req.user = {
+    id: demoUserId,
+    email: "demo@studiopow.com",
+    firstName: "Demo",
+    lastName: "User",
+    tenantId: demoTenant.id,
+    role: "owner",
+    platformAdmin: true, // Grant platform admin access in development mode
     claims: {
       sub: demoUserId,
       email: "demo@studiopow.com",
