@@ -6,6 +6,7 @@ import session from "express-session";
 import type { Express, RequestHandler } from "express";
 import memoize from "memoizee";
 import connectPg from "connect-pg-simple";
+import bcrypt from "bcryptjs";
 import { storage } from "./storage";
 
 if (!process.env.REPLIT_DOMAINS) {
@@ -246,11 +247,15 @@ const createDemoUserSession = async (req: any) => {
   // Ensure demo user exists
   let demoUser = await storage.getUser(demoUserId);
   if (!demoUser) {
+    // Hash a dummy password for demo user (password: "demo123")
+    const hashedPassword = await bcrypt.hash("demo123", 10);
+    
     demoUser = await storage.upsertUser({
       id: demoUserId,
       email: "demo@studiopow.com",
       firstName: "Demo",
       lastName: "User",
+      password: hashedPassword,
       tenantId: demoTenant.id, // Use the actual tenant ID
       role: "owner", // Give owner permissions for full access
     });
