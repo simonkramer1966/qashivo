@@ -42,50 +42,53 @@ export default function Home() {
       </nav>
 
       {/* Hero Section */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-slate-50 via-blue-50 to-teal-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 md:py-32">
-          <div className="grid md:grid-cols-2 gap-12 items-center">
-            <div>
-              <div className="inline-block mb-4 px-4 py-2 bg-[#17B6C3]/10 rounded-full">
-                <span className="text-[#17B6C3] font-semibold text-sm">AI-First Cashflow Management</span>
-              </div>
-              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 leading-tight mb-6">
-                We're Not Building Software for Credit Controllers.
-              </h1>
-              <h2 className="text-3xl md:text-4xl font-bold text-[#17B6C3] mb-6">
-                We're Building THE Credit Controller.
-              </h2>
-              <p className="text-xl text-gray-600 mb-8">
-                AI-first cashflow management that flips traditional software on its head. 
-                From invoice to enforcement, turning compliance into cash.
-              </p>
-              <div className="flex flex-col sm:flex-row gap-4">
-                <Button
-                  size="lg"
-                  className="bg-[#17B6C3] hover:bg-[#1396A1] text-white text-lg px-8"
-                  onClick={() => setLocation("/signup")}
-                  data-testid="button-get-started"
-                >
-                  See It In Action
-                  <ArrowRight className="ml-2 h-5 w-5" />
-                </Button>
-                <Button
-                  size="lg"
-                  variant="outline"
-                  className="border-[#17B6C3] text-[#17B6C3] hover:bg-[#17B6C3] hover:text-white text-lg px-8"
-                  onClick={() => setLocation("/signup")}
-                  data-testid="button-request-demo"
-                >
-                  Request Demo
-                </Button>
-              </div>
+      <section 
+        className="relative overflow-hidden min-h-[600px] md:min-h-[700px] flex items-center"
+        style={{
+          backgroundImage: `url(${heroImage})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat'
+        }}
+      >
+        {/* Overlay */}
+        <div className="absolute inset-0 bg-gradient-to-r from-slate-900/90 via-slate-900/80 to-slate-900/70"></div>
+        
+        {/* Content */}
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 md:py-32">
+          <div className="max-w-3xl">
+            <div className="inline-block mb-4 px-4 py-2 bg-[#17B6C3]/20 backdrop-blur-sm rounded-full border border-[#17B6C3]/30">
+              <span className="text-[#17B6C3] font-semibold text-sm">AI-First Cashflow Management</span>
             </div>
-            <div className="relative">
-              <img
-                src={heroImage}
-                alt="AI-powered cashflow management"
-                className="rounded-2xl shadow-2xl"
-              />
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white leading-tight mb-6">
+              We're Not Building Software for Credit Controllers.
+            </h1>
+            <h2 className="text-3xl md:text-4xl font-bold text-[#17B6C3] mb-6">
+              We're Building THE Credit Controller.
+            </h2>
+            <p className="text-xl text-gray-200 mb-8">
+              AI-first cashflow management that flips traditional software on its head. 
+              From invoice to enforcement, turning compliance into cash.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4">
+              <Button
+                size="lg"
+                className="bg-[#17B6C3] hover:bg-[#1396A1] text-white text-lg px-8"
+                onClick={() => setLocation("/signup")}
+                data-testid="button-get-started"
+              >
+                See It In Action
+                <ArrowRight className="ml-2 h-5 w-5" />
+              </Button>
+              <Button
+                size="lg"
+                variant="outline"
+                className="border-white text-white hover:bg-white hover:text-gray-900 text-lg px-8"
+                onClick={() => setLocation("/signup")}
+                data-testid="button-request-demo"
+              >
+                Request Demo
+              </Button>
             </div>
           </div>
         </div>
