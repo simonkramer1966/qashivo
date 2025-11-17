@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/form";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 
 const loginSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -42,11 +42,13 @@ export default function Login() {
     mutationFn: async (data: LoginForm) => {
       return await apiRequest("POST", "/api/login", data);
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       toast({
         title: "Login successful",
         description: "Welcome back!",
       });
+      // Invalidate user query to update authentication state
+      await queryClient.invalidateQueries({ queryKey: ['/api/user'] });
       setLocation("/");
     },
     onError: (error: any) => {
