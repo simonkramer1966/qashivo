@@ -279,8 +279,8 @@ export default function Home() {
                       <Check className="h-6 w-6 text-[#17B6C3]" />
                     </div>
                     <div>
-                      <h4 className="font-semibold text-lg mb-1">CCJ Filing via HMCTS API</h4>
-                      <p className="text-gray-400">File County Court Judgments in seconds, not weeks</p>
+                      <h4 className="font-semibold text-lg mb-1">Automated Dispute Handling</h4>
+                      <p className="text-gray-400">AI manages invoice disputes and queries efficiently</p>
                     </div>
                   </div>
                 </div>
