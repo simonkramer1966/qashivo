@@ -68,7 +68,7 @@ export default function Home() {
               We're Not Building Software for Credit Controllers.
             </h1>
             <h2 className="text-3xl md:text-4xl font-bold text-[#17B6C3] mb-6">
-              We're Building THE Credit Controller.
+              Qashivo IS the credit controller.
             </h2>
             <p className="text-xl text-gray-200 mb-8">
               AI-first cashflow management that flips traditional software on its head. 
