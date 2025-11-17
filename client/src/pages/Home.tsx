@@ -68,7 +68,8 @@ export default function Home() {
               Qashivo IS the credit controller.
             </h2>
             <p className="text-xl text-gray-200 mb-8">
-              AI-first cashflow management that flips traditional software on its head. 
+              AI-first cashflow management that flips traditional software on its head.
+              <br />
               From invoice to enforcement, turning compliance into cash.
             </p>
             <div className="flex flex-col sm:flex-row gap-4">
