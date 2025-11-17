@@ -244,24 +244,21 @@ const createDemoUserSession = async (req: any) => {
     throw new Error("Failed to create or find demo tenant");
   }
   
-  // Ensure demo user exists
-  let demoUser = await storage.getUser(demoUserId);
-  if (!demoUser) {
-    // Hash a dummy password for demo user (password: "demo123")
-    const hashedPassword = await bcrypt.hash("demo123", 10);
-    
-    demoUser = await storage.upsertUser({
-      id: demoUserId,
-      email: "demo@studiopow.com",
-      firstName: "Demo",
-      lastName: "User",
-      password: hashedPassword,
-      tenantId: demoTenant.id, // Use the actual tenant ID
-      role: "owner", // Give owner permissions for full access
-      platformAdmin: true, // Grant platform admin access in development mode
-    });
-    console.log("✅ Created demo user for development mode");
-  }
+  // Ensure demo user exists with platform admin access
+  // Always upsert to ensure demo user has platformAdmin: true even if they already exist
+  const hashedPassword = await bcrypt.hash("demo123", 10);
+  
+  const demoUser = await storage.upsertUser({
+    id: demoUserId,
+    email: "demo@studiopow.com",
+    firstName: "Demo",
+    lastName: "User",
+    password: hashedPassword,
+    tenantId: demoTenant.id, // Use the actual tenant ID
+    role: "owner", // Give owner permissions for full access
+    platformAdmin: true, // Grant platform admin access in development mode
+  });
+  console.log("✅ Demo user ensured with platform admin access");
   
   // Inject demo session (don't override Passport methods)
   req.user = {
