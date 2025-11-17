@@ -360,10 +360,6 @@ export default function Home() {
                   <Check className="text-[#17B6C3] mr-2 h-4 w-4 mt-0.5 flex-shrink-0" />
                   <span className="text-gray-700 text-sm">Email automation</span>
                 </li>
-                <li className="flex items-start">
-                  <Check className="text-[#17B6C3] mr-2 h-4 w-4 mt-0.5 flex-shrink-0" />
-                  <span className="text-gray-700 text-sm">SMS automation</span>
-                </li>
               </ul>
               <Button
                 className="w-full bg-gray-100 hover:bg-gray-200 text-gray-900 text-sm"
