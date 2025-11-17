@@ -358,7 +358,7 @@ export default function Home() {
                 </li>
                 <li className="flex items-start">
                   <Check className="text-[#17B6C3] mr-2 h-4 w-4 mt-0.5 flex-shrink-0" />
-                  <span className="text-gray-700 text-sm">Email & SMS automation</span>
+                  <span className="text-gray-700 text-sm">Email automation</span>
                 </li>
                 <li className="flex items-start">
                   <Check className="text-[#17B6C3] mr-2 h-4 w-4 mt-0.5 flex-shrink-0" />
@@ -398,6 +398,10 @@ export default function Home() {
                   <Check className="text-white mr-2 h-4 w-4 mt-0.5 flex-shrink-0" />
                   <span className="text-sm">AI voice calling</span>
                 </li>
+                <li className="flex items-start">
+                  <Check className="text-white mr-2 h-4 w-4 mt-0.5 flex-shrink-0" />
+                  <span className="text-sm">Dispute handling</span>
+                </li>
               </ul>
               <Button
                 className="w-full bg-white hover:bg-gray-100 text-[#17B6C3] text-sm"
@@ -424,10 +428,6 @@ export default function Home() {
                 <li className="flex items-start">
                   <Check className="text-[#17B6C3] mr-2 h-4 w-4 mt-0.5 flex-shrink-0" />
                   <span className="text-gray-700 text-sm">Everything in Starter</span>
-                </li>
-                <li className="flex items-start">
-                  <Check className="text-[#17B6C3] mr-2 h-4 w-4 mt-0.5 flex-shrink-0" />
-                  <span className="text-gray-700 text-sm">Dispute handling</span>
                 </li>
                 <li className="flex items-start">
                   <Check className="text-[#17B6C3] mr-2 h-4 w-4 mt-0.5 flex-shrink-0" />
