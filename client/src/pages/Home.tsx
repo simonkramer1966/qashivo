@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
 import { ArrowRight, Brain, Zap, TrendingUp, Shield, Check } from "lucide-react";
-import heroImage from "@assets/stock_images/modern_ai_technology_940bf071.jpg";
+import heroImage from "@assets/stock_images/modern_ai_dashboard__551088e4.jpg";
 
 export default function Home() {
   const [, setLocation] = useLocation();
