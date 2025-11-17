@@ -203,10 +203,6 @@ export default function Home() {
                   <Zap className="text-[#17B6C3] mr-3 h-5 w-5 mt-0.5 flex-shrink-0" />
                   <span className="text-gray-700">Detects broken payment promises and escalates automatically</span>
                 </li>
-                <li className="flex items-start">
-                  <Zap className="text-[#17B6C3] mr-3 h-5 w-5 mt-0.5 flex-shrink-0" />
-                  <span className="text-gray-700">Files County Court Judgments through API when needed</span>
-                </li>
               </ul>
             </div>
 
