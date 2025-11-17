@@ -99,9 +99,9 @@ export default function Home() {
               The AI-First Difference
             </h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Traditional software assists. Qashivo acts.
+              Accounts Receivable software is for Credit Controllers who chase invoices.
               <br />
-              It's not about helping you work faster—it's about AI doing the work.
+              Qashivo is for people who would rather not.
             </p>
           </div>
 
