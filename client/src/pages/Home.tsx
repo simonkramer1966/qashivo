@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
 import { ArrowRight, Brain, Zap, TrendingUp, Shield, Check } from "lucide-react";
 import heroImage from "@assets/stock_images/modern_ai_dashboard__551088e4.jpg";
+import logo from "@assets/Main Nexus Logo copy_1763392904110.png";
 
 export default function Home() {
   const [, setLocation] = useLocation();
@@ -13,7 +14,10 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-8">
-              <h1 className="text-2xl font-bold text-[#17B6C3]">Qashivo</h1>
+              <div className="flex items-center space-x-2">
+                <img src={logo} alt="Qashivo Logo" className="h-8 w-8" />
+                <h1 className="text-2xl font-bold text-[#17B6C3]">Qashivo</h1>
+              </div>
               <div className="hidden md:flex space-x-6">
                 <a href="#features" className="text-gray-700 hover:text-[#17B6C3] transition-colors">
                   Features
