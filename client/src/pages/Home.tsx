@@ -230,7 +230,7 @@ export default function Home() {
                 </li>
                 <li className="flex items-start">
                   <TrendingUp className="text-[#17B6C3] mr-3 h-5 w-5 mt-0.5 flex-shrink-0" />
-                  <span className="text-gray-700">Voice-activated: "What's my cashflow next month?"</span>
+                  <span className="text-gray-700">Voice-driven: "What's my cashflow next month?"</span>
                 </li>
               </ul>
             </div>
