@@ -313,14 +313,14 @@ export default function Home() {
             </p>
           </div>
           <div className="flex justify-center items-center gap-12 flex-wrap">
-            <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 shadow-lg border border-white/50 hover:shadow-xl transition-shadow">
-              <img src={xeroLogo} alt="Xero" className="h-16 w-auto object-contain" />
+            <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 shadow-lg border border-white/50 hover:shadow-xl transition-shadow w-48 h-32 flex items-center justify-center">
+              <img src={xeroLogo} alt="Xero" className="max-h-16 max-w-full object-contain" />
             </div>
-            <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 shadow-lg border border-white/50 hover:shadow-xl transition-shadow">
-              <img src={quickbooksLogo} alt="QuickBooks" className="h-16 w-auto object-contain" />
+            <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 shadow-lg border border-white/50 hover:shadow-xl transition-shadow w-48 h-32 flex items-center justify-center">
+              <img src={quickbooksLogo} alt="QuickBooks" className="max-h-16 max-w-full object-contain" />
             </div>
-            <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 shadow-lg border border-white/50 hover:shadow-xl transition-shadow">
-              <img src={sageLogo} alt="Sage" className="h-16 w-auto object-contain" />
+            <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 shadow-lg border border-white/50 hover:shadow-xl transition-shadow w-48 h-32 flex items-center justify-center">
+              <img src={sageLogo} alt="Sage" className="max-h-16 max-w-full object-contain" />
             </div>
           </div>
         </div>
