@@ -431,6 +431,10 @@ export default function Home() {
                 </li>
                 <li className="flex items-start">
                   <Check className="text-[#17B6C3] mr-2 h-4 w-4 mt-0.5 flex-shrink-0" />
+                  <span className="text-gray-700 text-sm">Debt Recovery</span>
+                </li>
+                <li className="flex items-start">
+                  <Check className="text-[#17B6C3] mr-2 h-4 w-4 mt-0.5 flex-shrink-0" />
                   <span className="text-gray-700 text-sm">CFO Cashflow Forecasting</span>
                 </li>
                 <li className="flex items-start">
