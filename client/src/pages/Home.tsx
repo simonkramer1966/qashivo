@@ -340,14 +340,14 @@ export default function Home() {
           </div>
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
             {/* Micro */}
-            <div className="bg-white rounded-2xl p-6 border-2 border-gray-200 hover:border-[#17B6C3] transition-colors">
+            <div className="bg-white rounded-2xl p-6 border-2 border-gray-200 hover:border-[#17B6C3] transition-colors flex flex-col h-full">
               <h3 className="text-xl font-bold text-gray-900 mb-2">Micro</h3>
               <p className="text-gray-600 mb-4 text-sm">For small businesses</p>
               <div className="mb-4">
                 <span className="text-3xl font-bold text-gray-900">£49</span>
                 <span className="text-gray-600 text-sm">/month</span>
               </div>
-              <ul className="space-y-2 mb-6">
+              <ul className="space-y-2 mb-6 flex-grow">
                 <li className="flex items-start">
                   <Check className="text-[#17B6C3] mr-2 h-4 w-4 mt-0.5 flex-shrink-0" />
                   <span className="text-gray-700 text-sm">Up to 100 invoices/month</span>
@@ -371,7 +371,7 @@ export default function Home() {
             </div>
 
             {/* Starter */}
-            <div className="bg-gradient-to-br from-[#17B6C3] to-teal-600 rounded-2xl p-6 text-white relative">
+            <div className="bg-gradient-to-br from-[#17B6C3] to-teal-600 rounded-2xl p-6 text-white relative flex flex-col h-full">
               <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 bg-yellow-400 text-gray-900 px-4 py-1 rounded-full text-xs font-semibold">
                 Most Popular
               </div>
@@ -381,7 +381,7 @@ export default function Home() {
                 <span className="text-3xl font-bold">£149</span>
                 <span className="text-white/90 text-sm">/month</span>
               </div>
-              <ul className="space-y-2 mb-6">
+              <ul className="space-y-2 mb-6 flex-grow">
                 <li className="flex items-start">
                   <Check className="text-white mr-2 h-4 w-4 mt-0.5 flex-shrink-0" />
                   <span className="text-sm">Up to 500 invoices/month</span>
@@ -413,14 +413,14 @@ export default function Home() {
             </div>
 
             {/* Professional */}
-            <div className="bg-white rounded-2xl p-6 border-2 border-gray-200 hover:border-[#17B6C3] transition-colors">
+            <div className="bg-white rounded-2xl p-6 border-2 border-gray-200 hover:border-[#17B6C3] transition-colors flex flex-col h-full">
               <h3 className="text-xl font-bold text-gray-900 mb-2">Professional</h3>
               <p className="text-gray-600 mb-4 text-sm">Established businesses</p>
               <div className="mb-4">
                 <span className="text-3xl font-bold text-gray-900">£499</span>
                 <span className="text-gray-600 text-sm">/month</span>
               </div>
-              <ul className="space-y-2 mb-6">
+              <ul className="space-y-2 mb-6 flex-grow">
                 <li className="flex items-start">
                   <Check className="text-[#17B6C3] mr-2 h-4 w-4 mt-0.5 flex-shrink-0" />
                   <span className="text-gray-700 text-sm">Up to 2,000 invoices/month</span>
@@ -452,13 +452,13 @@ export default function Home() {
             </div>
 
             {/* Enterprise */}
-            <div className="bg-white rounded-2xl p-6 border-2 border-gray-200 hover:border-[#17B6C3] transition-colors">
+            <div className="bg-white rounded-2xl p-6 border-2 border-gray-200 hover:border-[#17B6C3] transition-colors flex flex-col h-full">
               <h3 className="text-xl font-bold text-gray-900 mb-2">Enterprise</h3>
               <p className="text-gray-600 mb-4 text-sm">Custom solutions</p>
               <div className="mb-4">
                 <span className="text-3xl font-bold text-gray-900">Custom</span>
               </div>
-              <ul className="space-y-2 mb-6">
+              <ul className="space-y-2 mb-6 flex-grow">
                 <li className="flex items-start">
                   <Check className="text-[#17B6C3] mr-2 h-4 w-4 mt-0.5 flex-shrink-0" />
                   <span className="text-gray-700 text-sm">Unlimited invoices</span>
