@@ -99,7 +99,9 @@ export default function Home() {
               The AI-First Difference
             </h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Traditional software assists. Qashivo acts. It's not about helping you work faster—it's about AI doing the work.
+              Traditional software assists. Qashivo acts.
+              <br />
+              It's not about helping you work faster—it's about AI doing the work.
             </p>
           </div>
 
