@@ -4,8 +4,8 @@ import { ArrowRight, Brain, Zap, TrendingUp, Shield, Check } from "lucide-react"
 import heroImage from "@assets/generated_images/Advanced_AI_technology_center_4b230f51.png";
 import logo from "@assets/Main Nexus Logo copy_1763392904110.png";
 import xeroLogo from "@assets/Xero_software_logo.svg_1763402921236.png";
-import quickbooksLogo from "@assets/kisspng-quickbooks-accounting-software-intuit-computer-sof-tax-planner-pro-small-business-tax-planning-soft-5bae404d240a84.8074409915381463811476_1763402921236.jpg";
-import sageLogo from "@assets/png-clipart-sage-group-payroll-sage-50-accounting-payment-business-business-text-service-thumbnail_1763403074337.png";
+import quickbooksLogo from "@assets/quickbnooks_1763403237750.png";
+import sageLogo from "@assets/sage_1763403237750.jpeg";
 
 export default function Home() {
   const [, setLocation] = useLocation();
