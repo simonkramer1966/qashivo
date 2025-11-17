@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
 import { ArrowRight, Brain, Zap, TrendingUp, Shield, Check } from "lucide-react";
-import heroImage from "@assets/stock_images/artificial_intellige_d821355c.jpg";
+import heroImage from "@assets/stock_images/neural_network_conne_795f9f27.jpg";
 import logo from "@assets/Main Nexus Logo copy_1763392904110.png";
 
 export default function Home() {
