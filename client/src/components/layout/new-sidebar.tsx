@@ -302,8 +302,33 @@ export default function NewSidebar() {
     setLocation(href);
   };
 
+  const logoutMutation = useMutation({
+    mutationFn: async () => {
+      return await apiRequest("POST", "/api/logout", {});
+    },
+    onSuccess: () => {
+      // Clear all React Query cache
+      queryClient.clear();
+      
+      // Clear any local/session storage if needed
+      localStorage.clear();
+      sessionStorage.clear();
+      
+      // Navigate to login
+      setLocation("/login");
+    },
+    onError: (error: any) => {
+      console.error('Logout error:', error);
+      // Even if logout fails, clear cache and redirect
+      queryClient.clear();
+      localStorage.clear();
+      sessionStorage.clear();
+      setLocation("/login");
+    },
+  });
+
   const handleLogout = () => {
-    window.location.href = "/api/logout";
+    logoutMutation.mutate();
   };
 
   const isActivePath = (href: string) => {
