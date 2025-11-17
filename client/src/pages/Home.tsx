@@ -3,6 +3,9 @@ import { useLocation } from "wouter";
 import { ArrowRight, Brain, Zap, TrendingUp, Shield, Check } from "lucide-react";
 import heroImage from "@assets/generated_images/Advanced_AI_technology_center_4b230f51.png";
 import logo from "@assets/Main Nexus Logo copy_1763392904110.png";
+import xeroLogo from "@assets/stock_images/xero_accounting_soft_4e6465ed.jpg";
+import quickbooksLogo from "@assets/stock_images/quickbooks_accountin_6c8c2500.jpg";
+import sageLogo from "@assets/stock_images/sage_accounting_soft_4d459288.jpg";
 
 export default function Home() {
   const [, setLocation] = useLocation();
@@ -311,13 +314,13 @@ export default function Home() {
           </div>
           <div className="flex justify-center items-center gap-12 flex-wrap">
             <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 shadow-lg border border-white/50 hover:shadow-xl transition-shadow">
-              <div className="text-4xl font-bold text-gray-900">Xero</div>
+              <img src={xeroLogo} alt="Xero" className="h-16 w-auto object-contain" />
             </div>
             <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 shadow-lg border border-white/50 hover:shadow-xl transition-shadow">
-              <div className="text-4xl font-bold text-gray-900">QuickBooks</div>
+              <img src={quickbooksLogo} alt="QuickBooks" className="h-16 w-auto object-contain" />
             </div>
             <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 shadow-lg border border-white/50 hover:shadow-xl transition-shadow">
-              <div className="text-4xl font-bold text-gray-900">Sage</div>
+              <img src={sageLogo} alt="Sage" className="h-16 w-auto object-contain" />
             </div>
           </div>
         </div>
