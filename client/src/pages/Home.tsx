@@ -336,36 +336,75 @@ export default function Home() {
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
               Pay for results, not seats. Our AI-first model means you pay based on value delivered.
             </p>
+            <p className="text-sm text-gray-500 mt-4">Plus call & SMS charges apply</p>
           </div>
-          <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-            {/* Starter */}
-            <div className="bg-white rounded-2xl p-8 border-2 border-gray-200 hover:border-[#17B6C3] transition-colors">
-              <h3 className="text-2xl font-bold text-gray-900 mb-2">Starter</h3>
-              <p className="text-gray-600 mb-6">Perfect for growing SMEs</p>
-              <div className="mb-6">
-                <span className="text-4xl font-bold text-gray-900">£199</span>
-                <span className="text-gray-600">/month</span>
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
+            {/* Micro */}
+            <div className="bg-white rounded-2xl p-6 border-2 border-gray-200 hover:border-[#17B6C3] transition-colors">
+              <h3 className="text-xl font-bold text-gray-900 mb-2">Micro</h3>
+              <p className="text-gray-600 mb-4 text-sm">For small businesses</p>
+              <div className="mb-4">
+                <span className="text-3xl font-bold text-gray-900">£49</span>
+                <span className="text-gray-600 text-sm">/month</span>
               </div>
-              <ul className="space-y-3 mb-8">
+              <ul className="space-y-2 mb-6">
                 <li className="flex items-start">
-                  <Check className="text-[#17B6C3] mr-2 h-5 w-5 mt-0.5 flex-shrink-0" />
-                  <span className="text-gray-700">Up to 500 invoices/month</span>
+                  <Check className="text-[#17B6C3] mr-2 h-4 w-4 mt-0.5 flex-shrink-0" />
+                  <span className="text-gray-700 text-sm">Up to 100 invoices/month</span>
                 </li>
                 <li className="flex items-start">
-                  <Check className="text-[#17B6C3] mr-2 h-5 w-5 mt-0.5 flex-shrink-0" />
-                  <span className="text-gray-700">AI collections automation</span>
+                  <Check className="text-[#17B6C3] mr-2 h-4 w-4 mt-0.5 flex-shrink-0" />
+                  <span className="text-gray-700 text-sm">AI collections automation</span>
                 </li>
                 <li className="flex items-start">
-                  <Check className="text-[#17B6C3] mr-2 h-5 w-5 mt-0.5 flex-shrink-0" />
-                  <span className="text-gray-700">Cashflow forecasting</span>
+                  <Check className="text-[#17B6C3] mr-2 h-4 w-4 mt-0.5 flex-shrink-0" />
+                  <span className="text-gray-700 text-sm">Email automation</span>
                 </li>
                 <li className="flex items-start">
-                  <Check className="text-[#17B6C3] mr-2 h-5 w-5 mt-0.5 flex-shrink-0" />
-                  <span className="text-gray-700">Email & SMS automation</span>
+                  <Check className="text-[#17B6C3] mr-2 h-4 w-4 mt-0.5 flex-shrink-0" />
+                  <span className="text-gray-700 text-sm">Cashflow forecasting</span>
                 </li>
               </ul>
               <Button
-                className="w-full bg-gray-100 hover:bg-gray-200 text-gray-900"
+                className="w-full bg-gray-100 hover:bg-gray-200 text-gray-900 text-sm"
+                onClick={() => setLocation("/signup")}
+                data-testid="button-pricing-micro"
+              >
+                Start Free Trial
+              </Button>
+            </div>
+
+            {/* Starter */}
+            <div className="bg-gradient-to-br from-[#17B6C3] to-teal-600 rounded-2xl p-6 text-white relative">
+              <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 bg-yellow-400 text-gray-900 px-4 py-1 rounded-full text-xs font-semibold">
+                Most Popular
+              </div>
+              <h3 className="text-xl font-bold mb-2">Starter</h3>
+              <p className="text-white/90 mb-4 text-sm">Growing SMEs</p>
+              <div className="mb-4">
+                <span className="text-3xl font-bold">£149</span>
+                <span className="text-white/90 text-sm">/month</span>
+              </div>
+              <ul className="space-y-2 mb-6">
+                <li className="flex items-start">
+                  <Check className="text-white mr-2 h-4 w-4 mt-0.5 flex-shrink-0" />
+                  <span className="text-sm">Up to 500 invoices/month</span>
+                </li>
+                <li className="flex items-start">
+                  <Check className="text-white mr-2 h-4 w-4 mt-0.5 flex-shrink-0" />
+                  <span className="text-sm">Everything in Micro</span>
+                </li>
+                <li className="flex items-start">
+                  <Check className="text-white mr-2 h-4 w-4 mt-0.5 flex-shrink-0" />
+                  <span className="text-sm">AI voice calling</span>
+                </li>
+                <li className="flex items-start">
+                  <Check className="text-white mr-2 h-4 w-4 mt-0.5 flex-shrink-0" />
+                  <span className="text-sm">SMS automation</span>
+                </li>
+              </ul>
+              <Button
+                className="w-full bg-white hover:bg-gray-100 text-[#17B6C3] text-sm"
                 onClick={() => setLocation("/signup")}
                 data-testid="button-pricing-starter"
               >
@@ -374,40 +413,33 @@ export default function Home() {
             </div>
 
             {/* Professional */}
-            <div className="bg-gradient-to-br from-[#17B6C3] to-teal-600 rounded-2xl p-8 text-white relative">
-              <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 bg-yellow-400 text-gray-900 px-4 py-1 rounded-full text-sm font-semibold">
-                Most Popular
+            <div className="bg-white rounded-2xl p-6 border-2 border-gray-200 hover:border-[#17B6C3] transition-colors">
+              <h3 className="text-xl font-bold text-gray-900 mb-2">Professional</h3>
+              <p className="text-gray-600 mb-4 text-sm">Established businesses</p>
+              <div className="mb-4">
+                <span className="text-3xl font-bold text-gray-900">£499</span>
+                <span className="text-gray-600 text-sm">/month</span>
               </div>
-              <h3 className="text-2xl font-bold mb-2">Professional</h3>
-              <p className="text-white/90 mb-6">For established businesses</p>
-              <div className="mb-6">
-                <span className="text-4xl font-bold">£499</span>
-                <span className="text-white/90">/month</span>
-              </div>
-              <ul className="space-y-3 mb-8">
+              <ul className="space-y-2 mb-6">
                 <li className="flex items-start">
-                  <Check className="text-white mr-2 h-5 w-5 mt-0.5 flex-shrink-0" />
-                  <span>Up to 2,000 invoices/month</span>
+                  <Check className="text-[#17B6C3] mr-2 h-4 w-4 mt-0.5 flex-shrink-0" />
+                  <span className="text-gray-700 text-sm">Up to 2,000 invoices/month</span>
                 </li>
                 <li className="flex items-start">
-                  <Check className="text-white mr-2 h-5 w-5 mt-0.5 flex-shrink-0" />
-                  <span>Everything in Starter</span>
+                  <Check className="text-[#17B6C3] mr-2 h-4 w-4 mt-0.5 flex-shrink-0" />
+                  <span className="text-gray-700 text-sm">Everything in Starter</span>
                 </li>
                 <li className="flex items-start">
-                  <Check className="text-white mr-2 h-5 w-5 mt-0.5 flex-shrink-0" />
-                  <span>AI voice calling</span>
+                  <Check className="text-[#17B6C3] mr-2 h-4 w-4 mt-0.5 flex-shrink-0" />
+                  <span className="text-gray-700 text-sm">Dispute handling</span>
                 </li>
                 <li className="flex items-start">
-                  <Check className="text-white mr-2 h-5 w-5 mt-0.5 flex-shrink-0" />
-                  <span>CCJ filing automation</span>
-                </li>
-                <li className="flex items-start">
-                  <Check className="text-white mr-2 h-5 w-5 mt-0.5 flex-shrink-0" />
-                  <span>Priority support</span>
+                  <Check className="text-[#17B6C3] mr-2 h-4 w-4 mt-0.5 flex-shrink-0" />
+                  <span className="text-gray-700 text-sm">Priority support</span>
                 </li>
               </ul>
               <Button
-                className="w-full bg-white hover:bg-gray-100 text-[#17B6C3]"
+                className="w-full bg-[#17B6C3] hover:bg-[#1396A1] text-white text-sm"
                 onClick={() => setLocation("/signup")}
                 data-testid="button-pricing-professional"
               >
@@ -416,36 +448,36 @@ export default function Home() {
             </div>
 
             {/* Enterprise */}
-            <div className="bg-white rounded-2xl p-8 border-2 border-gray-200 hover:border-[#17B6C3] transition-colors">
-              <h3 className="text-2xl font-bold text-gray-900 mb-2">Enterprise</h3>
-              <p className="text-gray-600 mb-6">Custom solutions</p>
-              <div className="mb-6">
-                <span className="text-4xl font-bold text-gray-900">Custom</span>
+            <div className="bg-white rounded-2xl p-6 border-2 border-gray-200 hover:border-[#17B6C3] transition-colors">
+              <h3 className="text-xl font-bold text-gray-900 mb-2">Enterprise</h3>
+              <p className="text-gray-600 mb-4 text-sm">Custom solutions</p>
+              <div className="mb-4">
+                <span className="text-3xl font-bold text-gray-900">Custom</span>
               </div>
-              <ul className="space-y-3 mb-8">
+              <ul className="space-y-2 mb-6">
                 <li className="flex items-start">
-                  <Check className="text-[#17B6C3] mr-2 h-5 w-5 mt-0.5 flex-shrink-0" />
-                  <span className="text-gray-700">Unlimited invoices</span>
+                  <Check className="text-[#17B6C3] mr-2 h-4 w-4 mt-0.5 flex-shrink-0" />
+                  <span className="text-gray-700 text-sm">Unlimited invoices</span>
                 </li>
                 <li className="flex items-start">
-                  <Check className="text-[#17B6C3] mr-2 h-5 w-5 mt-0.5 flex-shrink-0" />
-                  <span className="text-gray-700">Everything in Professional</span>
+                  <Check className="text-[#17B6C3] mr-2 h-4 w-4 mt-0.5 flex-shrink-0" />
+                  <span className="text-gray-700 text-sm">Everything in Professional</span>
                 </li>
                 <li className="flex items-start">
-                  <Check className="text-[#17B6C3] mr-2 h-5 w-5 mt-0.5 flex-shrink-0" />
-                  <span className="text-gray-700">Multi-entity support</span>
+                  <Check className="text-[#17B6C3] mr-2 h-4 w-4 mt-0.5 flex-shrink-0" />
+                  <span className="text-gray-700 text-sm">Multi-entity support</span>
                 </li>
                 <li className="flex items-start">
-                  <Check className="text-[#17B6C3] mr-2 h-5 w-5 mt-0.5 flex-shrink-0" />
-                  <span className="text-gray-700">Dedicated account manager</span>
+                  <Check className="text-[#17B6C3] mr-2 h-4 w-4 mt-0.5 flex-shrink-0" />
+                  <span className="text-gray-700 text-sm">Dedicated account manager</span>
                 </li>
                 <li className="flex items-start">
-                  <Check className="text-[#17B6C3] mr-2 h-5 w-5 mt-0.5 flex-shrink-0" />
-                  <span className="text-gray-700">Custom integrations</span>
+                  <Check className="text-[#17B6C3] mr-2 h-4 w-4 mt-0.5 flex-shrink-0" />
+                  <span className="text-gray-700 text-sm">Custom integrations</span>
                 </li>
               </ul>
               <Button
-                className="w-full bg-[#17B6C3] hover:bg-[#1396A1] text-white"
+                className="w-full bg-gray-100 hover:bg-gray-200 text-gray-900 text-sm"
                 onClick={() => setLocation("/signup")}
                 data-testid="button-pricing-enterprise"
               >
