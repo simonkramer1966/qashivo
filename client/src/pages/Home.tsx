@@ -3,9 +3,9 @@ import { useLocation } from "wouter";
 import { ArrowRight, Brain, Zap, TrendingUp, Shield, Check } from "lucide-react";
 import heroImage from "@assets/generated_images/Advanced_AI_technology_center_4b230f51.png";
 import logo from "@assets/Main Nexus Logo copy_1763392904110.png";
-import xeroLogo from "@assets/stock_images/xero_accounting_soft_4e6465ed.jpg";
-import quickbooksLogo from "@assets/stock_images/quickbooks_accountin_6c8c2500.jpg";
-import sageLogo from "@assets/stock_images/sage_accounting_soft_4d459288.jpg";
+import xeroLogo from "@assets/Xero_software_logo.svg_1763402921236.png";
+import quickbooksLogo from "@assets/kisspng-quickbooks-accounting-software-intuit-computer-sof-tax-planner-pro-small-business-tax-planning-soft-5bae404d240a84.8074409915381463811476_1763402921236.jpg";
+import sageLogo from "@assets/png-clipart-sage-group-payroll-sage-50-accounting-payment-business-business-text-service-thumbnail_1763403074337.png";
 
 export default function Home() {
   const [, setLocation] = useLocation();
