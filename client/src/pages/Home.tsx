@@ -61,9 +61,6 @@ export default function Home() {
         {/* Content */}
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 md:py-32">
           <div className="max-w-3xl">
-            <div className="inline-block mb-4 px-4 py-2 bg-[#17B6C3]/20 backdrop-blur-sm rounded-full border border-[#17B6C3]/30">
-              <span className="text-[#17B6C3] font-semibold text-sm">AI-First Cashflow Management</span>
-            </div>
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white leading-tight mb-6">
               We're Not Building Software for Credit Controllers.
             </h1>
