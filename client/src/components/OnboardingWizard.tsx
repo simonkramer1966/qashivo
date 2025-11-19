@@ -56,7 +56,7 @@ const PHASE_CONFIG = {
     title: "Technical Connection",
     description: "Connect your accounting system and import data",
     icon: Zap,
-    estimatedTime: 2,
+    estimatedTime: 1,
     color: "bg-blue-500"
   },
   business_setup: {
@@ -204,7 +204,7 @@ export function OnboardingWizard() {
             Welcome to Qashivo
           </h1>
           <p className="text-lg text-gray-600 mb-4">
-            Let's get you set up in just 35 minutes
+            Connect your accounting system in 60 seconds
           </p>
           <Badge variant="secondary" className="bg-[#17B6C3]/10 text-[#17B6C3] border-[#17B6C3]/20">
             The Only AI Collections Platform That Works From Day One

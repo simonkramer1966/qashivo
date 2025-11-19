@@ -52,9 +52,9 @@ export default function Signup() {
     onSuccess: () => {
       toast({
         title: "Account created",
-        description: "Welcome to Qashivo!",
+        description: "Welcome to Qashivo! Let's get you set up.",
       });
-      setLocation("/");
+      setLocation("/onboarding");
     },
     onError: (error: any) => {
       toast({

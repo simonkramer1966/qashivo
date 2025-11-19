@@ -48,6 +48,7 @@ const Login = lazy(() => import("@/pages/Login"));
 const Signup = lazy(() => import("@/pages/Signup"));
 const ForgotPassword = lazy(() => import("@/pages/ForgotPassword"));
 const ResetPassword = lazy(() => import("@/pages/ResetPassword"));
+const UserOnboarding = lazy(() => import("@/pages/UserOnboarding"));
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -116,6 +117,7 @@ function Router() {
           <Route path="/admin/outcomes" component={AdminOutcomes} />
           <Route path="/partner" component={PartnerDashboard} />
           <Route path="/dashboard" component={Dashboard} />
+          <Route path="/onboarding" component={UserOnboarding} />
           <Route path="/cashflow" component={Cashflow} />
           <Route path="/intelligent-forecast" component={IntelligentForecast} />
           <Route path="/contacts" component={Contacts} />
