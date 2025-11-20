@@ -19,7 +19,6 @@ const ActionCentre = lazy(() => import("@/pages/action-centre"));
 const Workflows = lazy(() => import("@/pages/workflows"));
 const ActivityLog = lazy(() => import("@/pages/activity-log"));
 const Settings = lazy(() => import("@/pages/settings"));
-const AutomationSettings = lazy(() => import("@/pages/automation-settings"));
 const Account = lazy(() => import("@/pages/account"));
 const PartnerDashboard = lazy(() => import("@/pages/partner"));
 const QashivoAdminDashboard = lazy(() => import("@/pages/qashivo-admin"));
@@ -122,7 +121,6 @@ function Router() {
           <Route path="/documentation" component={Documentation} />
           <Route path="/documentation-review" component={DocumentationReview} />
           <Route path="/settings" component={Settings} />
-          <Route path="/automation-settings" component={AutomationSettings} />
           <Route path="/account" component={Account} />
           <Route path="/" component={Cashboard} />
           <Route path="/:rest*" component={NotFound} />
