@@ -8,6 +8,9 @@ import { Button } from "@/components/ui/button";
 import { LineChart, Line, BarChart, Bar, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import { useState } from "react";
 import DailyPlanApprovalModal from "@/components/automation/DailyPlanApprovalModal";
+import NewSidebar from "@/components/layout/new-sidebar";
+import BottomNav from "@/components/layout/bottom-nav";
+import Header from "@/components/layout/header";
 
 /**
  * Dashboard - Sprint 3: Investor Demo Metrics
@@ -108,32 +111,52 @@ export default function Dashboard() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-teal-50 p-6">
-        <div className="max-w-7xl mx-auto">
-          <Skeleton className="h-12 w-64 mb-8" />
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            {[1, 2, 3, 4].map((i) => (
-              <Skeleton key={i} className="h-40" />
-            ))}
-          </div>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Skeleton className="h-96" />
-            <Skeleton className="h-96" />
-          </div>
+      <div className="flex h-screen bg-white">
+        <div className="hidden lg:block">
+          <NewSidebar />
         </div>
+        <main className="flex-1 overflow-y-auto main-with-bottom-nav">
+          <Header 
+            title="Performance Dashboard" 
+            subtitle="AI performance and automation metrics"
+          />
+          <div className="container-apple py-4 sm:py-6 lg:py-8">
+            <Skeleton className="h-12 w-64 mb-8" />
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+              {[1, 2, 3, 4].map((i) => (
+                <Skeleton key={i} className="h-40" />
+              ))}
+            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <Skeleton className="h-96" />
+              <Skeleton className="h-96" />
+            </div>
+          </div>
+        </main>
+        <BottomNav />
       </div>
     );
   }
 
   if (error || !metrics) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-teal-50 p-6">
-        <div className="max-w-7xl mx-auto">
-          <div className="bg-red-50 border border-red-200 rounded-lg p-6">
-            <p className="text-red-800 font-semibold">Failed to load dashboard metrics</p>
-            <p className="text-red-600 text-sm mt-1">Please try refreshing the page</p>
-          </div>
+      <div className="flex h-screen bg-white">
+        <div className="hidden lg:block">
+          <NewSidebar />
         </div>
+        <main className="flex-1 overflow-y-auto main-with-bottom-nav">
+          <Header 
+            title="Performance Dashboard" 
+            subtitle="AI performance and automation metrics"
+          />
+          <div className="container-apple py-4 sm:py-6 lg:py-8">
+            <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+              <p className="text-red-800 font-semibold">Failed to load dashboard metrics</p>
+              <p className="text-red-600 text-sm mt-1">Please try refreshing the page</p>
+            </div>
+          </div>
+        </main>
+        <BottomNav />
       </div>
     );
   }
@@ -145,48 +168,47 @@ export default function Dashboard() {
   }));
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-teal-50 p-6">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="mb-8 flex items-start justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-3">
-              <div className="p-2 bg-[#17B6C3]/10 rounded-lg">
-                <Activity className="h-8 w-8 text-[#17B6C3]" />
-              </div>
-              Performance Dashboard
-            </h1>
-            <p className="text-slate-600 mt-2">Real-time metrics showing adaptive scheduler performance</p>
-          </div>
-          
-          <div className="relative" data-testid="daily-plan-trigger-container">
-            <DailyPlanApprovalModal 
-              trigger={
-                <Button 
-                  className="bg-[#17B6C3] hover:bg-[#1396A1] text-white relative"
-                  data-testid="button-review-daily-plan"
-                >
-                  <CheckCircle2 className="h-4 w-4 mr-2" />
-                  Review Daily Plan
-                  {hasPendingPlan && (
-                    <span className="absolute -top-1 -right-1 flex h-5 w-5">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-5 w-5 bg-red-500 items-center justify-center">
-                        <Bell className="h-3 w-3 text-white" />
+    <div className="flex h-screen bg-white">
+      <div className="hidden lg:block">
+        <NewSidebar />
+      </div>
+      
+      <main className="flex-1 overflow-y-auto main-with-bottom-nav">
+        <Header 
+          title="Performance Dashboard" 
+          subtitle="AI performance and automation metrics"
+          action={
+            <div className="relative" data-testid="daily-plan-trigger-container">
+              <DailyPlanApprovalModal 
+                trigger={
+                  <Button 
+                    className="bg-[#17B6C3] hover:bg-[#1396A1] text-white relative"
+                    data-testid="button-review-daily-plan"
+                  >
+                    <CheckCircle2 className="h-4 w-4 mr-2" />
+                    Review Daily Plan
+                    {hasPendingPlan && (
+                      <span className="absolute -top-1 -right-1 flex h-5 w-5">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-5 w-5 bg-red-500 items-center justify-center">
+                          <Bell className="h-3 w-3 text-white" />
+                        </span>
                       </span>
-                    </span>
-                  )}
-                </Button>
-              }
-              onApproved={() => {
-                // Invalidate all relevant queries to keep UI in sync across dashboard and action centre
-                queryClient.invalidateQueries({ queryKey: ['/api/metrics'] });
-                queryClient.invalidateQueries({ queryKey: ['/api/automation/daily-plan'] });
-                queryClient.invalidateQueries({ queryKey: ['/api/actions'] });
-              }}
-            />
-          </div>
-        </div>
+                    )}
+                  </Button>
+                }
+                onApproved={() => {
+                  // Invalidate all relevant queries to keep UI in sync across dashboard and action centre
+                  queryClient.invalidateQueries({ queryKey: ['/api/metrics'] });
+                  queryClient.invalidateQueries({ queryKey: ['/api/automation/daily-plan'] });
+                  queryClient.invalidateQueries({ queryKey: ['/api/actions'] });
+                }}
+              />
+            </div>
+          }
+        />
+        
+        <div className="container-apple py-4 sm:py-6 lg:py-8 bg-gradient-to-br from-slate-50 via-blue-50 to-teal-50">
 
         {/* Top Row: 4 Metric Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -649,6 +671,11 @@ export default function Dashboard() {
           </div>
         </Card>
       </div>
+        
+        </div>
+      </main>
+      
+      <BottomNav />
     </div>
   );
 }
