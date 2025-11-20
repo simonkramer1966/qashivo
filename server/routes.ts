@@ -9028,6 +9028,20 @@ Payment required immediately to avoid collection action. Contact us NOW.`
         });
       }
 
+      // Validate minConfidence values if provided
+      if (minConfidence !== undefined) {
+        const { email, sms, voice } = minConfidence;
+        if (email !== undefined && (email < 0 || email > 1)) {
+          return res.status(400).json({ message: "minConfidence.email must be between 0 and 1" });
+        }
+        if (sms !== undefined && (sms < 0 || sms > 1)) {
+          return res.status(400).json({ message: "minConfidence.sms must be between 0 and 1" });
+        }
+        if (voice !== undefined && (voice < 0 || voice > 1)) {
+          return res.status(400).json({ message: "minConfidence.voice must be between 0 and 1" });
+        }
+      }
+
       // Build update object with only provided fields
       const updates: any = { updatedAt: new Date() };
       if (approvalMode !== undefined) updates.approvalMode = approvalMode;

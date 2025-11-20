@@ -21,6 +21,7 @@ const Wallet = lazy(() => import("@/pages/wallet"));
 const Workflows = lazy(() => import("@/pages/workflows"));
 const ActivityLog = lazy(() => import("@/pages/activity-log"));
 const Settings = lazy(() => import("@/pages/settings"));
+const AutomationSettings = lazy(() => import("@/pages/automation-settings"));
 const Account = lazy(() => import("@/pages/account"));
 const PartnerDashboard = lazy(() => import("@/pages/partner"));
 const QashivoAdminDashboard = lazy(() => import("@/pages/qashivo-admin"));
@@ -131,6 +132,7 @@ function Router() {
           <Route path="/insights" component={Insights} />
           <Route path="/client-intelligence" component={ClientIntelligence} />
           <Route path="/settings" component={Settings} />
+          <Route path="/automation-settings" component={AutomationSettings} />
           <Route path="/account" component={Account} />
           <Route path="/" component={Cashboard} />
           <Route path="/:rest*" component={NotFound} />
