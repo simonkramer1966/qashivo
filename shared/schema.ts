@@ -89,6 +89,20 @@ export const tenants = pgTable("tenants", {
   interestMarkup: decimal("interest_markup", { precision: 5, scale: 2 }).default("8.00"), // Additional % on top of BoE rate
   interestGracePeriod: integer("interest_grace_period").default(30), // Days before interest starts
   
+  // AI Automation Policy Settings (Week 1: Supervised Autonomy)
+  approvalMode: varchar("approval_mode").default("manual"), // manual, auto_after_timeout, full_auto
+  approvalTimeoutHours: integer("approval_timeout_hours").default(12), // Auto-approve if not reviewed within X hours
+  executionTime: varchar("execution_time").default("09:00"), // Daily execution time (HH:MM format)
+  executionTimezone: varchar("execution_timezone").default("Europe/London"), // Timezone for execution scheduling
+  dailyLimits: jsonb("daily_limits").default({ email: 100, sms: 50, voice: 20 }), // Max actions per channel per day
+  minConfidence: jsonb("min_confidence").default({ email: 0.8, sms: 0.85, voice: 0.9 }), // Min confidence thresholds per channel
+  exceptionRules: jsonb("exception_rules").default({
+    flagFirstContact: true,
+    flagHighValue: 10000, // Flag first contacts over £10,000
+    flagDisputeKeywords: true,
+    flagVipCustomers: true,
+  }), // Rules for flagging actions as exceptions
+  
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -542,12 +556,18 @@ export const actions = pgTable("actions", {
   contactId: varchar("contact_id").references(() => contacts.id),
   userId: varchar("user_id").references(() => users.id),
   type: varchar("type").notNull(), // email, sms, call, whatsapp, payment, note, workflow_start, workflow_step
-  status: varchar("status").notNull().default("pending"), // pending, scheduled, executing, completed, failed, cancelled, approved, sent, snoozed, escalated
+  status: varchar("status").notNull().default("pending"), // pending, pending_approval, scheduled, executing, completed, failed, cancelled, exception, sent, snoozed, escalated
   subject: varchar("subject"),
   content: text("content"),
   scheduledFor: timestamp("scheduled_for"),
   completedAt: timestamp("completed_at"),
   metadata: jsonb("metadata"), // Additional data like email ID, SMS ID, etc.
+  
+  // Supervised autonomy approval tracking (Week 1)
+  approvedBy: varchar("approved_by").references(() => users.id), // Who approved this action
+  approvedAt: timestamp("approved_at"), // When approved
+  confidenceScore: decimal("confidence_score", { precision: 3, scale: 2 }), // AI confidence 0.00 to 1.00
+  exceptionReason: varchar("exception_reason"), // Why flagged as exception: first_contact_high_value, dispute_detected, vip_customer, low_confidence
   workflowStepId: varchar("workflow_step_id"),
   aiGenerated: boolean("ai_generated").default(false),
   source: varchar("source").default("automated"), // automated, manual

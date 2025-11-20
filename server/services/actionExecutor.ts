@@ -1,4 +1,4 @@
-import { eq, and, lte, sql } from "drizzle-orm";
+import { eq, and, lte, sql, isNotNull } from "drizzle-orm";
 import { db } from "../db";
 import { actions, contacts, invoices, tenants } from "@shared/schema";
 import { sendEmail } from "./sendgrid";
@@ -9,9 +9,12 @@ import { RetellService } from "../retell-service";
  * Action Executor Service
  * Phase 2 of two-phase scheduling:
  * - Runs every 5-15 minutes
- * - Finds actions with scheduledFor <= NOW()
+ * - Finds actions with scheduledFor <= NOW() AND approved
  * - Executes them (email/SMS/WhatsApp/voice)
  * - Updates status to completed/failed
+ * 
+ * Week 1 Enhancement: Only executes actions that have been approved
+ * via the daily plan approval workflow (status='scheduled' AND approvedBy set)
  */
 export class ActionExecutor {
   private isRunning: boolean = false;
@@ -33,6 +36,7 @@ export class ActionExecutor {
       console.log(`⚡ Action Executor: Checking for scheduled actions at ${now.toISOString()}`);
 
       // Find all actions scheduled for now or earlier
+      // Week 1: Only execute approved actions (status='scheduled' AND approvedBy is set)
       const scheduledActions = await db
         .select({
           action: actions,
@@ -47,7 +51,8 @@ export class ActionExecutor {
         .where(
           and(
             eq(actions.status, 'scheduled'),
-            lte(actions.scheduledFor, now)
+            lte(actions.scheduledFor, now),
+            isNotNull(actions.approvedBy) // Only execute approved actions
           )
         )
         .limit(50); // Process max 50 actions per run

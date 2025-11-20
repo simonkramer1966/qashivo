@@ -8919,6 +8919,139 @@ Payment required immediately to avoid collection action. Contact us NOW.`
     }
   });
 
+  // Week 1: Supervised Autonomy - Daily Plan & Approval
+  app.get("/api/automation/daily-plan", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      // Optional query param to force regeneration
+      const regenerate = req.query.regenerate === 'true';
+
+      const { generateDailyPlan } = await import("./services/dailyPlanGenerator");
+      const plan = await generateDailyPlan(user.tenantId, req.user.id, regenerate);
+      
+      res.json(plan);
+    } catch (error: any) {
+      console.error("Error generating daily plan:", error);
+      res.status(500).json({ message: `Failed to generate daily plan: ${error.message}` });
+    }
+  });
+
+  app.post("/api/automation/approve-plan", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      // Get tenant for execution time
+      const tenant = await storage.getTenant(user.tenantId);
+      if (!tenant) {
+        return res.status(404).json({ message: "Tenant not found" });
+      }
+
+      // Get all pending_approval actions for this tenant
+      const pendingActions = await db.query.actions.findMany({
+        where: and(
+          eq(actions.tenantId, user.tenantId),
+          eq(actions.status, 'pending_approval')
+        )
+      });
+
+      if (pendingActions.length === 0) {
+        return res.json({ 
+          message: "No actions pending approval",
+          approvedCount: 0 
+        });
+      }
+
+      // Calculate execution time for tomorrow
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      const [hours, minutes] = (tenant.executionTime || '09:00').split(':');
+      tomorrow.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+
+      // Batch update all pending actions to scheduled
+      const actionIds = pendingActions.map(a => a.id);
+      await db.update(actions)
+        .set({
+          status: 'scheduled',
+          scheduledFor: tomorrow,
+          approvedBy: req.user.id,
+          approvedAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(actions.tenantId, user.tenantId),
+            inArray(actions.id, actionIds)
+          )
+        );
+
+      console.log(`✅ Approved ${actionIds.length} actions for execution at ${tomorrow.toISOString()}`);
+
+      res.json({
+        message: "Plan approved successfully",
+        approvedCount: actionIds.length,
+        executionTime: tomorrow.toISOString(),
+      });
+    } catch (error: any) {
+      console.error("Error approving plan:", error);
+      res.status(500).json({ message: `Failed to approve plan: ${error.message}` });
+    }
+  });
+
+  app.patch("/api/automation/policy-settings", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const {
+        approvalMode,
+        approvalTimeoutHours,
+        executionTime,
+        executionTimezone,
+        dailyLimits,
+        minConfidence,
+        exceptionRules,
+      } = req.body;
+
+      // Validate approval mode
+      if (approvalMode && !['manual', 'auto_after_timeout', 'full_auto'].includes(approvalMode)) {
+        return res.status(400).json({ 
+          message: "Invalid approvalMode - must be manual, auto_after_timeout, or full_auto" 
+        });
+      }
+
+      // Build update object with only provided fields
+      const updates: any = { updatedAt: new Date() };
+      if (approvalMode !== undefined) updates.approvalMode = approvalMode;
+      if (approvalTimeoutHours !== undefined) updates.approvalTimeoutHours = approvalTimeoutHours;
+      if (executionTime !== undefined) updates.executionTime = executionTime;
+      if (executionTimezone !== undefined) updates.executionTimezone = executionTimezone;
+      if (dailyLimits !== undefined) updates.dailyLimits = dailyLimits;
+      if (minConfidence !== undefined) updates.minConfidence = minConfidence;
+      if (exceptionRules !== undefined) updates.exceptionRules = exceptionRules;
+
+      await storage.updateTenant(user.tenantId, updates);
+
+      console.log(`✅ Updated automation policy settings for tenant ${user.tenantId}`);
+
+      res.json({
+        message: "Policy settings updated successfully",
+        settings: updates,
+      });
+    } catch (error: any) {
+      console.error("Error updating policy settings:", error);
+      res.status(500).json({ message: `Failed to update policy settings: ${error.message}` });
+    }
+  });
+
   // Communication Mode Management
   app.get("/api/communications/mode", isAuthenticated, async (req: any, res) => {
     try {
