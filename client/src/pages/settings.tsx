@@ -1647,9 +1647,10 @@ export default function Settings() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <TabsList className="grid w-full grid-cols-7 bg-slate-50/80">
+                <TabsList className="grid w-full grid-cols-8 bg-slate-50/80">
                   <TabsTrigger value="general" className="data-[state=active]:bg-[#17B6C3] data-[state=active]:text-white" data-testid="tab-general">General</TabsTrigger>
                   <TabsTrigger value="integrations" className="data-[state=active]:bg-[#17B6C3] data-[state=active]:text-white" data-testid="tab-integrations">Integrations</TabsTrigger>
+                  <TabsTrigger value="automation" className="data-[state=active]:bg-[#17B6C3] data-[state=active]:text-white" data-testid="tab-automation">Automation</TabsTrigger>
                   <TabsTrigger value="notifications" className="data-[state=active]:bg-[#17B6C3] data-[state=active]:text-white" data-testid="tab-notifications">Notifications</TabsTrigger>
                   <TabsTrigger value="security" className="data-[state=active]:bg-[#17B6C3] data-[state=active]:text-white" data-testid="tab-security">Security</TabsTrigger>
                   <ProtectedComponent permission="admin:users" hideOnDeny>
@@ -2198,6 +2199,10 @@ export default function Settings() {
                   </div>
                 </CardContent>
               </Card>
+            </TabsContent>
+
+            <TabsContent value="automation" className="space-y-8">
+              <AutomationTabContent />
             </TabsContent>
 
             <TabsContent value="notifications" className="space-y-8">
