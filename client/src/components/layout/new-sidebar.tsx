@@ -57,6 +57,7 @@ import DemoModeToggle from "./DemoModeToggle";
 const navigationItems = [
   // Section 1: Dashboard
   { name: "Cashboard", href: "/", icon: Gauge },
+  { name: "Dashboard", href: "/dashboard", icon: BarChart3 },
   { name: "divider", href: "#", icon: null },
   
   // Section 2: Core Operations
