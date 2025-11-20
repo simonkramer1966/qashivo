@@ -1,0 +1,483 @@
+<response status="success"> <thinking> Need a crisp V1 requirements doc that bakes in basic AI voice and is focused on “good enough to sell 10 clients”, not perfection. I’ll structure it as: positioning + ICP, functional modules, AI voice scope, non-goals, and a short sales focus section so dev always understands why each feature exists. </thinking> <main_content> **BLUF:** V1 Qashivo = **Xero-only collections cockpit** with a single Action Centre, email/SMS/AI-voice chasing, and a simple DSO/coverage dashboard. It exists to get **10 paying customers** who see a clear path to reducing DSO in 90 days. Everything else is noise.
+1. Product positioning (V1)
+Qashivo is an adaptive collections cockpit for Xero that tells you exactly who to chase today, by email, SMS, or AI voice, and what happened as a result.
+Persona: Founder/MD, FD/VCFO, or credit controller.
+
+
+Use case: “Clear today’s collections work in under 20 minutes, with better results than my spreadsheet + ad-hoc calls.”
+
+
+Success for V1:
+10 customers paying £295–£395/m.
+
+
+At least 3 customers report a measurable DSO improvement or “cash in faster” story.
+
+
+
+2. ICP and basic commercial shape
+Target customers (for first 10):
+UK, Xero users.
+
+
+B2B, invoice-based.
+
+
+£500k–£5m revenue.
+
+
+100+ invoices/month OR >£200k regularly outstanding.
+
+
+Founding offer baked into product thinking:
+90-day “reduce DSO by 10+ days or we extend free” promise.
+
+
+Requires:
+
+
+Clear baseline DSO at onboarding.
+
+
+Basic before/after reporting.
+
+
+
+3. Core V1 functional requirements
+3.1 Xero integration & AR model (Must-have)
+Requirements
+OAuth connection to a single Xero org.
+
+
+Pull:
+
+
+Contacts/customers.
+
+
+Sales invoices + credit notes.
+
+
+Payments + allocations.
+
+
+Refresh cadence:
+
+
+Nightly automatic sync.
+
+
+“Refresh now” button in UI.
+
+
+Derived metrics:
+
+
+Ageing buckets per invoice (0–30, 31–60, 61–90, 90+).
+
+
+AR balance per customer.
+
+
+Simple DSO (rolling 30/90 days – pick one formula and stick to it).
+
+
+Why it sells: gives instant visibility and avoids “yet another spreadsheet”.
+
+3.2 Action Centre (the heart of Qashivo)
+Requirements
+Single main screen listing actions, not invoices.
+
+
+Each row shows:
+
+
+Priority: High / Medium / Low (+ internal score).
+
+
+Customer name.
+
+
+Bundled invoices summary (count, total £, oldest days overdue).
+
+
+Reason it’s here:
+ e.g. “Newly overdue 7 days”, “PTP missed 3 days ago”, “High value >60 days.”
+
+
+CTAs:
+
+
+Send email
+
+
+Send SMS
+
+
+AI Voice Call
+
+
+Snooze
+
+
+Simple scoring logic:
+
+
+Inputs: days overdue, amount, last contact date, PTP status.
+
+
+Heuristics:
+
+
+Missed PTP → High.
+
+
+60 days & high £ → High.
+
+
+
+Newly overdue <7 days & low £ → Low.
+
+
+Filters:
+
+
+By priority, by ageing band, by assigned owner (optional).
+
+
+Default view shows High + Medium only (exceptions-first).
+
+
+Why it sells: demos brilliantly; buyers see “today’s work” in one punchy list.
+
+3.3 Debtor profile & timeline
+Requirements
+Click a row → right-side panel with:
+
+
+Customer summary: total AR, total overdue, DSO for that customer, last payment date.
+
+
+Invoice list: outstanding + recently paid, with due dates and amounts.
+
+
+Activity timeline:
+
+
+Email events (sent; optional open status if easy).
+
+
+SMS events (sent/failed).
+
+
+AI voice calls (status + short summary).
+
+
+Manual notes (phone call logs, internal comments).
+
+
+Why it sells: “single view of the customer” and proof of action if directors ask “what have you done to chase this?”.
+
+3.4 Communications (email, SMS, AI voice)
+3.4.1 Email (SendGrid)
+Requirements
+Connect to SendGrid using Qashivo’s account + per-tenant sender identities.
+
+
+Small, fixed template library:
+
+
+Friendly reminder (upcoming/just overdue).
+
+
+Firm reminder (30+ days).
+
+
+Pre-legal nudge (60–90+ days, but no legal threats).
+
+
+Templates support:
+
+
+Customer name / contact name.
+
+
+Invoice list table (number, due date, amount).
+
+
+Total overdue.
+
+
+Payment link placeholder.
+
+
+Flow:
+
+
+From Action Centre → “Send email” opens pre-filled preview.
+
+
+User can tweak text before sending.
+
+
+Result stored on timeline with basic status (sent / failed; open if trivial).
+
+
+
+3.4.2 SMS (Vonage)
+Requirements
+Outbound SMS only, via Vonage.
+
+
+2–3 short templates:
+
+
+“We’ve emailed you details of overdue invoices totaling £X with [Company]. Please check and advise payment date.”
+
+
+“Quick reminder: you have £X overdue with [Company]. Reply with expected payment date or call [phone].”
+
+
+From Action Centre → “Send SMS” with preview & edit.
+
+
+Log to timeline with delivered/failed if available.
+
+
+
+3.4.3 AI Voice (Retell) – Basic, but real
+Requirements
+One outbound AI agent (Retell), manual trigger only from the Action Centre.
+
+
+Trigger: “AI Voice Call” button.
+
+
+Opens modal showing phone number, customer/contact name, and a script summary.
+
+
+Behaviour:
+
+
+Short, polite script:
+
+
+Identify self and purpose.
+
+
+Confirm awareness of invoices.
+
+
+Ask for payment date (PTP).
+
+
+If can’t pay → capture reason.
+
+
+If dispute → mark dispute and promise an email follow-up.
+
+
+Hard rules:
+
+
+No discounts.
+
+
+No new bank details.
+
+
+No legal threats.
+
+
+Outcomes (from Retell via webhook) must be mapped into:
+
+
+PTP + date.
+
+
+No money / can’t pay + reason.
+
+
+Dispute.
+
+
+Wrong contact.
+
+
+No answer / voicemail.
+
+
+Qashivo must:
+
+
+Log call on timeline (with short natural language summary).
+
+
+Store outcome in structured fields.
+
+
+Link recording URL for internal review (if enabled).
+
+
+Feed outcome back to the scheduler:
+
+
+PTP → reduce priority for a set time.
+
+
+Dispute → move to “Needs review”.
+
+
+No answer → queue email/SMS recommendation instead.
+
+
+Why it sells: gives a strong “holy shit” moment in demos – “your AI is calling my customers for me” – without promising sci-fi.
+
+3.5 Intelligence & scheduling (lightweight but real)
+Requirements
+Nightly job:
+
+
+Recompute scores and priorities for all open customers based on:
+
+
+New payments.
+
+
+Promises to pay (and whether they’re met or missed).
+
+
+Contact history (email/SMS/voice).
+
+
+Generate tomorrow’s Action Centre list.
+
+
+Cooldown logic:
+
+
+Don’t suggest more than one outbound touch (any channel) within a given cool-off period unless a PTP was missed.
+
+
+Feedback:
+
+
+Thumbs up/down on each suggested action.
+
+
+Store this for future model work (no live learning needed).
+
+
+
+3.6 Dashboard & reporting
+Requirements
+Single dashboard page with:
+
+
+Current DSO vs target.
+
+
+Total AR and total overdue.
+
+
+Overdue breakdown by band (0–30 / 31–60 / 61–90 / 90+).
+
+
+“Coverage” metric:
+
+
+% of overdue customers contacted in last 7 days.
+
+
+“Risk highlight” tile:
+
+
+“£X in 60+ days with no contact in last 14 days.”
+
+
+90-day DSO trend (line chart) if data is available.
+
+
+Simple “90-day DSO improvement” display used in sales:
+
+
+“At onboarding: 64 days. Now: 52 days.”
+
+
+
+3.7 Settings & admin (bare minimum)
+Requirements
+Tenant profile:
+
+
+Business name, logo, base currency.
+
+
+Target DSO.
+
+
+Comms settings:
+
+
+Default sender name + reply-to email.
+
+
+Default SMS from name/number.
+
+
+User management:
+
+
+One owner, optionally a few standard users.
+
+
+Email + password or magic link; no SSO in V1.
+
+
+
+4. Explicit non-goals (V1)
+To keep this shippable and sellable:
+❌ No QuickBooks/Sage/NetSuite integrations (Xero only).
+
+
+❌ No generic cashflow forecasting module (beyond simple “expected cash in” panel if you can squeeze it in).
+
+
+❌ No rule-builder UI for scoring/scheduling – logic is code/config only.
+
+
+❌ No inbound IVR / phone menu.
+
+
+❌ No automatic batch dialling; every AI call is user-triggered.
+
+
+❌ No deep analytics or ML-driven forecasts.
+
+
+❌ No mobile apps (just responsive web).
+
+
+❌ No granular roles/permissions or SSO.
+
+
+These are Phase 2+ or investor-story bullets, not needed to land 10 customers.
+
+5. “Sell 10 customers” alignment
+Every feature above must support one of these use cases demoed live:
+“Here’s today’s list” – Action Centre with obvious priorities.
+
+
+“Here’s how fast you can act” – send email, SMS, or initiate AI call in 1–2 clicks.
+
+
+“Here’s the story for one customer” – debtor timeline with proof of actions and voice call summary.
+
+
+“Here’s what’s changed since onboarding” – DSO trend and coverage metrics.
+
+
+If something doesn’t help one of those four demo beats, it’s probably not V1.
+
+If you want, I can next turn this into epics, user stories, and acceptance criteria for the dev, or into a 2-page V1 spec you can share with investors and early customers.
+

@@ -1,7 +1,116 @@
-# Nexus AR
+# Qashivo (formerly Nexus AR)
 
 ## Overview
-Nexus AR is an AI-driven accounts receivable and debt recovery application designed to automate and optimize collection processes. Its primary goal is to improve cash flow and reduce days sales outstanding for businesses through intelligent automation, multi-channel communication, and data-driven insights for invoice management. The project aims to become a leading solution for enterprise B2B companies with complex AR processes, focusing on intelligent automation, multi-channel communication, and data-driven insights for invoice management.
+Qashivo is an AI-first autonomous cashflow management solution for UK SMEs. Core positioning: **"Qashivo IS the credit controller"** - autonomous AI agents that execute collections work while users supervise (not assistive software where users execute). Target: MVP ready by December 15, 2025, with 10 paying customers by mid-January 2026.
+
+### Key Differentiators
+- 60-second Xero connect with instant AI analysis
+- Supervised autonomy model: AI plans overnight, user approves daily, AI executes throughout the day
+- Voice-driven natural language interface as primary UX
+- User workflow: 10 minutes daily to supervise (vs traditional 2-3 hours executing)
+
+### Commercial Strategy
+- **Pricing Tiers**: Micro £49, Starter £149 (Most Popular), Professional £499, Enterprise Custom
+- **Target**: Starter tier (£149) for first 10 customers
+- **De-risk**: 90-day DSO guarantee to reduce purchase friction
+
+## AI-First Development Roadmap (Nov 18 - Dec 15, 2025)
+
+### Infrastructure Reuse Status
+**70%+ of core infrastructure already built and reusable:**
+- ✅ Email/SMS/Voice execution (SendGrid, Vonage, Retell)
+- ✅ Xero sync and onboarding
+- ✅ Scoring services (credit, risk, prioritization)
+- ✅ Action Centre UI foundation
+- ✅ Database schema (actions, schedules, assignments)
+- 🛠️ Needs adaptation: Daily plan generation, approval workflow, autonomous execution
+
+### Week 1 (Nov 18-24): Supervised Autonomy Core
+**Goal**: Transform scheduler from "always running" to "generates plan → user approves → AI executes"
+
+**Deliverables:**
+- Backend generates daily plan from scoring (reuses collectionsAutomation + creditScoringService)
+- User approves plan with one click via DailyPlanApprovalModal
+- AI auto-executes at configured time
+- Policy settings UI for automation configuration
+- End-to-end tested flow
+
+**Technical Tasks:**
+1. Add automation policy fields to tenants table (approvalMode, executionTime, dailyLimits, minConfidence, exceptionRules)
+2. Create GET /api/automation/daily-plan endpoint
+3. Create POST /api/automation/approve-plan endpoint
+4. Modify actionExecutor to check approval status
+5. Build DailyPlanApprovalModal component
+6. Build automation-settings page
+7. Integrate approval modal into dashboard
+
+**Reuse**: 80% backend services, 40% frontend components
+
+### Week 2 (Nov 25-Dec 1): Automation Feed & Exceptions
+**Goal**: Redesign Action Centre from "user's todo list" to "AI's work log + exceptions queue"
+
+**Deliverables:**
+- Action Centre shows completed actions first (what AI did)
+- Exceptions Queue for items needing review
+- Exception flagging logic (first contact >£10K, disputes, VIPs, low confidence)
+- Outcome tracking from all channels
+- Timeline view (Today/Yesterday/Last 7 days)
+
+**Technical Tasks:**
+1. Redesign action-centre.tsx with timeline grouping
+2. Create exceptionHandler service with flagging rules
+3. Build ExceptionsQueue component/tab
+4. Enhance outcome tracking in actionExecutor
+5. Parse Retell webhook outcomes
+
+**Reuse**: 60% existing Action Centre
+
+### Week 3 (Dec 2-8): AI Performance Dashboard
+**Goal**: Show AI's autonomous work results, not user's pending work
+
+**Deliverables:**
+- Dashboard shows AI performance metrics (actions taken, outcomes, commitments)
+- DSO trend visualization (baseline vs current)
+- Coverage % indicator (customers contacted in last 7 days)
+- Outcome-based analytics
+- Channel effectiveness breakdown
+
+**Technical Tasks:**
+1. Redesign dashboard with AI performance focus
+2. Add metrics: actions over time, outcome distribution, DSO trend
+3. Build coverage gauge
+4. Apply Tufte/Few visualization principles
+5. Optional: Real-time execution monitor
+
+**Reuse**: 50% existing dashboard components
+
+### Week 4 (Dec 9-15): Polish & Launch Prep
+**Goal**: Templates, onboarding flow, final QA
+
+**Deliverables:**
+- Professional email/SMS/voice templates (3 email, 2 SMS, 1 voice script)
+- Polished 60-second Xero onboarding
+- Enhanced audit trail (message previews, recordings, compliance exports)
+- Error handling and edge cases
+- Demo-ready application
+
+**Technical Tasks:**
+1. Create message_templates table and default templates
+2. Enhance OnboardingWizard with instant analysis banner
+3. Add audit trail features to ActionDrawer
+4. Test API failures, empty states, permissions
+5. End-to-end QA and demo validation
+
+**Reuse**: 75% existing components
+
+### Success Metrics for V1 Launch
+- ✅ User can onboard in 60 seconds
+- ✅ Daily plan approval takes <1 minute
+- ✅ AI autonomously executes 30+ actions/day
+- ✅ Dashboard shows AI performance clearly
+- ✅ Exceptions handled in <5 minutes
+- ✅ Demo script completes successfully
+- ✅ Ready for first 10 paying customers
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
