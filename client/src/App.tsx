@@ -13,11 +13,9 @@ import PageLoader from "@/components/PageLoader";
 // Lazy-loaded pages for code splitting
 const NotFound = lazy(() => import("@/pages/not-found"));
 const Cashboard = lazy(() => import("@/pages/cashboard"));
-const Cashflow = lazy(() => import("@/pages/cashflow"));
 const Invoices = lazy(() => import("@/pages/invoices"));
 const Contacts = lazy(() => import("@/pages/contacts"));
 const ActionCentre = lazy(() => import("@/pages/action-centre"));
-const Wallet = lazy(() => import("@/pages/wallet"));
 const Workflows = lazy(() => import("@/pages/workflows"));
 const ActivityLog = lazy(() => import("@/pages/activity-log"));
 const Settings = lazy(() => import("@/pages/settings"));
@@ -30,9 +28,6 @@ const DocumentationReview = lazy(() => import("@/pages/documentation-review"));
 const PartnerRegistration = lazy(() => import("@/pages/partner-registration"));
 const ClientRegistration = lazy(() => import("@/pages/client-registration"));
 const SignIn = lazy(() => import("@/pages/signin"));
-const Insights = lazy(() => import("@/pages/insights"));
-const ClientIntelligence = lazy(() => import("@/pages/client-intelligence"));
-const IntelligentForecast = lazy(() => import("@/pages/intelligent-forecast"));
 const InvestorDemo = lazy(() => import("@/pages/investor-demo"));
 const InvestorDemoQashivo = lazy(() => import("@/pages/investor-demo-qashivo"));
 const InvestorDetail = lazy(() => import("@/pages/investor-detail"));
@@ -119,18 +114,13 @@ function Router() {
           <Route path="/partner" component={PartnerDashboard} />
           <Route path="/dashboard" component={Dashboard} />
           <Route path="/onboarding" component={UserOnboarding} />
-          <Route path="/cashflow" component={Cashflow} />
-          <Route path="/intelligent-forecast" component={IntelligentForecast} />
           <Route path="/contacts" component={Contacts} />
           <Route path="/invoices" component={Invoices} />
           <Route path="/action-centre" component={ActionCentre} />
-          <Route path="/wallet" component={Wallet} />
           <Route path="/workflows" component={Workflows} />
           <Route path="/activity-log" component={ActivityLog} />
           <Route path="/documentation" component={Documentation} />
           <Route path="/documentation-review" component={DocumentationReview} />
-          <Route path="/insights" component={Insights} />
-          <Route path="/client-intelligence" component={ClientIntelligence} />
           <Route path="/settings" component={Settings} />
           <Route path="/automation-settings" component={AutomationSettings} />
           <Route path="/account" component={Account} />

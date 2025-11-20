@@ -57,9 +57,6 @@ import DemoModeToggle from "./DemoModeToggle";
 const navigationItems = [
   // Section 1: Dashboard
   { name: "Cashboard", href: "/", icon: Gauge },
-  { name: "Cashflow", href: "/cashflow", icon: TrendingUp },
-  { name: "AI Forecast", href: "/intelligent-forecast", icon: Brain },
-  { name: "Wallet", href: "/wallet", icon: Wallet },
   { name: "divider", href: "#", icon: null },
   
   // Section 2: Core Operations
@@ -70,12 +67,6 @@ const navigationItems = [
   
   // Section 3: Management
   { name: "Workflows", href: "/workflows", icon: Workflow },
-  { name: "Reports", href: "/reports", icon: BarChart },
-  { name: "divider", href: "#", icon: null },
-  
-  // Section 4: AI & Intelligence
-  { name: "AI Insights", href: "/insights", icon: BarChart3 },
-  { name: "Client Intelligence", href: "/client-intelligence", icon: Brain },
 ];
 
 // Partner-specific sidebar navigation (for accounting firms managing multiple clients)
