@@ -236,39 +236,43 @@ export async function generateDailyPlan(
   // Calculate summary stats
   const totalValue = planActions.reduce((sum, a) => sum + parseFloat(a.amount), 0);
   const exceptionsCount = planActions.filter(a => a.status === 'exception').length;
-  
-  const byChannel = {
-    email: {
-      count: planActions.filter(a => a.type === 'email' && a.status === 'pending_approval').length,
-      totalValue: planActions.filter(a => a.type === 'email').reduce((sum, a) => sum + parseFloat(a.amount), 0),
-    },
-    sms: {
-      count: planActions.filter(a => a.type === 'sms' && a.status === 'pending_approval').length,
-      totalValue: planActions.filter(a => a.type === 'sms').reduce((sum, a) => sum + parseFloat(a.amount), 0),
-    },
-    voice: {
-      count: planActions.filter(a => a.type === 'voice' && a.status === 'pending_approval').length,
-      totalValue: planActions.filter(a => a.type === 'voice').reduce((sum, a) => sum + parseFloat(a.amount), 0),
-    },
-  };
+  const highPriorityCount = planActions.filter(a => a.priority === 'high').length;
+  const avgDaysOverdue = planActions.length > 0 
+    ? planActions.reduce((sum, a) => sum + a.daysOverdue, 0) / planActions.length 
+    : 0;
 
-  // Estimate outcomes (rough heuristic: 35% PTP rate, 60% of value)
-  const expectedPTPs = Math.round((planActions.length - exceptionsCount) * 0.35);
-  const expectedValue = Math.round(totalValue * 0.6);
+  const emailCount = planActions.filter(a => a.type === 'email' && a.status === 'pending_approval').length;
+  const smsCount = planActions.filter(a => a.type === 'sms' && a.status === 'pending_approval').length;
+  const voiceCount = planActions.filter(a => a.type === 'voice' && a.status === 'pending_approval').length;
 
   console.log(`✅ Generated plan: ${planActions.length} actions (${exceptionsCount} exceptions)`);
-  console.log(`📧 Email: ${byChannel.email.count}, 📱 SMS: ${byChannel.sms.count}, 📞 Voice: ${byChannel.voice.count}`);
+  console.log(`📧 Email: ${emailCount}, 📱 SMS: ${smsCount}, 📞 Voice: ${voiceCount}`);
+
+  // Map actions to frontend format with 'actionType' instead of 'type'
+  const formattedActions = planActions.map(action => ({
+    ...action,
+    actionType: action.type,
+  }));
 
   return {
-    totalActions: planActions.length,
-    byChannel,
-    exceptions: exceptionsCount,
-    estimatedOutcomes: {
-      expectedPTPs,
-      expectedValue,
+    actions: formattedActions,
+    summary: {
+      totalActions: planActions.length,
+      byType: {
+        email: emailCount,
+        sms: smsCount,
+        voice: voiceCount,
+      },
+      totalAmount: totalValue,
+      avgDaysOverdue: avgDaysOverdue,
+      highPriorityCount: highPriorityCount,
+      exceptionCount: exceptionsCount,
+      scheduledFor: tomorrow.toISOString(),
     },
-    actions: planActions,
-    executionTime: tenant.executionTime || '09:00',
+    tenantPolicies: {
+      executionTime: tenant.executionTime || '09:00',
+      dailyLimits: tenant.dailyLimits || { email: 100, sms: 50, voice: 20 },
+    },
     planGeneratedAt: new Date().toISOString(),
   };
 }
@@ -285,7 +289,7 @@ function buildPlanSummary(existingActions: any[], tenant: any): DailyPlanSummary
     invoiceNumber: action.invoice?.invoiceNumber || 'N/A',
     amount: action.invoice?.amount || '0',
     daysOverdue: action.metadata?.daysOverdue || 0,
-    type: action.type,
+    actionType: action.type, // Map 'type' to 'actionType' for frontend
     status: action.status,
     subject: action.subject || undefined,
     content: action.content || undefined,
@@ -296,35 +300,30 @@ function buildPlanSummary(existingActions: any[], tenant: any): DailyPlanSummary
 
   const totalValue = planActions.reduce((sum, a) => sum + parseFloat(a.amount), 0);
   const exceptionsCount = planActions.filter(a => a.status === 'exception').length;
-  
-  const byChannel = {
-    email: {
-      count: planActions.filter(a => a.type === 'email' && a.status === 'pending_approval').length,
-      totalValue: planActions.filter(a => a.type === 'email').reduce((sum, a) => sum + parseFloat(a.amount), 0),
-    },
-    sms: {
-      count: planActions.filter(a => a.type === 'sms' && a.status === 'pending_approval').length,
-      totalValue: planActions.filter(a => a.type === 'sms').reduce((sum, a) => sum + parseFloat(a.amount), 0),
-    },
-    voice: {
-      count: planActions.filter(a => a.type === 'voice' && a.status === 'pending_approval').length,
-      totalValue: planActions.filter(a => a.type === 'voice').reduce((sum, a) => sum + parseFloat(a.amount), 0),
-    },
-  };
-
-  const expectedPTPs = Math.round((planActions.length - exceptionsCount) * 0.35);
-  const expectedValue = Math.round(totalValue * 0.6);
+  const highPriorityCount = planActions.filter(a => a.priority === 'high').length;
+  const avgDaysOverdue = planActions.length > 0 
+    ? planActions.reduce((sum, a) => sum + a.daysOverdue, 0) / planActions.length 
+    : 0;
 
   return {
-    totalActions: planActions.length,
-    byChannel,
-    exceptions: exceptionsCount,
-    estimatedOutcomes: {
-      expectedPTPs,
-      expectedValue,
-    },
     actions: planActions,
-    executionTime: tenant.executionTime || '09:00',
+    summary: {
+      totalActions: planActions.length,
+      byType: {
+        email: planActions.filter(a => a.actionType === 'email' && a.status === 'pending_approval').length,
+        sms: planActions.filter(a => a.actionType === 'sms' && a.status === 'pending_approval').length,
+        voice: planActions.filter(a => a.actionType === 'voice' && a.status === 'pending_approval').length,
+      },
+      totalAmount: totalValue,
+      avgDaysOverdue: avgDaysOverdue,
+      highPriorityCount: highPriorityCount,
+      exceptionCount: exceptionsCount,
+      scheduledFor: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // Tomorrow
+    },
+    tenantPolicies: {
+      executionTime: tenant.executionTime || '09:00',
+      dailyLimits: tenant.dailyLimits || { email: 100, sms: 50, voice: 20 },
+    },
     planGeneratedAt: new Date().toISOString(),
   };
 }
