@@ -213,7 +213,7 @@ export default function DailyPlanApprovalModal({
               <Alert className="bg-blue-50/50 border-blue-200">
                 <Clock className="h-4 w-4 text-blue-600" />
                 <AlertDescription className="text-blue-900">
-                  <strong>Execution scheduled for tomorrow at {planData.tenantPolicies.executionTime}</strong>
+                  <strong>Execution scheduled for tomorrow at {planData.tenantPolicies?.executionTime || '09:00'}</strong>
                   <br />
                   Plan generated {new Date(planData.planGeneratedAt).toLocaleTimeString()}
                 </AlertDescription>
