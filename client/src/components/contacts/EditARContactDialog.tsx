@@ -50,11 +50,8 @@ export default function EditARContactDialog({
 
   const updateARMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
-      return await apiRequest(`/api/contacts/${contact.id}/ar-details`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
+      const response = await apiRequest("PATCH", `/api/contacts/${contact.id}/ar-details`, data);
+      return await response.json();
     },
     onSuccess: () => {
       toast({
