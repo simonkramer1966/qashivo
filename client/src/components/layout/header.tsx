@@ -234,10 +234,11 @@ export default function Header({ title, subtitle, action, noBorder = true, title
                     onClick={() => setLocation("/onboarding")}
                     variant="ghost"
                     size="sm"
-                    className="h-10 px-3 bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 border border-amber-500/20"
+                    className="h-10 px-3 gap-2 bg-amber-600/20 hover:bg-amber-600/30 text-amber-700 border border-amber-600/30 animate-pulse"
                     data-testid="button-resume-onboarding"
                   >
                     <ListTodo className="h-4 w-4" />
+                    <span className="hidden lg:inline font-medium">Complete Setup</span>
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
