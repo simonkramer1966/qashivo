@@ -244,9 +244,6 @@ export function OnboardingWizard() {
           <p className="text-lg text-gray-600 mb-4">
             Connect your accounting system in 60 seconds
           </p>
-          <Badge variant="secondary" className="bg-[#17B6C3]/10 text-[#17B6C3] border-[#17B6C3]/20">
-            The Only AI Collections Platform That Works From Day One
-          </Badge>
         </div>
 
         {/* Progress Overview */}
