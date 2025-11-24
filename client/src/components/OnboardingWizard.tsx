@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -84,6 +85,7 @@ const PHASE_CONFIG = {
 
 export function OnboardingWizard() {
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
+  const [, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -140,7 +142,26 @@ export function OnboardingWizard() {
     
     try {
       await completePhase.mutateAsync(currentPhase);
-      if (currentStepIndex < phases.length - 1) {
+      
+      // Check if this is the last phase
+      const isLastPhase = currentStepIndex === phases.length - 1;
+      
+      if (isLastPhase) {
+        // Complete entire onboarding and redirect to Cashboard
+        await fetch('/api/onboarding/complete', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }
+        });
+        
+        toast({
+          title: "🎉 Onboarding Complete!",
+          description: "Welcome to Qashivo! Your AI collections system is now live."
+        });
+        
+        // Redirect to Cashboard
+        setTimeout(() => setLocation('/'), 1000);
+      } else {
+        // Move to next phase
         setCurrentStepIndex(currentStepIndex + 1);
       }
     } catch (error) {
