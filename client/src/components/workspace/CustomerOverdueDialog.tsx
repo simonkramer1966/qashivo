@@ -28,6 +28,7 @@ import { formatCurrency } from "@/lib/utils";
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
 import { SendSMSDialog } from "../invoices/SendSMSDialog";
 import { ManualCallCaptureDialog } from "./ManualCallCaptureDialog";
 import { AIVoiceDialog } from "../invoices/AIVoiceDialog";
@@ -40,6 +41,7 @@ interface CustomerOverdueDialogProps {
 
 export function CustomerOverdueDialog({ customer, open, onOpenChange }: CustomerOverdueDialogProps) {
   const [, setLocation] = useLocation();
+  const { toast } = useToast();
   const [smsDialogOpen, setSmsDialogOpen] = useState(false);
   const [callCaptureDialogOpen, setCallCaptureDialogOpen] = useState(false);
   const [aiVoiceDialogOpen, setAiVoiceDialogOpen] = useState(false);
@@ -52,6 +54,24 @@ export function CustomerOverdueDialog({ customer, open, onOpenChange }: Customer
     queryKey: ['/api/tenant'],
     staleTime: 15 * 60 * 1000,
   });
+
+  // Check onboarding completion status
+  const { data: onboardingStatus } = useQuery<{ completed: boolean }>({
+    queryKey: ["/api/onboarding/status"],
+  });
+
+  // Helper to check if onboarding is complete before allowing communication
+  const checkOnboardingComplete = () => {
+    if (!onboardingStatus?.completed) {
+      toast({
+        title: "Complete Onboarding First",
+        description: "Please complete the onboarding setup to unlock AI-powered communications. Click the checklist icon in the header to resume.",
+        variant: "default"
+      });
+      return false;
+    }
+    return true;
+  };
   
   if (!customer) return null;
 
@@ -125,6 +145,7 @@ export function CustomerOverdueDialog({ customer, open, onOpenChange }: Customer
                     variant="outline" 
                     className="flex items-center gap-2 justify-start"
                     onClick={() => {
+                      if (!checkOnboardingComplete()) return;
                       // TODO: Implement email chase
                       console.log('Email chase for customer:', customer.contactId);
                     }}
@@ -136,6 +157,7 @@ export function CustomerOverdueDialog({ customer, open, onOpenChange }: Customer
                     variant="outline" 
                     className="flex items-center gap-2 justify-start"
                     onClick={() => {
+                      if (!checkOnboardingComplete()) return;
                       // Use first invoice for SMS (need invoice context)
                       if (customer.invoices?.length > 0) {
                         setSelectedInvoice(customer.invoices[0]);
@@ -150,6 +172,7 @@ export function CustomerOverdueDialog({ customer, open, onOpenChange }: Customer
                     variant="outline" 
                     className="flex items-center gap-2 justify-start"
                     onClick={() => {
+                      if (!checkOnboardingComplete()) return;
                       // TODO: Implement WhatsApp chase
                       console.log('WhatsApp chase for customer:', customer.contactId);
                     }}
@@ -161,6 +184,7 @@ export function CustomerOverdueDialog({ customer, open, onOpenChange }: Customer
                     variant="outline" 
                     className="flex items-center gap-2 justify-start"
                     onClick={() => {
+                      if (!checkOnboardingComplete()) return;
                       // Use first invoice for manual call capture
                       if (customer.invoices?.length > 0) {
                         setSelectedInvoice(customer.invoices[0]);
@@ -176,6 +200,7 @@ export function CustomerOverdueDialog({ customer, open, onOpenChange }: Customer
                     variant="outline" 
                     className="flex items-center gap-2 justify-start col-span-2 sm:col-span-1"
                     onClick={() => {
+                      if (!checkOnboardingComplete()) return;
                       // Use first invoice for AI voice call
                       if (customer.invoices?.length > 0) {
                         setSelectedInvoice(customer.invoices[0]);

@@ -148,18 +148,25 @@ export function OnboardingWizard() {
       
       if (isLastPhase) {
         // Complete entire onboarding and redirect to Cashboard
-        await fetch('/api/onboarding/complete', {
+        const response = await fetch('/api/onboarding/complete', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' }
         });
         
-        toast({
-          title: "🎉 Onboarding Complete!",
-          description: "Welcome to Qashivo! Your AI collections system is now live."
-        });
-        
-        // Redirect to Cashboard
-        setTimeout(() => setLocation('/'), 1000);
+        if (response.ok) {
+          // Invalidate onboarding status cache so header button disappears
+          queryClient.invalidateQueries({ queryKey: ['/api/onboarding/status'] });
+          
+          toast({
+            title: "🎉 Onboarding Complete!",
+            description: "Welcome to Qashivo! Your AI collections system is now live."
+          });
+          
+          // Redirect to Cashboard after server confirms completion
+          setLocation('/');
+        } else {
+          throw new Error('Failed to complete onboarding');
+        }
       } else {
         // Move to next phase
         setCurrentStepIndex(currentStepIndex + 1);
