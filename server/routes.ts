@@ -12819,6 +12819,19 @@ Return only JSON with keys: intent, sentiment, confidence, keyInsights, actionIt
           console.error(`❌ Initial Xero sync error:`, error);
         });
 
+      // Explicitly save session before sending response to ensure it's available for subsequent requests
+      await new Promise<void>((resolve, reject) => {
+        req.session.save((err: any) => {
+          if (err) {
+            console.error('⚠️ Failed to save session after Xero callback:', err);
+            reject(err);
+          } else {
+            console.log('✅ Session saved successfully after Xero callback');
+            resolve();
+          }
+        });
+      });
+
       // Success page with auto-redirect to onboarding
       res.send(`
         <!DOCTYPE html>

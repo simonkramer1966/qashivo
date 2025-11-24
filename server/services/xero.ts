@@ -398,11 +398,9 @@ class XeroService {
       let endpoint = 'Contacts';
       const whereClauses: string[] = [];
 
-      // Apply basic filters that can be done at API level
-      if (filters?.activeOnly !== false) {
-        whereClauses.push('IsActive==true');
-      }
-
+      // Note: Xero Contacts don't have an IsActive field in the API
+      // We filter active contacts after fetching, not via API query
+      
       if (whereClauses.length > 0) {
         // Properly encode the where clause
         const whereClause = whereClauses.join(' AND ');
@@ -412,6 +410,11 @@ class XeroService {
       console.log(`Fetching Xero contacts with endpoint: ${endpoint}`);
       const response = await this.makeAuthenticatedRequest(tokens, endpoint, 'GET', undefined, tenantIdForDbUpdate);
       let contacts = response.Contacts || [];
+      
+      // Filter for active contacts after fetching if requested
+      if (filters?.activeOnly !== false && contacts.length > 0) {
+        contacts = contacts.filter((c: any) => c.ContactStatus === 'ACTIVE' || !c.ContactStatus);
+      }
 
       console.log(`Fetched ${contacts.length} active contacts from Xero`);
 
@@ -881,31 +884,24 @@ class XeroService {
       let endpoint = 'BankTransactions';
       const whereClauses: string[] = [];
       
-      if (filters?.bankAccountId) {
-        whereClauses.push(`BankAccount.AccountID%3Dguid"${filters.bankAccountId}"`);
-      }
-      
-      if (filters?.transactionType) {
-        whereClauses.push(`Type%3D%3D%22${filters.transactionType}%22`);
-      }
-      
-      if (filters?.reconciled !== undefined) {
-        whereClauses.push(`IsReconciled%3D%3D${filters.reconciled}`);
-      }
+      // Note: Xero bank transaction filtering is complex - it's often better to fetch all and filter in-app
+      // For now, we'll fetch all transactions and filter in-memory for reliability
       
       // Date filtering using proper Xero DateTime format
       if (filters?.dateFrom) {
         const d = filters.dateFrom;
-        whereClauses.push(`Date%3E%3DDateTime(${d.getFullYear()},${d.getMonth()+1},${d.getDate()})`);
+        whereClauses.push(`Date>=DateTime(${d.getFullYear()},${d.getMonth()+1},${d.getDate()})`);
       }
       
       if (filters?.dateTo) {
         const d = filters.dateTo;
-        whereClauses.push(`Date%3C%3DDateTime(${d.getFullYear()},${d.getMonth()+1},${d.getDate()})`);
+        whereClauses.push(`Date<=DateTime(${d.getFullYear()},${d.getMonth()+1},${d.getDate()})`);
       }
       
       if (whereClauses.length > 0) {
-        endpoint += `?where=${whereClauses.join('%20AND%20')}`;
+        // Use proper encoding for Xero where clauses
+        const whereClause = whereClauses.join(' AND ');
+        endpoint += `?where=${encodeURIComponent(whereClause)}`;
       }
       
       if (filters?.page && filters.page > 1) {
@@ -918,7 +914,22 @@ class XeroService {
       
       console.log(`Fetching Xero bank transactions with endpoint: ${endpoint}`);
       const response = await this.makeAuthenticatedRequest(tokens, endpoint, 'GET', undefined, tenantIdForDbUpdate, headers);
-      const transactions = response.BankTransactions || [];
+      let transactions = response.BankTransactions || [];
+      
+      // Apply in-memory filtering for fields that don't work well in Xero API queries
+      if (filters?.bankAccountId && transactions.length > 0) {
+        transactions = transactions.filter((t: any) => 
+          t.BankAccount?.AccountID === filters.bankAccountId
+        );
+      }
+      
+      if (filters?.transactionType && transactions.length > 0) {
+        transactions = transactions.filter((t: any) => t.Type === filters.transactionType);
+      }
+      
+      if (filters?.reconciled !== undefined && transactions.length > 0) {
+        transactions = transactions.filter((t: any) => t.IsReconciled === filters.reconciled);
+      }
       
       return transactions;
     } catch (error) {
