@@ -139,6 +139,9 @@ export const contacts = pgTable("contacts", {
   arContactPhone: varchar("ar_contact_phone"), // AR-specific phone
   arNotes: text("ar_notes"), // AR-specific notes (separate from general notes)
   
+  // Collections workflow assignment
+  workflowId: varchar("workflow_id").references(() => workflows.id), // Assigned collections workflow (defaults to Standard Collections Workflow)
+  
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => [

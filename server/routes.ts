@@ -7934,6 +7934,83 @@ Guidelines:
     }
   });
 
+  // Seed Standard Collections Workflow for all tenants
+  app.post("/api/workflows/seed", isAuthenticated, async (req: any, res) => {
+    try {
+      const { WorkflowSeeder } = await import('./services/workflowSeeder');
+      const result = await WorkflowSeeder.seedAllTenants();
+      
+      res.json({
+        success: result.success,
+        message: `Seeded ${result.workflowsCreated} workflows across ${result.tenantsProcessed} tenants`,
+        details: result
+      });
+    } catch (error: any) {
+      console.error("Error seeding workflows:", error);
+      res.status(500).json({ message: "Failed to seed workflows", error: error.message });
+    }
+  });
+
+  // Assign workflow to a contact
+  app.patch("/api/contacts/:id/workflow", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub || req.user?.id;
+      const user = await storage.getUser(userId);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { id: contactId } = req.params;
+      const { workflowId } = req.body;
+
+      // Validate request body
+      if (!workflowId || typeof workflowId !== 'string') {
+        return res.status(400).json({ message: "Invalid workflowId" });
+      }
+
+      // Validate contact exists and belongs to tenant
+      const tenantContacts = await storage.getContacts(user.tenantId);
+      const contact = tenantContacts.find(c => c.id === contactId);
+      
+      if (!contact) {
+        return res.status(404).json({ message: "Contact not found" });
+      }
+
+      // Validate workflow exists and belongs to same tenant
+      const [workflow] = await db.select()
+        .from(workflows)
+        .where(eq(workflows.id, workflowId))
+        .limit(1);
+
+      if (!workflow) {
+        return res.status(404).json({ message: "Workflow not found" });
+      }
+
+      if (workflow.tenantId !== user.tenantId) {
+        return res.status(403).json({ message: "Workflow does not belong to your organization" });
+      }
+
+      // Update contact's workflow assignment
+      await db.update(contacts)
+        .set({ workflowId, updatedAt: new Date() })
+        .where(eq(contacts.id, contactId));
+
+      // Fetch updated contact
+      const [updatedContact] = await db.select()
+        .from(contacts)
+        .where(eq(contacts.id, contactId))
+        .limit(1);
+
+      res.json({
+        success: true,
+        contact: updatedContact
+      });
+    } catch (error: any) {
+      console.error("Error updating contact workflow:", error);
+      res.status(500).json({ message: "Failed to update contact workflow", error: error.message });
+    }
+  });
+
   // Collections Workflow Management Routes
   
   // Communication Templates

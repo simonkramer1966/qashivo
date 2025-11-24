@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useLocation } from "wouter";
@@ -39,6 +39,7 @@ interface Contact {
   riskScore: number;
   riskBand?: string | null;
   creditLimit?: number | null;
+  workflowId?: string | null;
 }
 
 export default function Customers() {
@@ -81,6 +82,16 @@ export default function Customers() {
   const contacts = contactsResponse?.contacts || [];
   const aggregates = contactsResponse?.aggregates || { totalOutstanding: 0, highRiskCount: 0, totalContacts: 0 };
   const pagination = contactsResponse?.pagination || { total: 0, page: 1, limit: 20, totalPages: 1 };
+
+  // Update selectedContact when contacts data changes (e.g., after workflow assignment)
+  useEffect(() => {
+    if (selectedContact && contacts.length > 0) {
+      const updatedContact = contacts.find(c => c.id === selectedContact.id);
+      if (updatedContact && JSON.stringify(updatedContact) !== JSON.stringify(selectedContact)) {
+        setSelectedContact(updatedContact);
+      }
+    }
+  }, [contacts, selectedContact]);
 
   // Reset to page 1 when search changes
   const handleSearchChange = (value: string) => {

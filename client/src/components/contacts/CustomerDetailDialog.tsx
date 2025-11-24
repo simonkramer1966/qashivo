@@ -14,6 +14,13 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { 
   Mail, 
   Phone, 
@@ -26,10 +33,13 @@ import {
   AlertCircle,
   Pencil,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Workflow
 } from "lucide-react";
 import { useCurrency } from "@/hooks/useCurrency";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import EditARContactDialog from "./EditARContactDialog";
 
 interface Contact {
@@ -46,6 +56,7 @@ interface Contact {
   arContactEmail?: string | null;
   arContactPhone?: string | null;
   arNotes?: string | null;
+  workflowId?: string | null;
 }
 
 interface Invoice {
@@ -65,6 +76,7 @@ interface CustomerDetailDialogProps {
 
 export function CustomerDetailDialog({ contact, open, onOpenChange }: CustomerDetailDialogProps) {
   const { formatCurrency } = useCurrency();
+  const { toast } = useToast();
   const [editAROpen, setEditAROpen] = useState(false);
   const [commsOpen, setCommsOpen] = useState(false);
   const [invoicesOpen, setInvoicesOpen] = useState(true);
@@ -73,6 +85,35 @@ export function CustomerDetailDialog({ contact, open, onOpenChange }: CustomerDe
   const { data: invoicesData } = useQuery<{ invoices: Invoice[] }>({
     queryKey: ['/api/invoices', contact?.id],
     enabled: !!contact?.id && open,
+  });
+
+  // Fetch available workflows
+  const { data: workflowsData } = useQuery<Array<{ id: string; name: string; description: string }>>({
+    queryKey: ['/api/workflows'],
+    enabled: open,
+  });
+
+  // Mutation to update contact workflow
+  const updateWorkflowMutation = useMutation({
+    mutationFn: (workflowId: string) => 
+      apiRequest("PATCH", `/api/contacts/${contact?.id}/workflow`, { workflowId }),
+    onSuccess: (data) => {
+      // Invalidate contact queries to refetch updated data
+      queryClient.invalidateQueries({ queryKey: ['/api/contacts'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/invoices', contact?.id] });
+      
+      toast({
+        title: "Workflow Updated",
+        description: "Collections workflow has been updated for this customer.",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: (error as any).message || "Failed to update workflow",
+        variant: "destructive",
+      });
+    },
   });
 
   if (!contact) return null;
@@ -236,6 +277,43 @@ export function CustomerDetailDialog({ contact, open, onOpenChange }: CustomerDe
                 <p className="text-sm text-amber-800 whitespace-pre-wrap">{contact.arNotes}</p>
               </div>
             )}
+
+            {/* Collections Workflow */}
+            <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="flex items-center gap-2 mb-3">
+                <Workflow className="h-4 w-4 text-blue-600" />
+                <h3 className="font-semibold text-blue-900">Collections Workflow</h3>
+              </div>
+              
+              <div className="space-y-2">
+                <label className="text-sm text-blue-800">
+                  Assigned workflow for this customer
+                </label>
+                <Select
+                  value={contact.workflowId || ""}
+                  onValueChange={(value) => updateWorkflowMutation.mutate(value)}
+                  disabled={updateWorkflowMutation.isPending}
+                  data-testid="select-workflow"
+                >
+                  <SelectTrigger className="w-full bg-white">
+                    <SelectValue placeholder="Select a workflow..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {workflowsData?.map((workflow) => (
+                      <SelectItem key={workflow.id} value={workflow.id}>
+                        {workflow.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                
+                {contact.workflowId && workflowsData && (
+                  <p className="text-xs text-blue-700 mt-1">
+                    {workflowsData.find(w => w.id === contact.workflowId)?.description}
+                  </p>
+                )}
+              </div>
+            </div>
 
             {/* Outstanding Invoices - Collapsible */}
             <Collapsible open={invoicesOpen} onOpenChange={setInvoicesOpen} className="mb-4">
