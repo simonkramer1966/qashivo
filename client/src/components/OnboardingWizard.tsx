@@ -97,12 +97,17 @@ export function OnboardingWizard() {
 
   // Complete phase mutation
   const completePhase = useMutation({
-    mutationFn: (phase: OnboardingPhase) => 
-      fetch('/api/onboarding/complete-phase', { 
+    mutationFn: async (phase: OnboardingPhase) => {
+      const res = await fetch('/api/onboarding/complete-phase', { 
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ phase })
-      }).then(res => res.json()),
+      });
+      if (!res.ok) {
+        throw new Error('Failed to complete phase');
+      }
+      return res.json();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/onboarding/progress'] });
       toast({
@@ -114,12 +119,17 @@ export function OnboardingWizard() {
 
   // Update phase progress mutation
   const updateProgress = useMutation({
-    mutationFn: ({ phase, data }: { phase: OnboardingPhase; data: any }) =>
-      fetch('/api/onboarding/progress', {
+    mutationFn: async ({ phase, data }: { phase: OnboardingPhase; data: any }) => {
+      const res = await fetch('/api/onboarding/progress', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ phase, data })
-      }).then(res => res.json()),
+      });
+      if (!res.ok) {
+        throw new Error('Failed to update progress');
+      }
+      return res.json();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/onboarding/progress'] });
     }
