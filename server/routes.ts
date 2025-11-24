@@ -1754,11 +1754,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Check onboarding status
   app.get('/api/onboarding/status', isAuthenticated, async (req: any, res) => {
     try {
-      // Get tenant from user session (no RBAC needed for simple status check)
-      const tenantId = req.user?.tenantId;
+      // Get user's tenant - support both regular users and partner-mode users
+      const user = await storage.getUser(req.user.id);
+      const tenantId = user?.tenantId || req.session?.activeTenantId;
       
       if (!tenantId) {
-        return res.status(400).json({ message: "No tenant associated with user" });
+        return res.status(400).json({ message: "User not associated with a tenant" });
       }
       
       const completed = await onboardingService.isOnboardingCompleted(tenantId);
