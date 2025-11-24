@@ -1806,13 +1806,91 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const importResult = await xeroOnboardingService.performAutomatedDataImport(xeroTokens, tenantId);
       
       if (importResult.success) {
-        // Update onboarding progress
-        await onboardingService.updatePhaseProgress(tenantId, 'technical_connection', {
-          xeroSetup: true,
-          dataImportCompleted: true
-        });
-        
         console.log(`✅ Xero onboarding import completed for tenant ${tenantId} in ${importResult.timeElapsed}ms`);
+        
+        // Auto-trigger AI analysis after successful import
+        let aiAnalysisResults = null;
+        try {
+          console.log(`🤖 Triggering instant AI analysis for tenant ${tenantId}...`);
+          const analysisStartTime = Date.now();
+          
+          // Get contacts and invoices for analysis
+          const contacts = await storage.getContacts(tenantId);
+          const invoices = await storage.getInvoices(tenantId);
+          
+          // Calculate key metrics
+          const totalOutstanding = invoices
+            .filter(inv => inv.status === 'outstanding' || inv.status === 'overdue')
+            .reduce((sum, inv) => sum + parseFloat(inv.amountDue || '0'), 0);
+          
+          const overdueInvoices = invoices.filter(inv => inv.status === 'overdue');
+          const totalOverdue = overdueInvoices.reduce((sum, inv) => sum + parseFloat(inv.amountDue || '0'), 0);
+          
+          // Identify top debtors (contacts with highest outstanding amounts)
+          const contactOutstanding = new Map<string, number>();
+          invoices
+            .filter(inv => inv.status === 'outstanding' || inv.status === 'overdue')
+            .forEach(inv => {
+              const contactId = inv.contactId;
+              if (contactId) {
+                const current = contactOutstanding.get(contactId) || 0;
+                contactOutstanding.set(contactId, current + parseFloat(inv.amountDue || '0'));
+              }
+            });
+          
+          const topDebtors = Array.from(contactOutstanding.entries())
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 5)
+            .map(([contactId, amount]) => {
+              const contact = contacts.find(c => c.id === contactId);
+              return {
+                name: contact?.name || 'Unknown',
+                amount,
+                invoiceCount: invoices.filter(i => i.contactId === contactId && (i.status === 'outstanding' || i.status === 'overdue')).length
+              };
+            });
+          
+          // Generate recommended actions based on data
+          const recommendedActions = [];
+          if (overdueInvoices.length > 0) {
+            recommendedActions.push(`Priority: Contact ${overdueInvoices.length} customers with overdue invoices`);
+          }
+          if (topDebtors.length > 0 && topDebtors[0].amount > 10000) {
+            recommendedActions.push(`High value: Focus on ${topDebtors[0].name} (£${topDebtors[0].amount.toLocaleString()})`);
+          }
+          if (totalOverdue > 0) {
+            recommendedActions.push(`Cash recovery: £${totalOverdue.toLocaleString()} overdue to collect`);
+          }
+          
+          const analysisTime = Date.now() - analysisStartTime;
+          
+          aiAnalysisResults = {
+            totalOutstanding,
+            totalOverdue,
+            overdueCount: overdueInvoices.length,
+            topDebtors,
+            recommendedActions,
+            analyzedAt: new Date().toISOString(),
+            analysisTimeMs: analysisTime
+          };
+          
+          console.log(`✅ AI analysis completed in ${analysisTime}ms - ${recommendedActions.length} recommendations generated`);
+        } catch (analysisError) {
+          console.error('❌ AI analysis failed (non-blocking):', analysisError);
+          // Don't fail the import if analysis fails
+        }
+        
+        // Update onboarding progress with ALL data in one call to avoid overwriting
+        await onboardingService.updatePhaseProgress(tenantId, 'technical_connection', {
+          technical_connection: {
+            xeroSetup: true,
+            dataImportCompleted: true,
+            importSummary: importResult.summary,
+            importTimestamp: new Date().toISOString(),
+            aiAnalysisCompleted: !!aiAnalysisResults,
+            aiAnalysisResults
+          }
+        });
       }
       
       res.json(importResult);

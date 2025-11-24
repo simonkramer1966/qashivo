@@ -54,19 +54,32 @@ export function TechnicalConnectionPhase({
   // Automated import mutation
   const providerImportMutation = useMutation({
     mutationFn: () => apiRequest('/api/onboarding/xero-import', 'POST'),
-    onSuccess: (data: any) => {
+    onSuccess: async (data: any) => {
       if (data.success) {
-        onUpdate({
-          technical_connection: {
-            ...techData,
-            [`${selectedProvider}ImportCompleted`]: true,
-            importSummary: data.summary,
-            importTimestamp: new Date().toISOString()
-          }
-        });
+        // Fetch latest onboarding progress to get AI analysis results
+        const progressResponse = await fetch('/api/onboarding/progress');
+        const progressData = await progressResponse.json();
+        
+        // Update with the latest phase data from the server (includes AI analysis)
+        if (progressData.progress?.phaseData?.technical_connection) {
+          onUpdate({
+            technical_connection: progressData.progress.phaseData.technical_connection
+          });
+        } else {
+          // Fallback to basic update if progress fetch fails
+          onUpdate({
+            technical_connection: {
+              ...techData,
+              [`${selectedProvider}ImportCompleted`]: true,
+              importSummary: data.summary,
+              importTimestamp: new Date().toISOString()
+            }
+          });
+        }
+        
         toast({
           title: "AI-Powered Import Complete! 🤖",
-          description: `Imported ${data.summary.contacts.total} contacts and ${data.summary.invoices.total} invoices with AI insights.`
+          description: `Imported ${data.summary.contacts.total} contacts and ${data.summary.invoices.total} invoices with instant AI analysis.`
         });
       } else {
         toast({
@@ -451,6 +464,106 @@ export function TechnicalConnectionPhase({
           </CardContent>
         </Card>
       </div>
+
+      {/* Instant AI Analysis Results Banner */}
+      {techData.aiAnalysisResults && (
+        <Card className="bg-gradient-to-br from-[#17B6C3]/5 via-blue-50/50 to-purple-50/50 border-[#17B6C3]/20 shadow-lg">
+          <CardHeader>
+            <div className="flex items-center gap-3">
+              <div className="p-3 bg-gradient-to-br from-[#17B6C3] to-blue-500 text-white rounded-lg">
+                <Brain className="w-6 h-6" />
+              </div>
+              <div>
+                <CardTitle className="text-xl bg-gradient-to-r from-[#17B6C3] to-blue-600 bg-clip-text text-transparent">
+                  Instant AI Analysis Complete
+                </CardTitle>
+                <CardDescription>
+                  Generated in {techData.aiAnalysisResults.analysisTimeMs}ms • Based on {importSummary?.invoices.total} invoices & {importSummary?.contacts.total} contacts
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Key Financial Metrics */}
+            <div className="grid grid-cols-3 gap-4">
+              <div className="bg-white/70 backdrop-blur-sm p-4 rounded-lg border border-gray-200/50">
+                <div className="flex items-center gap-2 mb-2">
+                  <TrendingUp className="w-4 h-4 text-green-500" />
+                  <span className="text-xs text-gray-600">Total Outstanding</span>
+                </div>
+                <div className="text-2xl font-bold text-gray-900">
+                  £{techData.aiAnalysisResults.totalOutstanding.toLocaleString()}
+                </div>
+              </div>
+              
+              <div className="bg-white/70 backdrop-blur-sm p-4 rounded-lg border border-gray-200/50">
+                <div className="flex items-center gap-2 mb-2">
+                  <AlertCircle className="w-4 h-4 text-orange-500" />
+                  <span className="text-xs text-gray-600">Overdue Amount</span>
+                </div>
+                <div className="text-2xl font-bold text-orange-600">
+                  £{techData.aiAnalysisResults.totalOverdue.toLocaleString()}
+                </div>
+              </div>
+              
+              <div className="bg-white/70 backdrop-blur-sm p-4 rounded-lg border border-gray-200/50">
+                <div className="flex items-center gap-2 mb-2">
+                  <FileText className="w-4 h-4 text-red-500" />
+                  <span className="text-xs text-gray-600">Overdue Invoices</span>
+                </div>
+                <div className="text-2xl font-bold text-red-600">
+                  {techData.aiAnalysisResults.overdueCount}
+                </div>
+              </div>
+            </div>
+
+            {/* Top Debtors */}
+            {techData.aiAnalysisResults.topDebtors?.length > 0 && (
+              <div className="bg-white/50 p-4 rounded-lg border border-gray-200/50">
+                <h4 className="font-semibold text-sm mb-3 text-gray-700">Top Priority Customers</h4>
+                <div className="space-y-2">
+                  {techData.aiAnalysisResults.topDebtors.slice(0, 3).map((debtor: any, idx: number) => (
+                    <div key={idx} className="flex items-center justify-between p-2 bg-white/70 rounded">
+                      <div className="flex items-center gap-2">
+                        <Badge variant="secondary" className="w-6 h-6 flex items-center justify-center p-0">
+                          {idx + 1}
+                        </Badge>
+                        <span className="text-sm font-medium">{debtor.name}</span>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-sm font-bold text-[#17B6C3]">
+                          £{debtor.amount.toLocaleString()}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {debtor.invoiceCount} invoice{debtor.invoiceCount !== 1 ? 's' : ''}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* AI Recommended Actions */}
+            {techData.aiAnalysisResults.recommendedActions?.length > 0 && (
+              <div className="bg-gradient-to-r from-[#17B6C3]/10 to-blue-50 p-4 rounded-lg border border-[#17B6C3]/30">
+                <div className="flex items-center gap-2 mb-3">
+                  <Brain className="w-5 h-5 text-[#17B6C3]" />
+                  <h4 className="font-semibold text-sm text-[#17B6C3]">AI Recommended Actions</h4>
+                </div>
+                <ul className="space-y-2">
+                  {techData.aiAnalysisResults.recommendedActions.map((action: string, idx: number) => (
+                    <li key={idx} className="flex items-start gap-2 text-sm">
+                      <CheckCircle2 className="w-4 h-4 text-[#17B6C3] mt-0.5 flex-shrink-0" />
+                      <span>{action}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Completion Summary */}
       {canComplete && (
