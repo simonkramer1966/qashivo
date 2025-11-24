@@ -7,20 +7,28 @@ import crypto from 'crypto';
  */
 export class AuthManager {
   private tokenCache: Map<string, any> = new Map();
-  private stateStore: Map<string, { provider: string; tenantId?: string }> = new Map();
 
   /**
    * Generate OAuth authorization URL
    */
   generateAuthUrl(
     config: ProviderConfig, 
+    session: any,
     tenantId?: string,
     customState?: string
   ): { authUrl: string; state: string } {
+    // Ensure session exists before generating auth URL
+    if (!session) {
+      throw new Error('Session required for OAuth flow. Please ensure user is authenticated.');
+    }
+
     const state = customState || crypto.randomBytes(16).toString('hex');
     
-    // Store state for validation
-    this.stateStore.set(state, { provider: config.name, tenantId });
+    // Store state in session for validation (survives redirects)
+    if (!session.oauthStates) {
+      session.oauthStates = {};
+    }
+    session.oauthStates[state] = { provider: config.name, tenantId };
 
     const params = new URLSearchParams({
       response_type: 'code',
@@ -42,17 +50,27 @@ export class AuthManager {
     providerName: string,
     code: string,
     state: string,
-    config: ProviderConfig
+    config: ProviderConfig,
+    session: any
   ): Promise<AuthResult> {
     try {
-      // Validate state
-      const stateData = this.stateStore.get(state);
+      // Check if session exists (user may have lost session during redirect)
+      if (!session || !session.oauthStates) {
+        return { success: false, error: 'Session expired. Please try connecting again.' };
+      }
+
+      // Validate state from session
+      const stateData = session.oauthStates[state];
       if (!stateData || stateData.provider !== providerName) {
+        // State not found could mean session expired or invalid state
+        if (!stateData) {
+          return { success: false, error: 'Session expired. Please try connecting again.' };
+        }
         return { success: false, error: 'Invalid state parameter' };
       }
 
-      // Clean up state
-      this.stateStore.delete(state);
+      // Clean up state from session
+      delete session.oauthStates[state];
 
       const tokenEndpoint = this.getTokenEndpoint(providerName);
       const response = await fetch(tokenEndpoint, {

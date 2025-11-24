@@ -96,7 +96,8 @@ export class APIMiddleware {
    * Connect to a provider (initiate OAuth flow)
    */
   async connectProvider(
-    providerName: string, 
+    providerName: string,
+    session: any,
     tenantId?: string,
     customState?: string
   ): Promise<{ success: boolean; authUrl?: string; error?: string }> {
@@ -107,7 +108,8 @@ export class APIMiddleware {
       }
 
       const { authUrl, state } = this.authManager.generateAuthUrl(
-        provider.config, 
+        provider.config,
+        session,
         tenantId, 
         customState
       );
@@ -128,7 +130,8 @@ export class APIMiddleware {
   async completeConnection(
     providerName: string,
     code: string,
-    state: string
+    state: string,
+    session: any
   ): Promise<AuthResult> {
     try {
       const provider = this.getProvider(providerName);
@@ -140,7 +143,8 @@ export class APIMiddleware {
         providerName,
         code,
         state,
-        provider.config
+        provider.config,
+        session
       );
     } catch (error) {
       console.error(`Failed to complete connection for ${providerName}:`, error);

@@ -12634,43 +12634,28 @@ Return only JSON with keys: intent, sentiment, confidence, keyInsights, actionIt
       // Check for authorization errors
       if (error) {
         console.error(`Xero authorization error: ${error} - ${error_description}`);
-        return res.status(400).send(`
-          <html>
-            <body style="font-family: system-ui; text-align: center; padding: 2rem;">
-              <h1>❌ Authorization Failed</h1>
-              <p>${error_description || error}</p>
-              <a href="/settings" style="background: #17B6C3; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px;">Back to Settings</a>
-            </body>
-          </html>
-        `);
+        const errorMsg = encodeURIComponent(error_description || error || 'Authorization failed');
+        return res.redirect(`/connection-error?provider=xero&error=${errorMsg}`);
       }
       
       if (!code || !state) {
-        return res.status(400).send(`
-          <html>
-            <body style="font-family: system-ui; text-align: center; padding: 2rem;">
-              <h1>❌ Authorization Failed</h1>
-              <p>Missing authorization code or state parameter</p>
-              <a href="/settings" style="background: #17B6C3; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px;">Back to Settings</a>
-            </body>
-          </html>
-        `);
+        const errorMsg = encodeURIComponent('Missing authorization code or state parameter');
+        return res.redirect(`/connection-error?provider=xero&error=${errorMsg}`);
       }
 
-      // Use APIMiddleware to complete the OAuth flow
-      const result = await apiMiddleware.completeConnection('xero', code as string, state as string);
+      // Check if session exists (may have expired during redirect)
+      if (!req.session) {
+        const errorMsg = encodeURIComponent('Session expired. Please try connecting again.');
+        return res.redirect(`/connection-error?provider=xero&error=${errorMsg}`);
+      }
+
+      // Use APIMiddleware to complete the OAuth flow (with session for state validation)
+      const result = await apiMiddleware.completeConnection('xero', code as string, state as string, req.session);
       
       if (!result.success || !result.tokens || !result.appTenantId) {
         console.error('Xero callback failed:', result.error);
-        return res.status(400).send(`
-          <html>
-            <body style="font-family: system-ui; text-align: center; padding: 2rem;">
-              <h1>❌ Connection Failed</h1>
-              <p>${result.error || 'Failed to complete Xero authorization'}</p>
-              <a href="/settings" style="background: #17B6C3; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px;">Back to Settings</a>
-            </body>
-          </html>
-        `);
+        const errorMsg = encodeURIComponent(result.error || 'Failed to complete Xero authorization');
+        return res.redirect(`/connection-error?provider=xero&error=${errorMsg}`);
       }
 
       // Extract tenant IDs and tokens from the result
@@ -16004,8 +15989,16 @@ ${tenant.name}
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
 
-      // Use APIMiddleware to initiate connection
-      const result = await apiMiddleware.connectProvider(providerName, user.tenantId);
+      // Ensure session exists before initiating OAuth flow
+      if (!req.session) {
+        return res.status(401).json({ 
+          success: false, 
+          message: "Session required for authentication. Please log in again." 
+        });
+      }
+
+      // Use APIMiddleware to initiate connection (with session for state persistence)
+      const result = await apiMiddleware.connectProvider(providerName, req.session, user.tenantId);
       
       if (result.success && result.authUrl) {
         // Return auth URL for frontend to redirect to

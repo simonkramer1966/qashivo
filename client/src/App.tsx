@@ -44,6 +44,7 @@ const Signup = lazy(() => import("@/pages/Signup"));
 const ForgotPassword = lazy(() => import("@/pages/ForgotPassword"));
 const ResetPassword = lazy(() => import("@/pages/ResetPassword"));
 const UserOnboarding = lazy(() => import("@/pages/UserOnboarding"));
+const ConnectionError = lazy(() => import("@/pages/connection-error"));
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -87,6 +88,7 @@ function Router() {
           <Route path="/debtor-portal" component={DebtorPortal} />
           <Route path="/partner/register" component={PartnerRegistration} />
           <Route path="/client/register" component={ClientRegistration} />
+          <Route path="/connection-error" component={ConnectionError} />
           <Route path="/login" component={Login} />
           <Route path="/signup" component={Signup} />
           <Route path="/forgot-password" component={ForgotPassword} />
@@ -113,6 +115,7 @@ function Router() {
           <Route path="/partner" component={PartnerDashboard} />
           <Route path="/dashboard" component={Dashboard} />
           <Route path="/onboarding" component={UserOnboarding} />
+          <Route path="/connection-error" component={ConnectionError} />
           <Route path="/contacts" component={Contacts} />
           <Route path="/invoices" component={Invoices} />
           <Route path="/action-centre" component={ActionCentre} />
