@@ -3431,7 +3431,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Update AR contact details (collections-specific overlay)
   app.patch("/api/contacts/:id/ar-details", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.id);
+      console.log("📝 AR contact update request:", {
+        params: req.params,
+        body: req.body,
+        userId: req.user?.id,
+        userClaims: req.user?.claims
+      });
+      
+      // Get user ID from claims structure (Passport deserialize adds this)
+      const userId = req.user?.claims?.sub || req.user?.id;
+      const user = await storage.getUser(userId);
       if (!user?.tenantId) {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
@@ -3440,14 +3449,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { arContactName, arContactEmail, arContactPhone, arNotes } = req.body;
 
       // Validate the contact exists and belongs to the tenant
-      const contacts = await storage.getContacts(user.tenantId);
-      const contact = contacts.find(c => c.id === id);
+      const tenantContacts = await storage.getContacts(user.tenantId);
+      const contact = tenantContacts.find(c => c.id === id);
       
       if (!contact) {
         return res.status(404).json({ message: "Contact not found" });
       }
 
-      // Update AR overlay fields in database
+      // Update AR overlay fields in database (using contacts table schema from @shared/schema)
       await db.update(contacts)
         .set({
           arContactName,
