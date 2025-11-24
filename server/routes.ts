@@ -7990,15 +7990,15 @@ Guidelines:
         return res.status(403).json({ message: "Workflow does not belong to your organization" });
       }
 
-      // Update contact's workflow assignment
+      // Update contact's workflow assignment with tenant scoping
       await db.update(contacts)
         .set({ workflowId, updatedAt: new Date() })
-        .where(eq(contacts.id, contactId));
+        .where(and(eq(contacts.id, contactId), eq(contacts.tenantId, user.tenantId)));
 
-      // Fetch updated contact
+      // Fetch updated contact with tenant scoping
       const [updatedContact] = await db.select()
         .from(contacts)
-        .where(eq(contacts.id, contactId))
+        .where(and(eq(contacts.id, contactId), eq(contacts.tenantId, user.tenantId)))
         .limit(1);
 
       res.json({

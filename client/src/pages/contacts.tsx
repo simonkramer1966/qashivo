@@ -87,11 +87,11 @@ export default function Customers() {
   useEffect(() => {
     if (selectedContact && contacts.length > 0) {
       const updatedContact = contacts.find(c => c.id === selectedContact.id);
-      if (updatedContact && JSON.stringify(updatedContact) !== JSON.stringify(selectedContact)) {
+      if (updatedContact && updatedContact.workflowId !== selectedContact.workflowId) {
         setSelectedContact(updatedContact);
       }
     }
-  }, [contacts, selectedContact]);
+  }, [contacts]);
 
   // Reset to page 1 when search changes
   const handleSearchChange = (value: string) => {
