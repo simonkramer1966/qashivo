@@ -12584,14 +12584,18 @@ Return only JSON with keys: intent, sentiment, confidence, keyInsights, actionIt
       console.log("Auth URL:", result.authUrl);
       console.log("Tenant ID:", user.tenantId);
       
-      // Promisify session.save to persist OAuth state before returning auth URL
+      // Store user ID in session for retrieval after OAuth callback
+      // This ensures we re-authenticate the correct user, preventing privilege escalation
+      req.session.oauthUserId = user.id;
+      
+      // Promisify session.save to persist OAuth state AND user ID before returning auth URL
       await new Promise<void>((resolve, reject) => {
         req.session.save((err: any) => {
           if (err) {
             console.error("❌ Error saving session:", err);
             reject(err);
           } else {
-            console.log("✅ Session saved successfully before Xero redirect");
+            console.log("✅ Session saved successfully before Xero redirect (including user ID)");
             resolve();
           }
         });
@@ -12780,6 +12784,49 @@ Return only JSON with keys: intent, sentiment, confidence, keyInsights, actionIt
       
       console.log(`✅ Xero connected successfully for app tenant: ${appTenantId}, Xero tenant: ${xeroTenantId}`);
 
+      // Re-establish Passport session after OAuth redirect
+      // Retrieve the user ID that was stored in session during auth-url request
+      const originalUserId = req.session?.oauthUserId;
+      
+      if (!req.user && originalUserId) {
+        // User isn't authenticated after OAuth redirect - re-establish session with the ORIGINAL user
+        console.log(`🔐 Re-establishing Passport session for user ID: ${originalUserId}`);
+        
+        const originalUser = await storage.getUser(originalUserId);
+        if (!originalUser) {
+          console.error(`❌ Could not find user ${originalUserId} to re-establish session`);
+          // Clean up the stored user ID
+          delete req.session.oauthUserId;
+          const errorMsg = encodeURIComponent('Session expired. Please log in and try again.');
+          return res.redirect(`/connection-error?provider=xero&error=${errorMsg}`);
+        }
+        
+        // Re-authenticate with the exact user who initiated the OAuth flow
+        await new Promise<void>((resolve, reject) => {
+          req.login(originalUser, (err) => {
+            if (err) {
+              console.error('❌ Failed to re-establish Passport session:', err);
+              reject(err);
+            } else {
+              console.log(`✅ Passport session re-established successfully for: ${originalUser.email}`);
+              // Clean up the stored user ID now that session is re-established
+              delete req.session.oauthUserId;
+              resolve();
+            }
+          });
+        });
+      } else if (req.user) {
+        console.log(`✅ User already authenticated: ${req.user.email}`);
+        // Clean up stored user ID if it exists
+        if (req.session?.oauthUserId) {
+          delete req.session.oauthUserId;
+        }
+      } else {
+        console.warn(`⚠️ No user authenticated and no oauthUserId in session - possible session loss`);
+        const errorMsg = encodeURIComponent('Authentication session lost. Please log in and try again.');
+        return res.redirect(`/connection-error?provider=xero&error=${errorMsg}`);
+      }
+
       // Advance onboarding to AI Review phase for instant analysis
       try {
         const currentProgress = await onboardingService.getOnboardingProgress(appTenantId);
@@ -12818,19 +12865,6 @@ Return only JSON with keys: intent, sentiment, confidence, keyInsights, actionIt
         .catch(error => {
           console.error(`❌ Initial Xero sync error:`, error);
         });
-
-      // Explicitly save session before sending response to ensure it's available for subsequent requests
-      await new Promise<void>((resolve, reject) => {
-        req.session.save((err: any) => {
-          if (err) {
-            console.error('⚠️ Failed to save session after Xero callback:', err);
-            reject(err);
-          } else {
-            console.log('✅ Session saved successfully after Xero callback');
-            resolve();
-          }
-        });
-      });
 
       // Success page with auto-redirect to onboarding
       res.send(`

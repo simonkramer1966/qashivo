@@ -8,5 +8,6 @@ declare module "express-session" {
       tokenId: string;
       authenticatedAt: string;
     };
+    oauthUserId?: string;
   }
 }
