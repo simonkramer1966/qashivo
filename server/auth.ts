@@ -73,7 +73,14 @@ export async function setupAuth(app: Express) {
   passport.deserializeUser(async (id: string, done) => {
     try {
       const user = await storage.getUser(id);
-      done(null, user as any);
+      // Format user to match expected RBAC structure (claims.sub pattern from Replit Auth)
+      const formattedUser = {
+        ...user,
+        claims: {
+          sub: user?.id || id
+        }
+      };
+      done(null, formattedUser as any);
     } catch (error) {
       done(error);
     }
