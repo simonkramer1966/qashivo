@@ -12485,12 +12485,40 @@ Return only JSON with keys: intent, sentiment, confidence, keyInsights, actionIt
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
 
-      const authUrl = xeroService.getAuthorizationUrl(user.tenantId);
+      // Ensure session exists before initiating OAuth flow
+      if (!req.session) {
+        return res.status(401).json({ 
+          message: "Session required for authentication. Please log in again." 
+        });
+      }
+
+      // Use APIMiddleware to initiate connection (stores OAuth state in session)
+      const result = await apiMiddleware.connectProvider('xero', req.session, user.tenantId);
+      
+      if (!result.success || !result.authUrl) {
+        return res.status(400).json({
+          message: result.error || "Failed to generate Xero authorization URL"
+        });
+      }
+
       console.log("=== GENERATED XERO AUTH URL ===");
-      console.log("Auth URL:", authUrl);
+      console.log("Auth URL:", result.authUrl);
       console.log("Tenant ID:", user.tenantId);
       
-      res.json({ authUrl });
+      // Promisify session.save to persist OAuth state before returning auth URL
+      await new Promise<void>((resolve, reject) => {
+        req.session.save((err: any) => {
+          if (err) {
+            console.error("❌ Error saving session:", err);
+            reject(err);
+          } else {
+            console.log("✅ Session saved successfully before Xero redirect");
+            resolve();
+          }
+        });
+      });
+      
+      res.json({ authUrl: result.authUrl });
     } catch (error) {
       console.error("Error getting Xero auth URL:", error);
       res.status(500).json({ message: "Failed to generate authorization URL" });
@@ -16001,6 +16029,19 @@ ${tenant.name}
       const result = await apiMiddleware.connectProvider(providerName, req.session, user.tenantId);
       
       if (result.success && result.authUrl) {
+        // Promisify session.save to persist OAuth state before returning auth URL
+        await new Promise<void>((resolve, reject) => {
+          req.session.save((err: any) => {
+            if (err) {
+              console.error("❌ Error saving session:", err);
+              reject(err);
+            } else {
+              console.log(`✅ Session saved successfully before ${providerName} redirect`);
+              resolve();
+            }
+          });
+        });
+        
         // Return auth URL for frontend to redirect to
         res.json({
           success: true,
