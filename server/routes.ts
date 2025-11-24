@@ -1754,24 +1754,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Check onboarding status
   app.get('/api/onboarding/status', isAuthenticated, async (req: any, res) => {
     try {
-      // Apply RBAC context manually
+      // Get tenant from user session (no RBAC needed for simple status check)
+      const tenantId = req.user?.tenantId;
       
-      // Apply RBAC context manually
-      await new Promise<void>((resolve, reject) => {
-        withRBACContext(req, res, (error) => {
-          if (error) reject(error);
-          else resolve();
-        });
-      });
+      if (!tenantId) {
+        return res.status(400).json({ message: "No tenant associated with user" });
+      }
       
-      const { tenantId } = req.rbac;
       const completed = await onboardingService.isOnboardingCompleted(tenantId);
       res.json({ completed });
     } catch (error) {
       console.error("Error checking onboarding status:", error);
-      if (error instanceof Error && (error.message.includes("not associated") || error.message.includes("Authorization"))) {
-        return res.status(403).json({ message: "Access denied" });
-      }
       res.status(500).json({ message: "Failed to check onboarding status" });
     }
   });
