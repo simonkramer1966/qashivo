@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -93,6 +93,18 @@ export default function Cashboard() {
   const [, setLocation] = useLocation();
   const { formatCurrency } = useCurrency();
   const [forecastPeriod, setForecastPeriod] = useState<"1" | "3" | "6">("1");
+
+  // Check onboarding status and redirect if not completed
+  const { data: onboardingStatus } = useQuery<{ completed: boolean }>({
+    queryKey: ["/api/onboarding/status"],
+  });
+
+  // Redirect to onboarding if not completed
+  useEffect(() => {
+    if (onboardingStatus && !onboardingStatus.completed) {
+      setLocation("/onboarding");
+    }
+  }, [onboardingStatus, setLocation]);
 
   const { data: metrics, isLoading: metricsLoading } = useQuery<CashMetrics>({
     queryKey: ["/api/dashboard/metrics"],
