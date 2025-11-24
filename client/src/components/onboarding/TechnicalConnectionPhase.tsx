@@ -196,12 +196,6 @@ export function TechnicalConnectionPhase({
           Connect your cloud accounting system for intelligent data import with automatic AI profile generation. 
           Our system analyzes your data to create personalized collection strategies.
         </p>
-        <div className="flex items-center justify-center gap-2 mt-3">
-          <Brain className="w-5 h-5 text-[#17B6C3]" />
-          <span className="text-sm font-medium text-[#17B6C3]">
-            Powered by AI Business Intelligence
-          </span>
-        </div>
       </div>
 
       {/* Provider Selection */}
