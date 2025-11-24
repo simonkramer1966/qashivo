@@ -3,7 +3,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { LogOut, User, Settings, AlertCircle, Power } from "lucide-react";
+import { LogOut, User, Settings, AlertCircle, Power, ListTodo } from "lucide-react";
 import { useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
@@ -38,6 +38,12 @@ export default function Header({ title, subtitle, action, noBorder = true, title
   });
 
   // Sync mutation for manual refresh
+  // Onboarding status query
+  const { data: onboardingStatus } = useQuery<{ completed: boolean }>({
+    queryKey: ["/api/onboarding/status"],
+    enabled: !!user,
+  });
+
   // Automation status query
   const { data: automationStatus, isLoading: isAutomationLoading } = useQuery<{
     enabled: boolean;
@@ -162,23 +168,37 @@ export default function Header({ title, subtitle, action, noBorder = true, title
               Qashivo
             </h1>
           </div>
-          {/* Sync Button on Mobile */}
-          {tenant?.xeroAccessToken && (
-            <Button
-              onClick={() => syncMutation.mutate()}
-              disabled={syncMutation.isPending}
-              variant="ghost"
-              size="sm"
-              className="h-9 px-3 bg-[#17B6C3]/10 hover:bg-[#17B6C3]/20 text-[#17B6C3] border border-[#17B6C3]/20"
-              data-testid="button-sync-now"
-            >
-              {syncMutation.isPending ? (
-                <div className="w-4 h-4 border-2 border-[#17B6C3] border-t-transparent rounded-full animate-spin" />
-              ) : (
-                <AlertCircle className="h-4 w-4" />
-              )}
-            </Button>
-          )}
+          <div className="flex items-center gap-2">
+            {/* Onboarding Resume Button on Mobile */}
+            {onboardingStatus && !onboardingStatus.completed && (
+              <Button
+                onClick={() => setLocation("/onboarding")}
+                variant="ghost"
+                size="sm"
+                className="h-9 px-3 bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 border border-amber-500/20"
+                data-testid="button-resume-onboarding-mobile"
+              >
+                <ListTodo className="h-4 w-4" />
+              </Button>
+            )}
+            {/* Sync Button on Mobile */}
+            {tenant?.xeroAccessToken && (
+              <Button
+                onClick={() => syncMutation.mutate()}
+                disabled={syncMutation.isPending}
+                variant="ghost"
+                size="sm"
+                className="h-9 px-3 bg-[#17B6C3]/10 hover:bg-[#17B6C3]/20 text-[#17B6C3] border border-[#17B6C3]/20"
+                data-testid="button-sync-now"
+              >
+                {syncMutation.isPending ? (
+                  <div className="w-4 h-4 border-2 border-[#17B6C3] border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <AlertCircle className="h-4 w-4" />
+                )}
+              </Button>
+            )}
+          </div>
         </div>
         {tenant?.name && (
           <div className="mb-3">
@@ -205,6 +225,28 @@ export default function Header({ title, subtitle, action, noBorder = true, title
           </p>
         </div>
         <div className="flex items-center space-x-2 sm:space-x-4">
+          {/* Onboarding Resume Button - Only show if onboarding is not complete */}
+          {onboardingStatus && !onboardingStatus.completed && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    onClick={() => setLocation("/onboarding")}
+                    variant="ghost"
+                    size="sm"
+                    className="h-10 px-3 bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 border border-amber-500/20"
+                    data-testid="button-resume-onboarding"
+                  >
+                    <ListTodo className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Resume onboarding setup</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
+
           {/* Sync Button - Only show if Xero is connected */}
           {tenant?.xeroAccessToken && (
             <TooltipProvider>
