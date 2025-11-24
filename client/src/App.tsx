@@ -48,16 +48,16 @@ const ConnectionError = lazy(() => import("@/pages/connection-error"));
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
-  const { showSplash, setShowSplash, triggerSplash } = useSplash();
+  const { showSplash, setShowSplash } = useSplash();
   const [location] = useLocation();
 
-  // Inactivity timer - disabled for investor demo and beta partner pages
-  const isInvestorDemo = location === '/investor-demo' || location === '/investor-demo-qashivo' || location === '/investor-detail' || location === '/beta-partner';
-  useInactivityTimer({
-    timeout: 60000, // 60 seconds
-    onInactive: triggerSplash,
-    enabled: isAuthenticated && !showSplash && !isInvestorDemo
-  });
+  // Inactivity timer disabled - splash screen is now manual only via logo click
+  // const isInvestorDemo = location === '/investor-demo' || location === '/investor-demo-qashivo' || location === '/investor-detail' || location === '/beta-partner';
+  // useInactivityTimer({
+  //   timeout: 60000, // 60 seconds
+  //   onInactive: triggerSplash,
+  //   enabled: isAuthenticated && !showSplash && !isInvestorDemo
+  // });
 
   // Show loading state while checking authentication
   if (isLoading) {

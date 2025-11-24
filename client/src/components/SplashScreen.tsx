@@ -67,7 +67,7 @@ export default function SplashScreen({ onEnter }: SplashScreenProps) {
         {/* Footer Info */}
         <div className="animate-fade-in-delay-4 pt-8">
           <p className="text-xs sm:text-sm text-white/50">
-            Click the logo or inactive for 60 seconds to lock screen
+            Click the Qashivo logo to lock screen
           </p>
         </div>
       </div>
