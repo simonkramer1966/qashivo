@@ -12771,6 +12771,53 @@ Return only JSON with keys: intent, sentiment, confidence, keyInsights, actionIt
     }
   });
 
+  // Get Xero connection health status
+  app.get("/api/xero/health", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const tenant = await storage.getTenant(user.tenantId);
+      if (!tenant) {
+        return res.status(404).json({ message: "Tenant not found" });
+      }
+
+      // Check if Xero is configured at all
+      const isConfigured = !!(tenant.xeroRefreshToken && tenant.xeroTenantId);
+      
+      res.json({
+        isConfigured,
+        connectionStatus: tenant.xeroConnectionStatus || (isConfigured ? 'unknown' : 'not_configured'),
+        lastHealthCheck: tenant.xeroLastHealthCheck,
+        lastSyncAt: tenant.xeroLastSyncAt,
+        error: tenant.xeroHealthCheckError,
+      });
+    } catch (error) {
+      console.error("Error fetching Xero health:", error);
+      res.status(500).json({ message: "Failed to fetch Xero health status" });
+    }
+  });
+
+  // Force a health check for current tenant
+  app.post("/api/xero/health/check", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { xeroHealthCheckService } = await import("./services/xeroHealthCheck");
+      const result = await xeroHealthCheckService.checkSingleTenant(user.tenantId);
+      
+      res.json(result);
+    } catch (error) {
+      console.error("Error running Xero health check:", error);
+      res.status(500).json({ message: "Failed to run health check" });
+    }
+  });
+
   // Test endpoint to verify callback URL is reachable
   app.get("/api/xero/test-callback", async (req, res) => {
     res.send(`

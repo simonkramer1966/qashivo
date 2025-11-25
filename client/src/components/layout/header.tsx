@@ -3,7 +3,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { LogOut, User, Settings, AlertCircle, Power, ListTodo } from "lucide-react";
+import { LogOut, User, Settings, AlertCircle, Power, ListTodo, AlertTriangle, RefreshCw } from "lucide-react";
 import { useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
@@ -37,7 +37,39 @@ export default function Header({ title, subtitle, action, noBorder = true, title
     enabled: !!user,
   });
 
-  // Sync mutation for manual refresh
+  // Xero connection health status
+  const { data: xeroHealth } = useQuery<{
+    isConfigured: boolean;
+    connectionStatus: 'connected' | 'disconnected' | 'error' | 'unknown' | 'not_configured';
+    lastHealthCheck?: string;
+    lastSyncAt?: string;
+    error?: string;
+  }>({
+    queryKey: ['/api/xero/health'],
+    enabled: !!user && !!tenant?.xeroTenantId,
+    refetchInterval: 60000, // Refresh every minute to get latest status
+  });
+
+  // Check if Xero needs reconnection
+  const needsXeroReconnect = xeroHealth?.connectionStatus === 'disconnected' || xeroHealth?.connectionStatus === 'error';
+
+  // Reconnect mutation - gets auth URL and redirects
+  const reconnectMutation = useMutation({
+    mutationFn: () => apiRequest("GET", "/api/xero/auth-url"),
+    onSuccess: (data: any) => {
+      if (data.authUrl) {
+        window.location.href = data.authUrl;
+      }
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Reconnection Failed",
+        description: error?.message || "Failed to start Xero reconnection",
+        variant: "destructive",
+      });
+    },
+  });
+
   // Onboarding status query
   const { data: onboardingStatus } = useQuery<{ completed: boolean }>({
     queryKey: ["/api/onboarding/status"],
@@ -157,6 +189,40 @@ export default function Header({ title, subtitle, action, noBorder = true, title
 
   return (
     <header className="sticky top-0 z-40 bg-white glass-card px-4 sm:px-6 py-4 sm:py-6 border-0 rounded-none shadow-glass [scrollbar-gutter:stable]">
+      {/* Xero Disconnection Alert Banner */}
+      {needsXeroReconnect && (
+        <div className="mb-4 -mx-4 sm:-mx-6 -mt-4 sm:-mt-6 px-4 sm:px-6 py-3 bg-amber-50 border-b border-amber-200 flex items-center justify-between gap-3" data-testid="banner-xero-disconnected">
+          <div className="flex items-center gap-3">
+            <AlertTriangle className="h-5 w-5 text-amber-600 flex-shrink-0" />
+            <div>
+              <p className="text-sm font-medium text-amber-800">
+                Xero connection lost
+              </p>
+              <p className="text-xs text-amber-600 hidden sm:block">
+                {xeroHealth?.error || "Your Xero sync has stopped. Reconnect to resume automatic updates."}
+              </p>
+            </div>
+          </div>
+          <Button
+            onClick={() => reconnectMutation.mutate()}
+            disabled={reconnectMutation.isPending}
+            size="sm"
+            className="bg-amber-600 hover:bg-amber-700 text-white flex-shrink-0"
+            data-testid="button-reconnect-xero"
+          >
+            {reconnectMutation.isPending ? (
+              <RefreshCw className="h-4 w-4 animate-spin" />
+            ) : (
+              <>
+                <RefreshCw className="h-4 w-4 mr-2" />
+                <span className="hidden sm:inline">Reconnect Xero</span>
+                <span className="sm:hidden">Reconnect</span>
+              </>
+            )}
+          </Button>
+        </div>
+      )}
+
       {/* Mobile View - Logo, Name, and Page Title */}
       <div className="lg:hidden">
         <div className="flex items-center justify-between mb-2">

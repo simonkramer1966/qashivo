@@ -302,6 +302,18 @@ app.use((req, res, next) => {
     }
   }
 
+  // Initialize Xero health check service (every 20 minutes)
+  if (process.env.NODE_ENV !== 'test') {
+    try {
+      console.log("🏥 Initializing Xero health check service...");
+      const { xeroHealthCheckService } = await import("./services/xeroHealthCheck");
+      await xeroHealthCheckService.start();
+      console.log("✅ Xero health check service started");
+    } catch (error) {
+      console.error("❌ Failed to initialize Xero health check service:", error);
+    }
+  }
+
   // Initialize PTP breach detector
   if (process.env.NODE_ENV !== 'test') {
     try {

@@ -68,13 +68,12 @@ export class XeroHealthCheckService {
     console.log(`🏥 Checking Xero connection for tenant: ${tenant.name}`);
 
     try {
-      // Import XeroService dynamically to avoid circular deps
-      const { XeroService } = await import('./xero');
-      const xeroService = new XeroService();
+      // Import xeroService dynamically to avoid circular deps
+      const { xeroService } = await import('./xero');
 
       // Check if we have required tokens
       if (!tenant.xeroRefreshToken || !tenant.xeroTenantId) {
-        await this.updateConnectionStatus(tenant.id, 'disconnected', 'Missing refresh token or tenant ID');
+        await this.updateConnectionStatus(tenant.id, 'disconnected', 'Missing Xero credentials');
         return;
       }
 
@@ -85,7 +84,7 @@ export class XeroHealthCheckService {
       );
 
       if (!refreshedTokens) {
-        await this.updateConnectionStatus(tenant.id, 'disconnected', 'Token refresh failed');
+        await this.updateConnectionStatus(tenant.id, 'disconnected', 'Token refresh failed - please reconnect');
         console.log(`❌ Xero connection FAILED for tenant: ${tenant.name}`);
         return;
       }
@@ -94,13 +93,11 @@ export class XeroHealthCheckService {
       const orgInfo = await this.testApiCall(refreshedTokens.accessToken, refreshedTokens.tenantId);
       
       if (orgInfo) {
-        // Update tokens and mark as connected
+        // Only update health check status fields - tokens are already updated by refreshAccessToken
+        // This prevents overwriting with stale values
         await db
           .update(tenants)
           .set({
-            xeroAccessToken: refreshedTokens.accessToken,
-            xeroRefreshToken: refreshedTokens.refreshToken,
-            xeroExpiresAt: refreshedTokens.expiresAt,
             xeroConnectionStatus: 'connected',
             xeroLastHealthCheck: new Date(),
             xeroHealthCheckError: null,
@@ -110,14 +107,45 @@ export class XeroHealthCheckService {
 
         console.log(`✅ Xero connection HEALTHY for tenant: ${tenant.name}`);
       } else {
-        await this.updateConnectionStatus(tenant.id, 'error', 'API call failed after token refresh');
+        await this.updateConnectionStatus(tenant.id, 'error', 'API verification failed');
         console.log(`⚠️ Xero connection ERROR for tenant: ${tenant.name} (API call failed)`);
       }
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      await this.updateConnectionStatus(tenant.id, 'disconnected', errorMessage);
-      console.log(`❌ Xero connection FAILED for tenant: ${tenant.name} - ${errorMessage}`);
+      // Sanitize error message to avoid exposing sensitive OAuth details
+      const rawError = error instanceof Error ? error.message : 'Unknown error';
+      const sanitizedError = this.sanitizeErrorMessage(rawError);
+      await this.updateConnectionStatus(tenant.id, 'disconnected', sanitizedError);
+      console.log(`❌ Xero connection FAILED for tenant: ${tenant.name} - ${sanitizedError}`);
     }
+  }
+
+  private sanitizeErrorMessage(error: string): string {
+    // Remove sensitive OAuth/token details and truncate to reasonable length
+    const sensitivePatterns = [
+      /access_token[=:][^\s&]+/gi,
+      /refresh_token[=:][^\s&]+/gi,
+      /client_secret[=:][^\s&]+/gi,
+      /Bearer [^\s]+/gi,
+    ];
+    
+    let sanitized = error;
+    for (const pattern of sensitivePatterns) {
+      sanitized = sanitized.replace(pattern, '[REDACTED]');
+    }
+    
+    // Map common errors to user-friendly messages
+    if (sanitized.includes('400') || sanitized.includes('invalid_grant')) {
+      return 'Authorization expired - please reconnect';
+    }
+    if (sanitized.includes('401') || sanitized.includes('unauthorized')) {
+      return 'Authentication failed - please reconnect';
+    }
+    if (sanitized.includes('403')) {
+      return 'Access denied - please reconnect and grant permissions';
+    }
+    
+    // Truncate if still too long
+    return sanitized.length > 100 ? sanitized.substring(0, 100) + '...' : sanitized;
   }
 
   private async testApiCall(accessToken: string, tenantId: string): Promise<boolean> {
