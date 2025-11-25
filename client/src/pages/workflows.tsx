@@ -36,7 +36,7 @@ export default function Workflows() {
   const { toast } = useToast();
   const { isAuthenticated, isLoading } = useAuth();
   const [, setLocation] = useLocation();
-  const [activeTab, setActiveTab] = useState("dashboard");
+  const [activeTab, setActiveTab] = useState("templates");
   const queryClient = useQueryClient();
 
   // Fetch collections dashboard data
@@ -682,11 +682,7 @@ export default function Workflows() {
         
         <div className="p-8">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-            <TabsList className="grid w-full grid-cols-6 bg-white border border-gray-200">
-              <TabsTrigger value="dashboard" className="data-[state=active]:bg-[#17B6C3] data-[state=active]:text-white">
-                <BarChart3 className="mr-2 h-4 w-4" />
-                Dashboard
-              </TabsTrigger>
+            <TabsList className="grid w-full grid-cols-5 bg-white border border-gray-200">
               <TabsTrigger value="templates" className="data-[state=active]:bg-[#17B6C3] data-[state=active]:text-white">
                 <Mail className="mr-2 h-4 w-4" />
                 Templates
@@ -708,10 +704,6 @@ export default function Workflows() {
                 Analytics
               </TabsTrigger>
             </TabsList>
-
-            <TabsContent value="dashboard">
-              <DashboardOverview />
-            </TabsContent>
 
             <TabsContent value="templates">
               <TemplateManagement />
