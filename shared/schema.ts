@@ -89,6 +89,11 @@ export const tenants = pgTable("tenants", {
   interestMarkup: decimal("interest_markup", { precision: 5, scale: 2 }).default("8.00"), // Additional % on top of BoE rate
   interestGracePeriod: integer("interest_grace_period").default(30), // Days before interest starts
   
+  // Xero Connection Health Monitoring
+  xeroConnectionStatus: varchar("xero_connection_status").default("unknown"), // connected, disconnected, error, unknown
+  xeroLastHealthCheck: timestamp("xero_last_health_check"),
+  xeroHealthCheckError: text("xero_health_check_error"), // Last error message if any
+  
   // AI Automation Policy Settings (Week 1: Supervised Autonomy)
   approvalMode: varchar("approval_mode").default("manual"), // manual, auto_after_timeout, full_auto
   approvalTimeoutHours: integer("approval_timeout_hours").default(12), // Auto-approve if not reviewed within X hours
