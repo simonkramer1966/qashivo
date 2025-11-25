@@ -682,7 +682,7 @@ export default function Workflows() {
         
         <div className="p-8">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-            <TabsList className="grid w-full grid-cols-5 bg-white border border-gray-200">
+            <TabsList className="grid w-full grid-cols-4 bg-white border border-gray-200">
               <TabsTrigger value="templates" className="data-[state=active]:bg-[#17B6C3] data-[state=active]:text-white">
                 <Mail className="mr-2 h-4 w-4" />
                 Templates
@@ -698,10 +698,6 @@ export default function Workflows() {
               <TabsTrigger value="voice" className="data-[state=active]:bg-[#17B6C3] data-[state=active]:text-white">
                 <Phone className="mr-2 h-4 w-4" />
                 Voice
-              </TabsTrigger>
-              <TabsTrigger value="analytics" className="data-[state=active]:bg-[#17B6C3] data-[state=active]:text-white">
-                <TrendingUp className="mr-2 h-4 w-4" />
-                Analytics
               </TabsTrigger>
             </TabsList>
 
@@ -728,25 +724,6 @@ export default function Workflows() {
 
             <TabsContent value="voice">
               <VoiceConfig />
-            </TabsContent>
-
-            <TabsContent value="analytics">
-              <Card className="bg-white border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
-                <CardHeader>
-                  <CardTitle className="text-xl font-bold">Performance Analytics</CardTitle>
-                  <CardDescription>Comprehensive channel effectiveness and ROI analysis</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-center py-12">
-                    <BarChart3 className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">Analytics Dashboard</h3>
-                    <p className="text-gray-600 mb-4">Advanced analytics and reporting features coming soon</p>
-                    <Button variant="outline" data-testid="button-preview-analytics">
-                      Preview Analytics
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
             </TabsContent>
           </Tabs>
         </div>
