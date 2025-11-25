@@ -682,7 +682,7 @@ export default function Workflows() {
         
         <div className="p-8">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-            <TabsList className="grid w-full grid-cols-4 bg-white border border-gray-200">
+            <TabsList className="grid w-full grid-cols-3 bg-white border border-gray-200">
               <TabsTrigger value="templates" className="data-[state=active]:bg-[#17B6C3] data-[state=active]:text-white">
                 <Mail className="mr-2 h-4 w-4" />
                 Templates
@@ -694,10 +694,6 @@ export default function Workflows() {
               <TabsTrigger value="senders" className="data-[state=active]:bg-[#17B6C3] data-[state=active]:text-white">
                 <Building2 className="mr-2 h-4 w-4" />
                 Senders
-              </TabsTrigger>
-              <TabsTrigger value="voice" className="data-[state=active]:bg-[#17B6C3] data-[state=active]:text-white">
-                <Phone className="mr-2 h-4 w-4" />
-                Voice
               </TabsTrigger>
             </TabsList>
 
@@ -711,19 +707,6 @@ export default function Workflows() {
 
             <TabsContent value="senders">
               <EmailSenderManagement />
-            </TabsContent>
-
-
-            <TabsContent value="sms">
-              <SMSStrategy />
-            </TabsContent>
-
-            <TabsContent value="whatsapp">
-              <WhatsAppConfig />
-            </TabsContent>
-
-            <TabsContent value="voice">
-              <VoiceConfig />
             </TabsContent>
           </Tabs>
         </div>
