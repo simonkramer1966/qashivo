@@ -10146,7 +10146,7 @@ Payment required immediately to avoid collection action. Contact us NOW.`
         .where(
           and(
             eq(actions.tenantId, user.tenantId),
-            eq(actions.channel, 'sms'),
+            eq(actions.type, 'sms'),
             gte(actions.createdAt, thirtyDaysAgo)
           )
         );
