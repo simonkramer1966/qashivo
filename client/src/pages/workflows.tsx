@@ -31,6 +31,7 @@ import EmailSenderManagement from "@/components/collections/EmailSenderManagemen
 import CollectionScheduleBuilder from "@/components/collections/CollectionScheduleBuilder";
 import CustomerAssignmentManager from "@/components/collections/CustomerAssignmentManager";
 import VoiceConfig from "@/components/collections/VoiceConfig";
+import SMSManagement from "@/components/collections/SMSManagement";
 
 export default function Workflows() {
   const { toast } = useToast();
@@ -682,7 +683,7 @@ export default function Workflows() {
         
         <div className="p-8">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-            <TabsList className="grid w-full grid-cols-3 bg-white border border-gray-200">
+            <TabsList className="grid w-full grid-cols-4 bg-white border border-gray-200">
               <TabsTrigger value="templates" className="data-[state=active]:bg-[#17B6C3] data-[state=active]:text-white">
                 <Mail className="mr-2 h-4 w-4" />
                 Templates
@@ -690,6 +691,10 @@ export default function Workflows() {
               <TabsTrigger value="schedules" className="data-[state=active]:bg-[#17B6C3] data-[state=active]:text-white">
                 <Target className="mr-2 h-4 w-4" />
                 Workflows
+              </TabsTrigger>
+              <TabsTrigger value="sms" className="data-[state=active]:bg-[#17B6C3] data-[state=active]:text-white">
+                <MessageSquare className="mr-2 h-4 w-4" />
+                SMS
               </TabsTrigger>
               <TabsTrigger value="senders" className="data-[state=active]:bg-[#17B6C3] data-[state=active]:text-white">
                 <Building2 className="mr-2 h-4 w-4" />
@@ -703,6 +708,10 @@ export default function Workflows() {
 
             <TabsContent value="schedules" className="-mx-8 -mb-8">
               <CollectionScheduleBuilder className="px-4" />
+            </TabsContent>
+
+            <TabsContent value="sms">
+              <SMSManagement />
             </TabsContent>
 
             <TabsContent value="senders">

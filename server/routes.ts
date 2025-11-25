@@ -10129,6 +10129,54 @@ Payment required immediately to avoid collection action. Contact us NOW.`
     }
   });
 
+  // SMS Configuration
+  app.get("/api/collections/sms/configuration", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      // Get SMS statistics from the database (last 30 days)
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+      const smsActions = await db.select()
+        .from(actions)
+        .where(
+          and(
+            eq(actions.tenantId, user.tenantId),
+            eq(actions.channel, 'sms'),
+            gte(actions.createdAt, thirtyDaysAgo)
+          )
+        );
+
+      const messagesSent = smsActions.length;
+      const deliveredMessages = smsActions.filter(a => a.status === 'completed').length;
+      const failedMessages = smsActions.filter(a => a.status === 'failed').length;
+      const deliveryRate = messagesSent > 0 
+        ? Math.round((deliveredMessages / messagesSent) * 100) 
+        : 0;
+
+      res.json({
+        phoneNumber: process.env.VONAGE_PHONE_NUMBER || '+44 7418 317011',
+        country: 'United Kingdom',
+        countryCode: 'GB',
+        capabilities: ['sms', 'voice'],
+        provider: 'Vonage',
+        status: 'active',
+        stats: {
+          messagesSent,
+          deliveryRate,
+          failedMessages
+        }
+      });
+    } catch (error) {
+      console.error("Error fetching SMS configuration:", error);
+      res.status(500).json({ message: "Failed to fetch SMS configuration" });
+    }
+  });
+
   // Workflow Templates
   app.get("/api/collections/workflow-templates", isAuthenticated, async (req: any, res) => {
     try {
