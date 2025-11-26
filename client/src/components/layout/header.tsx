@@ -193,8 +193,20 @@ export default function Header({ title, subtitle, action, noBorder = true, title
     return "User";
   };
 
+  // Check if accounting software is connected
+  const isAccountingSoftwareConnected = xeroHealth?.connectionStatus === 'connected';
+
   return (
-    <header className="sticky top-0 z-40 bg-white glass-card px-4 sm:px-6 py-4 sm:py-6 border-0 rounded-none shadow-glass [scrollbar-gutter:stable]">
+    <header className="sticky top-0 z-40 bg-white glass-card border-0 rounded-none shadow-glass [scrollbar-gutter:stable]">
+      {/* Connected indicator bar - shows when accounting software is connected */}
+      {isAccountingSoftwareConnected && (
+        <div 
+          className="h-[5px] bg-gradient-to-r from-[#17B6C3] to-[#0ea5e9] -mx-0"
+          data-testid="indicator-accounting-connected"
+        />
+      )}
+      
+      <div className="px-4 sm:px-6 py-4 sm:py-6">
       {/* Xero Disconnection Alert Banner */}
       {needsXeroReconnect && (
         <div className="mb-4 -mx-4 sm:-mx-6 -mt-4 sm:-mt-6 px-4 sm:px-6 py-3 bg-amber-50 border-b border-amber-200 flex items-center justify-between gap-3" data-testid="banner-xero-disconnected">
@@ -349,6 +361,7 @@ export default function Header({ title, subtitle, action, noBorder = true, title
           
           {action}
         </div>
+      </div>
       </div>
     </header>
   );
