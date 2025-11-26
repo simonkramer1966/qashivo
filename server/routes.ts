@@ -12955,12 +12955,15 @@ Return only JSON with keys: intent, sentiment, confidence, keyInsights, actionIt
       const xeroTenantId = result.tokens.tenantId; // Xero's tenant ID
       const tokens = result.tokens;
       
-      // Save tokens to database
+      // Save tokens to database and mark connection as healthy
       await storage.updateTenant(appTenantId, {
         xeroAccessToken: tokens.accessToken,
         xeroRefreshToken: tokens.refreshToken || null,
         xeroTenantId: xeroTenantId || null,
         xeroExpiresAt: tokens.expiresAt || null,
+        xeroConnectionStatus: 'connected',
+        xeroLastHealthCheck: new Date(),
+        xeroHealthCheckError: null,
       });
       
       console.log(`✅ Xero connected successfully for app tenant: ${appTenantId}, Xero tenant: ${xeroTenantId}`);
