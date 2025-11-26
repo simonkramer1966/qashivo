@@ -55,8 +55,14 @@ export default function Header({ title, subtitle, action, noBorder = true, title
 
   // Reconnect mutation - gets auth URL and redirects
   const reconnectMutation = useMutation({
-    mutationFn: () => apiRequest("GET", "/api/xero/auth-url"),
-    onSuccess: (data: any) => {
+    mutationFn: async () => {
+      const res = await fetch("/api/xero/auth-url", {
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to get Xero auth URL");
+      return res.json();
+    },
+    onSuccess: (data: { authUrl: string }) => {
       if (data.authUrl) {
         window.location.href = data.authUrl;
       }
