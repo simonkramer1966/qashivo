@@ -1065,12 +1065,12 @@ export default function ActionCentre() {
                 <h3 className="text-lg font-semibold text-slate-900 mb-4">Recent AI Activity</h3>
                 <div className="divide-y divide-slate-100">
                   {[
-                    { date: '27 Nov', time: '14:32', customer: 'Apex Construction Ltd', amount: 4250, outcome: 'Delivered', icon: Mail, color: 'blue' },
-                    { date: '27 Nov', time: '14:26', customer: 'Henderson & Partners', amount: 8500, outcome: 'Promise to pay £8,500 by Dec 5', icon: Phone, color: 'green' },
-                    { date: '27 Nov', time: '14:19', customer: 'Metro Supplies', amount: 1875, outcome: 'Delivered', icon: MessageSquare, color: 'purple' },
-                    { date: '27 Nov', time: '14:12', customer: 'Northern Logistics', amount: 3200, outcome: 'Opened', icon: Mail, color: 'blue' },
-                    { date: '27 Nov', time: '13:59', customer: 'Brightside Retail', amount: 6750, outcome: 'Dispute raised - needs review', icon: Phone, color: 'amber' },
-                    { date: '27 Nov', time: '13:34', customer: 'Coastal Properties', amount: 2100, outcome: 'Delivered', icon: Mail, color: 'blue' },
+                    { date: '27 Nov', time: '14:32', customer: 'Apex Construction Ltd', amount: 4250, outcome: 'Delivered', outcomeAmount: null, icon: Mail, color: 'blue' },
+                    { date: '27 Nov', time: '14:26', customer: 'Henderson & Partners', amount: 8500, outcome: 'Promise to pay', outcomeAmount: 8500, icon: Phone, color: 'green' },
+                    { date: '27 Nov', time: '14:19', customer: 'Metro Supplies', amount: 1875, outcome: 'Delivered', outcomeAmount: null, icon: MessageSquare, color: 'purple' },
+                    { date: '27 Nov', time: '14:12', customer: 'Northern Logistics', amount: 3200, outcome: 'Opened', outcomeAmount: null, icon: Mail, color: 'blue' },
+                    { date: '27 Nov', time: '13:59', customer: 'Brightside Retail', amount: 6750, outcome: 'Dispute', outcomeAmount: null, icon: Phone, color: 'amber' },
+                    { date: '27 Nov', time: '13:34', customer: 'Coastal Properties', amount: 2100, outcome: 'Delivered', outcomeAmount: null, icon: Mail, color: 'blue' },
                   ].map((activity, idx) => (
                     <div key={idx} className="flex items-center gap-4 py-3 hover:bg-slate-50/50 px-2 -mx-2 rounded transition-colors">
                       <span className="text-xs text-slate-500 shrink-0 w-14">{activity.date}</span>
@@ -1098,6 +1098,9 @@ export default function ActionCentre() {
                       }`}>
                         {activity.outcome}
                       </div>
+                      <span className="text-sm font-semibold text-green-600 tabular-nums shrink-0 w-20 text-right">
+                        {activity.outcomeAmount ? formatCurrency(activity.outcomeAmount) : '—'}
+                      </span>
                     </div>
                   ))}
                 </div>
