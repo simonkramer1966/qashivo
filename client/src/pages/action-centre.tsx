@@ -1065,14 +1065,17 @@ export default function ActionCentre() {
                 <h3 className="text-lg font-semibold text-slate-900 mb-4">Recent AI Activity</h3>
                 <div className="divide-y divide-slate-100">
                   {[
-                    { time: '2 mins ago', action: 'Email sent', customer: 'Apex Construction Ltd', detail: 'Payment reminder for INV-2024-0847 (£4,250)', outcome: 'Delivered', icon: Mail, color: 'blue' },
-                    { time: '8 mins ago', action: 'Voice call completed', customer: 'Henderson & Partners', detail: 'Follow-up on overdue balance', outcome: 'Promise to pay £8,500 by Dec 5', icon: Phone, color: 'green' },
-                    { time: '15 mins ago', action: 'SMS sent', customer: 'Metro Supplies', detail: 'Gentle reminder for INV-2024-0823', outcome: 'Delivered', icon: MessageSquare, color: 'purple' },
-                    { time: '22 mins ago', action: 'Email sent', customer: 'Northern Logistics', detail: 'Final notice before escalation', outcome: 'Opened', icon: Mail, color: 'blue' },
-                    { time: '35 mins ago', action: 'Voice call completed', customer: 'Brightside Retail', detail: 'Collections call - 45 days overdue', outcome: 'Dispute raised - needs review', icon: Phone, color: 'amber' },
-                    { time: '1 hour ago', action: 'Email sent', customer: 'Coastal Properties', detail: 'Statement of account attached', outcome: 'Delivered', icon: Mail, color: 'blue' },
+                    { date: '27 Nov', time: '14:32', action: 'Email sent', customer: 'Apex Construction Ltd', detail: 'Payment reminder for INV-2024-0847 (£4,250)', outcome: 'Delivered', icon: Mail, color: 'blue' },
+                    { date: '27 Nov', time: '14:26', action: 'Voice call completed', customer: 'Henderson & Partners', detail: 'Follow-up on overdue balance', outcome: 'Promise to pay £8,500 by Dec 5', icon: Phone, color: 'green' },
+                    { date: '27 Nov', time: '14:19', action: 'SMS sent', customer: 'Metro Supplies', detail: 'Gentle reminder for INV-2024-0823', outcome: 'Delivered', icon: MessageSquare, color: 'purple' },
+                    { date: '27 Nov', time: '14:12', action: 'Email sent', customer: 'Northern Logistics', detail: 'Final notice before escalation', outcome: 'Opened', icon: Mail, color: 'blue' },
+                    { date: '27 Nov', time: '13:59', action: 'Voice call completed', customer: 'Brightside Retail', detail: 'Collections call - 45 days overdue', outcome: 'Dispute raised - needs review', icon: Phone, color: 'amber' },
+                    { date: '27 Nov', time: '13:34', action: 'Email sent', customer: 'Coastal Properties', detail: 'Statement of account attached', outcome: 'Delivered', icon: Mail, color: 'blue' },
                   ].map((activity, idx) => (
                     <div key={idx} className="flex items-center gap-4 py-3 hover:bg-slate-50/50 px-2 -mx-2 rounded transition-colors">
+                      <span className="text-xs text-slate-500 shrink-0 w-14">{activity.date}</span>
+                      <span className="text-xs font-medium text-slate-700 shrink-0 w-12">{activity.time}</span>
+                      <span className="text-sm text-slate-900 font-medium truncate flex-1">{activity.customer}</span>
                       <div className={`p-2 rounded-lg shrink-0 ${
                         activity.color === 'blue' ? 'bg-blue-100' : 
                         activity.color === 'green' ? 'bg-green-100' : 
@@ -1086,11 +1089,6 @@ export default function ActionCentre() {
                           'text-amber-600'
                         }`} />
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <span className="font-medium text-sm text-slate-900">{activity.action}</span>
-                        <span className="text-slate-400 mx-2">·</span>
-                        <span className="text-sm text-slate-700">{activity.customer}</span>
-                      </div>
                       <div className={`text-xs px-2 py-1 rounded-full shrink-0 ${
                         activity.outcome.includes('Promise') ? 'bg-green-100 text-green-700' :
                         activity.outcome.includes('Dispute') ? 'bg-amber-100 text-amber-700' :
@@ -1099,7 +1097,6 @@ export default function ActionCentre() {
                       }`}>
                         {activity.outcome}
                       </div>
-                      <span className="text-xs text-slate-400 shrink-0 w-20 text-right">{activity.time}</span>
                     </div>
                   ))}
                 </div>
