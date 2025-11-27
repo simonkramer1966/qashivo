@@ -725,13 +725,13 @@ export default function ActionCentre() {
                 onClick={() => setActiveTab('payment_plans')}
                 className={`px-2 py-2 rounded-md text-sm font-medium transition-all flex items-center justify-center gap-1 ${
                   activeTab === 'payment_plans'
-                    ? 'bg-blue-500 text-white shadow-sm'
+                    ? 'bg-green-500 text-white shadow-sm'
                     : 'bg-transparent text-slate-600 hover:bg-white/50'
                 }`}
                 data-testid="tab-payment-plans"
               >
                 <span>Plans</span>
-                {tabData?.paymentPlans && <span className={`px-1.5 py-0.5 rounded-full text-xs ${activeTab === 'payment_plans' ? 'bg-white/20' : 'bg-blue-100 text-blue-700'}`}>{tabData.paymentPlans.count}</span>}
+                {tabData?.paymentPlans && <span className={`px-1.5 py-0.5 rounded-full text-xs ${activeTab === 'payment_plans' ? 'bg-white/20' : 'bg-green-100 text-green-700'}`}>{tabData.paymentPlans.count}</span>}
               </button>
               
               <button
