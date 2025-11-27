@@ -769,7 +769,7 @@ export default function ActionCentre() {
                 }`}
                 data-testid="tab-enforcement"
               >
-                <span>Enforce</span>
+                <span>Legal</span>
                 {tabData?.enforcement && <span className={`px-1.5 py-0.5 rounded-full text-xs ${activeTab === 'enforcement' ? 'bg-white/20' : 'bg-slate-200'}`}>{tabData.enforcement.count}</span>}
               </button>
             </div>
