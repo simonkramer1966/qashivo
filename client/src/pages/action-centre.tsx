@@ -641,10 +641,10 @@ export default function ActionCentre() {
         <div className="container-apple py-4 sm:py-6 lg:py-8">
           {/* Workflow Tabs - 9-tab system: Completed (default), Exceptions, Queries, Overdue, PTP, Pymt Plans, Broken, Recovery, Enforcement */}
           <div className="mb-6">
-            <div className="flex flex-wrap gap-1 p-1 bg-slate-100 rounded-lg">
+            <div className="grid grid-cols-9 gap-1 p-1 bg-slate-100 rounded-lg">
               <button
                 onClick={() => setActiveTab('completed')}
-                className={`px-3 py-2 rounded-md text-sm font-medium transition-all ${
+                className={`px-2 py-2 rounded-md text-sm font-medium transition-all flex items-center justify-center gap-1 ${
                   activeTab === 'completed'
                     ? 'bg-[#17B6C3] text-white shadow-sm'
                     : 'bg-transparent text-slate-600 hover:bg-white/50'
@@ -652,12 +652,12 @@ export default function ActionCentre() {
                 data-testid="tab-completed"
               >
                 <span>Completed</span>
-                {tabData?.completed && <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-xs ${activeTab === 'completed' ? 'bg-white/20' : 'bg-slate-200'}`}>{tabData.completed.count}</span>}
+                {tabData?.completed && <span className={`px-1.5 py-0.5 rounded-full text-xs ${activeTab === 'completed' ? 'bg-white/20' : 'bg-slate-200'}`}>{tabData.completed.count}</span>}
               </button>
               
               <button
                 onClick={() => setActiveTab('exceptions')}
-                className={`px-3 py-2 rounded-md text-sm font-medium transition-all ${
+                className={`px-2 py-2 rounded-md text-sm font-medium transition-all flex items-center justify-center gap-1 ${
                   activeTab === 'exceptions'
                     ? 'bg-amber-500 text-white shadow-sm'
                     : 'bg-transparent text-slate-600 hover:bg-white/50'
@@ -665,12 +665,12 @@ export default function ActionCentre() {
                 data-testid="tab-exceptions"
               >
                 <span>Exceptions</span>
-                {tabData?.exceptions && tabData.exceptions.count > 0 && <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-xs ${activeTab === 'exceptions' ? 'bg-white/20' : 'bg-amber-100 text-amber-700'}`}>{tabData.exceptions.count}</span>}
+                {tabData?.exceptions && tabData.exceptions.count > 0 && <span className={`px-1.5 py-0.5 rounded-full text-xs ${activeTab === 'exceptions' ? 'bg-white/20' : 'bg-amber-100 text-amber-700'}`}>{tabData.exceptions.count}</span>}
               </button>
               
               <button
                 onClick={() => setActiveTab('queries')}
-                className={`px-3 py-2 rounded-md text-sm font-medium transition-all ${
+                className={`px-2 py-2 rounded-md text-sm font-medium transition-all flex items-center justify-center gap-1 ${
                   activeTab === 'queries'
                     ? 'bg-[#17B6C3] text-white shadow-sm'
                     : 'bg-transparent text-slate-600 hover:bg-white/50'
@@ -678,12 +678,12 @@ export default function ActionCentre() {
                 data-testid="tab-queries"
               >
                 <span>Queries</span>
-                {tabData?.queries && <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-xs ${activeTab === 'queries' ? 'bg-white/20' : 'bg-slate-200'}`}>{tabData.queries.count}</span>}
+                {tabData?.queries && <span className={`px-1.5 py-0.5 rounded-full text-xs ${activeTab === 'queries' ? 'bg-white/20' : 'bg-slate-200'}`}>{tabData.queries.count}</span>}
               </button>
               
               <button
                 onClick={() => setActiveTab('overdue')}
-                className={`px-3 py-2 rounded-md text-sm font-medium transition-all ${
+                className={`px-2 py-2 rounded-md text-sm font-medium transition-all flex items-center justify-center gap-1 ${
                   activeTab === 'overdue'
                     ? 'bg-[#17B6C3] text-white shadow-sm'
                     : 'bg-transparent text-slate-600 hover:bg-white/50'
@@ -691,12 +691,12 @@ export default function ActionCentre() {
                 data-testid="tab-overdue"
               >
                 <span>Overdue</span>
-                {tabData?.overdueInvoices && <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-xs ${activeTab === 'overdue' ? 'bg-white/20' : 'bg-slate-200'}`}>{tabData.overdueInvoices.count}</span>}
+                {tabData?.overdueInvoices && <span className={`px-1.5 py-0.5 rounded-full text-xs ${activeTab === 'overdue' ? 'bg-white/20' : 'bg-slate-200'}`}>{tabData.overdueInvoices.count}</span>}
               </button>
               
               <button
                 onClick={() => setActiveTab('ptp')}
-                className={`px-3 py-2 rounded-md text-sm font-medium transition-all ${
+                className={`px-2 py-2 rounded-md text-sm font-medium transition-all flex items-center justify-center gap-1 ${
                   activeTab === 'ptp'
                     ? 'bg-green-500 text-white shadow-sm'
                     : 'bg-transparent text-slate-600 hover:bg-white/50'
@@ -704,12 +704,12 @@ export default function ActionCentre() {
                 data-testid="tab-ptp"
               >
                 <span>PTP</span>
-                {tabData?.upcomingPTP && <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-xs ${activeTab === 'ptp' ? 'bg-white/20' : 'bg-green-100 text-green-700'}`}>{tabData.upcomingPTP.count}</span>}
+                {tabData?.upcomingPTP && <span className={`px-1.5 py-0.5 rounded-full text-xs ${activeTab === 'ptp' ? 'bg-white/20' : 'bg-green-100 text-green-700'}`}>{tabData.upcomingPTP.count}</span>}
               </button>
               
               <button
                 onClick={() => setActiveTab('payment_plans')}
-                className={`px-3 py-2 rounded-md text-sm font-medium transition-all ${
+                className={`px-2 py-2 rounded-md text-sm font-medium transition-all flex items-center justify-center gap-1 ${
                   activeTab === 'payment_plans'
                     ? 'bg-blue-500 text-white shadow-sm'
                     : 'bg-transparent text-slate-600 hover:bg-white/50'
@@ -717,12 +717,12 @@ export default function ActionCentre() {
                 data-testid="tab-payment-plans"
               >
                 <span>Plans</span>
-                {tabData?.paymentPlans && <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-xs ${activeTab === 'payment_plans' ? 'bg-white/20' : 'bg-blue-100 text-blue-700'}`}>{tabData.paymentPlans.count}</span>}
+                {tabData?.paymentPlans && <span className={`px-1.5 py-0.5 rounded-full text-xs ${activeTab === 'payment_plans' ? 'bg-white/20' : 'bg-blue-100 text-blue-700'}`}>{tabData.paymentPlans.count}</span>}
               </button>
               
               <button
                 onClick={() => setActiveTab('broken')}
-                className={`px-3 py-2 rounded-md text-sm font-medium transition-all ${
+                className={`px-2 py-2 rounded-md text-sm font-medium transition-all flex items-center justify-center gap-1 ${
                   activeTab === 'broken'
                     ? 'bg-red-500 text-white shadow-sm'
                     : 'bg-transparent text-slate-600 hover:bg-white/50'
@@ -730,12 +730,12 @@ export default function ActionCentre() {
                 data-testid="tab-broken"
               >
                 <span>Broken</span>
-                {tabData?.brokenPromises && tabData.brokenPromises.count > 0 && <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-xs ${activeTab === 'broken' ? 'bg-white/20' : 'bg-red-100 text-red-700'}`}>{tabData.brokenPromises.count}</span>}
+                {tabData?.brokenPromises && tabData.brokenPromises.count > 0 && <span className={`px-1.5 py-0.5 rounded-full text-xs ${activeTab === 'broken' ? 'bg-white/20' : 'bg-red-100 text-red-700'}`}>{tabData.brokenPromises.count}</span>}
               </button>
               
               <button
                 onClick={() => setActiveTab('recovery')}
-                className={`px-3 py-2 rounded-md text-sm font-medium transition-all ${
+                className={`px-2 py-2 rounded-md text-sm font-medium transition-all flex items-center justify-center gap-1 ${
                   activeTab === 'recovery'
                     ? 'bg-purple-500 text-white shadow-sm'
                     : 'bg-transparent text-slate-600 hover:bg-white/50'
@@ -743,20 +743,20 @@ export default function ActionCentre() {
                 data-testid="tab-recovery"
               >
                 <span>Recovery</span>
-                {tabData?.debtRecovery && <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-xs ${activeTab === 'recovery' ? 'bg-white/20' : 'bg-purple-100 text-purple-700'}`}>{tabData.debtRecovery.count}</span>}
+                {tabData?.debtRecovery && <span className={`px-1.5 py-0.5 rounded-full text-xs ${activeTab === 'recovery' ? 'bg-white/20' : 'bg-purple-100 text-purple-700'}`}>{tabData.debtRecovery.count}</span>}
               </button>
               
               <button
                 onClick={() => setActiveTab('enforcement')}
-                className={`px-3 py-2 rounded-md text-sm font-medium transition-all ${
+                className={`px-2 py-2 rounded-md text-sm font-medium transition-all flex items-center justify-center gap-1 ${
                   activeTab === 'enforcement'
                     ? 'bg-slate-700 text-white shadow-sm'
                     : 'bg-transparent text-slate-600 hover:bg-white/50'
                 }`}
                 data-testid="tab-enforcement"
               >
-                <span>Enforcement</span>
-                {tabData?.enforcement && <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-xs ${activeTab === 'enforcement' ? 'bg-white/20' : 'bg-slate-200'}`}>{tabData.enforcement.count}</span>}
+                <span>Enforce</span>
+                {tabData?.enforcement && <span className={`px-1.5 py-0.5 rounded-full text-xs ${activeTab === 'enforcement' ? 'bg-white/20' : 'bg-slate-200'}`}>{tabData.enforcement.count}</span>}
               </button>
             </div>
           </div>
