@@ -160,8 +160,8 @@ export default function ActionCentre() {
   const [page, setPage] = useState(1);
   const limit = 20;
   
-  // Workflow-based filter (main tabs)
-  const [activeTab, setActiveTab] = useState<'queries' | 'overdue' | 'debt_recovery' | 'enforcement'>('overdue');
+  // Workflow-based filter (main tabs) - 9 tabs: completed (default), exceptions, queries, overdue, ptp, payment_plans, broken, recovery, enforcement
+  const [activeTab, setActiveTab] = useState<'completed' | 'exceptions' | 'queries' | 'overdue' | 'ptp' | 'payment_plans' | 'broken' | 'recovery' | 'enforcement'>('completed');
   
   // Multi-select toggle filters
   const [directionFilters, setDirectionFilters] = useState<string[]>([]);
@@ -184,14 +184,15 @@ export default function ActionCentre() {
     refetchInterval: 15000, // Auto-refresh every 15 seconds
   });
 
-  // Fetch categorized tab data
+  // Fetch categorized tab data - 9 tabs
   const { data: tabData, isLoading: isLoadingTabs } = useQuery<{
+    completed: { count: number; items: any[] };
+    exceptions: { count: number; items: any[] };
     queries: { count: number; items: any[] };
     overdueInvoices: { count: number; items: any[] };
     upcomingPTP: { count: number; items: any[] };
+    paymentPlans: { count: number; items: any[] };
     brokenPromises: { count: number; items: any[] };
-    disputes: { count: number; items: any[] };
-    onHold: { count: number; items: any[] };
     debtRecovery: { count: number; items: any[] };
     enforcement: { count: number; items: any[] };
   }>({
@@ -491,22 +492,32 @@ export default function ActionCentre() {
     return 'upcoming';
   };
 
-  // Determine if current tab shows actions (unified view)
-  const isActionsTab = activeTab !== 'queries';
+  // Determine if current tab shows actions (unified view) - most tabs show actions
+  const isActionsTab = !['queries'].includes(activeTab);
   
-  // Determine which tabs show grid view (debt recovery & enforcement only)
-  const showGridView = activeTab === 'debt_recovery' || activeTab === 'enforcement';
+  // Determine which tabs show grid view (recovery & enforcement only)
+  const showGridView = activeTab === 'recovery' || activeTab === 'enforcement';
 
   // Get items for active tab
   const currentTabItems = useMemo(() => {
     if (!tabData) return [];
     
     switch (activeTab) {
+      case 'completed':
+        return tabData.completed?.items || [];
+      case 'exceptions':
+        return tabData.exceptions?.items || [];
       case 'queries':
-        return tabData.queries.items;
+        return tabData.queries?.items || [];
       case 'overdue':
-        return tabData.overdueInvoices.items;
-      case 'debt_recovery':
+        return tabData.overdueInvoices?.items || [];
+      case 'ptp':
+        return tabData.upcomingPTP?.items || [];
+      case 'payment_plans':
+        return tabData.paymentPlans?.items || [];
+      case 'broken':
+        return tabData.brokenPromises?.items || [];
+      case 'recovery':
         return tabData.debtRecovery?.items || [];
       case 'enforcement':
         return tabData.enforcement?.items || [];
@@ -628,12 +639,38 @@ export default function ActionCentre() {
         />
         
         <div className="container-apple py-4 sm:py-6 lg:py-8">
-          {/* Workflow Tabs - 4-tab system: Queries, Overdue, Debt Recovery, Enforcement */}
+          {/* Workflow Tabs - 9-tab system: Completed (default), Exceptions, Queries, Overdue, PTP, Pymt Plans, Broken, Recovery, Enforcement */}
           <div className="mb-6">
-            <div className="flex gap-2 p-1 bg-slate-100 rounded-lg">
+            <div className="flex flex-wrap gap-1 p-1 bg-slate-100 rounded-lg">
+              <button
+                onClick={() => setActiveTab('completed')}
+                className={`px-3 py-2 rounded-md text-sm font-medium transition-all ${
+                  activeTab === 'completed'
+                    ? 'bg-[#17B6C3] text-white shadow-sm'
+                    : 'bg-transparent text-slate-600 hover:bg-white/50'
+                }`}
+                data-testid="tab-completed"
+              >
+                <span>Completed</span>
+                {tabData?.completed && <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-xs ${activeTab === 'completed' ? 'bg-white/20' : 'bg-slate-200'}`}>{tabData.completed.count}</span>}
+              </button>
+              
+              <button
+                onClick={() => setActiveTab('exceptions')}
+                className={`px-3 py-2 rounded-md text-sm font-medium transition-all ${
+                  activeTab === 'exceptions'
+                    ? 'bg-amber-500 text-white shadow-sm'
+                    : 'bg-transparent text-slate-600 hover:bg-white/50'
+                }`}
+                data-testid="tab-exceptions"
+              >
+                <span>Exceptions</span>
+                {tabData?.exceptions && tabData.exceptions.count > 0 && <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-xs ${activeTab === 'exceptions' ? 'bg-white/20' : 'bg-amber-100 text-amber-700'}`}>{tabData.exceptions.count}</span>}
+              </button>
+              
               <button
                 onClick={() => setActiveTab('queries')}
-                className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-all ${
+                className={`px-3 py-2 rounded-md text-sm font-medium transition-all ${
                   activeTab === 'queries'
                     ? 'bg-[#17B6C3] text-white shadow-sm'
                     : 'bg-transparent text-slate-600 hover:bg-white/50'
@@ -641,12 +678,12 @@ export default function ActionCentre() {
                 data-testid="tab-queries"
               >
                 <span>Queries</span>
-                {tabData && <span className={`ml-2 px-1.5 py-0.5 rounded-full text-xs ${activeTab === 'queries' ? 'bg-white/20' : 'bg-slate-200'}`}>{tabData.queries.count}</span>}
+                {tabData?.queries && <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-xs ${activeTab === 'queries' ? 'bg-white/20' : 'bg-slate-200'}`}>{tabData.queries.count}</span>}
               </button>
               
               <button
                 onClick={() => setActiveTab('overdue')}
-                className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-all ${
+                className={`px-3 py-2 rounded-md text-sm font-medium transition-all ${
                   activeTab === 'overdue'
                     ? 'bg-[#17B6C3] text-white shadow-sm'
                     : 'bg-transparent text-slate-600 hover:bg-white/50'
@@ -654,33 +691,72 @@ export default function ActionCentre() {
                 data-testid="tab-overdue"
               >
                 <span>Overdue</span>
-                {tabData && <span className={`ml-2 px-1.5 py-0.5 rounded-full text-xs ${activeTab === 'overdue' ? 'bg-white/20' : 'bg-slate-200'}`}>{tabData.overdueInvoices.count}</span>}
+                {tabData?.overdueInvoices && <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-xs ${activeTab === 'overdue' ? 'bg-white/20' : 'bg-slate-200'}`}>{tabData.overdueInvoices.count}</span>}
               </button>
               
               <button
-                onClick={() => setActiveTab('debt_recovery')}
-                className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-all ${
-                  activeTab === 'debt_recovery'
-                    ? 'bg-[#17B6C3] text-white shadow-sm'
+                onClick={() => setActiveTab('ptp')}
+                className={`px-3 py-2 rounded-md text-sm font-medium transition-all ${
+                  activeTab === 'ptp'
+                    ? 'bg-green-500 text-white shadow-sm'
                     : 'bg-transparent text-slate-600 hover:bg-white/50'
                 }`}
-                data-testid="tab-debt-recovery"
+                data-testid="tab-ptp"
               >
-                <span>Debt Recovery</span>
-                {tabData && tabData.debtRecovery && <span className={`ml-2 px-1.5 py-0.5 rounded-full text-xs ${activeTab === 'debt_recovery' ? 'bg-white/20' : 'bg-slate-200'}`}>{tabData.debtRecovery.count || 0}</span>}
+                <span>PTP</span>
+                {tabData?.upcomingPTP && <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-xs ${activeTab === 'ptp' ? 'bg-white/20' : 'bg-green-100 text-green-700'}`}>{tabData.upcomingPTP.count}</span>}
+              </button>
+              
+              <button
+                onClick={() => setActiveTab('payment_plans')}
+                className={`px-3 py-2 rounded-md text-sm font-medium transition-all ${
+                  activeTab === 'payment_plans'
+                    ? 'bg-blue-500 text-white shadow-sm'
+                    : 'bg-transparent text-slate-600 hover:bg-white/50'
+                }`}
+                data-testid="tab-payment-plans"
+              >
+                <span>Pymt Plans</span>
+                {tabData?.paymentPlans && <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-xs ${activeTab === 'payment_plans' ? 'bg-white/20' : 'bg-blue-100 text-blue-700'}`}>{tabData.paymentPlans.count}</span>}
+              </button>
+              
+              <button
+                onClick={() => setActiveTab('broken')}
+                className={`px-3 py-2 rounded-md text-sm font-medium transition-all ${
+                  activeTab === 'broken'
+                    ? 'bg-red-500 text-white shadow-sm'
+                    : 'bg-transparent text-slate-600 hover:bg-white/50'
+                }`}
+                data-testid="tab-broken"
+              >
+                <span>Broken</span>
+                {tabData?.brokenPromises && tabData.brokenPromises.count > 0 && <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-xs ${activeTab === 'broken' ? 'bg-white/20' : 'bg-red-100 text-red-700'}`}>{tabData.brokenPromises.count}</span>}
+              </button>
+              
+              <button
+                onClick={() => setActiveTab('recovery')}
+                className={`px-3 py-2 rounded-md text-sm font-medium transition-all ${
+                  activeTab === 'recovery'
+                    ? 'bg-purple-500 text-white shadow-sm'
+                    : 'bg-transparent text-slate-600 hover:bg-white/50'
+                }`}
+                data-testid="tab-recovery"
+              >
+                <span>Recovery</span>
+                {tabData?.debtRecovery && <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-xs ${activeTab === 'recovery' ? 'bg-white/20' : 'bg-purple-100 text-purple-700'}`}>{tabData.debtRecovery.count}</span>}
               </button>
               
               <button
                 onClick={() => setActiveTab('enforcement')}
-                className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-all ${
+                className={`px-3 py-2 rounded-md text-sm font-medium transition-all ${
                   activeTab === 'enforcement'
-                    ? 'bg-[#17B6C3] text-white shadow-sm'
+                    ? 'bg-slate-700 text-white shadow-sm'
                     : 'bg-transparent text-slate-600 hover:bg-white/50'
                 }`}
                 data-testid="tab-enforcement"
               >
                 <span>Enforcement</span>
-                {tabData && tabData.enforcement && <span className={`ml-2 px-1.5 py-0.5 rounded-full text-xs ${activeTab === 'enforcement' ? 'bg-white/20' : 'bg-slate-200'}`}>{tabData.enforcement.count || 0}</span>}
+                {tabData?.enforcement && <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-xs ${activeTab === 'enforcement' ? 'bg-white/20' : 'bg-slate-200'}`}>{tabData.enforcement.count}</span>}
               </button>
             </div>
           </div>
@@ -1112,7 +1188,7 @@ export default function ActionCentre() {
                                 oldestInvoiceDueDate: action.metadata?.oldestDueDate || '',
                                 daysOverdue: action.metadata?.daysOverdue || 0,
                                 invoices: action.metadata?.invoices || [],
-                                stage: activeTab === 'debt_recovery' ? 'debt_recovery' : 'enforcement',
+                                stage: activeTab === 'recovery' ? 'debt_recovery' : 'enforcement',
                               });
                               setIsActionDrawerOpen(true);
                             }}
@@ -1199,7 +1275,7 @@ export default function ActionCentre() {
                         oldestInvoiceDueDate: item.metadata?.oldestDueDate || '',
                         daysOverdue: item.metadata?.daysOverdue || 0,
                         invoices: item.metadata?.invoices || [],
-                        stage: activeTab as 'overdue' | 'debt_recovery' | 'enforcement',
+                        stage: 'overdue',
                       });
                       setIsActionDrawerOpen(true);
                     }

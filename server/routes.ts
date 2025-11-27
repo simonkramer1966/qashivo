@@ -4897,6 +4897,92 @@ Guidelines:
         .filter(({ dispute }) => dispute.status !== 'resolved')
         .map(({ dispute }) => dispute.invoiceId);
       
+      // 0. COMPLETED - actions that AI has executed (completed/sent outbound actions)
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+      
+      const completedActionsRaw = allActions.filter(a => {
+        const isCompleted = a.status === 'completed' || a.status === 'sent';
+        const isOutbound = a.metadata?.direction === 'outbound' || !a.metadata?.direction;
+        const isRecent = a.completedAt ? new Date(a.completedAt) >= sevenDaysAgo : 
+                         a.createdAt ? new Date(a.createdAt) >= sevenDaysAgo : false;
+        const isActionable = a.type === 'email' || a.type === 'sms' || a.type === 'call' || a.type === 'voice';
+        return isCompleted && isOutbound && isRecent && isActionable;
+      });
+      
+      // Enrich completed actions with contact/invoice info
+      const completedActions = await Promise.all(completedActionsRaw.map(async (action) => {
+        let companyName = '';
+        let contactName = '';
+        let invoiceNumber = '';
+        let invoiceAmount = '0';
+        
+        if (action.contactId) {
+          try {
+            const contact = await storage.getContact(action.contactId, tenantId);
+            if (contact) {
+              companyName = contact.companyName || '';
+              contactName = contact.name || '';
+            }
+          } catch (e) {}
+        }
+        
+        if (action.invoiceId) {
+          const invoice = allInvoices.find(inv => inv.id === action.invoiceId);
+          if (invoice) {
+            invoiceNumber = invoice.invoiceNumber || '';
+            invoiceAmount = invoice.amount || '0';
+          }
+        }
+        
+        return {
+          ...action,
+          companyName,
+          contactName,
+          invoiceNumber,
+          invoiceAmount
+        };
+      }));
+      
+      // 0.5. EXCEPTIONS - actions flagged for human review
+      const exceptionsRaw = allActions.filter(a => {
+        return a.status === 'exception' || 
+               (a.exceptionReason && a.status !== 'completed' && a.status !== 'sent' && a.status !== 'cancelled');
+      });
+      
+      const exceptions = await Promise.all(exceptionsRaw.map(async (action) => {
+        let companyName = '';
+        let contactName = '';
+        let invoiceNumber = '';
+        let invoiceAmount = '0';
+        
+        if (action.contactId) {
+          try {
+            const contact = await storage.getContact(action.contactId, tenantId);
+            if (contact) {
+              companyName = contact.companyName || '';
+              contactName = contact.name || '';
+            }
+          } catch (e) {}
+        }
+        
+        if (action.invoiceId) {
+          const invoice = allInvoices.find(inv => inv.id === action.invoiceId);
+          if (invoice) {
+            invoiceNumber = invoice.invoiceNumber || '';
+            invoiceAmount = invoice.amount || '0';
+          }
+        }
+        
+        return {
+          ...action,
+          companyName,
+          contactName,
+          invoiceNumber,
+          invoiceAmount
+        };
+      }));
+      
       // 1. QUERIES - actions with general_query intent
       const queries = allActions.filter(a => a.intentType === 'general_query');
       
@@ -5194,21 +5280,26 @@ Guidelines:
         return { ...enriched, holdReason };
       }));
       
-      // 7. DEBT RECOVERY - invoices with stage = 'debt_recovery'
+      // 7. PAYMENT PLANS - invoices with active payment plans
+      const paymentPlansRaw = allInvoices.filter(inv => inv.paymentPlanId);
+      const paymentPlansItems = await Promise.all(paymentPlansRaw.map(enrichInvoice));
+      
+      // 8. DEBT RECOVERY - invoices with stage = 'debt_recovery'
       const debtRecoveryRaw = allInvoices.filter(inv => inv.stage === 'debt_recovery');
       const debtRecovery = await Promise.all(debtRecoveryRaw.map(enrichInvoice));
       
-      // 8. ENFORCEMENT - invoices with stage = 'enforcement'
+      // 9. ENFORCEMENT - invoices with stage = 'enforcement'
       const enforcementRaw = allInvoices.filter(inv => inv.stage === 'enforcement');
       const enforcement = await Promise.all(enforcementRaw.map(enrichInvoice));
       
       res.json({
+        completed: { count: completedActions.length, items: completedActions },
+        exceptions: { count: exceptions.length, items: exceptions },
         queries: { count: queries.length, items: queries },
         overdueInvoices: { count: overdueInvoicesRaw.length, items: overdueCustomers },
         upcomingPTP: { count: upcomingPTP.length, items: upcomingPTP },
+        paymentPlans: { count: paymentPlansItems.length, items: paymentPlansItems },
         brokenPromises: { count: brokenPromises.length, items: brokenPromises },
-        disputes: { count: allDisputes.length, items: allDisputes },
-        onHold: { count: onHold.length, items: onHold },
         debtRecovery: { count: debtRecovery.length, items: debtRecovery },
         enforcement: { count: enforcement.length, items: enforcement }
       });
