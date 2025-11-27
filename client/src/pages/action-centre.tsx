@@ -673,13 +673,13 @@ export default function ActionCentre() {
                 onClick={() => setActiveTab('exceptions')}
                 className={`px-2 py-2 rounded-md text-sm font-medium transition-all flex items-center justify-center gap-1 ${
                   activeTab === 'exceptions'
-                    ? 'bg-amber-500 text-white shadow-sm'
+                    ? 'bg-yellow-500 text-white shadow-sm'
                     : 'bg-transparent text-slate-600 hover:bg-white/50'
                 }`}
                 data-testid="tab-exceptions"
               >
                 <span>VIP</span>
-                <span className={`px-1.5 py-0.5 rounded-full text-xs ${activeTab === 'exceptions' ? 'bg-white/20' : 'bg-amber-100 text-amber-700'}`}>{tabData?.exceptions?.count ?? 0}</span>
+                <span className={`px-1.5 py-0.5 rounded-full text-xs ${activeTab === 'exceptions' ? 'bg-white/20' : 'bg-yellow-100 text-yellow-700'}`}>{tabData?.exceptions?.count ?? 0}</span>
               </button>
               
               <button
