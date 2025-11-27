@@ -1065,12 +1065,12 @@ export default function ActionCentre() {
                 <h3 className="text-lg font-semibold text-slate-900 mb-4">Recent AI Activity</h3>
                 <div className="divide-y divide-slate-100">
                   {[
-                    { date: '27 Nov', time: '14:32', action: 'Email sent', customer: 'Apex Construction Ltd', detail: 'Payment reminder for INV-2024-0847 (£4,250)', outcome: 'Delivered', icon: Mail, color: 'blue' },
-                    { date: '27 Nov', time: '14:26', action: 'Voice call completed', customer: 'Henderson & Partners', detail: 'Follow-up on overdue balance', outcome: 'Promise to pay £8,500 by Dec 5', icon: Phone, color: 'green' },
-                    { date: '27 Nov', time: '14:19', action: 'SMS sent', customer: 'Metro Supplies', detail: 'Gentle reminder for INV-2024-0823', outcome: 'Delivered', icon: MessageSquare, color: 'purple' },
-                    { date: '27 Nov', time: '14:12', action: 'Email sent', customer: 'Northern Logistics', detail: 'Final notice before escalation', outcome: 'Opened', icon: Mail, color: 'blue' },
-                    { date: '27 Nov', time: '13:59', action: 'Voice call completed', customer: 'Brightside Retail', detail: 'Collections call - 45 days overdue', outcome: 'Dispute raised - needs review', icon: Phone, color: 'amber' },
-                    { date: '27 Nov', time: '13:34', action: 'Email sent', customer: 'Coastal Properties', detail: 'Statement of account attached', outcome: 'Delivered', icon: Mail, color: 'blue' },
+                    { date: '27 Nov', time: '14:32', customer: 'Apex Construction Ltd', amount: 4250, outcome: 'Delivered', icon: Mail, color: 'blue' },
+                    { date: '27 Nov', time: '14:26', customer: 'Henderson & Partners', amount: 8500, outcome: 'Promise to pay £8,500 by Dec 5', icon: Phone, color: 'green' },
+                    { date: '27 Nov', time: '14:19', customer: 'Metro Supplies', amount: 1875, outcome: 'Delivered', icon: MessageSquare, color: 'purple' },
+                    { date: '27 Nov', time: '14:12', customer: 'Northern Logistics', amount: 3200, outcome: 'Opened', icon: Mail, color: 'blue' },
+                    { date: '27 Nov', time: '13:59', customer: 'Brightside Retail', amount: 6750, outcome: 'Dispute raised - needs review', icon: Phone, color: 'amber' },
+                    { date: '27 Nov', time: '13:34', customer: 'Coastal Properties', amount: 2100, outcome: 'Delivered', icon: Mail, color: 'blue' },
                   ].map((activity, idx) => (
                     <div key={idx} className="flex items-center gap-4 py-3 hover:bg-slate-50/50 px-2 -mx-2 rounded transition-colors">
                       <span className="text-xs text-slate-500 shrink-0 w-14">{activity.date}</span>
@@ -1089,6 +1089,7 @@ export default function ActionCentre() {
                         }`} />
                       </div>
                       <span className="text-sm text-slate-900 font-medium truncate flex-1">{activity.customer}</span>
+                      <span className="text-sm font-semibold text-slate-900 tabular-nums shrink-0 w-20 text-right">{formatCurrency(activity.amount)}</span>
                       <div className={`text-xs px-2 py-1 rounded-full shrink-0 ${
                         activity.outcome.includes('Promise') ? 'bg-green-100 text-green-700' :
                         activity.outcome.includes('Dispute') ? 'bg-amber-100 text-amber-700' :
