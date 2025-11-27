@@ -1089,7 +1089,6 @@ export default function ActionCentre() {
                         }`} />
                       </div>
                       <span className="text-sm text-slate-900 font-medium truncate flex-1">{activity.customer}</span>
-                      <span className="text-sm font-semibold text-slate-900 tabular-nums shrink-0 w-20 text-right">{formatCurrency(activity.amount)}</span>
                       <div className={`text-xs px-2 py-1 rounded-full shrink-0 ${
                         activity.outcome.includes('Promise') ? 'bg-green-100 text-green-700' :
                         activity.outcome.includes('Dispute') ? 'bg-amber-100 text-amber-700' :
@@ -1098,6 +1097,7 @@ export default function ActionCentre() {
                       }`}>
                         {activity.outcome}
                       </div>
+                      <span className="text-sm font-semibold text-slate-900 tabular-nums shrink-0 w-20 text-right">{formatCurrency(activity.amount)}</span>
                       <span className="text-sm font-semibold text-green-600 tabular-nums shrink-0 w-20 text-right">
                         {activity.outcomeAmount ? formatCurrency(activity.outcomeAmount) : '—'}
                       </span>
