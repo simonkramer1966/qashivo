@@ -976,7 +976,7 @@ export default function ActionCentre() {
               <div className="flex items-center justify-between">
                 <div>
                   <h2 className="text-xl font-bold text-slate-900">Todays Plan</h2>
-                  <p className="text-sm text-slate-600 mt-1">Review and approve upcoming actions. Move items to Exceptions for manual handling.</p>
+                  <p className="text-sm text-slate-600 mt-1">Review and approve upcoming actions. Move items to VIP for manual handling.</p>
                 </div>
                 <div className="flex items-center gap-3">
                   <Button
