@@ -1273,7 +1273,7 @@ export default function ActionCentre() {
           )}
 
           {/* Action List - For all other tabs */}
-          {activeTab !== 'completed' && (
+          {activeTab !== 'completed' && activeTab !== 'plan' && (
           <div className={isActionsTab ? "" : "card-apple overflow-hidden"}>
             {isLoading ? (
               // Loading skeleton
