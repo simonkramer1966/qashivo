@@ -678,7 +678,7 @@ export default function ActionCentre() {
                 }`}
                 data-testid="tab-exceptions"
               >
-                <span>Exceptions</span>
+                <span>VIP</span>
                 <span className={`px-1.5 py-0.5 rounded-full text-xs ${activeTab === 'exceptions' ? 'bg-white/20' : 'bg-amber-100 text-amber-700'}`}>{tabData?.exceptions?.count ?? 0}</span>
               </button>
               
