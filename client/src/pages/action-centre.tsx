@@ -1075,7 +1075,6 @@ export default function ActionCentre() {
                     <div key={idx} className="flex items-center gap-4 py-3 hover:bg-slate-50/50 px-2 -mx-2 rounded transition-colors">
                       <span className="text-xs text-slate-500 shrink-0 w-14">{activity.date}</span>
                       <span className="text-xs font-medium text-slate-700 shrink-0 w-12">{activity.time}</span>
-                      <span className="text-sm text-slate-900 font-medium truncate flex-1">{activity.customer}</span>
                       <div className={`p-2 rounded-lg shrink-0 ${
                         activity.color === 'blue' ? 'bg-blue-100' : 
                         activity.color === 'green' ? 'bg-green-100' : 
@@ -1089,6 +1088,7 @@ export default function ActionCentre() {
                           'text-amber-600'
                         }`} />
                       </div>
+                      <span className="text-sm text-slate-900 font-medium truncate flex-1">{activity.customer}</span>
                       <div className={`text-xs px-2 py-1 rounded-full shrink-0 ${
                         activity.outcome.includes('Promise') ? 'bg-green-100 text-green-700' :
                         activity.outcome.includes('Dispute') ? 'bg-amber-100 text-amber-700' :
