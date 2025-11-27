@@ -27,8 +27,12 @@ import {
   ShieldAlert,
   CircleDollarSign,
   Users,
-  TrendingUp
+  TrendingUp,
+  Calendar as CalendarIcon
 } from "lucide-react";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { format } from "date-fns";
 import NewSidebar from "@/components/layout/new-sidebar";
 import BottomNav from "@/components/layout/bottom-nav";
 import Header from "@/components/layout/header";
@@ -53,6 +57,49 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { KebabMenu } from "@/components/action-centre/KebabMenu";
 import { ResponseDrawer } from "@/components/action-centre/ResponseDrawer";
 import { ActionDrawer } from "@/components/action-centre/ActionDrawer";
+
+// Completed tab metrics data by date range
+const COMPLETED_METRICS = {
+  yesterday: { actions: 47, actionsChange: '+12', commitments: 24350, ptpCount: 8, customers: 32, coverage: '78%', responseRate: 34, responseChange: '+5%', emailCount: 28, emailOpen: '42%', smsCount: 7, smsDelivery: '100%', voiceCount: 12, voiceAnswered: 8 },
+  week: { actions: 312, actionsChange: '+45', commitments: 156800, ptpCount: 52, customers: 189, coverage: '92%', responseRate: 38, responseChange: '+8%', emailCount: 184, emailOpen: '45%', smsCount: 48, smsDelivery: '98%', voiceCount: 80, voiceAnswered: 56 },
+  month: { actions: 1247, actionsChange: '+180', commitments: 624500, ptpCount: 198, customers: 412, coverage: '96%', responseRate: 41, responseChange: '+12%', emailCount: 742, emailOpen: '44%', smsCount: 185, smsDelivery: '99%', voiceCount: 320, voiceAnswered: 224 },
+  custom: { actions: 0, actionsChange: '—', commitments: 0, ptpCount: 0, customers: 0, coverage: '—', responseRate: 0, responseChange: '—', emailCount: 0, emailOpen: '—', smsCount: 0, smsDelivery: '—', voiceCount: 0, voiceAnswered: 0 },
+};
+
+// Completed tab activities data by date range
+const COMPLETED_ACTIVITIES = {
+  yesterday: [
+    { date: '27 Nov', time: '14:32', customer: 'Apex Construction Ltd', amount: 4250, outcome: 'Delivered', outcomeAmount: null, channel: 'email', color: 'blue' },
+    { date: '27 Nov', time: '14:26', customer: 'Henderson & Partners', amount: 8500, outcome: 'Promise to pay', outcomeAmount: 8500, channel: 'voice', color: 'green' },
+    { date: '27 Nov', time: '14:19', customer: 'Metro Supplies', amount: 1875, outcome: 'Delivered', outcomeAmount: null, channel: 'sms', color: 'purple' },
+    { date: '27 Nov', time: '14:12', customer: 'Northern Logistics', amount: 3200, outcome: 'Opened', outcomeAmount: null, channel: 'email', color: 'blue' },
+    { date: '27 Nov', time: '13:59', customer: 'Brightside Retail', amount: 6750, outcome: 'Dispute', outcomeAmount: null, channel: 'voice', color: 'amber' },
+    { date: '27 Nov', time: '13:34', customer: 'Coastal Properties', amount: 2100, outcome: 'Delivered', outcomeAmount: null, channel: 'email', color: 'blue' },
+  ],
+  week: [
+    { date: '27 Nov', time: '14:32', customer: 'Apex Construction Ltd', amount: 4250, outcome: 'Delivered', outcomeAmount: null, channel: 'email', color: 'blue' },
+    { date: '27 Nov', time: '14:26', customer: 'Henderson & Partners', amount: 8500, outcome: 'Promise to pay', outcomeAmount: 8500, channel: 'voice', color: 'green' },
+    { date: '26 Nov', time: '11:45', customer: 'Summit Engineering', amount: 15000, outcome: 'Promise to pay', outcomeAmount: 15000, channel: 'voice', color: 'green' },
+    { date: '26 Nov', time: '10:22', customer: 'Valley Traders', amount: 2400, outcome: 'Delivered', outcomeAmount: null, channel: 'sms', color: 'purple' },
+    { date: '25 Nov', time: '16:18', customer: 'Urban Developments', amount: 9800, outcome: 'Opened', outcomeAmount: null, channel: 'email', color: 'blue' },
+    { date: '25 Nov', time: '09:45', customer: 'Riverside Flooring', amount: 5600, outcome: 'Promise to pay', outcomeAmount: 5600, channel: 'voice', color: 'green' },
+    { date: '24 Nov', time: '15:30', customer: 'Highland Motors', amount: 7300, outcome: 'Delivered', outcomeAmount: null, channel: 'email', color: 'blue' },
+    { date: '23 Nov', time: '14:10', customer: 'Greenfield Services', amount: 1200, outcome: 'Dispute', outcomeAmount: null, channel: 'voice', color: 'amber' },
+  ],
+  month: [
+    { date: '27 Nov', time: '14:32', customer: 'Apex Construction Ltd', amount: 4250, outcome: 'Delivered', outcomeAmount: null, channel: 'email', color: 'blue' },
+    { date: '27 Nov', time: '14:26', customer: 'Henderson & Partners', amount: 8500, outcome: 'Promise to pay', outcomeAmount: 8500, channel: 'voice', color: 'green' },
+    { date: '25 Nov', time: '11:45', customer: 'Summit Engineering', amount: 15000, outcome: 'Promise to pay', outcomeAmount: 15000, channel: 'voice', color: 'green' },
+    { date: '22 Nov', time: '10:22', customer: 'Valley Traders', amount: 2400, outcome: 'Delivered', outcomeAmount: null, channel: 'sms', color: 'purple' },
+    { date: '18 Nov', time: '16:18', customer: 'Urban Developments', amount: 9800, outcome: 'Opened', outcomeAmount: null, channel: 'email', color: 'blue' },
+    { date: '15 Nov', time: '09:45', customer: 'Riverside Flooring', amount: 5600, outcome: 'Promise to pay', outcomeAmount: 5600, channel: 'voice', color: 'green' },
+    { date: '10 Nov', time: '15:30', customer: 'Highland Motors', amount: 7300, outcome: 'Delivered', outcomeAmount: null, channel: 'email', color: 'blue' },
+    { date: '05 Nov', time: '14:10', customer: 'Greenfield Services', amount: 1200, outcome: 'Dispute', outcomeAmount: null, channel: 'voice', color: 'amber' },
+    { date: '02 Nov', time: '11:22', customer: 'Parkside Holdings', amount: 18500, outcome: 'Promise to pay', outcomeAmount: 18500, channel: 'voice', color: 'green' },
+    { date: '01 Nov', time: '09:15', customer: 'Westfield Trading', amount: 3400, outcome: 'Delivered', outcomeAmount: null, channel: 'email', color: 'blue' },
+  ],
+  custom: [],
+};
 
 // Helper to get recommended action label without rendering full component
 const getRecommendedActionLabel = (action: any) => {
@@ -149,6 +196,237 @@ function formatExactDateTime(dateStr: string): string {
   return `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
 }
 
+// Completed Tab Content Component
+function CompletedTabContent({ 
+  completedDateRange, 
+  setCompletedDateRange, 
+  customDateRange, 
+  setCustomDateRange 
+}: { 
+  completedDateRange: 'yesterday' | 'week' | 'month' | 'custom';
+  setCompletedDateRange: (value: 'yesterday' | 'week' | 'month' | 'custom') => void;
+  customDateRange: { from: Date | undefined; to: Date | undefined };
+  setCustomDateRange: (value: { from: Date | undefined; to: Date | undefined }) => void;
+}) {
+  const { metrics, activities, periodLabel } = useMemo(() => {
+    const m = COMPLETED_METRICS[completedDateRange] || COMPLETED_METRICS.yesterday;
+    const a = COMPLETED_ACTIVITIES[completedDateRange] || [];
+    const label = completedDateRange === 'yesterday' ? 'yesterday' 
+      : completedDateRange === 'week' ? 'this week' 
+      : completedDateRange === 'month' ? 'this month' 
+      : 'selected period';
+    return { metrics: m, activities: a, periodLabel: label };
+  }, [completedDateRange]);
+  
+  const isCustomRangeSelected = completedDateRange === 'custom' && customDateRange.from && customDateRange.to;
+  
+  const getChannelIcon = (channel: string) => {
+    switch (channel) {
+      case 'email': return <Mail className="h-4 w-4 text-blue-600" />;
+      case 'voice': return <Phone className="h-4 w-4 text-green-600" />;
+      case 'sms': return <MessageSquare className="h-4 w-4 text-purple-600" />;
+      default: return <Mail className="h-4 w-4 text-blue-600" />;
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Header with Date Range Selector */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-bold text-slate-900">Completed Activity</h2>
+          <p className="text-sm text-slate-600 mt-1">AI actions completed and their outcomes</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <Select value={completedDateRange} onValueChange={(value: 'yesterday' | 'week' | 'month' | 'custom') => setCompletedDateRange(value)}>
+            <SelectTrigger className="w-[160px] bg-white/80" data-testid="select-date-range">
+              <SelectValue placeholder="Select period" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="yesterday">Yesterday</SelectItem>
+              <SelectItem value="week">This Week</SelectItem>
+              <SelectItem value="month">This Month</SelectItem>
+              <SelectItem value="custom">Custom Range</SelectItem>
+            </SelectContent>
+          </Select>
+          
+          {completedDateRange === 'custom' && (
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="bg-white/80 gap-2" data-testid="button-custom-date-picker">
+                  <CalendarIcon className="h-4 w-4" />
+                  {customDateRange.from ? (
+                    customDateRange.to ? (
+                      <>
+                        {format(customDateRange.from, "dd MMM")} - {format(customDateRange.to, "dd MMM")}
+                      </>
+                    ) : (
+                      format(customDateRange.from, "dd MMM yyyy")
+                    )
+                  ) : (
+                    "Pick dates"
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="end">
+                <Calendar
+                  mode="range"
+                  selected={{ from: customDateRange.from, to: customDateRange.to }}
+                  onSelect={(range) => setCustomDateRange({ from: range?.from, to: range?.to })}
+                  numberOfMonths={2}
+                  data-testid="calendar-custom-range"
+                />
+              </PopoverContent>
+            </Popover>
+          )}
+        </div>
+      </div>
+
+      {/* Performance Summary */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="bg-white/80 backdrop-blur-sm border border-white/50 rounded-xl p-5 shadow-lg">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="p-2 bg-[#17B6C3]/10 rounded-lg">
+              <CheckCircle2 className="h-5 w-5 text-[#17B6C3]" />
+            </div>
+            <span className="text-sm font-medium text-slate-600">Actions Completed</span>
+          </div>
+          <div className="text-3xl font-bold text-slate-900">{metrics.actions.toLocaleString()}</div>
+          <div className="text-xs text-green-600 mt-1">{metrics.actionsChange} from previous period</div>
+        </div>
+
+        <div className="bg-white/80 backdrop-blur-sm border border-white/50 rounded-xl p-5 shadow-lg">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="p-2 bg-green-100 rounded-lg">
+              <CircleDollarSign className="h-5 w-5 text-green-600" />
+            </div>
+            <span className="text-sm font-medium text-slate-600">Commitments Secured</span>
+          </div>
+          <div className="text-3xl font-bold text-slate-900">{formatCurrency(metrics.commitments)}</div>
+          <div className="text-xs text-green-600 mt-1">{metrics.ptpCount} promises to pay</div>
+        </div>
+
+        <div className="bg-white/80 backdrop-blur-sm border border-white/50 rounded-xl p-5 shadow-lg">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="p-2 bg-blue-100 rounded-lg">
+              <Users className="h-5 w-5 text-blue-600" />
+            </div>
+            <span className="text-sm font-medium text-slate-600">Customers Contacted</span>
+          </div>
+          <div className="text-3xl font-bold text-slate-900">{metrics.customers.toLocaleString()}</div>
+          <div className="text-xs text-slate-500 mt-1">{metrics.coverage} coverage {periodLabel}</div>
+        </div>
+
+        <div className="bg-white/80 backdrop-blur-sm border border-white/50 rounded-xl p-5 shadow-lg">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="p-2 bg-purple-100 rounded-lg">
+              <TrendingUp className="h-5 w-5 text-purple-600" />
+            </div>
+            <span className="text-sm font-medium text-slate-600">Response Rate</span>
+          </div>
+          <div className="text-3xl font-bold text-slate-900">{metrics.responseRate}%</div>
+          <div className="text-xs text-green-600 mt-1">{metrics.responseChange} improvement</div>
+        </div>
+      </div>
+
+      {/* Channel Breakdown */}
+      <div className="bg-white/80 backdrop-blur-sm border border-white/50 rounded-xl p-5 shadow-lg">
+        <h3 className="text-lg font-semibold text-slate-900 mb-4">Channel Performance</h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="flex items-center gap-4 p-4 bg-slate-50/50 rounded-lg">
+            <div className="p-3 bg-blue-100 rounded-lg">
+              <Mail className="h-6 w-6 text-blue-600" />
+            </div>
+            <div className="flex-1">
+              <div className="flex justify-between items-baseline">
+                <span className="font-semibold text-slate-900">Email</span>
+                <span className="text-2xl font-bold text-slate-900">{metrics.emailCount}</span>
+              </div>
+              <div className="flex justify-between text-xs text-slate-500 mt-1">
+                <span>Sent {periodLabel}</span>
+                <span className="text-green-600">{metrics.emailOpen} opened</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-4 p-4 bg-slate-50/50 rounded-lg">
+            <div className="p-3 bg-purple-100 rounded-lg">
+              <MessageSquare className="h-6 w-6 text-purple-600" />
+            </div>
+            <div className="flex-1">
+              <div className="flex justify-between items-baseline">
+                <span className="font-semibold text-slate-900">SMS</span>
+                <span className="text-2xl font-bold text-slate-900">{metrics.smsCount}</span>
+              </div>
+              <div className="flex justify-between text-xs text-slate-500 mt-1">
+                <span>Sent {periodLabel}</span>
+                <span className="text-green-600">{metrics.smsDelivery} delivered</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-4 p-4 bg-slate-50/50 rounded-lg">
+            <div className="p-3 bg-green-100 rounded-lg">
+              <Phone className="h-6 w-6 text-green-600" />
+            </div>
+            <div className="flex-1">
+              <div className="flex justify-between items-baseline">
+                <span className="font-semibold text-slate-900">Voice</span>
+                <span className="text-2xl font-bold text-slate-900">{metrics.voiceCount}</span>
+              </div>
+              <div className="flex justify-between text-xs text-slate-500 mt-1">
+                <span>Completed {periodLabel}</span>
+                <span className="text-green-600">{metrics.voiceAnswered} answered</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Completed Activity Feed */}
+      <div className="bg-white/80 backdrop-blur-sm border border-white/50 rounded-xl p-5 shadow-lg">
+        <h3 className="text-lg font-semibold text-slate-900 mb-4">Activity Log</h3>
+        {activities.length === 0 ? (
+          <div className="text-center py-8 text-slate-500">
+            <CalendarIcon className="h-12 w-12 mx-auto mb-3 text-slate-300" />
+            <p>Select a custom date range to view activity</p>
+          </div>
+        ) : (
+        <div className="divide-y divide-slate-100">
+          {activities.map((activity, idx) => (
+            <div key={idx} className="flex items-center gap-4 py-3 hover:bg-slate-50/50 px-2 -mx-2 rounded transition-colors">
+              <span className="text-xs text-slate-500 shrink-0 w-14">{activity.date}</span>
+              <span className="text-xs font-medium text-slate-700 shrink-0 w-12">{activity.time}</span>
+              <div className={`p-2 rounded-lg shrink-0 ${
+                activity.color === 'blue' ? 'bg-blue-100' : 
+                activity.color === 'green' ? 'bg-green-100' : 
+                activity.color === 'purple' ? 'bg-purple-100' : 
+                'bg-amber-100'
+              }`}>
+                {getChannelIcon(activity.channel)}
+              </div>
+              <span className="text-sm text-slate-900 font-medium truncate flex-1">{activity.customer}</span>
+              <div className={`text-xs px-2 py-1 rounded-full shrink-0 ${
+                activity.outcome.includes('Promise') ? 'bg-green-100 text-green-700' :
+                activity.outcome.includes('Dispute') ? 'bg-amber-100 text-amber-700' :
+                activity.outcome === 'Opened' ? 'bg-blue-100 text-blue-700' :
+                'bg-slate-100 text-slate-600'
+              }`}>
+                {activity.outcome}
+              </div>
+              <span className="text-sm font-semibold text-slate-900 tabular-nums shrink-0 w-20 text-right">{formatCurrency(activity.amount)}</span>
+              <span className="text-sm font-semibold text-green-600 tabular-nums shrink-0 w-20 text-right">
+                {activity.outcomeAmount ? formatCurrency(activity.outcomeAmount) : '—'}
+              </span>
+            </div>
+          ))}
+        </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function ActionCentre() {
   const [, setLocation] = useLocation();
   const [searchQuery, setSearchQuery] = useState("");
@@ -180,6 +458,13 @@ export default function ActionCentre() {
   // Bulk operations state
   const [selectedActions, setSelectedActions] = useState<Set<string>>(new Set());
   const [bulkAssignUser, setBulkAssignUser] = useState<string>('');
+  
+  // Completed tab date range state
+  const [completedDateRange, setCompletedDateRange] = useState<'yesterday' | 'week' | 'month' | 'custom'>('yesterday');
+  const [customDateRange, setCustomDateRange] = useState<{ from: Date | undefined; to: Date | undefined }>({
+    from: undefined,
+    to: undefined
+  });
   
 
   const { data: actions = [], isLoading } = useQuery<Action[]>({
@@ -1122,154 +1407,12 @@ export default function ActionCentre() {
 
           {/* Completed Tab - AI Accomplishments Summary */}
           {activeTab === 'completed' && (
-            <div className="space-y-6">
-              {/* Today's AI Performance Summary */}
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div className="bg-white/80 backdrop-blur-sm border border-white/50 rounded-xl p-5 shadow-lg">
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="p-2 bg-[#17B6C3]/10 rounded-lg">
-                      <CheckCircle2 className="h-5 w-5 text-[#17B6C3]" />
-                    </div>
-                    <span className="text-sm font-medium text-slate-600">Actions Completed</span>
-                  </div>
-                  <div className="text-3xl font-bold text-slate-900">47</div>
-                  <div className="text-xs text-green-600 mt-1">+12 from yesterday</div>
-                </div>
-
-                <div className="bg-white/80 backdrop-blur-sm border border-white/50 rounded-xl p-5 shadow-lg">
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="p-2 bg-green-100 rounded-lg">
-                      <CircleDollarSign className="h-5 w-5 text-green-600" />
-                    </div>
-                    <span className="text-sm font-medium text-slate-600">Commitments Secured</span>
-                  </div>
-                  <div className="text-3xl font-bold text-slate-900">£24,350</div>
-                  <div className="text-xs text-green-600 mt-1">8 promises to pay</div>
-                </div>
-
-                <div className="bg-white/80 backdrop-blur-sm border border-white/50 rounded-xl p-5 shadow-lg">
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="p-2 bg-blue-100 rounded-lg">
-                      <Users className="h-5 w-5 text-blue-600" />
-                    </div>
-                    <span className="text-sm font-medium text-slate-600">Customers Contacted</span>
-                  </div>
-                  <div className="text-3xl font-bold text-slate-900">32</div>
-                  <div className="text-xs text-slate-500 mt-1">78% coverage this week</div>
-                </div>
-
-                <div className="bg-white/80 backdrop-blur-sm border border-white/50 rounded-xl p-5 shadow-lg">
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="p-2 bg-purple-100 rounded-lg">
-                      <TrendingUp className="h-5 w-5 text-purple-600" />
-                    </div>
-                    <span className="text-sm font-medium text-slate-600">Response Rate</span>
-                  </div>
-                  <div className="text-3xl font-bold text-slate-900">34%</div>
-                  <div className="text-xs text-green-600 mt-1">+5% improvement</div>
-                </div>
-              </div>
-
-              {/* Channel Breakdown */}
-              <div className="bg-white/80 backdrop-blur-sm border border-white/50 rounded-xl p-5 shadow-lg">
-                <h3 className="text-lg font-semibold text-slate-900 mb-4">Channel Performance</h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="flex items-center gap-4 p-4 bg-slate-50/50 rounded-lg">
-                    <div className="p-3 bg-blue-100 rounded-lg">
-                      <Mail className="h-6 w-6 text-blue-600" />
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex justify-between items-baseline">
-                        <span className="font-semibold text-slate-900">Email</span>
-                        <span className="text-2xl font-bold text-slate-900">28</span>
-                      </div>
-                      <div className="flex justify-between text-xs text-slate-500 mt-1">
-                        <span>Sent today</span>
-                        <span className="text-green-600">42% opened</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-4 p-4 bg-slate-50/50 rounded-lg">
-                    <div className="p-3 bg-purple-100 rounded-lg">
-                      <MessageSquare className="h-6 w-6 text-purple-600" />
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex justify-between items-baseline">
-                        <span className="font-semibold text-slate-900">SMS</span>
-                        <span className="text-2xl font-bold text-slate-900">7</span>
-                      </div>
-                      <div className="flex justify-between text-xs text-slate-500 mt-1">
-                        <span>Sent today</span>
-                        <span className="text-green-600">100% delivered</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-4 p-4 bg-slate-50/50 rounded-lg">
-                    <div className="p-3 bg-green-100 rounded-lg">
-                      <Phone className="h-6 w-6 text-green-600" />
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex justify-between items-baseline">
-                        <span className="font-semibold text-slate-900">Voice</span>
-                        <span className="text-2xl font-bold text-slate-900">12</span>
-                      </div>
-                      <div className="flex justify-between text-xs text-slate-500 mt-1">
-                        <span>Completed today</span>
-                        <span className="text-green-600">8 answered</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Completed Activity Feed */}
-              <div className="bg-white/80 backdrop-blur-sm border border-white/50 rounded-xl p-5 shadow-lg">
-                <h3 className="text-lg font-semibold text-slate-900 mb-4">Completed Activity</h3>
-                <div className="divide-y divide-slate-100">
-                  {[
-                    { date: '27 Nov', time: '14:32', customer: 'Apex Construction Ltd', amount: 4250, outcome: 'Delivered', outcomeAmount: null, icon: Mail, color: 'blue' },
-                    { date: '27 Nov', time: '14:26', customer: 'Henderson & Partners', amount: 8500, outcome: 'Promise to pay', outcomeAmount: 8500, icon: Phone, color: 'green' },
-                    { date: '27 Nov', time: '14:19', customer: 'Metro Supplies', amount: 1875, outcome: 'Delivered', outcomeAmount: null, icon: MessageSquare, color: 'purple' },
-                    { date: '27 Nov', time: '14:12', customer: 'Northern Logistics', amount: 3200, outcome: 'Opened', outcomeAmount: null, icon: Mail, color: 'blue' },
-                    { date: '27 Nov', time: '13:59', customer: 'Brightside Retail', amount: 6750, outcome: 'Dispute', outcomeAmount: null, icon: Phone, color: 'amber' },
-                    { date: '27 Nov', time: '13:34', customer: 'Coastal Properties', amount: 2100, outcome: 'Delivered', outcomeAmount: null, icon: Mail, color: 'blue' },
-                  ].map((activity, idx) => (
-                    <div key={idx} className="flex items-center gap-4 py-3 hover:bg-slate-50/50 px-2 -mx-2 rounded transition-colors">
-                      <span className="text-xs text-slate-500 shrink-0 w-14">{activity.date}</span>
-                      <span className="text-xs font-medium text-slate-700 shrink-0 w-12">{activity.time}</span>
-                      <div className={`p-2 rounded-lg shrink-0 ${
-                        activity.color === 'blue' ? 'bg-blue-100' : 
-                        activity.color === 'green' ? 'bg-green-100' : 
-                        activity.color === 'purple' ? 'bg-purple-100' : 
-                        'bg-amber-100'
-                      }`}>
-                        <activity.icon className={`h-4 w-4 ${
-                          activity.color === 'blue' ? 'text-blue-600' : 
-                          activity.color === 'green' ? 'text-green-600' : 
-                          activity.color === 'purple' ? 'text-purple-600' : 
-                          'text-amber-600'
-                        }`} />
-                      </div>
-                      <span className="text-sm text-slate-900 font-medium truncate flex-1">{activity.customer}</span>
-                      <div className={`text-xs px-2 py-1 rounded-full shrink-0 ${
-                        activity.outcome.includes('Promise') ? 'bg-green-100 text-green-700' :
-                        activity.outcome.includes('Dispute') ? 'bg-amber-100 text-amber-700' :
-                        activity.outcome === 'Opened' ? 'bg-blue-100 text-blue-700' :
-                        'bg-slate-100 text-slate-600'
-                      }`}>
-                        {activity.outcome}
-                      </div>
-                      <span className="text-sm font-semibold text-slate-900 tabular-nums shrink-0 w-20 text-right">{formatCurrency(activity.amount)}</span>
-                      <span className="text-sm font-semibold text-green-600 tabular-nums shrink-0 w-20 text-right">
-                        {activity.outcomeAmount ? formatCurrency(activity.outcomeAmount) : '—'}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
+            <CompletedTabContent 
+              completedDateRange={completedDateRange}
+              setCompletedDateRange={setCompletedDateRange}
+              customDateRange={customDateRange}
+              setCustomDateRange={setCustomDateRange}
+            />
           )}
 
           {/* Action List - For all other tabs */}
