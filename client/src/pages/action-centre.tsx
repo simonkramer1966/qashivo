@@ -1063,7 +1063,7 @@ export default function ActionCentre() {
               {/* Recent Activity Feed */}
               <div className="bg-white/80 backdrop-blur-sm border border-white/50 rounded-xl p-5 shadow-lg">
                 <h3 className="text-lg font-semibold text-slate-900 mb-4">Recent AI Activity</h3>
-                <div className="space-y-3">
+                <div className="divide-y divide-slate-100">
                   {[
                     { time: '2 mins ago', action: 'Email sent', customer: 'Apex Construction Ltd', detail: 'Payment reminder for INV-2024-0847 (£4,250)', outcome: 'Delivered', icon: Mail, color: 'blue' },
                     { time: '8 mins ago', action: 'Voice call completed', customer: 'Henderson & Partners', detail: 'Follow-up on overdue balance', outcome: 'Promise to pay £8,500 by Dec 5', icon: Phone, color: 'green' },
@@ -1072,8 +1072,8 @@ export default function ActionCentre() {
                     { time: '35 mins ago', action: 'Voice call completed', customer: 'Brightside Retail', detail: 'Collections call - 45 days overdue', outcome: 'Dispute raised - needs review', icon: Phone, color: 'amber' },
                     { time: '1 hour ago', action: 'Email sent', customer: 'Coastal Properties', detail: 'Statement of account attached', outcome: 'Delivered', icon: Mail, color: 'blue' },
                   ].map((activity, idx) => (
-                    <div key={idx} className="flex items-start gap-4 p-3 hover:bg-slate-50/50 rounded-lg transition-colors">
-                      <div className={`p-2 rounded-lg ${
+                    <div key={idx} className="flex items-center gap-4 py-3 hover:bg-slate-50/50 px-2 -mx-2 rounded transition-colors">
+                      <div className={`p-2 rounded-lg shrink-0 ${
                         activity.color === 'blue' ? 'bg-blue-100' : 
                         activity.color === 'green' ? 'bg-green-100' : 
                         activity.color === 'purple' ? 'bg-purple-100' : 
@@ -1087,14 +1087,11 @@ export default function ActionCentre() {
                         }`} />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium text-sm text-slate-900">{activity.action}</span>
-                          <span className="text-xs text-slate-400">{activity.time}</span>
-                        </div>
-                        <div className="text-sm text-slate-700 font-medium mt-0.5">{activity.customer}</div>
-                        <div className="text-xs text-slate-500 mt-0.5">{activity.detail}</div>
+                        <span className="font-medium text-sm text-slate-900">{activity.action}</span>
+                        <span className="text-slate-400 mx-2">·</span>
+                        <span className="text-sm text-slate-700">{activity.customer}</span>
                       </div>
-                      <div className={`text-xs px-2 py-1 rounded-full ${
+                      <div className={`text-xs px-2 py-1 rounded-full shrink-0 ${
                         activity.outcome.includes('Promise') ? 'bg-green-100 text-green-700' :
                         activity.outcome.includes('Dispute') ? 'bg-amber-100 text-amber-700' :
                         activity.outcome === 'Opened' ? 'bg-blue-100 text-blue-700' :
@@ -1102,6 +1099,7 @@ export default function ActionCentre() {
                       }`}>
                         {activity.outcome}
                       </div>
+                      <span className="text-xs text-slate-400 shrink-0 w-20 text-right">{activity.time}</span>
                     </div>
                   ))}
                 </div>
