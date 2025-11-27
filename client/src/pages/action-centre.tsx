@@ -654,7 +654,7 @@ export default function ActionCentre() {
                 }`}
                 data-testid="tab-plan"
               >
-                <span>Plan</span>
+                <span>Planned</span>
               </button>
               
               <button
