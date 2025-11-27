@@ -679,7 +679,7 @@ export default function ActionCentre() {
                 data-testid="tab-exceptions"
               >
                 <span>Exceptions</span>
-                <span className={`px-1.5 py-0.5 rounded-full text-xs ${activeTab === 'exceptions' ? 'bg-white/20' : 'bg-amber-100 text-amber-700'}`}>{tabData?.exceptions?.count || 3}</span>
+                <span className={`px-1.5 py-0.5 rounded-full text-xs ${activeTab === 'exceptions' ? 'bg-white/20' : 'bg-amber-100 text-amber-700'}`}>{tabData?.exceptions?.count || 'NIL'}</span>
               </button>
               
               <button
@@ -744,7 +744,7 @@ export default function ActionCentre() {
                 data-testid="tab-broken"
               >
                 <span>Broken</span>
-                {tabData?.brokenPromises && tabData.brokenPromises.count > 0 && <span className={`px-1.5 py-0.5 rounded-full text-xs ${activeTab === 'broken' ? 'bg-white/20' : 'bg-red-100 text-red-700'}`}>{tabData.brokenPromises.count}</span>}
+                <span className={`px-1.5 py-0.5 rounded-full text-xs ${activeTab === 'broken' ? 'bg-white/20' : 'bg-red-100 text-red-700'}`}>{tabData?.brokenPromises?.count || 'NIL'}</span>
               </button>
               
               <button
