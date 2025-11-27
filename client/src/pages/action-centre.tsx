@@ -751,13 +751,13 @@ export default function ActionCentre() {
                 onClick={() => setActiveTab('recovery')}
                 className={`px-2 py-2 rounded-md text-sm font-medium transition-all flex items-center justify-center gap-1 ${
                   activeTab === 'recovery'
-                    ? 'bg-purple-500 text-white shadow-sm'
+                    ? 'bg-rose-800 text-white shadow-sm'
                     : 'bg-transparent text-slate-600 hover:bg-white/50'
                 }`}
                 data-testid="tab-recovery"
               >
                 <span>Recovery</span>
-                {tabData?.debtRecovery && <span className={`px-1.5 py-0.5 rounded-full text-xs ${activeTab === 'recovery' ? 'bg-white/20' : 'bg-purple-100 text-purple-700'}`}>{tabData.debtRecovery.count}</span>}
+                {tabData?.debtRecovery && <span className={`px-1.5 py-0.5 rounded-full text-xs ${activeTab === 'recovery' ? 'bg-white/20' : 'bg-rose-100 text-rose-800'}`}>{tabData.debtRecovery.count}</span>}
               </button>
               
               <button
