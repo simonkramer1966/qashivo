@@ -1027,22 +1027,6 @@ export default function ActionCentre() {
                   </div>
 
                   <div className="flex items-center gap-4 p-4 bg-slate-50/50 rounded-lg">
-                    <div className="p-3 bg-green-100 rounded-lg">
-                      <Phone className="h-6 w-6 text-green-600" />
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex justify-between items-baseline">
-                        <span className="font-semibold text-slate-900">Calls</span>
-                        <span className="text-2xl font-bold text-slate-900">12</span>
-                      </div>
-                      <div className="flex justify-between text-xs text-slate-500 mt-1">
-                        <span>Completed today</span>
-                        <span className="text-green-600">8 answered</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-4 p-4 bg-slate-50/50 rounded-lg">
                     <div className="p-3 bg-purple-100 rounded-lg">
                       <MessageSquare className="h-6 w-6 text-purple-600" />
                     </div>
@@ -1054,6 +1038,22 @@ export default function ActionCentre() {
                       <div className="flex justify-between text-xs text-slate-500 mt-1">
                         <span>Sent today</span>
                         <span className="text-green-600">100% delivered</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-4 p-4 bg-slate-50/50 rounded-lg">
+                    <div className="p-3 bg-green-100 rounded-lg">
+                      <Phone className="h-6 w-6 text-green-600" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex justify-between items-baseline">
+                        <span className="font-semibold text-slate-900">Voice</span>
+                        <span className="text-2xl font-bold text-slate-900">12</span>
+                      </div>
+                      <div className="flex justify-between text-xs text-slate-500 mt-1">
+                        <span>Completed today</span>
+                        <span className="text-green-600">8 answered</span>
                       </div>
                     </div>
                   </div>
