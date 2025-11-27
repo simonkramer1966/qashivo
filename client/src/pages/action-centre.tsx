@@ -1226,9 +1226,9 @@ export default function ActionCentre() {
                 </div>
               </div>
 
-              {/* Recent Activity Feed */}
+              {/* Completed Activity Feed */}
               <div className="bg-white/80 backdrop-blur-sm border border-white/50 rounded-xl p-5 shadow-lg">
-                <h3 className="text-lg font-semibold text-slate-900 mb-4">Recent AI Activity</h3>
+                <h3 className="text-lg font-semibold text-slate-900 mb-4">Completed Activity</h3>
                 <div className="divide-y divide-slate-100">
                   {[
                     { date: '27 Nov', time: '14:32', customer: 'Apex Construction Ltd', amount: 4250, outcome: 'Delivered', outcomeAmount: null, icon: Mail, color: 'blue' },
