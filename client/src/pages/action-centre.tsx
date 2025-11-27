@@ -764,7 +764,8 @@ export default function ActionCentre() {
             </div>
           </div>
 
-          {/* Search Bar + Pagination Controls */}
+          {/* Search Bar + Pagination Controls - Hide on Completed tab */}
+          {activeTab !== 'completed' && (
           <div className="mb-6">
             {/* Desktop: Search + Pagination on same row */}
             <div className="hidden sm:flex items-center gap-3 mb-4">
@@ -898,6 +899,7 @@ export default function ActionCentre() {
               )}
             </div>
           </div>
+          )}
 
           {/* Bulk Operations Toolbar - Sprint 2 */}
           {activeTab === 'overdue' && selectedActions.size > 0 && (
