@@ -716,7 +716,7 @@ export default function ActionCentre() {
                 }`}
                 data-testid="tab-payment-plans"
               >
-                <span>Pymt Plans</span>
+                <span>Plans</span>
                 {tabData?.paymentPlans && <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-xs ${activeTab === 'payment_plans' ? 'bg-white/20' : 'bg-blue-100 text-blue-700'}`}>{tabData.paymentPlans.count}</span>}
               </button>
               
