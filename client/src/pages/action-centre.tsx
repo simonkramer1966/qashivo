@@ -24,7 +24,10 @@ import {
   ArrowDown,
   Pause,
   FileText,
-  ShieldAlert
+  ShieldAlert,
+  CircleDollarSign,
+  Users,
+  TrendingUp
 } from "lucide-react";
 import NewSidebar from "@/components/layout/new-sidebar";
 import BottomNav from "@/components/layout/bottom-nav";
@@ -953,7 +956,161 @@ export default function ActionCentre() {
             </div>
           )}
 
-          {/* Action List */}
+          {/* Completed Tab - AI Accomplishments Summary */}
+          {activeTab === 'completed' && (
+            <div className="space-y-6">
+              {/* Today's AI Performance Summary */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="bg-white/80 backdrop-blur-sm border border-white/50 rounded-xl p-5 shadow-lg">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="p-2 bg-[#17B6C3]/10 rounded-lg">
+                      <CheckCircle2 className="h-5 w-5 text-[#17B6C3]" />
+                    </div>
+                    <span className="text-sm font-medium text-slate-600">Actions Completed</span>
+                  </div>
+                  <div className="text-3xl font-bold text-slate-900">47</div>
+                  <div className="text-xs text-green-600 mt-1">+12 from yesterday</div>
+                </div>
+
+                <div className="bg-white/80 backdrop-blur-sm border border-white/50 rounded-xl p-5 shadow-lg">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="p-2 bg-green-100 rounded-lg">
+                      <CircleDollarSign className="h-5 w-5 text-green-600" />
+                    </div>
+                    <span className="text-sm font-medium text-slate-600">Commitments Secured</span>
+                  </div>
+                  <div className="text-3xl font-bold text-slate-900">£24,350</div>
+                  <div className="text-xs text-green-600 mt-1">8 promises to pay</div>
+                </div>
+
+                <div className="bg-white/80 backdrop-blur-sm border border-white/50 rounded-xl p-5 shadow-lg">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="p-2 bg-blue-100 rounded-lg">
+                      <Users className="h-5 w-5 text-blue-600" />
+                    </div>
+                    <span className="text-sm font-medium text-slate-600">Customers Contacted</span>
+                  </div>
+                  <div className="text-3xl font-bold text-slate-900">32</div>
+                  <div className="text-xs text-slate-500 mt-1">78% coverage this week</div>
+                </div>
+
+                <div className="bg-white/80 backdrop-blur-sm border border-white/50 rounded-xl p-5 shadow-lg">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="p-2 bg-purple-100 rounded-lg">
+                      <TrendingUp className="h-5 w-5 text-purple-600" />
+                    </div>
+                    <span className="text-sm font-medium text-slate-600">Response Rate</span>
+                  </div>
+                  <div className="text-3xl font-bold text-slate-900">34%</div>
+                  <div className="text-xs text-green-600 mt-1">+5% improvement</div>
+                </div>
+              </div>
+
+              {/* Channel Breakdown */}
+              <div className="bg-white/80 backdrop-blur-sm border border-white/50 rounded-xl p-5 shadow-lg">
+                <h3 className="text-lg font-semibold text-slate-900 mb-4">Channel Performance</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="flex items-center gap-4 p-4 bg-slate-50/50 rounded-lg">
+                    <div className="p-3 bg-blue-100 rounded-lg">
+                      <Mail className="h-6 w-6 text-blue-600" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex justify-between items-baseline">
+                        <span className="font-semibold text-slate-900">Email</span>
+                        <span className="text-2xl font-bold text-slate-900">28</span>
+                      </div>
+                      <div className="flex justify-between text-xs text-slate-500 mt-1">
+                        <span>Sent today</span>
+                        <span className="text-green-600">42% opened</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-4 p-4 bg-slate-50/50 rounded-lg">
+                    <div className="p-3 bg-green-100 rounded-lg">
+                      <Phone className="h-6 w-6 text-green-600" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex justify-between items-baseline">
+                        <span className="font-semibold text-slate-900">Calls</span>
+                        <span className="text-2xl font-bold text-slate-900">12</span>
+                      </div>
+                      <div className="flex justify-between text-xs text-slate-500 mt-1">
+                        <span>Completed today</span>
+                        <span className="text-green-600">8 answered</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-4 p-4 bg-slate-50/50 rounded-lg">
+                    <div className="p-3 bg-purple-100 rounded-lg">
+                      <MessageSquare className="h-6 w-6 text-purple-600" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex justify-between items-baseline">
+                        <span className="font-semibold text-slate-900">SMS</span>
+                        <span className="text-2xl font-bold text-slate-900">7</span>
+                      </div>
+                      <div className="flex justify-between text-xs text-slate-500 mt-1">
+                        <span>Sent today</span>
+                        <span className="text-green-600">100% delivered</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Recent Activity Feed */}
+              <div className="bg-white/80 backdrop-blur-sm border border-white/50 rounded-xl p-5 shadow-lg">
+                <h3 className="text-lg font-semibold text-slate-900 mb-4">Recent AI Activity</h3>
+                <div className="space-y-3">
+                  {[
+                    { time: '2 mins ago', action: 'Email sent', customer: 'Apex Construction Ltd', detail: 'Payment reminder for INV-2024-0847 (£4,250)', outcome: 'Delivered', icon: Mail, color: 'blue' },
+                    { time: '8 mins ago', action: 'Voice call completed', customer: 'Henderson & Partners', detail: 'Follow-up on overdue balance', outcome: 'Promise to pay £8,500 by Dec 5', icon: Phone, color: 'green' },
+                    { time: '15 mins ago', action: 'SMS sent', customer: 'Metro Supplies', detail: 'Gentle reminder for INV-2024-0823', outcome: 'Delivered', icon: MessageSquare, color: 'purple' },
+                    { time: '22 mins ago', action: 'Email sent', customer: 'Northern Logistics', detail: 'Final notice before escalation', outcome: 'Opened', icon: Mail, color: 'blue' },
+                    { time: '35 mins ago', action: 'Voice call completed', customer: 'Brightside Retail', detail: 'Collections call - 45 days overdue', outcome: 'Dispute raised - needs review', icon: Phone, color: 'amber' },
+                    { time: '1 hour ago', action: 'Email sent', customer: 'Coastal Properties', detail: 'Statement of account attached', outcome: 'Delivered', icon: Mail, color: 'blue' },
+                  ].map((activity, idx) => (
+                    <div key={idx} className="flex items-start gap-4 p-3 hover:bg-slate-50/50 rounded-lg transition-colors">
+                      <div className={`p-2 rounded-lg ${
+                        activity.color === 'blue' ? 'bg-blue-100' : 
+                        activity.color === 'green' ? 'bg-green-100' : 
+                        activity.color === 'purple' ? 'bg-purple-100' : 
+                        'bg-amber-100'
+                      }`}>
+                        <activity.icon className={`h-4 w-4 ${
+                          activity.color === 'blue' ? 'text-blue-600' : 
+                          activity.color === 'green' ? 'text-green-600' : 
+                          activity.color === 'purple' ? 'text-purple-600' : 
+                          'text-amber-600'
+                        }`} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium text-sm text-slate-900">{activity.action}</span>
+                          <span className="text-xs text-slate-400">{activity.time}</span>
+                        </div>
+                        <div className="text-sm text-slate-700 font-medium mt-0.5">{activity.customer}</div>
+                        <div className="text-xs text-slate-500 mt-0.5">{activity.detail}</div>
+                      </div>
+                      <div className={`text-xs px-2 py-1 rounded-full ${
+                        activity.outcome.includes('Promise') ? 'bg-green-100 text-green-700' :
+                        activity.outcome.includes('Dispute') ? 'bg-amber-100 text-amber-700' :
+                        activity.outcome === 'Opened' ? 'bg-blue-100 text-blue-700' :
+                        'bg-slate-100 text-slate-600'
+                      }`}>
+                        {activity.outcome}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Action List - For all other tabs */}
+          {activeTab !== 'completed' && (
           <div className={isActionsTab ? "" : "card-apple overflow-hidden"}>
             {isLoading ? (
               // Loading skeleton
@@ -1289,6 +1446,7 @@ export default function ActionCentre() {
               </div>
             )}
           </div>
+          )}
         </div>
       </main>
 
