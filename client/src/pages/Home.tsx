@@ -174,7 +174,7 @@ export default function Home() {
                 size="lg"
                 variant="outline"
                 className="border-white text-gray-300 hover:bg-white hover:text-gray-900 text-lg px-8"
-                onClick={() => setLocation("/signup")}
+                onClick={() => window.open("https://qashivo.replit.app/investor-demo", "_blank")}
                 data-testid="button-request-demo"
               >
                 Request Demo
