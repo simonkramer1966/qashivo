@@ -12796,6 +12796,59 @@ Return only JSON with keys: intent, sentiment, confidence, keyInsights, actionIt
         });
       }
 
+      // Capture returnTo parameter for post-OAuth redirect (must be safe relative path)
+      // Security: validate returnTo using strict whitelist approach to prevent open redirect attacks
+      const rawReturnTo = req.query.returnTo as string | undefined;
+      
+      // Exact whitelist of allowed internal routes (no prefix matching for maximum safety)
+      const allowedRoutes = new Set([
+        '/dashboard',
+        '/settings',
+        '/settings/integrations',
+        '/settings/team',
+        '/settings/billing',
+        '/action-centre',
+        '/contacts',
+        '/invoices',
+        '/workflows',
+        '/analytics',
+        '/profile',
+        '/admin',
+      ]);
+      
+      // Always clear any existing returnTo first
+      req.session.xeroReturnTo = null;
+      
+      if (rawReturnTo && typeof rawReturnTo === 'string') {
+        try {
+          // Use URL parsing to safely canonicalize the path
+          const baseUrl = 'https://internal.local';
+          const parsedUrl = new URL(rawReturnTo, baseUrl);
+          
+          // Get normalized pathname (URL constructor resolves dot segments and normalizes)
+          // Strip any trailing slashes for consistent matching
+          const normalizedPath = parsedUrl.pathname.replace(/\/+$/, '') || '/';
+          
+          // Security checks:
+          // 1. Must resolve to our base origin (not external)
+          // 2. Pathname must exactly match a whitelisted route
+          // 3. No credentials in URL
+          // 4. No hash/fragment (ignore parsedUrl.hash as we only use pathname)
+          if (parsedUrl.origin === baseUrl && 
+              parsedUrl.username === '' && 
+              parsedUrl.password === '' &&
+              allowedRoutes.has(normalizedPath)) {
+            // Use only the normalized pathname (no query params to prevent XSS)
+            req.session.xeroReturnTo = normalizedPath;
+            console.log(`📍 Stored returnTo URL for post-OAuth redirect: ${normalizedPath}`);
+          } else {
+            console.warn(`⚠️ Rejected returnTo URL (not in whitelist): ${rawReturnTo} -> ${normalizedPath}`);
+          }
+        } catch (e) {
+          console.warn(`⚠️ Rejected invalid returnTo URL: ${rawReturnTo}`);
+        }
+      }
+
       // Use APIMiddleware to initiate connection (stores OAuth state in session)
       const result = await apiMiddleware.connectProvider('xero', req.session, user.tenantId);
       
@@ -13102,28 +13155,71 @@ Return only JSON with keys: intent, sentiment, confidence, keyInsights, actionIt
         return res.redirect(`/connection-error?provider=xero&error=${errorMsg}`);
       }
 
-      // Advance onboarding to AI Review phase for instant analysis
+      // Check if onboarding is already completed to determine redirect destination
+      let isOnboardingComplete = false;
+      let redirectUrl = '/onboarding?step=ai_review_launch&autoStartAnalysis=true';
+      
       try {
-        const currentProgress = await onboardingService.getOnboardingProgress(appTenantId);
-        if (currentProgress) {
-          // Merge existing completed phases with the phases we're completing
-          const existingCompleted = (currentProgress.completedPhases as string[]) || [];
-          const phasesToComplete = ['technical_connection', 'business_setup', 'brand_customization'];
-          const mergedCompleted = Array.from(new Set([...existingCompleted, ...phasesToComplete]));
+        isOnboardingComplete = await onboardingService.isOnboardingCompleted(appTenantId);
+        
+        if (isOnboardingComplete) {
+          // User is reconnecting - redirect to their original page or dashboard
+          // Security: re-validate returnTo using strict whitelist approach
+          const rawReturnTo = req.session?.xeroReturnTo;
           
-          // Skip to AI Review phase to show instant analysis
-          await db.update(onboardingProgress).set({
-            currentPhase: 'ai_review_launch',
-            completedPhases: mergedCompleted,
-            updatedAt: new Date()
-          }).where(eq(onboardingProgress.tenantId, appTenantId));
-          console.log(`✅ Advanced to AI Review phase for instant analysis: ${appTenantId}`);
+          // Always clean up returnTo from session first (prevents reuse of stale values)
+          if (req.session?.xeroReturnTo) {
+            delete req.session.xeroReturnTo;
+          }
+          
+          // Exact whitelist of allowed internal routes (must match auth endpoint)
+          const allowedRoutes = new Set([
+            '/dashboard',
+            '/settings',
+            '/settings/integrations',
+            '/settings/team',
+            '/settings/billing',
+            '/action-centre',
+            '/contacts',
+            '/invoices',
+            '/workflows',
+            '/analytics',
+            '/profile',
+            '/admin',
+          ]);
+          
+          // Only accept the stored returnTo if it exactly matches a whitelisted route
+          // The auth endpoint already validated and normalized this value
+          if (rawReturnTo && typeof rawReturnTo === 'string' && allowedRoutes.has(rawReturnTo)) {
+            redirectUrl = rawReturnTo;
+            console.log(`📍 Onboarding complete - redirecting to returnTo: ${redirectUrl}`);
+          } else {
+            redirectUrl = '/dashboard';
+            console.log(`📍 Onboarding complete - redirecting to dashboard${rawReturnTo ? ' (invalid returnTo)' : ' (no returnTo)'}`);
+          }
         } else {
-          console.warn(`⚠️ No onboarding progress found for tenant ${appTenantId} - user will start from beginning`);
+          // First-time connection - advance onboarding and redirect there
+          const currentProgress = await onboardingService.getOnboardingProgress(appTenantId);
+          if (currentProgress) {
+            // Merge existing completed phases with the phases we're completing
+            const existingCompleted = (currentProgress.completedPhases as string[]) || [];
+            const phasesToComplete = ['technical_connection', 'business_setup', 'brand_customization'];
+            const mergedCompleted = Array.from(new Set([...existingCompleted, ...phasesToComplete]));
+            
+            // Skip to AI Review phase to show instant analysis
+            await db.update(onboardingProgress).set({
+              currentPhase: 'ai_review_launch',
+              completedPhases: mergedCompleted,
+              updatedAt: new Date()
+            }).where(eq(onboardingProgress.tenantId, appTenantId));
+            console.log(`✅ Advanced to AI Review phase for instant analysis: ${appTenantId}`);
+          } else {
+            console.warn(`⚠️ No onboarding progress found for tenant ${appTenantId} - user will start from beginning`);
+          }
         }
       } catch (error) {
-        console.error(`⚠️ Failed to advance onboarding phase:`, error);
-        // Don't fail the whole flow if onboarding update fails
+        console.error(`⚠️ Failed to check onboarding status:`, error);
+        // Default to onboarding if we can't determine status
       }
 
       // Trigger automatic comprehensive sync after successful connection
@@ -13278,12 +13374,12 @@ Return only JSON with keys: intent, sentiment, confidence, keyInsights, actionIt
         <body>
           <div class="container">
             <div class="success-icon">🎉</div>
-            <h1>Xero Connected!</h1>
-            <p class="subtitle">Your Qashivo account is now connected to Xero</p>
+            <h1>Xero ${isOnboardingComplete ? 'Reconnected' : 'Connected'}!</h1>
+            <p class="subtitle">${isOnboardingComplete ? 'Your Xero connection has been restored' : 'Your Qashivo account is now connected to Xero'}</p>
             
             <div class="ai-badge">
               <span class="loader"></span>
-              AI Analysis Starting...
+              ${isOnboardingComplete ? 'Syncing Data...' : 'AI Analysis Starting...'}
             </div>
             
             <div class="steps">
@@ -13295,14 +13391,14 @@ Return only JSON with keys: intent, sentiment, confidence, keyInsights, actionIt
                 <span class="step-check">✓</span>
                 <span>Syncing invoices and contacts</span>
               </div>
-              <div class="step-item">
+              ${isOnboardingComplete ? '' : `<div class="step-item">
                 <span class="step-check">⏳</span>
                 <span>Launching AI cashflow analysis</span>
-              </div>
+              </div>`}
             </div>
             
-            <a href="/onboarding?step=ai_review_launch&autoStartAnalysis=true" class="btn" onclick="clearInterval(window.redirectInterval)">Continue to AI Analysis</a>
-            <div class="countdown">Auto-starting in <span id="countdown">2</span> seconds...</div>
+            <a href="${redirectUrl}" class="btn" onclick="clearInterval(window.redirectInterval)">${isOnboardingComplete ? 'Return to App' : 'Continue to AI Analysis'}</a>
+            <div class="countdown">Redirecting in <span id="countdown">2</span> seconds...</div>
           </div>
           <script>
             let seconds = 2;
@@ -13312,7 +13408,7 @@ Return only JSON with keys: intent, sentiment, confidence, keyInsights, actionIt
               if (countdownEl) countdownEl.textContent = seconds;
               if (seconds <= 0) {
                 clearInterval(window.redirectInterval);
-                window.location.replace("/onboarding?step=ai_review_launch&autoStartAnalysis=true");
+                window.location.replace("${redirectUrl}");
               }
             }, 1000);
           </script>
