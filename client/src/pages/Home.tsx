@@ -167,7 +167,7 @@ export default function Home() {
                 </li>
                 <li className="flex items-start">
                   <span className="text-red-400 mr-2">•</span>
-                  <span className="font-semibold text-gray-900">You still send every email manually</span>
+                  <span className="font-semibold text-gray-900">Send emails on static 7, 14, 21 day periods when every client is different</span>
                 </li>
                 <li className="flex items-start">
                   <span className="text-red-400 mr-2">•</span>
