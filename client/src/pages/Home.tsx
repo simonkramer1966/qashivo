@@ -170,15 +170,6 @@ export default function Home() {
                 See It In Action
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
-              <Button
-                size="lg"
-                variant="outline"
-                className="border-white text-gray-300 hover:bg-white hover:text-gray-900 text-lg px-8"
-                onClick={() => setLocation("/demo")}
-                data-testid="button-request-demo"
-              >
-                Request Demo
-              </Button>
             </div>
           </div>
         </div>
