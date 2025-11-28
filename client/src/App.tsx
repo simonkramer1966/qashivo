@@ -39,6 +39,7 @@ const AdminOutcomes = lazy(() => import("@/pages/admin-outcomes"));
 const Dashboard = lazy(() => import("@/pages/dashboard"));
 const Homepage = lazy(() => import("@/pages/homepage"));
 const Home = lazy(() => import("@/pages/Home"));
+const Demo = lazy(() => import("@/pages/Demo"));
 const Login = lazy(() => import("@/pages/Login"));
 const Signup = lazy(() => import("@/pages/Signup"));
 const ForgotPassword = lazy(() => import("@/pages/ForgotPassword"));
@@ -80,6 +81,7 @@ function Router() {
         // Unauthenticated routes - only signup and signin pages
         <Switch>
           <Route path="/home" component={Home} />
+          <Route path="/demo" component={Demo} />
           <Route path="/homepage" component={Homepage} />
           <Route path="/investor-demo" component={InvestorDemo} />
           <Route path="/investor-demo-qashivo" component={InvestorDemoQashivo} />
@@ -101,6 +103,7 @@ function Router() {
         // Authenticated routes - main application
         <Switch>
           <Route path="/home" component={Home} />
+          <Route path="/demo" component={Demo} />
           <Route path="/homepage" component={Homepage} />
           <Route path="/investor-demo" component={InvestorDemo} />
           <Route path="/investor-demo-qashivo" component={InvestorDemoQashivo} />
