@@ -365,7 +365,7 @@ export default function Header({ title, subtitle, action, noBorder = true, title
                 <TooltipContent>
                   <p>
                     {needsXeroReconnect 
-                      ? "Xero connection lost - click to reconnect"
+                      ? "Accounting connection lost - click to reconnect"
                       : syncMutation.isPending 
                         ? "Syncing customers & invoices..." 
                         : xeroHealth?.organisationName 
