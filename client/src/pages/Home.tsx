@@ -115,8 +115,8 @@ export default function Home() {
               </Button>
               <Button
                 size="lg"
-                variant="outline"
-                className="border-white text-white hover:bg-white/10 text-lg px-8"
+                variant="ghost"
+                className="text-gray-400 hover:text-[#17B6C3] hover:bg-transparent text-lg px-8"
                 onClick={() => setLocation("/contact")}
                 data-testid="button-hero-contact"
               >
