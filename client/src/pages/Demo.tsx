@@ -836,15 +836,6 @@ export default function Demo() {
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button
               size="lg"
-              className="bg-white hover:bg-gray-100 text-[#17B6C3] text-lg px-8"
-              onClick={() => setLocation("/signup")}
-              data-testid="button-demo-cta-trial"
-            >
-              Start Free Trial
-              <ArrowRight className="ml-2 h-5 w-5" />
-            </Button>
-            <Button
-              size="lg"
               variant="outline"
               className="border-white text-white hover:bg-white hover:text-[#17B6C3] text-lg px-8"
               onClick={() => setLocation("/home")}
