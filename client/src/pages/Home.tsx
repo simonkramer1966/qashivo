@@ -442,7 +442,6 @@ export default function Home() {
               </ul>
               <Button
                 className="w-full bg-gray-100 hover:bg-gray-200 text-gray-900 text-sm"
-                onClick={() => setLocation("/signup")}
                 data-testid="button-pricing-micro"
               >
                 Start Free Trial
@@ -484,7 +483,6 @@ export default function Home() {
               </ul>
               <Button
                 className="w-full bg-white hover:bg-gray-100 text-[#17B6C3] text-sm"
-                onClick={() => setLocation("/signup")}
                 data-testid="button-pricing-starter"
               >
                 Start Free Trial
@@ -523,7 +521,6 @@ export default function Home() {
               </ul>
               <Button
                 className="w-full bg-[#17B6C3] hover:bg-[#1396A1] text-white text-sm"
-                onClick={() => setLocation("/signup")}
                 data-testid="button-pricing-professional"
               >
                 Start Free Trial
@@ -561,7 +558,7 @@ export default function Home() {
               </ul>
               <Button
                 className="w-full bg-gray-100 hover:bg-gray-200 text-gray-900 text-sm"
-                onClick={() => setLocation("/signup")}
+                onClick={() => handleOpenSalesForm('pricing')}
                 data-testid="button-pricing-enterprise"
               >
                 Contact Sales
