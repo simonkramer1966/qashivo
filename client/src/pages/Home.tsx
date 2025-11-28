@@ -356,7 +356,7 @@ export default function Home() {
                 <div className="text-5xl font-bold text-[#17B6C3] mb-2">95%</div>
                 <p className="text-gray-600 text-lg">Less time on collections</p>
                 <p className="text-gray-500 mt-2">
-                  Get your mornings back. Let AI do the work you hired it for.
+                  Get your mornings back. Let Qashivo do the work you hired it for.
                 </p>
               </div>
             </div>
