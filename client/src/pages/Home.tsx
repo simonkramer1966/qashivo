@@ -44,7 +44,7 @@ const salesEnquirySchema = z.object({
   company: z.string().optional(),
   phone: z.string().optional(),
   message: z.string().min(10, "Please provide more details (at least 10 characters)"),
-  enquiryType: z.enum(['demo', 'pricing', 'partnership', 'general'])
+  enquiryType: z.enum(['demo', 'pricing', 'partnership', 'investment', 'general'])
 });
 
 type SalesEnquiryForm = z.infer<typeof salesEnquirySchema>;
@@ -855,6 +855,7 @@ export default function Home() {
                           <SelectItem value="demo">Product Demo</SelectItem>
                           <SelectItem value="pricing">Pricing Information</SelectItem>
                           <SelectItem value="partnership">Partnership Opportunities</SelectItem>
+                          <SelectItem value="investment">Investment</SelectItem>
                           <SelectItem value="general">General Enquiry</SelectItem>
                         </SelectContent>
                       </Select>
