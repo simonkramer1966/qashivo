@@ -201,48 +201,19 @@ export default function Header({ title, subtitle, action, noBorder = true, title
 
   return (
     <header className="sticky top-0 z-40 bg-white glass-card border-0 rounded-none shadow-glass [scrollbar-gutter:stable]">
-      {/* Connected indicator bar - shows when accounting software is connected */}
-      {isAccountingSoftwareConnected && (
+      {/* Connection indicator bar - teal when connected, red when disconnected */}
+      {tenant?.xeroAccessToken && (
         <div 
-          className="h-[5px] bg-gradient-to-r from-[#17B6C3] to-[#0ea5e9] -mx-0"
-          data-testid="indicator-accounting-connected"
+          className={`h-[5px] -mx-0 ${
+            needsXeroReconnect 
+              ? "bg-gradient-to-r from-red-500 to-red-600" 
+              : "bg-gradient-to-r from-[#17B6C3] to-[#0ea5e9]"
+          }`}
+          data-testid={needsXeroReconnect ? "indicator-accounting-disconnected" : "indicator-accounting-connected"}
         />
       )}
       
       <div className="px-4 sm:px-6 py-4 sm:py-6">
-      {/* Xero Disconnection Alert Banner */}
-      {needsXeroReconnect && (
-        <div className="mb-4 -mx-4 sm:-mx-6 -mt-4 sm:-mt-6 px-4 sm:px-6 py-3 bg-amber-50 border-b border-amber-200 flex items-center justify-between gap-3" data-testid="banner-xero-disconnected">
-          <div className="flex items-center gap-3">
-            <AlertTriangle className="h-5 w-5 text-amber-600 flex-shrink-0" />
-            <div>
-              <p className="text-sm font-medium text-amber-800">
-                Xero connection lost
-              </p>
-              <p className="text-xs text-amber-600 hidden sm:block">
-                {xeroHealth?.error || "Your Xero sync has stopped. Reconnect to resume automatic updates."}
-              </p>
-            </div>
-          </div>
-          <Button
-            onClick={() => reconnectMutation.mutate()}
-            disabled={reconnectMutation.isPending}
-            size="sm"
-            className="bg-amber-600 hover:bg-amber-700 text-white flex-shrink-0"
-            data-testid="button-reconnect-xero"
-          >
-            {reconnectMutation.isPending ? (
-              <RefreshCw className="h-4 w-4 animate-spin" />
-            ) : (
-              <>
-                <RefreshCw className="h-4 w-4 mr-2" />
-                <span className="hidden sm:inline">Reconnect Xero</span>
-                <span className="sm:hidden">Reconnect</span>
-              </>
-            )}
-          </Button>
-        </div>
-      )}
 
       {/* Mobile View - Logo, Name, and Page Title */}
       <div className="lg:hidden">
@@ -268,20 +239,24 @@ export default function Header({ title, subtitle, action, noBorder = true, title
                 <ListTodo className="h-4 w-4" />
               </Button>
             )}
-            {/* Sync Button on Mobile */}
+            {/* Sync/Reconnect Button on Mobile */}
             {tenant?.xeroAccessToken && (
               <Button
-                onClick={() => syncMutation.mutate()}
-                disabled={syncMutation.isPending}
+                onClick={() => needsXeroReconnect ? reconnectMutation.mutate() : syncMutation.mutate()}
+                disabled={needsXeroReconnect ? reconnectMutation.isPending : syncMutation.isPending}
                 variant="ghost"
                 size="sm"
-                className="h-9 px-3 bg-[#17B6C3]/10 hover:bg-[#17B6C3]/20 text-[#17B6C3] border border-[#17B6C3]/20"
-                data-testid="button-sync-now"
+                className={`h-9 px-3 ${
+                  needsXeroReconnect 
+                    ? "bg-red-500/10 hover:bg-red-500/20 text-red-600 border border-red-500" 
+                    : "bg-[#17B6C3]/10 hover:bg-[#17B6C3]/20 text-[#17B6C3] border border-[#17B6C3]/20"
+                }`}
+                data-testid={needsXeroReconnect ? "button-reconnect-xero" : "button-sync-now"}
               >
-                {syncMutation.isPending ? (
-                  <div className="w-4 h-4 border-2 border-[#17B6C3] border-t-transparent rounded-full animate-spin" />
+                {(needsXeroReconnect ? reconnectMutation.isPending : syncMutation.isPending) ? (
+                  <div className={`w-4 h-4 border-2 ${needsXeroReconnect ? "border-red-600" : "border-[#17B6C3]"} border-t-transparent rounded-full animate-spin`} />
                 ) : (
-                  <AlertCircle className="h-4 w-4" />
+                  <RefreshCw className="h-4 w-4" />
                 )}
               </Button>
             )}
@@ -335,38 +310,46 @@ export default function Header({ title, subtitle, action, noBorder = true, title
             </TooltipProvider>
           )}
 
-          {/* Sync Button - Only show if Xero is connected */}
+          {/* Sync/Reconnect Button - Only show if Xero token exists */}
           {tenant?.xeroAccessToken && (
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
-                    onClick={() => syncMutation.mutate()}
-                    disabled={syncMutation.isPending}
+                    onClick={() => needsXeroReconnect ? reconnectMutation.mutate() : syncMutation.mutate()}
+                    disabled={needsXeroReconnect ? reconnectMutation.isPending : syncMutation.isPending}
                     variant="ghost"
                     size="sm"
-                    className="h-10 px-3 gap-2 bg-[#17B6C3]/10 hover:bg-[#17B6C3]/20 text-[#17B6C3] border border-[#17B6C3]/20"
-                    data-testid="button-sync-now"
+                    className={`h-10 px-3 gap-2 ${
+                      needsXeroReconnect 
+                        ? "bg-red-500/10 hover:bg-red-500/20 text-red-600 border border-red-500" 
+                        : "bg-[#17B6C3]/10 hover:bg-[#17B6C3]/20 text-[#17B6C3] border border-[#17B6C3]/20"
+                    }`}
+                    data-testid={needsXeroReconnect ? "button-reconnect-xero" : "button-sync-now"}
                   >
-                    {syncMutation.isPending ? (
-                      <div className="w-4 h-4 border-2 border-[#17B6C3] border-t-transparent rounded-full animate-spin" />
+                    {(needsXeroReconnect ? reconnectMutation.isPending : syncMutation.isPending) ? (
+                      <div className={`w-4 h-4 border-2 ${needsXeroReconnect ? "border-red-600" : "border-[#17B6C3]"} border-t-transparent rounded-full animate-spin`} />
                     ) : (
                       <RefreshCw className="h-4 w-4" />
                     )}
-                    {xeroHealth?.organisationName && (
+                    {needsXeroReconnect ? (
+                      <span className="hidden lg:inline text-sm font-medium">Reconnect</span>
+                    ) : xeroHealth?.organisationName ? (
                       <span className="hidden lg:inline text-sm font-medium truncate max-w-[120px]">
                         {xeroHealth.organisationName}
                       </span>
-                    )}
+                    ) : null}
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
                   <p>
-                    {syncMutation.isPending 
-                      ? "Syncing customers & invoices..." 
-                      : xeroHealth?.organisationName 
-                        ? `Sync ${xeroHealth.organisationName}` 
-                        : "Sync Xero data"}
+                    {needsXeroReconnect 
+                      ? "Xero connection lost - click to reconnect"
+                      : syncMutation.isPending 
+                        ? "Syncing customers & invoices..." 
+                        : xeroHealth?.organisationName 
+                          ? `Sync ${xeroHealth.organisationName}` 
+                          : "Sync Xero data"}
                   </p>
                 </TooltipContent>
               </Tooltip>
