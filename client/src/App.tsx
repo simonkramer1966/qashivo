@@ -41,6 +41,10 @@ const Homepage = lazy(() => import("@/pages/homepage"));
 const Home = lazy(() => import("@/pages/Home"));
 const Demo = lazy(() => import("@/pages/Demo"));
 const Contact = lazy(() => import("@/pages/Contact"));
+const Features = lazy(() => import("@/pages/Features"));
+const Integrations = lazy(() => import("@/pages/Integrations"));
+const PricingPage = lazy(() => import("@/pages/Pricing"));
+const Partners = lazy(() => import("@/pages/Partners"));
 const Login = lazy(() => import("@/pages/Login"));
 const Signup = lazy(() => import("@/pages/Signup"));
 const ForgotPassword = lazy(() => import("@/pages/ForgotPassword"));
@@ -84,6 +88,10 @@ function Router() {
           <Route path="/home" component={Home} />
           <Route path="/demo" component={Demo} />
           <Route path="/contact" component={Contact} />
+          <Route path="/features" component={Features} />
+          <Route path="/integrations" component={Integrations} />
+          <Route path="/pricing" component={PricingPage} />
+          <Route path="/partners" component={Partners} />
           <Route path="/homepage" component={Homepage} />
           <Route path="/investor-demo" component={InvestorDemo} />
           <Route path="/investor-demo-qashivo" component={InvestorDemoQashivo} />
@@ -107,6 +115,10 @@ function Router() {
           <Route path="/home" component={Home} />
           <Route path="/demo" component={Demo} />
           <Route path="/contact" component={Contact} />
+          <Route path="/features" component={Features} />
+          <Route path="/integrations" component={Integrations} />
+          <Route path="/pricing" component={PricingPage} />
+          <Route path="/partners" component={Partners} />
           <Route path="/homepage" component={Homepage} />
           <Route path="/investor-demo" component={InvestorDemo} />
           <Route path="/investor-demo-qashivo" component={InvestorDemoQashivo} />

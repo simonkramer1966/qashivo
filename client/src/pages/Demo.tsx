@@ -305,19 +305,19 @@ export default function Demo() {
                 <h1 className="text-2xl font-bold text-[#17B6C3]">Qashivo</h1>
               </a>
               <div className="hidden md:flex space-x-6">
-                <a href="/home#features" className="text-gray-700 hover:text-[#17B6C3] transition-colors">
+                <a href="/features" className="text-gray-700 hover:text-[#17B6C3] transition-colors" data-testid="link-nav-features">
                   Features
                 </a>
-                <a href="/home#integrations" className="text-gray-700 hover:text-[#17B6C3] transition-colors">
+                <a href="/integrations" className="text-gray-700 hover:text-[#17B6C3] transition-colors" data-testid="link-nav-integrations">
                   Integrations
                 </a>
-                <a href="/home#pricing" className="text-gray-700 hover:text-[#17B6C3] transition-colors">
+                <a href="/pricing" className="text-gray-700 hover:text-[#17B6C3] transition-colors" data-testid="link-nav-pricing">
                   Pricing
                 </a>
-                <a href="/home#partners" className="text-gray-700 hover:text-[#17B6C3] transition-colors">
+                <a href="/partners" className="text-gray-700 hover:text-[#17B6C3] transition-colors" data-testid="link-nav-partners">
                   Partners
                 </a>
-                <a href="/demo" className="text-[#17B6C3] font-semibold">
+                <a href="/demo" className="text-[#17B6C3] font-semibold" data-testid="link-nav-demo">
                   Demo
                 </a>
                 <a href="/contact" className="text-gray-700 hover:text-[#17B6C3] transition-colors" data-testid="link-nav-contact">
