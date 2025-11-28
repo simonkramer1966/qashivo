@@ -132,10 +132,6 @@ export default function Home() {
       <section className="py-24 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <div className="inline-flex items-center bg-red-100 rounded-full px-4 py-2 mb-6">
-              <AlertTriangle className="h-4 w-4 text-red-600 mr-2" />
-              <span className="text-sm font-semibold text-red-600">The Broken Playbook</span>
-            </div>
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
               Your Finance Software Shows You Problems.<br />
               <span className="text-gray-500">Then Leaves You to Fix Them.</span>
