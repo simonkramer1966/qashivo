@@ -33,6 +33,9 @@ export default function Features() {
                 <h1 className="text-2xl font-bold text-[#17B6C3]">Qashivo</h1>
               </a>
               <div className="hidden md:flex space-x-6">
+                <a href="/home" className="text-gray-700 hover:text-[#17B6C3] transition-colors" data-testid="link-nav-home">
+                  Home
+                </a>
                 <a href="/features" className="text-[#17B6C3] font-medium" data-testid="link-nav-features">
                   Features
                 </a>
