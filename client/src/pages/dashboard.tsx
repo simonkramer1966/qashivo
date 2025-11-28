@@ -1,13 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
-import { queryClient } from "@/lib/queryClient";
-import { TrendingDown, TrendingUp, Sparkles, Users, CheckCircle2, Clock, Activity, Bell } from "lucide-react";
+import { TrendingDown, TrendingUp, Sparkles, Users, CheckCircle2, Clock, Activity } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { LineChart, Line, BarChart, Bar, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import { useState } from "react";
-import DailyPlanApprovalModal from "@/components/automation/DailyPlanApprovalModal";
 import NewSidebar from "@/components/layout/new-sidebar";
 import BottomNav from "@/components/layout/bottom-nav";
 import Header from "@/components/layout/header";
@@ -87,25 +84,10 @@ interface DashboardMetrics {
   generatedAt: string;
 }
 
-interface DailyPlanData {
-  summary: {
-    totalActions: number;
-  };
-}
-
 export default function Dashboard() {
   const { data: metrics, isLoading, error } = useQuery<DashboardMetrics>({
     queryKey: ['/api/metrics'],
   });
-
-  // Check for pending daily plan
-  const { data: dailyPlan } = useQuery<DailyPlanData>({
-    queryKey: ['/api/automation/daily-plan'],
-    retry: false, // Don't retry if plan doesn't exist
-    enabled: true,
-  });
-
-  const hasPendingPlan = dailyPlan && dailyPlan.summary && dailyPlan.summary.totalActions > 0;
 
   const [baselineMode, setBaselineMode] = useState<'adaptive' | 'static'>('adaptive');
 
@@ -177,35 +159,6 @@ export default function Dashboard() {
         <Header 
           title="Performance Dashboard" 
           subtitle="AI performance and automation metrics"
-          action={
-            <div className="relative" data-testid="daily-plan-trigger-container">
-              <DailyPlanApprovalModal 
-                trigger={
-                  <Button 
-                    className="bg-[#17B6C3] hover:bg-[#1396A1] text-white relative"
-                    data-testid="button-review-daily-plan"
-                  >
-                    <CheckCircle2 className="h-4 w-4 mr-2" />
-                    Review Daily Plan
-                    {hasPendingPlan && (
-                      <span className="absolute -top-1 -right-1 flex h-5 w-5">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-5 w-5 bg-red-500 items-center justify-center">
-                          <Bell className="h-3 w-3 text-white" />
-                        </span>
-                      </span>
-                    )}
-                  </Button>
-                }
-                onApproved={() => {
-                  // Invalidate all relevant queries to keep UI in sync across dashboard and action centre
-                  queryClient.invalidateQueries({ queryKey: ['/api/metrics'] });
-                  queryClient.invalidateQueries({ queryKey: ['/api/automation/daily-plan'] });
-                  queryClient.invalidateQueries({ queryKey: ['/api/actions'] });
-                }}
-              />
-            </div>
-          }
         />
         
         <div className="container-apple py-4 sm:py-6 lg:py-8 bg-gradient-to-br from-slate-50 via-blue-50 to-teal-50">
