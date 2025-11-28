@@ -246,7 +246,7 @@ export default function Header({ title, subtitle, action, noBorder = true, title
                 disabled={needsXeroReconnect ? reconnectMutation.isPending : syncMutation.isPending}
                 variant="ghost"
                 size="sm"
-                className={`h-9 px-3 ${
+                className={`h-9 px-3 gap-1.5 ${
                   needsXeroReconnect 
                     ? "bg-red-500/10 hover:bg-red-500/20 text-red-600 border border-red-500" 
                     : "bg-[#17B6C3]/10 hover:bg-[#17B6C3]/20 text-[#17B6C3] border border-[#17B6C3]/20"
@@ -257,6 +257,9 @@ export default function Header({ title, subtitle, action, noBorder = true, title
                   <div className={`w-4 h-4 border-2 ${needsXeroReconnect ? "border-red-600" : "border-[#17B6C3]"} border-t-transparent rounded-full animate-spin`} />
                 ) : (
                   <RefreshCw className="h-4 w-4" />
+                )}
+                {needsXeroReconnect && (
+                  <span className="text-xs font-medium">Reconnect</span>
                 )}
               </Button>
             )}
