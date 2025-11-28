@@ -836,8 +836,7 @@ export default function Demo() {
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button
               size="lg"
-              variant="outline"
-              className="border-white text-white hover:bg-white hover:text-[#17B6C3] text-lg px-8"
+              className="bg-white text-gray-700 hover:text-[#17B6C3] text-lg px-8"
               onClick={() => setLocation("/home")}
               data-testid="button-demo-cta-learn"
             >
