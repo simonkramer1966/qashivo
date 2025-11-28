@@ -167,7 +167,7 @@ export default function Home() {
               <Button
                 size="lg"
                 className="bg-[#17B6C3] hover:bg-[#1396A1] text-white text-lg px-8"
-                onClick={() => setLocation("/signup")}
+                onClick={() => setLocation("/demo")}
                 data-testid="button-get-started"
               >
                 See It In Action
