@@ -94,10 +94,9 @@ export default function Home() {
         
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 md:py-32">
           <div className="max-w-3xl">
-            <div className="inline-flex items-center bg-white/20 backdrop-blur-sm rounded-full px-4 py-2 mb-6">
-              <Zap className="h-4 w-4 text-[#17B6C3] mr-2" />
-              <span className="text-sm font-semibold text-white">Stop Buying Software That Just Points at Problems</span>
-            </div>
+            <p className="text-xl md:text-2xl text-gray-300 mb-4">
+              Stop Buying Software That Just Points at Problems
+            </p>
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white leading-tight mb-6">
               Qashivo <span className="text-[#17B6C3]">Fixes Them</span> For You
             </h1>
