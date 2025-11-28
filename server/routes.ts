@@ -12896,11 +12896,12 @@ Return only JSON with keys: intent, sentiment, confidence, keyInsights, actionIt
 
       console.log(`🔌 Disconnecting Xero for tenant: ${user.tenantId}`);
 
-      // Clear Xero tokens from tenant record
+      // Clear Xero tokens and org name from tenant record
       await storage.updateTenant(user.tenantId, {
         xeroAccessToken: null,
         xeroRefreshToken: null,
         xeroTenantId: null,
+        xeroOrganisationName: null,
       });
 
       console.log("✅ Xero disconnected successfully");
@@ -12934,6 +12935,7 @@ Return only JSON with keys: intent, sentiment, confidence, keyInsights, actionIt
       res.json({
         isConfigured,
         connectionStatus: tenant.xeroConnectionStatus || (isConfigured ? 'unknown' : 'not_configured'),
+        organisationName: tenant.xeroOrganisationName || null,
         lastHealthCheck: tenant.xeroLastHealthCheck,
         lastSyncAt: tenant.xeroLastSyncAt,
         error: tenant.xeroHealthCheckError,
@@ -13100,17 +13102,19 @@ Return only JSON with keys: intent, sentiment, confidence, keyInsights, actionIt
       const tokens = result.tokens;
       
       // Save tokens to database and mark connection as healthy
+      const xeroOrgName = tokens.tenantName || null;
       await storage.updateTenant(appTenantId, {
         xeroAccessToken: tokens.accessToken,
         xeroRefreshToken: tokens.refreshToken || null,
         xeroTenantId: xeroTenantId || null,
+        xeroOrganisationName: xeroOrgName,
         xeroExpiresAt: tokens.expiresAt || null,
         xeroConnectionStatus: 'connected',
         xeroLastHealthCheck: new Date(),
         xeroHealthCheckError: null,
       });
       
-      console.log(`✅ Xero connected successfully for app tenant: ${appTenantId}, Xero tenant: ${xeroTenantId}`);
+      console.log(`✅ Xero connected successfully for app tenant: ${appTenantId}, Xero org: ${xeroOrgName}`);
 
       // Re-establish Passport session after OAuth redirect
       // Retrieve the user ID that was stored in session during auth-url request

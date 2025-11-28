@@ -41,6 +41,7 @@ export default function Header({ title, subtitle, action, noBorder = true, title
   const { data: xeroHealth } = useQuery<{
     isConfigured: boolean;
     connectionStatus: 'connected' | 'disconnected' | 'error' | 'unknown' | 'not_configured';
+    organisationName?: string | null;
     lastHealthCheck?: string;
     lastSyncAt?: string;
     error?: string;
@@ -344,18 +345,29 @@ export default function Header({ title, subtitle, action, noBorder = true, title
                     disabled={syncMutation.isPending}
                     variant="ghost"
                     size="sm"
-                    className="h-10 px-3 bg-[#17B6C3]/10 hover:bg-[#17B6C3]/20 text-[#17B6C3] border border-[#17B6C3]/20"
+                    className="h-10 px-3 gap-2 bg-[#17B6C3]/10 hover:bg-[#17B6C3]/20 text-[#17B6C3] border border-[#17B6C3]/20"
                     data-testid="button-sync-now"
                   >
                     {syncMutation.isPending ? (
                       <div className="w-4 h-4 border-2 border-[#17B6C3] border-t-transparent rounded-full animate-spin" />
                     ) : (
-                      <AlertCircle className="h-4 w-4" />
+                      <RefreshCw className="h-4 w-4" />
+                    )}
+                    {xeroHealth?.organisationName && (
+                      <span className="hidden lg:inline text-sm font-medium truncate max-w-[120px]">
+                        {xeroHealth.organisationName}
+                      </span>
                     )}
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>{syncMutation.isPending ? "Syncing customers & invoices..." : "Sync Xero data"}</p>
+                  <p>
+                    {syncMutation.isPending 
+                      ? "Syncing customers & invoices..." 
+                      : xeroHealth?.organisationName 
+                        ? `Sync ${xeroHealth.organisationName}` 
+                        : "Sync Xero data"}
+                  </p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>

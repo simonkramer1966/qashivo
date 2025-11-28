@@ -13,6 +13,7 @@ interface XeroTokens {
   refreshToken: string;
   expiresAt: Date;
   tenantId: string;
+  tenantName?: string;
 }
 
 interface XeroContact {
@@ -1210,14 +1211,16 @@ class XeroService {
 
       const connections = await connectionsResponse.json();
       const tenantId = connections[0]?.tenantId || '';
+      const tenantName = connections[0]?.tenantName || '';
 
-      console.log(`Xero integration successful, tenant ID: ${tenantId}`);
+      console.log(`Xero integration successful, tenant ID: ${tenantId}, org name: ${tenantName}`);
 
       return {
         accessToken: tokenData.access_token,
         refreshToken: tokenData.refresh_token,
         expiresAt: new Date(Date.now() + tokenData.expires_in * 1000),
         tenantId,
+        tenantName,
       };
     } catch (error) {
       console.error('Failed to exchange code for tokens:', error);

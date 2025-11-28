@@ -56,6 +56,7 @@ export const tenants = pgTable("tenants", {
   xeroAccessToken: text("xero_access_token"),
   xeroRefreshToken: text("xero_refresh_token"),
   xeroTenantId: varchar("xero_tenant_id"),
+  xeroOrganisationName: varchar("xero_organisation_name"),
   xeroExpiresAt: timestamp("xero_expires_at"),
   xeroSyncInterval: integer("xero_sync_interval").default(240), // minutes (4 hours)
   xeroLastSyncAt: timestamp("xero_last_sync_at"),
