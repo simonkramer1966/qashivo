@@ -23,6 +23,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { AIResultsDialog } from "@/components/AIResultsDialog";
 import logo from "@assets/Main Nexus Logo copy_1763392904110.png";
+import heroImage from "@assets/generated_images/Advanced_AI_technology_center_4b230f51.png";
 
 const sanitizePhoneNumber = (phone: string, countryCode: string): string => {
   let cleaned = phone.replace(/[\s\-\(\)\.]/g, '');
@@ -326,16 +327,28 @@ export default function Demo() {
       </nav>
 
       {/* Hero Section */}
-      <section className="py-16 md:py-24 bg-gradient-to-br from-slate-50 via-blue-50 to-teal-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <div className="inline-flex items-center bg-[#17B6C3]/10 rounded-full px-4 py-2 mb-6">
+      <section 
+        className="relative overflow-hidden min-h-[400px] md:min-h-[500px] flex items-center"
+        style={{
+          backgroundImage: `url(${heroImage})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat'
+        }}
+      >
+        {/* Gradient Overlay */}
+        <div className="absolute inset-0 bg-gradient-to-r from-slate-900/90 via-slate-900/80 to-slate-900/70"></div>
+        
+        {/* Content */}
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24 text-center">
+          <div className="inline-flex items-center bg-white/20 backdrop-blur-sm rounded-full px-4 py-2 mb-6">
             <Zap className="h-4 w-4 text-[#17B6C3] mr-2" />
-            <span className="text-sm font-semibold text-[#17B6C3]">Interactive Demo</span>
+            <span className="text-sm font-semibold text-white">Interactive Demo</span>
           </div>
-          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 mb-6">
+          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6">
             Experience Qashivo <span className="text-[#17B6C3]">in Action</span>
           </h1>
-          <p className="text-xl text-gray-600 max-w-3xl mx-auto mb-8">
+          <p className="text-xl text-gray-200 max-w-3xl mx-auto mb-8">
             Explore our three core pillars: autonomous credit control, intelligent cashflow forecasting, 
             and instant invoice financing. Try our live AI demos below.
           </p>
