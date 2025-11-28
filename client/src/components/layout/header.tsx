@@ -37,7 +37,7 @@ export default function Header({ title, subtitle, action, noBorder = true, title
     enabled: !!user,
   });
 
-  // Xero connection health status
+  // Xero connection health status - always fetch to show connect button or status
   const { data: xeroHealth } = useQuery<{
     isConfigured: boolean;
     connectionStatus: 'connected' | 'disconnected' | 'error' | 'unknown' | 'not_configured';
@@ -47,7 +47,7 @@ export default function Header({ title, subtitle, action, noBorder = true, title
     error?: string;
   }>({
     queryKey: ['/api/xero/health'],
-    enabled: !!user && !!tenant?.xeroTenantId,
+    enabled: !!user,
     refetchInterval: 60000, // Refresh every minute to get latest status
   });
 
@@ -198,11 +198,13 @@ export default function Header({ title, subtitle, action, noBorder = true, title
 
   // Check if accounting software is connected
   const isAccountingSoftwareConnected = xeroHealth?.connectionStatus === 'connected';
+  // Show connection bar if Xero is configured (connected or was connected but now disconnected/error)
+  const showConnectionBar = xeroHealth?.connectionStatus && xeroHealth.connectionStatus !== 'not_configured';
 
   return (
     <header className="sticky top-0 z-40 bg-white glass-card border-0 rounded-none shadow-glass [scrollbar-gutter:stable]">
-      {/* Connection indicator bar - teal when connected, red when disconnected */}
-      {tenant?.xeroAccessToken && (
+      {/* Connection indicator bar - teal when connected, red when disconnected/error */}
+      {showConnectionBar && (
         <div 
           className={`h-[5px] -mx-0 ${
             needsXeroReconnect 
@@ -239,8 +241,8 @@ export default function Header({ title, subtitle, action, noBorder = true, title
                 <ListTodo className="h-4 w-4" />
               </Button>
             )}
-            {/* Sync/Reconnect Button on Mobile */}
-            {tenant?.xeroAccessToken && (
+            {/* Sync/Reconnect/Connect Button on Mobile */}
+            {showConnectionBar ? (
               <Button
                 onClick={() => needsXeroReconnect ? reconnectMutation.mutate() : syncMutation.mutate()}
                 disabled={needsXeroReconnect ? reconnectMutation.isPending : syncMutation.isPending}
@@ -261,6 +263,22 @@ export default function Header({ title, subtitle, action, noBorder = true, title
                 {needsXeroReconnect && (
                   <span className="text-xs font-medium">Reconnect</span>
                 )}
+              </Button>
+            ) : xeroHealth?.connectionStatus === 'not_configured' && (
+              <Button
+                onClick={() => reconnectMutation.mutate()}
+                disabled={reconnectMutation.isPending}
+                variant="ghost"
+                size="sm"
+                className="h-9 px-3 gap-1.5 bg-[#17B6C3]/10 hover:bg-[#17B6C3]/20 text-[#17B6C3] border border-[#17B6C3]/20"
+                data-testid="button-connect-xero"
+              >
+                {reconnectMutation.isPending ? (
+                  <div className="w-4 h-4 border-2 border-[#17B6C3] border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <RefreshCw className="h-4 w-4" />
+                )}
+                <span className="text-xs font-medium">Connect</span>
               </Button>
             )}
           </div>
@@ -313,8 +331,8 @@ export default function Header({ title, subtitle, action, noBorder = true, title
             </TooltipProvider>
           )}
 
-          {/* Sync/Reconnect Button - Only show if Xero token exists */}
-          {tenant?.xeroAccessToken && (
+          {/* Sync/Reconnect/Connect Button */}
+          {showConnectionBar ? (
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -354,6 +372,31 @@ export default function Header({ title, subtitle, action, noBorder = true, title
                           ? `Sync ${xeroHealth.organisationName}` 
                           : "Sync Xero data"}
                   </p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          ) : xeroHealth?.connectionStatus === 'not_configured' && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    onClick={() => reconnectMutation.mutate()}
+                    disabled={reconnectMutation.isPending}
+                    variant="ghost"
+                    size="sm"
+                    className="h-10 px-3 gap-2 bg-[#17B6C3]/10 hover:bg-[#17B6C3]/20 text-[#17B6C3] border border-[#17B6C3]/20"
+                    data-testid="button-connect-xero"
+                  >
+                    {reconnectMutation.isPending ? (
+                      <div className="w-4 h-4 border-2 border-[#17B6C3] border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <RefreshCw className="h-4 w-4" />
+                    )}
+                    <span className="hidden lg:inline text-sm font-medium">Connect to Xero</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Connect your Xero account to sync data</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
