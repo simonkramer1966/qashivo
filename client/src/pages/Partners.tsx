@@ -79,7 +79,8 @@ export default function Partners() {
         
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24 text-center w-full">
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white leading-tight mb-6">
-            Grow Your Practice, <span className="text-[#17B6C3]">Grow Your Revenue</span>
+            Grow Your Practice,<br />
+            <span className="text-[#17B6C3]">Grow Your Revenue</span>
           </h1>
           <p className="text-xl text-gray-200 max-w-3xl mx-auto">
             Join our network of forward-thinking accounting firms and financial advisors 
