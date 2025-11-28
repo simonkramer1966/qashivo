@@ -379,14 +379,14 @@ export default function Home() {
 
           <div className="grid md:grid-cols-3 gap-8">
             {/* Pillar 1: Credit Control */}
-            <div className="bg-gradient-to-br from-[#17B6C3]/5 to-teal-50 rounded-2xl p-8 border-2 border-[#17B6C3]/20 hover:border-[#17B6C3] transition-colors">
+            <div className="bg-gradient-to-br from-[#17B6C3]/5 to-teal-50 rounded-2xl p-8 border-2 border-[#17B6C3]/20 hover:border-[#17B6C3] transition-colors flex flex-col h-full">
               <div className="w-14 h-14 bg-[#17B6C3]/10 rounded-xl flex items-center justify-center mb-6">
                 <Brain className="h-7 w-7 text-[#17B6C3]" />
               </div>
               <h3 className="text-xl font-bold text-gray-900 mb-2">Autonomous Credit Control</h3>
               <p className="text-[#17B6C3] font-semibold text-sm mb-4">AI IS the credit controller</p>
               
-              <div className="mb-6">
+              <div className="mb-6 flex-grow">
                 <p className="text-gray-600 text-sm mb-3">
                   <span className="font-semibold text-gray-900">The pain:</span> Spending hours sending reminder emails, making awkward phone calls, tracking who promised what.
                 </p>
@@ -395,21 +395,21 @@ export default function Home() {
                 </p>
               </div>
 
-              <div className="bg-white rounded-xl p-4 border border-gray-100">
+              <div className="bg-white rounded-xl p-4 border border-gray-100 mt-auto">
                 <div className="text-2xl font-bold text-[#17B6C3]">30%</div>
                 <p className="text-sm text-gray-600">Average DSO reduction</p>
               </div>
             </div>
 
             {/* Pillar 2: Cashflow Forecasting */}
-            <div className="bg-gradient-to-br from-blue-500/5 to-indigo-50 rounded-2xl p-8 border-2 border-blue-500/20 hover:border-blue-500 transition-colors">
+            <div className="bg-gradient-to-br from-blue-500/5 to-indigo-50 rounded-2xl p-8 border-2 border-blue-500/20 hover:border-blue-500 transition-colors flex flex-col h-full">
               <div className="w-14 h-14 bg-blue-500/10 rounded-xl flex items-center justify-center mb-6">
                 <BarChart3 className="h-7 w-7 text-blue-600" />
               </div>
               <h3 className="text-xl font-bold text-gray-900 mb-2">Predictive Cashflow Intelligence</h3>
               <p className="text-blue-600 font-semibold text-sm mb-4">Forecasts that drive action</p>
               
-              <div className="mb-6">
+              <div className="mb-6 flex-grow">
                 <p className="text-gray-600 text-sm mb-3">
                   <span className="font-semibold text-gray-900">The pain:</span> Pretty charts that show you'll be short next month, but no way to prevent it.
                 </p>
@@ -418,21 +418,21 @@ export default function Home() {
                 </p>
               </div>
 
-              <div className="bg-white rounded-xl p-4 border border-gray-100">
+              <div className="bg-white rounded-xl p-4 border border-gray-100 mt-auto">
                 <div className="text-2xl font-bold text-blue-600">90-day</div>
                 <p className="text-sm text-gray-600">Rolling AI-powered forecasts</p>
               </div>
             </div>
 
             {/* Pillar 3: Invoice Financing */}
-            <div className="bg-gradient-to-br from-amber-500/5 to-yellow-50 rounded-2xl p-8 border-2 border-amber-500/20 hover:border-amber-500 transition-colors">
+            <div className="bg-gradient-to-br from-amber-500/5 to-yellow-50 rounded-2xl p-8 border-2 border-amber-500/20 hover:border-amber-500 transition-colors flex flex-col h-full">
               <div className="w-14 h-14 bg-amber-500/10 rounded-xl flex items-center justify-center mb-6">
                 <DollarSign className="h-7 w-7 text-amber-600" />
               </div>
               <h3 className="text-xl font-bold text-gray-900 mb-2">On-Demand Invoice Liquidity</h3>
               <p className="text-amber-600 font-semibold text-sm mb-4">Cash when you need it</p>
               
-              <div className="mb-6">
+              <div className="mb-6 flex-grow">
                 <p className="text-gray-600 text-sm mb-3">
                   <span className="font-semibold text-gray-900">The pain:</span> Lengthy applications, disconnected from your actual invoices and collections.
                 </p>
@@ -441,7 +441,7 @@ export default function Home() {
                 </p>
               </div>
 
-              <div className="bg-white rounded-xl p-4 border border-gray-100">
+              <div className="bg-white rounded-xl p-4 border border-gray-100 mt-auto">
                 <div className="text-2xl font-bold text-amber-600">85%</div>
                 <p className="text-sm text-gray-600">Advance on invoice value</p>
               </div>
