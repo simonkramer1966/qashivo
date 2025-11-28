@@ -52,6 +52,7 @@ type SalesEnquiryForm = z.infer<typeof salesEnquirySchema>;
 export default function Home() {
   const [, setLocation] = useLocation();
   const [showSalesForm, setShowSalesForm] = useState(false);
+  const [showTrialComingSoon, setShowTrialComingSoon] = useState(false);
   const [formSubmitted, setFormSubmitted] = useState(false);
   const { toast } = useToast();
   
@@ -442,6 +443,7 @@ export default function Home() {
               </ul>
               <Button
                 className="w-full bg-gray-100 hover:bg-gray-200 text-gray-900 text-sm"
+                onClick={() => setShowTrialComingSoon(true)}
                 data-testid="button-pricing-micro"
               >
                 Start Free Trial
@@ -483,6 +485,7 @@ export default function Home() {
               </ul>
               <Button
                 className="w-full bg-white hover:bg-gray-100 text-[#17B6C3] text-sm"
+                onClick={() => setShowTrialComingSoon(true)}
                 data-testid="button-pricing-starter"
               >
                 Start Free Trial
@@ -521,6 +524,7 @@ export default function Home() {
               </ul>
               <Button
                 className="w-full bg-[#17B6C3] hover:bg-[#1396A1] text-white text-sm"
+                onClick={() => setShowTrialComingSoon(true)}
                 data-testid="button-pricing-professional"
               >
                 Start Free Trial
@@ -668,6 +672,7 @@ export default function Home() {
             <Button
               size="lg"
               className="bg-[#17B6C3] hover:bg-[#1396A1] text-white text-lg px-8"
+              onClick={() => setShowTrialComingSoon(true)}
               data-testid="button-start-free"
             >
               Start Free Trial
@@ -902,6 +907,38 @@ export default function Home() {
               </form>
             </Form>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Trial Coming Soon Dialog */}
+      <Dialog open={showTrialComingSoon} onOpenChange={setShowTrialComingSoon}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold text-gray-900">
+              Trial Coming Soon
+            </DialogTitle>
+            <DialogDescription>
+              We're putting the finishing touches on our free trial experience. In the meantime, book a demo to see Qashivo in action.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex gap-3 pt-4">
+            <Button
+              variant="outline"
+              onClick={() => setShowTrialComingSoon(false)}
+              className="flex-1"
+            >
+              Close
+            </Button>
+            <Button
+              onClick={() => {
+                setShowTrialComingSoon(false);
+                handleOpenSalesForm('demo');
+              }}
+              className="flex-1 bg-[#17B6C3] hover:bg-[#1396A1] text-white"
+            >
+              Book a Demo
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
