@@ -505,7 +505,7 @@ export default function Home() {
           </div>
           <div className="grid md:grid-cols-2 gap-12 max-w-5xl mx-auto">
             {/* Accountants */}
-            <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 shadow-xl border border-white/50">
+            <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 shadow-xl border border-white/50 flex flex-col">
               <div className="w-16 h-16 bg-[#17B6C3]/10 rounded-xl flex items-center justify-center mb-6">
                 <Brain className="h-8 w-8 text-[#17B6C3]" />
               </div>
@@ -513,7 +513,7 @@ export default function Home() {
               <p className="text-gray-600 mb-6">
                 Offer your clients cutting-edge AI cashflow management. Earn recurring revenue while reducing client churn.
               </p>
-              <ul className="space-y-3 mb-8">
+              <ul className="space-y-3 mb-8 flex-grow">
                 <li className="flex items-start">
                   <Check className="text-[#17B6C3] mr-2 h-5 w-5 mt-0.5 flex-shrink-0" />
                   <span className="text-gray-700">White-label partnership options</span>
@@ -532,7 +532,7 @@ export default function Home() {
                 </li>
               </ul>
               <Button
-                className="w-full bg-[#17B6C3] hover:bg-[#1396A1] text-white"
+                className="w-full bg-[#17B6C3] hover:bg-[#1396A1] text-white mt-auto"
                 onClick={() => setLocation("/signup")}
                 data-testid="button-partner-accountant"
               >
@@ -541,7 +541,7 @@ export default function Home() {
             </div>
 
             {/* Financial Advisors */}
-            <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 shadow-xl border border-white/50">
+            <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 shadow-xl border border-white/50 flex flex-col">
               <div className="w-16 h-16 bg-[#17B6C3]/10 rounded-xl flex items-center justify-center mb-6">
                 <TrendingUp className="h-8 w-8 text-[#17B6C3]" />
               </div>
@@ -549,7 +549,7 @@ export default function Home() {
               <p className="text-gray-600 mb-6">
                 Help your SME clients improve cashflow and reduce financial stress with autonomous AI management.
               </p>
-              <ul className="space-y-3 mb-8">
+              <ul className="space-y-3 mb-8 flex-grow">
                 <li className="flex items-start">
                   <Check className="text-[#17B6C3] mr-2 h-5 w-5 mt-0.5 flex-shrink-0" />
                   <span className="text-gray-700">Referral commission program</span>
@@ -568,7 +568,7 @@ export default function Home() {
                 </li>
               </ul>
               <Button
-                className="w-full bg-[#17B6C3] hover:bg-[#1396A1] text-white"
+                className="w-full bg-[#17B6C3] hover:bg-[#1396A1] text-white mt-auto"
                 onClick={() => setLocation("/signup")}
                 data-testid="button-partner-advisor"
               >
