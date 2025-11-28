@@ -13,6 +13,7 @@ import {
 import { AuthManager } from './AuthManager';
 import { DataTransformer } from './DataTransformer';
 import { ProviderRegistry } from './ProviderRegistry';
+import { storage } from '../storage';
 
 /**
  * Main API Middleware Manager
@@ -202,6 +203,20 @@ export class APIMiddleware {
         await (provider as any).disconnect();
       }
 
+      // Clear provider-specific database fields
+      if (providerName === 'xero' && tenantId) {
+        console.log(`🔌 Clearing Xero connection fields for tenant: ${tenantId}`);
+        await storage.updateTenant(tenantId, {
+          xeroAccessToken: null,
+          xeroRefreshToken: null,
+          xeroTenantId: null,
+          xeroOrganisationName: null,
+          xeroConnectionStatus: 'disconnected',
+        });
+        console.log(`✅ Xero connection fields cleared for tenant: ${tenantId}`);
+      }
+
+      console.log(`${providerName} provider disconnected`);
       return { success: true };
     } catch (error) {
       console.error(`Failed to disconnect ${providerName}:`, error);
