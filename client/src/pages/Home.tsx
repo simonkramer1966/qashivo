@@ -668,7 +668,6 @@ export default function Home() {
             <Button
               size="lg"
               className="bg-[#17B6C3] hover:bg-[#1396A1] text-white text-lg px-8"
-              onClick={() => setLocation("/signup")}
               data-testid="button-start-free"
             >
               Start Free Trial
