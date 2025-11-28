@@ -80,10 +80,6 @@ export default function Integrations() {
         <div className="absolute inset-0 bg-gradient-to-r from-slate-900/90 via-slate-900/80 to-slate-900/70"></div>
         
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24 text-center w-full">
-          <div className="inline-flex items-center bg-white/20 backdrop-blur-sm rounded-full px-4 py-2 mb-6">
-            <Link2 className="h-4 w-4 text-[#17B6C3] mr-2" />
-            <span className="text-sm font-semibold text-white">Seamless Connections</span>
-          </div>
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white leading-tight mb-6">
             Connect in <span className="text-[#17B6C3]">60 Seconds</span>
           </h1>
