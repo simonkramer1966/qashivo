@@ -304,24 +304,32 @@ export default function Demo() {
                 <img src={logo} alt="Qashivo Logo" className="h-8 w-8" />
                 <h1 className="text-2xl font-bold text-[#17B6C3]">Qashivo</h1>
               </a>
+              <div className="hidden md:flex space-x-6">
+                <a href="/home#features" className="text-gray-700 hover:text-[#17B6C3] transition-colors">
+                  Features
+                </a>
+                <a href="/home#integrations" className="text-gray-700 hover:text-[#17B6C3] transition-colors">
+                  Integrations
+                </a>
+                <a href="/home#pricing" className="text-gray-700 hover:text-[#17B6C3] transition-colors">
+                  Pricing
+                </a>
+                <a href="/home#partners" className="text-gray-700 hover:text-[#17B6C3] transition-colors">
+                  Partners
+                </a>
+                <a href="/demo" className="text-[#17B6C3] font-semibold">
+                  Demo
+                </a>
+              </div>
             </div>
-            <div className="flex items-center gap-4">
-              <Button
-                variant="outline"
-                className="border-[#17B6C3] text-[#17B6C3] hover:bg-[#17B6C3] hover:text-white"
-                onClick={() => setLocation("/login")}
-                data-testid="button-demo-login"
-              >
-                Login
-              </Button>
-              <Button
-                className="bg-[#17B6C3] hover:bg-[#1396A1] text-white"
-                onClick={() => setLocation("/signup")}
-                data-testid="button-demo-signup"
-              >
-                Start Free Trial
-              </Button>
-            </div>
+            <Button
+              onClick={() => setLocation("/login")}
+              variant="outline"
+              className="border-[#17B6C3] text-[#17B6C3] hover:bg-[#17B6C3] hover:text-white"
+              data-testid="button-demo-login"
+            >
+              Login
+            </Button>
           </div>
         </div>
       </nav>
