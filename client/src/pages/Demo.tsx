@@ -54,39 +54,69 @@ export default function Demo() {
   const [smsName, setSmsName] = useState("");
   const [smsPhone, setSmsPhone] = useState("");
   const [smsCountryCode, setSmsCountryCode] = useState("+44");
-  const [demoResults, setDemoResults] = useState<any>(null);
   const [resultsDialogOpen, setResultsDialogOpen] = useState(false);
   const [currentResults, setCurrentResults] = useState<any>(null);
   const [resultsType, setResultsType] = useState<"voice" | "sms">("voice");
   const [voiceProgress, setVoiceProgress] = useState<string>("");
   const [smsProgress, setSmsProgress] = useState<string>("");
   const [isDemoProcessing, setIsDemoProcessing] = useState(false);
+  const [activeDemo, setActiveDemo] = useState<"voice" | "sms" | null>(null);
+  const [demoStartTime, setDemoStartTime] = useState<number | null>(null);
   
   const [invoiceAmount, setInvoiceAmount] = useState("10000");
   const [fundingDays, setFundingDays] = useState("30");
+  const [invoiceError, setInvoiceError] = useState("");
   
   useEffect(() => {
-    if (!leadId) return;
+    if (!leadId || !activeDemo || !demoStartTime) return;
+    
+    const POLL_TIMEOUT_MS = 120000;
+    const MIN_WAIT_MS = 3000;
 
     const pollInterval = setInterval(async () => {
+      const elapsed = Date.now() - demoStartTime;
+      
+      if (elapsed > POLL_TIMEOUT_MS) {
+        setVoiceProgress("");
+        setSmsProgress("");
+        setActiveDemo(null);
+        setDemoStartTime(null);
+        setIsDemoProcessing(false);
+        toast({
+          title: "Timeout",
+          description: "The demo didn't complete in time. Please try again.",
+          variant: "destructive",
+        });
+        clearInterval(pollInterval);
+        return;
+      }
+      
+      if (elapsed < MIN_WAIT_MS) {
+        return;
+      }
+      
       try {
         const response = await fetch(`/api/investor/lead/${leadId}/results`);
         if (response.ok) {
           const results = await response.json();
-          setDemoResults(results);
           
-          if (results.voiceDemoResults && results.voiceDemoCompleted) {
+          if (activeDemo === "voice" && results.voiceDemoResults && results.voiceDemoCompleted) {
             setCurrentResults(results.voiceDemoResults);
             setResultsType("voice");
             setVoiceProgress("");
             setIsDemoProcessing(false);
+            setActiveDemo(null);
+            setDemoStartTime(null);
             setResultsDialogOpen(true);
           }
-          if (results.smsDemoResults && results.smsDemoCompleted) {
+          
+          if (activeDemo === "sms" && results.smsDemoResults && results.smsDemoCompleted) {
             setCurrentResults(results.smsDemoResults);
             setResultsType("sms");
             setSmsProgress("");
             setIsDemoProcessing(false);
+            setActiveDemo(null);
+            setDemoStartTime(null);
             setResultsDialogOpen(true);
           }
         }
@@ -96,7 +126,7 @@ export default function Demo() {
     }, 1500);
 
     return () => clearInterval(pollInterval);
-  }, [leadId]);
+  }, [leadId, activeDemo, demoStartTime, toast]);
 
   const handleVoiceDemo = async () => {
     if (!voicePhone) return;
@@ -104,6 +134,8 @@ export default function Demo() {
     setResultsDialogOpen(false);
     setCurrentResults(null);
     setSmsProgress("");
+    setActiveDemo(null);
+    setDemoStartTime(null);
     
     setVoiceProgress("Initiating...");
     setIsDemoProcessing(true);
@@ -137,6 +169,9 @@ export default function Demo() {
       
       if (!response.ok) throw new Error("Failed to initiate call");
       
+      setDemoStartTime(Date.now());
+      setActiveDemo("voice");
+      
       setCurrentResults({
         intent: "analyzing",
         sentiment: "listening",
@@ -156,6 +191,7 @@ export default function Demo() {
     } catch (error) {
       setVoiceProgress("");
       setIsDemoProcessing(false);
+      setActiveDemo(null);
       toast({
         title: "Error",
         description: "Failed to initiate call. Please try again.",
@@ -170,6 +206,8 @@ export default function Demo() {
     setResultsDialogOpen(false);
     setCurrentResults(null);
     setVoiceProgress("");
+    setActiveDemo(null);
+    setDemoStartTime(null);
     
     setSmsProgress("Initiating...");
     setIsDemoProcessing(true);
@@ -203,6 +241,9 @@ export default function Demo() {
       
       if (!response.ok) throw new Error("Failed to send SMS");
       
+      setDemoStartTime(Date.now());
+      setActiveDemo("sms");
+      
       setCurrentResults({
         intent: "waiting",
         sentiment: "pending",
@@ -222,6 +263,7 @@ export default function Demo() {
     } catch (error) {
       setSmsProgress("");
       setIsDemoProcessing(false);
+      setActiveDemo(null);
       toast({
         title: "Error",
         description: "Failed to send SMS. Please try again.",
@@ -683,13 +725,29 @@ export default function Demo() {
                     <div>
                       <Label className="text-sm font-medium">Invoice Amount (£)</Label>
                       <Input
-                        type="number"
+                        type="text"
+                        inputMode="numeric"
                         value={invoiceAmount}
-                        onChange={(e) => setInvoiceAmount(e.target.value)}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setInvoiceAmount(val);
+                          if (val && !/^\d+(\.\d{0,2})?$/.test(val.replace(/,/g, ''))) {
+                            setInvoiceError("Please enter a valid amount");
+                          } else if (parseFloat(val.replace(/,/g, '') || "0") <= 0) {
+                            setInvoiceError("Amount must be greater than zero");
+                          } else if (parseFloat(val.replace(/,/g, '') || "0") > 10000000) {
+                            setInvoiceError("Maximum amount is £10,000,000");
+                          } else {
+                            setInvoiceError("");
+                          }
+                        }}
                         placeholder="10000"
-                        className="mt-1 text-lg"
+                        className={`mt-1 text-lg ${invoiceError ? 'border-red-500' : ''}`}
                         data-testid="input-funding-amount"
                       />
+                      {invoiceError && (
+                        <p className="text-xs text-red-500 mt-1">{invoiceError}</p>
+                      )}
                     </div>
                     <div>
                       <Label className="text-sm font-medium">Expected Payment (Days)</Label>
