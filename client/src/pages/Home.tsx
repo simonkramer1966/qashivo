@@ -259,10 +259,6 @@ export default function Home() {
       <section className="py-24 bg-gradient-to-br from-slate-50 via-blue-50 to-teal-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <div className="inline-flex items-center bg-[#17B6C3]/10 rounded-full px-4 py-2 mb-6">
-              <Bot className="h-4 w-4 text-[#17B6C3] mr-2" />
-              <span className="text-sm font-semibold text-[#17B6C3]">Supervised Autonomy</span>
-            </div>
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
               Meet the Credit Controller<br />
               <span className="text-[#17B6C3]">That Never Clocks Off</span>
