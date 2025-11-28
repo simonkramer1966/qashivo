@@ -106,8 +106,8 @@ function Router() {
           <Route path="/forgot-password" component={ForgotPassword} />
           <Route path="/reset-password" component={ResetPassword} />
           <Route path="/signin" component={SignIn} />
-          <Route path="/" component={Login} />
-          <Route path="/:rest*" component={Login} />
+          <Route path="/" component={Home} />
+          <Route path="/:rest*" component={Home} />
         </Switch>
       ) : (
         // Authenticated routes - main application
