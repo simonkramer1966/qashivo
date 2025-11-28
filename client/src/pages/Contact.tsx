@@ -176,7 +176,7 @@ export default function Contact() {
                   </div>
                   <div>
                     <h3 className="font-semibold text-gray-900 mb-1">Call Us</h3>
-                    <p className="text-gray-600" data-testid="text-contact-phone">+44 (0) 20 1234 5678</p>
+                    <p className="text-gray-600" data-testid="text-contact-phone">+44 (0) 20 4538 3931</p>
                   </div>
                 </div>
                 
