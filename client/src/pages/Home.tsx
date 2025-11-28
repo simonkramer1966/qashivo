@@ -1,14 +1,99 @@
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
-import { ArrowRight, Brain, Zap, TrendingUp, Shield, Check } from "lucide-react";
+import { ArrowRight, Brain, Zap, TrendingUp, Shield, Check, X, Loader2 } from "lucide-react";
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { useMutation } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useToast } from "@/hooks/use-toast";
 import heroImage from "@assets/generated_images/Advanced_AI_technology_center_4b230f51.png";
 import logo from "@assets/Main Nexus Logo copy_1763392904110.png";
 import xeroLogo from "@assets/Xero_software_logo.svg_1763402921236.png";
 import quickbooksLogo from "@assets/quickbnooks_1763403237750.png";
 import sageLogo from "@assets/sage_1763403374233.png";
 
+const salesEnquirySchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  email: z.string().email("Please enter a valid email"),
+  company: z.string().optional(),
+  phone: z.string().optional(),
+  message: z.string().min(10, "Please provide more details (at least 10 characters)"),
+  enquiryType: z.enum(['demo', 'pricing', 'partnership', 'general'])
+});
+
+type SalesEnquiryForm = z.infer<typeof salesEnquirySchema>;
+
 export default function Home() {
   const [, setLocation] = useLocation();
+  const [showSalesForm, setShowSalesForm] = useState(false);
+  const [formSubmitted, setFormSubmitted] = useState(false);
+  const { toast } = useToast();
+  
+  const form = useForm<SalesEnquiryForm>({
+    resolver: zodResolver(salesEnquirySchema),
+    defaultValues: {
+      name: "",
+      email: "",
+      company: "",
+      phone: "",
+      message: "",
+      enquiryType: "general"
+    }
+  });
+  
+  const submitMutation = useMutation({
+    mutationFn: async (data: SalesEnquiryForm) => {
+      const response = await apiRequest('POST', '/api/public/sales-enquiry', data);
+      return response;
+    },
+    onSuccess: () => {
+      setFormSubmitted(true);
+      form.reset();
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to send enquiry",
+        description: error.message || "Please try again or email us directly.",
+        variant: "destructive"
+      });
+    }
+  });
+  
+  const onSubmit = (data: SalesEnquiryForm) => {
+    submitMutation.mutate(data);
+  };
+  
+  const handleOpenSalesForm = (enquiryType: 'demo' | 'pricing' | 'partnership' | 'general' = 'general') => {
+    form.setValue('enquiryType', enquiryType);
+    setFormSubmitted(false);
+    setShowSalesForm(true);
+  };
 
   return (
     <div className="min-h-screen bg-white">
@@ -602,7 +687,7 @@ export default function Home() {
               size="lg"
               variant="outline"
               className="border-[#17B6C3] text-[#17B6C3] hover:bg-[#17B6C3] hover:text-white text-lg px-8"
-              onClick={() => setLocation("/signup")}
+              onClick={() => handleOpenSalesForm('general')}
               data-testid="button-talk-to-sales"
             >
               Talk to Sales
@@ -648,6 +733,187 @@ export default function Home() {
           </div>
         </div>
       </footer>
+      
+      {/* Sales Enquiry Dialog */}
+      <Dialog open={showSalesForm} onOpenChange={setShowSalesForm}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold text-gray-900">
+              {formSubmitted ? "Thank You!" : "Talk to Our Team"}
+            </DialogTitle>
+            <DialogDescription>
+              {formSubmitted 
+                ? "We've received your enquiry and will be in touch shortly." 
+                : "Fill in your details and we'll get back to you within 24 hours."}
+            </DialogDescription>
+          </DialogHeader>
+          
+          {formSubmitted ? (
+            <div className="py-8 text-center">
+              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Check className="h-8 w-8 text-green-600" />
+              </div>
+              <p className="text-gray-600 mb-6">
+                One of our team members will reach out to you soon.
+              </p>
+              <Button
+                onClick={() => setShowSalesForm(false)}
+                className="bg-[#17B6C3] hover:bg-[#1396A1] text-white"
+              >
+                Close
+              </Button>
+            </div>
+          ) : (
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Name *</FormLabel>
+                        <FormControl>
+                          <Input 
+                            placeholder="Your name" 
+                            {...field} 
+                            data-testid="input-enquiry-name"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="email"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Email *</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="email" 
+                            placeholder="you@company.com" 
+                            {...field} 
+                            data-testid="input-enquiry-email"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="company"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Company</FormLabel>
+                        <FormControl>
+                          <Input 
+                            placeholder="Company name" 
+                            {...field} 
+                            data-testid="input-enquiry-company"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="phone"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Phone</FormLabel>
+                        <FormControl>
+                          <Input 
+                            placeholder="+44 ..." 
+                            {...field} 
+                            data-testid="input-enquiry-phone"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                
+                <FormField
+                  control={form.control}
+                  name="enquiryType"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>What are you interested in?</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger data-testid="select-enquiry-type">
+                            <SelectValue placeholder="Select an option" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="demo">Product Demo</SelectItem>
+                          <SelectItem value="pricing">Pricing Information</SelectItem>
+                          <SelectItem value="partnership">Partnership Opportunities</SelectItem>
+                          <SelectItem value="general">General Enquiry</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="message"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Message *</FormLabel>
+                      <FormControl>
+                        <Textarea 
+                          placeholder="Tell us about your business and how we can help..."
+                          className="min-h-[100px]"
+                          {...field} 
+                          data-testid="textarea-enquiry-message"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <div className="flex gap-3 pt-4">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setShowSalesForm(false)}
+                    className="flex-1"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={submitMutation.isPending}
+                    className="flex-1 bg-[#17B6C3] hover:bg-[#1396A1] text-white"
+                    data-testid="button-submit-enquiry"
+                  >
+                    {submitMutation.isPending ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Sending...
+                      </>
+                    ) : (
+                      "Send Enquiry"
+                    )}
+                  </Button>
+                </div>
+              </form>
+            </Form>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

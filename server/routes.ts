@@ -296,6 +296,89 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const { registerWebhookRoutes } = await import("./routes/webhooks");
   registerWebhookRoutes(app);
   
+  // Public contact form endpoint (no auth required)
+  const salesEnquirySchema = z.object({
+    name: z.string().min(1, "Name is required"),
+    email: z.string().email("Valid email is required"),
+    company: z.string().optional(),
+    phone: z.string().optional(),
+    message: z.string().min(10, "Please provide more details about your enquiry"),
+    enquiryType: z.enum(['demo', 'pricing', 'partnership', 'general']).default('general')
+  });
+
+  app.post('/api/public/sales-enquiry', async (req, res) => {
+    try {
+      const data = salesEnquirySchema.parse(req.body);
+      
+      // Import sendEmail function
+      const { sendEmail, DEFAULT_FROM_EMAIL } = await import('./services/sendgrid');
+      
+      // Send email to sales team
+      const salesEmail = process.env.SALES_EMAIL || 'sales@qashivo.com';
+      
+      const enquiryTypeLabel = {
+        demo: 'Product Demo Request',
+        pricing: 'Pricing Enquiry',
+        partnership: 'Partnership Enquiry',
+        general: 'General Enquiry'
+      }[data.enquiryType];
+      
+      const emailHtml = `
+        <h2>New Sales Enquiry - ${enquiryTypeLabel}</h2>
+        <table style="border-collapse: collapse; width: 100%; max-width: 600px;">
+          <tr>
+            <td style="padding: 10px; border: 1px solid #ddd; font-weight: bold; background: #f9f9f9;">Name</td>
+            <td style="padding: 10px; border: 1px solid #ddd;">${data.name}</td>
+          </tr>
+          <tr>
+            <td style="padding: 10px; border: 1px solid #ddd; font-weight: bold; background: #f9f9f9;">Email</td>
+            <td style="padding: 10px; border: 1px solid #ddd;"><a href="mailto:${data.email}">${data.email}</a></td>
+          </tr>
+          ${data.company ? `
+          <tr>
+            <td style="padding: 10px; border: 1px solid #ddd; font-weight: bold; background: #f9f9f9;">Company</td>
+            <td style="padding: 10px; border: 1px solid #ddd;">${data.company}</td>
+          </tr>
+          ` : ''}
+          ${data.phone ? `
+          <tr>
+            <td style="padding: 10px; border: 1px solid #ddd; font-weight: bold; background: #f9f9f9;">Phone</td>
+            <td style="padding: 10px; border: 1px solid #ddd;">${data.phone}</td>
+          </tr>
+          ` : ''}
+          <tr>
+            <td style="padding: 10px; border: 1px solid #ddd; font-weight: bold; background: #f9f9f9;">Enquiry Type</td>
+            <td style="padding: 10px; border: 1px solid #ddd;">${enquiryTypeLabel}</td>
+          </tr>
+        </table>
+        <h3 style="margin-top: 20px;">Message</h3>
+        <p style="background: #f9f9f9; padding: 15px; border-radius: 5px;">${data.message.replace(/\n/g, '<br>')}</p>
+        <hr style="margin: 20px 0;">
+        <p style="color: #666; font-size: 12px;">This enquiry was submitted via the Qashivo website contact form.</p>
+      `;
+      
+      const success = await sendEmail({
+        to: salesEmail,
+        from: DEFAULT_FROM_EMAIL,
+        subject: `[Qashivo] ${enquiryTypeLabel} from ${data.name}`,
+        html: emailHtml,
+        text: `New ${enquiryTypeLabel}\n\nName: ${data.name}\nEmail: ${data.email}\n${data.company ? `Company: ${data.company}\n` : ''}${data.phone ? `Phone: ${data.phone}\n` : ''}\nMessage:\n${data.message}`
+      });
+      
+      if (success) {
+        res.json({ success: true, message: 'Thank you for your enquiry. Our team will be in touch shortly.' });
+      } else {
+        res.status(500).json({ success: false, message: 'Failed to send enquiry. Please try again or email us directly.' });
+      }
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ success: false, message: error.errors[0].message });
+      }
+      console.error('Sales enquiry error:', error);
+      res.status(500).json({ success: false, message: 'An error occurred. Please try again.' });
+    }
+  });
+  
   // Auth middleware
   await setupAuth(app);
 
