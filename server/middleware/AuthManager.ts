@@ -101,6 +101,7 @@ export class AuthManager {
         refreshToken: tokenData.refresh_token,
         expiresAt: new Date(Date.now() + (tokenData.expires_in * 1000)),
         tenantId: additionalData?.tenantId, // Provider's tenant ID (e.g., Xero tenant ID)
+        tenantName: additionalData?.tenantName, // Provider's tenant/org name (e.g., Xero organisation name)
         scope: tokenData.scope,
       };
 
@@ -251,7 +252,10 @@ export class AuthManager {
           });
           if (xeroResponse.ok) {
             const connections = await xeroResponse.json();
-            return { tenantId: connections[0]?.tenantId };
+            return { 
+              tenantId: connections[0]?.tenantId,
+              tenantName: connections[0]?.tenantName 
+            };
           }
           break;
 
