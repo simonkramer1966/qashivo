@@ -123,6 +123,9 @@ export default function Home() {
                 <a href="/demo" className="text-gray-700 hover:text-[#17B6C3] transition-colors">
                   Demo
                 </a>
+                <a href="/contact" className="text-gray-700 hover:text-[#17B6C3] transition-colors" data-testid="link-nav-contact">
+                  Contact
+                </a>
               </div>
             </div>
             <Button

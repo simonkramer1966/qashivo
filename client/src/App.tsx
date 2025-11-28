@@ -40,6 +40,7 @@ const Dashboard = lazy(() => import("@/pages/dashboard"));
 const Homepage = lazy(() => import("@/pages/homepage"));
 const Home = lazy(() => import("@/pages/Home"));
 const Demo = lazy(() => import("@/pages/Demo"));
+const Contact = lazy(() => import("@/pages/Contact"));
 const Login = lazy(() => import("@/pages/Login"));
 const Signup = lazy(() => import("@/pages/Signup"));
 const ForgotPassword = lazy(() => import("@/pages/ForgotPassword"));
@@ -82,6 +83,7 @@ function Router() {
         <Switch>
           <Route path="/home" component={Home} />
           <Route path="/demo" component={Demo} />
+          <Route path="/contact" component={Contact} />
           <Route path="/homepage" component={Homepage} />
           <Route path="/investor-demo" component={InvestorDemo} />
           <Route path="/investor-demo-qashivo" component={InvestorDemoQashivo} />
@@ -104,6 +106,7 @@ function Router() {
         <Switch>
           <Route path="/home" component={Home} />
           <Route path="/demo" component={Demo} />
+          <Route path="/contact" component={Contact} />
           <Route path="/homepage" component={Homepage} />
           <Route path="/investor-demo" component={InvestorDemo} />
           <Route path="/investor-demo-qashivo" component={InvestorDemoQashivo} />

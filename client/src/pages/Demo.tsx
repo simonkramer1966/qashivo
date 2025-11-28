@@ -320,6 +320,9 @@ export default function Demo() {
                 <a href="/demo" className="text-[#17B6C3] font-semibold">
                   Demo
                 </a>
+                <a href="/contact" className="text-gray-700 hover:text-[#17B6C3] transition-colors" data-testid="link-nav-contact">
+                  Contact
+                </a>
               </div>
             </div>
             <Button
