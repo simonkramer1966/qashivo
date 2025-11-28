@@ -1,5 +1,5 @@
 import { db } from '../db';
-import { workflows, workflowNodes, workflowEdges, tenants } from '@shared/schema';
+import { workflows, workflowNodes, workflowConnections, tenants } from '@shared/schema';
 import { eq, and } from 'drizzle-orm';
 
 /**
@@ -188,7 +188,7 @@ export class WorkflowSeeder {
 
       // Create edges connecting the nodes sequentially
       for (let i = 0; i < createdNodes.length - 1; i++) {
-        await db.insert(workflowEdges).values({
+        await db.insert(workflowConnections).values({
           workflowId: workflow.id,
           sourceNodeId: createdNodes[i].id,
           targetNodeId: createdNodes[i + 1].id,
