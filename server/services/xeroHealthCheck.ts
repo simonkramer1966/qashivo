@@ -89,23 +89,23 @@ export class XeroHealthCheckService {
         return;
       }
 
-      // Token refresh succeeded - try a lightweight API call to verify
-      const orgInfo = await this.testApiCall(refreshedTokens.accessToken, refreshedTokens.tenantId);
+      // Token refresh succeeded - try a lightweight API call to verify and get org info
+      const orgInfo = await this.getOrganisationInfo(refreshedTokens.accessToken, refreshedTokens.tenantId);
       
-      if (orgInfo) {
-        // Only update health check status fields - tokens are already updated by refreshAccessToken
-        // This prevents overwriting with stale values
+      if (orgInfo.isConnected) {
+        // Update health check status and organisation name if available
         await db
           .update(tenants)
           .set({
             xeroConnectionStatus: 'connected',
             xeroLastHealthCheck: new Date(),
             xeroHealthCheckError: null,
+            ...(orgInfo.organisationName && { xeroOrganisationName: orgInfo.organisationName }),
             updatedAt: new Date(),
           })
           .where(eq(tenants.id, tenant.id));
 
-        console.log(`✅ Xero connection HEALTHY for tenant: ${tenant.name}`);
+        console.log(`✅ Xero connection HEALTHY for tenant: ${tenant.name}${orgInfo.organisationName ? ` (${orgInfo.organisationName})` : ''}`);
       } else {
         await this.updateConnectionStatus(tenant.id, 'error', 'API verification failed');
         console.log(`⚠️ Xero connection ERROR for tenant: ${tenant.name} (API call failed)`);
@@ -148,9 +148,12 @@ export class XeroHealthCheckService {
     return sanitized.length > 100 ? sanitized.substring(0, 100) + '...' : sanitized;
   }
 
-  private async testApiCall(accessToken: string, tenantId: string): Promise<boolean> {
+  private async getOrganisationInfo(accessToken: string, tenantId: string): Promise<{
+    isConnected: boolean;
+    organisationName?: string;
+  }> {
     try {
-      // Lightweight API call - just get organisation info
+      // Lightweight API call - get organisation info
       const response = await fetch('https://api.xero.com/api.xro/2.0/Organisation', {
         headers: {
           'Authorization': `Bearer ${accessToken}`,
@@ -159,10 +162,24 @@ export class XeroHealthCheckService {
         },
       });
 
-      return response.ok;
+      if (!response.ok) {
+        return { isConnected: false };
+      }
+
+      // Try to extract organisation name from response
+      try {
+        const data = await response.json();
+        const orgName = data?.Organisations?.[0]?.Name;
+        return { 
+          isConnected: true,
+          organisationName: orgName || undefined
+        };
+      } catch {
+        return { isConnected: true };
+      }
     } catch (error) {
       console.error('Error testing Xero API:', error);
-      return false;
+      return { isConnected: false };
     }
   }
 
