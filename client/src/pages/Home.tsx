@@ -119,6 +119,9 @@ export default function Home() {
                 <a href="#partners" className="text-gray-700 hover:text-[#17B6C3] transition-colors">
                   Partners
                 </a>
+                <a href="/demo" className="text-gray-700 hover:text-[#17B6C3] transition-colors">
+                  Demo
+                </a>
               </div>
             </div>
             <Button
