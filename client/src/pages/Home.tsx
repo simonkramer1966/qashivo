@@ -540,7 +540,7 @@ export default function Home() {
       <section className="py-24 bg-gradient-to-br from-[#17B6C3] to-teal-600">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">
-            Ready to Let AI Handle the Heavy Lifting?
+            Ready to Let Qashivo Handle the Heavy Lifting?
           </h2>
           <p className="text-xl text-white/90 mb-8">
             Join SMEs who've stopped chasing invoices and started supervising AI that gets them paid.
