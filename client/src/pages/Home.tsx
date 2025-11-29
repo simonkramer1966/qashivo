@@ -142,7 +142,7 @@ export default function Home() {
 
           <div className="grid md:grid-cols-3 gap-8">
             {/* Credit Control Software */}
-            <div className="bg-gray-50 rounded-2xl p-8 border-2 border-gray-200">
+            <div className="bg-gray-50 rounded-2xl p-8 border-2 border-gray-200 flex flex-col h-full">
               <div className="w-14 h-14 bg-red-100 rounded-xl flex items-center justify-center mb-6">
                 <X className="h-7 w-7 text-red-500" />
               </div>
@@ -150,7 +150,7 @@ export default function Home() {
               <p className="text-gray-600 mb-4">
                 "Here are 47 overdue invoices you need to chase."
               </p>
-              <ul className="space-y-3 text-sm text-gray-600">
+              <ul className="space-y-3 text-sm text-gray-600 flex-grow">
                 <li className="flex items-start">
                   <span className="text-red-400 mr-2">•</span>
                   Shows you who owes what
@@ -177,7 +177,7 @@ export default function Home() {
             </div>
 
             {/* Cashflow Forecasting */}
-            <div className="bg-gray-50 rounded-2xl p-8 border-2 border-gray-200">
+            <div className="bg-gray-50 rounded-2xl p-8 border-2 border-gray-200 flex flex-col h-full">
               <div className="w-14 h-14 bg-red-100 rounded-xl flex items-center justify-center mb-6">
                 <X className="h-7 w-7 text-red-500" />
               </div>
@@ -185,7 +185,7 @@ export default function Home() {
               <p className="text-gray-600 mb-4">
                 "You'll be £30K short in 45 days."
               </p>
-              <ul className="space-y-3 text-sm text-gray-600">
+              <ul className="space-y-3 text-sm text-gray-600 flex-grow">
                 <li className="flex items-start">
                   <span className="text-red-400 mr-2">•</span>
                   Projects future shortfalls
@@ -212,7 +212,7 @@ export default function Home() {
             </div>
 
             {/* Invoice Financing */}
-            <div className="bg-gray-50 rounded-2xl p-8 border-2 border-gray-200">
+            <div className="bg-gray-50 rounded-2xl p-8 border-2 border-gray-200 flex flex-col h-full">
               <div className="w-14 h-14 bg-red-100 rounded-xl flex items-center justify-center mb-6">
                 <X className="h-7 w-7 text-red-500" />
               </div>
@@ -220,7 +220,7 @@ export default function Home() {
               <p className="text-gray-600 mb-4">
                 "Upload your invoices and wait 5 days."
               </p>
-              <ul className="space-y-3 text-sm text-gray-600">
+              <ul className="space-y-3 text-sm text-gray-600 flex-grow">
                 <li className="flex items-start">
                   <span className="text-red-400 mr-2">•</span>
                   Lengthy application process
