@@ -240,7 +240,7 @@ export default function Partners() {
               </div>
               <h3 className="text-lg font-bold text-gray-900 mb-2">Recurring Revenue</h3>
               <p className="text-gray-600">
-                Earn 20% of subscription fees for every client you refer, paid monthly for as long as they're a customer.
+                Earn 20% of subscription fees and charge high margin advisory fees for effortless cashflow management.
               </p>
             </div>
             
