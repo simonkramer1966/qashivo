@@ -249,7 +249,7 @@ export default function Home() {
           </div>
 
           <div className="mt-16 text-center">
-            <p className="text-2xl font-bold text-gray-900">
+            <p className="text-3xl md:text-4xl font-bold text-gray-900">
               You bought three tools. You're still doing three jobs.
             </p>
           </div>
