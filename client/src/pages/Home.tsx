@@ -11,6 +11,7 @@ import {
   AlertTriangle,
   Clock,
   DollarSign,
+  PoundSterling,
   BarChart3,
   Bot,
   Eye
@@ -240,7 +241,7 @@ export default function Home() {
               </ul>
               <div className="mt-6 pt-6 border-t border-gray-200">
                 <p className="text-sm text-gray-500">
-                  <DollarSign className="h-4 w-4 inline mr-1" />
+                  <PoundSterling className="h-4 w-4 inline mr-1" />
                   Cash when it's too late
                 </p>
               </div>
