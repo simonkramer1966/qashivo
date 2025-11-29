@@ -102,7 +102,7 @@ export default function Home() {
               Qashivo <span className="text-[#17B6C3]">Fixes Them</span> For You
             </h1>
             <p className="text-xl text-gray-200 mb-8">
-              The only platform where AI collects cash, forecasts risk, and releases working capital—while you supervise for ten minutes a day.
+              The only platform where AI collects cash, forecasts risk, and releases working capital, while you supervise for ten minutes a day.
             </p>
             <div className="flex flex-col sm:flex-row gap-4">
               <Button
