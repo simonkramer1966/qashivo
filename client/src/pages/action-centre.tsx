@@ -1725,19 +1725,37 @@ export default function ActionCentre() {
                             </div>
                           </div>
 
-                          {/* Invoice Number */}
+                          {/* Invoice Number / Count - handle customer groups for Overdue tab */}
                           <div className="px-4 h-12 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center" onClick={handleClick}>
-                            <span className="text-sm text-[#17B6C3] font-medium">{item.invoiceNumber || '—'}</span>
+                            {activeTab === 'overdue' && item.invoiceCount ? (
+                              <span className="text-sm text-[#17B6C3] font-medium">
+                                {item.invoiceCount === 1 && item.invoices?.[0]?.invoiceNumber 
+                                  ? item.invoices[0].invoiceNumber 
+                                  : `${item.invoiceCount} invoice${item.invoiceCount > 1 ? 's' : ''}`}
+                              </span>
+                            ) : (
+                              <span className="text-sm text-[#17B6C3] font-medium">{item.invoiceNumber || '—'}</span>
+                            )}
                           </div>
 
-                          {/* Amount */}
+                          {/* Amount - use totalOutstanding for customer groups */}
                           <div className="px-4 h-12 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center justify-end" onClick={handleClick}>
-                            <span className="font-bold text-sm text-slate-900">{item.invoiceAmount ? formatCurrency(parseFloat(item.invoiceAmount)) : '—'}</span>
+                            {activeTab === 'overdue' && item.totalOutstanding !== undefined ? (
+                              <span className="font-bold text-sm text-slate-900">{formatCurrency(item.totalOutstanding)}</span>
+                            ) : (
+                              <span className="font-bold text-sm text-slate-900">{item.invoiceAmount ? formatCurrency(parseFloat(item.invoiceAmount)) : '—'}</span>
+                            )}
                           </div>
 
-                          {/* Days Overdue */}
+                          {/* Days Overdue - calculate from oldestDueDate for customer groups */}
                           <div className="px-4 h-12 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center justify-end" onClick={handleClick}>
-                            <span className="text-sm text-slate-700">{item.metadata?.daysOverdue || 0}d</span>
+                            {activeTab === 'overdue' && item.oldestDueDate ? (
+                              <span className="text-sm text-slate-700">
+                                {Math.max(0, Math.floor((new Date().getTime() - new Date(item.oldestDueDate).getTime()) / (1000 * 60 * 60 * 24)))}d
+                              </span>
+                            ) : (
+                              <span className="text-sm text-slate-700">{item.metadata?.daysOverdue || 0}d</span>
+                            )}
                           </div>
 
                           {/* Status / Badges */}
