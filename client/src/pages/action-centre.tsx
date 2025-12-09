@@ -1646,6 +1646,14 @@ export default function ActionCentre() {
                         ? Math.max(0, Math.floor((new Date().getTime() - new Date(item.oldestDueDate).getTime()) / (1000 * 60 * 60 * 24)))
                         : 0;
                       
+                      // Transform invoices to match API expected format (amount as string)
+                      const formattedInvoices = (item.invoices || []).map((inv: any) => ({
+                        id: inv.id || '',
+                        invoiceNumber: inv.invoiceNumber || '',
+                        amount: String(inv.amount || inv.amountDue || '0'),
+                        dueDate: inv.dueDate || '',
+                      }));
+                      
                       setSelectedActionCustomer({
                         contactName: item.contactName || 'Unknown Customer',
                         contactId: item.contactId,
@@ -1654,15 +1662,24 @@ export default function ActionCentre() {
                         totalOutstanding: item.totalOutstanding || 0,
                         oldestInvoiceDueDate: item.oldestDueDate || '',
                         daysOverdue: daysOverdue,
-                        invoices: item.invoices || [],
+                        invoices: formattedInvoices,
                         stage: 'overdue',
                       });
                       setIsActionDrawerOpen(true);
                     } else {
                       // Other tabs - use metadata structure
-                      const totalOutstanding = item.metadata?.invoices?.reduce((sum: number, inv: any) => 
+                      const rawInvoices = item.metadata?.invoices || [];
+                      const totalOutstanding = rawInvoices.reduce((sum: number, inv: any) => 
                         sum + parseFloat(inv.amount || '0'), 0
                       ) || parseFloat(item.invoiceAmount || '0');
+                      
+                      // Transform invoices to match API expected format (amount as string)
+                      const formattedInvoices = rawInvoices.map((inv: any) => ({
+                        id: inv.id || '',
+                        invoiceNumber: inv.invoiceNumber || '',
+                        amount: String(inv.amount || '0'),
+                        dueDate: inv.dueDate || '',
+                      }));
                       
                       setSelectedActionCustomer({
                         contactName: item.contactName || 'Unknown Customer',
@@ -1672,7 +1689,7 @@ export default function ActionCentre() {
                         totalOutstanding: totalOutstanding,
                         oldestInvoiceDueDate: item.metadata?.oldestDueDate || '',
                         daysOverdue: item.metadata?.daysOverdue || 0,
-                        invoices: item.metadata?.invoices || [],
+                        invoices: formattedInvoices,
                         stage: 'overdue',
                       });
                       setIsActionDrawerOpen(true);
