@@ -345,41 +345,52 @@ export function ActionDrawer({ open, onOpenChange, customer }: ActionDrawerProps
               </Button>
             </div>
 
-            {/* Generate Content Button */}
-            <Button
-              variant="outline"
-              className="w-full mb-3"
-              onClick={handleGenerateContent}
-              disabled={isGenerating || generateContentMutation.isPending}
-              data-testid="button-generate-content"
-            >
-              {isGenerating || generateContentMutation.isPending ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Generating {selectedActionType} content...
-                </>
-              ) : (
-                <>
-                  <Sparkles className="h-4 w-4 mr-2" />
-                  Generate AI {selectedActionType.toUpperCase()} Draft
-                </>
-              )}
-            </Button>
+            {/* Voice - Retell integration (no customization) */}
+            {selectedActionType === 'voice' ? (
+              <div className="bg-white/80 dark:bg-gray-900/80 rounded-lg p-4 text-center">
+                <Phone className="h-10 w-10 mx-auto mb-3 text-[#17B6C3]" />
+                <h4 className="font-semibold mb-2">AI Voice Call</h4>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                  Our AI agent will call {customer?.contactName} using our intelligent credit control strategy. 
+                  The call script adapts dynamically based on the customer's payment history and outstanding balance.
+                </p>
+                <p className="text-xs text-gray-500 flex items-center justify-center gap-1">
+                  <AlertTriangle className="h-3 w-3" />
+                  Voice strategy is managed centrally and cannot be customised per call
+                </p>
+              </div>
+            ) : (
+              <>
+                {/* Generate Content Button */}
+                <Button
+                  variant="outline"
+                  className="w-full mb-3"
+                  onClick={handleGenerateContent}
+                  disabled={isGenerating || generateContentMutation.isPending}
+                  data-testid="button-generate-content"
+                >
+                  {isGenerating || generateContentMutation.isPending ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Generating {selectedActionType} content...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="h-4 w-4 mr-2" />
+                      Generate AI {selectedActionType.toUpperCase()} Draft
+                    </>
+                  )}
+                </Button>
 
-            {/* Content Editor */}
-            <Textarea
-              placeholder={`AI will generate ${selectedActionType} content here, or write your own...`}
-              value={draftContent}
-              onChange={(e) => setDraftContent(e.target.value)}
-              className="min-h-[200px] bg-white/80 dark:bg-gray-900/80"
-              data-testid="input-action-content"
-            />
-            
-            {selectedActionType === 'voice' && draftContent && (
-              <p className="text-xs text-gray-500 mt-2 flex items-center gap-1">
-                <AlertTriangle className="h-3 w-3" />
-                This script will be used for AI voice calls
-              </p>
+                {/* Content Editor */}
+                <Textarea
+                  placeholder={`AI will generate ${selectedActionType} content here, or write your own...`}
+                  value={draftContent}
+                  onChange={(e) => setDraftContent(e.target.value)}
+                  className="min-h-[200px] bg-white/80 dark:bg-gray-900/80"
+                  data-testid="input-action-content"
+                />
+              </>
             )}
           </div>
 
@@ -403,13 +414,18 @@ export function ActionDrawer({ open, onOpenChange, customer }: ActionDrawerProps
           <Button
             className="w-full bg-[#17B6C3] hover:bg-[#1396A1] text-white"
             onClick={handleSendAction}
-            disabled={!draftContent.trim() || sendActionMutation.isPending}
+            disabled={selectedActionType !== 'voice' && !draftContent.trim() || sendActionMutation.isPending}
             data-testid="button-send-action"
           >
             {sendActionMutation.isPending ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Sending...
+                {selectedActionType === 'voice' ? 'Initiating call...' : 'Sending...'}
+              </>
+            ) : selectedActionType === 'voice' ? (
+              <>
+                <Phone className="h-4 w-4 mr-2" />
+                Initiate Voice Call
               </>
             ) : (
               <>
