@@ -1640,7 +1640,26 @@ export default function ActionCentre() {
                       } else if (item.invoiceId) {
                         setLocation(`/invoices/${item.invoiceId}`);
                       }
+                    } else if (activeTab === 'overdue' && item.invoices) {
+                      // Customer group from Overdue tab - use direct fields
+                      const daysOverdue = item.oldestDueDate 
+                        ? Math.max(0, Math.floor((new Date().getTime() - new Date(item.oldestDueDate).getTime()) / (1000 * 60 * 60 * 24)))
+                        : 0;
+                      
+                      setSelectedActionCustomer({
+                        contactName: item.contactName || 'Unknown Customer',
+                        contactId: item.contactId,
+                        email: item.contact?.email || '',
+                        phone: item.contact?.phone || '',
+                        totalOutstanding: item.totalOutstanding || 0,
+                        oldestInvoiceDueDate: item.oldestDueDate || '',
+                        daysOverdue: daysOverdue,
+                        invoices: item.invoices || [],
+                        stage: 'overdue',
+                      });
+                      setIsActionDrawerOpen(true);
                     } else {
+                      // Other tabs - use metadata structure
                       const totalOutstanding = item.metadata?.invoices?.reduce((sum: number, inv: any) => 
                         sum + parseFloat(inv.amount || '0'), 0
                       ) || parseFloat(item.invoiceAmount || '0');
