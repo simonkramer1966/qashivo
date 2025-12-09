@@ -3,6 +3,8 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
+import { useDashboardWebSocket } from "@/hooks/useDashboardWebSocket";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -431,11 +433,18 @@ export default function ActionCentre() {
   const [, setLocation] = useLocation();
   const [searchQuery, setSearchQuery] = useState("");
   const { toast } = useToast();
+  const { user } = useAuth();
   const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
   const [selectedQuery, setSelectedQuery] = useState<any>(null);
   const [isResponseDrawerOpen, setIsResponseDrawerOpen] = useState(false);
   const [selectedActionCustomer, setSelectedActionCustomer] = useState<any>(null);
   const [isActionDrawerOpen, setIsActionDrawerOpen] = useState(false);
+  
+  // Real-time updates via WebSocket
+  useDashboardWebSocket({ 
+    tenantId: user?.tenantId,
+    autoInvalidate: true 
+  });
   
   // Pagination state
   const [page, setPage] = useState(1);

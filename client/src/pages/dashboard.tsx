@@ -8,6 +8,8 @@ import { useState } from "react";
 import NewSidebar from "@/components/layout/new-sidebar";
 import BottomNav from "@/components/layout/bottom-nav";
 import Header from "@/components/layout/header";
+import { useAuth } from "@/hooks/useAuth";
+import { useDashboardWebSocket } from "@/hooks/useDashboardWebSocket";
 
 /**
  * Dashboard - Sprint 3: Investor Demo Metrics
@@ -85,8 +87,15 @@ interface DashboardMetrics {
 }
 
 export default function Dashboard() {
+  const { user } = useAuth();
   const { data: metrics, isLoading, error } = useQuery<DashboardMetrics>({
     queryKey: ['/api/metrics'],
+  });
+
+  // Real-time updates via WebSocket
+  useDashboardWebSocket({ 
+    tenantId: user?.tenantId,
+    autoInvalidate: true 
   });
 
   const [baselineMode, setBaselineMode] = useState<'adaptive' | 'static'>('adaptive');

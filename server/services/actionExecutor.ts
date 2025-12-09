@@ -4,6 +4,7 @@ import { actions, contacts, invoices, tenants } from "@shared/schema";
 import { sendEmail } from "./sendgrid";
 import { sendSMS } from "./vonage";
 import { RetellService } from "../retell-service";
+import { websocketService } from "./websocketService";
 
 /**
  * Action Executor Service
@@ -94,6 +95,9 @@ export class ActionExecutor {
               .where(eq(actions.id, action.id));
             successCount++;
             console.log(`✅ Executed ${action.type} action for ${contact.name}`);
+            
+            // Broadcast real-time update to connected clients
+            websocketService.broadcastActionCompleted(action.tenantId, action.id, action.type);
           } else {
             await db
               .update(actions)

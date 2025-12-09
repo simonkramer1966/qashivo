@@ -4418,6 +4418,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       const action = await storage.createAction(actionData);
+      
+      // Broadcast real-time update
+      const wsService = (req.app as any).websocketService;
+      if (wsService) {
+        wsService.broadcastActionCreated(user.tenantId, action.id);
+      }
+      
       res.status(201).json(action);
     } catch (error) {
       console.error("Error creating action:", error);
@@ -4690,6 +4697,12 @@ Guidelines:
 
       // TODO: Actually send via the appropriate channel (email/SMS/voice)
       // For now, we just create the action record
+      
+      // Broadcast real-time update
+      const wsService = (req.app as any).websocketService;
+      if (wsService) {
+        wsService.broadcastActionCompleted(user.tenantId, action.id, actionType);
+      }
 
       res.json({ 
         success: true, 
@@ -20350,6 +20363,13 @@ Return only JSON with keys: intent, sentiment, confidence, keyInsights, actionIt
   // ==================== END DOCUMENTATION DOWNLOAD API ====================
 
   const httpServer = createServer(app);
+  
+  // Initialize dashboard WebSocket service for real-time updates
+  const { websocketService } = await import('./services/websocketService');
+  websocketService.initialize(httpServer);
+  
+  // Attach websocket service to app for access in other routes/services
+  (app as any).websocketService = websocketService;
   
   // WebSocket server for real-time investor demo updates
   const { WebSocketServer } = await import('ws');
