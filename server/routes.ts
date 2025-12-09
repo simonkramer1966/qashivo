@@ -19642,6 +19642,68 @@ ${tenant.name}
     }
   });
 
+  // Seed demo data
+  app.post("/api/demo-mode/seed", isAuthenticated, async (req: any, res) => {
+    try {
+      const tenantId = req.user?.tenantId;
+      if (!tenantId) {
+        return res.status(400).json({ message: "No tenant associated with user" });
+      }
+
+      const { demoDataService } = await import('./services/demoDataService.js');
+      const result = await demoDataService.seedDemoData(tenantId);
+      
+      if (result.success) {
+        res.json(result);
+      } else {
+        res.status(400).json(result);
+      }
+    } catch (error) {
+      console.error("Error seeding demo data:", error);
+      res.status(500).json({ message: "Failed to seed demo data" });
+    }
+  });
+
+  // Clear demo data
+  app.post("/api/demo-mode/clear", isAuthenticated, async (req: any, res) => {
+    try {
+      const tenantId = req.user?.tenantId;
+      if (!tenantId) {
+        return res.status(400).json({ message: "No tenant associated with user" });
+      }
+
+      const { demoDataService } = await import('./services/demoDataService.js');
+      const result = await demoDataService.clearDemoData(tenantId);
+      
+      if (result.success) {
+        res.json(result);
+      } else {
+        res.status(400).json(result);
+      }
+    } catch (error) {
+      console.error("Error clearing demo data:", error);
+      res.status(500).json({ message: "Failed to clear demo data" });
+    }
+  });
+
+  // Check if demo data exists
+  app.get("/api/demo-mode/has-data", isAuthenticated, async (req: any, res) => {
+    try {
+      const tenantId = req.user?.tenantId;
+      if (!tenantId) {
+        return res.status(400).json({ message: "No tenant associated with user" });
+      }
+
+      const { demoDataService } = await import('./services/demoDataService.js');
+      const hasData = await demoDataService.hasDemoData(tenantId);
+      
+      res.json({ hasData });
+    } catch (error) {
+      console.error("Error checking demo data:", error);
+      res.status(500).json({ message: "Failed to check demo data status" });
+    }
+  });
+
   // ==================== END DEMO MODE API ====================
 
   // ==================== PLATFORM ADMIN API ====================
