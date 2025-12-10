@@ -37,6 +37,7 @@ import step3AIAnalysisImage from "@assets/Screenshot_2025-12-10_at_11.30.52_1765
 export default function Home() {
   const [, setLocation] = useLocation();
   const [showTrialComingSoon, setShowTrialComingSoon] = useState(false);
+  const [lightboxImage, setLightboxImage] = useState<{ src: string; alt: string } | null>(null);
 
   return (
     <div className="min-h-screen bg-white">
@@ -309,7 +310,8 @@ export default function Home() {
                   <img 
                     src={step1PlannedImage} 
                     alt="AI-generated daily action plan" 
-                    className="w-full h-40 object-cover object-top rounded-lg shadow-md border border-gray-200"
+                    className="w-full h-40 object-cover object-top rounded-lg shadow-md border border-gray-200 cursor-pointer hover:shadow-lg transition-shadow"
+                    onClick={() => setLightboxImage({ src: step1PlannedImage, alt: "AI-generated daily action plan" })}
                     data-testid="img-step1-planned"
                   />
                 </div>
@@ -334,7 +336,8 @@ export default function Home() {
                   <img 
                     src={step2CompletedImage} 
                     alt="Completed actions and outcomes dashboard" 
-                    className="w-full h-40 object-cover object-top rounded-lg shadow-md border border-gray-200"
+                    className="w-full h-40 object-cover object-top rounded-lg shadow-md border border-gray-200 cursor-pointer hover:shadow-lg transition-shadow"
+                    onClick={() => setLightboxImage({ src: step2CompletedImage, alt: "Completed actions and outcomes dashboard" })}
                     data-testid="img-step2-completed"
                   />
                 </div>
@@ -359,7 +362,8 @@ export default function Home() {
                   <img 
                     src={step3AIAnalysisImage} 
                     alt="AI real-time call analysis" 
-                    className="w-full h-40 object-cover object-top rounded-lg shadow-md border border-gray-200"
+                    className="w-full h-40 object-cover object-top rounded-lg shadow-md border border-gray-200 cursor-pointer hover:shadow-lg transition-shadow"
+                    onClick={() => setLightboxImage({ src: step3AIAnalysisImage, alt: "AI real-time call analysis" })}
                     data-testid="img-step3-analysis"
                   />
                 </div>
@@ -671,6 +675,27 @@ export default function Home() {
               Book a Demo
             </Button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Image Lightbox Dialog */}
+      <Dialog open={!!lightboxImage} onOpenChange={(open) => !open && setLightboxImage(null)}>
+        <DialogContent className="max-w-4xl w-[90vw] p-2 bg-black/90 border-none">
+          <button
+            onClick={() => setLightboxImage(null)}
+            className="absolute top-4 right-4 z-50 p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors"
+            data-testid="button-lightbox-close"
+          >
+            <X className="h-6 w-6 text-white" />
+          </button>
+          {lightboxImage && (
+            <img
+              src={lightboxImage.src}
+              alt={lightboxImage.alt}
+              className="w-full h-auto max-h-[85vh] object-contain rounded-lg"
+              data-testid="img-lightbox"
+            />
+          )}
         </DialogContent>
       </Dialog>
     </div>
