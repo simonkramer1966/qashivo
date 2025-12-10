@@ -30,6 +30,9 @@ import xeroLogo from "@assets/Xero_software_logo.svg_1763402921236.png";
 import quickbooksLogo from "@assets/quickbnooks_1763403237750.png";
 import sageLogo from "@assets/sage_1763403374233.png";
 import dashboardScreenshot from "@assets/Screenshot_2025-12-10_at_11.20.44_1765365915412.png";
+import step1PlannedImage from "@assets/Screenshot_2025-12-10_at_11.28.38_1765366388284.png";
+import step2CompletedImage from "@assets/Screenshot_2025-12-10_at_11.17.27_1765366400897.png";
+import step3AIAnalysisImage from "@assets/Screenshot_2025-12-10_at_11.30.52_1765366416868.png";
 
 export default function Home() {
   const [, setLocation] = useLocation();
@@ -290,51 +293,75 @@ export default function Home() {
           <div className="grid md:grid-cols-3 gap-8 mb-16">
             {/* Step 1 */}
             <div className="relative">
-              <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 shadow-xl border border-white/50 h-full">
+              <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 shadow-xl border border-white/50 h-full flex flex-col">
                 <div className="absolute -top-4 left-8 w-8 h-8 bg-[#17B6C3] rounded-full flex items-center justify-center text-white font-bold">
                   1
                 </div>
-                <div className="pt-4">
+                <div className="pt-4 flex-grow">
                   <div className="text-sm text-[#17B6C3] font-semibold mb-2">Overnight</div>
                   <h3 className="text-xl font-bold text-gray-900 mb-3">AI Plans Your Day</h3>
-                  <p className="text-gray-600">
+                  <p className="text-gray-600 mb-4">
                     While you sleep, Qashivo analyses every invoice, scores every debtor, 
                     and builds tomorrow's action plan based on real payment behaviour.
                   </p>
+                </div>
+                <div className="mt-auto">
+                  <img 
+                    src={step1PlannedImage} 
+                    alt="AI-generated daily action plan" 
+                    className="w-full h-40 object-cover object-top rounded-lg shadow-md border border-gray-200"
+                    data-testid="img-step1-planned"
+                  />
                 </div>
               </div>
             </div>
 
             {/* Step 2 */}
             <div className="relative">
-              <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 shadow-xl border border-white/50 h-full">
+              <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 shadow-xl border border-white/50 h-full flex flex-col">
                 <div className="absolute -top-4 left-8 w-8 h-8 bg-[#17B6C3] rounded-full flex items-center justify-center text-white font-bold">
                   2
                 </div>
-                <div className="pt-4">
+                <div className="pt-4 flex-grow">
                   <div className="text-sm text-[#17B6C3] font-semibold mb-2">Morning</div>
                   <h3 className="text-xl font-bold text-gray-900 mb-3">You Approve in Minutes</h3>
-                  <p className="text-gray-600">
+                  <p className="text-gray-600 mb-4">
                     Review the daily plan over coffee. One click to approve. 
                     Flag any VIP customers for special handling. Done in under 10 minutes.
                   </p>
+                </div>
+                <div className="mt-auto">
+                  <img 
+                    src={step2CompletedImage} 
+                    alt="Completed actions and outcomes dashboard" 
+                    className="w-full h-40 object-cover object-top rounded-lg shadow-md border border-gray-200"
+                    data-testid="img-step2-completed"
+                  />
                 </div>
               </div>
             </div>
 
             {/* Step 3 */}
             <div className="relative">
-              <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 shadow-xl border border-white/50 h-full">
+              <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 shadow-xl border border-white/50 h-full flex flex-col">
                 <div className="absolute -top-4 left-8 w-8 h-8 bg-[#17B6C3] rounded-full flex items-center justify-center text-white font-bold">
                   3
                 </div>
-                <div className="pt-4">
+                <div className="pt-4 flex-grow">
                   <div className="text-sm text-[#17B6C3] font-semibold mb-2">All Day</div>
                   <h3 className="text-xl font-bold text-gray-900 mb-3">AI Executes Non-Stop</h3>
-                  <p className="text-gray-600">
+                  <p className="text-gray-600 mb-4">
                     Emails sent. SMS delivered. AI voice calls made. Disputes handled. 
                     Promises tracked. You get updates. Cash lands in your account.
                   </p>
+                </div>
+                <div className="mt-auto">
+                  <img 
+                    src={step3AIAnalysisImage} 
+                    alt="AI real-time call analysis" 
+                    className="w-full h-40 object-cover object-top rounded-lg shadow-md border border-gray-200"
+                    data-testid="img-step3-analysis"
+                  />
                 </div>
               </div>
             </div>
