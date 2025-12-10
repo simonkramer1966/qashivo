@@ -29,7 +29,7 @@ import logo from "@assets/Main Nexus Logo copy_1763392904110.png";
 import xeroLogo from "@assets/Xero_software_logo.svg_1763402921236.png";
 import quickbooksLogo from "@assets/quickbnooks_1763403237750.png";
 import sageLogo from "@assets/sage_1763403374233.png";
-import dashboardScreenshot from "@assets/Screenshot_2025-12-10_at_11.20.44_1765365680164.png";
+import dashboardScreenshot from "@assets/Screenshot_2025-12-10_at_11.20.44_1765365915412.png";
 
 export default function Home() {
   const [, setLocation] = useLocation();
