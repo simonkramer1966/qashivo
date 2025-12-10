@@ -50,6 +50,12 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import nexusLogo from "@assets/Main Nexus Logo copy_1756923544828.png";
 import UserProfileDialog from "./UserProfileDialog";
 import DemoModeToggle from "./DemoModeToggle";
@@ -771,22 +777,22 @@ export default function NewSidebar() {
       
       {/* Navigation */}
       <nav className={cn("flex-1 mt-2.5", isCollapsed ? "px-2" : "px-4")}>
-        <ul className="space-y-1">
-          {currentNavigationItems.map((item, index) => {
-            // Render divider
-            if (item.name === "divider") {
-              return (
-                <li key={`divider-${index}`} className="my-3">
-                  <div className="h-px bg-gray-300" />
-                </li>
-              );
-            }
-            
-            const isActive = isActivePath(item.href);
-            const Icon = item.icon;
-            
-            return (
-              <li key={item.name}>
+        <TooltipProvider delayDuration={0}>
+          <ul className="space-y-1">
+            {currentNavigationItems.map((item, index) => {
+              // Render divider
+              if (item.name === "divider") {
+                return (
+                  <li key={`divider-${index}`} className="my-3">
+                    <div className="h-px bg-gray-300" />
+                  </li>
+                );
+              }
+              
+              const isActive = isActivePath(item.href);
+              const Icon = item.icon;
+              
+              const navButton = (
                 <button
                   onClick={() => handleNavigation(item.href)}
                   className={cn(
@@ -798,7 +804,6 @@ export default function NewSidebar() {
                     (item as any).ownerOnly && !isCollapsed && "border-t border-gray-300 mt-2 pt-2"
                   )}
                   data-testid={`nav-${item.name.toLowerCase().replace(/\s+/g, '-')}`}
-                  title={isCollapsed ? item.name : undefined}
                 >
                   {Icon && <Icon className="w-5 h-5" />}
                   {!isCollapsed && (
@@ -812,10 +817,27 @@ export default function NewSidebar() {
                     </>
                   )}
                 </button>
-              </li>
-            );
-          })}
-        </ul>
+              );
+              
+              return (
+                <li key={item.name}>
+                  {isCollapsed ? (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        {navButton}
+                      </TooltipTrigger>
+                      <TooltipContent side="right" className="font-medium">
+                        {item.name}
+                      </TooltipContent>
+                    </Tooltip>
+                  ) : (
+                    navButton
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </TooltipProvider>
       </nav>
 
       {/* User Profile Section - Footer */}
