@@ -39,6 +39,14 @@ interface CashMetrics {
   dso: number;
   escalatedCount: number;
   escalatedValue: number;
+  paymentPlansCount: number;
+  paymentPlansValue: number;
+  disputesCount: number;
+  disputesValue: number;
+  debtRecoveryCount: number;
+  debtRecoveryValue: number;
+  legalCount: number;
+  legalValue: number;
 }
 
 interface CashFlowData {
@@ -255,7 +263,7 @@ export default function Cashboard() {
                     <div className="h-6 w-24 bg-slate-200 animate-pulse rounded"></div>
                   ) : (
                     <p className="text-xl font-bold text-slate-900">
-                      {formatCurrency(0)} <span className="text-xs font-normal text-slate-500">(0)</span>
+                      {formatCurrency(metrics?.paymentPlansValue || 0)} <span className="text-xs font-normal text-slate-500">({metrics?.paymentPlansCount || 0})</span>
                     </p>
                   )}
                 </div>
@@ -274,7 +282,7 @@ export default function Cashboard() {
                     <div className="h-6 w-24 bg-slate-200 animate-pulse rounded"></div>
                   ) : (
                     <p className="text-xl font-bold text-slate-900">
-                      {formatCurrency(0)} <span className="text-xs font-normal text-slate-500">(0)</span>
+                      {formatCurrency(metrics?.disputesValue || 0)} <span className="text-xs font-normal text-slate-500">({metrics?.disputesCount || 0})</span>
                     </p>
                   )}
                 </div>
@@ -293,7 +301,7 @@ export default function Cashboard() {
                     <div className="h-6 w-24 bg-slate-200 animate-pulse rounded"></div>
                   ) : (
                     <p className="text-xl font-bold text-slate-900">
-                      {formatCurrency(0)} <span className="text-xs font-normal text-slate-500">(0)</span>
+                      {formatCurrency(metrics?.debtRecoveryValue || 0)} <span className="text-xs font-normal text-slate-500">({metrics?.debtRecoveryCount || 0})</span>
                     </p>
                   )}
                 </div>
@@ -312,7 +320,7 @@ export default function Cashboard() {
                     <div className="h-6 w-24 bg-slate-200 animate-pulse rounded"></div>
                   ) : (
                     <p className="text-xl font-bold text-slate-900">
-                      {formatCurrency(0)} <span className="text-xs font-normal text-slate-500">(0)</span>
+                      {formatCurrency(metrics?.legalValue || 0)} <span className="text-xs font-normal text-slate-500">({metrics?.legalCount || 0})</span>
                     </p>
                   )}
                 </div>
@@ -368,25 +376,25 @@ export default function Cashboard() {
             {/* Payment Plans */}
             <div className="card-apple p-2 bg-[#F9FAFB]" data-testid="card-payment-plans">
               <p className="text-xs text-slate-600 mb-0.5">Plans</p>
-              <p className="text-base font-bold text-slate-900">{formatCurrency(0)}</p>
+              <p className="text-base font-bold text-slate-900">{formatCurrency(metrics?.paymentPlansValue || 0)}</p>
             </div>
 
             {/* Disputes */}
             <div className="card-apple p-2 bg-[#FFF5F5]" data-testid="card-disputes">
               <p className="text-xs text-slate-600 mb-0.5">Disputes</p>
-              <p className="text-base font-bold text-slate-900">{formatCurrency(0)}</p>
+              <p className="text-base font-bold text-slate-900">{formatCurrency(metrics?.disputesValue || 0)}</p>
             </div>
 
             {/* Debt Recovery */}
             <div className="card-apple p-2 bg-[#FFF5F5]" data-testid="card-debt-recovery">
               <p className="text-xs text-slate-600 mb-0.5">Recovery</p>
-              <p className="text-base font-bold text-slate-900">{formatCurrency(0)}</p>
+              <p className="text-base font-bold text-slate-900">{formatCurrency(metrics?.debtRecoveryValue || 0)}</p>
             </div>
 
             {/* Legal */}
             <div className="card-apple p-2 bg-[#FFF5F5]" data-testid="card-legal">
               <p className="text-xs text-slate-600 mb-0.5">Legal</p>
-              <p className="text-base font-bold text-slate-900">{formatCurrency(0)}</p>
+              <p className="text-base font-bold text-slate-900">{formatCurrency(metrics?.legalValue || 0)}</p>
             </div>
           </div>
 

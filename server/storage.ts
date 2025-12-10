@@ -1429,7 +1429,16 @@ export class DatabaseStorage implements IStorage {
   async getDebtRecoveryMetrics(tenantId: string): Promise<{
     escalatedCount: number;
     escalatedValue: number;
+    paymentPlansCount: number;
+    paymentPlansValue: number;
+    disputesCount: number;
+    disputesValue: number;
+    debtRecoveryCount: number;
+    debtRecoveryValue: number;
+    legalCount: number;
+    legalValue: number;
   }> {
+    // Get escalated invoices
     const escalatedResult = await db
       .select({
         count: count(),
@@ -1444,12 +1453,88 @@ export class DatabaseStorage implements IStorage {
         )
       );
 
+    // Get payment plan invoices
+    const paymentPlansResult = await db
+      .select({
+        count: count(),
+        total: sql<number>`SUM(${invoices.amount} - ${invoices.amountPaid})`,
+      })
+      .from(invoices)
+      .where(
+        and(
+          eq(invoices.tenantId, tenantId),
+          eq(invoices.pauseState, "payment_plan"),
+          sql`${invoices.status} IN ('pending', 'overdue')`
+        )
+      );
+
+    // Get disputed invoices
+    const disputesResult = await db
+      .select({
+        count: count(),
+        total: sql<number>`SUM(${invoices.amount} - ${invoices.amountPaid})`,
+      })
+      .from(invoices)
+      .where(
+        and(
+          eq(invoices.tenantId, tenantId),
+          eq(invoices.pauseState, "dispute"),
+          sql`${invoices.status} IN ('pending', 'overdue')`
+        )
+      );
+
+    // Get debt recovery invoices (stage = debt_recovery)
+    const debtRecoveryResult = await db
+      .select({
+        count: count(),
+        total: sql<number>`SUM(${invoices.amount} - ${invoices.amountPaid})`,
+      })
+      .from(invoices)
+      .where(
+        and(
+          eq(invoices.tenantId, tenantId),
+          eq(invoices.stage, "debt_recovery"),
+          sql`${invoices.status} IN ('pending', 'overdue')`
+        )
+      );
+
+    // Get legal invoices (legalFlag = true)
+    const legalResult = await db
+      .select({
+        count: count(),
+        total: sql<number>`SUM(${invoices.amount} - ${invoices.amountPaid})`,
+      })
+      .from(invoices)
+      .where(
+        and(
+          eq(invoices.tenantId, tenantId),
+          eq(invoices.legalFlag, true),
+          sql`${invoices.status} IN ('pending', 'overdue')`
+        )
+      );
+
     const escalatedCount = escalatedResult[0]?.count || 0;
     const escalatedValue = escalatedResult[0]?.total || 0;
+    const paymentPlansCount = paymentPlansResult[0]?.count || 0;
+    const paymentPlansValue = paymentPlansResult[0]?.total || 0;
+    const disputesCount = disputesResult[0]?.count || 0;
+    const disputesValue = disputesResult[0]?.total || 0;
+    const debtRecoveryCount = debtRecoveryResult[0]?.count || 0;
+    const debtRecoveryValue = debtRecoveryResult[0]?.total || 0;
+    const legalCount = legalResult[0]?.count || 0;
+    const legalValue = legalResult[0]?.total || 0;
 
     return {
       escalatedCount,
       escalatedValue: Number(escalatedValue),
+      paymentPlansCount,
+      paymentPlansValue: Number(paymentPlansValue),
+      disputesCount,
+      disputesValue: Number(disputesValue),
+      debtRecoveryCount,
+      debtRecoveryValue: Number(debtRecoveryValue),
+      legalCount,
+      legalValue: Number(legalValue),
     };
   }
 
