@@ -31,7 +31,7 @@ import quickbooksLogo from "@assets/quickbnooks_1763403237750.png";
 import sageLogo from "@assets/sage_1763403374233.png";
 import dashboardScreenshot from "@assets/Screenshot_2025-12-10_at_11.20.44_1765365915412.png";
 import step1PlannedImage from "@assets/Screenshot_2025-12-10_at_11.28.38_1765366388284.png";
-import step2CompletedImage from "@assets/Screenshot_2025-12-10_at_11.17.27_1765366400897.png";
+import step2CompletedImage from "@assets/Screenshot_2025-12-10_at_11.42.18_1765367144185.png";
 import step3AIAnalysisImage from "@assets/Screenshot_2025-12-10_at_11.30.52_1765366416868.png";
 
 export default function Home() {
