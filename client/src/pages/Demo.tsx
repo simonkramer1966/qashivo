@@ -401,7 +401,7 @@ export default function Demo() {
                 data-testid="tab-capital"
               >
                 <Banknote className="w-4 h-4 sm:w-5 sm:h-5 mr-2 flex-shrink-0" />
-                <span className="whitespace-nowrap">Capital</span>
+                <span className="whitespace-nowrap">Capital Access</span>
               </TabsTrigger>
             </TabsList>
 
