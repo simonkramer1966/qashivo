@@ -2251,7 +2251,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const contact = await storage.getContact(invoice.contactId, user.tenantId);
           contactPaymentMap.set(invoice.contactId, {
             contactId: invoice.contactId,
-            contactName: contact?.name || 'Unknown',
+            contactName: contact?.companyName || contact?.name || 'Unknown',
             totalPaid: 0,
             paidCount: 0,
             totalDaysToPay: 0,
