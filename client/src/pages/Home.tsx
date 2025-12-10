@@ -29,6 +29,7 @@ import logo from "@assets/Main Nexus Logo copy_1763392904110.png";
 import xeroLogo from "@assets/Xero_software_logo.svg_1763402921236.png";
 import quickbooksLogo from "@assets/quickbnooks_1763403237750.png";
 import sageLogo from "@assets/sage_1763403374233.png";
+import dashboardScreenshot from "@assets/Screenshot_2025-12-10_at_11.20.44_1765365680164.png";
 
 export default function Home() {
   const [, setLocation] = useLocation();
@@ -91,37 +92,53 @@ export default function Home() {
           backgroundRepeat: 'no-repeat'
         }}
       >
-        <div className="absolute inset-0 bg-gradient-to-r from-slate-900/90 via-slate-900/80 to-slate-900/70"></div>
+        <div className="absolute inset-0 bg-gradient-to-r from-slate-900/95 via-slate-900/90 to-slate-900/80"></div>
         
-        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 md:py-32">
-          <div className="max-w-3xl">
-            <p className="text-xl md:text-2xl text-gray-300 mb-4">
-              Stop Buying Software That Just Points at Problems
-            </p>
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white leading-tight mb-6">
-              Qashivo <span className="text-[#17B6C3]">Fixes Them</span> For You
-            </h1>
-            <p className="text-xl text-gray-200 mb-8">
-              The only platform where AI collects cash, forecasts risk, and releases working capital, while you supervise for ten minutes a day.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4">
-              <Button
-                size="lg"
-                className="bg-[#17B6C3] hover:bg-[#1396A1] text-white text-lg px-8"
-                onClick={() => setLocation("/demo")}
-                data-testid="button-hero-demo"
-              >
-                See It In Action
-                <ArrowRight className="ml-2 h-5 w-5" />
-              </Button>
-              <Button
-                size="lg"
-                className="bg-white text-gray-600 hover:text-[#17B6C3] hover:bg-white text-lg px-8"
-                onClick={() => setLocation("/contact")}
-                data-testid="button-hero-contact"
-              >
-                Talk to Sales
-              </Button>
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24">
+          <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
+            {/* Left side - Text content */}
+            <div className="max-w-xl">
+              <p className="text-xl md:text-2xl text-gray-300 mb-4">
+                Stop Buying Software That Just Points at Problems
+              </p>
+              <h1 className="text-4xl md:text-5xl lg:text-5xl font-bold text-white leading-tight mb-6">
+                Qashivo <span className="text-[#17B6C3]">Fixes Them</span> For You
+              </h1>
+              <p className="text-lg md:text-xl text-gray-200 mb-8">
+                The only platform where AI collects cash, forecasts risk, and releases working capital, while you supervise for ten minutes a day.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-4">
+                <Button
+                  size="lg"
+                  className="bg-[#17B6C3] hover:bg-[#1396A1] text-white text-lg px-8"
+                  onClick={() => setLocation("/demo")}
+                  data-testid="button-hero-demo"
+                >
+                  See It In Action
+                  <ArrowRight className="ml-2 h-5 w-5" />
+                </Button>
+                <Button
+                  size="lg"
+                  className="bg-white text-gray-600 hover:text-[#17B6C3] hover:bg-white text-lg px-8"
+                  onClick={() => setLocation("/contact")}
+                  data-testid="button-hero-contact"
+                >
+                  Talk to Sales
+                </Button>
+              </div>
+            </div>
+            
+            {/* Right side - Dashboard screenshot */}
+            <div className="hidden lg:block">
+              <div className="relative">
+                <div className="absolute -inset-4 bg-gradient-to-r from-[#17B6C3]/20 to-teal-500/20 rounded-2xl blur-xl"></div>
+                <img 
+                  src={dashboardScreenshot} 
+                  alt="Qashivo Dashboard - Real-time cashflow and receivables overview" 
+                  className="relative rounded-xl shadow-2xl border border-white/10"
+                  data-testid="img-hero-dashboard"
+                />
+              </div>
             </div>
           </div>
         </div>
