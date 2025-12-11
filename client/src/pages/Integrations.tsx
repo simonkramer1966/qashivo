@@ -183,7 +183,7 @@ export default function Integrations() {
               </div>
               <h3 className="text-xl font-bold text-gray-900 mb-3">Real-Time Sync</h3>
               <p className="text-gray-600">
-                Changes in your accounting software are reflected in Qashivo within minutes. No manual imports needed.
+                Changes in Xero are reflected in Qashivo within minutes. No manual imports needed.
               </p>
             </div>
             
