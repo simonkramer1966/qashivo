@@ -5,6 +5,8 @@ import { sendEmail } from "./sendgrid";
 import { sendSMS } from "./vonage";
 import { RetellService } from "../retell-service";
 import { websocketService } from "./websocketService";
+import { aiMessageGenerator, type MessageContext, type ToneSettings } from "./aiMessageGenerator";
+import { ToneProfile, PlaybookStage } from "./playbookEngine";
 
 /**
  * Action Executor Service
@@ -188,7 +190,60 @@ export class ActionExecutor {
   }
 
   /**
-   * Send email action
+   * Build message context from action data
+   */
+  private buildMessageContext(
+    action: any,
+    contact: any,
+    invoice: any,
+    tenant: any
+  ): MessageContext {
+    const daysOverdue = invoice?.dueDate 
+      ? Math.max(0, Math.floor((Date.now() - new Date(invoice.dueDate).getTime()) / (1000 * 60 * 60 * 24)))
+      : action.metadata?.daysOverdue || 0;
+
+    return {
+      customerName: contact.name || 'Customer',
+      companyName: contact.companyName || contact.name,
+      invoiceNumber: invoice?.invoiceNumber || action.metadata?.invoiceNumber || 'N/A',
+      invoiceAmount: this.parseAmount(invoice?.amount ?? action.metadata?.amount ?? 0),
+      currency: '£',
+      dueDate: invoice?.dueDate ? new Date(invoice.dueDate) : new Date(),
+      daysOverdue,
+      totalOutstanding: action.metadata?.totalOutstanding,
+      invoiceCount: action.metadata?.invoiceCount,
+      previousContactCount: action.metadata?.previousContactCount,
+      lastContactDate: action.metadata?.lastContactDate ? new Date(action.metadata.lastContactDate) : undefined,
+      lastContactChannel: action.metadata?.lastContactChannel,
+      hasPromiseToPay: action.metadata?.hasPromiseToPay,
+      promiseToPayDate: action.metadata?.promiseToPayDate ? new Date(action.metadata.promiseToPayDate) : undefined,
+      promiseToPayMissed: action.metadata?.promiseToPayMissed,
+      isHighValue: action.metadata?.isHighValue,
+      isVip: action.metadata?.isVip,
+      hasDispute: action.metadata?.hasDispute,
+      tenantName: tenant.name || 'Accounts Team',
+      tenantPhone: tenant.phone,
+      tenantEmail: tenant.email,
+      paymentLink: action.metadata?.paymentLink,
+    };
+  }
+
+  /**
+   * Build tone settings from action metadata
+   */
+  private buildToneSettings(action: any): ToneSettings {
+    return {
+      stage: (action.metadata?.stage || 'CREDIT_CONTROL') as PlaybookStage,
+      toneProfile: (action.metadata?.toneProfile || 'CREDIT_CONTROL_FRIENDLY') as ToneProfile,
+      reasonCode: action.metadata?.reasonCode,
+      templateId: action.metadata?.templateId,
+      tenantStyle: action.metadata?.tenantStyle,
+      useLatePaymentLegislation: action.metadata?.useLatePaymentLegislation,
+    };
+  }
+
+  /**
+   * Send email action with AI-generated content
    */
   private async sendEmailAction(
     action: any,
@@ -201,23 +256,42 @@ export class ActionExecutor {
         return { success: false, error: 'Contact has no email address' };
       }
 
-      const emailData = this.replaceTemplateVariables(
-        action.content || '',
-        contact,
-        invoice
-      );
+      const messageContext = this.buildMessageContext(action, contact, invoice, tenant);
+      const toneSettings = this.buildToneSettings(action);
+
+      let emailContent: { subject: string; body: string };
+
+      if (action.content && action.content.trim() !== '') {
+        emailContent = {
+          subject: action.subject || 'Payment Reminder',
+          body: this.replaceTemplateVariables(action.content, contact, invoice)
+        };
+      } else {
+        console.log(`🤖 Generating AI email for ${contact.name}...`);
+        const generated = await aiMessageGenerator.generateEmail(messageContext, toneSettings);
+        emailContent = {
+          subject: generated.subject || 'Payment Reminder',
+          body: generated.body
+        };
+        console.log(`✅ AI email generated with subject: ${emailContent.subject}`);
+      }
 
       const result = await sendEmail({
         to: contact.email,
         from: `${tenant.name} <noreply@qashivo.com>`,
-        subject: action.subject || 'Payment Reminder',
-        html: emailData,
-        text: emailData.replace(/<[^>]*>/g, ''),
+        subject: emailContent.subject,
+        html: emailContent.body,
+        text: emailContent.body.replace(/<[^>]*>/g, ''),
       });
 
       return { 
         success: result, 
-        data: { emailSent: true, to: contact.email } 
+        data: { 
+          emailSent: true, 
+          to: contact.email,
+          subject: emailContent.subject,
+          aiGenerated: !action.content || action.content.trim() === ''
+        } 
       };
     } catch (error: any) {
       return { success: false, error: error.message };
@@ -225,7 +299,7 @@ export class ActionExecutor {
   }
 
   /**
-   * Send SMS action
+   * Send SMS action with AI-generated content
    */
   private async sendSMSAction(
     action: any,
@@ -238,11 +312,18 @@ export class ActionExecutor {
         return { success: false, error: 'Contact has no phone number' };
       }
 
-      const message = this.replaceTemplateVariables(
-        action.content || '',
-        contact,
-        invoice
-      );
+      let message: string;
+
+      if (action.content && action.content.trim() !== '') {
+        message = this.replaceTemplateVariables(action.content, contact, invoice);
+      } else {
+        console.log(`🤖 Generating AI SMS for ${contact.name}...`);
+        const messageContext = this.buildMessageContext(action, contact, invoice, tenant);
+        const toneSettings = this.buildToneSettings(action);
+        const generated = await aiMessageGenerator.generateSMS(messageContext, toneSettings);
+        message = generated.body;
+        console.log(`✅ AI SMS generated: ${message.substring(0, 50)}...`);
+      }
 
       const result = await sendSMS({
         to: contact.phone,
@@ -251,7 +332,10 @@ export class ActionExecutor {
 
       return { 
         success: result.success, 
-        data: { messageId: result.messageId },
+        data: { 
+          messageId: result.messageId,
+          aiGenerated: !action.content || action.content.trim() === ''
+        },
         error: result.error 
       };
     } catch (error: any) {
@@ -260,7 +344,7 @@ export class ActionExecutor {
   }
 
   /**
-   * Send WhatsApp action
+   * Send WhatsApp action with AI-generated content
    */
   private async sendWhatsAppAction(
     action: any,
@@ -273,14 +357,19 @@ export class ActionExecutor {
         return { success: false, error: 'Contact has no phone number' };
       }
 
-      const message = this.replaceTemplateVariables(
-        action.content || '',
-        contact,
-        invoice
-      );
+      let message: string;
 
-      // Use Vonage SMS service for WhatsApp
-      // WhatsApp routing is determined by Vonage based on number format
+      if (action.content && action.content.trim() !== '') {
+        message = this.replaceTemplateVariables(action.content, contact, invoice);
+      } else {
+        console.log(`🤖 Generating AI WhatsApp message for ${contact.name}...`);
+        const messageContext = this.buildMessageContext(action, contact, invoice, tenant);
+        const toneSettings = this.buildToneSettings(action);
+        const generated = await aiMessageGenerator.generateSMS(messageContext, toneSettings);
+        message = generated.body;
+        console.log(`✅ AI WhatsApp message generated`);
+      }
+
       const result = await sendSMS({
         to: contact.phone,
         message: message,
@@ -289,7 +378,10 @@ export class ActionExecutor {
 
       return { 
         success: result.success, 
-        data: { messageId: result.messageId },
+        data: { 
+          messageId: result.messageId,
+          aiGenerated: !action.content || action.content.trim() === ''
+        },
         error: result.error 
       };
     } catch (error: any) {
@@ -298,7 +390,7 @@ export class ActionExecutor {
   }
 
   /**
-   * Initiate AI voice call
+   * Initiate AI voice call with AI-generated opening script
    */
   private async initiateVoiceCall(
     action: any,
@@ -314,6 +406,17 @@ export class ActionExecutor {
       const agentId = action.metadata?.agentId || process.env.RETELL_AGENT_ID;
       if (!agentId) {
         return { success: false, error: 'No AI agent ID configured' };
+      }
+
+      let openingScript: string | undefined;
+      
+      if (!action.content || action.content.trim() === '') {
+        console.log(`🤖 Generating AI voice script for ${contact.name}...`);
+        const messageContext = this.buildMessageContext(action, contact, invoice, tenant);
+        const toneSettings = this.buildToneSettings(action);
+        const generated = await aiMessageGenerator.generateVoiceScript(messageContext, toneSettings);
+        openingScript = generated.voiceScript;
+        console.log(`✅ AI voice script generated`);
       }
 
       const retellService = new RetellService();
@@ -332,6 +435,7 @@ export class ActionExecutor {
           toneProfile: action.metadata?.toneProfile || 'CREDIT_CONTROL_FRIENDLY',
           stage: action.metadata?.stage || 'CREDIT_CONTROL',
           reasonCode: action.metadata?.reasonCode || 'GENERIC_OVERDUE_FOLLOWUP',
+          openingScript: openingScript || '',
         },
         metadata: {
           tenantId: tenant.id,
@@ -340,16 +444,31 @@ export class ActionExecutor {
           actionId: action.id,
           voiceTone: action.metadata?.voiceTone,
           stage: action.metadata?.stage,
+          aiGenerated: !action.content || action.content.trim() === '',
         }
       });
 
       return { 
         success: true, 
-        data: result 
+        data: { ...result, aiGenerated: !action.content || action.content.trim() === '' }
       };
     } catch (error: any) {
       return { success: false, error: error.message };
     }
+  }
+
+  /**
+   * Safely parse amount value (handles both string and number)
+   */
+  private parseAmount(value: any): number {
+    if (typeof value === 'number' && !isNaN(value)) {
+      return value;
+    }
+    if (typeof value === 'string') {
+      const parsed = parseFloat(value.replace(/[^0-9.-]/g, ''));
+      return isNaN(parsed) ? 0 : parsed;
+    }
+    return 0;
   }
 
   /**
@@ -366,7 +485,7 @@ export class ActionExecutor {
       '{companyName}': contact.companyName || contact.name || '',
       '{customerName}': contact.name || '',
       '{invoiceNumber}': invoice?.invoiceNumber || 'N/A',
-      '{amount}': invoice?.amount ? `£${parseFloat(invoice.amount).toFixed(2)}` : 'N/A',
+      '{amount}': invoice?.amount ? `£${this.parseAmount(invoice.amount).toFixed(2)}` : 'N/A',
       '{dueDate}': invoice?.dueDate ? new Date(invoice.dueDate).toLocaleDateString('en-GB') : 'N/A',
       '{daysOverdue}': invoice?.dueDate 
         ? Math.floor((Date.now() - new Date(invoice.dueDate).getTime()) / (1000 * 60 * 60 * 24)).toString()
