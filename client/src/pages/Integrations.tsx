@@ -84,7 +84,7 @@ export default function Integrations() {
             Connect in <span className="text-[#17B6C3]">60 Seconds</span>
           </h1>
           <p className="text-xl text-gray-200 max-w-3xl mx-auto">
-            Link your accounting software and watch Qashivo's AI spring into action. 
+            Connect to Xero and watch Qashivo's AI spring into action. 
             Instant sync. Instant analysis. Instant transformation.
           </p>
         </div>
