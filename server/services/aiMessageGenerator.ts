@@ -243,13 +243,15 @@ Generate a personalised, professional email.`;
 
 Your tone should be ${tone}.
 
-Guidelines:
-- Keep messages under 160 characters when possible
-- Be direct but professional
-- Include the key info: amount and invoice reference
-- Include a clear call to action
+CRITICAL GUIDELINES:
+- Maximum 160 characters - this is essential for SMS delivery
+- Use ONLY the total amount and number of invoices - NEVER list individual invoice numbers
+- Be ultra-concise: every word must earn its place
+- Include a clear call to action (call/pay)
 - Never be threatening
 - Use British English
+
+Example format: "Hi [Name], you have [X] invoices totalling [£amount] overdue. Please pay or call us on [number]. [Company]"
 
 Respond with valid JSON containing:
 {
@@ -259,24 +261,29 @@ Respond with valid JSON containing:
 
   private buildSMSUserPrompt(context: MessageContext, toneSettings: ToneSettings): string {
     const currency = context.currency || '£';
+    const invoiceCount = context.invoiceCount || 1;
+    const totalAmount = context.totalOutstanding || context.invoiceAmount;
     
     let situationHint = "";
     if (context.promiseToPayMissed) {
-      situationHint = "Note: Customer missed their promised payment date.";
+      situationHint = "Customer missed promised payment.";
     } else if (context.daysOverdue > 60) {
-      situationHint = "Note: This is significantly overdue and requires urgent attention.";
+      situationHint = "Significantly overdue - urgent.";
     }
 
-    return `Generate an SMS for:
+    return `Generate a SHORT SMS (max 160 chars) for:
 
 Customer: ${context.customerName}
-Invoice: ${context.invoiceNumber}
-Amount: ${currency}${context.invoiceAmount.toFixed(2)}
-Days Overdue: ${context.daysOverdue}
+Total Outstanding: ${currency}${totalAmount.toFixed(2)}
+Number of Invoices: ${invoiceCount}
+Oldest Overdue: ${context.daysOverdue} days
 Sender: ${context.tenantName}
+${context.tenantPhone ? `Phone: ${context.tenantPhone}` : ''}
 ${situationHint}
 
-Stage: ${toneSettings.stage}`;
+Stage: ${toneSettings.stage}
+
+IMPORTANT: Do NOT include individual invoice numbers. Only use total amount and count.`;
   }
 
   private buildVoiceSystemPrompt(toneSettings: ToneSettings): string {
@@ -358,12 +365,15 @@ Tone: ${toneSettings.toneProfile}`;
 
   private getDefaultSMSBody(context: MessageContext, toneSettings: ToneSettings): string {
     const currency = context.currency || '£';
+    const invoiceCount = context.invoiceCount || 1;
+    const totalAmount = context.totalOutstanding || context.invoiceAmount;
+    const invoiceText = invoiceCount === 1 ? 'invoice' : 'invoices';
     
     if (toneSettings.stage === 'RECOVERY') {
-      return `URGENT: Invoice ${context.invoiceNumber} (${currency}${context.invoiceAmount.toFixed(2)}) is ${context.daysOverdue} days overdue. Please pay immediately or call ${context.tenantName}.`;
+      return `URGENT: ${invoiceCount} ${invoiceText} totalling ${currency}${totalAmount.toFixed(2)} overdue. Please pay now or call ${context.tenantName}.`;
     }
 
-    return `Reminder: Invoice ${context.invoiceNumber} (${currency}${context.invoiceAmount.toFixed(2)}) is ${context.daysOverdue} days past due. Please arrange payment. - ${context.tenantName}`;
+    return `Hi ${context.customerName}, ${invoiceCount} ${invoiceText} (${currency}${totalAmount.toFixed(2)}) overdue. Please pay or call us. - ${context.tenantName}`;
   }
 
   private getDefaultVoiceScript(context: MessageContext, toneSettings: ToneSettings): string {
