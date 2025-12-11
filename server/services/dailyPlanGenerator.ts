@@ -1,8 +1,67 @@
 import { eq, and, sql } from "drizzle-orm";
 import { db } from "../db";
-import { actions, tenants, contacts, invoices } from "@shared/schema";
-import { checkCollectionActions, type CollectionAction } from "./collectionsAutomation";
+import { actions, tenants, contacts, invoices, communicationTemplates } from "@shared/schema";
+import { checkCollectionActions, type CollectionAction, generateInvoiceTableHtml } from "./collectionsAutomation";
 import { setupDefaultWorkflow } from "./defaultWorkflowSetup";
+
+/**
+ * Fetches and renders a template with variable substitution
+ * Returns null if template not found, rendering fails, or has unresolved placeholders
+ */
+async function fetchAndRenderTemplate(
+  templateId: string | undefined,
+  variables: Record<string, string>,
+  actionType: 'email' | 'sms' | 'voice'
+): Promise<{ subject: string | null; content: string } | null> {
+  if (!templateId) return null;
+
+  try {
+    const template = await db.query.communicationTemplates.findFirst({
+      where: eq(communicationTemplates.id, templateId)
+    });
+
+    if (!template || !template.content) return null;
+
+    // Render the template by replacing variables
+    let renderedContent = template.content;
+    let renderedSubject = template.subject || null;
+
+    // Replace all {{variable}} placeholders with provided values
+    for (const [key, value] of Object.entries(variables)) {
+      const regex = new RegExp(`\\{\\{${key}\\}\\}`, 'g');
+      renderedContent = renderedContent.replace(regex, value || '');
+      if (renderedSubject) {
+        renderedSubject = renderedSubject.replace(regex, value || '');
+      }
+    }
+
+    // Check if there are any remaining unresolved placeholders in content or subject - if so, fall back to defaults
+    const hasUnresolvedContent = /\{\{[^}]+\}\}/.test(renderedContent);
+    const hasUnresolvedSubject = renderedSubject && /\{\{[^}]+\}\}/.test(renderedSubject);
+    if (hasUnresolvedContent || hasUnresolvedSubject) {
+      console.log(`Template ${templateId} has unresolved variables, falling back to defaults`);
+      return null;
+    }
+
+    // For SMS/voice, convert HTML to plain text while preserving structure
+    if (actionType !== 'email') {
+      renderedContent = renderedContent
+        .replace(/<br\s*\/?>/gi, '\n')           // <br> to newline
+        .replace(/<\/p>/gi, '\n\n')              // </p> to double newline
+        .replace(/<\/div>/gi, '\n')              // </div> to newline
+        .replace(/<li>/gi, '• ')                 // <li> to bullet
+        .replace(/<\/li>/gi, '\n')               // </li> to newline
+        .replace(/<[^>]*>/g, '')                 // Strip remaining HTML tags
+        .replace(/\n{3,}/g, '\n\n')              // Collapse multiple newlines
+        .trim();
+    }
+
+    return { subject: renderedSubject, content: renderedContent };
+  } catch (error) {
+    console.error(`Failed to fetch/render template ${templateId}:`, error);
+    return null;
+  }
+}
 
 export interface DailyPlanAction {
   id: string;
@@ -235,6 +294,29 @@ export async function generateDailyPlan(
       ? `Payment reminder - ${invoiceCount} outstanding invoices totalling ${rec.totalOverdue || rec.amount}`
       : `Payment reminder - Invoice ${rec.invoiceNumber}`;
 
+    // Build template variables for rendering
+    const templateVariables: Record<string, string> = {
+      contactName: rec.contactFirstName || rec.contactName,
+      firstName: rec.contactFirstName || rec.contactName,
+      fullName: rec.contactName,
+      invoiceNumber: rec.invoiceNumber,
+      amount: rec.amount,
+      daysOverdue: rec.daysOverdue.toString(),
+      companyName: tenant.name,
+      invoiceCount: invoiceCount.toString(),
+      totalOverdue: rec.totalOverdue || rec.amount,
+      oldestInvoiceDays: (rec.oldestInvoiceDays || rec.daysOverdue).toString(),
+      invoiceTable: rec.invoiceTable || '',
+      paymentLink: `https://pay.qashivo.com/${tenantId}/${rec.contactId}`,
+    };
+
+    // Try to use workflow template first (hybrid approach)
+    const renderedTemplate = await fetchAndRenderTemplate(rec.templateId, templateVariables, actionType);
+    
+    // Determine final subject and content
+    const finalSubject = renderedTemplate?.subject || rec.actionDetails.subject || defaultSubject;
+    const finalContent = renderedTemplate?.content || rec.actionDetails.message || generateDefaultMessage(rec, actionType);
+
     // Create action record in database
     const [newAction] = await db.insert(actions).values({
       tenantId,
@@ -243,8 +325,8 @@ export async function generateDailyPlan(
       userId,
       type: actionType,
       status,
-      subject: rec.actionDetails.subject || defaultSubject,
-      content: rec.actionDetails.message || generateDefaultMessage(rec, actionType),
+      subject: finalSubject,
+      content: finalContent,
       scheduledFor: tomorrow,
       confidenceScore: confidenceScore.toString(),
       exceptionReason,
