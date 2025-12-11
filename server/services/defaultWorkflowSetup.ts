@@ -16,19 +16,21 @@ const DEFAULT_TEMPLATES = [
     type: "email",
     category: "early_overdue",
     stage: 1,
-    subject: "Friendly Reminder: Invoice {{invoiceNumber}} is now due",
+    subject: "Friendly Reminder: {{invoiceCount}} invoice(s) totalling {{totalOverdue}} now overdue",
     content: `Dear {{contactName}},
 
 I hope this email finds you well.
 
-This is a friendly reminder that invoice {{invoiceNumber}} for {{amount}} was due on {{dueDate}} and is now {{daysOverdue}} day(s) overdue.
+This is a friendly reminder that you have {{invoiceCount}} invoice(s) totalling {{totalOverdue}} that are now overdue.
+
+{{invoiceTable}}
 
 We understand that invoices can sometimes be overlooked, so we wanted to bring this to your attention. If you've already arranged payment, please disregard this message.
 
-For your convenience, you can view and pay your invoice using our secure payment portal:
+For your convenience, you can view and pay your invoices using our secure payment portal:
 {{paymentLink}}
 
-If you have any questions about this invoice or need to discuss payment arrangements, please don't hesitate to reach out.
+If you have any questions about these invoices or need to discuss payment arrangements, please don't hesitate to reach out.
 
 Kind regards,
 {{companyName}}`,
@@ -41,14 +43,16 @@ Kind regards,
     type: "email",
     category: "early_overdue",
     stage: 2,
-    subject: "Second Notice: Invoice {{invoiceNumber}} - {{daysOverdue}} days overdue",
+    subject: "Second Notice: {{invoiceCount}} invoice(s) totalling {{totalOverdue}} overdue",
     content: `Dear {{contactName}},
 
-We're following up on our previous message regarding invoice {{invoiceNumber}} for {{amount}}, which is now {{daysOverdue}} days past due.
+We're following up on our previous message regarding your overdue invoices. You currently have {{invoiceCount}} invoice(s) totalling {{totalOverdue}} past due, with the oldest being {{oldestInvoiceDays}} days overdue.
+
+{{invoiceTable}}
 
 We haven't received payment or heard back from you, and we'd like to resolve this matter promptly. Please let us know if:
 - Payment has been sent (we'll confirm receipt)
-- There are any issues with the invoice that need addressing
+- There are any issues with the invoices that need addressing
 - You need to arrange a payment plan
 
 You can pay securely online here: {{paymentLink}}
@@ -62,15 +66,77 @@ Best regards,
     sendTiming: { daysOffset: 7, timeOfDay: "09:00", weekdaysOnly: true }
   },
   {
+    name: "Day 14 - Formal Notice",
+    type: "email",
+    category: "medium_overdue",
+    stage: 3,
+    subject: "Important: {{invoiceCount}} invoice(s) totalling {{totalOverdue}} require immediate attention",
+    content: `Dear {{contactName}},
+
+Despite our previous communications, we note that {{invoiceCount}} invoice(s) totalling {{totalOverdue}} remain unpaid. The oldest invoice is now {{oldestInvoiceDays}} days overdue.
+
+{{invoiceTable}}
+
+We take our business relationship seriously and would like to resolve this matter without further escalation. Please arrange payment within the next 7 days or contact us immediately to discuss your situation.
+
+If there are any disputes or concerns regarding these invoices, please let us know so we can address them promptly.
+
+Pay securely online: {{paymentLink}}
+
+We look forward to hearing from you.
+
+Regards,
+{{companyName}}`,
+    toneOfVoice: "formal",
+    isDefault: true,
+    sendTiming: { daysOffset: 14, timeOfDay: "09:00", weekdaysOnly: true }
+  },
+  {
     name: "Day 14 - SMS Reminder",
     type: "sms",
     category: "medium_overdue",
-    stage: 3,
+    stage: 4,
     subject: "SMS Payment Reminder",
-    content: `Hi {{contactName}}, this is {{companyName}}. Invoice {{invoiceNumber}} for {{amount}} is now {{daysOverdue}} days overdue. Please pay or contact us to discuss. Thank you.`,
+    content: `Hi {{contactName}}, this is {{companyName}}. You have {{invoiceCount}} overdue invoice(s) totalling {{totalOverdue}}. Please pay or contact us urgently. Thank you.`,
     toneOfVoice: "professional",
     isDefault: true,
     sendTiming: { daysOffset: 14, timeOfDay: "10:00", weekdaysOnly: true }
+  },
+  {
+    name: "Day 30 - Final Notice Before Recovery",
+    type: "email",
+    category: "late_overdue",
+    stage: 5,
+    subject: "Final Notice: Invoices totalling {{totalOverdue}} - Action Required to Avoid Recovery Proceedings",
+    content: `Dear {{contactName}},
+
+FINAL NOTICE BEFORE DEBT RECOVERY
+
+Despite our previous correspondence, we have not received payment for the following invoices which are now significantly overdue:
+
+{{invoiceTable}}
+
+Total Outstanding: {{totalOverdue}}
+Oldest Invoice: {{oldestInvoiceDays}} days overdue
+
+We have made every reasonable effort to resolve this matter amicably. However, if we do not receive payment or hear from you within the next 7 days, we will have no alternative but to refer this debt to our external collection agency for recovery proceedings.
+
+Please be aware that this may:
+- Incur additional costs and interest charges
+- Affect your credit rating
+- Impact our future business relationship
+
+To avoid these consequences, please arrange immediate payment or contact us today to discuss a resolution.
+
+Pay now: {{paymentLink}}
+
+This is our final attempt to resolve this matter directly before escalation.
+
+Yours faithfully,
+{{companyName}}`,
+    toneOfVoice: "firm",
+    isDefault: true,
+    sendTiming: { daysOffset: 30, timeOfDay: "09:00", weekdaysOnly: true }
   }
 ];
 
@@ -103,7 +169,7 @@ export async function ensureDefaultTemplates(tenantId: string): Promise<string[]
       isDefault: template.isDefault,
       isActive: true,
       sendTiming: template.sendTiming,
-      variables: ["contactName", "invoiceNumber", "amount", "dueDate", "daysOverdue", "paymentLink", "companyName"]
+      variables: ["contactName", "invoiceNumber", "amount", "dueDate", "daysOverdue", "paymentLink", "companyName", "invoiceTable", "invoiceCount", "totalOverdue", "oldestInvoiceDays"]
     }).returning();
 
     templateIds.push(created.id);
@@ -148,11 +214,29 @@ export async function ensureDefaultSchedule(tenantId: string, templateIds: strin
     },
     {
       id: "step-3",
+      name: "Formal Notice",
+      daysTrigger: 14,
+      actionType: "email",
+      templateId: templateIds[2],
+      templateName: "Day 14 - Formal Notice",
+      enabled: true
+    },
+    {
+      id: "step-4",
       name: "SMS Reminder",
       daysTrigger: 14,
       actionType: "sms",
-      templateId: templateIds[2],
+      templateId: templateIds[3],
       templateName: "Day 14 - SMS Reminder",
+      enabled: true
+    },
+    {
+      id: "step-5",
+      name: "Final Notice",
+      daysTrigger: 30,
+      actionType: "email",
+      templateId: templateIds[4],
+      templateName: "Day 30 - Final Notice Before Recovery",
       enabled: true
     }
   ];
@@ -160,7 +244,7 @@ export async function ensureDefaultSchedule(tenantId: string, templateIds: strin
   const [created] = await db.insert(collectionSchedules).values({
     tenantId,
     name: DEFAULT_SCHEDULE_NAME,
-    description: "Automated collection workflow: Email at Day 1, Follow-up at Day 7, SMS at Day 14",
+    description: "Automated collection workflow: Day 1 friendly email, Day 7 follow-up, Day 14 formal email + SMS, Day 30 final notice before recovery",
     isActive: true,
     isDefault: true,
     workflow: "overdue_only",
