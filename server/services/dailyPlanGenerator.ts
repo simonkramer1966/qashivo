@@ -384,23 +384,26 @@ function generateDefaultMessage(action: CollectionAction, actionType: 'email' | 
   const totalAmount = action.totalOverdue || action.amount;
   const oldestDays = action.oldestInvoiceDays || action.daysOverdue;
   
+  // Use first name for personalized greetings
+  const firstName = action.contactFirstName || action.contactName;
+  
   // EMAIL: Use HTML formatting with invoice table
   if (actionType === 'email') {
     if (hasMultipleInvoices && action.invoiceTable) {
       if (oldestDays < 7) {
-        return `<p>Dear ${action.contactName},</p>
+        return `<p>Dear ${firstName},</p>
 <p>This is a friendly reminder that you have <strong>${invoiceCount} invoices</strong> totalling <strong>${totalAmount}</strong> that are now overdue.</p>
 ${action.invoiceTable}
 <p>Please arrange payment at your earliest convenience.</p>
 <p>Thank you.</p>`;
       } else if (oldestDays < 30) {
-        return `<p>Dear ${action.contactName},</p>
+        return `<p>Dear ${firstName},</p>
 <p>You have <strong>${invoiceCount} invoices</strong> totalling <strong>${totalAmount}</strong> that require your immediate attention.</p>
 ${action.invoiceTable}
 <p>Please contact us if there are any issues preventing payment.</p>
 <p>Thank you.</p>`;
       } else {
-        return `<p>Dear ${action.contactName},</p>
+        return `<p>Dear ${firstName},</p>
 <p>We note that you have <strong>${invoiceCount} invoices</strong> totalling <strong>${totalAmount}</strong> that remain unpaid, with the oldest being ${oldestDays} days overdue.</p>
 ${action.invoiceTable}
 <p>We require urgent payment to avoid further action. Please contact us immediately to discuss payment arrangements.</p>
@@ -409,31 +412,31 @@ ${action.invoiceTable}
     }
     // Single invoice email
     if (action.daysOverdue < 7) {
-      return `Dear ${action.contactName},\n\nThis is a friendly reminder that invoice ${action.invoiceNumber} for ${action.amount} is now ${action.daysOverdue} days overdue.\n\nPlease arrange payment at your earliest convenience.\n\nThank you.`;
+      return `Dear ${firstName},\n\nThis is a friendly reminder that invoice ${action.invoiceNumber} for ${action.amount} is now ${action.daysOverdue} days overdue.\n\nPlease arrange payment at your earliest convenience.\n\nThank you.`;
     } else if (action.daysOverdue < 30) {
-      return `Dear ${action.contactName},\n\nInvoice ${action.invoiceNumber} for ${action.amount} is now ${action.daysOverdue} days overdue.\n\nWe would appreciate your immediate attention to this matter.\n\nPlease contact us if there are any issues preventing payment.\n\nThank you.`;
+      return `Dear ${firstName},\n\nInvoice ${action.invoiceNumber} for ${action.amount} is now ${action.daysOverdue} days overdue.\n\nWe would appreciate your immediate attention to this matter.\n\nPlease contact us if there are any issues preventing payment.\n\nThank you.`;
     } else {
-      return `Dear ${action.contactName},\n\nWe note that invoice ${action.invoiceNumber} for ${action.amount} remains unpaid after ${action.daysOverdue} days.\n\nWe require urgent payment to avoid further action.\n\nPlease contact us immediately to discuss payment arrangements.\n\nThank you.`;
+      return `Dear ${firstName},\n\nWe note that invoice ${action.invoiceNumber} for ${action.amount} remains unpaid after ${action.daysOverdue} days.\n\nWe require urgent payment to avoid further action.\n\nPlease contact us immediately to discuss payment arrangements.\n\nThank you.`;
     }
   }
   
   // SMS/VOICE: Plain text only (no HTML, concise for SMS character limits)
   if (hasMultipleInvoices) {
     if (oldestDays < 7) {
-      return `Hi ${action.contactName}, this is a friendly reminder that you have ${invoiceCount} invoices totalling ${totalAmount} now overdue. Please arrange payment at your earliest convenience. Thank you.`;
+      return `Hi ${firstName}, this is a friendly reminder that you have ${invoiceCount} invoices totalling ${totalAmount} now overdue. Please arrange payment at your earliest convenience. Thank you.`;
     } else if (oldestDays < 30) {
-      return `Hi ${action.contactName}, you have ${invoiceCount} invoices totalling ${totalAmount} requiring attention (oldest: ${oldestDays} days overdue). Please contact us if there are any issues. Thank you.`;
+      return `Hi ${firstName}, you have ${invoiceCount} invoices totalling ${totalAmount} requiring attention (oldest: ${oldestDays} days overdue). Please contact us if there are any issues. Thank you.`;
     } else {
-      return `Hi ${action.contactName}, you have ${invoiceCount} invoices totalling ${totalAmount} unpaid (oldest: ${oldestDays} days overdue). Urgent payment required to avoid further action. Please contact us immediately.`;
+      return `Hi ${firstName}, you have ${invoiceCount} invoices totalling ${totalAmount} unpaid (oldest: ${oldestDays} days overdue). Urgent payment required to avoid further action. Please contact us immediately.`;
     }
   }
   
   // Single invoice SMS/voice
   if (action.daysOverdue < 7) {
-    return `Hi ${action.contactName}, this is a friendly reminder that invoice ${action.invoiceNumber} for ${action.amount} is now ${action.daysOverdue} days overdue. Please arrange payment. Thank you.`;
+    return `Hi ${firstName}, this is a friendly reminder that invoice ${action.invoiceNumber} for ${action.amount} is now ${action.daysOverdue} days overdue. Please arrange payment. Thank you.`;
   } else if (action.daysOverdue < 30) {
-    return `Hi ${action.contactName}, invoice ${action.invoiceNumber} for ${action.amount} is ${action.daysOverdue} days overdue. Please contact us if there are any issues. Thank you.`;
+    return `Hi ${firstName}, invoice ${action.invoiceNumber} for ${action.amount} is ${action.daysOverdue} days overdue. Please contact us if there are any issues. Thank you.`;
   } else {
-    return `Hi ${action.contactName}, invoice ${action.invoiceNumber} for ${action.amount} is ${action.daysOverdue} days overdue. Urgent payment required. Please contact us immediately.`;
+    return `Hi ${firstName}, invoice ${action.invoiceNumber} for ${action.amount} is ${action.daysOverdue} days overdue. Urgent payment required. Please contact us immediately.`;
   }
 }
