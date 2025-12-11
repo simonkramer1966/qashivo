@@ -2,6 +2,7 @@ import { eq, and, sql } from "drizzle-orm";
 import { db } from "../db";
 import { actions, tenants, contacts, invoices } from "@shared/schema";
 import { checkCollectionActions, type CollectionAction } from "./collectionsAutomation";
+import { setupDefaultWorkflow } from "./defaultWorkflowSetup";
 
 export interface DailyPlanAction {
   id: string;
@@ -134,6 +135,10 @@ export async function generateDailyPlan(
       )
     );
   }
+
+  // Ensure default workflow is set up (creates templates, schedule, assigns unassigned contacts)
+  const workflowSetup = await setupDefaultWorkflow(tenantId);
+  console.log(`🔧 Workflow setup: ${workflowSetup.contactsAssigned} contacts auto-assigned to default schedule`);
 
   // Get recommended actions from existing service
   const recommendedActions = await checkCollectionActions(tenantId);
