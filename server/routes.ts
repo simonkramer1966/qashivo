@@ -61,7 +61,8 @@ import {
   inboundMessages,
   smsMessages,
   investorLeads,
-  onboardingProgress
+  onboardingProgress,
+  messageDrafts
 } from "@shared/schema";
 import { getOverdueCategoryFromDueDate } from "@shared/utils/overdueUtils";
 import { calculateLatePaymentInterest } from "./utils/interestCalculator";
@@ -5773,11 +5774,33 @@ Guidelines:
         sum + (Number(inv.amount) - Number(inv.amountPaid || 0)), 0
       );
 
-      // Get template content based on action metadata or use action's stored content
-      let subject = action.subject || '';
-      let content = action.content || '';
+      // Check for pre-generated AI draft first
+      let subject = '';
+      let content = '';
+      let usedPreGeneratedDraft = false;
+      
+      const channel = action.type === 'call' ? 'voice' : action.type as 'email' | 'sms' | 'voice';
+      const [draft] = await db.select()
+        .from(messageDrafts)
+        .where(and(
+          eq(messageDrafts.actionId, action.id),
+          eq(messageDrafts.channel, channel),
+          eq(messageDrafts.status, 'generated')
+        ));
 
-      // Replace template variables
+      if (draft) {
+        // Use pre-generated AI content
+        subject = draft.subject || '';
+        content = draft.body || draft.voiceScript || '';
+        usedPreGeneratedDraft = true;
+        console.log(`⚡ Using pre-generated ${channel} draft for action ${action.id}`);
+      } else {
+        // Fall back to action's stored content or template
+        subject = action.subject || '';
+        content = action.content || '';
+      }
+
+      // Replace template variables (for fallback content)
       const replacements: Record<string, string> = {
         '{{contactName}}': contactName,
         '{{companyName}}': tenant?.name || 'Your Company',
@@ -5801,10 +5824,12 @@ Guidelines:
       }));
       replacements['{{invoiceTable}}'] = generateInvoiceTableHtml(invoiceSummaries);
 
-      // Apply replacements
-      for (const [key, value] of Object.entries(replacements)) {
-        subject = subject.replace(new RegExp(key.replace(/[{}]/g, '\\$&'), 'g'), value);
-        content = content.replace(new RegExp(key.replace(/[{}]/g, '\\$&'), 'g'), value);
+      // Only apply template replacements for fallback content (not pre-generated AI content)
+      if (!usedPreGeneratedDraft) {
+        for (const [key, value] of Object.entries(replacements)) {
+          subject = subject.replace(new RegExp(key.replace(/[{}]/g, '\\$&'), 'g'), value);
+          content = content.replace(new RegExp(key.replace(/[{}]/g, '\\$&'), 'g'), value);
+        }
       }
 
       res.json({
@@ -5815,7 +5840,8 @@ Guidelines:
         contactName,
         companyName,
         totalOverdue: new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' }).format(totalOverdue),
-        invoiceCount: invoicesWithOverdue.length
+        invoiceCount: invoicesWithOverdue.length,
+        isAiGenerated: usedPreGeneratedDraft
       });
     } catch (error) {
       console.error("Error fetching action preview:", error);
