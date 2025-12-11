@@ -9286,6 +9286,28 @@ Payment required immediately to avoid collection action. Contact us NOW.`
     }
   });
 
+  // Generate plan now (force regeneration)
+  app.post("/api/automation/generate-plan", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      console.log(`🔄 Manual plan generation triggered by user ${req.user.id}`);
+
+      const { generateDailyPlan } = await import("./services/dailyPlanGenerator");
+      const plan = await generateDailyPlan(user.tenantId, req.user.id, true); // Force regeneration
+      
+      console.log(`✅ Generated ${plan.actions.length} actions for today's plan`);
+
+      res.json(plan);
+    } catch (error: any) {
+      console.error("Error generating daily plan:", error);
+      res.status(500).json({ message: `Failed to generate daily plan: ${error.message}` });
+    }
+  });
+
   app.post("/api/automation/approve-plan", isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
