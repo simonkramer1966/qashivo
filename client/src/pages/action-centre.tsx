@@ -497,6 +497,47 @@ export default function ActionCentre() {
     refetchInterval: 15000, // Auto-refresh every 15 seconds
   });
 
+  // Fetch daily plan for Planned tab
+  interface DailyPlanAction {
+    id: string;
+    contactId: string;
+    contactName: string;
+    invoiceId: string;
+    invoiceNumber: string;
+    amount: string;
+    daysOverdue: number;
+    actionType: 'email' | 'sms' | 'voice';
+    status: 'pending_approval' | 'exception';
+    subject?: string;
+    content?: string;
+    confidenceScore: number;
+    exceptionReason?: string;
+    priority: string;
+  }
+
+  interface DailyPlanResponse {
+    actions: DailyPlanAction[];
+    summary: {
+      totalActions: number;
+      byType: { email: number; sms: number; voice: number };
+      totalAmount: number;
+      avgDaysOverdue: number;
+      highPriorityCount: number;
+      exceptionCount: number;
+      scheduledFor: string;
+    };
+    tenantPolicies: {
+      executionTime: string;
+      dailyLimits: { email: number; sms: number; voice: number };
+    };
+    planGeneratedAt: string;
+  }
+
+  const { data: dailyPlan, isLoading: isLoadingPlan } = useQuery<DailyPlanResponse>({
+    queryKey: ['/api/automation/daily-plan'],
+    enabled: activeTab === 'plan',
+  });
+
   // Mark invoice as paid mutation
   const markPaidMutation = useMutation({
     mutationFn: async (invoiceId: string) => {
@@ -586,6 +627,99 @@ export default function ActionCentre() {
       toast({
         title: "Error",
         description: "Failed to assign actions",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Approve entire daily plan mutation
+  const approvePlanMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch('/api/automation/approve-plan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to approve plan');
+      }
+      return await response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Plan Approved",
+        description: `${data.approvedCount} action(s) scheduled for execution`,
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/automation/daily-plan'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/actions'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/action-centre/tabs'] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to approve plan",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Approve single action from plan
+  const approveActionMutation = useMutation({
+    mutationFn: async (actionId: string) => {
+      const response = await fetch(`/api/actions/${actionId}/approve`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to approve action');
+      }
+      return await response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Action Approved",
+        description: "Action scheduled for execution",
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/automation/daily-plan'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/actions'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/action-centre/tabs'] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to approve action",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Escalate action to VIP (exception)
+  const escalateToVIPMutation = useMutation({
+    mutationFn: async (actionId: string) => {
+      const response = await fetch(`/api/actions/${actionId}/escalate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to escalate action');
+      }
+      return await response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Moved to VIP",
+        description: "Action flagged for manual review",
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/automation/daily-plan'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/actions'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/action-centre/tabs'] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to escalate action",
         variant: "destructive",
       });
     },
@@ -1266,151 +1400,168 @@ export default function ActionCentre() {
           {/* Plan Tab - Upcoming AI Plan for Supervised Autonomy */}
           {activeTab === 'plan' && (
             <div className="space-y-6">
-              {/* Plan Header with Approve All */}
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-xl font-bold text-slate-900">Todays Plan</h2>
-                  <p className="text-sm text-slate-600 mt-1">Review and approve upcoming actions. Move items to VIP for manual handling.</p>
-                </div>
-                <div className="flex items-center gap-3">
-                  <Button
-                    onClick={() => {
-                      toast({
-                        title: "Plan Approved",
-                        description: "All 12 actions will execute at scheduled times",
-                      });
-                    }}
-                    className="bg-[#17B6C3] hover:bg-[#1396A1] text-white"
-                    data-testid="button-approve-all-plan"
-                  >
-                    <CheckCircle2 className="h-4 w-4 mr-2" />
-                    Approve All
-                  </Button>
-                </div>
-              </div>
-
-              {/* Plan Summary Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div className="bg-white/80 backdrop-blur-sm border border-white/50 rounded-xl p-5 shadow-lg">
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="p-2 bg-indigo-100 rounded-lg">
-                      <Clock className="h-5 w-5 text-indigo-600" />
-                    </div>
-                    <span className="text-sm font-medium text-slate-600">Planned Actions</span>
+              {/* Loading State */}
+              {isLoadingPlan && (
+                <div className="space-y-4">
+                  <div className="h-16 bg-slate-200 animate-pulse rounded-xl"></div>
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    {[...Array(4)].map((_, i) => (
+                      <div key={i} className="h-28 bg-slate-200 animate-pulse rounded-xl"></div>
+                    ))}
                   </div>
-                  <div className="text-3xl font-bold text-slate-900">12</div>
-                  <div className="text-xs text-slate-500 mt-1">Scheduled for today</div>
+                  <div className="h-64 bg-slate-200 animate-pulse rounded-xl"></div>
                 </div>
+              )}
 
-                <div className="bg-white/80 backdrop-blur-sm border border-white/50 rounded-xl p-5 shadow-lg">
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="p-2 bg-blue-100 rounded-lg">
-                      <Mail className="h-5 w-5 text-blue-600" />
+              {/* Empty State */}
+              {!isLoadingPlan && (!dailyPlan || dailyPlan.actions.length === 0) && (
+                <div className="bg-white/80 backdrop-blur-sm border border-white/50 rounded-xl p-12 shadow-lg text-center">
+                  <Clock className="h-16 w-16 mx-auto mb-4 text-slate-300" />
+                  <h3 className="text-xl font-semibold text-slate-900 mb-2">No Planned Actions</h3>
+                  <p className="text-slate-600 max-w-md mx-auto">
+                    AI will generate tomorrow's action plan overnight based on your overdue invoices and customer behaviour patterns.
+                  </p>
+                </div>
+              )}
+
+              {/* Plan Content */}
+              {!isLoadingPlan && dailyPlan && dailyPlan.actions.length > 0 && (
+                <>
+                  {/* Plan Header with Approve All */}
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h2 className="text-xl font-bold text-slate-900">Today's Plan</h2>
+                      <p className="text-sm text-slate-600 mt-1">
+                        Review and approve upcoming actions. Move items to VIP for manual handling.
+                        {dailyPlan.tenantPolicies?.executionTime && (
+                          <span className="ml-2 text-[#17B6C3]">Execution at {dailyPlan.tenantPolicies.executionTime}</span>
+                        )}
+                      </p>
                     </div>
-                    <span className="text-sm font-medium text-slate-600">Emails</span>
-                  </div>
-                  <div className="text-3xl font-bold text-slate-900">6</div>
-                  <div className="text-xs text-slate-500 mt-1">Payment reminders</div>
-                </div>
-
-                <div className="bg-white/80 backdrop-blur-sm border border-white/50 rounded-xl p-5 shadow-lg">
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="p-2 bg-purple-100 rounded-lg">
-                      <MessageSquare className="h-5 w-5 text-purple-600" />
+                    <div className="flex items-center gap-3">
+                      <Button
+                        onClick={() => approvePlanMutation.mutate()}
+                        disabled={approvePlanMutation.isPending || dailyPlan.actions.filter(a => a.status === 'pending_approval').length === 0}
+                        className="bg-[#17B6C3] hover:bg-[#1396A1] text-white"
+                        data-testid="button-approve-all-plan"
+                      >
+                        <CheckCircle2 className="h-4 w-4 mr-2" />
+                        {approvePlanMutation.isPending ? 'Approving...' : `Approve All (${dailyPlan.actions.filter(a => a.status === 'pending_approval').length})`}
+                      </Button>
                     </div>
-                    <span className="text-sm font-medium text-slate-600">SMS</span>
                   </div>
-                  <div className="text-3xl font-bold text-slate-900">3</div>
-                  <div className="text-xs text-slate-500 mt-1">Follow-up messages</div>
-                </div>
 
-                <div className="bg-white/80 backdrop-blur-sm border border-white/50 rounded-xl p-5 shadow-lg">
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="p-2 bg-green-100 rounded-lg">
-                      <Phone className="h-5 w-5 text-green-600" />
-                    </div>
-                    <span className="text-sm font-medium text-slate-600">Voice</span>
-                  </div>
-                  <div className="text-3xl font-bold text-slate-900">3</div>
-                  <div className="text-xs text-slate-500 mt-1">Collection calls</div>
-                </div>
-              </div>
-
-              {/* Planned Actions List */}
-              <div className="bg-white/80 backdrop-blur-sm border border-white/50 rounded-xl p-5 shadow-lg">
-                <h3 className="text-lg font-semibold text-slate-900 mb-4">Scheduled Actions</h3>
-                <div className="divide-y divide-slate-100">
-                  {[
-                    { time: '09:00', customer: 'Apex Construction Ltd', amount: 4250, channel: 'email', action: 'Payment reminder', priority: 'high', icon: Mail, color: 'blue' },
-                    { time: '09:15', customer: 'Henderson & Partners', amount: 12500, channel: 'voice', action: 'Collections call', priority: 'high', icon: Phone, color: 'green' },
-                    { time: '09:30', customer: 'Metro Supplies', amount: 1875, channel: 'sms', action: 'Gentle reminder', priority: 'medium', icon: MessageSquare, color: 'purple' },
-                    { time: '10:00', customer: 'Northern Logistics', amount: 8200, channel: 'email', action: 'Second reminder', priority: 'high', icon: Mail, color: 'blue' },
-                    { time: '10:30', customer: 'Brightside Retail', amount: 6750, channel: 'voice', action: 'Follow-up call', priority: 'medium', icon: Phone, color: 'green' },
-                    { time: '11:00', customer: 'Coastal Properties', amount: 3100, channel: 'email', action: 'Statement of account', priority: 'low', icon: Mail, color: 'blue' },
-                    { time: '11:30', customer: 'Summit Engineering', amount: 15000, channel: 'voice', action: 'VIP call', priority: 'high', icon: Phone, color: 'green' },
-                    { time: '12:00', customer: 'Valley Traders', amount: 2400, channel: 'sms', action: 'Payment reminder', priority: 'medium', icon: MessageSquare, color: 'purple' },
-                    { time: '14:00', customer: 'Riverside Flooring', amount: 5600, channel: 'email', action: 'Final notice', priority: 'high', icon: Mail, color: 'blue' },
-                    { time: '14:30', customer: 'Urban Developments', amount: 9800, channel: 'email', action: 'Payment reminder', priority: 'medium', icon: Mail, color: 'blue' },
-                    { time: '15:00', customer: 'Greenfield Services', amount: 1200, channel: 'sms', action: 'Gentle reminder', priority: 'low', icon: MessageSquare, color: 'purple' },
-                    { time: '15:30', customer: 'Highland Motors', amount: 7300, channel: 'email', action: 'Second reminder', priority: 'medium', icon: Mail, color: 'blue' },
-                  ].map((item, idx) => (
-                    <div key={idx} className="flex items-center gap-4 py-3 hover:bg-slate-50/50 px-2 -mx-2 rounded transition-colors">
-                      <span className="text-sm font-medium text-slate-700 shrink-0 w-14">{item.time}</span>
-                      <div className={`p-2 rounded-lg shrink-0 ${
-                        item.color === 'blue' ? 'bg-blue-100' : 
-                        item.color === 'green' ? 'bg-green-100' : 
-                        'bg-purple-100'
-                      }`}>
-                        <item.icon className={`h-4 w-4 ${
-                          item.color === 'blue' ? 'text-blue-600' : 
-                          item.color === 'green' ? 'text-green-600' : 
-                          'text-purple-600'
-                        }`} />
+                  {/* Plan Summary Cards */}
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div className="bg-white/80 backdrop-blur-sm border border-white/50 rounded-xl p-5 shadow-lg">
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className="p-2 bg-indigo-100 rounded-lg">
+                          <Clock className="h-5 w-5 text-indigo-600" />
+                        </div>
+                        <span className="text-sm font-medium text-slate-600">Planned Actions</span>
                       </div>
-                      <span className="text-sm text-slate-900 font-medium truncate flex-1">{item.customer}</span>
-                      <span className={`text-xs px-2 py-1 rounded-full shrink-0 ${
-                        item.priority === 'high' ? 'bg-rose-100 text-rose-700' :
-                        item.priority === 'medium' ? 'bg-amber-100 text-amber-700' :
-                        'bg-slate-100 text-slate-600'
-                      }`}>
-                        {item.priority}
-                      </span>
-                      <span className="text-xs text-slate-500 shrink-0 w-32 truncate">{item.action}</span>
-                      <span className="text-sm font-semibold text-slate-900 tabular-nums shrink-0 w-20 text-right">{formatCurrency(item.amount)}</span>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-8 px-2 text-amber-600 hover:text-amber-700 hover:bg-amber-50"
-                          onClick={() => {
-                            toast({
-                              title: "Moved to Exceptions",
-                              description: `${item.customer} requires manual review`,
-                            });
-                          }}
-                          data-testid={`button-exception-${idx}`}
-                        >
-                          <AlertTriangle className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-8 px-2 text-green-600 hover:text-green-700 hover:bg-green-50"
-                          onClick={() => {
-                            toast({
-                              title: "Action Approved",
-                              description: `${item.action} for ${item.customer} confirmed`,
-                            });
-                          }}
-                          data-testid={`button-approve-${idx}`}
-                        >
-                          <CheckCircle2 className="h-4 w-4" />
-                        </Button>
+                      <div className="text-3xl font-bold text-slate-900">{dailyPlan.summary.totalActions}</div>
+                      <div className="text-xs text-slate-500 mt-1">
+                        {formatCurrency(dailyPlan.summary.totalAmount)} total value
                       </div>
                     </div>
-                  ))}
-                </div>
-              </div>
+
+                    <div className="bg-white/80 backdrop-blur-sm border border-white/50 rounded-xl p-5 shadow-lg">
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className="p-2 bg-blue-100 rounded-lg">
+                          <Mail className="h-5 w-5 text-blue-600" />
+                        </div>
+                        <span className="text-sm font-medium text-slate-600">Emails</span>
+                      </div>
+                      <div className="text-3xl font-bold text-slate-900">{dailyPlan.summary.byType.email}</div>
+                      <div className="text-xs text-slate-500 mt-1">Payment reminders</div>
+                    </div>
+
+                    <div className="bg-white/80 backdrop-blur-sm border border-white/50 rounded-xl p-5 shadow-lg">
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className="p-2 bg-purple-100 rounded-lg">
+                          <MessageSquare className="h-5 w-5 text-purple-600" />
+                        </div>
+                        <span className="text-sm font-medium text-slate-600">SMS</span>
+                      </div>
+                      <div className="text-3xl font-bold text-slate-900">{dailyPlan.summary.byType.sms}</div>
+                      <div className="text-xs text-slate-500 mt-1">Follow-up messages</div>
+                    </div>
+
+                    <div className="bg-white/80 backdrop-blur-sm border border-white/50 rounded-xl p-5 shadow-lg">
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className="p-2 bg-green-100 rounded-lg">
+                          <Phone className="h-5 w-5 text-green-600" />
+                        </div>
+                        <span className="text-sm font-medium text-slate-600">Voice</span>
+                      </div>
+                      <div className="text-3xl font-bold text-slate-900">{dailyPlan.summary.byType.voice}</div>
+                      <div className="text-xs text-slate-500 mt-1">Collection calls</div>
+                    </div>
+                  </div>
+
+                  {/* Planned Actions List */}
+                  <div className="bg-white/80 backdrop-blur-sm border border-white/50 rounded-xl p-5 shadow-lg">
+                    <h3 className="text-lg font-semibold text-slate-900 mb-4">Scheduled Actions</h3>
+                    <div className="divide-y divide-slate-100">
+                      {dailyPlan.actions.map((item, idx) => {
+                        const IconComponent = item.actionType === 'email' ? Mail : item.actionType === 'voice' ? Phone : MessageSquare;
+                        const colorClass = item.actionType === 'email' ? 'blue' : item.actionType === 'voice' ? 'green' : 'purple';
+                        const actionLabel = item.daysOverdue > 30 ? 'Final notice' : item.daysOverdue > 14 ? 'Second reminder' : 'Payment reminder';
+                        
+                        return (
+                          <div key={item.id} className="flex items-center gap-4 py-3 hover:bg-slate-50/50 px-2 -mx-2 rounded transition-colors">
+                            <span className="text-sm font-medium text-slate-500 shrink-0 w-16">{item.daysOverdue}d overdue</span>
+                            <div className={`p-2 rounded-lg shrink-0 ${
+                              colorClass === 'blue' ? 'bg-blue-100' : 
+                              colorClass === 'green' ? 'bg-green-100' : 
+                              'bg-purple-100'
+                            }`}>
+                              <IconComponent className={`h-4 w-4 ${
+                                colorClass === 'blue' ? 'text-blue-600' : 
+                                colorClass === 'green' ? 'text-green-600' : 
+                                'text-purple-600'
+                              }`} />
+                            </div>
+                            <span className="text-sm text-slate-900 font-medium truncate flex-1">{item.contactName}</span>
+                            <span className={`text-xs px-2 py-1 rounded-full shrink-0 ${
+                              item.priority === 'high' ? 'bg-rose-100 text-rose-700' :
+                              item.priority === 'medium' ? 'bg-amber-100 text-amber-700' :
+                              'bg-slate-100 text-slate-600'
+                            }`}>
+                              {item.priority}
+                            </span>
+                            <span className="text-xs text-slate-500 shrink-0 w-28 truncate">{actionLabel}</span>
+                            <span className="text-sm font-semibold text-slate-900 tabular-nums shrink-0 w-20 text-right">{formatCurrency(parseFloat(item.amount))}</span>
+                            <div className="flex items-center gap-2 shrink-0">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-8 px-2 text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+                                onClick={() => escalateToVIPMutation.mutate(item.id)}
+                                disabled={escalateToVIPMutation.isPending}
+                                data-testid={`button-vip-${idx}`}
+                              >
+                                <AlertTriangle className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-8 px-2 text-green-600 hover:text-green-700 hover:bg-green-50"
+                                onClick={() => approveActionMutation.mutate(item.id)}
+                                disabled={approveActionMutation.isPending || item.status !== 'pending_approval'}
+                                data-testid={`button-approve-${idx}`}
+                              >
+                                <CheckCircle2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           )}
 

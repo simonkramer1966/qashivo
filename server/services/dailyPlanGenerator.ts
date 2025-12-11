@@ -11,7 +11,7 @@ export interface DailyPlanAction {
   invoiceNumber: string;
   amount: string;
   daysOverdue: number;
-  type: 'email' | 'sms' | 'voice';
+  actionType: 'email' | 'sms' | 'voice';
   status: 'pending_approval' | 'exception';
   subject?: string;
   content?: string;
@@ -20,20 +20,25 @@ export interface DailyPlanAction {
   priority: string;
 }
 
-export interface DailyPlanSummary {
-  totalActions: number;
-  byChannel: {
-    email: { count: number; totalValue: number };
-    sms: { count: number; totalValue: number };
-    voice: { count: number; totalValue: number };
-  };
-  exceptions: number;
-  estimatedOutcomes: {
-    expectedPTPs: number;
-    expectedValue: number;
-  };
+export interface DailyPlanResponse {
   actions: DailyPlanAction[];
-  executionTime: string;
+  summary: {
+    totalActions: number;
+    byType: {
+      email: number;
+      sms: number;
+      voice: number;
+    };
+    totalAmount: number;
+    avgDaysOverdue: number;
+    highPriorityCount: number;
+    exceptionCount: number;
+    scheduledFor: string;
+  };
+  tenantPolicies: {
+    executionTime: string;
+    dailyLimits: { email: number; sms: number; voice: number };
+  };
   planGeneratedAt: string;
 }
 
@@ -51,7 +56,7 @@ export async function generateDailyPlan(
   tenantId: string, 
   userId: string,
   regenerate: boolean = false
-): Promise<DailyPlanSummary> {
+): Promise<DailyPlanResponse> {
   console.log(`📋 Generating daily plan for tenant ${tenantId}...`);
   
   // Get tenant settings
@@ -66,16 +71,20 @@ export async function generateDailyPlan(
   if (!tenant.collectionsAutomationEnabled) {
     console.log('Collections automation disabled for this tenant');
     return {
-      totalActions: 0,
-      byChannel: {
-        email: { count: 0, totalValue: 0 },
-        sms: { count: 0, totalValue: 0 },
-        voice: { count: 0, totalValue: 0 },
-      },
-      exceptions: 0,
-      estimatedOutcomes: { expectedPTPs: 0, expectedValue: 0 },
       actions: [],
-      executionTime: tenant.executionTime || '09:00',
+      summary: {
+        totalActions: 0,
+        byType: { email: 0, sms: 0, voice: 0 },
+        totalAmount: 0,
+        avgDaysOverdue: 0,
+        highPriorityCount: 0,
+        exceptionCount: 0,
+        scheduledFor: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+      },
+      tenantPolicies: {
+        executionTime: tenant.executionTime || '09:00',
+        dailyLimits: (tenant.dailyLimits as any) || { email: 100, sms: 50, voice: 20 },
+      },
       planGeneratedAt: new Date().toISOString(),
     };
   }
@@ -221,7 +230,7 @@ export async function generateDailyPlan(
       invoiceNumber: rec.invoiceNumber,
       amount: rec.amount,
       daysOverdue: rec.daysOverdue,
-      type: actionType,
+      actionType,
       status,
       subject: newAction.subject || undefined,
       content: newAction.content || undefined,
@@ -241,21 +250,15 @@ export async function generateDailyPlan(
     ? planActions.reduce((sum, a) => sum + a.daysOverdue, 0) / planActions.length 
     : 0;
 
-  const emailCount = planActions.filter(a => a.type === 'email' && a.status === 'pending_approval').length;
-  const smsCount = planActions.filter(a => a.type === 'sms' && a.status === 'pending_approval').length;
-  const voiceCount = planActions.filter(a => a.type === 'voice' && a.status === 'pending_approval').length;
+  const emailCount = planActions.filter(a => a.actionType === 'email' && a.status === 'pending_approval').length;
+  const smsCount = planActions.filter(a => a.actionType === 'sms' && a.status === 'pending_approval').length;
+  const voiceCount = planActions.filter(a => a.actionType === 'voice' && a.status === 'pending_approval').length;
 
   console.log(`✅ Generated plan: ${planActions.length} actions (${exceptionsCount} exceptions)`);
   console.log(`📧 Email: ${emailCount}, 📱 SMS: ${smsCount}, 📞 Voice: ${voiceCount}`);
 
-  // Map actions to frontend format with 'actionType' instead of 'type'
-  const formattedActions = planActions.map(action => ({
-    ...action,
-    actionType: action.type,
-  }));
-
   return {
-    actions: formattedActions,
+    actions: planActions,
     summary: {
       totalActions: planActions.length,
       byType: {
@@ -271,7 +274,7 @@ export async function generateDailyPlan(
     },
     tenantPolicies: {
       executionTime: tenant.executionTime || '09:00',
-      dailyLimits: tenant.dailyLimits || { email: 100, sms: 50, voice: 20 },
+      dailyLimits: (tenant.dailyLimits as { email: number; sms: number; voice: number }) || { email: 100, sms: 50, voice: 20 },
     },
     planGeneratedAt: new Date().toISOString(),
   };
@@ -280,7 +283,7 @@ export async function generateDailyPlan(
 /**
  * Helper: Build plan summary from existing action records
  */
-function buildPlanSummary(existingActions: any[], tenant: any): DailyPlanSummary {
+function buildPlanSummary(existingActions: any[], tenant: any): DailyPlanResponse {
   const planActions: DailyPlanAction[] = existingActions.map(action => ({
     id: action.id,
     contactId: action.contactId,
@@ -289,7 +292,7 @@ function buildPlanSummary(existingActions: any[], tenant: any): DailyPlanSummary
     invoiceNumber: action.invoice?.invoiceNumber || 'N/A',
     amount: action.invoice?.amount || '0',
     daysOverdue: action.metadata?.daysOverdue || 0,
-    actionType: action.type, // Map 'type' to 'actionType' for frontend
+    actionType: action.type as 'email' | 'sms' | 'voice',
     status: action.status,
     subject: action.subject || undefined,
     content: action.content || undefined,
@@ -318,11 +321,11 @@ function buildPlanSummary(existingActions: any[], tenant: any): DailyPlanSummary
       avgDaysOverdue: avgDaysOverdue,
       highPriorityCount: highPriorityCount,
       exceptionCount: exceptionsCount,
-      scheduledFor: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // Tomorrow
+      scheduledFor: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
     },
     tenantPolicies: {
       executionTime: tenant.executionTime || '09:00',
-      dailyLimits: tenant.dailyLimits || { email: 100, sms: 50, voice: 20 },
+      dailyLimits: (tenant.dailyLimits as { email: number; sms: number; voice: number }) || { email: 100, sms: 50, voice: 20 },
     },
     planGeneratedAt: new Date().toISOString(),
   };
