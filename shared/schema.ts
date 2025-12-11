@@ -641,6 +641,37 @@ export const actions = pgTable("actions", {
   index("idx_actions_invoice").on(table.invoiceId),
 ]);
 
+// Message Drafts table for pre-generated AI content
+export const messageDrafts = pgTable("message_drafts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  actionId: varchar("action_id").notNull().references(() => actions.id, { onDelete: 'cascade' }),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  
+  // Channel and content
+  channel: varchar("channel").notNull(), // email, sms, voice
+  subject: varchar("subject"), // For emails
+  body: text("body"), // Email HTML body or SMS text
+  voiceScript: text("voice_script"), // For voice calls
+  callToAction: varchar("call_to_action"), // Brief CTA text
+  
+  // Context tracking for freshness detection
+  contextHash: varchar("context_hash").notNull(), // Hash of context data to detect changes
+  
+  // Status tracking
+  status: varchar("status").notNull().default("pending"), // pending, generated, used, stale, failed
+  generatedAt: timestamp("generated_at"),
+  usedAt: timestamp("used_at"),
+  
+  // Error tracking
+  errorMessage: text("error_message"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_message_drafts_action").on(table.actionId),
+  index("idx_message_drafts_tenant_status").on(table.tenantId, table.status),
+]);
+
 // Inbound Messages table for intent analysis
 export const inboundMessages = pgTable("inbound_messages", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -2271,6 +2302,12 @@ export const insertActionSchema = createInsertSchema(actions).omit({
   updatedAt: true,
 });
 
+export const insertMessageDraftSchema = createInsertSchema(messageDrafts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export const insertInboundMessageSchema = createInsertSchema(inboundMessages).omit({
   id: true,
   createdAt: true,
@@ -2508,6 +2545,8 @@ export type InsertCachedXeroInvoice = z.infer<typeof insertCachedXeroInvoiceSche
 export type CachedXeroInvoice = typeof cachedXeroInvoices.$inferSelect;
 export type InsertAction = z.infer<typeof insertActionSchema>;
 export type Action = typeof actions.$inferSelect;
+export type InsertMessageDraft = z.infer<typeof insertMessageDraftSchema>;
+export type MessageDraft = typeof messageDrafts.$inferSelect;
 export type InsertInboundMessage = z.infer<typeof insertInboundMessageSchema>;
 export type InboundMessage = typeof inboundMessages.$inferSelect;
 export type InsertContactOutcome = z.infer<typeof insertContactOutcomeSchema>;

@@ -380,6 +380,17 @@ export async function generateDailyPlan(
   console.log(`✅ Generated plan: ${planActions.length} actions (${exceptionsCount} exceptions)`);
   console.log(`📧 Email: ${emailCount}, 📱 SMS: ${smsCount}, 📞 Voice: ${voiceCount}`);
 
+  // Pre-generate AI message content for all actions (runs in background)
+  // This speeds up execution time by having content ready before approval
+  const { messagePreGenerator } = await import('./messagePreGenerator');
+  messagePreGenerator.preGenerateForTenant(tenantId)
+    .then(stats => {
+      console.log(`🤖 Pre-generation complete: ${stats.generated} drafts generated, ${stats.skipped} skipped, ${stats.failed} failed`);
+    })
+    .catch(error => {
+      console.error('Pre-generation failed (non-blocking):', error.message);
+    });
+
   return {
     actions: planActions,
     summary: {

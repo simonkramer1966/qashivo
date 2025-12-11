@@ -1,12 +1,13 @@
 import { eq, and, lte, sql, isNotNull } from "drizzle-orm";
 import { db } from "../db";
-import { actions, contacts, invoices, tenants } from "@shared/schema";
+import { actions, contacts, invoices, tenants, messageDrafts } from "@shared/schema";
 import { sendEmail } from "./sendgrid";
 import { sendSMS } from "./vonage";
 import { RetellService } from "../retell-service";
 import { websocketService } from "./websocketService";
 import { aiMessageGenerator, type MessageContext, type ToneSettings } from "./aiMessageGenerator";
 import { ToneProfile, PlaybookStage } from "./playbookEngine";
+import { messagePreGenerator } from "./messagePreGenerator";
 
 /**
  * Action Executor Service
@@ -243,7 +244,7 @@ export class ActionExecutor {
   }
 
   /**
-   * Send email action with AI-generated content
+   * Send email action with pre-generated or AI-generated content
    */
   private async sendEmailAction(
     action: any,
@@ -260,6 +261,7 @@ export class ActionExecutor {
       const toneSettings = this.buildToneSettings(action);
 
       let emailContent: { subject: string; body: string };
+      let usedPreGenerated = false;
 
       if (action.content && action.content.trim() !== '') {
         emailContent = {
@@ -267,13 +269,31 @@ export class ActionExecutor {
           body: this.replaceTemplateVariables(action.content, contact, invoice)
         };
       } else {
-        console.log(`🤖 Generating AI email for ${contact.name}...`);
-        const generated = await aiMessageGenerator.generateEmail(messageContext, toneSettings);
-        emailContent = {
-          subject: generated.subject || 'Payment Reminder',
-          body: generated.body
-        };
-        console.log(`✅ AI email generated with subject: ${emailContent.subject}`);
+        // Check for pre-generated draft first
+        const { draft, contextChanged } = await messagePreGenerator.getDraftForAction(
+          action.id,
+          'email',
+          messageContext,
+          toneSettings
+        );
+
+        if (draft && draft.body) {
+          console.log(`⚡ Using pre-generated email for ${contact.name}`);
+          emailContent = {
+            subject: draft.subject || 'Payment Reminder',
+            body: draft.body
+          };
+          usedPreGenerated = true;
+        } else {
+          // Generate on-demand if no valid draft
+          console.log(`🤖 Generating AI email for ${contact.name}${contextChanged ? ' (context changed)' : ''}...`);
+          const generated = await aiMessageGenerator.generateEmail(messageContext, toneSettings);
+          emailContent = {
+            subject: generated.subject || 'Payment Reminder',
+            body: generated.body
+          };
+          console.log(`✅ AI email generated with subject: ${emailContent.subject}`);
+        }
       }
 
       const result = await sendEmail({
@@ -284,13 +304,19 @@ export class ActionExecutor {
         text: emailContent.body.replace(/<[^>]*>/g, ''),
       });
 
+      // Mark draft as used if we used a pre-generated one
+      if (usedPreGenerated) {
+        await messagePreGenerator.markDraftUsed(action.id);
+      }
+
       return { 
         success: result, 
         data: { 
           emailSent: true, 
           to: contact.email,
           subject: emailContent.subject,
-          aiGenerated: !action.content || action.content.trim() === ''
+          aiGenerated: !action.content || action.content.trim() === '',
+          usedPreGenerated
         } 
       };
     } catch (error: any) {
@@ -299,7 +325,7 @@ export class ActionExecutor {
   }
 
   /**
-   * Send SMS action with AI-generated content
+   * Send SMS action with pre-generated or AI-generated content
    */
   private async sendSMSAction(
     action: any,
@@ -313,16 +339,31 @@ export class ActionExecutor {
       }
 
       let message: string;
+      let usedPreGenerated = false;
+      const messageContext = this.buildMessageContext(action, contact, invoice, tenant);
+      const toneSettings = this.buildToneSettings(action);
 
       if (action.content && action.content.trim() !== '') {
         message = this.replaceTemplateVariables(action.content, contact, invoice);
       } else {
-        console.log(`🤖 Generating AI SMS for ${contact.name}...`);
-        const messageContext = this.buildMessageContext(action, contact, invoice, tenant);
-        const toneSettings = this.buildToneSettings(action);
-        const generated = await aiMessageGenerator.generateSMS(messageContext, toneSettings);
-        message = generated.body;
-        console.log(`✅ AI SMS generated: ${message.substring(0, 50)}...`);
+        // Check for pre-generated draft first
+        const { draft, contextChanged } = await messagePreGenerator.getDraftForAction(
+          action.id,
+          'sms',
+          messageContext,
+          toneSettings
+        );
+
+        if (draft && draft.body) {
+          console.log(`⚡ Using pre-generated SMS for ${contact.name}`);
+          message = draft.body;
+          usedPreGenerated = true;
+        } else {
+          console.log(`🤖 Generating AI SMS for ${contact.name}${contextChanged ? ' (context changed)' : ''}...`);
+          const generated = await aiMessageGenerator.generateSMS(messageContext, toneSettings);
+          message = generated.body;
+          console.log(`✅ AI SMS generated: ${message.substring(0, 50)}...`);
+        }
       }
 
       const result = await sendSMS({
@@ -330,11 +371,16 @@ export class ActionExecutor {
         message: message,
       });
 
+      if (usedPreGenerated && result.success) {
+        await messagePreGenerator.markDraftUsed(action.id);
+      }
+
       return { 
         success: result.success, 
         data: { 
           messageId: result.messageId,
-          aiGenerated: !action.content || action.content.trim() === ''
+          aiGenerated: !action.content || action.content.trim() === '',
+          usedPreGenerated
         },
         error: result.error 
       };
@@ -390,7 +436,7 @@ export class ActionExecutor {
   }
 
   /**
-   * Initiate AI voice call with AI-generated opening script
+   * Initiate AI voice call with pre-generated or AI-generated opening script
    */
   private async initiateVoiceCall(
     action: any,
@@ -409,14 +455,29 @@ export class ActionExecutor {
       }
 
       let openingScript: string | undefined;
+      let usedPreGenerated = false;
+      const messageContext = this.buildMessageContext(action, contact, invoice, tenant);
+      const toneSettings = this.buildToneSettings(action);
       
       if (!action.content || action.content.trim() === '') {
-        console.log(`🤖 Generating AI voice script for ${contact.name}...`);
-        const messageContext = this.buildMessageContext(action, contact, invoice, tenant);
-        const toneSettings = this.buildToneSettings(action);
-        const generated = await aiMessageGenerator.generateVoiceScript(messageContext, toneSettings);
-        openingScript = generated.voiceScript;
-        console.log(`✅ AI voice script generated`);
+        // Check for pre-generated draft first
+        const { draft, contextChanged } = await messagePreGenerator.getDraftForAction(
+          action.id,
+          'voice',
+          messageContext,
+          toneSettings
+        );
+
+        if (draft && draft.voiceScript) {
+          console.log(`⚡ Using pre-generated voice script for ${contact.name}`);
+          openingScript = draft.voiceScript;
+          usedPreGenerated = true;
+        } else {
+          console.log(`🤖 Generating AI voice script for ${contact.name}${contextChanged ? ' (context changed)' : ''}...`);
+          const generated = await aiMessageGenerator.generateVoiceScript(messageContext, toneSettings);
+          openingScript = generated.voiceScript;
+          console.log(`✅ AI voice script generated`);
+        }
       }
 
       const retellService = new RetellService();
@@ -445,12 +506,17 @@ export class ActionExecutor {
           voiceTone: action.metadata?.voiceTone,
           stage: action.metadata?.stage,
           aiGenerated: !action.content || action.content.trim() === '',
+          usedPreGenerated,
         }
       });
 
+      if (usedPreGenerated) {
+        await messagePreGenerator.markDraftUsed(action.id);
+      }
+
       return { 
         success: true, 
-        data: { ...result, aiGenerated: !action.content || action.content.trim() === '' }
+        data: { ...result, aiGenerated: !action.content || action.content.trim() === '', usedPreGenerated }
       };
     } catch (error: any) {
       return { success: false, error: error.message };
