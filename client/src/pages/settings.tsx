@@ -59,6 +59,7 @@ import ProtectedComponent from "@/components/rbac/ProtectedComponent";
 import PermissionMatrix from "@/components/rbac/PermissionMatrix";
 import UserInviteModal from "@/components/rbac/UserInviteModal";
 import UserManagementTabContent from "@/components/rbac/UserManagementTabContent";
+import EmailSenderManagement from "@/components/collections/EmailSenderManagement";
 import { BookOpen, Volume2, Timer, Gauge } from "lucide-react";
 
 // Playbook settings interface
@@ -1613,6 +1614,11 @@ function AutomationTabContent() {
           </div>
         </form>
       </Form>
+
+      {/* Email Sender Setup - Moved from Workflows */}
+      <div className="mt-8">
+        <EmailSenderManagement />
+      </div>
     </div>
   );
 }
