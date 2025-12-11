@@ -79,6 +79,13 @@ export function ActionPreviewDrawer({
 }: ActionPreviewDrawerProps) {
   const { data: preview, isLoading: isLoadingPreview, isError, refetch } = useQuery<TemplatePreview>({
     queryKey: ['/api/actions', action?.id, 'preview'],
+    queryFn: async () => {
+      const res = await fetch(`/api/actions/${action?.id}/preview`, {
+        credentials: 'include',
+      });
+      if (!res.ok) throw new Error('Failed to fetch preview');
+      return res.json();
+    },
     enabled: open && !!action?.id,
     retry: 1,
   });
