@@ -3,10 +3,18 @@ import { db } from "../db";
 import { invoices, contacts, collectionSchedules, customerScheduleAssignments, tenants } from "@shared/schema";
 import { CollectionLearningService, type OptimizedAction } from "./collectionLearningService";
 
+export interface InvoiceSummary {
+  invoiceId: string;
+  invoiceNumber: string;
+  amount: string;
+  dueDate: string;
+  daysOverdue: number;
+}
+
 export interface CollectionAction {
   invoiceId: string;
   contactId: string;
-  tenantId: string;  // Add tenantId for customer profile lookup
+  tenantId: string;
   invoiceNumber: string;
   contactName: string;
   daysOverdue: number;
@@ -22,6 +30,12 @@ export interface CollectionAction {
     message?: string;
     escalationLevel?: string;
   };
+  // Aggregated invoice data for consolidated reminders
+  allInvoices?: InvoiceSummary[];
+  invoiceCount?: number;
+  totalOverdue?: string;
+  oldestInvoiceDays?: number;
+  invoiceTable?: string;
 }
 
 export interface CollectionScheduleStep {
@@ -33,6 +47,38 @@ export interface CollectionScheduleStep {
   message?: string;
   priority?: 'low' | 'normal' | 'high' | 'urgent';
   escalationLevel?: string;
+}
+
+/**
+ * Generates an HTML table for displaying multiple invoices in email templates
+ */
+function generateInvoiceTableHtml(invoices: InvoiceSummary[]): string {
+  if (invoices.length === 0) return '';
+  
+  const rows = invoices.map(inv => `
+    <tr>
+      <td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${inv.invoiceNumber}</td>
+      <td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">£${parseFloat(inv.amount).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+      <td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${inv.dueDate}</td>
+      <td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${inv.daysOverdue} days</td>
+    </tr>
+  `).join('');
+
+  return `
+<table style="width: 100%; border-collapse: collapse; margin: 16px 0; font-family: Arial, sans-serif;">
+  <thead>
+    <tr style="background-color: #f3f4f6;">
+      <th style="padding: 10px; text-align: left; border-bottom: 2px solid #d1d5db;">Invoice #</th>
+      <th style="padding: 10px; text-align: left; border-bottom: 2px solid #d1d5db;">Amount</th>
+      <th style="padding: 10px; text-align: left; border-bottom: 2px solid #d1d5db;">Due Date</th>
+      <th style="padding: 10px; text-align: left; border-bottom: 2px solid #d1d5db;">Days Overdue</th>
+    </tr>
+  </thead>
+  <tbody>
+    ${rows}
+  </tbody>
+</table>
+  `.trim();
 }
 
 /**
@@ -89,6 +135,17 @@ export async function checkCollectionActions(tenantId: string): Promise<Collecti
 
     console.log(`Found ${overdueInvoices.length} potentially overdue invoices for tenant ${tenantId}`);
 
+    // Group invoices by contact for consolidated reminders
+    const contactInvoiceMap = new Map<string, {
+      contact: typeof overdueInvoices[0]['contact'];
+      invoices: Array<{
+        invoice: typeof overdueInvoices[0]['invoice'];
+        daysOverdue: number;
+      }>;
+      assignment: typeof overdueInvoices[0]['assignment'];
+      schedule: typeof overdueInvoices[0]['schedule'];
+    }>();
+
     for (const record of overdueInvoices) {
       const { invoice, contact, assignment, schedule } = record;
 
@@ -106,37 +163,68 @@ export async function checkCollectionActions(tenantId: string): Promise<Collecti
         continue;
       }
 
-      // Parse schedule steps
-      let scheduleSteps: any[] = [];
-      try {
-        scheduleSteps = Array.isArray(schedule.scheduleSteps) 
-          ? schedule.scheduleSteps as any[]
-          : [];
-      } catch (error) {
-        console.error(`Error parsing schedule steps for schedule ${schedule.id}:`, error);
-        continue;
+      // Group by contact
+      if (!contactInvoiceMap.has(contact.id)) {
+        contactInvoiceMap.set(contact.id, {
+          contact,
+          invoices: [],
+          assignment,
+          schedule,
+        });
       }
+      contactInvoiceMap.get(contact.id)!.invoices.push({ invoice, daysOverdue });
+    }
 
-      // Find latest eligible trigger point (handle both delay and daysTrigger formats)
-      const steps = (Array.isArray(schedule.scheduleSteps) ? schedule.scheduleSteps : [])
+    // Generate one action per contact with aggregated invoice data
+    for (const [contactId, data] of contactInvoiceMap) {
+      const { contact, invoices: contactInvoices, assignment, schedule } = data;
+
+      // Find the oldest invoice to determine the schedule step
+      const oldestInvoice = contactInvoices.reduce((max, curr) => 
+        curr.daysOverdue > max.daysOverdue ? curr : max
+      , contactInvoices[0]);
+
+      // Parse schedule steps
+      const steps = (Array.isArray(schedule!.scheduleSteps) ? schedule!.scheduleSteps : [])
         .map(s => ({ ...s, trigger: Number(s.daysTrigger ?? s.delay) }))
         .filter(s => Number.isFinite(s.trigger))
         .sort((a, b) => a.trigger - b.trigger);
       
-      const matchingStep = steps.filter(s => s.trigger <= daysOverdue).at(-1);
+      const matchingStep = steps.filter(s => s.trigger <= oldestInvoice.daysOverdue).at(-1);
 
       if (matchingStep) {
-        const action: CollectionAction = {
+        // Calculate aggregated values
+        const totalAmount = contactInvoices.reduce((sum, { invoice }) => 
+          sum + parseFloat(invoice.amount), 0
+        );
+        const oldestDays = Math.max(...contactInvoices.map(i => i.daysOverdue));
+        
+        // Build invoice summary list
+        const allInvoices: InvoiceSummary[] = contactInvoices.map(({ invoice, daysOverdue }) => ({
           invoiceId: invoice.id,
-          contactId: contact.id,
-          tenantId: tenantId,  // Include tenantId for customer profile lookup
           invoiceNumber: invoice.invoiceNumber,
-          contactName: contact.name || 'Unknown',
-          daysOverdue,
           amount: invoice.amount,
+          dueDate: new Date(invoice.dueDate).toLocaleDateString('en-GB'),
+          daysOverdue,
+        })).sort((a, b) => b.daysOverdue - a.daysOverdue); // Oldest first
+
+        // Generate HTML invoice table for email templates
+        const invoiceTable = generateInvoiceTableHtml(allInvoices);
+
+        // Use the oldest invoice as the primary reference
+        const primaryInvoice = oldestInvoice.invoice;
+
+        const action: CollectionAction = {
+          invoiceId: primaryInvoice.id,
+          contactId: contact.id,
+          tenantId: tenantId,
+          invoiceNumber: primaryInvoice.invoiceNumber,
+          contactName: contact.name || 'Unknown',
+          daysOverdue: oldestInvoice.daysOverdue,
+          amount: primaryInvoice.amount,
           action: matchingStep.action || `${matchingStep.type || 'email'} reminder`,
           actionType: (matchingStep.actionType || matchingStep.type || 'email') as 'email' | 'sms' | 'voice' | 'manual',
-          scheduleName: schedule.name,
+          scheduleName: schedule!.name,
           templateId: matchingStep.template || matchingStep.templateId,
           priority: matchingStep.priority || 'normal',
           actionDetails: {
@@ -145,6 +233,12 @@ export async function checkCollectionActions(tenantId: string): Promise<Collecti
             message: matchingStep.message,
             escalationLevel: matchingStep.escalationLevel,
           },
+          // Aggregated data for consolidated reminders
+          allInvoices,
+          invoiceCount: contactInvoices.length,
+          totalOverdue: `£${totalAmount.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+          oldestInvoiceDays: oldestDays,
+          invoiceTable,
         };
 
         actions.push(action);
