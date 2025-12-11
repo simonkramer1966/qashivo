@@ -9395,16 +9395,15 @@ Payment required immediately to avoid collection action. Contact us NOW.`
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
 
-      // Optional query param to force regeneration
-      const regenerate = req.query.regenerate === 'true';
-
+      // fetchOnly=true means don't auto-generate if no plan exists
+      // This allows showing empty state after deletion
       const { generateDailyPlan } = await import("./services/dailyPlanGenerator");
-      const plan = await generateDailyPlan(user.tenantId, req.user.id, regenerate);
+      const plan = await generateDailyPlan(user.tenantId, req.user.id, false, true);
       
       res.json(plan);
     } catch (error: any) {
-      console.error("Error generating daily plan:", error);
-      res.status(500).json({ message: `Failed to generate daily plan: ${error.message}` });
+      console.error("Error fetching daily plan:", error);
+      res.status(500).json({ message: `Failed to fetch daily plan: ${error.message}` });
     }
   });
 

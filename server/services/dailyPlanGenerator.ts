@@ -53,11 +53,14 @@ export interface DailyPlanResponse {
  * 
  * IDEMPOTENT: If a plan already exists (pending_approval actions), returns it
  * instead of creating duplicates. Pass regenerate=true to force recreation.
+ * 
+ * fetchOnly: If true, only returns existing plan without generating new actions
  */
 export async function generateDailyPlan(
   tenantId: string, 
   userId: string,
-  regenerate: boolean = false
+  regenerate: boolean = false,
+  fetchOnly: boolean = false
 ): Promise<DailyPlanResponse> {
   console.log(`📋 Generating daily plan for tenant ${tenantId}...`);
   
@@ -122,6 +125,28 @@ export async function generateDailyPlan(
     console.log(`♻️  Returning existing plan for tomorrow: ${existingPlanActions.length} actions`);
     
     return buildPlanSummary(existingPlanActions, tenant);
+  }
+
+  // If fetchOnly mode, return empty plan without generating (for demo/testing)
+  if (fetchOnly) {
+    console.log(`📭 Fetch-only mode: no existing plan, returning empty`);
+    return {
+      actions: [],
+      summary: {
+        totalActions: 0,
+        byType: { email: 0, sms: 0, voice: 0 },
+        totalAmount: 0,
+        avgDaysOverdue: 0,
+        highPriorityCount: 0,
+        exceptionCount: 0,
+        scheduledFor: tomorrow.toISOString(),
+      },
+      tenantPolicies: {
+        executionTime: tenant.executionTime || '09:00',
+        dailyLimits: (tenant.dailyLimits as any) || { email: 100, sms: 50, voice: 20 },
+      },
+      planGeneratedAt: new Date().toISOString(),
+    };
   }
 
   // If regenerating, delete existing pending_approval/exception actions for tomorrow
