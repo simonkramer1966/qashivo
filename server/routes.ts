@@ -6017,22 +6017,23 @@ Guidelines:
         return res.status(404).json({ message: "Action not found" });
       }
 
-      // Update action status to escalated
+      // Update action status to exception (VIP) for manual handling
       await db
         .update(actions)
         .set({
-          status: "escalated",
+          status: "exception",
+          exceptionReason: reason || "manual_escalation",
           escalatedBy: user.id,
           escalatedAt: new Date(),
-          escalationReason: reason || null,
+          escalationReason: reason || "manual_escalation",
           updatedAt: new Date(),
         })
         .where(eq(actions.id, id));
 
-      console.log(`🚨 Action ${id} escalated by ${user.firstName} ${user.lastName}`);
+      console.log(`🚨 Action ${id} moved to VIP by ${user.firstName} ${user.lastName}`);
 
       res.json({ 
-        message: "Action escalated for manual handling",
+        message: "Action moved to VIP for manual handling",
         actionId: id
       });
     } catch (error) {

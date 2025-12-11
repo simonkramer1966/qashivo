@@ -707,6 +707,7 @@ export default function ActionCentre() {
       const response = await fetch(`/api/actions/${actionId}/escalate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
       });
       if (!response.ok) {
         const error = await response.json();
