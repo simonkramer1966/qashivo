@@ -5779,7 +5779,9 @@ Guidelines:
       let content = '';
       let usedPreGeneratedDraft = false;
       
-      const channel = action.type === 'call' ? 'voice' : action.type as 'email' | 'sms' | 'voice';
+      // Normalize channel to lowercase for consistent lookup
+      const rawType = action.type?.toLowerCase() || 'email';
+      const channel = rawType === 'call' ? 'voice' : rawType as 'email' | 'sms' | 'voice';
       const [draft] = await db.select()
         .from(messageDrafts)
         .where(and(
@@ -5795,9 +5797,21 @@ Guidelines:
         usedPreGeneratedDraft = true;
         console.log(`⚡ Using pre-generated ${channel} draft for action ${action.id}`);
       } else {
-        // Fall back to action's stored content or template
-        subject = action.subject || '';
-        content = action.content || '';
+        // Fall back to channel-appropriate content
+        if (channel === 'sms') {
+          // Generate short SMS fallback (not the email template)
+          const invoiceText = invoicesWithOverdue.length === 1 ? 'invoice' : 'invoices';
+          const formattedTotal = new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' }).format(totalOverdue);
+          content = `Hi ${contactName}, you have ${invoicesWithOverdue.length} ${invoiceText} totalling ${formattedTotal} overdue. Please arrange payment or call us. - ${tenant?.name || 'Your Company'}`;
+        } else if (channel === 'voice') {
+          // Voice script fallback
+          const formattedTotal = new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' }).format(totalOverdue);
+          content = `Hello, this is calling on behalf of ${tenant?.name || 'Your Company'}. I'm calling about ${invoicesWithOverdue.length} outstanding invoice${invoicesWithOverdue.length > 1 ? 's' : ''} totalling ${formattedTotal}. I wanted to check if there are any issues and see if we can help arrange payment.`;
+        } else {
+          // Email - use stored content or template
+          subject = action.subject || '';
+          content = action.content || '';
+        }
       }
 
       // Replace template variables (for fallback content)
