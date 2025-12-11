@@ -9,6 +9,17 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { 
   Mail, 
   Phone, 
@@ -31,7 +42,8 @@ import {
   Users,
   TrendingUp,
   Calendar as CalendarIcon,
-  RefreshCw
+  RefreshCw,
+  Trash2
 } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -764,6 +776,37 @@ export default function ActionCentre() {
     },
   });
 
+  // Delete all planned actions
+  const deletePlanMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch('/api/automation/daily-plan', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to delete plan');
+      }
+      return await response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Plan Deleted",
+        description: `Deleted ${data.deletedCount || 0} planned actions`,
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/automation/daily-plan'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/actions'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/action-centre/tabs'] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete plan",
+        variant: "destructive",
+      });
+    },
+  });
+
   // Toggle selection helper
   const toggleSelection = (actionId: string) => {
     const newSelection = new Set(selectedActions);
@@ -1487,6 +1530,46 @@ export default function ActionCentre() {
                       </p>
                     </div>
                     <div className="flex items-center gap-3">
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            disabled={deletePlanMutation.isPending || dailyPlan.actions.length === 0}
+                            variant="outline"
+                            className="text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
+                            data-testid="button-delete-all-plan"
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            {deletePlanMutation.isPending ? 'Deleting...' : 'Delete All'}
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Delete All Planned Actions?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              This will permanently delete all {dailyPlan.actions.filter(a => a.status === 'pending_approval' || a.status === 'scheduled').length} planned actions. This action cannot be undone.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => deletePlanMutation.mutate()}
+                              className="bg-red-600 hover:bg-red-700 text-white"
+                            >
+                              Delete All
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                      <Button
+                        onClick={() => generatePlanMutation.mutate()}
+                        disabled={generatePlanMutation.isPending}
+                        variant="outline"
+                        className="text-slate-600 border-slate-200 hover:bg-slate-50"
+                        data-testid="button-regenerate-plan"
+                      >
+                        <RefreshCw className={`h-4 w-4 mr-2 ${generatePlanMutation.isPending ? 'animate-spin' : ''}`} />
+                        {generatePlanMutation.isPending ? 'Generating...' : 'Generate'}
+                      </Button>
                       <Button
                         onClick={() => approvePlanMutation.mutate()}
                         disabled={approvePlanMutation.isPending || dailyPlan.actions.filter(a => a.status === 'pending_approval').length === 0}

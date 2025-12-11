@@ -9430,6 +9430,37 @@ Payment required immediately to avoid collection action. Contact us NOW.`
     }
   });
 
+  // Delete all planned actions (for demo/testing purposes)
+  app.delete("/api/automation/daily-plan", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      // Delete all pending_approval and scheduled actions for this tenant
+      const result = await db
+        .delete(actions)
+        .where(
+          and(
+            eq(actions.tenantId, user.tenantId),
+            inArray(actions.status, ['pending_approval', 'scheduled'])
+          )
+        )
+        .returning({ id: actions.id });
+
+      console.log(`🗑️ Deleted ${result.length} planned actions for tenant ${user.tenantId}`);
+
+      res.json({
+        message: "All planned actions deleted",
+        deletedCount: result.length,
+      });
+    } catch (error: any) {
+      console.error("Error deleting planned actions:", error);
+      res.status(500).json({ message: `Failed to delete planned actions: ${error.message}` });
+    }
+  });
+
   app.post("/api/automation/approve-plan", isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
