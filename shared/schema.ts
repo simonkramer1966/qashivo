@@ -109,6 +109,17 @@ export const tenants = pgTable("tenants", {
     flagVipCustomers: true,
   }), // Rules for flagging actions as exceptions
   
+  // Playbook Configuration (AI-Driven Collections)
+  tenantStyle: varchar("tenant_style").default("STANDARD"), // GENTLE, STANDARD, FIRM - affects tone of communications
+  highValueThreshold: decimal("high_value_threshold", { precision: 10, scale: 2 }).default("10000"), // Amount that triggers HIGH_VALUE risk tag
+  singleInvoiceHighValueThreshold: decimal("single_invoice_high_value_threshold", { precision: 10, scale: 2 }).default("5000"), // Single invoice threshold for HIGH_VALUE
+  useLatePamentLegislation: boolean("use_late_payment_legislation").default(false), // Enable statutory interest/costs notifications
+  channelCooldowns: jsonb("channel_cooldowns").default({ email: 3, sms: 5, voice: 7 }), // Minimum days between contacts per channel
+  maxTouchesPerWindow: integer("max_touches_per_window").default(3), // Max outbound touches per 14-day window
+  contactWindowDays: integer("contact_window_days").default(14), // Contact frequency window in days
+  businessHoursStart: varchar("business_hours_start").default("08:00"), // Earliest time for voice calls
+  businessHoursEnd: varchar("business_hours_end").default("18:00"), // Latest time for voice calls
+  
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -148,6 +159,19 @@ export const contacts = pgTable("contacts", {
   // Collections workflow assignment
   workflowId: varchar("workflow_id").references(() => workflows.id), // Assigned collections workflow (defaults to Standard Collections Workflow)
   
+  // Playbook-driven collections state (AI autonomous decision-making)
+  playbookStage: varchar("playbook_stage").default("CREDIT_CONTROL"), // CREDIT_CONTROL, RECOVERY, LEGAL
+  playbookRiskTag: varchar("playbook_risk_tag").default("NORMAL"), // NORMAL, HIGH_VALUE
+  manualBlocked: boolean("manual_blocked").default(false), // User disabled auto-chasing for this customer
+  nextTouchNotBefore: timestamp("next_touch_not_before"), // Cooldown: don't contact before this time
+  lastOutboundAt: timestamp("last_outbound_at"), // Last outbound chase (any channel)
+  lastOutboundChannel: varchar("last_outbound_channel"), // EMAIL, SMS, VOICE
+  lastInboundAt: timestamp("last_inbound_at"), // Last meaningful reply from customer
+  contactCountLast30d: integer("contact_count_last_30d").default(0), // Outbound touches in last 30 days
+  isPotentiallyVulnerable: boolean("is_potentially_vulnerable").default(false), // Sole trader under strain - softer approach
+  wrongPartyRisk: varchar("wrong_party_risk").default("NONE"), // NONE, SUSPECTED, CONFIRMED
+  interestNotified: boolean("interest_notified").default(false), // Whether statutory interest notification was sent
+  
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => [
@@ -156,6 +180,8 @@ export const contacts = pgTable("contacts", {
   index("idx_contacts_email").on(table.email),
   index("idx_contacts_company_name").on(table.companyName),
   index("idx_contacts_tenant_id").on(table.tenantId),
+  index("idx_contacts_playbook_stage").on(table.playbookStage),
+  index("idx_contacts_next_touch").on(table.nextTouchNotBefore),
 ]);
 
 // Contact Notes table

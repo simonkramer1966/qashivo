@@ -328,12 +328,18 @@ export class ActionExecutor {
           invoiceNumber: invoice?.invoiceNumber || 'N/A',
           amount: invoice?.amount || 'N/A',
           daysOverdue: action.metadata?.daysOverdue || 0,
+          voiceTone: action.metadata?.voiceTone || 'VOICE_TONE_CALM_COLLABORATIVE',
+          toneProfile: action.metadata?.toneProfile || 'CREDIT_CONTROL_FRIENDLY',
+          stage: action.metadata?.stage || 'CREDIT_CONTROL',
+          reasonCode: action.metadata?.reasonCode || 'GENERIC_OVERDUE_FOLLOWUP',
         },
         metadata: {
           tenantId: tenant.id,
           contactId: contact.id,
           invoiceId: invoice?.id,
           actionId: action.id,
+          voiceTone: action.metadata?.voiceTone,
+          stage: action.metadata?.stage,
         }
       });
 

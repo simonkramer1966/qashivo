@@ -59,6 +59,345 @@ import ProtectedComponent from "@/components/rbac/ProtectedComponent";
 import PermissionMatrix from "@/components/rbac/PermissionMatrix";
 import UserInviteModal from "@/components/rbac/UserInviteModal";
 import UserManagementTabContent from "@/components/rbac/UserManagementTabContent";
+import { BookOpen, Volume2, Timer, Gauge } from "lucide-react";
+
+// Playbook settings interface
+interface PlaybookSettings {
+  tenantStyle: string;
+  highValueThreshold: string;
+  singleInvoiceHighValueThreshold: string;
+  useLatePamentLegislation: boolean;
+  channelCooldowns: { email: number; sms: number; voice: number };
+  maxTouchesPerWindow: number;
+  contactWindowDays: number;
+  businessHoursStart: string;
+  businessHoursEnd: string;
+}
+
+// Playbook Tab Component - AI-Driven Collections Configuration
+function PlaybookTabContent() {
+  const { toast } = useToast();
+  const { user } = useAuth();
+  
+  const { data: tenantSettings, isLoading } = useQuery<PlaybookSettings>({
+    queryKey: ['/api/settings/playbook'],
+  });
+
+  const updatePlaybookMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const response = await apiRequest('PATCH', '/api/settings/playbook', data);
+      if (!response.ok) throw new Error('Failed to update playbook settings');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/settings/playbook'] });
+      toast({
+        title: "Settings Updated",
+        description: "Your playbook configuration has been saved.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update settings. Please try again.",
+        variant: "destructive",
+      });
+    }
+  });
+
+  const [tenantStyle, setTenantStyle] = useState<string>('STANDARD');
+  const [highValueThreshold, setHighValueThreshold] = useState<string>('10000');
+  const [singleInvoiceThreshold, setSingleInvoiceThreshold] = useState<string>('5000');
+  const [useLatePamentLegislation, setUseLatePamentLegislation] = useState(false);
+  const [emailCooldown, setEmailCooldown] = useState<string>('3');
+  const [smsCooldown, setSmsCooldown] = useState<string>('5');
+  const [voiceCooldown, setVoiceCooldown] = useState<string>('7');
+  const [maxTouchesPerWindow, setMaxTouchesPerWindow] = useState<string>('3');
+  const [businessHoursStart, setBusinessHoursStart] = useState<string>('08:00');
+  const [businessHoursEnd, setBusinessHoursEnd] = useState<string>('18:00');
+
+  useEffect(() => {
+    if (tenantSettings) {
+      setTenantStyle(tenantSettings.tenantStyle || 'STANDARD');
+      setHighValueThreshold(tenantSettings.highValueThreshold || '10000');
+      setSingleInvoiceThreshold(tenantSettings.singleInvoiceHighValueThreshold || '5000');
+      setUseLatePamentLegislation(tenantSettings.useLatePamentLegislation || false);
+      setEmailCooldown(tenantSettings.channelCooldowns?.email?.toString() || '3');
+      setSmsCooldown(tenantSettings.channelCooldowns?.sms?.toString() || '5');
+      setVoiceCooldown(tenantSettings.channelCooldowns?.voice?.toString() || '7');
+      setMaxTouchesPerWindow(tenantSettings.maxTouchesPerWindow?.toString() || '3');
+      setBusinessHoursStart(tenantSettings.businessHoursStart || '08:00');
+      setBusinessHoursEnd(tenantSettings.businessHoursEnd || '18:00');
+    }
+  }, [tenantSettings]);
+
+  const handleSave = () => {
+    updatePlaybookMutation.mutate({
+      tenantStyle,
+      highValueThreshold: parseFloat(highValueThreshold),
+      singleInvoiceHighValueThreshold: parseFloat(singleInvoiceThreshold),
+      useLatePamentLegislation,
+      channelCooldowns: {
+        email: parseInt(emailCooldown),
+        sms: parseInt(smsCooldown),
+        voice: parseInt(voiceCooldown),
+      },
+      maxTouchesPerWindow: parseInt(maxTouchesPerWindow),
+      businessHoursStart,
+      businessHoursEnd,
+    });
+  };
+
+  if (isLoading) {
+    return <div className="flex items-center justify-center p-8">Loading...</div>;
+  }
+
+  return (
+    <div className="space-y-8">
+      <Card className="card-glass">
+        <CardHeader>
+          <CardTitle className="text-xl font-bold flex items-center">
+            <div className="p-2 bg-[#17B6C3]/10 rounded-lg mr-3">
+              <BookOpen className="h-5 w-5 text-[#17B6C3]" />
+            </div>
+            AI Collections Playbook
+          </CardTitle>
+          <CardDescription className="text-base">
+            Configure how Qashivo's AI autonomously manages your credit control and collections. 
+            The playbook determines who to contact, when, and how - based on best-practice credit control principles.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <Alert>
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              <strong>AI-First Collections:</strong> Qashivo decides the optimal contact strategy based on invoice age, 
+              amount, payment history, and customer behaviour. You set the guardrails; the AI executes.
+            </AlertDescription>
+          </Alert>
+        </CardContent>
+      </Card>
+
+      <Card className="card-glass">
+        <CardHeader>
+          <CardTitle className="text-xl font-bold flex items-center">
+            <div className="p-2 bg-[#17B6C3]/10 rounded-lg mr-3">
+              <Volume2 className="h-5 w-5 text-[#17B6C3]" />
+            </div>
+            Communication Tone
+          </CardTitle>
+          <CardDescription className="text-base">
+            Set your preferred communication style. This affects email, SMS, and voice call tone across all stages.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="space-y-2">
+            <Label htmlFor="tenantStyle">Tenant Communication Style</Label>
+            <Select value={tenantStyle} onValueChange={setTenantStyle}>
+              <SelectTrigger className="bg-white/70 border-gray-200/30" data-testid="select-tenant-style">
+                <SelectValue placeholder="Select style" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="GENTLE">Gentle - Maximum relationship preservation, softest tone</SelectItem>
+                <SelectItem value="STANDARD">Standard - Professional balance of firmness and courtesy</SelectItem>
+                <SelectItem value="FIRM">Firm - Direct and assertive while remaining professional</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-sm text-muted-foreground">
+              This affects how AI communicates across credit control and recovery stages.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="card-glass">
+        <CardHeader>
+          <CardTitle className="text-xl font-bold flex items-center">
+            <div className="p-2 bg-[#17B6C3]/10 rounded-lg mr-3">
+              <Gauge className="h-5 w-5 text-[#17B6C3]" />
+            </div>
+            High-Value Thresholds
+          </CardTitle>
+          <CardDescription className="text-base">
+            Define what constitutes a high-value customer for escalation and VIP handling.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="grid grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <Label htmlFor="highValueThreshold">Total Overdue Threshold (£)</Label>
+              <Input 
+                id="highValueThreshold"
+                type="number"
+                value={highValueThreshold}
+                onChange={(e) => setHighValueThreshold(e.target.value)}
+                className="bg-white/70 border-gray-200/30"
+                data-testid="input-high-value-threshold"
+              />
+              <p className="text-sm text-muted-foreground">
+                Customers with total overdue above this are flagged as HIGH_VALUE
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="singleInvoiceThreshold">Single Invoice Threshold (£)</Label>
+              <Input 
+                id="singleInvoiceThreshold"
+                type="number"
+                value={singleInvoiceThreshold}
+                onChange={(e) => setSingleInvoiceThreshold(e.target.value)}
+                className="bg-white/70 border-gray-200/30"
+                data-testid="input-single-invoice-threshold"
+              />
+              <p className="text-sm text-muted-foreground">
+                Any single invoice above this triggers HIGH_VALUE treatment
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="card-glass">
+        <CardHeader>
+          <CardTitle className="text-xl font-bold flex items-center">
+            <div className="p-2 bg-[#17B6C3]/10 rounded-lg mr-3">
+              <Timer className="h-5 w-5 text-[#17B6C3]" />
+            </div>
+            Contact Frequency & Cooldowns
+          </CardTitle>
+          <CardDescription className="text-base">
+            Control how often AI contacts customers to avoid over-communication.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="grid grid-cols-3 gap-6">
+            <div className="space-y-2">
+              <Label htmlFor="emailCooldown">Email Cooldown (days)</Label>
+              <Input 
+                id="emailCooldown"
+                type="number"
+                min="1"
+                max="30"
+                value={emailCooldown}
+                onChange={(e) => setEmailCooldown(e.target.value)}
+                className="bg-white/70 border-gray-200/30"
+                data-testid="input-email-cooldown"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="smsCooldown">SMS Cooldown (days)</Label>
+              <Input 
+                id="smsCooldown"
+                type="number"
+                min="1"
+                max="30"
+                value={smsCooldown}
+                onChange={(e) => setSmsCooldown(e.target.value)}
+                className="bg-white/70 border-gray-200/30"
+                data-testid="input-sms-cooldown"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="voiceCooldown">Voice Call Cooldown (days)</Label>
+              <Input 
+                id="voiceCooldown"
+                type="number"
+                min="1"
+                max="30"
+                value={voiceCooldown}
+                onChange={(e) => setVoiceCooldown(e.target.value)}
+                className="bg-white/70 border-gray-200/30"
+                data-testid="input-voice-cooldown"
+              />
+            </div>
+          </div>
+          
+          <Separator />
+          
+          <div className="grid grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <Label htmlFor="maxTouches">Max Touches per 14-day Window</Label>
+              <Input 
+                id="maxTouches"
+                type="number"
+                min="1"
+                max="10"
+                value={maxTouchesPerWindow}
+                onChange={(e) => setMaxTouchesPerWindow(e.target.value)}
+                className="bg-white/70 border-gray-200/30"
+                data-testid="input-max-touches"
+              />
+              <p className="text-sm text-muted-foreground">
+                Maximum outbound contacts per customer within any 14-day period
+              </p>
+            </div>
+            <div className="space-y-4">
+              <Label>Business Hours for Voice Calls</Label>
+              <div className="flex items-center gap-4">
+                <Input 
+                  type="time"
+                  value={businessHoursStart}
+                  onChange={(e) => setBusinessHoursStart(e.target.value)}
+                  className="bg-white/70 border-gray-200/30 w-32"
+                  data-testid="input-business-hours-start"
+                />
+                <span className="text-muted-foreground">to</span>
+                <Input 
+                  type="time"
+                  value={businessHoursEnd}
+                  onChange={(e) => setBusinessHoursEnd(e.target.value)}
+                  className="bg-white/70 border-gray-200/30 w-32"
+                  data-testid="input-business-hours-end"
+                />
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="card-glass">
+        <CardHeader>
+          <CardTitle className="text-xl font-bold flex items-center">
+            <div className="p-2 bg-[#17B6C3]/10 rounded-lg mr-3">
+              <ShieldAlert className="h-5 w-5 text-[#17B6C3]" />
+            </div>
+            Late Payment Legislation
+          </CardTitle>
+          <CardDescription className="text-base">
+            Enable statutory interest and compensation notifications for recovery-stage invoices.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div className="space-y-1">
+              <Label htmlFor="latePayment">Enable Late Payment Legislation</Label>
+              <p className="text-sm text-muted-foreground">
+                When enabled, AI will include statutory interest (Bank of England base rate + 8%) 
+                and compensation information in recovery-stage communications.
+              </p>
+            </div>
+            <Switch 
+              id="latePayment"
+              checked={useLatePamentLegislation}
+              onCheckedChange={setUseLatePamentLegislation}
+              data-testid="switch-late-payment-legislation"
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="flex justify-end">
+        <Button 
+          onClick={handleSave}
+          disabled={updatePlaybookMutation.isPending}
+          className="bg-[#17B6C3] hover:bg-[#1396A1] text-white"
+          data-testid="button-save-playbook"
+        >
+          {updatePlaybookMutation.isPending ? 'Saving...' : 'Save Playbook Settings'}
+        </Button>
+      </div>
+    </div>
+  );
+}
 
 // Test Tab Component
 function TestTabContent() {
@@ -1647,9 +1986,10 @@ export default function Settings() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <TabsList className="grid w-full grid-cols-8 bg-slate-50/80">
+                <TabsList className="grid w-full grid-cols-9 bg-slate-50/80">
                   <TabsTrigger value="general" className="data-[state=active]:bg-[#17B6C3] data-[state=active]:text-white" data-testid="tab-general">General</TabsTrigger>
                   <TabsTrigger value="integrations" className="data-[state=active]:bg-[#17B6C3] data-[state=active]:text-white" data-testid="tab-integrations">Integrations</TabsTrigger>
+                  <TabsTrigger value="playbook" className="data-[state=active]:bg-[#17B6C3] data-[state=active]:text-white" data-testid="tab-playbook">Playbook</TabsTrigger>
                   <TabsTrigger value="automation" className="data-[state=active]:bg-[#17B6C3] data-[state=active]:text-white" data-testid="tab-automation">Automation</TabsTrigger>
                   <TabsTrigger value="notifications" className="data-[state=active]:bg-[#17B6C3] data-[state=active]:text-white" data-testid="tab-notifications">Notifications</TabsTrigger>
                   <TabsTrigger value="security" className="data-[state=active]:bg-[#17B6C3] data-[state=active]:text-white" data-testid="tab-security">Security</TabsTrigger>
@@ -2406,6 +2746,10 @@ export default function Settings() {
                 <UserManagementTabContent />
               </TabsContent>
             </ProtectedComponent>
+
+            <TabsContent value="playbook" className="space-y-8">
+              <PlaybookTabContent />
+            </TabsContent>
 
             <TabsContent value="test" className="space-y-8">
               <TestTabContent />

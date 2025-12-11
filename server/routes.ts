@@ -14268,6 +14268,109 @@ Return only JSON with keys: intent, sentiment, confidence, keyInsights, actionIt
     }
   });
 
+  // Playbook settings endpoints - AI-Driven Collections Configuration
+  app.get('/api/settings/playbook', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const tenant = await storage.getTenant(user.tenantId);
+      if (!tenant) {
+        return res.status(404).json({ message: "Tenant not found" });
+      }
+
+      res.json({
+        tenantStyle: tenant.tenantStyle || 'STANDARD',
+        highValueThreshold: tenant.highValueThreshold || '10000',
+        singleInvoiceHighValueThreshold: tenant.singleInvoiceHighValueThreshold || '5000',
+        useLatePamentLegislation: tenant.useLatePamentLegislation || false,
+        channelCooldowns: tenant.channelCooldowns || { email: 3, sms: 5, voice: 7 },
+        maxTouchesPerWindow: tenant.maxTouchesPerWindow || 3,
+        contactWindowDays: tenant.contactWindowDays || 14,
+        businessHoursStart: tenant.businessHoursStart || '08:00',
+        businessHoursEnd: tenant.businessHoursEnd || '18:00',
+      });
+    } catch (error) {
+      console.error("Error fetching playbook settings:", error);
+      res.status(500).json({ message: "Failed to fetch playbook settings" });
+    }
+  });
+
+  // Playbook settings schema for validation
+  const playbookSettingsSchema = z.object({
+    tenantStyle: z.enum(['GENTLE', 'STANDARD', 'FIRM']).optional(),
+    highValueThreshold: z.union([z.string(), z.number()]).optional(),
+    singleInvoiceHighValueThreshold: z.union([z.string(), z.number()]).optional(),
+    useLatePamentLegislation: z.boolean().optional(),
+    channelCooldowns: z.object({
+      email: z.number().min(1).max(30),
+      sms: z.number().min(1).max(30),
+      voice: z.number().min(1).max(30),
+    }).optional(),
+    maxTouchesPerWindow: z.number().min(1).max(10).optional(),
+    contactWindowDays: z.number().min(7).max(30).optional(),
+    businessHoursStart: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/).optional(),
+    businessHoursEnd: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/).optional(),
+  });
+
+  app.patch('/api/settings/playbook', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      // Validate request body
+      const parseResult = playbookSettingsSchema.safeParse(req.body);
+      if (!parseResult.success) {
+        return res.status(400).json({ 
+          message: "Invalid playbook settings", 
+          errors: parseResult.error.errors 
+        });
+      }
+
+      const validated = parseResult.data;
+      
+      // Get current tenant to merge channelCooldowns properly
+      const currentTenant = await storage.getTenant(user.tenantId);
+      const currentCooldowns = currentTenant?.channelCooldowns || { email: 3, sms: 5, voice: 7 };
+
+      const updates: any = {};
+      if (validated.tenantStyle !== undefined) updates.tenantStyle = validated.tenantStyle;
+      if (validated.highValueThreshold !== undefined) updates.highValueThreshold = String(validated.highValueThreshold);
+      if (validated.singleInvoiceHighValueThreshold !== undefined) updates.singleInvoiceHighValueThreshold = String(validated.singleInvoiceHighValueThreshold);
+      if (validated.useLatePamentLegislation !== undefined) updates.useLatePamentLegislation = validated.useLatePamentLegislation;
+      if (validated.channelCooldowns !== undefined) {
+        // Deep merge channelCooldowns to preserve unspecified values
+        updates.channelCooldowns = { ...currentCooldowns, ...validated.channelCooldowns };
+      }
+      if (validated.maxTouchesPerWindow !== undefined) updates.maxTouchesPerWindow = validated.maxTouchesPerWindow;
+      if (validated.contactWindowDays !== undefined) updates.contactWindowDays = validated.contactWindowDays;
+      if (validated.businessHoursStart !== undefined) updates.businessHoursStart = validated.businessHoursStart;
+      if (validated.businessHoursEnd !== undefined) updates.businessHoursEnd = validated.businessHoursEnd;
+
+      const tenant = await storage.updateTenant(user.tenantId!, updates);
+      console.log(`✅ Playbook settings updated for tenant ${user.tenantId}`);
+      
+      res.json({
+        tenantStyle: tenant.tenantStyle || 'STANDARD',
+        highValueThreshold: tenant.highValueThreshold || '10000',
+        singleInvoiceHighValueThreshold: tenant.singleInvoiceHighValueThreshold || '5000',
+        useLatePamentLegislation: tenant.useLatePamentLegislation || false,
+        channelCooldowns: tenant.channelCooldowns || { email: 3, sms: 5, voice: 7 },
+        maxTouchesPerWindow: tenant.maxTouchesPerWindow || 3,
+        contactWindowDays: tenant.contactWindowDays || 14,
+        businessHoursStart: tenant.businessHoursStart || '08:00',
+        businessHoursEnd: tenant.businessHoursEnd || '18:00',
+      });
+    } catch (error) {
+      console.error("Error updating playbook settings:", error);
+      res.status(500).json({ message: "Failed to update playbook settings" });
+    }
+  });
+
   // Partner registration endpoint (no auth required)
   app.post('/api/partner/register', async (req: any, res) => {
     try {
