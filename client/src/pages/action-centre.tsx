@@ -1165,6 +1165,7 @@ export default function ActionCentre() {
                 data-testid="tab-plan"
               >
                 <span>Planned</span>
+                <span className={`px-1.5 py-0.5 rounded-full text-xs ${activeTab === 'plan' ? 'bg-white/20' : 'bg-indigo-100 text-indigo-700'}`}>{dailyPlan?.actions?.length ?? 0}</span>
               </button>
               
               <button
@@ -1177,6 +1178,7 @@ export default function ActionCentre() {
                 data-testid="tab-completed"
               >
                 <span>Completed</span>
+                <span className={`px-1.5 py-0.5 rounded-full text-xs ${activeTab === 'completed' ? 'bg-white/20' : 'bg-slate-200'}`}>{tabData?.completed?.count ?? 0}</span>
               </button>
               
               <button
