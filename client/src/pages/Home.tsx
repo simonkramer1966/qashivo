@@ -27,8 +27,6 @@ import {
 import heroImage from "@assets/generated_images/Advanced_AI_technology_center_4b230f51.png";
 import logo from "@assets/Main Nexus Logo copy_1763392904110.png";
 import xeroLogo from "@assets/Xero_software_logo.svg_1763402921236.png";
-import quickbooksLogo from "@assets/quickbnooks_1763403237750.png";
-import sageLogo from "@assets/sage_1763403374233.png";
 import dashboardScreenshot from "@assets/Screenshot_2025-12-10_at_11.20.44_1765365915412.png";
 import step1PlannedImage from "@assets/Screenshot_2025-12-10_at_11.28.38_1765366388284.png";
 import step2CompletedImage from "@assets/Screenshot_2025-12-10_at_11.42.18_1765367144185.png";
@@ -554,22 +552,16 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              Connected in 60 Seconds. AI Working Immediately.
+              Connect to Xero in 60 Seconds. AI Working Immediately.
             </h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
               Link your accounting software and watch Qashivo spring into action. 
               No lengthy onboarding. No implementation projects. Just results.
             </p>
           </div>
-          <div className="flex justify-center items-center gap-12 flex-wrap">
+          <div className="flex justify-center items-center">
             <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 shadow-lg border border-gray-200 hover:border-[#17B6C3] hover:shadow-xl transition-all w-48 h-32 flex items-center justify-center">
               <img src={xeroLogo} alt="Xero" className="max-h-16 max-w-full object-contain" />
-            </div>
-            <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 shadow-lg border border-gray-200 hover:border-[#17B6C3] hover:shadow-xl transition-all w-48 h-32 flex items-center justify-center">
-              <img src={quickbooksLogo} alt="QuickBooks" className="max-h-16 max-w-full object-contain" />
-            </div>
-            <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 shadow-lg border border-gray-200 hover:border-[#17B6C3] hover:shadow-xl transition-all w-48 h-32 flex items-center justify-center">
-              <img src={sageLogo} alt="Sage" className="max-h-16 max-w-full object-contain" />
             </div>
           </div>
         </div>
