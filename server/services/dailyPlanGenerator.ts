@@ -229,6 +229,12 @@ export async function generateDailyPlan(
       status = 'exception';
     }
 
+    // Generate appropriate subject line (single vs multiple invoices)
+    const invoiceCount = rec.invoiceCount || 1;
+    const defaultSubject = invoiceCount > 1
+      ? `Payment reminder - ${invoiceCount} outstanding invoices totalling ${rec.totalOverdue || rec.amount}`
+      : `Payment reminder - Invoice ${rec.invoiceNumber}`;
+
     // Create action record in database
     const [newAction] = await db.insert(actions).values({
       tenantId,
@@ -237,7 +243,7 @@ export async function generateDailyPlan(
       userId,
       type: actionType,
       status,
-      subject: rec.actionDetails.subject || `Payment reminder - Invoice ${rec.invoiceNumber}`,
+      subject: rec.actionDetails.subject || defaultSubject,
       content: rec.actionDetails.message || generateDefaultMessage(rec),
       scheduledFor: tomorrow,
       confidenceScore: confidenceScore.toString(),
@@ -248,7 +254,9 @@ export async function generateDailyPlan(
         scheduleName: rec.scheduleName,
         priority: rec.priority,
         generatedBy: 'daily_plan',
-        invoiceCount: rec.invoiceCount || 1,
+        invoiceCount: invoiceCount,
+        allInvoices: rec.allInvoices,
+        totalOverdue: rec.totalOverdue,
       },
       aiGenerated: true,
       source: 'automated',
@@ -269,7 +277,7 @@ export async function generateDailyPlan(
       confidenceScore,
       exceptionReason,
       priority: rec.priority,
-      invoiceCount: rec.invoiceCount || 1,
+      invoiceCount: invoiceCount,
     });
 
     channelCounts[actionType]++;
@@ -367,8 +375,39 @@ function buildPlanSummary(existingActions: any[], tenant: any): DailyPlanRespons
 
 /**
  * Helper: Generate default message content
+ * Supports both single invoices and consolidated multi-invoice reminders
  */
 function generateDefaultMessage(action: CollectionAction): string {
+  const invoiceCount = action.invoiceCount || 1;
+  const hasMultipleInvoices = invoiceCount > 1 && action.invoiceTable;
+  
+  // For multiple invoices, use consolidated messaging with invoice table
+  if (hasMultipleInvoices) {
+    const totalAmount = action.totalOverdue || action.amount;
+    const oldestDays = action.oldestInvoiceDays || action.daysOverdue;
+    
+    if (oldestDays < 7) {
+      return `<p>Dear ${action.contactName},</p>
+<p>This is a friendly reminder that you have <strong>${invoiceCount} invoices</strong> totalling <strong>${totalAmount}</strong> that are now overdue.</p>
+${action.invoiceTable}
+<p>Please arrange payment at your earliest convenience.</p>
+<p>Thank you.</p>`;
+    } else if (oldestDays < 30) {
+      return `<p>Dear ${action.contactName},</p>
+<p>You have <strong>${invoiceCount} invoices</strong> totalling <strong>${totalAmount}</strong> that require your immediate attention.</p>
+${action.invoiceTable}
+<p>Please contact us if there are any issues preventing payment.</p>
+<p>Thank you.</p>`;
+    } else {
+      return `<p>Dear ${action.contactName},</p>
+<p>We note that you have <strong>${invoiceCount} invoices</strong> totalling <strong>${totalAmount}</strong> that remain unpaid, with the oldest being ${oldestDays} days overdue.</p>
+${action.invoiceTable}
+<p>We require urgent payment to avoid further action. Please contact us immediately to discuss payment arrangements.</p>
+<p>Thank you.</p>`;
+    }
+  }
+  
+  // Single invoice messaging (original behavior)
   if (action.daysOverdue < 7) {
     return `Dear ${action.contactName},\n\nThis is a friendly reminder that invoice ${action.invoiceNumber} for ${action.amount} is now ${action.daysOverdue} days overdue.\n\nPlease arrange payment at your earliest convenience.\n\nThank you.`;
   } else if (action.daysOverdue < 30) {
