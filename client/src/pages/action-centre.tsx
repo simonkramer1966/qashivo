@@ -519,6 +519,7 @@ export default function ActionCentre() {
     confidenceScore: number;
     exceptionReason?: string;
     priority: string;
+    invoiceCount?: number;
   }
 
   interface DailyPlanResponse {
@@ -1578,6 +1579,11 @@ export default function ActionCentre() {
                               }`} />
                             </div>
                             <span className="text-sm text-slate-900 font-medium truncate flex-1">{item.contactName}</span>
+                            {item.invoiceCount && item.invoiceCount > 1 && (
+                              <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 shrink-0">
+                                {item.invoiceCount} invoices
+                              </span>
+                            )}
                             <span className={`text-xs px-2 py-1 rounded-full shrink-0 ${
                               item.priority === 'high' ? 'bg-rose-100 text-rose-700' :
                               item.priority === 'medium' ? 'bg-amber-100 text-amber-700' :

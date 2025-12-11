@@ -19,6 +19,7 @@ export interface DailyPlanAction {
   confidenceScore: number;
   exceptionReason?: string;
   priority: string;
+  invoiceCount?: number;
 }
 
 export interface DailyPlanResponse {
@@ -222,6 +223,7 @@ export async function generateDailyPlan(
         scheduleName: rec.scheduleName,
         priority: rec.priority,
         generatedBy: 'daily_plan',
+        invoiceCount: rec.invoiceCount || 1,
       },
       aiGenerated: true,
       source: 'automated',
@@ -242,6 +244,7 @@ export async function generateDailyPlan(
       confidenceScore,
       exceptionReason,
       priority: rec.priority,
+      invoiceCount: rec.invoiceCount || 1,
     });
 
     channelCounts[actionType]++;
@@ -304,6 +307,7 @@ function buildPlanSummary(existingActions: any[], tenant: any): DailyPlanRespons
     confidenceScore: parseFloat(action.confidenceScore || '0.85'),
     exceptionReason: action.exceptionReason || undefined,
     priority: action.metadata?.priority || 'normal',
+    invoiceCount: action.metadata?.invoiceCount || 1,
   }));
 
   const totalValue = planActions.reduce((sum, a) => sum + parseFloat(a.amount), 0);
