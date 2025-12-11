@@ -128,7 +128,7 @@ export async function checkCollectionActions(tenantId: string): Promise<Collecti
         and(
           eq(invoices.tenantId, tenantId),
           lte(invoices.dueDate, today), // Invoice is past due
-          gte(invoices.amount, invoices.amountPaid || 0), // Still has outstanding balance
+          sql`COALESCE(${invoices.amountPaid}, 0) < ${invoices.amount}`, // Has outstanding balance (amountPaid < amount)
           sql`${invoices.status} NOT IN ('paid', 'cancelled', 'void')` // Exclude paid/cancelled/void invoices
         )
       );
@@ -176,37 +176,47 @@ export async function checkCollectionActions(tenantId: string): Promise<Collecti
     }
 
     // Generate one action per contact with aggregated invoice data
-    for (const [contactId, data] of contactInvoiceMap) {
+    const contactEntries = Array.from(contactInvoiceMap.entries());
+    for (const [contactId, data] of contactEntries) {
       const { contact, invoices: contactInvoices, assignment, schedule } = data;
 
+      type InvoiceWithOverdue = { invoice: typeof contactInvoices[0]['invoice']; daysOverdue: number };
+      
       // Find the oldest invoice to determine the schedule step
-      const oldestInvoice = contactInvoices.reduce((max, curr) => 
-        curr.daysOverdue > max.daysOverdue ? curr : max
-      , contactInvoices[0]);
+      const oldestInvoice = contactInvoices.reduce(
+        (max: InvoiceWithOverdue, curr: InvoiceWithOverdue) => 
+          curr.daysOverdue > max.daysOverdue ? curr : max,
+        contactInvoices[0]
+      );
 
       // Parse schedule steps
-      const steps = (Array.isArray(schedule!.scheduleSteps) ? schedule!.scheduleSteps : [])
-        .map(s => ({ ...s, trigger: Number(s.daysTrigger ?? s.delay) }))
-        .filter(s => Number.isFinite(s.trigger))
-        .sort((a, b) => a.trigger - b.trigger);
+      type ScheduleStep = { daysTrigger?: number; delay?: number; trigger: number; [key: string]: any };
+      const scheduleStepsRaw = Array.isArray(schedule!.scheduleSteps) ? schedule!.scheduleSteps : [];
+      const steps: ScheduleStep[] = scheduleStepsRaw
+        .map((s: any) => ({ ...s, trigger: Number(s.daysTrigger ?? s.delay) }))
+        .filter((s: ScheduleStep) => Number.isFinite(s.trigger))
+        .sort((a: ScheduleStep, b: ScheduleStep) => a.trigger - b.trigger);
       
-      const matchingStep = steps.filter(s => s.trigger <= oldestInvoice.daysOverdue).at(-1);
+      const matchingStep = steps.filter((s: ScheduleStep) => s.trigger <= oldestInvoice.daysOverdue).at(-1);
 
       if (matchingStep) {
         // Calculate aggregated values
-        const totalAmount = contactInvoices.reduce((sum, { invoice }) => 
-          sum + parseFloat(invoice.amount), 0
+        const totalAmount = contactInvoices.reduce(
+          (sum: number, item: InvoiceWithOverdue) => sum + parseFloat(item.invoice.amount), 
+          0
         );
-        const oldestDays = Math.max(...contactInvoices.map(i => i.daysOverdue));
+        const oldestDays = Math.max(...contactInvoices.map((i: InvoiceWithOverdue) => i.daysOverdue));
         
         // Build invoice summary list
-        const allInvoices: InvoiceSummary[] = contactInvoices.map(({ invoice, daysOverdue }) => ({
-          invoiceId: invoice.id,
-          invoiceNumber: invoice.invoiceNumber,
-          amount: invoice.amount,
-          dueDate: new Date(invoice.dueDate).toLocaleDateString('en-GB'),
-          daysOverdue,
-        })).sort((a, b) => b.daysOverdue - a.daysOverdue); // Oldest first
+        const allInvoices: InvoiceSummary[] = contactInvoices
+          .map((item: InvoiceWithOverdue) => ({
+            invoiceId: item.invoice.id,
+            invoiceNumber: item.invoice.invoiceNumber,
+            amount: item.invoice.amount,
+            dueDate: new Date(item.invoice.dueDate).toLocaleDateString('en-GB'),
+            daysOverdue: item.daysOverdue,
+          }))
+          .sort((a: InvoiceSummary, b: InvoiceSummary) => b.daysOverdue - a.daysOverdue); // Oldest first
 
         // Generate HTML invoice table for email templates
         const invoiceTable = generateInvoiceTableHtml(allInvoices);
