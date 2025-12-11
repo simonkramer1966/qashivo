@@ -4,7 +4,6 @@ import {
   Zap, 
   RefreshCw,
   Shield,
-  Clock,
   CheckCircle2,
   ArrowRight,
   Link2,
@@ -14,8 +13,6 @@ import {
 import heroImage from "@assets/generated_images/Advanced_AI_technology_center_4b230f51.png";
 import logo from "@assets/Main Nexus Logo copy_1763392904110.png";
 import xeroLogo from "@assets/Xero_software_logo.svg_1763402921236.png";
-import quickbooksLogo from "@assets/quickbnooks_1763403237750.png";
-import sageLogo from "@assets/sage_1763403374233.png";
 
 export default function Integrations() {
   const [, setLocation] = useLocation();
@@ -102,9 +99,9 @@ export default function Integrations() {
             </p>
           </div>
           
-          <div className="grid md:grid-cols-3 gap-8 max-w-4xl mx-auto">
+          <div className="flex justify-center">
             {/* Xero */}
-            <div className="bg-gradient-to-br from-slate-50 via-blue-50 to-teal-50 rounded-2xl p-8 text-center border border-white/50 shadow-lg hover:shadow-xl transition-shadow">
+            <div className="bg-gradient-to-br from-slate-50 via-blue-50 to-teal-50 rounded-2xl p-8 text-center border border-white/50 shadow-lg hover:shadow-xl transition-shadow max-w-sm">
               <div className="h-20 flex items-center justify-center mb-6">
                 <img src={xeroLogo} alt="Xero" className="h-16 object-contain" />
               </div>
@@ -113,32 +110,6 @@ export default function Integrations() {
               <div className="inline-flex items-center text-green-600 text-sm font-medium">
                 <CheckCircle2 className="h-4 w-4 mr-1" />
                 Available Now
-              </div>
-            </div>
-            
-            {/* QuickBooks */}
-            <div className="bg-gradient-to-br from-slate-50 via-blue-50 to-teal-50 rounded-2xl p-8 text-center border border-white/50 shadow-lg hover:shadow-xl transition-shadow">
-              <div className="h-20 flex items-center justify-center mb-6">
-                <img src={quickbooksLogo} alt="QuickBooks" className="h-16 object-contain" />
-              </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-2">QuickBooks</h3>
-              <p className="text-gray-600 mb-4">Complete integration with QB Online and Desktop</p>
-              <div className="inline-flex items-center text-amber-600 text-sm font-medium">
-                <Clock className="h-4 w-4 mr-1" />
-                Coming Q1 2026
-              </div>
-            </div>
-            
-            {/* Sage */}
-            <div className="bg-gradient-to-br from-slate-50 via-blue-50 to-teal-50 rounded-2xl p-8 text-center border border-white/50 shadow-lg hover:shadow-xl transition-shadow">
-              <div className="h-20 flex items-center justify-center mb-6">
-                <img src={sageLogo} alt="Sage" className="h-16 object-contain" />
-              </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-2">Sage</h3>
-              <p className="text-gray-600 mb-4">Deep integration with Sage 50 and Sage Business Cloud</p>
-              <div className="inline-flex items-center text-amber-600 text-sm font-medium">
-                <Clock className="h-4 w-4 mr-1" />
-                Coming Q2 2026
               </div>
             </div>
           </div>
