@@ -1,0 +1,863 @@
+QASHIVO V1 COLLECTIONS PLAYBOOK SPEC
+(Credit Control First, Recovery Second, Legal-Ready)
+
+Purpose and philosophy
+
+Qashivo is first and foremost a credit control tool, not a debt collection tool.
+
+The primary job of this playbook is to:
+
+Help businesses stay on top of credit control in a calm, professional way.
+
+Use polite, relationship-preserving communication in the early and mid stages.
+
+Only move a subset of cases into a “recovery” stage, where the tone becomes clearly firmer, but still professional and non-threatening.
+
+Be ready for a later “legal” stage, where cases may be passed to county court or high court enforcement. The legal stage is not defined or implemented in V1, but the playbook structure should support adding it.
+
+The playbook is implemented in code only. There is no workflow builder in the UI.
+
+For each customer, the playbook decides:
+
+Whether they appear in the Action Centre today.
+
+Their priority (High / Medium / Low).
+
+A single recommended next action (email / SMS / AI voice / snooze).
+
+A reason code that explains why.
+
+The collections stage they are in:
+
+CREDIT_CONTROL
+
+RECOVERY
+
+(LEGAL – reserved for future extension)
+
+A tone profile, including a voice tone variable for Retell, so the AI agent knows how to speak to the client.
+
+AI then drafts the actual content (emails, SMS, call scripts) using this context and tone.
+
+Core entities and fields
+
+1.1 Per invoice
+
+For each invoice we need at least:
+
+invoice_id
+
+customer_id
+
+issue_date
+
+due_date
+
+amount
+
+status (OUTSTANDING / PAID / CREDIT)
+
+days_overdue (calculated as max(0, today - due_date))
+
+is_disputed (true/false)
+
+1.2 Per customer (collections state)
+
+For each customer we maintain derived fields:
+
+total_ar (all outstanding invoices, including not-overdue)
+
+total_overdue
+
+max_days_overdue
+
+avg_days_overdue
+
+overdue_band:
+
+CURRENT (no overdue)
+
+0_7 (1–7 days overdue)
+
+8_30
+
+31_60
+
+61_90
+
+90_PLUS
+
+stage:
+
+CREDIT_CONTROL
+
+RECOVERY
+
+LEGAL (reserved for future; not used in V1 logic)
+
+last_outbound_at (datetime of any last outbound chase: email/SMS/voice)
+
+last_outbound_channel (EMAIL / SMS / VOICE)
+
+last_inbound_at (datetime of last meaningful reply/input from customer)
+
+contact_count_last_30d (number of outbound chases)
+
+in_dispute (true if any open invoice is in dispute)
+
+ptp_status (NONE / ACTIVE / MET / MISSED)
+
+ptp_promised_date (if ACTIVE)
+
+ptp_last_outcome_at
+
+manual_blocked (true if user has said “don’t auto-chase this customer”)
+
+risk_tag (NORMAL / HIGH_VALUE), for example HIGH_VALUE if:
+
+total_overdue > £10k, or
+
+any single outstanding invoice > £5k
+
+tenant_style: a simple tenant-level preference such as GENTLE / STANDARD / FIRM (this is optional but useful).
+
+1.3 Stage definition: Credit control vs Recovery vs Legal
+
+Stage is derived but can also be manually overridden.
+
+Default behaviour in V1:
+
+If max_days_overdue < 90 days → stage = CREDIT_CONTROL
+
+If max_days_overdue >= 90 days → stage = RECOVERY
+
+LEGAL is reserved for future:
+
+stage = LEGAL will be used later when a case has been handed over to legal (for example county court or high court).
+
+In V1, logic should treat LEGAL as “do not auto-chase; informational/hand-off only”.
+
+Stage influences:
+
+Tone and template choice:
+
+CREDIT_CONTROL → polite, helpful, assuming good intent.
+
+RECOVERY → clearly firmer, more formal, highlighting seriousness, but still professional and non-threatening.
+
+LEGAL (future) → likely no AI chasing; communication is either internal or via specialist legal templates.
+
+Priority weighting (recovery and, in future, legal cases tend to be higher priority, all else equal).
+
+1.4 Tone profile and voice tone (for Retell)
+
+The playbook should define a tone_profile for each suggested action, and a derived voice_tone that can be passed to Retell.
+
+Example tone_profile values:
+
+CREDIT_CONTROL_FRIENDLY
+
+CREDIT_CONTROL_FIRM
+
+RECOVERY_FORMAL_FIRM
+
+LEGAL_ESCALATION_INFO (reserved for future legal stage)
+
+Example voice_tone values for Retell:
+
+VOICE_TONE_CALM_COLLABORATIVE
+
+VOICE_TONE_FIRM_COLLABORATIVE
+
+VOICE_TONE_FORMAL_RECOVERY
+
+VOICE_TONE_LEGAL_INFO (future; not used in V1 content)
+
+Mapping rule of thumb:
+
+CREDIT_CONTROL_FRIENDLY → VOICE_TONE_CALM_COLLABORATIVE
+
+CREDIT_CONTROL_FIRM → VOICE_TONE_FIRM_COLLABORATIVE
+
+RECOVERY_FORMAL_FIRM → VOICE_TONE_FORMAL_RECOVERY
+
+LEGAL_ESCALATION_INFO → VOICE_TONE_LEGAL_INFO (for future use; V1 should not generate legal threats)
+
+1.5 Action Centre row
+
+The playbook outputs, for each eligible customer:
+
+priority_score (0–100 internal)
+
+priority_band (HIGH / MEDIUM / LOW)
+
+reason_code (text enum, for example: NEWLY_OVERDUE_7D, PTP_MISSED, 60D_HIGH_VALUE_NO_CONTACT, RECOVERY_90_PLUS_FORMAL_REMINDER)
+
+suggested_action (EMAIL / SMS / VOICE_CALL / SNOOZE)
+
+suggested_template_id (for example: EMAIL_FRIENDLY_REMINDER, SMS_OVERDUE_REMINDER, VOICE_PTP_CALL, RECOVERY_EMAIL_FORMAL_REMINDER)
+
+next_touch_not_before (datetime; used for cooldown logic)
+
+stage (CREDIT_CONTROL / RECOVERY / LEGAL)
+
+tone_profile (for written and spoken tone)
+
+voice_tone (specifically for Retell)
+
+Inclusion rules (who appears in the Action Centre)
+
+A customer appears in the Action Centre if all of the following are true:
+
+total_overdue > 0.
+
+manual_blocked is false.
+
+We are not in a cooldown period:
+
+Either next_touch_not_before is empty, or now >= next_touch_not_before.
+
+Disputes:
+
+If in_dispute is true and there is no open internal task to resolve the dispute, the customer is added as a low-priority “Needs review” item instead of being chased. This is still part of credit control: fix the dispute before chasing.
+
+Stage = CREDIT_CONTROL or RECOVERY.
+
+If stage = LEGAL (in future), default behaviour should be: do not surface as a chase action unless there is a dedicated legal workflow. LEGAL is reserved and should be safely ignored in V1.
+
+Priority scoring
+
+The goal of the score is to rank customers by commercial risk and urgency, with extra weight for missed promises to pay and high-value recovery cases.
+
+3.1 Inputs into the score
+
+For each eligible customer we calculate a base score, starting at 0, and then adding or subtracting.
+
+a) Overdue severity
+
+If max_days_overdue <= 7: add 10
+
+If 8–30 days: add 20
+
+If 31–60 days: add 40
+
+If 61–90 days: add 60
+
+If > 90 days: add 80
+
+b) Amount overdue
+
+If total_overdue >= £20,000: add 20
+
+If >= £10,000: add 15
+
+If >= £5,000: add 10
+
+If >= £1,000: add 5
+
+c) Promises to pay
+
+If ptp_status = MISSED: add 30 (broken promises matter a lot).
+
+If ptp_status = ACTIVE: subtract 10 (we give them some space until the promised date).
+
+d) Contact recency
+
+Let days_since_last_outbound be the number of days since last_outbound_at (or “no contact” if there hasn’t been any):
+
+If last_outbound_at is empty: add 10 (no one has chased them yet).
+
+If days_since_last_outbound >= 30: add 15.
+
+If days_since_last_outbound >= 14: add 10.
+
+If days_since_last_outbound <= 3: subtract 10 (we avoid spamming).
+
+e) Risk tag
+
+If risk_tag = HIGH_VALUE and max_days_overdue >= 60: add 10.
+
+f) Disputes
+
+If in_dispute is true: subtract 20 (we should resolve the dispute before aggressive chasing).
+
+g) Stage weighting (credit control vs recovery vs legal)
+
+If stage = RECOVERY: add 10 (recovery cases are more urgent by definition).
+
+If stage = LEGAL (future): treat similarly to RECOVERY or as a fixed high priority, but in V1 you can simply avoid using LEGAL so this line is effectively a no-op.
+
+3.2 Mapping score to priority band
+
+Once the base score is calculated:
+
+If score >= 70: priority_band = HIGH
+
+If 40 <= score < 70: priority_band = MEDIUM
+
+If score < 40: priority_band = LOW
+
+The Action Centre is sorted by:
+
+priority_band (HIGH first, then MEDIUM, then LOW),
+
+then score descending.
+
+Suggested action logic (playbook rules)
+
+The playbook rules map a customer’s situation to:
+
+reason_code
+
+suggested_action (channel)
+
+suggested_template_id
+
+cooldown (next_touch_not_before)
+
+stage (CREDIT_CONTROL / RECOVERY; LEGAL reserved)
+
+tone_profile (written + spoken tone)
+
+voice_tone (for Retell AI voice)
+
+Rules are evaluated in order; the first matching rule wins.
+
+Helper concepts:
+
+days_since_last_outbound
+
+days_since_last_inbound
+
+has_any_prior_contact = whether last_outbound_at is set
+
+4.1 Missed promise to pay (always top priority within stage)
+
+Condition:
+
+ptp_status = MISSED.
+
+Behaviour:
+
+reason_code = PTP_MISSED.
+
+If days_since_last_outbound > 3:
+
+If risk_tag = HIGH_VALUE or max_days_overdue >= 60:
+
+suggested_action = VOICE_CALL.
+
+suggested_template_id = VOICE_PTP_CHASE.
+
+tone_profile = depends on stage:
+
+If stage = CREDIT_CONTROL → CREDIT_CONTROL_FIRM.
+
+If stage = RECOVERY → RECOVERY_FORMAL_FIRM.
+
+voice_tone:
+
+CREDIT_CONTROL → VOICE_TONE_FIRM_COLLABORATIVE.
+
+RECOVERY → VOICE_TONE_FORMAL_RECOVERY.
+
+Otherwise:
+
+suggested_action = SMS.
+
+suggested_template_id = SMS_PTP_CHASE.
+
+tone_profile = CREDIT_CONTROL_FIRM or RECOVERY_FORMAL_FIRM depending on stage.
+
+voice_tone is not needed for SMS, but can be stored for consistency.
+
+next_touch_not_before = today + 3 days.
+
+Tone:
+
+If stage = CREDIT_CONTROL:
+
+Firm but still collaborative: “You promised X, we haven’t seen payment, can you confirm a new date?”
+
+If stage = RECOVERY:
+
+More formal and serious: “You previously committed to pay by X and that payment has not been received. We now need a firm payment date and may have to escalate next steps.”
+
+4.2 Newly overdue (0–7 days, credit control only)
+
+Condition:
+
+overdue_band = 0_7.
+
+has_any_prior_contact = false.
+
+stage = CREDIT_CONTROL (for 0–7 days it should almost always be credit control).
+
+Behaviour:
+
+reason_code = NEWLY_OVERDUE_7D.
+
+suggested_action = EMAIL.
+
+suggested_template_id = EMAIL_FRIENDLY_REMINDER.
+
+tone_profile = CREDIT_CONTROL_FRIENDLY.
+
+voice_tone = VOICE_TONE_CALM_COLLABORATIVE (mainly relevant if voice is ever used at this stage).
+
+next_touch_not_before = today + 5 days.
+
+Tone:
+
+Polite and helpful: “Just a quick reminder, this invoice is now overdue, please let us know if there are any issues.”
+
+4.3 Early overdue (8–30 days, credit control)
+
+Condition A: first touch.
+
+overdue_band = 8_30.
+
+has_any_prior_contact = false.
+
+stage = CREDIT_CONTROL.
+
+Action:
+
+reason_code = EARLY_OVERDUE_FIRST_TOUCH.
+
+suggested_action = EMAIL.
+
+suggested_template_id = EMAIL_FRIENDLY_REMINDER.
+
+tone_profile = CREDIT_CONTROL_FRIENDLY (or CREDIT_CONTROL_FIRM if tenant_style = FIRM).
+
+voice_tone = VOICE_TONE_CALM_COLLABORATIVE by default.
+
+next_touch_not_before = today + 7 days.
+
+Condition B: no response to first contact.
+
+overdue_band = 8_30.
+
+has_any_prior_contact = true.
+
+days_since_last_outbound >= 7.
+
+No meaningful reply: last_inbound_at is empty or older than last_outbound_at.
+
+stage = CREDIT_CONTROL.
+
+Action:
+
+reason_code = EARLY_OVERDUE_NO_RESPONSE.
+
+If total_overdue >= £5,000:
+
+suggested_action = SMS.
+
+suggested_template_id = SMS_OVERDUE_REMINDER.
+
+tone_profile = CREDIT_CONTROL_FIRM.
+
+voice_tone = VOICE_TONE_FIRM_COLLABORATIVE (kept for consistency, even though this is SMS).
+
+Else:
+
+suggested_action = EMAIL.
+
+suggested_template_id = EMAIL_FIRM_REMINDER.
+
+tone_profile = CREDIT_CONTROL_FIRM.
+
+voice_tone = VOICE_TONE_FIRM_COLLABORATIVE.
+
+next_touch_not_before = today + 7 days.
+
+Tone:
+
+Still credit control: clear but courteous, focused on solving the issue and getting a payment date.
+
+4.4 Mid overdue (31–60 days, credit control)
+
+Condition:
+
+overdue_band = 31_60.
+
+ptp_status is not ACTIVE.
+
+days_since_last_outbound >= 7 (or no previous contact).
+
+stage = CREDIT_CONTROL (unless manually escalated).
+
+Action:
+
+reason_code = MID_OVERDUE_ESCALATION.
+
+If risk_tag = HIGH_VALUE or total_overdue >= £10,000:
+
+suggested_action = VOICE_CALL.
+
+suggested_template_id = VOICE_PTP_REQUEST.
+
+tone_profile = CREDIT_CONTROL_FIRM.
+
+voice_tone = VOICE_TONE_FIRM_COLLABORATIVE.
+
+Else:
+
+suggested_action = EMAIL.
+
+suggested_template_id = EMAIL_FIRM_REMINDER.
+
+tone_profile = CREDIT_CONTROL_FIRM.
+
+voice_tone = VOICE_TONE_FIRM_COLLABORATIVE (for consistency).
+
+next_touch_not_before = today + 7 days.
+
+Tone:
+
+Clearly firmer than early reminders, but still in “we want to resolve this together” mode.
+
+4.5 Late overdue (61–90 days, end of credit control)
+
+Condition:
+
+overdue_band = 61_90.
+
+ptp_status is not ACTIVE.
+
+days_since_last_outbound >= 10 (or no previous contact).
+
+stage = CREDIT_CONTROL (unless already moved to RECOVERY earlier).
+
+Action:
+
+reason_code = LATE_OVERDUE_61_90.
+
+If risk_tag = HIGH_VALUE:
+
+suggested_action = VOICE_CALL.
+
+suggested_template_id = VOICE_ESCALATED_REMINDER.
+
+tone_profile = CREDIT_CONTROL_FIRM.
+
+voice_tone = VOICE_TONE_FIRM_COLLABORATIVE.
+
+Else:
+
+suggested_action = SMS.
+
+suggested_template_id = SMS_ESCALATED_REMINDER.
+
+tone_profile = CREDIT_CONTROL_FIRM.
+
+voice_tone = VOICE_TONE_FIRM_COLLABORATIVE.
+
+next_touch_not_before = today + 10 days.
+
+Tone:
+
+Late-stage credit control: firm, emphasising impact (for example, service or credit terms may be affected) but not yet “recovery language”.
+
+4.6 Recovery stage (90+ days or manually escalated)
+
+When a customer is in stage = RECOVERY, they are no longer treated as routine credit control. Communication becomes more formal and clearly firmer, but must remain professional, factual, and non-threatening.
+
+Condition:
+
+stage = RECOVERY.
+
+overdue_band = 90_PLUS.
+
+ptp_status is not ACTIVE.
+
+days_since_last_outbound >= 14.
+
+Action:
+
+reason_code = RECOVERY_90_PLUS_FORMAL_REMINDER.
+
+suggested_action = EMAIL.
+
+suggested_template_id = RECOVERY_EMAIL_FORMAL_REMINDER.
+
+tone_profile = RECOVERY_FORMAL_FIRM.
+
+voice_tone = VOICE_TONE_FORMAL_RECOVERY.
+
+next_touch_not_before = today + 14 days.
+
+Tone for recovery emails/SMS/calls:
+
+Formal and firm, for example:
+
+Reference to previous attempts to contact.
+
+Clear statement of amounts and how long they have been overdue.
+
+Statement that the account may be placed on hold or referred to an external recovery partner if not resolved by a certain date.
+
+No legal threats in V1 (no references to court, legal action, etc.).
+
+Optional additional recovery rule:
+
+If no response after a recovery email and amount is high value:
+
+reason_code = RECOVERY_FOLLOW_UP_CALL.
+
+suggested_action = VOICE_CALL.
+
+suggested_template_id = RECOVERY_VOICE_FORMAL_CALL.
+
+tone_profile = RECOVERY_FORMAL_FIRM.
+
+voice_tone = VOICE_TONE_FORMAL_RECOVERY.
+
+next_touch_not_before = today + 14 days.
+
+4.7 Customers with active disputes
+
+Condition:
+
+in_dispute = true.
+
+Action:
+
+reason_code = IN_DISPUTE_REVIEW.
+
+suggested_action = SNOOZE or create internal “Needs review” task.
+
+No automated chasing until dispute is resolved or marked as invalid.
+
+tone_profile and voice_tone are irrelevant because there is no outbound chase.
+
+4.8 Fallback rule
+
+If no other rule matches:
+
+reason_code = GENERIC_OVERDUE_FOLLOWUP.
+
+suggested_action = EMAIL.
+
+suggested_template_id = EMAIL_FIRM_REMINDER.
+
+tone_profile = CREDIT_CONTROL_FIRM or RECOVERY_FORMAL_FIRM based on stage.
+
+voice_tone = VOICE_TONE_FIRM_COLLABORATIVE or VOICE_TONE_FORMAL_RECOVERY based on stage.
+
+next_touch_not_before = today + 7 days.
+
+Stage and tone still apply:
+
+CREDIT_CONTROL → polite/firm credit control tone.
+
+RECOVERY → formal recovery tone.
+
+Cooldown and contact limits
+
+To avoid over-contacting customers:
+
+Maximum touches per customer:
+
+No more than 3 outbound touches (any channel) in any 14-day window.
+
+If this would be exceeded:
+
+suggested_action = SNOOZE.
+
+reason_code = MAX_TOUCH_LIMIT_REACHED.
+
+next_touch_not_before = today + 7 days.
+
+Channel-specific cooldowns:
+
+Email: at least 3 days between emails.
+
+SMS: at least 5 days between SMS messages.
+
+Voice (AI calls): at least 7 days between calls.
+
+If a rule would break a cooldown, we either:
+
+Switch to another channel that is still within limits, or
+
+Fall back to SNOOZE for a few days.
+
+How AI integrates with the playbook (including Retell tone)
+
+The playbook defines the structure and guardrails. AI fills in the words and speaking style.
+
+For each Action Centre row, Qashivo sends to the AI:
+
+customer details and summary (name, AR, overdue totals, list of invoices)
+
+stage (CREDIT_CONTROL / RECOVERY / LEGAL)
+
+reason_code
+
+suggested_action (EMAIL / SMS / VOICE_CALL)
+
+suggested_template_id
+
+tone_profile (for written tone)
+
+voice_tone (for Retell voice tone)
+
+any relevant PTP or dispute information
+
+tenant-level “style” settings (for example: GENTLE / STANDARD / FIRM)
+
+The AI then:
+
+Drafts the actual email subject and body, or
+
+Drafts SMS text, or
+
+Drafts the AI call opening and talking points (Retell).
+
+For Retell specifically:
+
+Qashivo passes the voice_tone variable so Retell knows whether to use:
+
+A calm, collaborative tone (early credit control).
+
+A firmer, but still collaborative tone (mid/late credit control).
+
+A formal recovery tone (recovery stage).
+
+In future, a neutral, informational tone around legal escalation (LEGAL stage), without making legal threats itself.
+
+Tone rules:
+
+If stage = CREDIT_CONTROL:
+
+Wording is courteous, assumes good intent, asks for clarity and payment dates, and aims to protect the long-term relationship. voice_tone is usually VOICE_TONE_CALM_COLLABORATIVE or VOICE_TONE_FIRM_COLLABORATIVE.
+
+If stage = RECOVERY:
+
+Wording is clearly firmer and more formal, sets explicit expectations and timelines, and mentions potential business-level consequences (such as being put on stop or passing to recovery partners) without legal threats. voice_tone is VOICE_TONE_FORMAL_RECOVERY.
+
+If stage = LEGAL (future):
+
+AI may not be used to chase at all. Any voice_tone such as VOICE_TONE_LEGAL_INFO would be used to explain process or status, not to threaten legal action.
+
+The user can always review and edit text before sending.
+
+Outcomes of each action (sent, failed, reply, PTP set, dispute raised, no answer, etc.) are logged back onto the customer timeline and into structured fields (for example, ptp_status and ptp_promised_date), which feed the next nightly run of the playbook.
+
+Example scenarios
+
+Scenario 1: healthy credit control
+
+A single invoice for £600, 5 days overdue, no previous chase.
+
+stage = CREDIT_CONTROL.
+
+reason_code = NEWLY_OVERDUE_7D.
+
+suggested_action = EMAIL.
+
+suggested_template_id = EMAIL_FRIENDLY_REMINDER.
+
+tone_profile = CREDIT_CONTROL_FRIENDLY.
+
+voice_tone = VOICE_TONE_CALM_COLLABORATIVE (if voice were used).
+
+AI writes a polite, friendly reminder.
+
+Scenario 2: high value, mid overdue
+
+Three invoices totalling £14,000, 65 days overdue.
+
+Several emails sent, no meaningful reply.
+
+stage = CREDIT_CONTROL (or moved to RECOVERY if chosen).
+
+reason_code = LATE_OVERDUE_61_90.
+
+If stage = CREDIT_CONTROL:
+
+suggested_action = VOICE_CALL.
+
+suggested_template_id = VOICE_ESCALATED_REMINDER.
+
+tone_profile = CREDIT_CONTROL_FIRM.
+
+voice_tone = VOICE_TONE_FIRM_COLLABORATIVE.
+
+If later moved to RECOVERY:
+
+suggested_action still VOICE_CALL or EMAIL.
+
+templates switch to RECOVERY versions.
+
+tone_profile = RECOVERY_FORMAL_FIRM.
+
+voice_tone = VOICE_TONE_FORMAL_RECOVERY.
+
+Scenario 3: broken promise
+
+Invoice £3,000, 32 days overdue.
+
+Customer previously promised to pay by a specific date.
+
+Date passed, no payment.
+
+ptp_status = MISSED.
+
+reason_code = PTP_MISSED.
+
+If stage = CREDIT_CONTROL:
+
+suggested_action = SMS or VOICE_CALL based on amount.
+
+tone_profile = CREDIT_CONTROL_FIRM.
+
+voice_tone = VOICE_TONE_FIRM_COLLABORATIVE.
+
+Message: “We haven’t seen the payment you promised, can you confirm a new date?”
+
+If stage = RECOVERY:
+
+suggested_action = SMS or VOICE_CALL.
+
+tone_profile = RECOVERY_FORMAL_FIRM.
+
+voice_tone = VOICE_TONE_FORMAL_RECOVERY.
+
+Message: “You previously committed to pay by X and we have not received this. Please confirm payment by [new clear date] or we may need to escalate internally.”
+
+Future extension: Legal phase (not implemented in V1)
+
+To support future legal escalation (county court, high court, etc.), the playbook is structured so that:
+
+stage can include LEGAL.
+
+reason_codes can later include LEGAL_PREPARATION, LEGAL_FILED, LEGAL_ENFORCEMENT, etc.
+
+tone_profile can include LEGAL_ESCALATION_INFO.
+
+voice_tone can include VOICE_TONE_LEGAL_INFO for neutral, informational updates if voice is ever used.
+
+In V1:
+
+No LEGAL rules are active.
+
+No AI-generated legal threats or legal advice.
+
+LEGAL stage should be treated as “do not auto-chase” until a specific legal module is designed.
+
+This keeps Qashivo firmly positioned as AI-first credit control, with a clean separation between:
+
+Credit control stage.
+
+Recovery stage.
+
+Future legal enforcement stage.
+
+And it gives you an explicit voice_tone variable for Retell so the AI agent’s spoken tone always matches the client’s stage and the philosophy of the product.
+
+Thinking
+ChatGPT can make mistakes. OpenAI doesn't use Qashivo workspace data to train its models.
