@@ -634,7 +634,7 @@ export default function Cashboard() {
               {collectionRate < 75 && (
                 <div 
                   className="card-apple-hover p-4 cursor-pointer"
-                  onClick={() => setLocation('/workflows')}
+                  onClick={() => setLocation('/settings')}
                   data-testid="action-collection-rate"
                 >
                   <div className="flex items-center justify-between">
@@ -646,7 +646,7 @@ export default function Cashboard() {
                         <h4 className="font-semibold text-slate-900">
                           Low Collection Rate
                         </h4>
-                        <p className="text-sm text-slate-600">Optimize your workflow</p>
+                        <p className="text-sm text-slate-600">Review playbook settings</p>
                       </div>
                     </div>
                     <ChevronRight className="h-5 w-5 text-slate-400" />

@@ -16,7 +16,6 @@ const Cashboard = lazy(() => import("@/pages/cashboard"));
 const Invoices = lazy(() => import("@/pages/invoices"));
 const Contacts = lazy(() => import("@/pages/contacts"));
 const ActionCentre = lazy(() => import("@/pages/action-centre"));
-const Workflows = lazy(() => import("@/pages/workflows"));
 const ActivityLog = lazy(() => import("@/pages/activity-log"));
 const Settings = lazy(() => import("@/pages/settings"));
 const Account = lazy(() => import("@/pages/account"));
@@ -137,7 +136,6 @@ function Router() {
           <Route path="/contacts" component={Contacts} />
           <Route path="/invoices" component={Invoices} />
           <Route path="/action-centre" component={ActionCentre} />
-          <Route path="/workflows" component={Workflows} />
           <Route path="/activity-log" component={ActivityLog} />
           <Route path="/documentation" component={Documentation} />
           <Route path="/documentation-review" component={DocumentationReview} />

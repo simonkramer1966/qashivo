@@ -9,7 +9,6 @@ import {
   BarChart3, 
   FileText, 
   Users, 
-  Workflow, 
   Bot, 
   BarChart, 
   Settings, 
@@ -70,10 +69,6 @@ const navigationItems = [
   { name: "Workspace", href: "/action-centre", icon: Target },
   { name: "Customers", href: "/contacts", icon: Users },
   { name: "Invoices", href: "/invoices", icon: FileText },
-  { name: "divider", href: "#", icon: null },
-  
-  // Section 3: Management
-  { name: "Workflows", href: "/workflows", icon: Workflow },
 ];
 
 // Partner-specific sidebar navigation (for accounting firms managing multiple clients)
