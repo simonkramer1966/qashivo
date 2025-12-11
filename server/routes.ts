@@ -9422,6 +9422,21 @@ Payment required immediately to avoid collection action. Contact us NOW.`
       
       console.log(`✅ Generated ${plan.actions.length} actions for today's plan`);
 
+      // Trigger message pre-generation asynchronously (don't block response)
+      if (plan.actions.length > 0) {
+        const { messagePreGenerator } = await import("./services/messagePreGenerator");
+        const actionIds = plan.actions.map((a: any) => a.id);
+        
+        // Run pre-generation in background - user gets fast response while messages are prepared
+        messagePreGenerator.preGenerateForActions(actionIds)
+          .then(result => {
+            console.log(`✅ Pre-generated messages: ${result.generated} generated, ${result.failed} failed, ${result.skipped} skipped`);
+          })
+          .catch(err => {
+            console.error(`❌ Message pre-generation failed:`, err.message);
+          });
+      }
+
       res.json(plan);
     } catch (error: any) {
       console.error("Error generating daily plan:", error);

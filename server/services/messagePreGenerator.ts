@@ -233,6 +233,49 @@ export class MessagePreGenerationService {
     return contactActions.length;
   }
 
+  /**
+   * Pre-generate drafts for a list of action IDs
+   * Used by manual "Generate Plan Now" button to prepare messages in background
+   */
+  async preGenerateForActions(actionIds: string[]): Promise<{ generated: number; failed: number; skipped: number }> {
+    console.log(`🔄 Pre-generating message drafts for ${actionIds.length} actions`);
+    
+    const stats = { generated: 0, failed: 0, skipped: 0 };
+    
+    if (actionIds.length === 0) {
+      return stats;
+    }
+
+    try {
+      const actionsToProcess = await db.select()
+        .from(actions)
+        .where(and(
+          inArray(actions.id, actionIds),
+          inArray(actions.type, ['email', 'sms', 'voice', 'call'])
+        ));
+
+      console.log(`Found ${actionsToProcess.length} communication actions to pre-generate`);
+
+      for (const action of actionsToProcess) {
+        try {
+          const result = await this.preGenerateForAction(action);
+          if (result === 'generated') stats.generated++;
+          else if (result === 'skipped') stats.skipped++;
+          else if (result === 'failed') stats.failed++;
+        } catch (error: any) {
+          console.error(`Failed to pre-generate for action ${action.id}:`, error.message);
+          stats.failed++;
+        }
+      }
+
+      console.log(`✅ Pre-generation complete: ${stats.generated} generated, ${stats.skipped} skipped, ${stats.failed} failed`);
+      return stats;
+    } catch (error: any) {
+      console.error(`Pre-generation failed:`, error.message);
+      throw error;
+    }
+  }
+
   private normalizeChannel(actionType: string): 'email' | 'sms' | 'voice' | null {
     switch (actionType.toLowerCase()) {
       case 'email': return 'email';
