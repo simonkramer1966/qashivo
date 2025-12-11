@@ -555,8 +555,8 @@ export default function Home() {
               Connect to Xero in 60 Seconds. AI Working Immediately.
             </h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Link your accounting software and watch Qashivo spring into action. 
-              No lengthy onboarding. No implementation projects. Just results.
+              Connect to Xero and watch Qashivo's AI spring into action. 
+              Instant sync. Instant analysis. Instant transformation.
             </p>
           </div>
           <div className="flex justify-center items-center">
