@@ -233,7 +233,7 @@ export default function Integrations() {
               </div>
               <h3 className="text-xl font-bold text-gray-900 mb-3">Two-Way Updates</h3>
               <p className="text-gray-600">
-                Payment updates from Qashivo are written back to your accounting software automatically.
+                Payment updates from Qashivo are written back to Xero automatically.
               </p>
             </div>
           </div>
