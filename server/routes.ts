@@ -5702,6 +5702,127 @@ Guidelines:
   // Action Centre Triage Endpoints (Sprint 1)
   // ============================================================================
 
+  // Get action preview - renders the template with actual debtor data
+  app.get("/api/actions/:id/preview", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { id } = req.params;
+
+      // Get the action
+      const existingAction = await db
+        .select()
+        .from(actions)
+        .where(and(eq(actions.id, id), eq(actions.tenantId, user.tenantId)))
+        .limit(1);
+
+      if (!existingAction.length) {
+        return res.status(404).json({ message: "Action not found" });
+      }
+
+      const action = existingAction[0];
+
+      // Get contact info
+      let contactName = 'Customer';
+      let companyName = '';
+      if (action.contactId) {
+        const contact = await storage.getContact(action.contactId, user.tenantId);
+        if (contact) {
+          contactName = contact.name || 'Customer';
+          companyName = contact.companyName || '';
+        }
+      }
+
+      // Get tenant info for company name
+      const tenant = await db.query.tenants.findFirst({
+        where: eq(tenants.id, user.tenantId)
+      });
+
+      // Get all overdue invoices for this contact
+      const contactInvoices = action.contactId ? await db
+        .select()
+        .from(invoices)
+        .where(
+          and(
+            eq(invoices.tenantId, user.tenantId),
+            eq(invoices.contactId, action.contactId),
+            sql`${invoices.dueDate} < CURRENT_DATE`,
+            sql`COALESCE(${invoices.amountPaid}, 0) < ${invoices.amount}`,
+            sql`${invoices.status} NOT IN ('paid', 'cancelled', 'void')`
+          )
+        ) : [];
+
+      // Calculate totals
+      const today = new Date();
+      const invoicesWithOverdue = contactInvoices.map(inv => {
+        const dueDate = new Date(inv.dueDate);
+        const daysOverdue = Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
+        const outstanding = Number(inv.amount) - Number(inv.amountPaid || 0);
+        return {
+          invoiceNumber: inv.invoiceNumber,
+          amount: new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' }).format(outstanding),
+          dueDate: dueDate.toLocaleDateString('en-GB'),
+          daysOverdue
+        };
+      });
+
+      const totalOverdue = contactInvoices.reduce((sum, inv) => 
+        sum + (Number(inv.amount) - Number(inv.amountPaid || 0)), 0
+      );
+
+      // Get template content based on action metadata or use action's stored content
+      let subject = action.subject || '';
+      let content = action.content || '';
+
+      // Replace template variables
+      const replacements: Record<string, string> = {
+        '{{contactName}}': contactName,
+        '{{companyName}}': tenant?.name || 'Your Company',
+        '{{invoiceNumber}}': invoicesWithOverdue[0]?.invoiceNumber || '',
+        '{{invoiceAmount}}': invoicesWithOverdue[0]?.amount || '',
+        '{{daysOverdue}}': String(invoicesWithOverdue[0]?.daysOverdue || 0),
+        '{{dueDate}}': invoicesWithOverdue[0]?.dueDate || '',
+        '{{invoiceCount}}': String(invoicesWithOverdue.length),
+        '{{totalOverdue}}': new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' }).format(totalOverdue),
+        '{{oldestInvoiceDays}}': String(Math.max(...invoicesWithOverdue.map(i => i.daysOverdue), 0)),
+      };
+
+      // Generate invoice table HTML using shared function
+      const { generateInvoiceTableHtml } = await import("./services/collectionsAutomation");
+      const invoiceSummaries = invoicesWithOverdue.map(inv => ({
+        invoiceId: '', // Not needed for table generation
+        invoiceNumber: inv.invoiceNumber,
+        amount: inv.amount.replace(/[£,]/g, ''), // Remove currency formatting for the function
+        dueDate: inv.dueDate,
+        daysOverdue: inv.daysOverdue
+      }));
+      replacements['{{invoiceTable}}'] = generateInvoiceTableHtml(invoiceSummaries);
+
+      // Apply replacements
+      for (const [key, value] of Object.entries(replacements)) {
+        subject = subject.replace(new RegExp(key.replace(/[{}]/g, '\\$&'), 'g'), value);
+        content = content.replace(new RegExp(key.replace(/[{}]/g, '\\$&'), 'g'), value);
+      }
+
+      res.json({
+        actionType: action.type,
+        subject,
+        content,
+        invoices: invoicesWithOverdue,
+        contactName,
+        companyName,
+        totalOverdue: new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' }).format(totalOverdue),
+        invoiceCount: invoicesWithOverdue.length
+      });
+    } catch (error) {
+      console.error("Error fetching action preview:", error);
+      res.status(500).json({ message: "Failed to fetch action preview" });
+    }
+  });
+
   // Approve action - move from pending to scheduled (collector approves AI recommendation)
   app.post("/api/actions/:id/approve", isAuthenticated, async (req: any, res) => {
     try {

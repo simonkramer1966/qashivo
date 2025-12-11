@@ -52,7 +52,7 @@ export interface CollectionScheduleStep {
 /**
  * Generates an HTML table for displaying multiple invoices in email templates
  */
-function generateInvoiceTableHtml(invoices: InvoiceSummary[]): string {
+export function generateInvoiceTableHtml(invoices: InvoiceSummary[]): string {
   if (invoices.length === 0) return '';
   
   const rows = invoices.map(inv => `

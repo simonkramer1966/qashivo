@@ -60,6 +60,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { KebabMenu } from "@/components/action-centre/KebabMenu";
 import { ResponseDrawer } from "@/components/action-centre/ResponseDrawer";
 import { ActionDrawer } from "@/components/action-centre/ActionDrawer";
+import { ActionPreviewDrawer } from "@/components/ActionPreviewDrawer";
 
 // Completed tab metrics data by date range
 const COMPLETED_METRICS = {
@@ -440,6 +441,10 @@ export default function ActionCentre() {
   const [isResponseDrawerOpen, setIsResponseDrawerOpen] = useState(false);
   const [selectedActionCustomer, setSelectedActionCustomer] = useState<any>(null);
   const [isActionDrawerOpen, setIsActionDrawerOpen] = useState(false);
+  
+  // Action preview drawer state for Plan tab
+  const [selectedPlanAction, setSelectedPlanAction] = useState<any>(null);
+  const [isPreviewDrawerOpen, setIsPreviewDrawerOpen] = useState(false);
   
   // Real-time updates via WebSocket
   useDashboardWebSocket({ 
@@ -1551,7 +1556,15 @@ export default function ActionCentre() {
                         const actionLabel = item.daysOverdue > 30 ? 'Final notice' : item.daysOverdue > 14 ? 'Second reminder' : 'Payment reminder';
                         
                         return (
-                          <div key={item.id} className="flex items-center gap-4 py-3 hover:bg-slate-50/50 px-2 -mx-2 rounded transition-colors">
+                          <div 
+                            key={item.id} 
+                            className="flex items-center gap-4 py-3 hover:bg-slate-50/50 px-2 -mx-2 rounded transition-colors cursor-pointer"
+                            onClick={() => {
+                              setSelectedPlanAction(item);
+                              setIsPreviewDrawerOpen(true);
+                            }}
+                            data-testid={`action-row-plan-${idx}`}
+                          >
                             <span className="text-sm font-medium text-slate-500 shrink-0 w-16">{item.daysOverdue}d overdue</span>
                             <div className={`p-2 rounded-lg shrink-0 ${
                               colorClass === 'blue' ? 'bg-blue-100' : 
@@ -1574,7 +1587,7 @@ export default function ActionCentre() {
                             </span>
                             <span className="text-xs text-slate-500 shrink-0 w-28 truncate">{actionLabel}</span>
                             <span className="text-sm font-semibold text-slate-900 tabular-nums shrink-0 w-20 text-right">{formatCurrency(parseFloat(item.amount))}</span>
-                            <div className="flex items-center gap-2 shrink-0">
+                            <div className="flex items-center gap-2 shrink-0" onClick={(e) => e.stopPropagation()}>
                               <Button
                                 size="sm"
                                 variant="ghost"
@@ -2033,6 +2046,28 @@ export default function ActionCentre() {
         open={isActionDrawerOpen}
         onOpenChange={setIsActionDrawerOpen}
         customer={selectedActionCustomer}
+      />
+      
+      {/* Action Preview Drawer (for Plan tab) */}
+      <ActionPreviewDrawer
+        action={selectedPlanAction}
+        open={isPreviewDrawerOpen}
+        onOpenChange={(open) => {
+          setIsPreviewDrawerOpen(open);
+          if (!open) setSelectedPlanAction(null);
+        }}
+        onApprove={(id) => {
+          approveActionMutation.mutate(id);
+          setIsPreviewDrawerOpen(false);
+          setSelectedPlanAction(null);
+        }}
+        onEscalateToVIP={(id) => {
+          escalateToVIPMutation.mutate(id);
+          setIsPreviewDrawerOpen(false);
+          setSelectedPlanAction(null);
+        }}
+        isApproving={approveActionMutation.isPending}
+        isEscalating={escalateToVIPMutation.isPending}
       />
     </div>
   );
