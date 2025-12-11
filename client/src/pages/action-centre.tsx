@@ -30,7 +30,8 @@ import {
   CircleDollarSign,
   Users,
   TrendingUp,
-  Calendar as CalendarIcon
+  Calendar as CalendarIcon,
+  RefreshCw
 } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -720,6 +721,37 @@ export default function ActionCentre() {
       toast({
         title: "Error",
         description: error.message || "Failed to escalate action",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Generate plan now (force regeneration)
+  const generatePlanMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch('/api/automation/generate-plan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to generate plan');
+      }
+      return await response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Plan Generated",
+        description: `Created ${data.actions?.length || 0} actions based on your overdue invoices`,
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/automation/daily-plan'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/actions'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/action-centre/tabs'] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to generate plan",
         variant: "destructive",
       });
     },
@@ -1418,9 +1450,18 @@ export default function ActionCentre() {
                 <div className="bg-white/80 backdrop-blur-sm border border-white/50 rounded-xl p-12 shadow-lg text-center">
                   <Clock className="h-16 w-16 mx-auto mb-4 text-slate-300" />
                   <h3 className="text-xl font-semibold text-slate-900 mb-2">No Planned Actions</h3>
-                  <p className="text-slate-600 max-w-md mx-auto">
-                    AI will generate tomorrow's action plan overnight based on your overdue invoices and customer behaviour patterns.
+                  <p className="text-slate-600 max-w-md mx-auto mb-6">
+                    AI generates action plans based on your overdue invoices and customer behaviour patterns.
                   </p>
+                  <Button
+                    onClick={() => generatePlanMutation.mutate()}
+                    disabled={generatePlanMutation.isPending}
+                    className="bg-[#17B6C3] hover:bg-[#1396A1] text-white"
+                    data-testid="button-generate-plan"
+                  >
+                    <RefreshCw className={`h-4 w-4 mr-2 ${generatePlanMutation.isPending ? 'animate-spin' : ''}`} />
+                    {generatePlanMutation.isPending ? 'Generating...' : 'Generate Plan Now'}
+                  </Button>
                 </div>
               )}
 
