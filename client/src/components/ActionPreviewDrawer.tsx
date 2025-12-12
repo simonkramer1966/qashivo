@@ -29,6 +29,7 @@ interface DailyPlanAction {
   id: string;
   contactId: string;
   contactName: string;
+  companyName?: string;
   invoiceId: string;
   invoiceNumber: string;
   amount: string;
@@ -152,16 +153,14 @@ export function ActionPreviewDrawer({
       >
         <SheetHeader className="px-6 py-4 border-b bg-slate-50/80">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className={`p-2 rounded-lg ${getActionTypeColor()}`}>
-                {getActionTypeIcon()}
-              </div>
-              <div>
-                <SheetTitle className="text-lg">{action.contactName}</SheetTitle>
-                <SheetDescription className="text-sm">
-                  {getActionTypeLabel()} Preview
-                </SheetDescription>
-              </div>
+            <div>
+              <SheetTitle className="text-lg">{action.companyName || action.contactName}</SheetTitle>
+              {action.companyName && action.contactName && (
+                <SheetDescription className="text-sm">{action.contactName}</SheetDescription>
+              )}
+              {!action.companyName && (
+                <SheetDescription className="text-sm">{getActionTypeLabel()} Preview</SheetDescription>
+              )}
             </div>
             <div className="flex items-center gap-2">
               <Badge variant="outline" className={getPriorityColor()}>
