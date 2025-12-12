@@ -275,6 +275,7 @@ import { webhookHandler } from "./services/webhookHandler";
 import { ForecastEngine, type ForecastConfig, type ForecastScenario } from "../shared/forecast";
 import { subscriptionService } from "./services/subscriptionService";
 import { businessAnalyticsService } from "./services/businessAnalytics";
+import { cleanEmailContent } from "./services/messagePostProcessor";
 import { clientPartnerService } from "./services/clientPartnerService";
 import { signalCollector } from "./lib/signal-collector";
 import { getDashboardMetrics } from "./services/metricsService";
@@ -5844,6 +5845,10 @@ Guidelines:
         for (const [key, value] of Object.entries(replacements)) {
           subject = subject.replace(new RegExp(key.replace(/[{}]/g, '\\$&'), 'g'), value);
           content = content.replace(new RegExp(key.replace(/[{}]/g, '\\$&'), 'g'), value);
+        }
+        // Apply post-processing to ensure proper HTML paragraph formatting for emails
+        if (channel === 'email') {
+          content = cleanEmailContent(content);
         }
       }
 
