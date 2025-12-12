@@ -480,19 +480,6 @@ export function InvoiceDetailDialog({ invoice, open, onOpenChange, onDemoStart, 
               <FileText className="h-4 w-4 mr-2" />
               Note
             </Button>
-            {invoice && invoice.status !== 'paid' && daysOverdue > 0 && onDemoStart && (
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="touch-target"
-                onClick={() => onDemoStart(invoice.id)}
-                disabled={isDemoLoading}
-                data-testid="button-demo-dialog"
-              >
-                <PlayCircle className="h-4 w-4 mr-2" />
-                Demo
-              </Button>
-            )}
           </div>
         </div>
       </DialogContent>
