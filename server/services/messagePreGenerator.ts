@@ -6,6 +6,8 @@ import { ToneProfile, PlaybookStage } from './playbookEngine';
 import crypto from 'crypto';
 
 export class MessagePreGenerationService {
+  // Bump this version when AI prompts are updated to invalidate cached drafts
+  private readonly PROMPT_VERSION = 2;
   
   /**
    * Pre-generate message drafts for all pending actions scheduled for today
@@ -372,6 +374,9 @@ export class MessagePreGenerationService {
    */
   private computeContextHash(action: any, context: MessageContext, toneSettings: ToneSettings): string {
     const contextSnapshot = {
+      // Prompt version - bump to invalidate all cached drafts when prompts change
+      promptVersion: this.PROMPT_VERSION,
+      
       // Customer context
       customerName: context.customerName,
       companyName: context.companyName,
@@ -412,6 +417,9 @@ export class MessagePreGenerationService {
    */
   computeContextHashForLookup(context: MessageContext, toneSettings: ToneSettings): string {
     const contextSnapshot = {
+      // Prompt version - must match computeContextHash
+      promptVersion: this.PROMPT_VERSION,
+      
       customerName: context.customerName,
       companyName: context.companyName,
       invoiceNumber: context.invoiceNumber,
