@@ -217,10 +217,7 @@ export function ActionPreviewDrawer({
               </div>
             ) : action.actionType === 'voice' ? (
               <div className="space-y-4">
-                <div className="flex items-center gap-2">
-                  <Mic className="h-5 w-5 text-green-600" />
-                  <h3 className="font-semibold text-slate-900">AI Voice Call</h3>
-                </div>
+                <h3 className="font-semibold text-slate-900">AI Voice Call</h3>
                 <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                   <p className="text-sm text-green-800 mb-3">
                     This action will initiate an AI-powered voice call to <span className="font-medium">{preview?.contactName || action.contactName}</span>. The AI agent will:
@@ -281,16 +278,9 @@ export function ActionPreviewDrawer({
               </div>
             ) : (
               <div className="space-y-4">
-                <div className="flex items-center gap-2">
-                  {action.actionType === 'email' ? (
-                    <Mail className="h-5 w-5 text-blue-600" />
-                  ) : (
-                    <MessageSquare className="h-5 w-5 text-purple-600" />
-                  )}
-                  <h3 className="font-semibold text-slate-900">
-                    {action.actionType === 'email' ? 'Email Preview' : 'SMS Preview'}
-                  </h3>
-                </div>
+                <h3 className="font-semibold text-slate-900">
+                  {action.actionType === 'email' ? 'Email Preview' : 'SMS Preview'}
+                </h3>
 
                 {action.actionType === 'email' && preview?.subject && (
                   <div className="bg-slate-100 rounded-lg p-3">
