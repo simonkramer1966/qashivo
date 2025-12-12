@@ -5641,16 +5641,19 @@ Guidelines:
       const enforcementRaw = allInvoices.filter(inv => inv.stage === 'enforcement');
       const enforcement = await Promise.all(enforcementRaw.map(enrichInvoice));
       
+      // Combine PTPs and payment plans into "promises"
+      const allPromises = [...upcomingPTP, ...paymentPlansItems];
+      
+      // Combine debt recovery and enforcement into "recovery"
+      const allRecovery = [...debtRecovery, ...enforcement];
+      
       res.json({
-        completed: { count: completedActions.length, items: completedActions, metrics: completedMetrics },
-        exceptions: { count: exceptions.length, items: exceptions },
         queries: { count: queries.length, items: queries },
         overdueInvoices: { count: overdueInvoicesRaw.length, items: overdueCustomers },
-        upcomingPTP: { count: upcomingPTP.length, items: upcomingPTP },
-        paymentPlans: { count: paymentPlansItems.length, items: paymentPlansItems },
+        promises: { count: allPromises.length, items: allPromises },
         brokenPromises: { count: brokenPromises.length, items: brokenPromises },
-        debtRecovery: { count: debtRecovery.length, items: debtRecovery },
-        enforcement: { count: enforcement.length, items: enforcement }
+        disputes: { count: allDisputes.length, items: allDisputes },
+        recovery: { count: allRecovery.length, items: allRecovery }
       });
     } catch (error) {
       console.error("Error fetching action centre tabs:", error);
