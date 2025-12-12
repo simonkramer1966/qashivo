@@ -179,8 +179,8 @@ function CompletedTabContent({
   setCustomDateRange,
   completedData
 }: { 
-  completedDateRange: 'yesterday' | 'week' | 'month' | 'custom';
-  setCompletedDateRange: (value: 'yesterday' | 'week' | 'month' | 'custom') => void;
+  completedDateRange: 'today' | 'yesterday' | 'week' | 'month' | 'custom';
+  setCompletedDateRange: (value: 'today' | 'yesterday' | 'week' | 'month' | 'custom') => void;
   customDateRange: { from: Date | undefined; to: Date | undefined };
   setCustomDateRange: (value: { from: Date | undefined; to: Date | undefined }) => void;
   completedData?: { count: number; items: any[]; metrics?: { yesterday: any; week: any; month: any } };
@@ -219,7 +219,11 @@ function CompletedTabContent({
       let startCutoff = new Date();
       let endCutoff: Date | null = null;
       
-      if (completedDateRange === 'yesterday') {
+      if (completedDateRange === 'today') {
+        // Today: from start of today to now
+        startCutoff.setHours(0, 0, 0, 0);
+        endCutoff = new Date();
+      } else if (completedDateRange === 'yesterday') {
         // Yesterday: from start of yesterday to end of yesterday (not including today)
         startCutoff.setDate(startCutoff.getDate() - 1);
         startCutoff.setHours(0, 0, 0, 0);
@@ -256,7 +260,8 @@ function CompletedTabContent({
       }));
     }
     
-    const label = completedDateRange === 'yesterday' ? 'yesterday' 
+    const label = completedDateRange === 'today' ? 'today'
+      : completedDateRange === 'yesterday' ? 'yesterday' 
       : completedDateRange === 'week' ? 'this week' 
       : completedDateRange === 'month' ? 'this month' 
       : 'selected period';
@@ -283,11 +288,12 @@ function CompletedTabContent({
           <p className="text-sm text-slate-600 mt-1">AI actions completed and their outcomes</p>
         </div>
         <div className="flex items-center gap-3">
-          <Select value={completedDateRange} onValueChange={(value: 'yesterday' | 'week' | 'month' | 'custom') => setCompletedDateRange(value)}>
+          <Select value={completedDateRange} onValueChange={(value: 'today' | 'yesterday' | 'week' | 'month' | 'custom') => setCompletedDateRange(value)}>
             <SelectTrigger className="w-[160px] bg-white/80" data-testid="select-date-range">
               <SelectValue placeholder="Select period" />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem value="today">Today</SelectItem>
               <SelectItem value="yesterday">Yesterday</SelectItem>
               <SelectItem value="week">This Week</SelectItem>
               <SelectItem value="month">This Month</SelectItem>
@@ -516,7 +522,7 @@ export default function ActionCentre() {
   const [bulkAssignUser, setBulkAssignUser] = useState<string>('');
   
   // Completed tab date range state
-  const [completedDateRange, setCompletedDateRange] = useState<'yesterday' | 'week' | 'month' | 'custom'>('yesterday');
+  const [completedDateRange, setCompletedDateRange] = useState<'today' | 'yesterday' | 'week' | 'month' | 'custom'>('today');
   const [customDateRange, setCustomDateRange] = useState<{ from: Date | undefined; to: Date | undefined }>({
     from: undefined,
     to: undefined
