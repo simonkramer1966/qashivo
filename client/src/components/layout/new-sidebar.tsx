@@ -66,7 +66,7 @@ const navigationItems = [
   { name: "divider", href: "#", icon: null },
   
   // Section 2: Core Operations
-  { name: "Workspace", href: "/action-centre", icon: Target },
+  { name: "Action Centre", href: "/action-centre", icon: Target },
   { name: "Customers", href: "/contacts", icon: Users },
   { name: "Invoices", href: "/invoices", icon: FileText },
 ];
