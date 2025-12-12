@@ -278,36 +278,43 @@ Generate a personalised, professional email.`;
   }
 
   private buildSMSSystemPrompt(toneSettings: ToneSettings): string {
-    const toneDescriptions: Record<ToneProfile, string> = {
-      CREDIT_CONTROL_FRIENDLY: "friendly and helpful",
-      CREDIT_CONTROL_FIRM: "direct but professional",
-      RECOVERY_FORMAL_FIRM: "formal and urgent",
-      LEGAL_ESCALATION_INFO: "formal with clear urgency"
+    const stageGuidance: Record<PlaybookStage, string> = {
+      CREDIT_CONTROL: `STAGE: CREDIT CONTROL (under 60 days overdue)
+- Tone: Friendly, helpful reminder
+- Assume it may be an oversight
+- Offer to help if there's an issue
+- Example: "Hi Sarah,\\n£1,250 on inv 2341 was due 5 Dec.\\nPlease pay or let us know if there's an issue. ABC Ltd"`,
+      RECOVERY: `STAGE: RECOVERY (60+ days overdue)
+- Tone: Formal, direct, urgent
+- Emphasise days overdue
+- Mention avoiding further action
+- Example: "Hi Sarah,\\n£1,250 is 45 days overdue.\\nPay today to avoid escalation. ABC Ltd 020 7123 4567"`,
+      LEGAL: `STAGE: PRE-LEGAL (escalation)
+- Tone: Formal, final warning
+- Clear consequence if not paid
+- Request immediate contact`
     };
 
-    const tone = toneDescriptions[toneSettings.toneProfile] || toneDescriptions.CREDIT_CONTROL_FRIENDLY;
+    const guidance = stageGuidance[toneSettings.stage] || stageGuidance.CREDIT_CONTROL;
 
-    return `You are a credit control specialist writing collection SMS messages for UK businesses.
+    return `You are a UK credit control specialist writing collection SMS messages.
 
-Your tone should be ${tone}.
+${guidance}
 
-CRITICAL GUIDELINES:
-- Maximum 160 characters - this is essential for SMS delivery
-- Use ONLY the total amount and number of invoices - NEVER list individual invoice numbers
-- Be ultra-concise: every word must earn its place
-- Include a clear call to action (call/pay)
-- Never be threatening
-- Use British English
+CRITICAL RULES:
+- HARD LIMIT: 160 characters maximum - count carefully before responding
+- Use ONLY total amount and invoice count - NEVER list invoice numbers
+- Every word must earn its place
+- Clear call to action (pay/call)
+- Never be threatening - professional UK tone
+- Include phone number if provided
 
-FORMATTING:
-- Use a newline character (\\n) after the greeting to separate it from the main message for better readability
-- Structure: Greeting\\nMain message with amount\\nCall to action. Sender
+STRUCTURE (use \\n for line breaks):
+Greeting\\nAmount + context\\nAction + sender
 
-Example: "Hi [Name],\\nYou have [X] invoices totalling £[amount] overdue.\\nPay or call [number]. [Company]"
-
-Respond with valid JSON containing:
+Respond with valid JSON:
 {
-  "body": "SMS message text with \\n for line breaks"
+  "body": "SMS text here"
 }`;
   }
 
@@ -318,24 +325,28 @@ Respond with valid JSON containing:
     
     let situationHint = "";
     if (context.promiseToPayMissed) {
-      situationHint = "Customer missed promised payment.";
+      situationHint = "CONTEXT: Customer missed a promised payment date - reference this.";
+    } else if (context.daysOverdue > 90) {
+      situationHint = "CONTEXT: Severely overdue - emphasise urgency.";
     } else if (context.daysOverdue > 60) {
-      situationHint = "Significantly overdue - urgent.";
+      situationHint = "CONTEXT: Significantly overdue - be direct about escalation.";
+    } else if (context.daysOverdue > 30) {
+      situationHint = "CONTEXT: Moderately overdue - firmer tone needed.";
     }
 
-    return `Generate a SHORT SMS (max 160 chars) for:
+    return `Generate SMS (MUST be under 160 characters):
 
 Customer: ${context.customerName}
-Total Outstanding: ${currency}${totalAmount.toFixed(2)}
-Number of Invoices: ${invoiceCount}
-Oldest Overdue: ${context.daysOverdue} days
+Amount: ${currency}${totalAmount.toFixed(2)}
+Invoices: ${invoiceCount}
+Days Overdue: ${context.daysOverdue}
 Sender: ${context.tenantName}
 ${context.tenantPhone ? `Phone: ${context.tenantPhone}` : ''}
 ${situationHint}
 
 Stage: ${toneSettings.stage}
 
-IMPORTANT: Do NOT include individual invoice numbers. Only use total amount and count.`;
+REMEMBER: Max 160 chars. No invoice numbers. Include phone if provided.`;
   }
 
   private buildVoiceSystemPrompt(toneSettings: ToneSettings): string {
@@ -459,13 +470,46 @@ ${invoiceTableHtml}
     const currency = context.currency || '£';
     const invoiceCount = context.invoiceCount || 1;
     const totalAmount = context.totalOutstanding || context.invoiceAmount;
-    const invoiceText = invoiceCount === 1 ? 'invoice' : 'invoices';
+    const formattedAmount = `${currency}${totalAmount.toFixed(2)}`;
+    const firstName = context.customerName.split(' ')[0];
+    
+    // Use abbreviated tenant name if needed for length
+    const tenantName = this.abbreviateTenantName(context.tenantName, 20);
+    const phone = context.tenantPhone ? ` ${context.tenantPhone}` : '';
+    
+    let message: string;
     
     if (toneSettings.stage === 'RECOVERY') {
-      return `URGENT: ${invoiceCount} ${invoiceText} totalling ${currency}${totalAmount.toFixed(2)} overdue.\nPlease pay now or call ${context.tenantName}.`;
+      // Recovery: formal, urgent, mention days overdue
+      message = `Hi ${firstName},\n${formattedAmount} is ${context.daysOverdue} days overdue.\nPay today to avoid escalation. ${tenantName}`;
+    } else if (context.promiseToPayMissed) {
+      // Promise missed: reference the broken commitment
+      message = `Hi ${firstName},\nYour promised payment of ${formattedAmount} wasn't received.\nPlease pay or call. ${tenantName}`;
+    } else {
+      // Credit Control: friendly reminder
+      message = `Hi ${firstName},\n${formattedAmount} overdue (${invoiceCount} inv).\nPlease pay or call if any issues. ${tenantName}`;
     }
-
-    return `Hi ${context.customerName},\n${invoiceCount} ${invoiceText} (${currency}${totalAmount.toFixed(2)}) overdue.\nPlease pay or call us. - ${context.tenantName}`;
+    
+    // Add phone if it fits within 160 chars
+    if (phone && (message.length + phone.length) <= 160) {
+      message += phone;
+    }
+    
+    return message;
+  }
+  
+  private abbreviateTenantName(name: string, maxLength: number): string {
+    if (name.length <= maxLength) return name;
+    
+    // Try abbreviating common suffixes
+    let abbreviated = name
+      .replace(/\s+(Limited|Ltd\.?|LLP|PLC|Inc\.?)$/i, '')
+      .replace(/\s+(Company|Corp\.?|Corporation)$/i, '');
+    
+    if (abbreviated.length <= maxLength) return abbreviated;
+    
+    // Truncate with ellipsis
+    return abbreviated.substring(0, maxLength - 3) + '...';
   }
 
   private getDefaultVoiceScript(context: MessageContext, toneSettings: ToneSettings): string {

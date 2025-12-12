@@ -149,7 +149,7 @@ export function cleanEmailContent(body: string): string {
 
 /**
  * Post-process SMS content
- * Ensures proper line breaks are preserved
+ * Ensures proper line breaks are preserved and enforces 160 character limit
  */
 export function cleanSmsContent(body: string): string {
   if (!body) return body;
@@ -160,5 +160,52 @@ export function cleanSmsContent(body: string): string {
   // Remove excessive whitespace while preserving intentional breaks
   cleaned = cleaned.replace(/\n{3,}/g, '\n\n');
   
-  return cleaned.trim();
+  cleaned = cleaned.trim();
+  
+  // Enforce 160 character limit for SMS
+  if (cleaned.length > 160) {
+    cleaned = truncateSmsToLimit(cleaned, 160);
+  }
+  
+  return cleaned;
+}
+
+/**
+ * Truncate SMS to character limit while preserving meaning
+ * Tries to break at word boundaries and keeps essential structure
+ */
+function truncateSmsToLimit(text: string, limit: number): string {
+  if (text.length <= limit) return text;
+  
+  // Find the last space before the limit to avoid cutting words
+  const truncated = text.substring(0, limit - 3);
+  const lastSpace = truncated.lastIndexOf(' ');
+  
+  if (lastSpace > limit * 0.6) {
+    return truncated.substring(0, lastSpace) + '...';
+  }
+  
+  return truncated + '...';
+}
+
+/**
+ * Build SMS content that fits within character limit
+ * Prioritizes essential information and truncates less important parts
+ */
+export function buildSmsWithLimit(
+  parts: { text: string; priority: number }[],
+  maxLength: number = 160
+): string {
+  // Sort by priority (lower = more important)
+  const sorted = [...parts].sort((a, b) => a.priority - b.priority);
+  
+  let result = '';
+  for (const part of sorted) {
+    const candidate = result ? `${result}\n${part.text}` : part.text;
+    if (candidate.length <= maxLength) {
+      result = candidate;
+    }
+  }
+  
+  return result.trim();
 }

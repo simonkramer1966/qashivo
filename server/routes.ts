@@ -5801,10 +5801,24 @@ Guidelines:
       } else {
         // Fall back to channel-appropriate content
         if (channel === 'sms') {
-          // Generate short SMS fallback (not the email template)
-          const invoiceText = invoicesWithOverdue.length === 1 ? 'invoice' : 'invoices';
+          // Generate short SMS fallback with stage-appropriate messaging
           const formattedTotal = new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' }).format(totalOverdue);
-          content = `Hi ${contactName}, you have ${invoicesWithOverdue.length} ${invoiceText} totalling ${formattedTotal} overdue. Please arrange payment or call us. - ${tenant?.name || 'Your Company'}`;
+          const firstName = contactName.split(' ')[0];
+          const maxDaysOverdue = Math.max(...invoicesWithOverdue.map(i => i.daysOverdue), 0);
+          
+          // Abbreviate tenant name if too long
+          let tenantName = tenant?.name || 'Your Company';
+          if (tenantName.length > 20) {
+            tenantName = tenantName.replace(/\s+(Limited|Ltd\.?|LLP|PLC|Inc\.?)$/i, '').substring(0, 17) + '...';
+          }
+          
+          if (maxDaysOverdue >= 60) {
+            // Recovery stage: urgent, direct
+            content = `Hi ${firstName},\n${formattedTotal} is ${maxDaysOverdue} days overdue.\nPay today to avoid escalation. ${tenantName}`;
+          } else {
+            // Credit Control: friendly reminder (shorter format)
+            content = `Hi ${firstName},\n${formattedTotal} overdue (${invoicesWithOverdue.length} inv).\nPlease pay or call if any issues. ${tenantName}`;
+          }
         } else if (channel === 'voice') {
           // Voice script fallback
           const formattedTotal = new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' }).format(totalOverdue);
