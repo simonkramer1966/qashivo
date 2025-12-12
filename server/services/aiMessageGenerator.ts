@@ -11,6 +11,7 @@
 
 import OpenAI from "openai";
 import { ToneProfile, PlaybookStage, ReasonCode, TemplateId } from "./playbookEngine";
+import { cleanEmailContent, cleanSmsContent } from "./messagePostProcessor";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -93,14 +94,21 @@ class AIMessageGenerator {
 
       const result = JSON.parse(response.choices[0].message.content || '{}');
       
+      // Post-process to ensure proper HTML paragraph formatting
+      const rawBody = result.body || this.getDefaultEmailBody(context, toneSettings);
+      
       return {
         subject: result.subject || this.getDefaultSubject(context, toneSettings),
-        body: result.body || this.getDefaultEmailBody(context, toneSettings),
+        body: cleanEmailContent(rawBody),
         callToAction: result.callToAction
       };
     } catch (error) {
       console.error('AI email generation failed, using fallback:', error);
-      return this.getFallbackEmail(context, toneSettings);
+      const fallback = this.getFallbackEmail(context, toneSettings);
+      return {
+        ...fallback,
+        body: cleanEmailContent(fallback.body)
+      };
     }
   }
 
@@ -127,12 +135,18 @@ class AIMessageGenerator {
 
       const result = JSON.parse(response.choices[0].message.content || '{}');
       
+      // Post-process to ensure proper line break formatting
+      const rawBody = result.body || this.getDefaultSMSBody(context, toneSettings);
+      
       return {
-        body: result.body || this.getDefaultSMSBody(context, toneSettings)
+        body: cleanSmsContent(rawBody)
       };
     } catch (error) {
       console.error('AI SMS generation failed, using fallback:', error);
-      return this.getFallbackSMS(context, toneSettings);
+      const fallback = this.getFallbackSMS(context, toneSettings);
+      return {
+        body: cleanSmsContent(fallback.body)
+      };
     }
   }
 
