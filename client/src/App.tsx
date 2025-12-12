@@ -36,6 +36,7 @@ const BetaPartner = lazy(() => import("@/pages/beta-partner"));
 const AdminAnalytics = lazy(() => import("@/pages/admin-analytics"));
 const AdminOutcomes = lazy(() => import("@/pages/admin-outcomes"));
 const Dashboard = lazy(() => import("@/pages/dashboard"));
+const DashboardExperimental = lazy(() => import("@/pages/dashboard-experimental"));
 const Homepage = lazy(() => import("@/pages/homepage"));
 const Home = lazy(() => import("@/pages/Home"));
 const Demo = lazy(() => import("@/pages/Demo"));
@@ -134,6 +135,7 @@ function Router() {
           <Route path="/admin/outcomes" component={AdminOutcomes} />
           <Route path="/partner" component={PartnerDashboard} />
           <Route path="/dashboard" component={Dashboard} />
+          <Route path="/dashboard-experimental" component={DashboardExperimental} />
           <Route path="/onboarding" component={UserOnboarding} />
           <Route path="/connection-error" component={ConnectionError} />
           <Route path="/contacts" component={Contacts} />
