@@ -3921,6 +3921,137 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Debtor Snapshot endpoint for Action Centre drawer
+  app.get("/api/contacts/:contactId/debtor-snapshot", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { contactId } = req.params;
+      
+      // Get contact
+      const contact = await storage.getContact(contactId, user.tenantId);
+      if (!contact) {
+        return res.status(404).json({ message: "Contact not found" });
+      }
+
+      // Get customer profile for PRS metrics
+      const customerProfile = await db.query.customerProfiles.findFirst({
+        where: and(
+          eq(customerProfiles.contactId, contactId),
+          eq(customerProfiles.tenantId, user.tenantId)
+        )
+      });
+
+      // Get overdue invoices for financial snapshot
+      const overdueInvoices = await db.query.invoices.findMany({
+        where: and(
+          eq(invoices.contactId, contactId),
+          eq(invoices.tenantId, user.tenantId),
+          eq(invoices.status, 'overdue')
+        )
+      });
+
+      const totalOutstanding = overdueInvoices.reduce((sum, inv) => 
+        sum + parseFloat(inv.amountDue?.toString() || '0'), 0);
+      
+      const oldestOverdueDays = overdueInvoices.length > 0 
+        ? Math.max(...overdueInvoices.map(inv => {
+            const dueDate = new Date(inv.dueDate!);
+            const now = new Date();
+            return Math.floor((now.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
+          }))
+        : 0;
+
+      // Get active PTP
+      const activePTP = await db.query.paymentPromises.findFirst({
+        where: and(
+          eq(paymentPromises.contactId, contactId),
+          eq(paymentPromises.tenantId, user.tenantId),
+          eq(paymentPromises.status, 'open')
+        ),
+        orderBy: desc(paymentPromises.createdAt)
+      });
+
+      // Get communications timeline (last 10)
+      const recentActions = await db.query.actions.findMany({
+        where: and(
+          eq(actions.contactId, contactId),
+          eq(actions.tenantId, user.tenantId),
+          inArray(actions.type, ['email', 'sms', 'voice', 'note', 'manual_call'])
+        ),
+        orderBy: desc(actions.createdAt),
+        limit: 10
+      });
+
+      // Also get notes
+      const recentNotes = await db.query.contactNotes.findMany({
+        where: and(
+          eq(contactNotes.contactId, contactId),
+          eq(contactNotes.tenantId, user.tenantId)
+        ),
+        orderBy: desc(contactNotes.createdAt),
+        limit: 10,
+        with: {
+          createdByUser: true
+        }
+      });
+
+      // Combine and sort timeline entries
+      const timeline = [
+        ...recentActions.map(action => ({
+          id: action.id,
+          type: action.type as 'email' | 'sms' | 'voice' | 'note',
+          direction: action.source === 'inbound' ? 'inbound' as const : 'outbound' as const,
+          description: action.subject || action.content?.substring(0, 100) || `${action.type} action`,
+          outcome: action.status,
+          createdAt: action.createdAt?.toISOString() || new Date().toISOString(),
+          createdBy: undefined
+        })),
+        ...recentNotes.map(note => ({
+          id: note.id,
+          type: 'note' as const,
+          direction: 'manual' as const,
+          description: note.content,
+          outcome: undefined,
+          createdAt: note.createdAt?.toISOString() || new Date().toISOString(),
+          createdBy: note.createdByUser?.firstName || 'User'
+        }))
+      ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+       .slice(0, 10);
+
+      // Build debtor snapshot
+      const debtor = {
+        id: contact.id,
+        companyName: contact.companyName || contact.name,
+        contactName: contact.name,
+        email: contact.email,
+        phone: contact.phone,
+        preferredChannel: customerProfile?.preferredChannel || undefined,
+        totalOutstanding,
+        invoiceCount: overdueInvoices.length,
+        oldestOverdueDays,
+        riskScore: customerProfile?.riskScore ? parseFloat(customerProfile.riskScore.toString()) : undefined,
+        paymentBehavior: customerProfile?.paymentBehavior || undefined,
+        vipFlag: contact.isVip || false,
+        activePTP: activePTP ? {
+          amount: parseFloat(activePTP.promisedAmount?.toString() || '0'),
+          promisedDate: activePTP.promisedDate?.toISOString() || '',
+          status: activePTP.status || 'open'
+        } : undefined,
+        promisesKept: customerProfile?.promisesKept || 0,
+        promisesBroken: customerProfile?.promisesBroken || 0
+      };
+
+      res.json({ debtor, timeline });
+    } catch (error) {
+      console.error("Error fetching debtor snapshot:", error);
+      res.status(500).json({ message: "Failed to fetch debtor snapshot" });
+    }
+  });
+
   // Customer Detail: Get learning profile
   app.get("/api/contacts/:contactId/learning-profile", isAuthenticated, async (req: any, res) => {
     try {

@@ -1,0 +1,300 @@
+✅ Qashivo Debtor Record — World-Class Requirements
+
+A debtor record must act as the single source of truth for understanding the customer, their payment behaviour, their promises, and how Qashivo should chase them. Nothing should require digging through inboxes, spreadsheets, or phone logs.
+
+Below is the recommended complete structure:
+
+1️⃣ Core Debtor Identity & Contact Details
+
+Purpose: Ensure we always know who we are contacting and how they want to be contacted.
+
+Business name (from Xero)
+
+Trading name / group / parent entity (optional but valuable)
+
+Billing contact(s):
+
+Primary email
+
+Backup email
+
+Mobile / landline
+
+Contact role (e.g., Owner, Accounts Payable, Bookkeeper)
+
+Additional contacts added in Qashivo (multi-contact support)
+
+Preferred channel(s): Email / SMS / Voice
+
+Address & jurisdiction (for any legal escalation later)
+
+Time zone (relevant for call/SMS windows)
+
+Contact validation flags (invalid email, unreachable number, etc.)
+
+2️⃣ Engagement & AI Contact Strategy
+
+Purpose: Tailor communications based on debtor behaviour and compliance with past outreach.
+
+AI Contact Approach Profile:
+E.g.: Soft-touch, Firm but polite, High-value formal, Escalation-ready.
+(V1 could be simple: Friendly / Standard / Firm.)
+
+Channel hierarchy:
+Which channels to try first → last (Email → SMS → AI Voice → Manual call).
+
+Cadence settings:
+Days between reminders, cooling-off periods, PTP adherence delays.
+
+Restrictions / preferences:
+
+Don’t call before/after specific times
+
+Don’t SMS
+
+Legal entity only accepts written notices
+
+Internal do/don’t contact notes
+
+3️⃣ VIP, Exceptions & Compliance Flags
+
+Purpose: Operational guardrails so AI does not behave incorrectly.
+
+VIP flag (no automated steps)
+
+Opt-out of automation (email/SMS/voice or selective opt-outs)
+
+Requires owner approval before escalation
+
+Bad debt / Watchlist / Under dispute
+
+Do-not-contact reasons (e.g., litigation, insolvency)
+
+4️⃣ Ownership & Internal Assignment
+
+Purpose: Make it clear who in Qashivo owns this debtor relationship.
+
+Assigned Qashivo user (credit controller / CFO / founder)
+
+Secondary owner or backup owner
+
+Routing rules (assign by ageing, value, region, etc. — future)
+
+5️⃣ Financial Profile
+
+Purpose: See the entire debtor’s value and ageing at a glance.
+
+AR Balance: total outstanding, overdue, and by ageing bucket
+
+Total open invoices and count
+
+High-value invoice flag
+
+Credit limit (if stored in Xero)
+
+Average invoice value
+
+Days Overdue for oldest invoice
+
+Weighted overdue average (helps risk scoring)
+
+6️⃣ Debtor-Level Key Metrics
+
+Purpose: Predict risk and prioritise intelligently.
+
+Current DSO (customer-specific)
+
+Rolling 90-day DSO trend
+
+Payment behaviour score:
+
+Always pays late
+
+Pays on PTP
+
+Unreliable
+
+First-time late
+
+Risk Score (derived):
+
+Inputs: outstanding amount, ageing, past disputes, broken PTPs, missed contacts
+
+Broken Promise Count
+
+Dispute frequency
+
+% of invoices paid on time historically
+
+7️⃣ Invoices & Transaction History
+
+Purpose: Instant clarity—nothing beats seeing exactly what is owed.
+
+Full invoice list:
+
+Paid
+
+Unpaid
+
+Overdue
+
+Recently allocated payments
+
+Invoice metadata:
+Invoice number, issue date, due date, amount, ageing, last chase, dispute flag.
+
+Credit notes, write-offs and adjustments
+
+8️⃣ Communications Timeline / Activity Log
+
+Purpose: Treat this like a “case file” — everything must be searchable and audit-ready.
+
+Includes every touch:
+
+Outbound email (with template used, status, opens if available)
+
+Outbound SMS (status: delivered/failed)
+
+AI Voice Calls
+
+Summary of call
+
+Outcome (PTP, dispute, no answer…)
+
+Link to recording
+
+Manual calls / notes
+
+Inbound emails (future V2)
+
+Inbound SMS replies (V2)
+
+Inbound calls (V2)
+
+All entries should be searchable by text and filterable by type.
+
+9️⃣ Promises-To-Pay (PTP) Management
+
+Purpose: This is the beating heart of effective collections.
+
+PTP status: Active / Completed / Missed
+
+PTP amount
+
+PTP date expected
+
+Reason for delay (if reported)
+
+History of PTPs (completed vs missed)
+
+This directly feeds the scoring engine.
+
+🔟 Dispute Tracking
+
+Purpose: Distinguish “won’t pay” from “can’t pay” vs “dispute”.
+
+Dispute flag (active/not active)
+
+Dispute reason
+
+Wrong amount
+
+Missing PO
+
+Service issue
+
+Quality complaint
+
+Internal AP delays
+
+Evidence attachments (optional)
+
+Date raised
+
+Resolution status & notes
+
+1️⃣1️⃣ Scheduling & Next Action
+
+Purpose: The user should instantly see the next step without thinking.
+
+Next recommended action (email/SMS/AI call)
+
+Priority level (High/Med/Low + score)
+
+Last touch date & channel
+
+Cooldown period remaining
+
+Escalation trigger date
+
+Last update to score
+
+Reason they are appearing in Action Centre
+(e.g., “Missed PTP”, “60+ days”, “High value newly overdue”)
+
+1️⃣2️⃣ Internal Tags & Segmentation
+
+Purpose: Helps large clients or partners manage portfolios.
+
+Industry / sector
+
+Region
+
+Account type (retainer, subscription, one-off)
+
+Partner-managed / accountant-managed flag
+
+Custom tags (“difficult payer”, “seasonal”, “VIP supplier”, etc.)
+
+1️⃣3️⃣ Attachments & Reference Files
+
+Purpose: Unified evidence store.
+
+Contracts
+
+Statements
+
+Previous legal letters
+
+Credit application forms
+
+Buyer/supplier correspondence (future via email ingestion)
+
+⭐ Bonus Suggestions (High Impact for V1.5/Phase 2)
+Payment Behaviour Classifier (simple ML)
+
+Auto-label customers as:
+
+Always on time
+
+Slightly late
+
+Chronically late
+
+Only pays after chasing
+
+Likelihood of Payment Score
+
+A simple probability estimate:
+
+High likelihood
+
+Medium
+
+Low
+
+Preferred Payment Method + Payment Links
+
+Store Stripe/GoCardless references where relevant.
+
+Legal Readiness Flag
+
+If they breach PTP twice + 60+ days → mark as escalation candidate.
+
+✅ Summary: What Qashivo Needs on Every Debtor Record
+
+A world-class debtor record is:
+
+A complete customer-level dossier combining commercial identity, financial exposure, behavioural intelligence, communications history, promises, disputes, and automation settings—so that every chase, every call, and every recommendation is informed and effective.
+
+This record becomes the brain of the Action Centre, driving prioritisation, messaging tone, AI call strategy, and risk scores.

@@ -183,7 +183,7 @@ function CompletedTabContent({
   setCompletedDateRange: (value: 'today' | 'yesterday' | 'week' | 'month' | 'custom') => void;
   customDateRange: { from: Date | undefined; to: Date | undefined };
   setCustomDateRange: (value: { from: Date | undefined; to: Date | undefined }) => void;
-  completedData?: { count: number; items: any[]; metrics?: { yesterday: any; week: any; month: any } };
+  completedData?: { count: number; items: any[]; metrics?: { today?: any; yesterday: any; week: any; month: any } };
 }) {
   const { metrics, activities, periodLabel } = useMemo(() => {
     // Use real API data if available, fall back to placeholder for custom range
@@ -555,12 +555,13 @@ export default function ActionCentre() {
     id: string;
     contactId: string;
     contactName: string;
+    companyName?: string;
     invoiceId: string;
     invoiceNumber: string;
     amount: string;
     daysOverdue: number;
     actionType: 'email' | 'sms' | 'voice';
-    status: 'pending_approval' | 'exception';
+    status: 'pending_approval' | 'exception' | 'scheduled';
     subject?: string;
     content?: string;
     confidenceScore: number;
