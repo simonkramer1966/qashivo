@@ -1,7 +1,7 @@
 import { db } from '../db';
-import { eq, and, inArray } from 'drizzle-orm';
+import { eq, and, inArray, sql } from 'drizzle-orm';
 import { actions, messageDrafts, contacts, invoices, tenants } from '@shared/schema';
-import { aiMessageGenerator, MessageContext, ToneSettings } from './aiMessageGenerator';
+import { aiMessageGenerator, MessageContext, ToneSettings, InvoiceDetail } from './aiMessageGenerator';
 import { ToneProfile, PlaybookStage } from './playbookEngine';
 import crypto from 'crypto';
 
@@ -69,7 +69,18 @@ export class MessagePreGenerationService {
       return 'skipped';
     }
 
-    const messageContext = this.buildMessageContext(action, contact, invoice, tenant);
+    // Fetch all overdue invoices for this contact (for email table)
+    const contactOverdueInvoices = action.contactId ? await db.select()
+      .from(invoices)
+      .where(and(
+        eq(invoices.tenantId, action.tenantId),
+        eq(invoices.contactId, action.contactId),
+        sql`${invoices.dueDate} < CURRENT_DATE`,
+        sql`COALESCE(${invoices.amountPaid}, 0) < ${invoices.amount}`,
+        sql`${invoices.status} NOT IN ('paid', 'cancelled', 'void')`
+      )) : [];
+
+    const messageContext = this.buildMessageContext(action, contact, invoice, tenant, contactOverdueInvoices);
     const toneSettings = this.buildToneSettings(action);
     const contextHash = this.computeContextHash(action, messageContext, toneSettings);
 
@@ -286,10 +297,27 @@ export class MessagePreGenerationService {
     }
   }
 
-  private buildMessageContext(action: any, contact: any, invoice: any, tenant: any): MessageContext {
+  private buildMessageContext(action: any, contact: any, invoice: any, tenant: any, overdueInvoices: any[] = []): MessageContext {
     const daysOverdue = invoice?.dueDate 
       ? Math.max(0, Math.floor((Date.now() - new Date(invoice.dueDate).getTime()) / (1000 * 60 * 60 * 24)))
       : action.metadata?.daysOverdue || 0;
+
+    // Build invoice details array for multiple invoices
+    const today = new Date();
+    const invoiceDetails: InvoiceDetail[] = overdueInvoices.map(inv => {
+      const dueDate = new Date(inv.dueDate);
+      const invoiceDaysOverdue = Math.max(0, Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24)));
+      const outstanding = Number(inv.amount) - Number(inv.amountPaid || 0);
+      return {
+        invoiceNumber: inv.invoiceNumber,
+        amount: outstanding,
+        dueDate: dueDate,
+        daysOverdue: invoiceDaysOverdue
+      };
+    });
+
+    // Calculate total outstanding from all overdue invoices
+    const totalFromInvoices = invoiceDetails.reduce((sum, inv) => sum + inv.amount, 0);
 
     return {
       customerName: contact.name || 'Customer',
@@ -299,8 +327,9 @@ export class MessagePreGenerationService {
       currency: '£',
       dueDate: invoice?.dueDate ? new Date(invoice.dueDate) : new Date(),
       daysOverdue,
-      totalOutstanding: action.metadata?.totalOutstanding,
-      invoiceCount: action.metadata?.invoiceCount,
+      totalOutstanding: totalFromInvoices > 0 ? totalFromInvoices : action.metadata?.totalOutstanding,
+      invoiceCount: invoiceDetails.length > 0 ? invoiceDetails.length : action.metadata?.invoiceCount,
+      invoiceDetails: invoiceDetails.length > 1 ? invoiceDetails : undefined, // Only include if multiple invoices
       previousContactCount: action.metadata?.previousContactCount,
       lastContactDate: action.metadata?.lastContactDate ? new Date(action.metadata.lastContactDate) : undefined,
       lastContactChannel: action.metadata?.lastContactChannel,
@@ -356,6 +385,11 @@ export class MessagePreGenerationService {
       isVip: context.isVip,
       isHighValue: context.isHighValue,
       
+      // Invoice details (for table generation)
+      invoiceCount: context.invoiceCount,
+      invoiceDetails: context.invoiceDetails?.map(inv => inv.invoiceNumber).sort() || null,
+      totalOutstanding: context.totalOutstanding,
+      
       // Tone settings
       stage: toneSettings.stage,
       toneProfile: toneSettings.toneProfile,
@@ -389,6 +423,12 @@ export class MessagePreGenerationService {
       previousContactCount: context.previousContactCount,
       isVip: context.isVip,
       isHighValue: context.isHighValue,
+      
+      // Invoice details (for table generation) - must match computeContextHash
+      invoiceCount: context.invoiceCount,
+      invoiceDetails: context.invoiceDetails?.map(inv => inv.invoiceNumber).sort() || null,
+      totalOutstanding: context.totalOutstanding,
+      
       stage: toneSettings.stage,
       toneProfile: toneSettings.toneProfile,
       tenantStyle: toneSettings.tenantStyle,

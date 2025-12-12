@@ -16,6 +16,13 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
+export interface InvoiceDetail {
+  invoiceNumber: string;
+  amount: number;
+  dueDate: Date;
+  daysOverdue: number;
+}
+
 export interface MessageContext {
   customerName: string;
   companyName?: string;
@@ -26,6 +33,7 @@ export interface MessageContext {
   daysOverdue: number;
   totalOutstanding?: number;
   invoiceCount?: number;
+  invoiceDetails?: InvoiceDetail[];  // Individual invoice breakdown for tables
   previousContactCount?: number;
   lastContactDate?: Date;
   lastContactChannel?: string;
@@ -67,7 +75,9 @@ class AIMessageGenerator {
     context: MessageContext,
     toneSettings: ToneSettings
   ): Promise<GeneratedMessage> {
-    const systemPrompt = this.buildEmailSystemPrompt(toneSettings);
+    const hasMultipleInvoices = (context.invoiceCount && context.invoiceCount > 1) || 
+                                 (context.invoiceDetails && context.invoiceDetails.length > 1);
+    const systemPrompt = this.buildEmailSystemPrompt(toneSettings, hasMultipleInvoices);
     const userPrompt = this.buildEmailUserPrompt(context, toneSettings);
 
     try {
@@ -159,7 +169,7 @@ class AIMessageGenerator {
     }
   }
 
-  private buildEmailSystemPrompt(toneSettings: ToneSettings): string {
+  private buildEmailSystemPrompt(toneSettings: ToneSettings, hasMultipleInvoices: boolean = false): string {
     const toneDescriptions: Record<ToneProfile, string> = {
       CREDIT_CONTROL_FRIENDLY: "warm, helpful, and understanding. Use a conversational tone that maintains a positive relationship while gently reminding about payment.",
       CREDIT_CONTROL_FIRM: "professional and direct, while remaining respectful. Clearly communicate the urgency without being aggressive.",
@@ -168,6 +178,9 @@ class AIMessageGenerator {
     };
 
     const tone = toneDescriptions[toneSettings.toneProfile] || toneDescriptions.CREDIT_CONTROL_FRIENDLY;
+
+    const invoiceTableInstruction = hasMultipleInvoices ? `
+- IMPORTANT: When there are multiple invoices, you MUST include an HTML table listing each invoice with columns: Invoice Number, Amount, Due Date, Days Overdue. Use clean styling with borders and proper formatting.` : '';
 
     return `You are a professional credit control specialist writing collection emails for UK businesses.
 
@@ -181,7 +194,7 @@ Guidelines:
 - Maintain professionalism at all times
 - Reference invoice details naturally
 - If there's a payment link, include it
-- For Recovery stage, mention the seriousness but offer a path to resolution
+- For Recovery stage, mention the seriousness but offer a path to resolution${invoiceTableInstruction}
 ${toneSettings.useLatePaymentLegislation ? "- You may reference the Late Payment of Commercial Debts (Interest) Act 1998 if appropriate" : ""}
 
 Respond with valid JSON containing:
@@ -207,6 +220,16 @@ Respond with valid JSON containing:
       situationContext = `We have contacted this customer ${context.previousContactCount} times already. This requires a more direct approach.`;
     }
 
+    // Build invoice details section if multiple invoices
+    let invoiceDetailsSection = '';
+    if (context.invoiceDetails && context.invoiceDetails.length > 1) {
+      invoiceDetailsSection = `\nInvoice Breakdown (INCLUDE AS HTML TABLE IN EMAIL):\n`;
+      context.invoiceDetails.forEach(inv => {
+        invoiceDetailsSection += `- ${inv.invoiceNumber}: ${currency}${inv.amount.toFixed(2)}, Due: ${inv.dueDate.toLocaleDateString('en-GB')}, ${inv.daysOverdue} days overdue\n`;
+      });
+      invoiceDetailsSection += `\nIMPORTANT: You MUST include an HTML table with the above invoices in the email body.`;
+    }
+
     return `Generate a collection email for the following situation:
 
 Customer: ${context.customerName}
@@ -216,7 +239,7 @@ Amount: ${currency}${context.invoiceAmount.toFixed(2)}
 Due Date: ${context.dueDate.toLocaleDateString('en-GB')}
 Days Overdue: ${context.daysOverdue}
 ${context.totalOutstanding ? `Total Outstanding: ${currency}${context.totalOutstanding.toFixed(2)}` : ''}
-${context.invoiceCount && context.invoiceCount > 1 ? `Number of Overdue Invoices: ${context.invoiceCount}` : ''}
+${context.invoiceCount && context.invoiceCount > 1 ? `Number of Overdue Invoices: ${context.invoiceCount}` : ''}${invoiceDetailsSection}
 
 Stage: ${toneSettings.stage}
 Reason: ${toneSettings.reasonCode || 'GENERIC_OVERDUE_FOLLOWUP'}
@@ -348,16 +371,56 @@ Tone: ${toneSettings.toneProfile}`;
   private getDefaultEmailBody(context: MessageContext, toneSettings: ToneSettings): string {
     const currency = context.currency || '£';
     
+    // Build invoice table HTML if multiple invoices
+    let invoiceTableHtml = '';
+    if (context.invoiceDetails && context.invoiceDetails.length > 1) {
+      invoiceTableHtml = `
+<table style="width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14px;">
+  <thead>
+    <tr style="background-color: #f3f4f6;">
+      <th style="padding: 12px; border: 1px solid #e5e7eb; text-align: left;">Invoice</th>
+      <th style="padding: 12px; border: 1px solid #e5e7eb; text-align: right;">Amount</th>
+      <th style="padding: 12px; border: 1px solid #e5e7eb; text-align: center;">Due Date</th>
+      <th style="padding: 12px; border: 1px solid #e5e7eb; text-align: center;">Days Overdue</th>
+    </tr>
+  </thead>
+  <tbody>
+    ${context.invoiceDetails.map(inv => `
+    <tr>
+      <td style="padding: 10px; border: 1px solid #e5e7eb;">${inv.invoiceNumber}</td>
+      <td style="padding: 10px; border: 1px solid #e5e7eb; text-align: right;">${currency}${inv.amount.toFixed(2)}</td>
+      <td style="padding: 10px; border: 1px solid #e5e7eb; text-align: center;">${inv.dueDate.toLocaleDateString('en-GB')}</td>
+      <td style="padding: 10px; border: 1px solid #e5e7eb; text-align: center;">${inv.daysOverdue}</td>
+    </tr>`).join('')}
+    <tr style="background-color: #f9fafb; font-weight: bold;">
+      <td style="padding: 10px; border: 1px solid #e5e7eb;">Total</td>
+      <td style="padding: 10px; border: 1px solid #e5e7eb; text-align: right;">${currency}${(context.totalOutstanding || context.invoiceAmount).toFixed(2)}</td>
+      <td style="padding: 10px; border: 1px solid #e5e7eb;" colspan="2"></td>
+    </tr>
+  </tbody>
+</table>`;
+    }
+    
     if (toneSettings.stage === 'RECOVERY') {
+      const invoiceRef = context.invoiceDetails && context.invoiceDetails.length > 1 
+        ? `${context.invoiceCount} overdue invoices totalling ${currency}${(context.totalOutstanding || context.invoiceAmount).toFixed(2)}`
+        : `invoice ${context.invoiceNumber} for ${currency}${context.invoiceAmount.toFixed(2)}`;
+      
       return `<p>Dear ${context.customerName},</p>
-<p>We are writing regarding invoice ${context.invoiceNumber} for ${currency}${context.invoiceAmount.toFixed(2)}, which is now ${context.daysOverdue} days overdue.</p>
-<p>Despite previous reminders, this invoice remains unpaid. We urge you to make payment immediately to avoid any further action being taken on this account.</p>
+<p>We are writing regarding ${invoiceRef}, which ${context.invoiceDetails && context.invoiceDetails.length > 1 ? 'are' : 'is'} now ${context.daysOverdue} days overdue.</p>
+${invoiceTableHtml}
+<p>Despite previous reminders, ${context.invoiceDetails && context.invoiceDetails.length > 1 ? 'these invoices remain' : 'this invoice remains'} unpaid. We urge you to make payment immediately to avoid any further action being taken on this account.</p>
 <p>If you are experiencing difficulties, please contact us immediately to discuss payment options.</p>
 <p>Kind regards,<br>${context.tenantName}</p>`;
     }
 
+    const invoiceRef = context.invoiceDetails && context.invoiceDetails.length > 1 
+      ? `${context.invoiceCount} invoices totalling ${currency}${(context.totalOutstanding || context.invoiceAmount).toFixed(2)}`
+      : `invoice ${context.invoiceNumber} for ${currency}${context.invoiceAmount.toFixed(2)}`;
+
     return `<p>Dear ${context.customerName},</p>
-<p>This is a friendly reminder that invoice ${context.invoiceNumber} for ${currency}${context.invoiceAmount.toFixed(2)} was due on ${context.dueDate.toLocaleDateString('en-GB')} and is now ${context.daysOverdue} days overdue.</p>
+<p>This is a friendly reminder that ${invoiceRef} ${context.invoiceDetails && context.invoiceDetails.length > 1 ? 'were' : 'was'} due on ${context.dueDate.toLocaleDateString('en-GB')} and ${context.invoiceDetails && context.invoiceDetails.length > 1 ? 'are' : 'is'} now ${context.daysOverdue} days overdue.</p>
+${invoiceTableHtml}
 <p>If you've already made payment, please disregard this message. Otherwise, we'd appreciate prompt payment to keep your account in good standing.</p>
 <p>If you have any questions or need to discuss payment arrangements, please don't hesitate to get in touch.</p>
 <p>Kind regards,<br>${context.tenantName}</p>`;
