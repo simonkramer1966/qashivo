@@ -166,10 +166,11 @@ export async function generateDailyPlan(
   windowEnd.setHours(windowEnd.getHours() + 6);
 
   // Check if a plan already exists for tomorrow's execution time
+  // Note: Only include pending_approval and scheduled - NOT exception (those are moved to VIP)
   const existingPlanActions = await db.query.actions.findMany({
     where: and(
       eq(actions.tenantId, tenantId),
-      sql`${actions.status} IN ('pending_approval', 'exception')`,
+      sql`${actions.status} IN ('pending_approval', 'scheduled')`,
       sql`${actions.scheduledFor} >= ${windowStart.toISOString()}`,
       sql`${actions.scheduledFor} <= ${windowEnd.toISOString()}`
     ),
@@ -208,13 +209,14 @@ export async function generateDailyPlan(
     };
   }
 
-  // If regenerating, delete existing pending_approval/exception actions for tomorrow
+  // If regenerating, delete existing pending_approval/scheduled actions for tomorrow
+  // Note: Do NOT delete exception actions - those are VIP items that need manual handling
   if (regenerate && existingPlanActions.length > 0) {
     console.log(`🔄 Regenerating plan - deleting ${existingPlanActions.length} existing actions for tomorrow`);
     await db.delete(actions).where(
       and(
         eq(actions.tenantId, tenantId),
-        sql`${actions.status} IN ('pending_approval', 'exception')`,
+        sql`${actions.status} IN ('pending_approval', 'scheduled')`,
         sql`${actions.scheduledFor} >= ${windowStart.toISOString()}`,
         sql`${actions.scheduledFor} <= ${windowEnd.toISOString()}`
       )
