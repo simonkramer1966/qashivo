@@ -5080,9 +5080,13 @@ Guidelines:
       const weekCutoff = getDateCutoff('week');
       const monthCutoff = getDateCutoff('month');
       
+      // Calculate end of yesterday (23:59:59.999)
+      const yesterdayEnd = new Date(yesterdayCutoff);
+      yesterdayEnd.setHours(23, 59, 59, 999);
+      
       const yesterdayActions = completedActionsRaw.filter(a => {
         const actionDate = a.completedAt ? new Date(a.completedAt) : new Date(a.createdAt);
-        return actionDate >= yesterdayCutoff;
+        return actionDate >= yesterdayCutoff && actionDate <= yesterdayEnd;
       });
       const weekActions = completedActionsRaw.filter(a => {
         const actionDate = a.completedAt ? new Date(a.completedAt) : new Date(a.createdAt);

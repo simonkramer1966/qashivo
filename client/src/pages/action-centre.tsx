@@ -216,24 +216,34 @@ function CompletedTabContent({
     let filteredActivities: any[] = [];
     if (completedData?.items) {
       const now = new Date();
-      const cutoff = new Date();
+      let startCutoff = new Date();
+      let endCutoff: Date | null = null;
+      
       if (completedDateRange === 'yesterday') {
-        cutoff.setDate(cutoff.getDate() - 1);
-        cutoff.setHours(0, 0, 0, 0);
+        // Yesterday: from start of yesterday to end of yesterday (not including today)
+        startCutoff.setDate(startCutoff.getDate() - 1);
+        startCutoff.setHours(0, 0, 0, 0);
+        endCutoff = new Date(startCutoff);
+        endCutoff.setHours(23, 59, 59, 999);
       } else if (completedDateRange === 'week') {
-        cutoff.setDate(cutoff.getDate() - 7);
+        startCutoff.setDate(startCutoff.getDate() - 7);
+        startCutoff.setHours(0, 0, 0, 0);
       } else if (completedDateRange === 'month') {
-        cutoff.setDate(cutoff.getDate() - 30);
+        startCutoff.setDate(startCutoff.getDate() - 30);
+        startCutoff.setHours(0, 0, 0, 0);
       } else if (completedDateRange === 'custom' && customDateRange.from) {
-        cutoff.setTime(customDateRange.from.getTime());
+        startCutoff.setTime(customDateRange.from.getTime());
+        if (customDateRange.to) {
+          endCutoff = new Date(customDateRange.to);
+          endCutoff.setHours(23, 59, 59, 999);
+        }
       }
       
       filteredActivities = completedData.items.filter((item: any) => {
         const itemDate = item.completedAt ? new Date(item.completedAt) : new Date(item.createdAt);
-        if (completedDateRange === 'custom' && customDateRange.from && customDateRange.to) {
-          return itemDate >= customDateRange.from && itemDate <= customDateRange.to;
-        }
-        return itemDate >= cutoff;
+        if (itemDate < startCutoff) return false;
+        if (endCutoff && itemDate > endCutoff) return false;
+        return true;
       }).map((item: any) => ({
         date: item.formattedDate || new Date(item.completedAt || item.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }),
         time: item.formattedTime || new Date(item.completedAt || item.createdAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
