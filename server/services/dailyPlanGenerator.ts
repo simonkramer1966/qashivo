@@ -67,6 +67,7 @@ export interface DailyPlanAction {
   id: string;
   contactId: string;
   contactName: string;
+  companyName?: string;
   invoiceId: string;
   invoiceNumber: string;
   amount: string;
@@ -350,6 +351,7 @@ export async function generateDailyPlan(
       id: newAction.id,
       contactId: rec.contactId,
       contactName: rec.contactName,
+      companyName: rec.companyName,
       invoiceId: rec.invoiceId,
       invoiceNumber: rec.invoiceNumber,
       amount: rec.amount,
@@ -424,6 +426,7 @@ function buildPlanSummary(existingActions: any[], tenant: any): DailyPlanRespons
     id: action.id,
     contactId: action.contactId,
     contactName: action.contact?.name || 'Unknown',
+    companyName: action.contact?.companyName || undefined,
     invoiceId: action.invoiceId || '',
     invoiceNumber: action.invoice?.invoiceNumber || 'N/A',
     amount: action.invoice?.amount || '0',

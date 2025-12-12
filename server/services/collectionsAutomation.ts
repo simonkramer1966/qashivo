@@ -17,6 +17,7 @@ export interface CollectionAction {
   tenantId: string;
   invoiceNumber: string;
   contactName: string;
+  companyName?: string;
   contactFirstName: string;
   daysOverdue: number;
   amount: string;
@@ -231,6 +232,7 @@ export async function checkCollectionActions(tenantId: string): Promise<Collecti
           tenantId: tenantId,
           invoiceNumber: primaryInvoice.invoiceNumber,
           contactName: contact.name || 'Unknown',
+          companyName: contact.companyName || undefined,
           contactFirstName: ((contact.name || '').trim().split(/\s+/)[0]) || contact.name || 'Unknown',
           daysOverdue: oldestInvoice.daysOverdue,
           amount: primaryInvoice.amount,
@@ -435,6 +437,7 @@ export async function nudgeInvoiceToNextAction(invoiceId: string, tenantId: stri
       tenantId: invoice.tenantId,  // Include tenantId for customer profile lookup
       invoiceNumber: invoice.invoiceNumber,
       contactName: contact.name || 'Unknown',
+      companyName: contact.companyName || undefined,
       contactFirstName: ((contact.name || '').trim().split(/\s+/)[0]) || contact.name || 'Unknown',
       daysOverdue: Math.max(0, daysOverdue),
       amount: invoice.amount,
