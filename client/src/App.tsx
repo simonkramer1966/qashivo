@@ -37,6 +37,7 @@ const AdminAnalytics = lazy(() => import("@/pages/admin-analytics"));
 const AdminOutcomes = lazy(() => import("@/pages/admin-outcomes"));
 const Dashboard = lazy(() => import("@/pages/dashboard"));
 const DashboardExperimental = lazy(() => import("@/pages/dashboard-experimental"));
+const CashboardExperimental = lazy(() => import("@/pages/cashboard-experimental"));
 const Homepage = lazy(() => import("@/pages/homepage"));
 const Home = lazy(() => import("@/pages/Home"));
 const Demo = lazy(() => import("@/pages/Demo"));
@@ -149,6 +150,7 @@ function Router() {
           <Route path="/cash-flow" component={CashFlow} />
           <Route path="/financing" component={Financing} />
           <Route path="/automation" component={Automation} />
+          <Route path="/cashboard-experimental" component={CashboardExperimental} />
           <Route path="/" component={Cashboard} />
           <Route path="/:rest*" component={NotFound} />
         </Switch>
