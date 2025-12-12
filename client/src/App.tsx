@@ -50,6 +50,9 @@ const ForgotPassword = lazy(() => import("@/pages/ForgotPassword"));
 const ResetPassword = lazy(() => import("@/pages/ResetPassword"));
 const UserOnboarding = lazy(() => import("@/pages/UserOnboarding"));
 const ConnectionError = lazy(() => import("@/pages/connection-error"));
+const CashFlow = lazy(() => import("@/pages/cash-flow"));
+const Financing = lazy(() => import("@/pages/financing"));
+const Automation = lazy(() => import("@/pages/automation"));
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -141,6 +144,9 @@ function Router() {
           <Route path="/documentation-review" component={DocumentationReview} />
           <Route path="/settings" component={Settings} />
           <Route path="/account" component={Account} />
+          <Route path="/cash-flow" component={CashFlow} />
+          <Route path="/financing" component={Financing} />
+          <Route path="/automation" component={Automation} />
           <Route path="/" component={Cashboard} />
           <Route path="/:rest*" component={NotFound} />
         </Switch>
