@@ -175,26 +175,17 @@ export function ActionPreviewDrawer({
           <div className="space-y-6">
             <div className="grid grid-cols-3 gap-4">
               <div className="bg-white/80 border border-slate-200/50 rounded-lg p-3">
-                <div className="flex items-center gap-2 text-slate-500 text-xs mb-1">
-                  <Clock className="h-3.5 w-3.5" />
-                  Days Overdue
-                </div>
+                <div className="text-slate-500 text-xs mb-1">Days Overdue</div>
                 <div className="text-xl font-bold text-slate-900">{action.daysOverdue}</div>
               </div>
               <div className="bg-white/80 border border-slate-200/50 rounded-lg p-3">
-                <div className="flex items-center gap-2 text-slate-500 text-xs mb-1">
-                  <PoundSterling className="h-3.5 w-3.5" />
-                  Amount
-                </div>
+                <div className="text-slate-500 text-xs mb-1">Amount</div>
                 <div className="text-xl font-bold text-slate-900">
                   {formatCurrency(parseFloat(action.amount))}
                 </div>
               </div>
               <div className="bg-white/80 border border-slate-200/50 rounded-lg p-3">
-                <div className="flex items-center gap-2 text-slate-500 text-xs mb-1">
-                  <FileText className="h-3.5 w-3.5" />
-                  Invoice
-                </div>
+                <div className="text-slate-500 text-xs mb-1">Invoice</div>
                 <div className="text-sm font-medium text-slate-900 truncate">
                   {action.invoiceNumber}
                 </div>
