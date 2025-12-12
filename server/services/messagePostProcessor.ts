@@ -164,6 +164,7 @@ export function cleanSmsContent(body: string): string {
   
   // Enforce 160 character limit for SMS
   if (cleaned.length > 160) {
+    console.warn(`⚠️ SMS exceeded 160 chars (${cleaned.length}), truncating: "${cleaned.substring(0, 50)}..."`);
     cleaned = truncateSmsToLimit(cleaned, 160);
   }
   
