@@ -1688,7 +1688,11 @@ export default function ActionCentre() {
                                 'text-purple-600'
                               }`} />
                             </div>
-                            <span className="text-sm text-slate-900 font-medium truncate flex-1">{item.contactName}</span>
+                            <div className="flex-1 min-w-0">
+                              {item.companyName && <div className="text-sm text-slate-900 font-medium truncate">{item.companyName}</div>}
+                              {item.contactName && <div className="text-xs text-slate-600 truncate">{item.contactName}</div>}
+                              {!item.companyName && !item.contactName && <div className="text-sm text-slate-900 font-medium truncate">Unknown Customer</div>}
+                            </div>
                             {item.invoiceCount && item.invoiceCount > 1 && (
                               <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 shrink-0">
                                 {item.invoiceCount} invoices
