@@ -180,7 +180,7 @@ class AIMessageGenerator {
     const tone = toneDescriptions[toneSettings.toneProfile] || toneDescriptions.CREDIT_CONTROL_FRIENDLY;
 
     const invoiceTableInstruction = hasMultipleInvoices ? `
-- IMPORTANT: When there are multiple invoices, you MUST include an HTML table listing each invoice with columns: Invoice Number, Amount, Due Date, Days Overdue. Use clean styling with borders and proper formatting.` : '';
+- IMPORTANT: When there are multiple invoices, you MUST include an HTML table listing each invoice with columns: Invoice Number, Amount, Due Date, Days Overdue. Use clean styling with borders and proper formatting. Place the table after the opening context paragraph.` : '';
 
     return `You are a professional credit control specialist writing collection emails for UK businesses.
 
@@ -197,10 +197,21 @@ Guidelines:
 - For Recovery stage, mention the seriousness but offer a path to resolution${invoiceTableInstruction}
 ${toneSettings.useLatePaymentLegislation ? "- You may reference the Late Payment of Commercial Debts (Interest) Act 1998 if appropriate" : ""}
 
+HTML FORMATTING REQUIREMENTS (CRITICAL):
+- Wrap EVERY paragraph in <p></p> tags - this is essential for proper email rendering
+- Structure your email with separate paragraphs for: greeting, context, main message, call to action, sign-off
+- Example structure:
+  <p>Dear [Name],</p>
+  <p>[Opening context about invoice(s)]</p>
+  [Invoice table if multiple invoices]
+  <p>[Main message with details]</p>
+  <p>[Call to action]</p>
+  <p>Kind regards,<br>[Sender]</p>
+
 Respond with valid JSON containing:
 {
   "subject": "Email subject line",
-  "body": "Full email body in HTML format with paragraphs",
+  "body": "Full HTML email body with each paragraph wrapped in <p> tags",
   "callToAction": "Brief call to action text"
 }`;
   }
@@ -274,11 +285,15 @@ CRITICAL GUIDELINES:
 - Never be threatening
 - Use British English
 
-Example format: "Hi [Name], you have [X] invoices totalling [£amount] overdue. Please pay or call us on [number]. [Company]"
+FORMATTING:
+- Use a newline character (\\n) after the greeting to separate it from the main message for better readability
+- Structure: Greeting\\nMain message with amount\\nCall to action. Sender
+
+Example: "Hi [Name],\\nYou have [X] invoices totalling £[amount] overdue.\\nPay or call [number]. [Company]"
 
 Respond with valid JSON containing:
 {
-  "body": "SMS message text"
+  "body": "SMS message text with \\n for line breaks"
 }`;
   }
 
@@ -433,10 +448,10 @@ ${invoiceTableHtml}
     const invoiceText = invoiceCount === 1 ? 'invoice' : 'invoices';
     
     if (toneSettings.stage === 'RECOVERY') {
-      return `URGENT: ${invoiceCount} ${invoiceText} totalling ${currency}${totalAmount.toFixed(2)} overdue. Please pay now or call ${context.tenantName}.`;
+      return `URGENT: ${invoiceCount} ${invoiceText} totalling ${currency}${totalAmount.toFixed(2)} overdue.\nPlease pay now or call ${context.tenantName}.`;
     }
 
-    return `Hi ${context.customerName}, ${invoiceCount} ${invoiceText} (${currency}${totalAmount.toFixed(2)}) overdue. Please pay or call us. - ${context.tenantName}`;
+    return `Hi ${context.customerName},\n${invoiceCount} ${invoiceText} (${currency}${totalAmount.toFixed(2)}) overdue.\nPlease pay or call us. - ${context.tenantName}`;
   }
 
   private getDefaultVoiceScript(context: MessageContext, toneSettings: ToneSettings): string {
