@@ -1337,53 +1337,53 @@ export default function ActionCentre() {
                 />
               </div>
 
-              {/* Pagination Controls - Desktop */}
-              {totalPages > 1 && (
-                <div className="flex gap-2 items-center">
-                  <Button
-                    onClick={() => setPage(Math.max(1, page - 1))}
-                    disabled={page === 1}
-                    variant="outline"
-                    size="sm"
-                    className="h-9"
-                    data-testid="button-prev-page"
-                  >
-                    Previous
-                  </Button>
-                  
-                  <div className="flex gap-1">
-                    {Array.from({ length: totalPages }, (_, i) => i + 1)
-                      .filter(pageNum => {
-                        return Math.abs(pageNum - page) <= 1 || pageNum === 1 || pageNum === totalPages;
-                      })
-                      .map((pageNum, idx, arr) => (
-                        <div key={pageNum} className="flex gap-1 items-center">
-                          {idx > 0 && arr[idx - 1] !== pageNum - 1 && <span className="text-slate-400">...</span>}
-                          <Button
-                            onClick={() => setPage(pageNum)}
-                            variant={page === pageNum ? "default" : "outline"}
-                            size="sm"
-                            className={`h-9 min-w-[36px] ${page === pageNum ? 'bg-[#17B6C3] hover:bg-[#1396A1]' : ''}`}
-                            data-testid={`button-page-${pageNum}`}
-                          >
-                            {pageNum}
-                          </Button>
-                        </div>
-                      ))}
-                  </div>
-                  
-                  <Button
-                    onClick={() => setPage(Math.min(totalPages, page + 1))}
-                    disabled={page === totalPages}
-                    variant="outline"
-                    size="sm"
-                    className="h-9"
-                    data-testid="button-next-page"
-                  >
-                    Next
-                  </Button>
+              {/* Pagination Controls - Desktop - Always visible */}
+              <div className="flex gap-2 items-center">
+                <Button
+                  onClick={() => setPage(Math.max(1, page - 1))}
+                  disabled={page === 1}
+                  variant="outline"
+                  size="sm"
+                  className="h-9"
+                  data-testid="button-prev-page"
+                >
+                  Previous
+                </Button>
+                
+                <div className="flex gap-1">
+                  {Array.from({ length: Math.max(1, totalPages) }, (_, i) => i + 1)
+                    .filter(pageNum => {
+                      return Math.abs(pageNum - page) <= 1 || pageNum === 1 || pageNum === totalPages;
+                    })
+                    .map((pageNum, idx, arr) => (
+                      <div key={pageNum} className="flex gap-1 items-center">
+                        {idx > 0 && arr[idx - 1] !== pageNum - 1 && <span className="text-slate-400">...</span>}
+                        <Button
+                          onClick={() => setPage(pageNum)}
+                          variant={page === pageNum ? "default" : "outline"}
+                          size="sm"
+                          className={`h-9 min-w-[36px] ${page === pageNum ? 'bg-[#17B6C3] hover:bg-[#1396A1]' : ''}`}
+                          data-testid={`button-page-${pageNum}`}
+                        >
+                          {pageNum}
+                        </Button>
+                      </div>
+                    ))}
                 </div>
-              )}
+                
+                <span className="text-xs text-slate-500">of {Math.max(1, totalPages)}</span>
+                
+                <Button
+                  onClick={() => setPage(Math.min(totalPages, page + 1))}
+                  disabled={page === totalPages || totalPages <= 1}
+                  variant="outline"
+                  size="sm"
+                  className="h-9"
+                  data-testid="button-next-page"
+                >
+                  Next
+                </Button>
+              </div>
             </div>
 
             {/* Mobile: Search and Pagination stacked */}
@@ -1404,51 +1404,50 @@ export default function ActionCentre() {
                 />
               </div>
 
-              {/* Pagination Controls - Mobile */}
-              {totalPages > 1 && (
-                <div className="flex gap-2 items-center justify-between">
-                  <Button
-                    onClick={() => setPage(Math.max(1, page - 1))}
-                    disabled={page === 1}
-                    variant="outline"
-                    size="sm"
-                    className="h-9"
-                    data-testid="button-prev-page-mobile"
-                  >
-                    Previous
-                  </Button>
-                  
-                  <div className="flex gap-1">
-                    {Array.from({ length: totalPages }, (_, i) => i + 1)
-                      .filter(pageNum => {
-                        return Math.abs(pageNum - page) <= 1;
-                      })
-                      .map((pageNum) => (
-                        <Button
-                          key={pageNum}
-                          onClick={() => setPage(pageNum)}
-                          variant={page === pageNum ? "default" : "outline"}
-                          size="sm"
-                          className={`h-9 min-w-[36px] ${page === pageNum ? 'bg-[#17B6C3] hover:bg-[#1396A1]' : ''}`}
-                          data-testid={`button-page-${pageNum}-mobile`}
-                        >
-                          {pageNum}
-                        </Button>
-                      ))}
-                  </div>
-                  
-                  <Button
-                    onClick={() => setPage(Math.min(totalPages, page + 1))}
-                    disabled={page === totalPages}
-                    variant="outline"
-                    size="sm"
-                    className="h-9"
-                    data-testid="button-next-page-mobile"
-                  >
-                    Next
-                  </Button>
+              {/* Pagination Controls - Mobile - Always visible */}
+              <div className="flex gap-2 items-center justify-between">
+                <Button
+                  onClick={() => setPage(Math.max(1, page - 1))}
+                  disabled={page === 1}
+                  variant="outline"
+                  size="sm"
+                  className="h-9"
+                  data-testid="button-prev-page-mobile"
+                >
+                  Previous
+                </Button>
+                
+                <div className="flex gap-1 items-center">
+                  {Array.from({ length: Math.max(1, totalPages) }, (_, i) => i + 1)
+                    .filter(pageNum => {
+                      return Math.abs(pageNum - page) <= 1;
+                    })
+                    .map((pageNum) => (
+                      <Button
+                        key={pageNum}
+                        onClick={() => setPage(pageNum)}
+                        variant={page === pageNum ? "default" : "outline"}
+                        size="sm"
+                        className={`h-9 min-w-[36px] ${page === pageNum ? 'bg-[#17B6C3] hover:bg-[#1396A1]' : ''}`}
+                        data-testid={`button-page-${pageNum}-mobile`}
+                      >
+                        {pageNum}
+                      </Button>
+                    ))}
+                  <span className="text-xs text-slate-500 mx-1">of {Math.max(1, totalPages)}</span>
                 </div>
-              )}
+                
+                <Button
+                  onClick={() => setPage(Math.min(totalPages, page + 1))}
+                  disabled={page === totalPages || totalPages <= 1}
+                  variant="outline"
+                  size="sm"
+                  className="h-9"
+                  data-testid="button-next-page-mobile"
+                >
+                  Next
+                </Button>
+              </div>
             </div>
           </div>
           )}
