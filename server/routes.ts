@@ -5641,20 +5641,150 @@ Guidelines:
       const enforcementRaw = allInvoices.filter(inv => inv.stage === 'enforcement');
       const enforcement = await Promise.all(enforcementRaw.map(enrichInvoice));
       
-      // Combine PTPs and payment plans into "promises"
-      const allPromises = [...upcomingPTP, ...paymentPlansItems];
+      // ========== PRECEDENCE-BASED INVOICE CATEGORIZATION ==========
+      // Each invoice appears in exactly ONE tab based on precedence:
+      // Recovery > Disputes > Queries > Broken > Promises > VIP > Overdue > Due
       
-      // Combine debt recovery and enforcement into "recovery"
-      const allRecovery = [...debtRecovery, ...enforcement];
+      // Get all unpaid invoices
+      const unpaidInvoices = allInvoices.filter(inv => 
+        inv.status === 'unpaid' || inv.status === 'overdue'
+      );
+      
+      // Get invoice IDs for each category (for precedence checks)
+      const recoveryInvoiceIds = new Set(
+        unpaidInvoices.filter(inv => inv.stage === 'debt_recovery' || inv.stage === 'enforcement').map(inv => inv.id)
+      );
+      
+      const disputeInvoiceIds = new Set([
+        ...invoiceIdsWithDisputes,
+        ...allActions.filter(a => a.intentType === 'dispute' && a.status === 'open' && a.invoiceId).map(a => a.invoiceId)
+      ]);
+      
+      const queryInvoiceIds = new Set(
+        allActions.filter(a => a.intentType === 'general_query' && a.status === 'open' && a.invoiceId).map(a => a.invoiceId)
+      );
+      
+      const brokenInvoiceIds = new Set(
+        brokenPromises.filter(a => a.invoiceId).map(a => a.invoiceId)
+      );
+      
+      const promiseInvoiceIds = new Set(
+        upcomingPTP.filter(a => a.invoiceId).map(a => a.invoiceId as string)
+      );
+      
+      // VIP invoices - those with contacts marked as VIP or manually flagged
+      const vipContactIds = new Set(
+        exceptions.filter(e => e.contactId).map(e => e.contactId)
+      );
+      
+      // Categorize each invoice using precedence
+      const categorizedInvoices: Record<string, any[]> = {
+        recovery: [],
+        disputes: [],
+        queries: [],
+        broken: [],
+        promises: [],
+        vip: [],
+        overdue: [],
+        due: []
+      };
+      
+      for (const inv of unpaidInvoices) {
+        if (recoveryInvoiceIds.has(inv.id)) {
+          categorizedInvoices.recovery.push(inv);
+        } else if (disputeInvoiceIds.has(inv.id)) {
+          categorizedInvoices.disputes.push(inv);
+        } else if (queryInvoiceIds.has(inv.id)) {
+          categorizedInvoices.queries.push(inv);
+        } else if (brokenInvoiceIds.has(inv.id)) {
+          categorizedInvoices.broken.push(inv);
+        } else if (promiseInvoiceIds.has(inv.id)) {
+          categorizedInvoices.promises.push(inv);
+        } else if (vipContactIds.has(inv.contactId)) {
+          categorizedInvoices.vip.push(inv);
+        } else if (new Date(inv.dueDate) < today) {
+          categorizedInvoices.overdue.push(inv);
+        } else {
+          categorizedInvoices.due.push(inv);
+        }
+      }
+      
+      // Helper to group invoices by debtor
+      const groupByDebtor = async (invoiceList: any[]) => {
+        const debtorMap = new Map<string, any>();
+        
+        for (const inv of invoiceList) {
+          const contactId = inv.contactId;
+          
+          if (!debtorMap.has(contactId)) {
+            let companyName = '';
+            let contactName = '';
+            let contact = null;
+            try {
+              contact = await storage.getContact(contactId, tenantId);
+              if (contact) {
+                companyName = contact.companyName || '';
+                contactName = contact.name || '';
+              }
+            } catch (e) {}
+            
+            debtorMap.set(contactId, {
+              contactId,
+              companyName,
+              contactName,
+              contact,
+              totalOutstanding: 0,
+              invoiceCount: 0,
+              invoices: [],
+              oldestDueDate: inv.dueDate,
+            });
+          }
+          
+          const debtor = debtorMap.get(contactId)!;
+          debtor.totalOutstanding += parseFloat(inv.amount || '0');
+          debtor.invoiceCount += 1;
+          debtor.invoices.push(inv);
+          
+          if (new Date(inv.dueDate) < new Date(debtor.oldestDueDate)) {
+            debtor.oldestDueDate = inv.dueDate;
+          }
+        }
+        
+        return Array.from(debtorMap.values()).sort((a, b) => 
+          b.totalOutstanding - a.totalOutstanding
+        );
+      };
+      
+      // Group each category by debtor
+      const [
+        recoveryDebtors,
+        disputeDebtors,
+        queryDebtors,
+        brokenDebtors,
+        promiseDebtors,
+        vipDebtors,
+        overdueDebtors,
+        dueDebtors
+      ] = await Promise.all([
+        groupByDebtor(categorizedInvoices.recovery),
+        groupByDebtor(categorizedInvoices.disputes),
+        groupByDebtor(categorizedInvoices.queries),
+        groupByDebtor(categorizedInvoices.broken),
+        groupByDebtor(categorizedInvoices.promises),
+        groupByDebtor(categorizedInvoices.vip),
+        groupByDebtor(categorizedInvoices.overdue),
+        groupByDebtor(categorizedInvoices.due)
+      ]);
       
       res.json({
-        vip: { count: exceptions.length, items: exceptions },
-        queries: { count: queries.length, items: queries },
-        overdueInvoices: { count: overdueInvoicesRaw.length, items: overdueCustomers },
-        promises: { count: allPromises.length, items: allPromises },
-        brokenPromises: { count: brokenPromises.length, items: brokenPromises },
-        disputes: { count: allDisputes.length, items: allDisputes },
-        recovery: { count: allRecovery.length, items: allRecovery }
+        vip: { count: vipDebtors.length, invoiceCount: categorizedInvoices.vip.length, items: vipDebtors },
+        due: { count: dueDebtors.length, invoiceCount: categorizedInvoices.due.length, items: dueDebtors },
+        overdue: { count: overdueDebtors.length, invoiceCount: categorizedInvoices.overdue.length, items: overdueDebtors },
+        promises: { count: promiseDebtors.length, invoiceCount: categorizedInvoices.promises.length, items: promiseDebtors },
+        broken: { count: brokenDebtors.length, invoiceCount: categorizedInvoices.broken.length, items: brokenDebtors },
+        queries: { count: queryDebtors.length, invoiceCount: categorizedInvoices.queries.length, items: queryDebtors },
+        disputes: { count: disputeDebtors.length, invoiceCount: categorizedInvoices.disputes.length, items: disputeDebtors },
+        recovery: { count: recoveryDebtors.length, invoiceCount: categorizedInvoices.recovery.length, items: recoveryDebtors }
       });
     } catch (error) {
       console.error("Error fetching action centre tabs:", error);
