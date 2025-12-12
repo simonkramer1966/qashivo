@@ -4997,19 +4997,109 @@ Guidelines:
         .map(({ dispute }) => dispute.invoiceId);
       
       // 0. COMPLETED - actions that AI has executed (completed/sent outbound actions)
-      const sevenDaysAgo = new Date();
-      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+      // Support date range filtering: yesterday, week, month (defaults to week for backward compat)
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
       
       const completedActionsRaw = allActions.filter(a => {
         const isCompleted = a.status === 'completed' || a.status === 'sent';
         const isOutbound = a.metadata?.direction === 'outbound' || !a.metadata?.direction;
-        const isRecent = a.completedAt ? new Date(a.completedAt) >= sevenDaysAgo : 
-                         a.createdAt ? new Date(a.createdAt) >= sevenDaysAgo : false;
+        const isRecent = a.completedAt ? new Date(a.completedAt) >= thirtyDaysAgo : 
+                         a.createdAt ? new Date(a.createdAt) >= thirtyDaysAgo : false;
         const isActionable = a.type === 'email' || a.type === 'sms' || a.type === 'call' || a.type === 'voice';
         return isCompleted && isOutbound && isRecent && isActionable;
       });
       
-      // Enrich completed actions with contact/invoice info
+      // Helper to get date cutoffs
+      const getDateCutoff = (range: 'yesterday' | 'week' | 'month') => {
+        const cutoff = new Date();
+        if (range === 'yesterday') {
+          cutoff.setDate(cutoff.getDate() - 1);
+          cutoff.setHours(0, 0, 0, 0);
+        } else if (range === 'week') {
+          cutoff.setDate(cutoff.getDate() - 7);
+        } else {
+          cutoff.setDate(cutoff.getDate() - 30);
+        }
+        return cutoff;
+      };
+      
+      // Calculate metrics for each date range
+      const calculateCompletedMetrics = (actions: typeof completedActionsRaw) => {
+        const emailActions = actions.filter(a => a.type === 'email');
+        const smsActions = actions.filter(a => a.type === 'sms');
+        const voiceActions = actions.filter(a => a.type === 'call' || a.type === 'voice');
+        
+        // Count PTPs (promise to pay outcomes)
+        const ptpActions = actions.filter(a => 
+          a.intentType === 'promise_to_pay' || 
+          a.metadata?.outcome === 'promise_to_pay' ||
+          a.metadata?.outcome === 'ptp'
+        );
+        
+        // Calculate commitment amounts from PTPs
+        const commitmentAmount = ptpActions.reduce((sum, a) => {
+          const amount = parseFloat(a.metadata?.ptpAmount || a.metadata?.amount || '0');
+          return sum + (isNaN(amount) ? 0 : amount);
+        }, 0);
+        
+        // Unique customers contacted
+        const uniqueCustomers = new Set(actions.map(a => a.contactId).filter(Boolean)).size;
+        
+        // Voice answered rate
+        const voiceAnswered = voiceActions.filter(a => 
+          a.metadata?.outcome === 'answered' || 
+          a.metadata?.callStatus === 'completed' ||
+          a.metadata?.answered === true
+        ).length;
+        
+        // Calculate SMS delivery rate
+        const smsDelivered = smsActions.filter(a => a.status === 'sent' || a.status === 'completed').length;
+        const smsDeliveryRate = smsActions.length > 0 ? Math.round((smsDelivered / smsActions.length) * 100) : 100;
+        
+        return {
+          actions: actions.length,
+          actionsChange: '—', // Will be calculated by comparing periods
+          emailCount: emailActions.length,
+          smsCount: smsActions.length,
+          voiceCount: voiceActions.length,
+          voiceAnswered,
+          ptpCount: ptpActions.length,
+          commitments: Math.round(commitmentAmount),
+          customers: uniqueCustomers,
+          coverage: uniqueCustomers > 0 ? `${Math.min(100, Math.round((uniqueCustomers / Math.max(1, overdueInvoicesRaw.length)) * 100))}%` : '0%',
+          responseRate: actions.length > 0 ? Math.round((ptpActions.length / actions.length) * 100) : 0,
+          responseChange: '—', // Will be calculated by comparing periods
+          emailOpen: emailActions.length > 0 ? `${Math.round(emailActions.filter(a => a.metadata?.opened).length / emailActions.length * 100)}%` : '0%',
+          smsDelivery: `${smsDeliveryRate}%`
+        };
+      };
+      
+      // Get metrics for each period
+      const yesterdayCutoff = getDateCutoff('yesterday');
+      const weekCutoff = getDateCutoff('week');
+      const monthCutoff = getDateCutoff('month');
+      
+      const yesterdayActions = completedActionsRaw.filter(a => {
+        const actionDate = a.completedAt ? new Date(a.completedAt) : new Date(a.createdAt);
+        return actionDate >= yesterdayCutoff;
+      });
+      const weekActions = completedActionsRaw.filter(a => {
+        const actionDate = a.completedAt ? new Date(a.completedAt) : new Date(a.createdAt);
+        return actionDate >= weekCutoff;
+      });
+      const monthActions = completedActionsRaw.filter(a => {
+        const actionDate = a.completedAt ? new Date(a.completedAt) : new Date(a.createdAt);
+        return actionDate >= monthCutoff;
+      });
+      
+      const completedMetrics = {
+        yesterday: calculateCompletedMetrics(yesterdayActions),
+        week: calculateCompletedMetrics(weekActions),
+        month: calculateCompletedMetrics(monthActions)
+      };
+      
+      // Enrich completed actions with contact/invoice info and format for frontend
       const completedActions = await Promise.all(completedActionsRaw.map(async (action) => {
         let companyName = '';
         let contactName = '';
@@ -5034,14 +5124,39 @@ Guidelines:
           }
         }
         
+        // Determine outcome label
+        let outcome = 'Delivered';
+        if (action.intentType === 'promise_to_pay' || action.metadata?.outcome === 'promise_to_pay') {
+          outcome = 'Promise to pay';
+        } else if (action.intentType === 'dispute' || action.metadata?.outcome === 'dispute') {
+          outcome = 'Dispute';
+        } else if (action.metadata?.opened) {
+          outcome = 'Opened';
+        }
+        
+        const actionDate = action.completedAt ? new Date(action.completedAt) : new Date(action.createdAt);
+        
         return {
           ...action,
           companyName,
           contactName,
           invoiceNumber,
-          invoiceAmount
+          invoiceAmount,
+          // Formatted fields for UI
+          formattedDate: actionDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }),
+          formattedTime: actionDate.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
+          outcome,
+          outcomeAmount: outcome === 'Promise to pay' ? parseFloat(invoiceAmount) : null,
+          channel: action.type === 'call' ? 'voice' : action.type
         };
       }));
+      
+      // Sort by most recent first
+      completedActions.sort((a, b) => {
+        const dateA = a.completedAt ? new Date(a.completedAt) : new Date(a.createdAt);
+        const dateB = b.completedAt ? new Date(b.completedAt) : new Date(b.createdAt);
+        return dateB.getTime() - dateA.getTime();
+      });
       
       // 0.5. EXCEPTIONS - actions flagged for human review
       const exceptionsRaw = allActions.filter(a => {
@@ -5392,7 +5507,7 @@ Guidelines:
       const enforcement = await Promise.all(enforcementRaw.map(enrichInvoice));
       
       res.json({
-        completed: { count: completedActions.length, items: completedActions },
+        completed: { count: completedActions.length, items: completedActions, metrics: completedMetrics },
         exceptions: { count: exceptions.length, items: exceptions },
         queries: { count: queries.length, items: queries },
         overdueInvoices: { count: overdueInvoicesRaw.length, items: overdueCustomers },

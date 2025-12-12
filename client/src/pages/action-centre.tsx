@@ -74,48 +74,7 @@ import { ResponseDrawer } from "@/components/action-centre/ResponseDrawer";
 import { ActionDrawer } from "@/components/action-centre/ActionDrawer";
 import { ActionPreviewDrawer } from "@/components/ActionPreviewDrawer";
 
-// Completed tab metrics data by date range
-const COMPLETED_METRICS = {
-  yesterday: { actions: 47, actionsChange: '+12', commitments: 24350, ptpCount: 8, customers: 32, coverage: '78%', responseRate: 34, responseChange: '+5%', emailCount: 28, emailOpen: '42%', smsCount: 7, smsDelivery: '100%', voiceCount: 12, voiceAnswered: 8 },
-  week: { actions: 312, actionsChange: '+45', commitments: 156800, ptpCount: 52, customers: 189, coverage: '92%', responseRate: 38, responseChange: '+8%', emailCount: 184, emailOpen: '45%', smsCount: 48, smsDelivery: '98%', voiceCount: 80, voiceAnswered: 56 },
-  month: { actions: 1247, actionsChange: '+180', commitments: 624500, ptpCount: 198, customers: 412, coverage: '96%', responseRate: 41, responseChange: '+12%', emailCount: 742, emailOpen: '44%', smsCount: 185, smsDelivery: '99%', voiceCount: 320, voiceAnswered: 224 },
-  custom: { actions: 0, actionsChange: '—', commitments: 0, ptpCount: 0, customers: 0, coverage: '—', responseRate: 0, responseChange: '—', emailCount: 0, emailOpen: '—', smsCount: 0, smsDelivery: '—', voiceCount: 0, voiceAnswered: 0 },
-};
-
-// Completed tab activities data by date range
-const COMPLETED_ACTIVITIES = {
-  yesterday: [
-    { date: '27 Nov', time: '14:32', customer: 'Apex Construction Ltd', amount: 4250, outcome: 'Delivered', outcomeAmount: null, channel: 'email', color: 'blue' },
-    { date: '27 Nov', time: '14:26', customer: 'Henderson & Partners', amount: 8500, outcome: 'Promise to pay', outcomeAmount: 8500, channel: 'voice', color: 'green' },
-    { date: '27 Nov', time: '14:19', customer: 'Metro Supplies', amount: 1875, outcome: 'Delivered', outcomeAmount: null, channel: 'sms', color: 'purple' },
-    { date: '27 Nov', time: '14:12', customer: 'Northern Logistics', amount: 3200, outcome: 'Opened', outcomeAmount: null, channel: 'email', color: 'blue' },
-    { date: '27 Nov', time: '13:59', customer: 'Brightside Retail', amount: 6750, outcome: 'Dispute', outcomeAmount: null, channel: 'voice', color: 'amber' },
-    { date: '27 Nov', time: '13:34', customer: 'Coastal Properties', amount: 2100, outcome: 'Delivered', outcomeAmount: null, channel: 'email', color: 'blue' },
-  ],
-  week: [
-    { date: '27 Nov', time: '14:32', customer: 'Apex Construction Ltd', amount: 4250, outcome: 'Delivered', outcomeAmount: null, channel: 'email', color: 'blue' },
-    { date: '27 Nov', time: '14:26', customer: 'Henderson & Partners', amount: 8500, outcome: 'Promise to pay', outcomeAmount: 8500, channel: 'voice', color: 'green' },
-    { date: '26 Nov', time: '11:45', customer: 'Summit Engineering', amount: 15000, outcome: 'Promise to pay', outcomeAmount: 15000, channel: 'voice', color: 'green' },
-    { date: '26 Nov', time: '10:22', customer: 'Valley Traders', amount: 2400, outcome: 'Delivered', outcomeAmount: null, channel: 'sms', color: 'purple' },
-    { date: '25 Nov', time: '16:18', customer: 'Urban Developments', amount: 9800, outcome: 'Opened', outcomeAmount: null, channel: 'email', color: 'blue' },
-    { date: '25 Nov', time: '09:45', customer: 'Riverside Flooring', amount: 5600, outcome: 'Promise to pay', outcomeAmount: 5600, channel: 'voice', color: 'green' },
-    { date: '24 Nov', time: '15:30', customer: 'Highland Motors', amount: 7300, outcome: 'Delivered', outcomeAmount: null, channel: 'email', color: 'blue' },
-    { date: '23 Nov', time: '14:10', customer: 'Greenfield Services', amount: 1200, outcome: 'Dispute', outcomeAmount: null, channel: 'voice', color: 'amber' },
-  ],
-  month: [
-    { date: '27 Nov', time: '14:32', customer: 'Apex Construction Ltd', amount: 4250, outcome: 'Delivered', outcomeAmount: null, channel: 'email', color: 'blue' },
-    { date: '27 Nov', time: '14:26', customer: 'Henderson & Partners', amount: 8500, outcome: 'Promise to pay', outcomeAmount: 8500, channel: 'voice', color: 'green' },
-    { date: '25 Nov', time: '11:45', customer: 'Summit Engineering', amount: 15000, outcome: 'Promise to pay', outcomeAmount: 15000, channel: 'voice', color: 'green' },
-    { date: '22 Nov', time: '10:22', customer: 'Valley Traders', amount: 2400, outcome: 'Delivered', outcomeAmount: null, channel: 'sms', color: 'purple' },
-    { date: '18 Nov', time: '16:18', customer: 'Urban Developments', amount: 9800, outcome: 'Opened', outcomeAmount: null, channel: 'email', color: 'blue' },
-    { date: '15 Nov', time: '09:45', customer: 'Riverside Flooring', amount: 5600, outcome: 'Promise to pay', outcomeAmount: 5600, channel: 'voice', color: 'green' },
-    { date: '10 Nov', time: '15:30', customer: 'Highland Motors', amount: 7300, outcome: 'Delivered', outcomeAmount: null, channel: 'email', color: 'blue' },
-    { date: '05 Nov', time: '14:10', customer: 'Greenfield Services', amount: 1200, outcome: 'Dispute', outcomeAmount: null, channel: 'voice', color: 'amber' },
-    { date: '02 Nov', time: '11:22', customer: 'Parkside Holdings', amount: 18500, outcome: 'Promise to pay', outcomeAmount: 18500, channel: 'voice', color: 'green' },
-    { date: '01 Nov', time: '09:15', customer: 'Westfield Trading', amount: 3400, outcome: 'Delivered', outcomeAmount: null, channel: 'email', color: 'blue' },
-  ],
-  custom: [],
-};
+// Completed tab now uses real data from /api/action-centre/tabs endpoint
 
 // Helper to get recommended action label without rendering full component
 const getRecommendedActionLabel = (action: any) => {
@@ -217,22 +176,82 @@ function CompletedTabContent({
   completedDateRange, 
   setCompletedDateRange, 
   customDateRange, 
-  setCustomDateRange 
+  setCustomDateRange,
+  completedData
 }: { 
   completedDateRange: 'yesterday' | 'week' | 'month' | 'custom';
   setCompletedDateRange: (value: 'yesterday' | 'week' | 'month' | 'custom') => void;
   customDateRange: { from: Date | undefined; to: Date | undefined };
   setCustomDateRange: (value: { from: Date | undefined; to: Date | undefined }) => void;
+  completedData?: { count: number; items: any[]; metrics?: { yesterday: any; week: any; month: any } };
 }) {
   const { metrics, activities, periodLabel } = useMemo(() => {
-    const m = COMPLETED_METRICS[completedDateRange] || COMPLETED_METRICS.yesterday;
-    const a = COMPLETED_ACTIVITIES[completedDateRange] || [];
+    // Use real API data if available, fall back to placeholder for custom range
+    const apiMetrics = completedData?.metrics;
+    let m: any;
+    const defaultMetrics = { 
+      actions: 0, 
+      actionsChange: '—',
+      commitments: 0, 
+      ptpCount: 0, 
+      customers: 0, 
+      coverage: '0%', 
+      responseRate: 0, 
+      responseChange: '—',
+      emailCount: 0, 
+      emailOpen: '0%', 
+      smsCount: 0, 
+      smsDelivery: '100%', 
+      voiceCount: 0, 
+      voiceAnswered: 0 
+    };
+    if (apiMetrics && completedDateRange !== 'custom') {
+      const apiData = apiMetrics[completedDateRange] || apiMetrics.week;
+      m = { ...defaultMetrics, ...apiData };
+    } else {
+      m = defaultMetrics;
+    }
+    
+    // Filter activities based on date range
+    let filteredActivities: any[] = [];
+    if (completedData?.items) {
+      const now = new Date();
+      const cutoff = new Date();
+      if (completedDateRange === 'yesterday') {
+        cutoff.setDate(cutoff.getDate() - 1);
+        cutoff.setHours(0, 0, 0, 0);
+      } else if (completedDateRange === 'week') {
+        cutoff.setDate(cutoff.getDate() - 7);
+      } else if (completedDateRange === 'month') {
+        cutoff.setDate(cutoff.getDate() - 30);
+      } else if (completedDateRange === 'custom' && customDateRange.from) {
+        cutoff.setTime(customDateRange.from.getTime());
+      }
+      
+      filteredActivities = completedData.items.filter((item: any) => {
+        const itemDate = item.completedAt ? new Date(item.completedAt) : new Date(item.createdAt);
+        if (completedDateRange === 'custom' && customDateRange.from && customDateRange.to) {
+          return itemDate >= customDateRange.from && itemDate <= customDateRange.to;
+        }
+        return itemDate >= cutoff;
+      }).map((item: any) => ({
+        date: item.formattedDate || new Date(item.completedAt || item.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }),
+        time: item.formattedTime || new Date(item.completedAt || item.createdAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
+        customer: item.companyName || item.contactName || 'Unknown',
+        amount: parseFloat(item.invoiceAmount || '0'),
+        outcome: item.outcome || 'Delivered',
+        outcomeAmount: item.outcomeAmount,
+        channel: item.channel || item.type,
+        color: item.channel === 'email' ? 'blue' : item.channel === 'voice' ? 'green' : item.channel === 'sms' ? 'purple' : 'blue'
+      }));
+    }
+    
     const label = completedDateRange === 'yesterday' ? 'yesterday' 
       : completedDateRange === 'week' ? 'this week' 
       : completedDateRange === 'month' ? 'this month' 
       : 'selected period';
-    return { metrics: m, activities: a, periodLabel: label };
-  }, [completedDateRange]);
+    return { metrics: m, activities: filteredActivities, periodLabel: label };
+  }, [completedDateRange, completedData, customDateRange]);
   
   const isCustomRangeSelected = completedDateRange === 'custom' && customDateRange.from && customDateRange.to;
   
@@ -1718,6 +1737,7 @@ export default function ActionCentre() {
               setCompletedDateRange={setCompletedDateRange}
               customDateRange={customDateRange}
               setCustomDateRange={setCustomDateRange}
+              completedData={tabData?.completed}
             />
           )}
 
