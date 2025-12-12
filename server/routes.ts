@@ -5648,6 +5648,7 @@ Guidelines:
       const allRecovery = [...debtRecovery, ...enforcement];
       
       res.json({
+        vip: { count: exceptions.length, items: exceptions },
         queries: { count: queries.length, items: queries },
         overdueInvoices: { count: overdueInvoicesRaw.length, items: overdueCustomers },
         promises: { count: allPromises.length, items: allPromises },

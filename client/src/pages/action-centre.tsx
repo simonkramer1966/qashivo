@@ -503,8 +503,8 @@ export default function ActionCentre() {
   const [page, setPage] = useState(1);
   const limit = 20;
   
-  // Workflow-based filter (main tabs) - 7 tabs: plan, overdue, promises, broken, queries, disputes, recovery
-  const [activeTab, setActiveTab] = useState<'plan' | 'overdue' | 'promises' | 'broken' | 'queries' | 'disputes' | 'recovery'>('plan');
+  // Workflow-based filter (main tabs) - 8 tabs: plan, vip, overdue, promises, broken, queries, disputes, recovery
+  const [activeTab, setActiveTab] = useState<'plan' | 'vip' | 'overdue' | 'promises' | 'broken' | 'queries' | 'disputes' | 'recovery'>('plan');
   
   // Multi-select toggle filters
   const [directionFilters, setDirectionFilters] = useState<string[]>([]);
@@ -528,8 +528,9 @@ export default function ActionCentre() {
     refetchInterval: 15000, // Auto-refresh every 15 seconds
   });
 
-  // Fetch categorized tab data - 6 tabs (plan is separate)
+  // Fetch categorized tab data - 7 tabs (plan is separate)
   const { data: tabData, isLoading: isLoadingTabs } = useQuery<{
+    vip: { count: number; items: any[] };
     queries: { count: number; items: any[] };
     overdueInvoices: { count: number; items: any[] };
     promises: { count: number; items: any[] };
@@ -1043,6 +1044,8 @@ export default function ActionCentre() {
     if (!tabData) return [];
     
     switch (activeTab) {
+      case 'vip':
+        return tabData.vip?.items || [];
       case 'queries':
         return tabData.queries?.items || [];
       case 'overdue':
@@ -1173,12 +1176,12 @@ export default function ActionCentre() {
         />
         
         <div className="container-apple py-4 sm:py-6 lg:py-8">
-          {/* Workflow Tabs - 7-tab system: Planned, Overdue, Promises, Broken, Queries, Disputes, Recovery */}
+          {/* Workflow Tabs - 8-tab system: Planned, VIP, Overdue, Promises, Broken, Queries, Disputes, Recovery */}
           <div className="mb-6">
-            <div className="grid grid-cols-7 gap-1 p-1 bg-slate-100 rounded-lg">
+            <div className="grid grid-cols-8 gap-1 p-1 bg-slate-100 rounded-lg">
               <button
                 onClick={() => setActiveTab('plan')}
-                className={`px-3 py-2 rounded-md text-sm font-medium transition-all flex items-center justify-center ${
+                className={`px-2 py-2 rounded-md text-sm font-medium transition-all flex items-center justify-center ${
                   activeTab === 'plan'
                     ? 'bg-[#17B6C3] text-white shadow-sm'
                     : 'bg-transparent text-slate-600 hover:bg-white/50'
@@ -1189,8 +1192,20 @@ export default function ActionCentre() {
               </button>
               
               <button
+                onClick={() => setActiveTab('vip')}
+                className={`px-2 py-2 rounded-md text-sm font-medium transition-all flex items-center justify-center ${
+                  activeTab === 'vip'
+                    ? 'bg-[#17B6C3] text-white shadow-sm'
+                    : 'bg-transparent text-slate-600 hover:bg-white/50'
+                }`}
+                data-testid="tab-vip"
+              >
+                VIP ({tabData?.vip?.count ?? 0})
+              </button>
+              
+              <button
                 onClick={() => setActiveTab('overdue')}
-                className={`px-3 py-2 rounded-md text-sm font-medium transition-all flex items-center justify-center ${
+                className={`px-2 py-2 rounded-md text-sm font-medium transition-all flex items-center justify-center ${
                   activeTab === 'overdue'
                     ? 'bg-[#17B6C3] text-white shadow-sm'
                     : 'bg-transparent text-slate-600 hover:bg-white/50'
@@ -1202,7 +1217,7 @@ export default function ActionCentre() {
               
               <button
                 onClick={() => setActiveTab('promises')}
-                className={`px-3 py-2 rounded-md text-sm font-medium transition-all flex items-center justify-center ${
+                className={`px-2 py-2 rounded-md text-sm font-medium transition-all flex items-center justify-center ${
                   activeTab === 'promises'
                     ? 'bg-[#17B6C3] text-white shadow-sm'
                     : 'bg-transparent text-slate-600 hover:bg-white/50'
@@ -1214,7 +1229,7 @@ export default function ActionCentre() {
               
               <button
                 onClick={() => setActiveTab('broken')}
-                className={`px-3 py-2 rounded-md text-sm font-medium transition-all flex items-center justify-center ${
+                className={`px-2 py-2 rounded-md text-sm font-medium transition-all flex items-center justify-center ${
                   activeTab === 'broken'
                     ? 'bg-[#17B6C3] text-white shadow-sm'
                     : 'bg-transparent text-slate-600 hover:bg-white/50'
@@ -1226,7 +1241,7 @@ export default function ActionCentre() {
               
               <button
                 onClick={() => setActiveTab('queries')}
-                className={`px-3 py-2 rounded-md text-sm font-medium transition-all flex items-center justify-center ${
+                className={`px-2 py-2 rounded-md text-sm font-medium transition-all flex items-center justify-center ${
                   activeTab === 'queries'
                     ? 'bg-[#17B6C3] text-white shadow-sm'
                     : 'bg-transparent text-slate-600 hover:bg-white/50'
@@ -1238,7 +1253,7 @@ export default function ActionCentre() {
               
               <button
                 onClick={() => setActiveTab('disputes')}
-                className={`px-3 py-2 rounded-md text-sm font-medium transition-all flex items-center justify-center ${
+                className={`px-2 py-2 rounded-md text-sm font-medium transition-all flex items-center justify-center ${
                   activeTab === 'disputes'
                     ? 'bg-[#17B6C3] text-white shadow-sm'
                     : 'bg-transparent text-slate-600 hover:bg-white/50'
@@ -1250,7 +1265,7 @@ export default function ActionCentre() {
               
               <button
                 onClick={() => setActiveTab('recovery')}
-                className={`px-3 py-2 rounded-md text-sm font-medium transition-all flex items-center justify-center ${
+                className={`px-2 py-2 rounded-md text-sm font-medium transition-all flex items-center justify-center ${
                   activeTab === 'recovery'
                     ? 'bg-[#17B6C3] text-white shadow-sm'
                     : 'bg-transparent text-slate-600 hover:bg-white/50'
