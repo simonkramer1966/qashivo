@@ -2,6 +2,13 @@ import { db } from "../db";
 import { invoices, contacts, actions, tenants } from "@shared/schema";
 import { eq, and, desc, gt, lt, isNull, or, sql } from "drizzle-orm";
 import { invoiceStateMachine, CharlieInvoiceState, CHARLIE_STATES } from "./invoiceStateMachine";
+import { 
+  charliePlaybook, 
+  CadenceRule, 
+  PreparedMessage, 
+  TemplateContext 
+} from "./charliePlaybook";
+import { TemplateId, ToneProfile, VoiceTone } from "./playbookEngine";
 
 /**
  * Charlie Decision Engine
@@ -96,6 +103,13 @@ export interface CharlieDecision {
     lastContactDate: Date | null;
     daysSinceLastContact: number | null;
   };
+  
+  // Template and messaging (from Playbook)
+  templateId: TemplateId | null;
+  toneProfile: ToneProfile;
+  voiceTone: VoiceTone;
+  cadence: CadenceRule;
+  isWithinCadence: boolean;
 }
 
 // Decision batch for daily planning
@@ -195,6 +209,7 @@ class CharlieDecisionEngine {
     
     // Check for exclusion
     if (priorityTier === 'excluded') {
+      const excludedCadence = charliePlaybook.getCadenceForSegment(customerSegment, 'none');
       return {
         invoiceId: invoice.id,
         contactId: contact.id,
@@ -226,6 +241,11 @@ class CharlieDecisionEngine {
           lastContactDate,
           daysSinceLastContact,
         },
+        templateId: null,
+        toneProfile: ToneProfile.CREDIT_CONTROL_FRIENDLY,
+        voiceTone: VoiceTone.VOICE_TONE_CALM_COLLABORATIVE,
+        cadence: excludedCadence,
+        isWithinCadence: false,
       };
     }
     
@@ -266,6 +286,15 @@ class CharlieDecisionEngine {
       confidence
     );
     
+    // Get playbook cadence and template info
+    const cadence = charliePlaybook.getCadenceForSegment(customerSegment, channel);
+    const isWithinCadence = charliePlaybook.isWithinCadence(lastContactDate, channel, customerSegment);
+    const { toneProfile, voiceTone, templateId } = this.selectTemplateFromPlaybook(
+      charlieState,
+      channel,
+      shouldEscalate
+    );
+    
     return {
       invoiceId: invoice.id,
       contactId: contact.id,
@@ -297,6 +326,11 @@ class CharlieDecisionEngine {
         lastContactDate,
         daysSinceLastContact,
       },
+      templateId,
+      toneProfile,
+      voiceTone,
+      cadence,
+      isWithinCadence,
     };
   }
   
@@ -819,6 +853,65 @@ class CharlieDecisionEngine {
       // Then by score within tier
       return b.priorityScore - a.priorityScore;
     });
+  }
+  
+  /**
+   * Select template from playbook based on state and channel
+   */
+  private selectTemplateFromPlaybook(
+    charlieState: CharlieInvoiceState,
+    channel: CharlieChannel,
+    shouldEscalate: boolean
+  ): { toneProfile: ToneProfile; voiceTone: VoiceTone; templateId: TemplateId | null } {
+    // Determine tone based on state
+    let toneProfile: ToneProfile;
+    let voiceTone: VoiceTone;
+    
+    if (charlieState === 'debt_recovery' || charlieState === 'final_demand') {
+      toneProfile = ToneProfile.RECOVERY_FORMAL_FIRM;
+      voiceTone = VoiceTone.VOICE_TONE_FORMAL_RECOVERY;
+    } else if (charlieState === 'ptp_missed' || shouldEscalate) {
+      toneProfile = ToneProfile.CREDIT_CONTROL_FIRM;
+      voiceTone = VoiceTone.VOICE_TONE_FIRM_COLLABORATIVE;
+    } else {
+      toneProfile = ToneProfile.CREDIT_CONTROL_FRIENDLY;
+      voiceTone = VoiceTone.VOICE_TONE_CALM_COLLABORATIVE;
+    }
+    
+    // Select template based on state and channel
+    let templateId: TemplateId | null = null;
+    
+    if (channel === 'email') {
+      if (charlieState === 'ptp_missed') {
+        templateId = TemplateId.EMAIL_FIRM_REMINDER;
+      } else if (charlieState === 'final_demand' || charlieState === 'debt_recovery') {
+        templateId = TemplateId.RECOVERY_EMAIL_FORMAL_REMINDER;
+      } else if (shouldEscalate) {
+        templateId = TemplateId.EMAIL_FIRM_REMINDER;
+      } else {
+        templateId = TemplateId.EMAIL_FRIENDLY_REMINDER;
+      }
+    } else if (channel === 'sms') {
+      if (charlieState === 'ptp_missed') {
+        templateId = TemplateId.SMS_PTP_CHASE;
+      } else if (shouldEscalate) {
+        templateId = TemplateId.SMS_ESCALATED_REMINDER;
+      } else {
+        templateId = TemplateId.SMS_OVERDUE_REMINDER;
+      }
+    } else if (channel === 'voice') {
+      if (charlieState === 'ptp_missed') {
+        templateId = TemplateId.VOICE_PTP_CHASE;
+      } else if (charlieState === 'final_demand' || charlieState === 'debt_recovery') {
+        templateId = TemplateId.RECOVERY_VOICE_FORMAL_CALL;
+      } else if (shouldEscalate) {
+        templateId = TemplateId.VOICE_ESCALATED_REMINDER;
+      } else {
+        templateId = TemplateId.VOICE_PTP_REQUEST;
+      }
+    }
+    
+    return { toneProfile, voiceTone, templateId };
   }
   
   /**
