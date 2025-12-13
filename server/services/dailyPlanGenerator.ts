@@ -3,6 +3,8 @@ import { db } from "../db";
 import { actions, tenants, contacts, invoices, communicationTemplates } from "@shared/schema";
 import { checkCollectionActions, type CollectionAction, generateInvoiceTableHtml } from "./collectionsAutomation";
 import { setupDefaultWorkflow } from "./defaultWorkflowSetup";
+import { charlieDecisionEngine, type CharlieDecision, type DailyPlan } from "./charlieDecisionEngine";
+import { charliePlaybook, prepareMessageFromDecision } from "./charliePlaybook";
 
 /**
  * Fetches and renders a template with variable substitution
@@ -228,10 +230,18 @@ export async function generateDailyPlan(
   const workflowSetup = await setupDefaultWorkflow(tenantId);
   console.log(`🔧 Workflow setup: ${workflowSetup.contactsAssigned} contacts auto-assigned to default schedule`);
 
-  // Get recommended actions from existing service
+  // Use Charlie Decision Engine for action generation
+  const useCharlie = tenant.useCharlieEngine !== false; // Default to true
+  
+  if (useCharlie) {
+    console.log(`🤖 Using Charlie Decision Engine for plan generation`);
+    return generateDailyPlanWithCharlie(tenantId, userId, tenant, tomorrow);
+  }
+
+  // Legacy path: Get recommended actions from existing service
   const recommendedActions = await checkCollectionActions(tenantId);
   
-  console.log(`🤖 AI recommended ${recommendedActions.length} actions`);
+  console.log(`🤖 Legacy AI recommended ${recommendedActions.length} actions`);
 
   // Parse policy settings with safe defaults
   const dailyLimits = (tenant.dailyLimits as any) || { email: 100, sms: 50, voice: 20 };
@@ -537,4 +547,198 @@ ${action.invoiceTable}
   } else {
     return `Hi ${firstName}, invoice ${action.invoiceNumber} for ${action.amount} is ${action.daysOverdue} days overdue. Urgent payment required. Please contact us immediately.`;
   }
+}
+
+// ============================================================================
+// CHARLIE DECISION ENGINE INTEGRATION
+// ============================================================================
+
+/**
+ * Generate daily plan using Charlie Decision Engine
+ * 
+ * This replaces the legacy collectionsAutomation approach with Charlie's:
+ * - Invoice state machine (12 states)
+ * - Customer segmentation
+ * - Prioritization logic
+ * - Cadence rules
+ * - Tone progression
+ */
+async function generateDailyPlanWithCharlie(
+  tenantId: string,
+  userId: string,
+  tenant: typeof tenants.$inferSelect,
+  scheduledFor: Date
+): Promise<DailyPlanResponse> {
+  // Get Charlie's daily plan with all decisions
+  const charliePlan = await charlieDecisionEngine.generateDailyPlan(tenantId);
+  
+  console.log(`🤖 Charlie generated ${charliePlan.decisions.length} decisions`);
+  console.log(`   Critical: ${charliePlan.summary.byCriticalPriority}, High: ${charliePlan.summary.byHighPriority}`);
+  console.log(`   Human review needed: ${charliePlan.summary.humanReviewRequired}`);
+  
+  // Parse policy settings
+  const dailyLimits = (tenant.dailyLimits as any) || { email: 100, sms: 50, voice: 20 };
+  const minConfidence = (tenant.minConfidence as any) || { email: 0.8, sms: 0.85, voice: 0.9 };
+  const exceptionRules = (tenant.exceptionRules as any) || {
+    flagFirstContact: true,
+    flagHighValue: 10000,
+    flagDisputeKeywords: true,
+    flagVipCustomers: true,
+  };
+  
+  // Get tenant config for message preparation
+  const tenantConfig = {
+    companyName: tenant.name,
+    senderName: tenant.name,
+    contactNumber: tenant.phone || '',
+    paymentDetails: tenant.paymentDetails || 'Please contact us for payment details.',
+  };
+  
+  // Filter actionable decisions (not excluded, within cadence)
+  const actionableDecisions = charliePlan.decisions.filter(d => 
+    d.priorityTier !== 'excluded' && 
+    d.recommendedChannel !== 'none' &&
+    d.isWithinCadence
+  );
+  
+  // Sort by priority score (highest first)
+  actionableDecisions.sort((a, b) => b.priorityScore - a.priorityScore);
+  
+  // Apply daily limits
+  const channelCounts = { email: 0, sms: 0, voice: 0 };
+  const planActions: DailyPlanAction[] = [];
+  
+  for (const decision of actionableDecisions) {
+    const channel = decision.recommendedChannel;
+    if (channel === 'none') continue;
+    
+    // Map voice channel to correct type for limits
+    const limitChannel = channel === 'voice' ? 'voice' : channel;
+    
+    // Skip if daily limit reached
+    if (channelCounts[limitChannel] >= dailyLimits[limitChannel]) {
+      console.log(`⏭️ Skipping ${channel} for ${decision.contact.name} - daily limit reached`);
+      continue;
+    }
+    
+    // Determine exception status
+    let exceptionReason: string | undefined;
+    let status: 'pending_approval' | 'exception' = 'pending_approval';
+    
+    // Exception: Charlie flagged for human review
+    if (decision.requiresHumanReview) {
+      exceptionReason = 'requires_human_review';
+      status = 'exception';
+    }
+    
+    // Exception: Low confidence
+    if (decision.confidence < (minConfidence[channel] || 0.8)) {
+      exceptionReason = 'low_confidence';
+      status = 'exception';
+    }
+    
+    // Exception: High value first contact
+    if (exceptionRules.flagHighValue && decision.invoice.amount >= exceptionRules.flagHighValue) {
+      if (decision.contact.daysSinceLastContact === null) {
+        exceptionReason = 'first_contact_high_value';
+        status = 'exception';
+      }
+    }
+    
+    // Exception: Escalation required
+    if (decision.shouldEscalate && decision.escalationTrigger !== 'none') {
+      exceptionReason = `escalation_${decision.escalationTrigger}`;
+      status = 'exception';
+    }
+    
+    // Prepare message using Charlie's playbook
+    const preparedMessage = prepareMessageFromDecision(decision, tenantConfig);
+    
+    // Map priority tier to priority string
+    const priority = decision.priorityTier === 'critical' || decision.priorityTier === 'high' 
+      ? 'high' 
+      : decision.priorityTier === 'medium' ? 'medium' : 'low';
+    
+    // Create action record
+    const [newAction] = await db.insert(actions).values({
+      tenantId,
+      contactId: decision.contactId,
+      invoiceId: decision.invoiceId,
+      userId,
+      type: channel,
+      status,
+      subject: preparedMessage?.subject || `Payment reminder: Invoice ${decision.invoice.invoiceNumber}`,
+      content: preparedMessage?.body || '',
+      scheduledFor,
+      confidenceScore: decision.confidence.toString(),
+      exceptionReason,
+      metadata: {
+        daysOverdue: decision.invoice.daysOverdue,
+        amount: decision.invoice.amount.toString(),
+        priority,
+        generatedBy: 'charlie_decision_engine',
+        charlieState: decision.charlieState,
+        customerSegment: decision.customerSegment,
+        priorityScore: decision.priorityScore,
+        priorityReasons: decision.priorityReasons,
+        channelReason: decision.channelReason,
+        escalationTrigger: decision.escalationTrigger,
+        toneProfile: decision.toneProfile,
+      },
+      aiGenerated: true,
+      source: 'automated',
+    }).returning();
+    
+    planActions.push({
+      id: newAction.id,
+      contactId: decision.contactId,
+      contactName: decision.contact.name,
+      invoiceId: decision.invoiceId,
+      invoiceNumber: decision.invoice.invoiceNumber,
+      amount: decision.invoice.amount.toString(),
+      daysOverdue: decision.invoice.daysOverdue,
+      actionType: channel,
+      status,
+      subject: newAction.subject || undefined,
+      content: newAction.content || undefined,
+      confidenceScore: decision.confidence,
+      exceptionReason,
+      priority,
+    });
+    
+    channelCounts[limitChannel]++;
+  }
+  
+  // Calculate summary stats
+  const totalValue = planActions.reduce((sum, a) => sum + parseFloat(a.amount), 0);
+  const exceptionsCount = planActions.filter(a => a.status === 'exception').length;
+  const highPriorityCount = planActions.filter(a => a.priority === 'high').length;
+  const avgDaysOverdue = planActions.length > 0 
+    ? planActions.reduce((sum, a) => sum + a.daysOverdue, 0) / planActions.length 
+    : 0;
+  
+  console.log(`✅ Charlie plan: ${planActions.length} actions (${exceptionsCount} exceptions)`);
+  console.log(`📧 Email: ${channelCounts.email}, 📱 SMS: ${channelCounts.sms}, 📞 Voice: ${channelCounts.voice}`);
+  
+  return {
+    actions: planActions,
+    summary: {
+      totalActions: planActions.length,
+      byType: {
+        email: planActions.filter(a => a.actionType === 'email' && a.status === 'pending_approval').length,
+        sms: planActions.filter(a => a.actionType === 'sms' && a.status === 'pending_approval').length,
+        voice: planActions.filter(a => a.actionType === 'voice' && a.status === 'pending_approval').length,
+      },
+      totalAmount: totalValue,
+      avgDaysOverdue,
+      highPriorityCount,
+      exceptionCount: exceptionsCount,
+      scheduledFor: scheduledFor.toISOString(),
+    },
+    tenantPolicies: {
+      executionTime: tenant.executionTime || '09:00',
+      dailyLimits: dailyLimits,
+    },
+    planGeneratedAt: new Date().toISOString(),
+  };
 }

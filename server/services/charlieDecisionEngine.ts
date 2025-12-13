@@ -180,6 +180,26 @@ class CharlieDecisionEngine {
       .orderBy(desc(actions.createdAt))
       .limit(1);
     
+    // Count actions in the last 7 days for weekly cadence check
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    
+    const [weeklyCountResult] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(actions)
+      .where(and(
+        eq(actions.tenantId, tenantId),
+        eq(actions.contactId, contact.id),
+        or(
+          eq(actions.type, 'email'),
+          eq(actions.type, 'sms'),
+          eq(actions.type, 'call')
+        ),
+        gt(actions.createdAt, sevenDaysAgo)
+      ));
+    
+    const weeklyContactCount = weeklyCountResult?.count || 0;
+    
     // Compute state
     const charlieState = invoiceStateMachine.computeState(invoice);
     const stateMetadata = CHARLIE_STATES[charlieState];
@@ -288,7 +308,7 @@ class CharlieDecisionEngine {
     
     // Get playbook cadence and template info
     const cadence = charliePlaybook.getCadenceForSegment(customerSegment, channel);
-    const isWithinCadence = charliePlaybook.isWithinCadence(lastContactDate, channel, customerSegment);
+    const isWithinCadence = charliePlaybook.isWithinCadence(lastContactDate, channel, customerSegment, weeklyContactCount);
     const { toneProfile, voiceTone, templateId } = this.selectTemplateFromPlaybook(
       charlieState,
       channel,
