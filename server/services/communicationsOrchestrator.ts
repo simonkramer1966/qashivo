@@ -258,7 +258,20 @@ class CommunicationsOrchestrator {
         subject: request.subject || 'Invoice Reminder',
         html: request.content,
         from: `${fromName} <noreply@qashivo.com>`,
+        invoiceId: request.invoiceIds?.[0],
+        customerId: request.contactId,
       });
+      
+      if (!result.success) {
+        return {
+          success: false,
+          channel: 'email',
+          status: 'failed',
+          traceId: '',
+          error: result.error || 'Email send failed',
+          retryable: true,
+        };
+      }
       
       return {
         success: true,
@@ -290,7 +303,9 @@ class CommunicationsOrchestrator {
       
       const result = await sendSMS({
         to: contact.phone,
-        text: request.content,
+        message: request.content,
+        invoiceId: request.invoiceIds?.[0],
+        customerId: request.contactId,
       });
       
       return {
@@ -316,18 +331,75 @@ class CommunicationsOrchestrator {
   }
   
   private async sendVoice(request: OutboundMessageRequest): Promise<OutboundMessageResult> {
-    // Voice calls use Retell - implementation will be wired later
-    console.log(`🎙️ Voice call requested for contact ${request.contactId}`);
-    
-    // For now, return a placeholder - Retell integration will be added
-    return {
-      success: false,
-      channel: 'voice',
-      status: 'queued',
-      traceId: '',
-      error: 'Voice calls are queued for Retell processing',
-      retryable: false,
-    };
+    try {
+      const contact = await storage.getContact(request.contactId, request.tenantId);
+      if (!contact?.phone) {
+        throw new Error('Contact has no phone number');
+      }
+      
+      const tenant = await storage.getTenant(request.tenantId);
+      
+      // Import Retell service dynamically
+      const { RetellService } = await import('../retell-service');
+      const retellService = new RetellService();
+      
+      // Get default from number from environment
+      const fromNumber = process.env.RETELL_FROM_NUMBER || process.env.VONAGE_PHONE_NUMBER || '';
+      
+      if (!fromNumber) {
+        return {
+          success: false,
+          channel: 'voice',
+          status: 'failed',
+          traceId: '',
+          error: 'No from number configured for voice calls',
+          retryable: false,
+        };
+      }
+      
+      // Create the call with dynamic variables for personalization
+      const callResult = await retellService.createCall({
+        fromNumber,
+        toNumber: contact.phone,
+        agentId: process.env.RETELL_AGENT_ID,
+        dynamicVariables: {
+          customer_name: contact.name || 'Customer',
+          company_name: tenant?.name || 'Our Company',
+          ...request.personalization,
+        },
+        metadata: {
+          tenantId: request.tenantId,
+          contactId: request.contactId,
+          invoiceId: request.invoiceIds?.[0],
+          actionId: request.actionId,
+          priority: request.priority,
+          tone: request.tone,
+          escalationLevel: request.escalationLevel,
+        },
+      });
+      
+      console.log(`🎙️ Voice call initiated: ${callResult.callId}`);
+      
+      return {
+        success: true,
+        messageId: callResult.callId,
+        channel: 'voice',
+        status: 'queued',
+        traceId: '',
+        sentAt: new Date().toISOString(),
+        unitsConsumed: 1, // Will be updated on call completion webhook
+      };
+    } catch (error: any) {
+      console.error('Voice call failed:', error.message);
+      return {
+        success: false,
+        channel: 'voice',
+        status: 'failed',
+        traceId: '',
+        error: error.message,
+        retryable: this.isRetryableError(error),
+      };
+    }
   }
   
   // Validation helpers

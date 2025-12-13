@@ -28,7 +28,7 @@ export async function sendEmail(params: {
   text?: string;
   invoiceId?: string;
   customerId?: string;
-}): Promise<boolean> {
+}): Promise<{ success: boolean; messageId?: string; error?: string }> {
   try {
     // Check if demo mode is enabled - SHORT-CIRCUIT and return mock success
     const { demoModeService } = await import('./demoModeService.js');
@@ -47,7 +47,7 @@ export async function sendEmail(params: {
       }
       
       // Return mock success immediately - DO NOT send real email
-      return true;
+      return { success: true, messageId: 'demo-mock-email-' + Date.now() };
     }
 
     const message: EmailMessage = {
@@ -59,10 +59,14 @@ export async function sendEmail(params: {
     };
 
     const result = await emailService.sendEmail(message);
-    return result.success;
-  } catch (error) {
+    return { 
+      success: result.success, 
+      messageId: result.messageId,
+      error: result.error 
+    };
+  } catch (error: any) {
     console.error('Send email error:', error);
-    return false;
+    return { success: false, error: error.message };
   }
 }
 
@@ -73,7 +77,7 @@ export async function sendReminderEmail(params: {
   subject: string;
   html: string;
   text?: string;
-}): Promise<boolean> {
+}): Promise<{ success: boolean; messageId?: string; error?: string }> {
   return await sendEmail(params);
 }
 
