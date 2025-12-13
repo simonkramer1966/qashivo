@@ -1,8 +1,10 @@
 import express, { type Request, Response, NextFunction } from "express";
 import path from "path";
+import { WebSocketServer } from "ws";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import debtorRoutes from "./debtor-routes";
+import { setupRetellWebSocket } from "./routes/retell-websocket";
 
 const app = express();
 
@@ -600,4 +602,25 @@ app.use((req, res, next) => {
   }, () => {
     log(`serving on port ${port}`);
   });
+
+  // Setup Retell Custom LLM WebSocket server
+  const wss = new WebSocketServer({ noServer: true });
+  setupRetellWebSocket(wss);
+  
+  server.on('upgrade', (request, socket, head) => {
+    const pathname = request.url || '';
+    
+    // Route Retell Custom LLM connections to our WebSocket server
+    if (pathname.includes('/retell-llm') || pathname.includes('/custom-llm')) {
+      console.log(`[WebSocket] Upgrading connection for path: ${pathname}`);
+      wss.handleUpgrade(request, socket, head, (ws) => {
+        wss.emit('connection', ws, request);
+      });
+    } else {
+      // Reject non-Retell WebSocket connections
+      socket.destroy();
+    }
+  });
+  
+  console.log('🎙️ Retell Custom LLM WebSocket ready at /retell-llm');
 })();

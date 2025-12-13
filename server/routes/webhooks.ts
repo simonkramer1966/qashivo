@@ -455,6 +455,219 @@ export function registerWebhookRoutes(app: Express) {
   });
 
   /**
+   * Retell Custom LLM Call Ended Webhook
+   * Handles call completion events from Charlie voice agent
+   * Captures PTP commitments, disputes, and conversation outcomes
+   */
+  app.post("/api/webhooks/retell/call-ended", async (req: Request, res: Response) => {
+    try {
+      console.log('🎙️  Received Custom LLM call ended webhook from Retell');
+      
+      // Handle nested call data structure
+      const callData = req.body?.call || req.body;
+      if (!callData || typeof callData !== 'object') {
+        console.log('⚠️  Invalid call data structure');
+        return res.status(200).json({ message: 'Invalid payload' });
+      }
+      
+      const {
+        call_id,
+        call_status,
+        end_timestamp,
+        transcript,
+        call_analysis,
+        metadata,
+        retell_llm_dynamic_variables
+      } = callData;
+
+      // Extract metadata (could be in metadata or retell_llm_dynamic_variables)
+      const callMetadata = metadata || retell_llm_dynamic_variables || {};
+      
+      if (!callMetadata.tenant_id || !callMetadata.contact_id) {
+        console.log('⚠️  Missing tenant or contact in call metadata');
+        return res.status(200).json({ message: 'Missing metadata' });
+      }
+
+      const { storage } = await import("../storage");
+      const { eventBus } = await import("../lib/event-bus");
+
+      // Extract captured PTP from call analysis or transcript
+      let capturedPtp: { amount?: string; date?: string } | null = null;
+      let capturedDispute: string | null = null;
+      let callOutcome = 'completed';
+
+      // Check call_analysis for structured data (with type guards)
+      if (call_analysis && typeof call_analysis === 'object') {
+        if (call_analysis.ptp_captured) {
+          capturedPtp = {
+            amount: typeof call_analysis.ptp_amount === 'string' ? call_analysis.ptp_amount : undefined,
+            date: typeof call_analysis.ptp_date === 'string' ? call_analysis.ptp_date : undefined
+          };
+          callOutcome = 'ptp_captured';
+        }
+        if (call_analysis.dispute_raised) {
+          capturedDispute = typeof call_analysis.dispute_details === 'string' 
+            ? call_analysis.dispute_details 
+            : 'Dispute raised during call';
+          callOutcome = 'dispute_raised';
+        }
+        if (call_analysis.refused_to_pay) {
+          callOutcome = 'refused';
+        }
+        if (call_analysis.wrong_person) {
+          callOutcome = 'wrong_contact';
+        }
+      }
+
+      // Parse transcript for PTP if not in analysis
+      // Handle both array of objects [{role, content}] and string format
+      let transcriptText = '';
+      let transcriptArray: Array<{role: string; content: string}> = [];
+      
+      if (typeof transcript === 'string') {
+        transcriptText = transcript;
+      } else if (Array.isArray(transcript)) {
+        transcriptArray = transcript.filter(
+          (t: any) => t && typeof t === 'object' && typeof t.role === 'string' && typeof t.content === 'string'
+        );
+        transcriptText = transcriptArray.map(t => `${t.role}: ${t.content}`).join('\n');
+      }
+      
+      if (!capturedPtp && transcriptText) {
+        // Look for payment commitment patterns
+        const ptpDatePattern = /(?:pay|commit|promise).*?(?:by|on|before)\s+(\d{1,2}(?:st|nd|rd|th)?(?:\s+(?:of\s+)?(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\w*)?|\w+day|tomorrow|next\s+\w+)/i;
+        const ptpAmountPattern = /(?:pay|commit|promise).*?(?:£|GBP)\s*(\d+(?:,\d{3})*(?:\.\d{2})?)/i;
+        
+        const dateMatch = transcriptText.match(ptpDatePattern);
+        const amountMatch = transcriptText.match(ptpAmountPattern);
+        
+        if (dateMatch || amountMatch) {
+          capturedPtp = {
+            amount: amountMatch ? amountMatch[1] : undefined,
+            date: dateMatch ? dateMatch[1] : undefined
+          };
+          callOutcome = 'ptp_captured';
+        }
+
+        // Look for dispute patterns
+        const disputePattern = /(?:dispute|wrong|incorrect|problem|issue|not received|never got)/i;
+        if (disputePattern.test(transcriptText)) {
+          const disputeMatch = transcriptArray.find(t => 
+            t.role === 'user' && disputePattern.test(t.content)
+          );
+          if (disputeMatch) {
+            capturedDispute = disputeMatch.content;
+            if (callOutcome === 'completed') {
+              callOutcome = 'dispute_raised';
+            }
+          } else if (!capturedDispute && disputePattern.test(transcriptText)) {
+            // Fallback for string transcript
+            capturedDispute = 'Dispute mentioned during call';
+            if (callOutcome === 'completed') {
+              callOutcome = 'dispute_raised';
+            }
+          }
+        }
+      }
+
+      // If PTP was captured, create promise-to-pay record
+      if (capturedPtp && (capturedPtp.amount || capturedPtp.date) && callMetadata.invoice_id) {
+        try {
+          // Get contact details for the PTP record
+          const contact = await storage.getContact(callMetadata.contact_id, callMetadata.tenant_id);
+          if (contact) {
+            await storage.createPromiseToPay({
+              tenantId: callMetadata.tenant_id,
+              invoiceId: callMetadata.invoice_id,
+              contactId: callMetadata.contact_id,
+              amount: capturedPtp.amount || callMetadata.invoice_amount || '0',
+              promisedDate: capturedPtp.date ? new Date(capturedPtp.date) : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+              paymentMethod: 'bank_transfer',
+              contactName: contact.name || 'Unknown',
+              contactEmail: contact.email || undefined,
+              contactPhone: contact.phone || undefined,
+              notes: `Captured via Charlie voice call ${call_id}`,
+            });
+            console.log(`✅ PTP recorded from voice call: ${capturedPtp.amount} by ${capturedPtp.date}`);
+          }
+        } catch (err) {
+          console.error('Failed to create PTP from voice call:', err);
+        }
+      }
+
+      // If dispute was raised, create dispute record
+      if (capturedDispute && callMetadata.invoice_id) {
+        try {
+          // Get contact details for the dispute record
+          const contact = await storage.getContact(callMetadata.contact_id, callMetadata.tenant_id);
+          if (contact) {
+            const responseDue = new Date();
+            responseDue.setDate(responseDue.getDate() + 14); // 14 days to respond
+            
+            await storage.createDispute({
+              tenantId: callMetadata.tenant_id,
+              invoiceId: callMetadata.invoice_id,
+              contactId: callMetadata.contact_id,
+              type: 'other',
+              summary: capturedDispute,
+              buyerContactName: contact.name || 'Unknown',
+              buyerContactEmail: contact.email || undefined,
+              buyerContactPhone: contact.phone || undefined,
+              responseDueAt: responseDue,
+            });
+            console.log(`✅ Dispute recorded from voice call: ${capturedDispute.substring(0, 50)}...`);
+          }
+        } catch (err) {
+          console.error('Failed to create dispute from voice call:', err);
+        }
+      }
+
+      // Publish outcome to event bus
+      const idempotencyKey = eventBus.generateIdempotencyKey(
+        callMetadata.tenant_id,
+        'contact.outcome',
+        `charlie-voice-${call_id}`
+      );
+
+      await eventBus.publishContactOutcome({
+        type: 'contact.outcome',
+        tenantId: callMetadata.tenant_id,
+        contactId: callMetadata.contact_id,
+        invoiceId: callMetadata.invoice_id,
+        actionId: callMetadata.action_id,
+        idempotencyKey,
+        channel: 'voice',
+        outcome: callOutcome,
+        providerMessageId: call_id,
+        providerStatus: call_status,
+        payload: {
+          call_id,
+          call_status,
+          ptp_captured: capturedPtp,
+          dispute_raised: capturedDispute,
+          call_analysis,
+          transcript_length: transcript?.length || 0
+        },
+        eventTimestamp: end_timestamp ? new Date(end_timestamp) : new Date(),
+      }).catch(err => console.error('Failed to publish voice call outcome:', err));
+
+      console.log(`✅ Charlie voice call processed: ${call_id} - outcome: ${callOutcome}`);
+
+      res.status(200).json({ 
+        message: 'Call ended processed',
+        call_id,
+        outcome: callOutcome,
+        ptp_captured: !!capturedPtp,
+        dispute_raised: !!capturedDispute
+      });
+
+    } catch (error) {
+      console.error('❌ Retell Custom LLM call ended webhook error:', error);
+      res.status(500).json({ error: 'Processing failed' });
+    }
+  });
+
+  /**
    * Retell Call Status Webhook (Outbound Voice Tracking)
    * https://docs.retellai.com/api-references/register-call
    */
@@ -515,10 +728,15 @@ export function registerWebhookRoutes(app: Express) {
       status: 'active',
       webhooks: {
         sendgrid: '/api/webhooks/sendgrid/inbound',
+        sendgrid_events: '/api/webhooks/sendgrid/events',
         vonage_sms: '/api/webhooks/vonage/sms',
         vonage_whatsapp: '/api/webhooks/vonage/whatsapp',
-        retell: '/api/webhooks/retell/transcript'
-      }
+        vonage_delivery: '/api/webhooks/vonage/delivery-receipt',
+        retell_transcript: '/api/webhooks/retell/transcript',
+        retell_call_status: '/api/webhooks/retell/call-status',
+        retell_call_ended: '/api/webhooks/retell/call-ended'
+      },
+      custom_llm_websocket: '/retell-llm'
     });
   });
 
