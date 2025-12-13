@@ -4545,3 +4545,199 @@ export type InsertMagicLinkToken = z.infer<typeof insertMagicLinkTokenSchema>;
 
 export type DebtorPayment = typeof debtorPayments.$inferSelect;
 export type InsertDebtorPayment = z.infer<typeof insertDebtorPaymentSchema>;
+
+// ============================================
+// CHARLIE - COMMUNICATIONS ORCHESTRATOR TYPES
+// ============================================
+
+// Communication channels supported
+export const CommunicationChannel = z.enum(['email', 'sms', 'voice']);
+export type CommunicationChannel = z.infer<typeof CommunicationChannel>;
+
+// Communication direction
+export const CommunicationDirection = z.enum(['outbound', 'inbound']);
+export type CommunicationDirection = z.infer<typeof CommunicationDirection>;
+
+// Invoice collection states (Charlie's state machine)
+export const InvoiceCollectionState = z.enum([
+  'issued',
+  'delivered',
+  'due_soon',
+  'due',
+  'overdue',
+  'admin_blocked',
+  'disputed',
+  'promise_to_pay',
+  'ptp_met',
+  'ptp_missed',
+  'final_demand',
+  'debt_recovery'
+]);
+export type InvoiceCollectionState = z.infer<typeof InvoiceCollectionState>;
+
+// Non-payment reason buckets
+export const NonPaymentReason = z.enum([
+  'admin_process',      // Missing PO, GRN, wrong address, etc.
+  'dispute',            // Quality, pricing, delivery issues
+  'cashflow',           // Customer cash constraints
+  'behavioral',         // Chronic late payer, avoidance
+  'internal'            // Our invoicing errors
+]);
+export type NonPaymentReason = z.infer<typeof NonPaymentReason>;
+
+// Communication tone levels
+export const CommunicationTone = z.enum([
+  'friendly_assumptive',    // Pre-due / just overdue
+  'firm_specific',          // 14-30 days
+  'formal_consequence'      // 60+ / missed PTP
+]);
+export type CommunicationTone = z.infer<typeof CommunicationTone>;
+
+// Outbound message request schema
+export const OutboundMessageRequestSchema = z.object({
+  tenantId: z.string(),
+  contactId: z.string(),
+  invoiceIds: z.array(z.string()).optional(),
+  actionId: z.string().optional(),
+  
+  channel: CommunicationChannel,
+  
+  // Content
+  subject: z.string().optional(),      // For email
+  content: z.string(),                 // Message body or voice script
+  templateId: z.string().optional(),   // If using a template
+  personalization: z.record(z.string(), z.any()).optional(),
+  
+  // Metadata
+  priority: z.enum(['low', 'normal', 'high', 'urgent']).default('normal'),
+  tone: CommunicationTone.optional(),
+  escalationLevel: z.number().min(1).max(5).default(1),
+  
+  // Scheduling
+  scheduledFor: z.string().datetime().optional(),
+  
+  // Compliance
+  bypassChecks: z.boolean().default(false),  // For manual override
+});
+export type OutboundMessageRequest = z.infer<typeof OutboundMessageRequestSchema>;
+
+// Outbound message result
+export const OutboundMessageResultSchema = z.object({
+  success: z.boolean(),
+  messageId: z.string().optional(),
+  channel: CommunicationChannel,
+  
+  // Delivery status
+  status: z.enum(['sent', 'queued', 'failed', 'blocked']),
+  blockedReason: z.string().optional(),
+  
+  // Tracking
+  traceId: z.string(),
+  sentAt: z.string().datetime().optional(),
+  
+  // Cost
+  unitsConsumed: z.number().optional(),
+  
+  // Error details
+  error: z.string().optional(),
+  retryable: z.boolean().default(false),
+});
+export type OutboundMessageResult = z.infer<typeof OutboundMessageResultSchema>;
+
+// Inbound message schema (normalized from all channels)
+export const InboundMessageSchema = z.object({
+  id: z.string(),
+  tenantId: z.string(),
+  
+  channel: CommunicationChannel,
+  direction: z.literal('inbound'),
+  
+  // Sender info
+  senderName: z.string().optional(),
+  senderEmail: z.string().optional(),
+  senderPhone: z.string().optional(),
+  contactId: z.string().optional(),    // Matched contact
+  
+  // Content
+  subject: z.string().optional(),
+  content: z.string(),                  // Message body or transcript
+  rawPayload: z.any(),                  // Original webhook payload
+  
+  // Intent analysis (populated after analysis)
+  intent: z.enum([
+    'promise_to_pay',
+    'dispute',
+    'query',
+    'payment_confirmation',
+    'hardship',
+    'callback_request',
+    'unknown'
+  ]).optional(),
+  intentConfidence: z.number().min(0).max(1).optional(),
+  sentiment: z.enum(['positive', 'neutral', 'negative']).optional(),
+  
+  // Extracted entities
+  extractedEntities: z.object({
+    promiseDate: z.string().optional(),
+    promiseAmount: z.number().optional(),
+    disputeReason: z.string().optional(),
+    invoiceReferences: z.array(z.string()).optional(),
+    queryType: z.string().optional(),
+  }).optional(),
+  
+  // Processing status
+  processed: z.boolean().default(false),
+  processedAt: z.string().datetime().optional(),
+  linkedActionId: z.string().optional(),
+  
+  receivedAt: z.string().datetime(),
+});
+export type InboundMessage = z.infer<typeof InboundMessageSchema>;
+
+// Pre-send check result
+export const PreSendCheckResultSchema = z.object({
+  canSend: z.boolean(),
+  blockedReasons: z.array(z.string()),
+  warnings: z.array(z.string()),
+  
+  checks: z.object({
+    withinBusinessHours: z.boolean(),
+    notOnDoNotContact: z.boolean(),
+    withinDailyLimits: z.boolean(),
+    withinCooldownPeriod: z.boolean(),
+    hasValidContactDetails: z.boolean(),
+    noActiveDispute: z.boolean().optional(),
+    noLegalHold: z.boolean().optional(),
+    notVulnerable: z.boolean().optional(),
+    hasRequiredData: z.boolean(),
+  }),
+});
+export type PreSendCheckResult = z.infer<typeof PreSendCheckResultSchema>;
+
+// Charlie's action recommendation
+export const CharlieRecommendationSchema = z.object({
+  debtorId: z.string(),
+  invoiceIds: z.array(z.string()),
+  
+  // Recommendation
+  recommendedChannel: CommunicationChannel,
+  recommendedTone: CommunicationTone,
+  recommendedTemplate: z.string().optional(),
+  messagePreview: z.string(),
+  
+  // Priority
+  priorityScore: z.number(),
+  priorityReasons: z.array(z.string()),
+  
+  // Confidence
+  confidence: z.number().min(0).max(1),
+  
+  // Current state
+  currentState: InvoiceCollectionState,
+  suggestedNextState: InvoiceCollectionState.optional(),
+  
+  // Risk assessment
+  riskScore: z.number().min(0).max(100).optional(),
+  riskDrivers: z.array(z.string()).optional(),
+});
+export type CharlieRecommendation = z.infer<typeof CharlieRecommendationSchema>;
