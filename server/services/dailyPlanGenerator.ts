@@ -651,40 +651,16 @@ async function generateDailyPlanWithCharlie(
     ).join('\n');
     
     const invoiceTableHtml = generateInvoiceTableHtml(contactDecisions.map(d => ({
+      invoiceId: d.invoiceId,
       invoiceNumber: d.invoice.invoiceNumber,
-      amount: `£${d.invoice.amount.toFixed(2)}`,
+      amount: d.invoice.amount.toFixed(2),
+      dueDate: new Date(d.invoice.dueDate).toLocaleDateString('en-GB'),
       daysOverdue: d.invoice.daysOverdue,
     })));
     
-    // Determine exception status using primary decision
-    let exceptionReason: string | undefined;
-    let status: 'pending_approval' | 'exception' = 'pending_approval';
-    
-    // Exception: Charlie flagged for human review
-    if (primaryDecision.requiresHumanReview) {
-      exceptionReason = 'requires_human_review';
-      status = 'exception';
-    }
-    
-    // Exception: Low confidence
-    if (primaryDecision.confidence < (minConfidence[channel] || 0.8)) {
-      exceptionReason = 'low_confidence';
-      status = 'exception';
-    }
-    
-    // Exception: High value first contact (use consolidated total)
-    if (exceptionRules.flagHighValue && totalAmount >= exceptionRules.flagHighValue) {
-      if (primaryDecision.contact.daysSinceLastContact === null) {
-        exceptionReason = 'first_contact_high_value';
-        status = 'exception';
-      }
-    }
-    
-    // Exception: Escalation required
-    if (primaryDecision.shouldEscalate && primaryDecision.escalationTrigger !== 'none') {
-      exceptionReason = `escalation_${primaryDecision.escalationTrigger}`;
-      status = 'exception';
-    }
+    // All Charlie-generated actions stay as pending_approval
+    // VIP routing is user-driven only (manual action on debtor or from planned list)
+    const status: 'pending_approval' = 'pending_approval';
     
     // Prepare consolidated message with invoice table (use HTML for email, plain text for SMS/voice)
     const invoiceTableForChannel = channel === 'email' ? invoiceTableHtml : invoiceTablePlain;
@@ -728,7 +704,6 @@ async function generateDailyPlanWithCharlie(
       content: preparedMessage?.body || '',
       scheduledFor,
       confidenceScore: primaryDecision.confidence.toString(),
-      exceptionReason,
       metadata: {
         daysOverdue: maxDaysOverdue,
         amount: totalAmount.toString(),
@@ -771,7 +746,6 @@ async function generateDailyPlanWithCharlie(
       subject: newAction.subject || undefined,
       content: newAction.content || undefined,
       confidenceScore: primaryDecision.confidence,
-      exceptionReason,
       priority,
       invoiceCount,
     });

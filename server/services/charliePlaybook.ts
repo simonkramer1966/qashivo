@@ -536,8 +536,11 @@ export function prepareMessageFromDecision(
     ? `${invoiceCount} invoices`
     : decision.invoice.invoiceNumber;
 
+  // Extract first name from contact name (use first word before space)
+  const contactFirstName = decision.contact.name?.split(' ')[0] || decision.contact.name;
+  
   const context: Partial<TemplateContext> = {
-    contactName: decision.contact.name,
+    contactName: contactFirstName,
     companyName: tenantConfig.companyName,
     invoiceNumber: invoiceNumberDisplay,
     invoiceTotal: formatCurrency(decision.invoice.amount),
