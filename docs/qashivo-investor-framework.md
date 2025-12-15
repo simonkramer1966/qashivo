@@ -555,73 +555,125 @@ The model improves automatically as more data accumulates — no ongoing mainten
 
 ---
 
-## Part 6: Invoice Financing Optimization
+## Part 6: Invoice Financing Intelligence
 
-### Overview
+### The SME Funding Reality
 
-Qashivo's Invoice Financing module analyzes which invoices to finance/factor, optimizing the cost-benefit tradeoff based on payment predictions and financing rates.
+Most SMEs don't have the financing options that larger businesses take for granted:
 
-### The Decision Framework
+| Financing Option | Enterprise Access | SME Reality |
+|-----------------|-------------------|-------------|
+| Bank overdraft | Standard facility | Often unavailable or withdrawn |
+| Credit lines | Multiple options | Limited or none |
+| Trade credit | Negotiable terms | Fixed supplier terms |
+| Invoice factoring | Multiple providers | Often the **only** option |
+
+**The implication**: When an SME faces a cash gap, the question isn't "is factoring cheaper than my overdraft?" — it's "do I factor this invoice or miss payroll?"
+
+### Qashivo's Approach: Cash Gap Prevention
+
+Rather than optimizing financing costs (which assumes alternatives exist), Qashivo focuses on **preventing cash gaps before they happen** and **making factoring decisions simple** when needed.
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│                  INVOICE FINANCING DECISION                          │
+│              INVOICE FINANCING INTELLIGENCE                          │
 ├─────────────────────────────────────────────────────────────────────┤
 │                                                                      │
-│  For each invoice, calculate:                                        │
-│                                                                      │
-│  ┌────────────────────────────────────────────────────────────┐     │
-│  │ Expected Collection Delay Cost                              │     │
-│  │ = Invoice Amount × Daily Cost of Capital × Expected Days    │     │
-│  └────────────────────────────────────────────────────────────┘     │
-│                          vs                                          │
-│  ┌────────────────────────────────────────────────────────────┐     │
-│  │ Financing Cost                                              │     │
-│  │ = Invoice Amount × Factoring Fee %                          │     │
-│  └────────────────────────────────────────────────────────────┘     │
-│                                                                      │
-│  Decision Rule:                                                      │
-│  IF Delay Cost > Financing Cost THEN Finance                        │
-│  ELSE Wait for organic collection                                    │
+│  ┌─────────────────────────────────────────────────────────────┐    │
+│  │                  CASH GAP DETECTION                          │    │
+│  │                                                              │    │
+│  │  Using Bayesian Cashflow Forecasting (Part 5), detect:       │    │
+│  │  • When projected cash drops below safe threshold            │    │
+│  │  • How much additional cash is needed                        │    │
+│  │  • When the gap occurs and how long it lasts                 │    │
+│  └──────────────────────────┬──────────────────────────────────┘    │
+│                             │                                        │
+│                             ▼                                        │
+│  ┌─────────────────────────────────────────────────────────────┐    │
+│  │              FINANCING RECOMMENDATION                        │    │
+│  │                                                              │    │
+│  │  "You'll need £15K by March 10th to cover payroll.          │    │
+│  │   Here are 3 invoices that could bridge the gap:"           │    │
+│  │                                                              │    │
+│  │   INV-042  £8,500   ABC Ltd    (Expected pay: March 25)     │    │
+│  │   INV-039  £4,200   XYZ Corp   (Expected pay: March 20)     │    │
+│  │   INV-044  £3,800   DEF Inc    (Expected pay: March 18)     │    │
+│  │                                                              │    │
+│  │   Total available: £16,500                                   │    │
+│  │   Financing cost @ 2.5%: £412                                │    │
+│  └─────────────────────────────────────────────────────────────┘    │
 │                                                                      │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
-### Decision Factors
+### The Decision Framework
 
-| Factor | Weight | Description |
-|--------|--------|-------------|
-| **Payment History Score** | High | Good payers = lower financing need |
-| **Invoice Age** | High | Older = higher risk, may benefit from financing |
-| **Invoice Size** | Medium | Larger invoices = higher absolute cost |
-| **Customer Segment** | Medium | Enterprise = slower but reliable |
-| **Financing Rate** | High | Compare to cost of capital |
+Qashivo helps SMEs answer three questions:
 
-### Example Analysis
+**1. Do I need financing at all?**
+- Cashflow forecast shows if/when cash gaps occur
+- Early warning means more time to collect organically
+- Better collections (via Charlie) reduces financing need
 
-| Invoice | Amount | Expected Days to Pay | Delay Cost* | Finance Fee | Recommendation |
-|---------|--------|---------------------|-------------|-------------|----------------|
-| INV-001 | £10,000 | 45 days | £370 | £250 (2.5%) | **Finance** |
-| INV-002 | £5,000 | 14 days | £58 | £125 (2.5%) | **Wait** |
-| INV-003 | £25,000 | 60 days | £1,233 | £625 (2.5%) | **Finance** |
-| INV-004 | £3,000 | 7 days | £17 | £75 (2.5%) | **Wait** |
+**2. Which invoices should I factor?**
+- Prioritize invoices from **reliable payers** (lower factoring risk = better rates)
+- Match invoice timing to cash gap timing
+- Avoid factoring invoices that will pay before the gap hits
 
-*Assuming 3% annual cost of capital
+**3. How much will it cost?**
+- Clear visibility of factoring fees
+- Compare to the cost of *not* having the cash (missed opportunities, late payment penalties, supplier relationship damage)
+
+### Invoice Selection for Factoring
+
+When financing is needed, Qashivo recommends which invoices to factor:
+
+| Factor | Why It Matters |
+|--------|----------------|
+| **Customer payment history** | Reliable payers = lower factoring risk = better rates |
+| **Invoice size** | Match to cash gap size (don't over-finance) |
+| **Expected payment date** | Factor invoices that won't pay in time naturally |
+| **Customer relationship** | Some businesses prefer not to factor certain clients |
+| **Concentration limits** | Factors limit exposure to single customers |
+
+### Practical Example
+
+**Scenario**: Business forecasts £12K shortfall on March 15th
+
+| Invoice | Amount | Customer | Payment Score | Expected Pay | Recommendation |
+|---------|--------|----------|---------------|--------------|----------------|
+| INV-101 | £8,000 | ABC Ltd | 85 (reliable) | March 28 | **Factor** — won't arrive in time, low risk |
+| INV-102 | £5,000 | XYZ Corp | 45 (variable) | March 20 | **Factor** — higher fee but needed |
+| INV-103 | £6,000 | DEF Inc | 90 (reliable) | March 12 | **Wait** — will arrive before gap |
+| INV-104 | £3,000 | New Co | 50 (unknown) | March 25 | **Avoid** — new customer, higher risk |
+
+**Result**: Factor INV-101 and INV-102 (£13K) to cover £12K gap. Cost: ~£325 at 2.5%.
 
 ### Integration with Financing Partners
 
-Qashivo can integrate with invoice financing platforms to:
-- Automatically submit invoices meeting financing criteria
-- Track financing status and costs
-- Reconcile payments from financing vs organic collection
-- Report on financing efficiency
+Qashivo can connect with invoice financing platforms to:
+
+- **One-click submission**: Send selected invoices to factor
+- **Rate comparison**: See offers from multiple providers (roadmap)
+- **Status tracking**: Monitor which invoices are financed vs organic
+- **Reconciliation**: Automatically match factored payments
+
+### The Bigger Picture: Reducing Financing Need
+
+The best financing is the financing you don't need. Qashivo reduces reliance on factoring by:
+
+1. **Faster collections** — Charlie's autonomous follow-up accelerates payment
+2. **Earlier visibility** — Bayesian forecasting spots gaps weeks in advance
+3. **Better customer selection** — Payment scoring informs credit decisions
+4. **Proactive management** — Address slow payers before they cause cash gaps
 
 ### Business Value
 
-- **Optimize Working Capital**: Finance only when economically advantageous
-- **Reduce Financing Costs**: Avoid unnecessary fees on invoices that will pay quickly
-- **Improve Cash Flow**: Accelerate receipt of high-delay invoices
-- **Data-Driven Decisions**: Remove guesswork from financing decisions
+- **Avoid crisis financing**: See cash gaps coming weeks ahead, not days
+- **Finance smarter**: Factor the right invoices at the right time
+- **Reduce financing costs**: Better collections = less factoring needed
+- **Simple decisions**: Clear recommendations, not complex spreadsheets
+- **Preserve relationships**: Choose which customers to factor (or not)
 
 ---
 
@@ -694,6 +746,4 @@ This puts our money where our mouth is and aligns our success with customer outc
 
 ---
 
-*Document prepared for investor presentation — December 2025*
-
-*Contact: [Qashivo Team]*
+*Document Prepared — December 2025*
