@@ -416,7 +416,7 @@ export default function Home() {
 
           <div className="grid md:grid-cols-3 gap-8">
             {/* Pillar 1: Credit Control */}
-            <div className="bg-gradient-to-br from-[#17B6C3]/5 to-teal-50 rounded-2xl p-8 border-2 border-[#17B6C3]/20 hover:border-[#17B6C3] transition-colors flex flex-col h-full">
+            <div className="bg-white rounded-2xl p-8 border-2 border-[#17B6C3]/20 hover:border-[#17B6C3] transition-colors flex flex-col h-full shadow-lg">
               <div className="w-14 h-14 bg-[#17B6C3]/10 rounded-xl flex items-center justify-center mb-6">
                 <Brain className="h-7 w-7 text-[#17B6C3]" />
               </div>
@@ -439,7 +439,7 @@ export default function Home() {
             </div>
 
             {/* Pillar 2: Cashflow Forecasting */}
-            <div className="bg-gradient-to-br from-blue-500/5 to-indigo-50 rounded-2xl p-8 border-2 border-blue-500/20 hover:border-blue-500 transition-colors flex flex-col h-full">
+            <div className="bg-white rounded-2xl p-8 border-2 border-blue-500/20 hover:border-blue-500 transition-colors flex flex-col h-full shadow-lg">
               <div className="w-14 h-14 bg-blue-500/10 rounded-xl flex items-center justify-center mb-6">
                 <BarChart3 className="h-7 w-7 text-blue-600" />
               </div>
@@ -462,7 +462,7 @@ export default function Home() {
             </div>
 
             {/* Pillar 3: Invoice Financing */}
-            <div className="bg-gradient-to-br from-amber-500/5 to-yellow-50 rounded-2xl p-8 border-2 border-amber-500/20 hover:border-amber-500 transition-colors flex flex-col h-full">
+            <div className="bg-white rounded-2xl p-8 border-2 border-amber-500/20 hover:border-amber-500 transition-colors flex flex-col h-full shadow-lg">
               <div className="w-14 h-14 bg-amber-500/10 rounded-xl flex items-center justify-center mb-6">
                 <DollarSign className="h-7 w-7 text-amber-600" />
               </div>
