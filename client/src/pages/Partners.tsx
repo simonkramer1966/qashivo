@@ -319,7 +319,7 @@ export default function Partners() {
               </div>
               <h3 className="text-lg font-bold text-gray-900 mb-2">Apply</h3>
               <p className="text-gray-600">
-                Submit your application and tell us about your practice. We'll review within 48 hours.
+                Submit your application and tell us about your business. We'll review within 48 hours.
               </p>
             </div>
             
