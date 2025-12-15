@@ -2,7 +2,6 @@ import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
 import { 
   Check, 
-  Zap, 
   TrendingUp,
   Users,
   Award,
@@ -10,7 +9,9 @@ import {
   Building2,
   Briefcase,
   PiggyBank,
-  HeartHandshake
+  Factory,
+  Truck,
+  Banknote
 } from "lucide-react";
 import heroImage from "@assets/generated_images/Advanced_AI_technology_center_4b230f51.png";
 import logo from "@assets/Main Nexus Logo copy_1763392904110.png";
@@ -79,12 +80,12 @@ export default function Partners() {
         
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24 text-center w-full">
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white leading-tight mb-6">
-            Grow Your Practice,<br />
-            <span className="text-[#17B6C3]">Grow Your Revenue</span>
+            Grow Your Revenue,<br />
+            <span className="text-[#17B6C3]">Shrink Your Costs</span>
           </h1>
           <p className="text-xl text-gray-200 max-w-3xl mx-auto">
-            Join our network of forward-thinking accounting firms and financial advisors 
-            offering AI-powered cashflow management to their clients.
+            Partner with Qashivo to offer autonomous AI credit control 
+            to your clients and portfolio companies.
           </p>
         </div>
       </section>
@@ -113,107 +114,132 @@ export default function Partners() {
         </div>
       </section>
 
-      {/* Partner Types */}
+      {/* Partner Channels */}
       <section className="py-16 md:py-24 bg-gradient-to-br from-slate-50 via-blue-50 to-teal-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              Partnership Opportunities
+              Partner Channels
             </h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Choose the partnership model that works best for your business
+              Qashivo works with partners across the credit ecosystem
             </p>
           </div>
           
-          <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
-            {/* Accounting Firms */}
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {/* Accounting Partners */}
             <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 shadow-xl border border-white/50 flex flex-col">
               <div className="w-16 h-16 bg-[#17B6C3]/10 rounded-xl flex items-center justify-center mb-6">
                 <Building2 className="h-8 w-8 text-[#17B6C3]" />
               </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-4">For Accounting Firms</h3>
-              <p className="text-gray-600 mb-6">
-                Offer your clients cutting-edge AI cashflow management. Reduce client churn, 
-                increase advisory revenue, and position your firm as an innovator.
+              <h3 className="text-xl font-bold text-gray-900 mb-3">Accounting Partners</h3>
+              <p className="text-gray-600 mb-6 flex-grow">
+                Your clients constantly ask for cashflow help but you lack the bandwidth. 
+                Qashivo becomes your firm's credit control department — fully white-labelled 
+                with your branding.
               </p>
-              <ul className="space-y-4 mb-8 flex-grow">
-                <li className="flex items-start">
-                  <Check className="text-[#17B6C3] mr-3 h-5 w-5 mt-0.5 flex-shrink-0" />
-                  <span className="text-gray-700">White-label partnership options</span>
-                </li>
-                <li className="flex items-start">
-                  <Check className="text-[#17B6C3] mr-3 h-5 w-5 mt-0.5 flex-shrink-0" />
-                  <span className="text-gray-700">20% recurring revenue share</span>
-                </li>
-                <li className="flex items-start">
-                  <Check className="text-[#17B6C3] mr-3 h-5 w-5 mt-0.5 flex-shrink-0" />
-                  <span className="text-gray-700">Dedicated partner portal</span>
-                </li>
-                <li className="flex items-start">
-                  <Check className="text-[#17B6C3] mr-3 h-5 w-5 mt-0.5 flex-shrink-0" />
-                  <span className="text-gray-700">Training and certification</span>
-                </li>
-                <li className="flex items-start">
-                  <Check className="text-[#17B6C3] mr-3 h-5 w-5 mt-0.5 flex-shrink-0" />
-                  <span className="text-gray-700">Co-marketing support</span>
-                </li>
-                <li className="flex items-start">
-                  <Check className="text-[#17B6C3] mr-3 h-5 w-5 mt-0.5 flex-shrink-0" />
-                  <span className="text-gray-700">Priority technical support</span>
-                </li>
-              </ul>
-              <Button
-                className="w-full bg-[#17B6C3] hover:bg-[#1396A1] text-white mt-auto"
-                onClick={() => setLocation("/contact")}
-                data-testid="button-partner-accountant"
-              >
-                Become a Partner
-                <ArrowRight className="ml-2 h-5 w-5" />
-              </Button>
+              <div className="bg-[#17B6C3]/5 rounded-lg p-3 text-sm text-[#17B6C3] font-medium">
+                White-label available
+              </div>
             </div>
 
-            {/* Financial Advisors */}
+            {/* Invoice Finance Companies */}
+            <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 shadow-xl border border-white/50 flex flex-col">
+              <div className="w-16 h-16 bg-[#17B6C3]/10 rounded-xl flex items-center justify-center mb-6">
+                <Banknote className="h-8 w-8 text-[#17B6C3]" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-3">Invoice Finance Companies</h3>
+              <p className="text-gray-600 mb-6 flex-grow">
+                Deploy autonomous AI collection across your entire portfolio. Qashivo 
+                manages collections for all funded invoices — reducing your operational 
+                burden while improving DSO.
+              </p>
+              <div className="bg-[#17B6C3]/5 rounded-lg p-3 text-sm text-[#17B6C3] font-medium">
+                White-label available
+              </div>
+            </div>
+
+            {/* Wholesale & Distribution */}
+            <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 shadow-xl border border-white/50 flex flex-col">
+              <div className="w-16 h-16 bg-[#17B6C3]/10 rounded-xl flex items-center justify-center mb-6">
+                <Truck className="h-8 w-8 text-[#17B6C3]" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-3">Wholesale & Distribution</h3>
+              <p className="text-gray-600 mb-6 flex-grow">
+                Margins squeezed to 10-15%, yet customers take 52+ days to pay. 
+                Qashivo ensures consistent follow-up across hundreds of customers 
+                without adding headcount.
+              </p>
+              <ul className="space-y-2 text-sm text-gray-500">
+                <li className="flex items-center">
+                  <Check className="text-[#17B6C3] mr-2 h-4 w-4 flex-shrink-0" />
+                  <span>Manage high transaction volumes</span>
+                </li>
+                <li className="flex items-center">
+                  <Check className="text-[#17B6C3] mr-2 h-4 w-4 flex-shrink-0" />
+                  <span>Protect thin margins</span>
+                </li>
+              </ul>
+            </div>
+
+            {/* Manufacturing */}
+            <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 shadow-xl border border-white/50 flex flex-col">
+              <div className="w-16 h-16 bg-[#17B6C3]/10 rounded-xl flex items-center justify-center mb-6">
+                <Factory className="h-8 w-8 text-[#17B6C3]" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-3">Manufacturing</h3>
+              <p className="text-gray-600 mb-6 flex-grow">
+                The slowest-paying sector in the UK economy, with manufacturers owed 
+                an average of £76,000 at any time. Qashivo's AI chases persistently 
+                without damaging customer relationships.
+              </p>
+              <ul className="space-y-2 text-sm text-gray-500">
+                <li className="flex items-center">
+                  <Check className="text-[#17B6C3] mr-2 h-4 w-4 flex-shrink-0" />
+                  <span>Reduce average £76K outstanding</span>
+                </li>
+                <li className="flex items-center">
+                  <Check className="text-[#17B6C3] mr-2 h-4 w-4 flex-shrink-0" />
+                  <span>Preserve customer relationships</span>
+                </li>
+              </ul>
+            </div>
+
+            {/* Recruitment & Staffing */}
             <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 shadow-xl border border-white/50 flex flex-col">
               <div className="w-16 h-16 bg-[#17B6C3]/10 rounded-xl flex items-center justify-center mb-6">
                 <Briefcase className="h-8 w-8 text-[#17B6C3]" />
               </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-4">For Financial Advisors</h3>
-              <p className="text-gray-600 mb-6">
-                Help your SME clients improve cashflow and reduce financial stress. 
-                Add value to your advisory relationships with AI-powered insights.
+              <h3 className="text-xl font-bold text-gray-900 mb-3">Recruitment & Staffing</h3>
+              <p className="text-gray-600 mb-6 flex-grow">
+                Pay contractors weekly but clients pay monthly — creating constant 
+                cashflow pressure. Qashivo's proactive reminders ensure invoices 
+                are paid on time, every time.
               </p>
-              <ul className="space-y-4 mb-8 flex-grow">
-                <li className="flex items-start">
-                  <Check className="text-[#17B6C3] mr-3 h-5 w-5 mt-0.5 flex-shrink-0" />
-                  <span className="text-gray-700">Referral commission programme</span>
+              <ul className="space-y-2 text-sm text-gray-500">
+                <li className="flex items-center">
+                  <Check className="text-[#17B6C3] mr-2 h-4 w-4 flex-shrink-0" />
+                  <span>Bridge the timing mismatch</span>
                 </li>
-                <li className="flex items-start">
-                  <Check className="text-[#17B6C3] mr-3 h-5 w-5 mt-0.5 flex-shrink-0" />
-                  <span className="text-gray-700">Client dashboard access</span>
-                </li>
-                <li className="flex items-start">
-                  <Check className="text-[#17B6C3] mr-3 h-5 w-5 mt-0.5 flex-shrink-0" />
-                  <span className="text-gray-700">Co-branded materials</span>
-                </li>
-                <li className="flex items-start">
-                  <Check className="text-[#17B6C3] mr-3 h-5 w-5 mt-0.5 flex-shrink-0" />
-                  <span className="text-gray-700">Ongoing partner education</span>
-                </li>
-                <li className="flex items-start">
-                  <Check className="text-[#17B6C3] mr-3 h-5 w-5 mt-0.5 flex-shrink-0" />
-                  <span className="text-gray-700">Cashflow reporting for clients</span>
-                </li>
-                <li className="flex items-start">
-                  <Check className="text-[#17B6C3] mr-3 h-5 w-5 mt-0.5 flex-shrink-0" />
-                  <span className="text-gray-700">Direct account management</span>
+                <li className="flex items-center">
+                  <Check className="text-[#17B6C3] mr-2 h-4 w-4 flex-shrink-0" />
+                  <span>Reduce reliance on invoice finance</span>
                 </li>
               </ul>
+            </div>
+
+            {/* CTA Card */}
+            <div className="bg-gradient-to-br from-[#17B6C3] to-teal-600 rounded-2xl p-8 shadow-xl flex flex-col justify-center text-white">
+              <h3 className="text-xl font-bold mb-3">Ready to Partner?</h3>
+              <p className="text-white/90 mb-6">
+                Join our growing network and offer autonomous AI credit control to your clients.
+              </p>
               <Button
-                className="w-full bg-[#17B6C3] hover:bg-[#1396A1] text-white mt-auto"
+                className="w-full bg-white text-[#17B6C3] hover:bg-gray-100"
                 onClick={() => setLocation("/contact")}
-                data-testid="button-partner-advisor"
+                data-testid="button-partner-cta"
               >
-                Join as Advisor
+                Get in Touch
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
             </div>
