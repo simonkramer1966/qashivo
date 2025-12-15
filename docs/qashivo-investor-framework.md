@@ -371,67 +371,187 @@ Qashivo integrates with best-in-class services for each channel:
 
 ---
 
-## Part 5: Cashflow Forecasting
+## Part 5: Bayesian Cashflow Forecasting
 
-### Overview
+### The Problem with Traditional Cashflow Forecasting
 
-Qashivo's Cashflow Forecasting module uses machine learning to predict when customers will pay, enabling business owners to plan cash positions with confidence.
+Most SME owners either:
+- **Don't forecast at all** — too complex, requires spreadsheet expertise
+- **Use static spreadsheets** — manually updated, quickly outdated, time-consuming
+- **Hire accountants** — expensive, still requires regular input and meetings
 
-### How It Works
+What they need: **Accurate forecasts that update automatically without ongoing effort.**
+
+### The Qashivo Approach: Bayesian Forecasting + Machine Learning
+
+Qashivo ingests **all Xero data** and applies Bayesian statistical models combined with machine learning to forecast both **cash inflows** and **cash outflows** — providing a complete picture of future cash position.
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│                    CASHFLOW FORECASTING ENGINE                       │
+│              BAYESIAN CASHFLOW FORECASTING ENGINE                    │
 ├─────────────────────────────────────────────────────────────────────┤
 │                                                                      │
-│  ┌─────────────────┐                                                │
-│  │ Payment History │                                                │
-│  │ Per Customer    │                                                │
-│  └────────┬────────┘                                                │
-│           │                                                          │
-│           ▼                                                          │
-│  ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐ │
-│  │  Pattern        │───▶│  ML Prediction  │───▶│  Cash Position  │ │
-│  │  Analysis       │    │  Model          │    │  Forecast       │ │
-│  └─────────────────┘    └─────────────────┘    └─────────────────┘ │
-│                                                                      │
-│  Features Analyzed:                                                  │
-│  ├── Historical payment timing (days from due date)                 │
-│  ├── Seasonal patterns (month-end, quarter-end)                     │
-│  ├── Customer segment behavior                                      │
-│  ├── Invoice size correlation                                       │
-│  └── Day-of-week patterns                                           │
+│  ┌─────────────────────────────────────────────────────────────┐    │
+│  │                    XERO DATA INGESTION                       │    │
+│  │  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐    │    │
+│  │  │ Invoices │  │  Bills   │  │  Bank    │  │ Recurring│    │    │
+│  │  │   (AR)   │  │  (AP)    │  │  Trans   │  │  Items   │    │    │
+│  │  └────┬─────┘  └────┬─────┘  └────┬─────┘  └────┬─────┘    │    │
+│  └───────┼─────────────┼─────────────┼─────────────┼──────────┘    │
+│          │             │             │             │                 │
+│          ▼             ▼             ▼             ▼                 │
+│  ┌─────────────────────────────────────────────────────────────┐    │
+│  │              BAYESIAN PATTERN RECOGNITION                    │    │
+│  │                                                              │    │
+│  │  • Customer payment timing distributions                     │    │
+│  │  • Supplier payment patterns                                 │    │
+│  │  • Overhead recurrence detection                             │    │
+│  │  • Seasonal trend identification                             │    │
+│  │  • Uncertainty quantification (confidence bands)             │    │
+│  └──────────────────────────┬──────────────────────────────────┘    │
+│                             │                                        │
+│                             ▼                                        │
+│  ┌──────────────────────────────────────────────────────────────┐   │
+│  │                    FORECAST OUTPUTS                           │   │
+│  │                                                               │   │
+│  │  ┌─────────────┐    ┌─────────────┐    ┌─────────────┐      │   │
+│  │  │   INFLOWS   │    │  OUTFLOWS   │    │ NET CASH    │      │   │
+│  │  │  (When $    │    │  (When $    │    │  POSITION   │      │   │
+│  │  │  comes in)  │    │  goes out)  │    │  Over Time  │      │   │
+│  │  └─────────────┘    └─────────────┘    └─────────────┘      │   │
+│  └───────────────────────────────────────────────────────────────┘   │
 │                                                                      │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
-### Prediction Outputs
+### Why Bayesian?
 
-| Output | Description |
-|--------|-------------|
-| **Expected Payment Date** | Per invoice, when we expect payment |
-| **Confidence Interval** | 80% likely to pay within X-Y days |
-| **30/60/90-Day Cash Position** | Projected AR balance over time |
-| **At-Risk Amount** | Invoices unlikely to be collected |
+Traditional forecasting gives you a single number. Bayesian forecasting gives you **probability distributions** — meaning you know not just *what* to expect, but *how confident* to be.
 
-### Customer Payment Profiles
+| Approach | Output | Limitation |
+|----------|--------|------------|
+| **Spreadsheet** | "We'll have £50K on March 1" | No uncertainty measure |
+| **Bayesian** | "80% likely £45K-£55K, 95% likely £40K-£60K" | Accounts for real-world variability |
 
-Based on historical behavior, customers are classified:
+This matters because business decisions require knowing the **range of outcomes**, not just the average.
 
-| Profile | Typical Behavior | Prediction Confidence |
-|---------|-----------------|----------------------|
-| **Consistent** | Always pays within X days of due | High (90%+) |
-| **Month-End** | Pays in batch at end of month | High (85%+) |
-| **Variable** | Pays 5-30 days after due | Medium (70%) |
-| **Chronic Late** | Regularly 30+ days late | Medium (60%) |
-| **Unknown** | New customer, no history | Low (50%) |
+### Data Sources from Xero
+
+Qashivo pulls **everything** from Xero to build the forecast:
+
+| Data Type | Used For |
+|-----------|----------|
+| **Sales Invoices** | Predicting when customers will pay (AR inflows) |
+| **Bills/Purchase Orders** | Predicting when suppliers need payment (AP outflows) |
+| **Bank Transactions** | Detecting recurring payments, historical patterns |
+| **Repeating Invoices** | Future revenue projections |
+| **Repeating Bills** | Fixed overhead commitments |
+| **Credit Notes** | Adjustments to expected inflows |
+| **Contact History** | Per-customer/supplier payment behavior |
+
+### The "Static State" Assumption
+
+By default, the forecast assumes **current patterns continue** — this is the static state:
+- Customers keep ordering at similar rates
+- Overheads stay consistent
+- Payment behaviors remain stable
+
+This works surprisingly well for most SMEs because:
+- 80% of cashflow is predictable recurring patterns
+- Major changes (new contracts, staff changes) are infrequent
+- The model self-corrects as new data arrives
+
+### Simple Adjustments for Change
+
+When things *do* change, users can make **simple adjustments** without spreadsheet complexity:
+
+| Scenario | User Action | System Response |
+|----------|-------------|-----------------|
+| **New contract signed** | "Add £5K/month starting February" | Adjusts inflow forecast |
+| **Losing a customer** | "Remove ABC Ltd from forecast" | Removes their pattern from projections |
+| **Hiring new staff** | "Add £3K/month payroll from March" | Increases overhead projection |
+| **Rent increase** | "Increase rent to £2K from April" | Updates recurring outflow |
+| **Seasonal adjustment** | "Q4 revenue typically +30%" | Applies seasonal modifier |
+
+These are **plain-language inputs**, not spreadsheet formulas. No accountant required.
+
+### Inflow Forecasting (Money Coming In)
+
+**What we predict:**
+- When each outstanding invoice will be paid
+- Expected revenue from recurring customers
+- Confidence intervals for each prediction
+
+**How it works:**
+
+```
+For each customer, the model learns:
+├── Average days to pay (mean)
+├── Variability in payment timing (standard deviation)
+├── Month-end vs continuous payment behavior
+├── Response to collection activities
+└── Seasonal patterns (e.g., slow in August)
+
+Combined with:
+├── Outstanding invoice values
+├── Recurring invoice patterns
+└── Historical revenue trends
+```
+
+**Output**: Daily/weekly/monthly expected inflows with confidence bands
+
+### Outflow Forecasting (Money Going Out)
+
+**What we predict:**
+- When bills need to be paid
+- Recurring overhead timing and amounts
+- Variable costs correlated with revenue
+
+**Categories detected automatically:**
+
+| Category | Detection Method | Example |
+|----------|-----------------|---------|
+| **Fixed Overheads** | Recurring bank debits, same amount monthly | Rent, insurance, subscriptions |
+| **Variable Overheads** | Recurring but varying amount | Utilities, phone bills |
+| **Payroll** | Monthly pattern, consistent timing | Staff salaries |
+| **Supplier Bills** | Bills from Xero, payment terms | Stock, materials |
+| **Tax Payments** | Quarterly/annual patterns | VAT, corporation tax |
+| **One-off Payments** | Scheduled bills, known commitments | Equipment purchases |
+
+### Forecast Outputs
+
+| Timeframe | View | Use Case |
+|-----------|------|----------|
+| **7-Day** | Daily breakdown | Immediate cash needs |
+| **30-Day** | Weekly summary | Short-term planning |
+| **90-Day** | Monthly projection | Quarter planning |
+| **12-Month** | Quarterly view | Annual planning, loan applications |
+
+Each view shows:
+- Expected inflows (with confidence range)
+- Expected outflows (by category)
+- Net cash position (with risk bands)
+- Low cash alerts (when position may go negative)
+
+### Accuracy Without Effort
+
+| Traditional Approach | Time Required | Accuracy |
+|---------------------|---------------|----------|
+| No forecasting | 0 hours | 0% (no visibility) |
+| Basic spreadsheet | 4-8 hours setup, 2 hours/month maintenance | 50-60% |
+| Detailed spreadsheet | 20+ hours setup, 5 hours/month maintenance | 70-80% |
+| Accountant-managed | Ongoing retainer fees | 75-85% |
+| **Qashivo Bayesian** | **5 minutes (Xero connect)** | **80-90%** |
+
+The model improves automatically as more data accumulates — no ongoing maintenance required.
 
 ### Business Value
 
-- **Cash Planning**: Know what cash to expect each week
-- **Credit Decisions**: Identify customers likely to pay late before extending more credit
-- **Collection Prioritization**: Focus on invoices that won't pay without intervention
-- **Variance Alerts**: Get notified when payment behavior changes
+- **Sleep better**: Know your cash position 90 days out with confidence bands
+- **Spot problems early**: Alerts when projected cash drops below safe levels
+- **Plan with confidence**: Make hiring/investment decisions with data, not gut feel
+- **Skip the spreadsheets**: No formulas, no manual updates, no accountant meetings
+- **Automatic improvement**: Forecasts get more accurate as the system learns your patterns
 
 ---
 
