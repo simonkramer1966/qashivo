@@ -509,7 +509,7 @@ export interface PreparedMessage {
 }
 
 export function prepareMessageFromDecision(
-  decision: CharlieDecision,
+  decision: CharlieDecision & { invoiceCount?: number; invoiceTable?: string; allInvoiceIds?: string[] },
   tenantConfig: {
     companyName: string;
     senderName: string;
@@ -520,23 +520,43 @@ export function prepareMessageFromDecision(
   const channel = decision.recommendedChannel;
   if (channel === 'none') return null;
 
+  // Check if this is a consolidated multi-invoice decision
+  const invoiceCount = decision.invoiceCount || 1;
+  const hasMultipleInvoices = invoiceCount > 1;
+  
+  // Build invoice summary - single or multi-invoice format
+  const invoiceSummary = hasMultipleInvoices && decision.invoiceTable
+    ? decision.invoiceTable
+    : `Invoice ${decision.invoice.invoiceNumber}: ${formatCurrency(decision.invoice.amount)}`;
+  
+  // Build invoice number display - channel-specific:
+  // Email: can use "X invoices" in subject, individual invoices in body
+  // SMS/Voice: keep primary invoice number for clarity in short messages
+  const invoiceNumberDisplay = (hasMultipleInvoices && channel === 'email')
+    ? `${invoiceCount} invoices`
+    : decision.invoice.invoiceNumber;
+
   const context: Partial<TemplateContext> = {
     contactName: decision.contact.name,
     companyName: tenantConfig.companyName,
-    invoiceNumber: decision.invoice.invoiceNumber,
+    invoiceNumber: invoiceNumberDisplay,
     invoiceTotal: formatCurrency(decision.invoice.amount),
     dueDate: formatDate(decision.invoice.dueDate),
     daysOverdue: decision.invoice.daysOverdue,
-    dueDateContext: decision.invoice.daysOverdue > 0 
-      ? `was due on ${formatDate(decision.invoice.dueDate)}` 
-      : `is due on ${formatDate(decision.invoice.dueDate)}`,
+    dueDateContext: hasMultipleInvoices
+      ? `with the oldest being ${decision.invoice.daysOverdue} days overdue`
+      : (decision.invoice.daysOverdue > 0 
+        ? `was due on ${formatDate(decision.invoice.dueDate)}` 
+        : `is due on ${formatDate(decision.invoice.dueDate)}`),
     senderName: tenantConfig.senderName,
     senderCompany: tenantConfig.companyName,
     contactNumber: tenantConfig.contactNumber,
     paymentDetails: tenantConfig.paymentDetails,
-    invoiceSummary: `Invoice ${decision.invoice.invoiceNumber}: ${formatCurrency(decision.invoice.amount)}`,
+    invoiceSummary,
     deadlineDate: formatDate(addDays(new Date(), 7)),
-  };
+    // Add multi-invoice specific context for templates that support it
+    invoiceCount: invoiceCount,
+  } as Partial<TemplateContext>;
 
   // Derive tone from state and escalation status
   const toneProfile = deriveToneFromState(decision.charlieState, decision.shouldEscalate);

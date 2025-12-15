@@ -608,8 +608,21 @@ async function generateDailyPlanWithCharlie(
   const channelCounts = { email: 0, sms: 0, voice: 0 };
   const planActions: DailyPlanAction[] = [];
   
+  // GROUP DECISIONS BY CONTACT - consolidate multiple invoices into one action per contact
+  const decisionsByContact = new Map<string, typeof actionableDecisions>();
   for (const decision of actionableDecisions) {
-    const channel = decision.recommendedChannel;
+    const existing = decisionsByContact.get(decision.contactId) || [];
+    existing.push(decision);
+    decisionsByContact.set(decision.contactId, existing);
+  }
+  
+  console.log(`📊 Grouped ${actionableDecisions.length} decisions into ${decisionsByContact.size} contacts`);
+  
+  // Process each contact ONCE (with all their invoices consolidated)
+  for (const [contactId, contactDecisions] of decisionsByContact) {
+    // Use first decision (highest priority due to earlier sort) for channel/priority
+    const primaryDecision = contactDecisions[0];
+    const channel = primaryDecision.recommendedChannel;
     if (channel === 'none') continue;
     
     // Map voice channel to correct type for limits
@@ -617,73 +630,127 @@ async function generateDailyPlanWithCharlie(
     
     // Skip if daily limit reached
     if (channelCounts[limitChannel] >= dailyLimits[limitChannel]) {
-      console.log(`⏭️ Skipping ${channel} for ${decision.contact.name} - daily limit reached`);
+      console.log(`⏭️ Skipping ${channel} for ${primaryDecision.contact.name} - daily limit reached`);
       continue;
     }
     
-    // Determine exception status
+    // Calculate consolidated amounts from all invoices for this contact
+    const totalAmount = contactDecisions.reduce((sum, d) => sum + d.invoice.amount, 0);
+    const invoiceCount = contactDecisions.length;
+    const maxDaysOverdue = Math.max(...contactDecisions.map(d => d.invoice.daysOverdue));
+    
+    // Find the oldest due date (earliest date = most overdue)
+    const oldestDueDate = contactDecisions.reduce((oldest, d) => {
+      const dueDate = new Date(d.invoice.dueDate);
+      return dueDate < oldest ? dueDate : oldest;
+    }, new Date(contactDecisions[0].invoice.dueDate));
+    
+    // Build invoice tables for multi-invoice contacts - plain text for SMS/voice, HTML for email
+    const invoiceTablePlain = contactDecisions.map(d => 
+      `• Invoice ${d.invoice.invoiceNumber}: £${d.invoice.amount.toFixed(2)} (${d.invoice.daysOverdue} days overdue)`
+    ).join('\n');
+    
+    const invoiceTableHtml = generateInvoiceTableHtml(contactDecisions.map(d => ({
+      invoiceNumber: d.invoice.invoiceNumber,
+      amount: `£${d.invoice.amount.toFixed(2)}`,
+      daysOverdue: d.invoice.daysOverdue,
+    })));
+    
+    // Determine exception status using primary decision
     let exceptionReason: string | undefined;
     let status: 'pending_approval' | 'exception' = 'pending_approval';
     
     // Exception: Charlie flagged for human review
-    if (decision.requiresHumanReview) {
+    if (primaryDecision.requiresHumanReview) {
       exceptionReason = 'requires_human_review';
       status = 'exception';
     }
     
     // Exception: Low confidence
-    if (decision.confidence < (minConfidence[channel] || 0.8)) {
+    if (primaryDecision.confidence < (minConfidence[channel] || 0.8)) {
       exceptionReason = 'low_confidence';
       status = 'exception';
     }
     
-    // Exception: High value first contact
-    if (exceptionRules.flagHighValue && decision.invoice.amount >= exceptionRules.flagHighValue) {
-      if (decision.contact.daysSinceLastContact === null) {
+    // Exception: High value first contact (use consolidated total)
+    if (exceptionRules.flagHighValue && totalAmount >= exceptionRules.flagHighValue) {
+      if (primaryDecision.contact.daysSinceLastContact === null) {
         exceptionReason = 'first_contact_high_value';
         status = 'exception';
       }
     }
     
     // Exception: Escalation required
-    if (decision.shouldEscalate && decision.escalationTrigger !== 'none') {
-      exceptionReason = `escalation_${decision.escalationTrigger}`;
+    if (primaryDecision.shouldEscalate && primaryDecision.escalationTrigger !== 'none') {
+      exceptionReason = `escalation_${primaryDecision.escalationTrigger}`;
       status = 'exception';
     }
     
-    // Prepare message using Charlie's playbook
-    const preparedMessage = prepareMessageFromDecision(decision, tenantConfig);
+    // Prepare consolidated message with invoice table (use HTML for email, plain text for SMS/voice)
+    const invoiceTableForChannel = channel === 'email' ? invoiceTableHtml : invoiceTablePlain;
+    
+    const consolidatedDecision = {
+      ...primaryDecision,
+      invoice: {
+        ...primaryDecision.invoice,
+        amount: totalAmount,
+        daysOverdue: maxDaysOverdue,
+        dueDate: oldestDueDate,  // Use oldest due date for consistent messaging
+      },
+      invoiceCount,
+      invoiceTable: invoiceTableForChannel,
+      invoiceTablePlain,
+      invoiceTableHtml,
+      allInvoiceIds: contactDecisions.map(d => d.invoiceId),
+    };
+    
+    const preparedMessage = prepareMessageFromDecision(consolidatedDecision as any, tenantConfig);
+    
+    // Generate subject line (different for single vs multiple invoices)
+    const subject = invoiceCount > 1
+      ? `Payment reminder - ${invoiceCount} outstanding invoices totalling £${totalAmount.toFixed(2)}`
+      : preparedMessage?.subject || `Payment reminder: Invoice ${primaryDecision.invoice.invoiceNumber}`;
     
     // Map priority tier to priority string
-    const priority = decision.priorityTier === 'critical' || decision.priorityTier === 'high' 
+    const priority = primaryDecision.priorityTier === 'critical' || primaryDecision.priorityTier === 'high' 
       ? 'high' 
-      : decision.priorityTier === 'medium' ? 'medium' : 'low';
+      : primaryDecision.priorityTier === 'medium' ? 'medium' : 'low';
     
-    // Create action record
+    // Create ONE action per contact (primary invoice ID, but metadata contains all)
     const [newAction] = await db.insert(actions).values({
       tenantId,
-      contactId: decision.contactId,
-      invoiceId: decision.invoiceId,
+      contactId: primaryDecision.contactId,
+      invoiceId: primaryDecision.invoiceId,
       userId,
       type: channel,
       status,
-      subject: preparedMessage?.subject || `Payment reminder: Invoice ${decision.invoice.invoiceNumber}`,
+      subject,
       content: preparedMessage?.body || '',
       scheduledFor,
-      confidenceScore: decision.confidence.toString(),
+      confidenceScore: primaryDecision.confidence.toString(),
       exceptionReason,
       metadata: {
-        daysOverdue: decision.invoice.daysOverdue,
-        amount: decision.invoice.amount.toString(),
+        daysOverdue: maxDaysOverdue,
+        amount: totalAmount.toString(),
         priority,
         generatedBy: 'charlie_decision_engine',
-        charlieState: decision.charlieState,
-        customerSegment: decision.customerSegment,
-        priorityScore: decision.priorityScore,
-        priorityReasons: decision.priorityReasons,
-        channelReason: decision.channelReason,
-        escalationTrigger: decision.escalationTrigger,
-        toneProfile: decision.toneProfile,
+        charlieState: primaryDecision.charlieState,
+        customerSegment: primaryDecision.customerSegment,
+        priorityScore: primaryDecision.priorityScore,
+        priorityReasons: primaryDecision.priorityReasons,
+        channelReason: primaryDecision.channelReason,
+        escalationTrigger: primaryDecision.escalationTrigger,
+        toneProfile: primaryDecision.toneProfile,
+        invoiceCount,
+        allInvoiceIds: contactDecisions.map(d => d.invoiceId),
+        invoiceTable: invoiceCount > 1 ? invoiceTablePlain : undefined,
+        invoiceTableHtml: invoiceCount > 1 ? invoiceTableHtml : undefined,
+        invoiceDetails: contactDecisions.map(d => ({
+          id: d.invoiceId,
+          number: d.invoice.invoiceNumber,
+          amount: d.invoice.amount,
+          daysOverdue: d.invoice.daysOverdue,
+        })),
       },
       aiGenerated: true,
       source: 'automated',
@@ -691,19 +758,22 @@ async function generateDailyPlanWithCharlie(
     
     planActions.push({
       id: newAction.id,
-      contactId: decision.contactId,
-      contactName: decision.contact.name,
-      invoiceId: decision.invoiceId,
-      invoiceNumber: decision.invoice.invoiceNumber,
-      amount: decision.invoice.amount.toString(),
-      daysOverdue: decision.invoice.daysOverdue,
+      contactId: primaryDecision.contactId,
+      contactName: primaryDecision.contact.name,
+      invoiceId: primaryDecision.invoiceId,
+      invoiceNumber: invoiceCount > 1 
+        ? `${invoiceCount} invoices`
+        : primaryDecision.invoice.invoiceNumber,
+      amount: totalAmount.toString(),
+      daysOverdue: maxDaysOverdue,
       actionType: channel,
       status,
       subject: newAction.subject || undefined,
       content: newAction.content || undefined,
-      confidenceScore: decision.confidence,
+      confidenceScore: primaryDecision.confidence,
       exceptionReason,
       priority,
+      invoiceCount,
     });
     
     channelCounts[limitChannel]++;
