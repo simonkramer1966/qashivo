@@ -286,7 +286,7 @@ export default function Partners() {
               </div>
               <h3 className="text-lg font-bold text-gray-900 mb-2">Competitive Edge</h3>
               <p className="text-gray-600">
-                Position yourself as an innovative, forward-thinking practice that leverages cutting-edge AI.
+                Position yourself as an innovative, forward-thinking business that leverages cutting-edge AI.
               </p>
             </div>
             
