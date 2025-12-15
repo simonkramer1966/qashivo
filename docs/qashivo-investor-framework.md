@@ -677,7 +677,170 @@ The best financing is the financing you don't need. Qashivo reduces reliance on 
 
 ---
 
-## Part 7: Commercial Model
+## Part 7: Partner Channels
+
+### Go-to-Market Strategy: B2B2B
+
+While direct SME sales are viable, **partner channels** offer faster scaling with lower customer acquisition costs. One partner relationship can unlock dozens or hundreds of SME clients.
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                    PARTNER CHANNEL MODEL                             │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                      │
+│   ┌─────────────┐     ┌─────────────┐     ┌─────────────┐          │
+│   │  Accounting │     │   Invoice   │     │  Industry   │          │
+│   │  Partners   │     │  Finance    │     │  Verticals  │          │
+│   └──────┬──────┘     └──────┬──────┘     └──────┬──────┘          │
+│          │                   │                   │                   │
+│          ▼                   ▼                   ▼                   │
+│   ┌─────────────────────────────────────────────────────────┐       │
+│   │                      QASHIVO                             │       │
+│   │            Autonomous Credit Control                     │       │
+│   └─────────────────────────────────────────────────────────┘       │
+│          │                   │                   │                   │
+│          ▼                   ▼                   ▼                   │
+│   ┌─────────────┐     ┌─────────────┐     ┌─────────────┐          │
+│   │  Their SME  │     │  Their SME  │     │  Their SME  │          │
+│   │  Clients    │     │  Clients    │     │  Members    │          │
+│   └─────────────┘     └─────────────┘     └─────────────┘          │
+│                                                                      │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+### Channel 1: Accounting Partners
+
+**The Opportunity**: Accounting firms manage finances for multiple SME clients but rarely offer credit control services.
+
+| Factor | Detail |
+|--------|--------|
+| **Partner Profile** | Accountancy practices with 20-500 SME clients |
+| **Their Pain** | Clients ask for help with cashflow; accountants aren't equipped to chase invoices |
+| **Qashivo Value** | White-label credit control they can offer as an add-on service |
+| **Revenue Model** | Partner margin on subscriptions (20-30%) or referral fees |
+
+**Scale Potential**: One accounting firm = 50-200 potential Qashivo users
+
+**Go-to-Market**: 
+- Partner with Xero/accounting software communities
+- Attend accountancy conferences (Accountex, etc.)
+- Content marketing targeting practice owners
+
+---
+
+### Channel 2: Invoice Finance Companies
+
+**The Opportunity**: Invoice finance companies fund receivables — they have direct financial interest in those invoices getting collected quickly.
+
+| Factor | Detail |
+|--------|--------|
+| **Partner Profile** | Factoring companies, invoice discounters, asset-based lenders |
+| **Their Pain** | Credit control is a cost centre; inconsistent collection across client portfolio |
+| **Qashivo Value** | Autonomous collection across entire funded portfolio; reduces bad debt |
+| **Revenue Model** | Per-client fee, per-invoice fee, or portfolio license |
+
+**Scale Potential**: One invoice finance company = 50-300 funded clients
+
+**Why They Care**:
+- Faster collection = faster repayment = better margins
+- Consistent professional chasing protects their reputation
+- Visibility across entire portfolio from one dashboard
+- Reduces manual collection staff costs
+
+**Go-to-Market**:
+- Direct outreach to invoice finance brokers and providers
+- Partner with invoice finance platforms (MarketFinance, Kriya, etc.)
+- Integrate with their existing systems
+
+---
+
+### Channel 3: Wholesale & Distribution
+
+**The Industry Problem**: 
+- Squeezed between suppliers (must pay quickly) and retailers (pay slowly)
+- High volume, low margins — can't afford dedicated credit control staff
+- 52+ day average payment times devastating for thin-margin businesses
+
+| Factor | Detail |
+|--------|--------|
+| **Partner Profile** | Trade associations, buying groups, wholesale platforms |
+| **Their Pain** | Members struggling with cashflow; late payments causing business failures |
+| **Qashivo Value** | Affordable autonomous credit control for members |
+| **Revenue Model** | Member benefit pricing, group discounts, or platform integration |
+
+**Scale Potential**: One wholesale buying group = 100-1,000 member businesses
+
+**Go-to-Market**:
+- Partner with trade associations (Federation of Wholesale Distributors, etc.)
+- Integrate with wholesale B2B platforms
+- Industry-specific messaging around margin protection
+
+---
+
+### Channel 4: Manufacturing
+
+**The Industry Problem**:
+- Slowest-paying sector in the UK
+- Average manufacturer owed £76,000 in unpaid invoices
+- 61% report customers paying slower than last year
+- Long payment terms (60-90 days) built into contracts
+
+| Factor | Detail |
+|--------|--------|
+| **Partner Profile** | Manufacturing trade bodies, ERP vendors, industry consultants |
+| **Their Pain** | Members/clients chronically struggling with late payments |
+| **Qashivo Value** | Systematic follow-up that respects contract terms but enforces payment |
+| **Revenue Model** | Association partnerships, ERP integrations, direct vertical sales |
+
+**Scale Potential**: Manufacturing sector = high-value invoices, repeat customers, process-driven (ideal for automation)
+
+**Go-to-Market**:
+- Partner with Make UK, Manufacturing NI, Scottish Engineering
+- Integrate with manufacturing ERP systems
+- Case studies showing DSO improvement
+
+---
+
+### Channel 5: Recruitment & Staffing
+
+**The Industry Problem**:
+- Classic timing mismatch: pay contractors weekly, get paid monthly
+- Notorious for cashflow stress — many already use invoice finance
+- High volume of invoices, often to same clients repeatedly
+
+| Factor | Detail |
+|--------|--------|
+| **Partner Profile** | Recruitment industry bodies, back-office providers, payroll/timesheet platforms |
+| **Their Pain** | Agencies spending hours chasing the same clients every month |
+| **Qashivo Value** | Automated weekly/monthly chase cycles tailored to recruitment billing patterns |
+| **Revenue Model** | Industry-specific pricing, integration with recruitment software |
+
+**Scale Potential**: 30,000+ recruitment agencies in UK; concentrated market with clear industry bodies
+
+**Go-to-Market**:
+- Partner with REC (Recruitment & Employment Confederation)
+- Integrate with recruitment back-office systems (ETZ, Boomerang, etc.)
+- Target recruitment finance providers as channel partners
+
+---
+
+### Partner Channel Summary
+
+| Channel | Reach per Partner | Sales Cycle | Revenue Potential |
+|---------|-------------------|-------------|-------------------|
+| **Accounting Partners** | 50-200 clients | Medium | Recurring referrals |
+| **Invoice Finance** | 50-300 clients | Long | High-value contracts |
+| **Wholesale** | 100-1,000 members | Medium | Volume play |
+| **Manufacturing** | Varies | Long | High-value invoices |
+| **Recruitment** | Industry-wide | Short | Quick adoption |
+
+**Strategic Priority**: Invoice Finance and Accounting Partners offer the fastest path to scale with aligned incentives.
+
+---
+
+## Part 8: Commercial Model
 
 ### Pricing Tiers
 
