@@ -729,13 +729,73 @@ This puts our money where our mouth is and aligns our success with customer outc
 | Authentication | Replit Auth (OpenID Connect) |
 | Hosting | Replit Deployments |
 
-### Security
+### Security & Compliance
 
-- OAuth 2.0 for all integrations
-- Row-level security (multi-tenant)
-- Encrypted credentials storage
-- Webhook signature verification
-- GDPR-compliant data handling
+#### Infrastructure Security
+
+| Layer | Implementation |
+|-------|----------------|
+| **Cloud Provider** | Google Cloud Platform (GCP) |
+| **Database** | Neon Serverless PostgreSQL (SOC 2 Type II certified) |
+| **Hosting** | Replit Deployments (enterprise-grade infrastructure) |
+| **CDN/Edge** | Cloudflare (DDoS protection, WAF) |
+
+#### Certifications & Compliance (Roadmap)
+
+| Certification | Status | Target |
+|---------------|--------|--------|
+| **SOC 2 Type I** | In Progress | Q2 2026 |
+| **SOC 2 Type II** | Planned | Q4 2026 |
+| **ISO 27001** | Planned | 2027 |
+| **GDPR Compliant** | ✅ Active | Current |
+| **ICO Registered** | ✅ Active | Current |
+
+#### Data Protection
+
+| Control | Description |
+|---------|-------------|
+| **Encryption at Rest** | AES-256 encryption for all stored data |
+| **Encryption in Transit** | TLS 1.3 for all API communications |
+| **Credential Storage** | Secrets encrypted with customer-specific keys |
+| **Data Residency** | UK/EU data centres (GDPR requirement) |
+| **Backup & Recovery** | Automated daily backups, 30-day retention |
+
+#### Application Security
+
+| Control | Implementation |
+|---------|----------------|
+| **Authentication** | OAuth 2.0 / OpenID Connect (no password storage) |
+| **Multi-Tenancy** | Row-level security with tenant isolation |
+| **API Security** | Rate limiting, request validation, CORS policies |
+| **Webhook Security** | HMAC signature verification on all inbound webhooks |
+| **Session Management** | Secure, HTTP-only cookies with automatic expiry |
+
+#### Third-Party Security
+
+All integration partners maintain enterprise security standards:
+
+| Partner | Security Posture |
+|---------|------------------|
+| **Xero** | SOC 1 & SOC 2 Type II, ISO 27001 |
+| **SendGrid** | SOC 2 Type II, ISO 27001 |
+| **Vonage** | SOC 2 Type II, ISO 27001, PCI DSS |
+| **Stripe** | PCI DSS Level 1, SOC 2 Type II |
+| **OpenAI** | SOC 2 Type II |
+| **Retell AI** | SOC 2 Type II |
+
+#### Access Controls
+
+- **Role-Based Access Control (RBAC)**: 50+ granular permissions
+- **Audit Logging**: All user actions logged with timestamps
+- **Admin Separation**: Platform admin access isolated from tenant data
+- **API Key Management**: Scoped tokens with automatic rotation
+
+#### Incident Response
+
+- 24-hour security incident response commitment
+- Automated alerting for anomalous access patterns
+- Regular penetration testing (planned quarterly from Q2 2026)
+- Vulnerability disclosure programme
 
 ### Monitoring
 
