@@ -429,7 +429,7 @@ export default function Demo() {
                     <span className="font-semibold text-[#17B6C3]">THE Credit Controller</span>
                   </div>
                   <h3 className="text-3xl font-bold text-gray-900">
-                    AI That Chases Invoices So You Don't Have To
+                    Qashivo Chases Invoices So You Don't Have To
                   </h3>
                   <p className="text-lg text-gray-600">
                     Not software for credit controllers — Qashivo is the credit controller. It runs 24/7, monitoring overdue invoices, sending personalised follow-ups, capturing customer responses, and moving each account through your escalation path based on your policies and outcomes.
