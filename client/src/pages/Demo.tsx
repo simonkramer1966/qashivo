@@ -433,9 +433,7 @@ export default function Demo() {
                     AI That Chases Invoices So You Don't Have To
                   </h3>
                   <p className="text-lg text-gray-600">
-                    Not software for credit controllers — the AI <em>is</em> the credit controller. 
-                    It works 24/7, detecting payment intent, sending personalized follow-ups, 
-                    and escalating when needed.
+                    Not software for credit controllers — Qashivo is the credit controller. It runs 24/7, monitoring overdue invoices, sending personalised follow-ups, capturing customer responses, and moving each account through your escalation path based on your policies and outcomes.
                   </p>
                   <ul className="space-y-4">
                     <li className="flex items-start">
@@ -444,7 +442,7 @@ export default function Demo() {
                       </div>
                       <div>
                         <h4 className="font-semibold text-gray-900">AI Voice Calls</h4>
-                        <p className="text-gray-600">Automated calls that detect intent and sentiment in real-time</p>
+                        <p className="text-gray-600">Outbound AI calls that classify outcomes (promise-to-pay, dispute, wrong contact, no answer), capture key details, and log a clear summary for your team.</p>
                       </div>
                     </li>
                     <li className="flex items-start">
@@ -453,7 +451,7 @@ export default function Demo() {
                       </div>
                       <div>
                         <h4 className="font-semibold text-gray-900">Smart SMS & Email</h4>
-                        <p className="text-gray-600">Personalized messages timed to maximize response rates</p>
+                        <p className="text-gray-600">Personalised messages triggered by invoice status and your chase policy — timed around due dates, ageing, and recent contact so you stay consistent without over-chasing.</p>
                       </div>
                     </li>
                     <li className="flex items-start">
@@ -462,7 +460,7 @@ export default function Demo() {
                       </div>
                       <div>
                         <h4 className="font-semibold text-gray-900">Broken Promise Detection</h4>
-                        <p className="text-gray-600">Auto-escalates when payment commitments aren't met</p>
+                        <p className="text-gray-600">Automatically flags missed commitments and escalates to the next step, so broken promises don't quietly turn into 60-day debt.</p>
                       </div>
                     </li>
                   </ul>
