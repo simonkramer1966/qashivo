@@ -712,11 +712,10 @@ export default function Demo() {
                     <span className="font-semibold text-[#17B6C3]">Invoice Financing</span>
                   </div>
                   <h3 className="text-3xl font-bold text-gray-900">
-                    Turn Approved Invoices Into Cash Within 24 Hours
+                    Turn Eligible Invoices Into Cash — via Our Funding Partner
                   </h3>
                   <p className="text-lg text-gray-600">
-                    Don't wait 60+ days to get paid. Get up to 85% of your invoice value immediately, 
-                    with transparent fees and no hidden costs.
+                    Don't wait 60+ days to get paid. If you choose to use our finance partner, you can access an advance against eligible invoices — with clear terms from a single provider (no price comparison, no marketplace).
                   </p>
                   <ul className="space-y-4">
                     <li className="flex items-start">
@@ -724,8 +723,8 @@ export default function Demo() {
                         <Zap className="h-5 w-5 text-[#17B6C3]" />
                       </div>
                       <div>
-                        <h4 className="font-semibold text-gray-900">24-Hour Funding</h4>
-                        <p className="text-gray-600">Get cash in your account within one business day</p>
+                        <h4 className="font-semibold text-gray-900">Fast Funding</h4>
+                        <p className="text-gray-600">Typically receive funds within one business day (subject to approval and cut-off times).</p>
                       </div>
                     </li>
                     <li className="flex items-start">
@@ -733,8 +732,8 @@ export default function Demo() {
                         <Check className="h-5 w-5 text-[#17B6C3]" />
                       </div>
                       <div>
-                        <h4 className="font-semibold text-gray-900">85% Advance Rate</h4>
-                        <p className="text-gray-600">Receive most of your invoice value upfront</p>
+                        <h4 className="font-semibold text-gray-900">Up to 85% Advance</h4>
+                        <p className="text-gray-600">Access up to 85% upfront on eligible invoices, depending on your account and debtor profile.</p>
                       </div>
                     </li>
                     <li className="flex items-start">
@@ -742,11 +741,14 @@ export default function Demo() {
                         <Shield className="h-5 w-5 text-[#17B6C3]" />
                       </div>
                       <div>
-                        <h4 className="font-semibold text-gray-900">Transparent Pricing</h4>
-                        <p className="text-gray-600">Simple daily fee with no hidden costs</p>
+                        <h4 className="font-semibold text-gray-900">Clear Fees</h4>
+                        <p className="text-gray-600">One provider, one fee structure — you'll see the partner's terms and costs upfront before you proceed.</p>
                       </div>
                     </li>
                   </ul>
+                  <p className="text-xs text-gray-500 italic">
+                    Invoice finance is provided by a single third-party partner. Eligibility, advance rates, fees and funding times vary and are subject to the partner's approval and terms.
+                  </p>
                 </div>
 
                 {/* Right: Funding Calculator */}
