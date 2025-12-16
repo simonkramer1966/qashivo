@@ -374,8 +374,7 @@ export default function Demo() {
             Experience Qashivo <span className="text-[#17B6C3]">in Action</span>
           </h1>
           <p className="text-xl text-gray-200 max-w-3xl mx-auto mb-8">
-            Explore our three core pillars: autonomous credit control, intelligent cashflow forecasting, 
-            and instant invoice financing. Try our live AI demos below.
+            Explore three ways Qashivo helps you get paid faster: automated chasing workflows, 90-day cash visibility, and invoice finance via one trusted partner. Try the live AI demos below.
           </p>
         </div>
       </section>
