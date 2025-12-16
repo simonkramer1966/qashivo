@@ -130,7 +130,11 @@ export default function Demo() {
   }, [leadId, activeDemo, demoStartTime, toast]);
 
   const handleVoiceDemo = async () => {
-    if (!voicePhone) return;
+    console.log('[VOICE-DEMO-UI] Button clicked, voicePhone:', voicePhone);
+    if (!voicePhone) {
+      console.log('[VOICE-DEMO-UI] No phone number, returning early');
+      return;
+    }
     
     setResultsDialogOpen(false);
     setCurrentResults(null);
@@ -143,9 +147,11 @@ export default function Demo() {
     
     try {
       const sanitizedPhone = sanitizePhoneNumber(voicePhone, voiceCountryCode);
+      console.log('[VOICE-DEMO-UI] Sanitized phone:', sanitizedPhone);
       let currentLeadId = leadId;
       
       if (!currentLeadId) {
+        console.log('[VOICE-DEMO-UI] No lead ID, creating new lead...');
         const leadRes = await fetch("/api/investor/lead", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -154,21 +160,28 @@ export default function Demo() {
             email: `demo-${Date.now()}@demo.qashivo.com` 
           }),
         });
+        console.log('[VOICE-DEMO-UI] Lead creation response status:', leadRes.status);
         if (!leadRes.ok) throw new Error("Failed to create lead");
         const lead = await leadRes.json();
+        console.log('[VOICE-DEMO-UI] Lead created:', lead.id);
         currentLeadId = lead.id;
         setLeadId(lead.id);
       }
       
       setTimeout(() => setVoiceProgress("Connecting..."), 400);
       
+      console.log('[VOICE-DEMO-UI] Calling voice-demo API with:', { leadId: currentLeadId, phone: sanitizedPhone, name: voiceName });
       const response = await fetch("/api/investor/voice-demo", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ leadId: currentLeadId, phone: sanitizedPhone, name: voiceName }),
       });
       
-      if (!response.ok) throw new Error("Failed to initiate call");
+      console.log('[VOICE-DEMO-UI] Voice demo response status:', response.status);
+      const responseData = await response.json();
+      console.log('[VOICE-DEMO-UI] Voice demo response data:', responseData);
+      
+      if (!response.ok) throw new Error(responseData.message || "Failed to initiate call");
       
       setDemoStartTime(Date.now());
       setActiveDemo("voice");
@@ -189,13 +202,15 @@ export default function Demo() {
         title: "AI Voice Call Started",
         description: "You'll receive a call shortly...",
       });
-    } catch (error) {
+    } catch (error: any) {
+      console.error('[VOICE-DEMO-UI] Error:', error);
+      console.error('[VOICE-DEMO-UI] Error message:', error?.message);
       setVoiceProgress("");
       setIsDemoProcessing(false);
       setActiveDemo(null);
       toast({
         title: "Error",
-        description: "Failed to initiate call. Please try again.",
+        description: error?.message || "Failed to initiate call. Please try again.",
         variant: "destructive",
       });
     }

@@ -20547,10 +20547,15 @@ ${tenant.name}
 
   // Trigger voice demo (Retell call)
   app.post("/api/investor/voice-demo", async (req, res) => {
+    console.log('🎤 [VOICE-DEMO] Received voice demo request:', JSON.stringify(req.body));
+    
     try {
       const { leadId, phone, name } = req.body;
       
+      console.log('🎤 [VOICE-DEMO] Parsed params - leadId:', leadId, 'phone:', phone, 'name:', name);
+      
       if (!leadId || !phone) {
+        console.log('🎤 [VOICE-DEMO] Missing required params - returning 400');
         return res.status(400).json({ message: "Lead ID and phone are required" });
       }
       
@@ -20558,7 +20563,14 @@ ${tenant.name}
       const updateData: any = { phone };
       if (name) updateData.voiceName = name;
       
+      console.log('🎤 [VOICE-DEMO] Updating lead with:', updateData);
       const lead = await storage.updateInvestorLead(leadId, updateData);
+      console.log('🎤 [VOICE-DEMO] Lead updated:', lead?.id);
+      
+      // Check Retell configuration
+      console.log('🎤 [VOICE-DEMO] Retell config check - AGENT_ID:', process.env.RETELL_AGENT_ID ? 'SET' : 'MISSING');
+      console.log('🎤 [VOICE-DEMO] Retell config check - API_KEY:', process.env.RETELL_API_KEY ? 'SET' : 'MISSING');
+      console.log('🎤 [VOICE-DEMO] Retell config check - PHONE_NUMBER:', process.env.RETELL_PHONE_NUMBER ? 'SET' : 'MISSING');
       
       // Trigger Retell AI call with investor demo script
       const { createUnifiedRetellCall, createStandardCollectionVariables } = await import('./utils/retellCallHelper.js');
@@ -20572,6 +20584,9 @@ ${tenant.name}
         customMessage: "This is a demo call to showcase Qashivo's AI voice capabilities"
       });
       
+      console.log('🎤 [VOICE-DEMO] Call variables prepared:', JSON.stringify(callVariables));
+      console.log('🎤 [VOICE-DEMO] Initiating Retell call to:', phone);
+      
       const callResult = await createUnifiedRetellCall({
         toNumber: phone,
         dynamicVariables: callVariables,
@@ -20583,16 +20598,19 @@ ${tenant.name}
         context: 'INVESTOR_DEMO'
       });
       
-      console.log(`📞 Investor demo call initiated for ${lead.name}:`, callResult.callId);
+      console.log(`📞 [VOICE-DEMO] SUCCESS - Call initiated for ${lead.name}:`, callResult.callId);
+      console.log('📞 [VOICE-DEMO] Full call result:', JSON.stringify(callResult));
       
       res.json({ 
         success: true, 
         message: "Voice call initiated",
         callId: callResult.callId
       });
-    } catch (error) {
-      console.error("Error triggering voice demo:", error);
-      res.status(500).json({ message: "Failed to trigger voice demo" });
+    } catch (error: any) {
+      console.error("❌ [VOICE-DEMO] Error triggering voice demo:", error);
+      console.error("❌ [VOICE-DEMO] Error message:", error?.message);
+      console.error("❌ [VOICE-DEMO] Error stack:", error?.stack);
+      res.status(500).json({ message: "Failed to trigger voice demo", error: error?.message });
     }
   });
 
