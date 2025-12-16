@@ -420,7 +420,7 @@ export default function Home() {
                 <Brain className="h-7 w-7 text-[#17B6C3]" />
               </div>
               <h3 className="text-xl font-bold text-gray-900 mb-2">Automated Credit Control</h3>
-              <p className="text-[#17B6C3] font-semibold text-sm mb-4">AI IS the credit controller</p>
+              <p className="text-[#17B6C3] font-semibold text-sm mb-4">Qashivo IS the credit controller</p>
               
               <div className="mb-6 flex-grow">
                 <p className="text-gray-600 text-sm mb-3">
