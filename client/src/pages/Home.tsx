@@ -409,8 +409,7 @@ export default function Home() {
               One Platform. Three Problems Solved.
             </h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Credit control, cashflow forecasting, and invoice financing—fully integrated, 
-              fully autonomous, and working together to get you paid faster.
+              Credit control, cashflow forecasting, and invoice finance. One connected system that automates the chasing workflow, improves cash visibility, and helps you unlock cash from eligible invoices.
             </p>
           </div>
 
