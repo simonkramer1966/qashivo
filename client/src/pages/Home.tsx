@@ -456,7 +456,7 @@ export default function Home() {
 
               <div className="bg-white rounded-xl p-4 border border-gray-100 mt-auto">
                 <div className="text-2xl font-bold text-blue-600">90-day</div>
-                <p className="text-sm text-gray-600">Rolling AI-powered forecasts</p>
+                <p className="text-sm text-gray-600">Rolling scenario-based forecasts</p>
               </div>
             </div>
 

@@ -387,7 +387,7 @@ export default function Demo() {
               Three Pillars of Cashflow Excellence
             </h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              A complete AI-powered platform that handles collections, predicts cashflow, and provides instant funding.
+              A complete automated platform that handles collections, forecasts cashflow scenarios, and provides access to funding.
             </p>
           </div>
 
@@ -624,7 +624,7 @@ export default function Demo() {
                     Cashflow Forecasting Powered by Collections
                   </h3>
                   <p className="text-lg text-gray-600">
-                    Forecast 90 days out using your live Xero AR/AP plus what Qashivo learns from chasing, promises-to-pay, disputes, and real customer updates. Know what's likely, what's at risk, and what to do today to close the gap.
+                    Forecast 90 days out using your live Xero AR/AP data combined with promises-to-pay, disputes, and real customer updates captured by Qashivo. Know what's likely, what's at risk, and what to do today to close the gap.
                   </p>
                   <ul className="space-y-4">
                     <li className="flex items-start">
@@ -685,8 +685,8 @@ export default function Demo() {
 
                   <div className="grid grid-cols-3 gap-4">
                     <div className="text-center p-4 bg-white rounded-lg">
-                      <div className="text-2xl font-bold text-[#17B6C3]">95%</div>
-                      <div className="text-xs text-gray-500">Forecast Accuracy</div>
+                      <div className="text-2xl font-bold text-[#17B6C3]">3</div>
+                      <div className="text-xs text-gray-500">Scenario Options</div>
                     </div>
                     <div className="text-center p-4 bg-white rounded-lg">
                       <div className="text-2xl font-bold text-green-600">-40%</div>

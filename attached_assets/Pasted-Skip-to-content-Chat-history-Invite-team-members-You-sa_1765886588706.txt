@@ -1,0 +1,949 @@
+Skip to content
+Chat history
+
+
+
+
+
+Invite team members
+You said:
+Are Xero saying we can't use our clients debtor payment data so that Qashivo learns?
+
+Skip to main content
+
+Getting Started
+Pricing
+Documentation
+Tools
+Support
+
+Sign up
+Log in
+Main content start
+Xero Developer Platform Terms & Conditions
+Introduction
+Welcome to the Xero developer platform! We’re excited to have you here but before you start using our tools and resources, we need you to look through and accept these terms. We’ve done our best to explain it all without using too much jargon, so it’s clear what we expect from you and what you can expect from us.
+
+These are your legal rights and obligations, so please read everything. If you use our developer platform, we’ll assume that you agree to our terms. 
+
+You may use the Xero developer platform only as permitted in these terms.  You must not use API Data sourced from the Xero developer platform to train or fine tune any artificial intelligence models including machine learning tools, large language models or predictive analytics tools (AI Models). For the purposes of these terms, “API Data” means any information accessed, received, transmitted, or generated through use of the developer platform’s public application programming interfaces (APIs), whether in raw or processed form. We use automated monitoring and other measures to protect the platform and may conduct audits to verify compliance with these terms. If we detect a risk or suspect a breach we may suspend or terminate access to protect the platform.  Please see clauses 29, 31 and 38 for further details. 
+
+If you still have questions or comments after you’ve read these terms, please go to the developer portal to get in touch. We’d love to help.
+
+Last updated: 4 December 2025. If you registered as a Xero developer on or after 4 December 2025, these terms apply to you straight away.  If you registered as a Xero developer before 4 December 2025, this version of the terms applies to you from 2 March 2026.
+
+Download current PDF | See archived versions
+
+What’s in these terms? 
+Who are we and what is the Xero developer platform? 
+
+How can I use the developer platform?
+
+What do I need to do to protect user data?
+
+What about your data and confidential information? 
+
+What intellectual property rights do we each have?
+
+What if I have a problem? 
+
+What can’t I do with the developer platform?
+
+Ending our relationship 
+
+Our responsibilities to each other 
+
+Important housekeeping 
+
+Appendix - Financial Services Terms
+
+Who are we and what is the Xero developer platform?
+1. You and Xero:  When we say you or your, we mean both you, and if you’re agreeing to these terms on behalf of any entity, that entity. When we say Xero, we, our or us, we’re talking about Xero Limited (a New Zealand company with registration number 1830488).
+
+2. Our services:  Our services consist of all the services we provide now or in the future, including our online and mobile accounting and financial products.
+
+3. Our developer platform:  Our developer platform is made up of many tools and resources that we make available to developers to create functionality and connect their applications, products or services (apps) with our services. To learn more about our developer tools and resources, check out the guides and other information on the developer portal.
+
+4. Getting started with the developer platform:  You can see how to get started with the developer platform on the developer portal. You can find out more about the registration process and requirements to become a Xero developer on the developer portal.
+
+5. Other terms:  Additional terms and/or fees may also apply to you after you register, such as where you use certain Xero products or services, join one of our partner programs, or offer financial services in line with section 11 below. We’ll let you know what those terms and/or fees are before you start using those products or services. If any API Data you process contains information obtained by us from Amazon.com Services LLC or its affiliates, then you agree to follow the data security standards set forth 
+here
+.
+
+How can I use the developer platform?
+6. Right to use the developer platform:  Once you’ve registered as a Xero developer, we’ll grant you the right to use the developer platform to develop and connect your apps with our services via Xero’s APIs only. However, we might revoke, terminate or restrict that right in line with these terms, or any other terms that might apply to you.
+
+7. Usage limits:  When you use the developer platform you agree to the following usage limits:
+
+a) Volume of usage: Your use of the developer platform is subject to the usage limits outlined here. If you join, or we request that you transition into, a different app partner tier, different usage limits (and fees) might apply to you.  To use the developer platform beyond the applicable limits which apply to you, you'll need to get Xero’s explicit consent. We may grant or deny this request at our discretion, and we may require you to agree to additional terms or charges. We may also update or amend usage limits or fees from time to time, but we’ll use reasonable efforts to let you know about any updates which may impact you at least 30 days’ before the update occurs.
+
+b) Purpose of usage: You may only use API Data sourced from the developer platform for the specific purpose of developing, testing, and supporting your app's features in accordance with your approved use case. We've outlined some key restrictions below and in clause 29:
+
+i.) Training of AI Models: API Data cannot be used to train, fine tune, adapt, or enhance any AI Models.
+
+ii.) Data passthrough: API Data shall not be passed to another third party without consent from the associated user. In no event will API Data be passed to another third party for purposes or activities that conflict with these term
+
+8. Your responsibilities:  You must keep your information (including a current email address) up to date, and ensure that any information you provide to us is true, accurate and complete. You are responsible for making sure your app’s use cases have been approved by us, including any material changes to your current offering (such as additional app functionality and/or a substantive change to your product that significantly alters your customer base) as well as any new use cases.You’re responsible for protecting your username and password from getting stolen or misused. You’re also solely responsible for any activity on your Xero developer account even if you didn’t authorise it. You agree to follow all instructions we provide you with on how to use the developer platform.
+
+9. Your terms:  Your apps must include your own legally binding terms of use and privacy policy (your terms) that are available to any user of your apps and our services. You need to make sure users agree to your terms before they use your apps, and you should keep a record of when users have agreed to your terms. Your terms will not apply to us and must be consistent with these terms and any other Xero terms you’ve agreed to. 
+
+10. Branding and publicity: You’ll need to get us to agree in writing if you want to use Xero’s brand materials, or mention Xero in the promotion of your app. Otherwise, you can promote your app as you wish, provided that you follow all guidelines we provide to you regarding the promotion of your app or the use of our brand materials. 
+
+11. Financial services: To use the developer platform to offer financial services through your app, for example lending, insurance, bank feeds, payments, or data products / underwriting, your app and your financial services will need to be approved by us and you may need to sign up to some additional terms. This might include a fee that we’ll let you know about when you sign up. If you’d like to know more about offering financial services, please contact us 
+here
+.
+
+What do I need to do to protect user data?
+12. User data:  When you make your apps available to users, those users may enter or upload their data, content or information (user data) into your app. Access to user data for you or your app may be provided by us or by a user, depending on how you use the developer platform.  User data includes data that is aggregated across multiple users. You must only use user data in accordance with your terms, the terms set out here, and all applicable laws. When you connect or integrate your app, you must ensure that all necessary user consents and permissions for use of any user data have been obtained. Your terms should also clearly describe how and why you collect, store, use and share any user data.
+
+13. Collection and use:  We are committed to using data responsibly, and we expect you to do the same. You should be familiar with our Responsible Data Use Commitments, and ensure your use of the developer platform and any user data is aligned with these commitments. If we see behaviour from you which doesn’t align with the Responsible Data Use Commitments (in our reasonable opinion) we reserve the right to take any action under section 31 below. 
+
+14. Collaborators: Sometimes, you might want to use a third party (like a subcontractor or a third party development company) to help you connect to the developer platform - we call them collaborators.  After you’ve agreed to these terms, you can allow your collaborators to access your app and the developer platform by adding them as a collaborator via the developer portal. If you add a collaborator, you’re responsible for them.  You’ll need to make sure they comply with these terms and only pass through user data to you. On the other hand, if you are the collaborator, it is your responsibility to make sure the developer you’re acting on behalf of has seen and accepted these terms before you provide any user data to them (and these terms continue to apply to you regardless). 
+
+15. Security: We’ve invested in technical, physical and administrative safeguards to do our part to help keep user data safe and secure. When you access the developer platform, you have an important role to play to protect the privacy of user data. You’ll need to take reasonable measures (which are at least industry standard)  to protect user data, including by meeting our minimum security requirements and security standards, which we may update from time to time. You should document your security measures in writing as we may ask to see them. If you spot a security issue that affects your app, such as any unauthorised access to user data, you must immediately (in any event within 24 hours of discovery) let us know the details at api@support.xero.com (including a description of the incident as well as your action plan to contain and mitigate it) and use your best efforts to resolve it. While we may help you with security issues where we reasonably believe we can, it’s your responsibility to investigate what went wrong and to notify affected users and any regulatory authorities who need to know about it. Where you notify any users or third parties, you can’t mention us unless we say in writing that’s okay or, in the case of regulatory authorities, required by law.
+
+16. When our terms apply to user data: When we receive any user data through your app, our terms of use, privacy notice and data processing terms (where applicable) will apply to our use of that user data from the time we receive it, and your terms will no longer apply (including any restrictions on Xero processing user data).
+
+What about your data and confidential information?
+17. Your data: We may collect certain data about your use of the developer platform, such as your API use, your app metadata, and the user accounts you access. We can use this data, and any feedback you provide to us, without restriction. Our privacy policy sets out in detail how we process your own personal data, like your name and email address. 
+
+18. Keeping it confidential: While using the developer platform or our services, you may share confidential information with us, and you may become aware of confidential information about us. You and we both agree to take reasonable steps to protect the other party’s confidential information from being accessed by unauthorised individuals. You or we may share each other’s confidential information with legal or regulatory authorities if required to do so.
+
+What intellectual property rights do we each have?
+19. What we own: We own everything we’ve put into the developer platform and our services unless otherwise stated and excluding content owned by others. This includes rights in the design, compilation, and look and feel of the developer platform and our services. It also includes rights in all copyrighted works, trademarks, designs, inventions, and other intellectual property. 
+
+20. Materials: Any materials that you or we possess before or create after entering these terms, including content, images, data and information in any form, will continue to be owned by that party.
+
+21. Our right to use your app: You continue to own your app and your materials. You grant us a right to use your app and any materials you provide to us, and your trademarks and logos, for marketing and  any activities relating to making your app available to users.
+
+22. Independent development: We’re always thinking about how to make Xero the best it can be and we regularly add new features to the developer platform and our services. We might independently create products or services that are similar to or competitive with your app – nothing in these terms will restrict or prevent us from doing so.
+
+23. Intellectual property rights: We take intellectual property rights seriously and we expect you to do the same. You must ensure that you hold or are otherwise authorised to use any intellectual property rights in your app and your material. You promise that your app’s connection with our services, and our use of your app and your material, will not breach the rights of any third party.
+
+What if I have a problem?
+24. Access issues: You know how the internet works – occasionally you might not be able to access the developer platform. This might happen for any number of reasons, at any time. 
+
+25. Data loss: Data loss is an unavoidable risk when using any technology. You’re solely responsible for maintaining copies of your data shared with the developer platform or entered into our services.
+
+26. Problems and support: If you have a problem, we have excellent support articles available through the developer portal that should help you with most situations. If you’ve tried the developer portal and still need help, you can contact our support team 
+here
+. We may provide you with assistance in connection with the developer platform at our discretion. Please note that we won’t be able to fix every problem you have. You’ll also need to provide your own support to users of your app. We don’t assume any responsibility for your app, even if we engage with users of your app directly which we may do on occasion.
+
+27. Modifications: We frequently release new updates, modifications and enhancements to the developer platform, and in some cases discontinue features. Where this occurs, we’ll typically notify our developer community at the same time and won’t always notify each platform user directly - so keep an eye out for changes. Your app may not work properly with future versions of the developer platform if it was developed using a previous version. We won’t be liable to you for any compatibility issues.
+
+28. Dispute resolution: If any dispute can’t be resolved through our support team, you and we agree to resolve disputes through binding arbitration only (at the venue specified at section 49 below) and not in any court or other dispute forum.
+
+What can't I do with the developer platform?
+29. While we can’t cover everything here, we do want to highlight a few examples of things you mustn’t ever do:
+
+Undermine the security or integrity of our computing systems or networks.
+
+Use the developer platform in any way that might impair functionality or interfere with other people’s use.
+
+Access any system of Xero or any third party without permission.
+
+Introduce or upload anything to the developer platform that includes viruses or other malicious code.
+
+Share anything that may be offensive, violates any law, or infringes on the rights of others.
+
+Modify, copy, adapt, reproduce, disassemble, decompile, reverse engineer or extract the source code of any part of the developer platform or our services.
+
+Access information or perform actions in Xero by reverse engineering our software, servers, APIs, cookies, services, or any other system or process.
+
+Resell, sublicense or provide the developer platform or our service (or access to them) in any way not expressly permitted through our developer platform.
+
+Sell any user data (but you can charge users a fee for your app). 
+
+Aggregate and supply user data (or any other API Data accessed through the developer platform) to another app or any third party.
+
+Try to exceed or bypass the usage limits that apply to the developer platform.
+
+Create (or encourage others to create) multiple versions of your app when they all do the same or similar thing.
+
+Download or scrape any of our websites, data or content in any way (including with bots or browser automation).
+
+Commit fraud or other illegal acts through the developer platform.
+
+Act in a manner that is abusive or disrespectful to a Xero employee, partner, user, or other Xero developer. We will not tolerate any abuse or bullying of our Xero employees in any situation and that includes interaction with our support teams.
+
+Access or use the developer platform for the purpose of attempting to move customers off Xero, or substantially reproducing our products or services. 
+
+Access or use the developer platform for competitive analysis or benchmarking or in order to share performance information about the developer platform (including uptime, response time, and benchmarks). 
+
+Access or use the developer platform to provide financial services without our approval.
+
+Use any automated tools, such as bots or browser extensions, to access or interact with Xero’s systems in a way that circumvents or undermines our security controls or that simulates user actions without Xero’s explicit authorisation.
+
+Ending our relationship
+30. Termination by you: If you’re no longer using the developer platform, you may terminate these terms at any time by notifying us in writing. At any other time, you may terminate these terms at any time on 30 days’ notice by notifying us in writing.
+
+31. Termination or suspension by us: We may terminate or suspend these terms by giving you 30 days’ notice. We may terminate, suspend or limit your access to the developer platform (including by removing access for one or more of your apps) immediately if: 
+
+you breach these or any other relevant terms and do not remedy the breach within 14 days after receiving notice of the breach,
+
+you breach any of these or any other relevant terms and the breach cannot be remedied,
+
+we have reasonable grounds to suspect a breach of these terms and consider, in our discretion, that it is reasonable to suspend access whilst we investigate such suspected breach,
+
+we decide that we need to in order to prevent harm, material risk or liability to us or any other person, 
+
+we stop offering the developer platform, 
+
+you act in a way which, in our reasonable opinion, brings or is likely to bring our brand into disrepute, or 
+
+required by law.
+
+32. Effect of termination: Upon termination of these terms: 
+
+You must stop using the developer platform and (unless we say otherwise) any of our materials and, at our request, return or destroy our confidential information.
+
+We will have no liability to you for terminating, suspending or limiting your access to the developer platform in accordance with these terms.
+
+Sections 29 (What you can’t do), 33-35 (Our responsibilities to each other) and 36-49 (Important Housekeeping) will continue to apply.
+
+Our responsibilities to each other
+33. You indemnify us: You indemnify us against all losses, costs (including legal costs), expenses, demands or liability that we incur (directly ourselves or as a result of any third party claim) arising out of, or in connection with your breach of these terms, your relationships with users, your use of the developer platform or our services, or any third party claim against us, relating to your app or your use of the developer platform or our services, except for losses arising from:
+
+a breach of these terms by Xero, its employees, contractors or agents, or 
+
+any gross negligence, wilful misconduct, fraud or material error that was solely the responsibility of Xero, its employees, contractors or agents.
+
+For the purposes of this indemnity, Xero will take reasonable mitigation measures where possible. 
+
+34. Disclaimer of warranties: The developer platform and our services and materials are made available to you solely on an “as is” basis. Except for non-excludable guarantees and other rights you have that we cannot exclude, we disclaim all warranties, express or implied, including any implied warranties of non-infringement, merchantability and fitness for a particular purpose, and continuous operation.
+
+35. Limitation of liability: Regardless of the above, our liability to you will not be limited if we aren’t legally allowed to limit it. Some examples of this might be if your loss came from our gross negligence, fraud or wilful misconduct. Other than liability that we cannot exclude or limit by law, our liability to you in connection with the developer platform, our services, materials or these terms, in contract, tort (including negligence) or otherwise, is limited:
+
+We have no liability arising from your use of the developer platform for any loss of revenue or profit, loss of goodwill, loss of customers, loss of capital, loss of anticipated savings, legal, tax or accounting compliance issues, damage to reputation, loss in connection with any other contract, or indirect, consequential, incidental, punitive, exemplary or special loss, damage or expense.
+
+For loss or corruption of your data, our liability will be limited to taking reasonable steps to try and recover that data from our available backups.
+
+Our total aggregate liability to you in any circumstances is limited to the greater of (i) the total amount you paid us (if any) to use the developer platform in the 12 months immediately preceding the date on which the claim giving rise to the liability arose, and (ii) USD$1,000.
+
+Important housekeeping
+36. Compliance with law:  You must comply with all laws and regulations that apply to your app and any of the activities mentioned under these terms. 
+
+37. Modern slavery: You should take reasonable steps to ensure that you do not engage in or support any form of modern slavery (including employment of trafficked individuals, debt bondage, forced labour, the worst forms of child labour, or any breach of applicable anti-slavery laws, regulations or codes).
+
+38. Audit: You agree that we may monitor and audit use of the Xero API to verify your compliance with any Xero terms which are applicable to you and to ensure or improve the quality of the developer platform. Any such audit will not occur more than twice per year and will be limited to information and systems relevant to your use of the APIs and your app’s integration with Xero. At any time, we may ask you to provide reasonable evidence that your app complies with these terms.
+
+39. Events outside our control:  We do our best to control the controllables. We aren’t liable to you for any failure or delay in performance of any of our obligations under these Terms arising out of any event or circumstance beyond our reasonable control.
+
+40. Notices: Any notice you send to Xero must be sent to legalnotices@xero.com. When we notify you under these terms, we’ll do it by email or by posting a visible notice through the developer portal.  Any notices we send to you via email will be sent to the email address you’ve provided us through the developer portal.
+
+41. Export limitations: You must not use the developer platform in violation of any export or trade embargo laws that apply to you.
+
+42. Excluded terms: The terms of the United Nations Convention on Contracts for the Sale of Goods and the Uniform Computer Information Transactions Act (UCITA) do not apply to these terms.
+
+43. Blocking your access or disabling your account: As our sites are global, different laws may apply in different countries that restrict our relationship with you. We may block your access or terminate your account if we reasonably believe there’s a risk - like a potential breach of a law or regulation - associated with you, your company, your app, or a payment. Examples of where we might do this include transactions where the payment is from a sanctioned person or country; or where we reasonably believe there is a legal or regulatory risk or a risk of loss being suffered by us or our users or partners. You promise that you’re not located in a sanctioned country and are not on a sanctioned persons list. 
+
+44. Relationship between the parties; assignment: Nothing in these terms is to be construed as constituting a partnership, joint venture, employment or agency relationship between you and us, or between you and any other user. You’re solely responsible for resolving disputes between you and any other user. Xero may assign these terms – or any of our rights or obligations in these terms – to another Xero entity as it deems appropriate, or as otherwise necessary in connection with a merger, acquisition, or sale of all or a substantive part of Xero’s assets or voting securities. Xero entities are the companies controlled by or under common control with Xero Limited (a New Zealand company with registration number 1830488).
+
+45. Changes to these terms: We sometimes will decide to change these terms of use. But don’t worry, changes won’t apply retrospectively and, if we make changes, we’ll make reasonable efforts to let you know. You can keep track of changes to our terms by referring to the version and the date last updated at the top of the terms. Generally, we will try to give you 60 days’ notice of material changes before they become effective, unless we need to make immediate changes for reasons we don’t have control over. If a change isn’t material, we may not notify you. If you find a modified term unacceptable, you may stop using the developer platform and terminate these terms in accordance with section 30.
+
+46. Enforcement and waiver of terms: If there’s any part of these terms that either one of us is unable to enforce, we’ll ignore that part but everything else will remain enforceable. If one of us chooses to waive a right that it has under these terms, that waiver will only apply if it is in writing and signed by that party.
+
+47. Survival: Any section that by its nature is intended to continue to apply will still apply after these Terms come to an end.
+
+48. Interpretation: Words like ‘include’ and ‘including’ are not words of limitation and where anything is within our discretion we mean our sole discretion.
+
+49. Law and venue: Check out the table below to see what law, and the exclusive venue, applies in any dispute between you and us, based on the location of your principal place of business:
+
+Location
+
+Law
+
+Venue
+
+Australia
+
+Victoria, Australia
+
+Victoria, Australia
+
+United Kingdom
+
+England and Wales
+
+England
+
+United States
+
+California, United States
+
+California, United States
+
+New Zealand and the rest of the world
+
+New Zealand
+
+New Zealand
+
+Appendix 
+Financial Services Terms
+1. Restricted practices: Once approved, you can provide your approved financial services to users through the developer platform, but you agree you will not do any of these things:
+
+Use the developer platform to generate customer leads for another financial services product, including by populating, informing or distributing the other product. 
+
+Use the developer platform to develop or enable a price comparison tool or marketplace for financial services.
+
+Say or imply that Xero endorses, underwrites, brokers or makes any warranties or commitments around your app or any financial services.
+
+Breach, or cause users or Xero to breach, any relevant law, regulation, guidance or code of practice that applies to the provision of financial services in the jurisdiction where you operate.
+
+2. Keep us updated: You are responsible for making sure your financial services have been approved by us, including any changes to your current offering as well as any new financial services.
+
+AI toolkit
+MCP Server
+Agents Toolkit
+Prompt Library
+Documentation
+OAuth 2
+API reference
+Webhooks
+Community
+GitHub
+Product Feedback
+Connect to the Community
+Weekly Office Hours
+Dev Day Discord Server
+Find a developer
+News
+DevBlog
+API status
+Changelog
+Support
+Contact us
+FAQ
+© 2025 Xero Limited. All rights reserved. "Xero", "Beautiful business" and "Your business supercharged" are trademarks of Xero Limited.
+About Xero
+We are hiring!
+Developer Platform Terms and Conditions
+The Xero Developer Platform Commercial Terms
+Xero ecosystem principles
+Twitter
+YouTube
+Instagram
+Developer Platform Terms and Conditions — Xero Developer
+ChatGPT said:
+
+Thought for 58s
+Yes — as those new Xero Developer Platform Terms are written, you can’t use Xero API-sourced debtor/payment data to “learn” by training/fine-tuning/adapting an AI model. They explicitly prohibit using “API Data” (which includes raw and processed forms) to “train or fine tune” any AI models, including “predictive analytics tools.” 
+developer.xero.com
+
+What that means for Qashivo in practice:
+
+Not allowed (without a separate written agreement/consent from Xero):
+
+Training/fine-tuning an LLM on Xero AR/payment history. 
+developer.xero.com
+
+Training even a small “which debtor will pay / which channel works” model using features derived from Xero API data (because they explicitly include “predictive analytics tools”). 
+developer.xero.com
+
+Using aggregated data across clients to improve a model (they still define that as “API Data” if it came via the APIs). 
+developer.xero.com
+
+Still generally compatible with the terms (if you’re careful):
+
+Using the Xero data to run the product: ageing, action lists, reminders, timelines, reporting, rules-based prioritisation (i.e., not training a model). 
+developer.xero.com
+
+Using AI at inference time to draft emails / call scripts / summaries, as long as you’re not using the data to train models and you respect the “data passthrough” rule (see next point). 
+developer.xero.com
+
+Two extra gotchas to watch:
+
+Data passthrough: If you send invoice/debtor details to Retell/OpenAI/etc, Xero treats that as “passing API Data to a third party”, which requires the associated user’s consent, and you must ensure it’s not used in ways that conflict with the terms. 
+developer.xero.com
+
+Effective date: These revised terms are already effective for devs registered on/after 4 Dec 2025, and apply to earlier-registered devs from 2 Mar 2026. 
+developer.xero.com
++1
+
+If you want Qashivo to “learn” in V1 and stay compliant, the safest framing is configuration + rules + per-tenant preferences (e.g., “cooldown days”, “VIP/do-not-call”, “preferred channel”), and keep “AI” to generation/summarisation with explicit consent and strict no-training/no-retention terms from your AI vendors.
+
+If you tell me exactly what you mean by “learns” (e.g., “improves prioritisation”, “chooses best channel”, “fine-tunes prompts/voice agent”), I’ll map each item to a compliant implementation pattern.
+
+You said:
+So as it stands how does the affect Qashivo for Credit Control, Cashflow and Invoice Financing?
+ChatGPT said:
+
+Thought for 1m 6s
+Here’s the practical impact as the terms stand today (last updated 4 Dec 2025).
+
+1) Credit Control (your core V1)
+Mostly fine — but “learning” can’t be model-training.
+
+What you can do:
+
+Pull invoices/payments from Xero and run rules/heuristics (ageing, priority scoring, “PTP missed → High”, cooldown windows, etc.). Nothing in the terms bans deterministic logic. 
+Xero Developer
+
+Use AI for drafting emails, call scripts, summarising outcomes, etc., as long as you are not training/fine-tuning/adapting/enhancing an AI model using Xero API data. 
+Xero Developer
+
+What you can’t do (without Xero’s explicit permission):
+
+Use debtor payment history from Xero APIs to train/fine-tune/adapt any model (they explicitly include “predictive analytics tools”). 
+Xero Developer
++1
+
+Key operational gotcha:
+
+If you send invoice/debtor details to Retell / OpenAI / SMS vendors, that’s API data passthrough — you need the associated user’s consent, and you must ensure it’s not used for conflicting purposes. 
+Xero Developer
++1
+
+So for Credit Control: keep “learning” as per-tenant configuration + human feedback + rules, not “models that improve from Xero data”.
+
+2) Cashflow Forecasting
+You can do cashflow — but the more “predictive” it gets, the more careful you must be.
+
+Safe patterns:
+
+A cashflow based on known facts in Xero: open AR/AP, due dates, repeating bills, payroll schedules (if available), VAT assumptions, user-entered rules (“rent on the 1st”), etc. This is computation, not training. 
+Xero Developer
+
+Risky / likely prohibited patterns:
+
+Training a model on Xero-derived history to predict:
+
+“probability of payment by day X”
+
+“expected payment date”
+
+“expected late-payment behaviour by customer”
+
+“DSO forecast driven by learned patterns”
+Because that’s exactly the “train/fine tune… predictive analytics tools” ban. 
+Xero Developer
++1
+
+So for Cashflow: V1 should be deterministic + scenario-based. If you want true predictive behaviour later, you’ll either need (a) Xero approval, or (b) models trained on non–Xero-API datasets (and still no “improving the model” using API data).
+
+3) Invoice Financing
+This is the most impacted area. Two separate issues: (A) “financial services approval”, and (B) “no marketplace/price comparison.”
+
+A) Approval requirement
+Xero explicitly says if you use the developer platform to offer financial services (they list lending + “data products / underwriting”), you need Xero approval and may need additional terms/fees. 
+Xero Developer
+
+B) Restricted practices (big constraint)
+Even once approved, the Financial Services Terms say you must not:
+
+build a price comparison tool or marketplace for financial services, 
+Xero Developer
+
+or use the platform to generate customer leads for another financial services product (wording is broad). 
+Xero Developer
+
+So for Invoice Financing:
+
+“Identify invoices suitable to finance” (internal analytics) is one thing.
+
+“Route to lender offers / compare rates / recommend provider” starts looking like marketplace/price comparison and/or lead-gen, and will likely need Xero approval at minimum (and may still be restricted depending on implementation). 
+Xero Developer
++1
+
+The clean V1 takeaway for Qashivo
+Credit Control: ship it now, but brand “learning” as rules + user feedback, not “we train models on Xero payment data.” 
+Xero Developer
+
+Cashflow: ship deterministic forecasts; avoid ML trained on Xero history. 
+Xero Developer
+
+Invoice Financing: treat as Phase 2+ unless you’re ready to pursue Xero financial services approval and design it to avoid “marketplace/price comparison” behaviour. 
+Xero Developer
++1
+
+If you paste your intended “invoice financing” UX (e.g., “we suggest 3 lenders” vs “we introduce to 1 partner” vs “we just flag eligible invoices”), I’ll tell you which versions look safest under these clauses and how to word it in your product + terms.
+
+You said:
+Can it learn per tenant i.e. not across Xero as a whole?
+ChatGPT said:
+
+Thought for 38s
+No — “per-tenant” doesn’t get you around it. The clause is blanket: you “must not use API Data sourced from the Xero developer platform to train or fine tune any artificial intelligence models… (including… predictive analytics tools).” It doesn’t say “across tenants”; it says don’t train on API Data at all. 
+Xero Developer
++1
+
+What you can do per tenant (and still call it “learning” in plain English)
+These are usually fine because they’re not training/fine-tuning a model:
+
+Tenant-specific rules + parameters (cooldown days, escalation thresholds, VIP/do-not-call, channel preference rules).
+
+Tenant-specific playbooks (if X then email template A; if PTP missed then call; etc.).
+
+Tenant-specific “memory” for the agent as retrieval, not training: store facts/notes and inject them into prompts at runtime (RAG).
+
+User feedback loops that change settings (e.g., thumbs-down reduces how often SMS is suggested) — but implemented as config/heuristics, not a learned predictive model.
+
+What’s still not allowed (even if it’s isolated to one tenant)
+A model (even a small one) that updates weights/parameters using Xero AR/payment history: “this customer pays 12 days late on average so predict…” → that’s predictive analytics trained on API data. 
+Xero Developer
++1
+
+Grey area to avoid
+Trying to “train” on exported Xero data uploaded by the customer instead of pulled via API might look like a loophole, but it’s risky: Xero’s intent here is clearly to stop model training on data originating from their platform. I’d treat that as “don’t do it unless Xero/legal explicitly bless it.”
+
+Bottom line for Qashivo:
+You can absolutely be “smart” per tenant via rules + preferences + retrieval + summarisation, but you shouldn’t describe it (internally or externally) as “training a model on Xero payment data,” even per tenant, unless you secure explicit written permission from Xero. 
+Xero Developer
++1
+
+You said:
+Well that really screws things for us?  What weould you suggest we do
+ChatGPT said:
+
+Thought for 52s
+It doesn’t kill Qashivo — but it forces a very specific shape:
+
+You can use Xero API data to run the product (collections cockpit, actions, dashboards).
+
+You can’t use Xero API data (even “processed”) to train/fine-tune/adapt any AI / predictive model, even per-tenant. 
+Xero Developer
++2
+Xero Developer
++2
+
+So the move is: ship “AI-assisted operations” (inference + rules + retrieval), not “AI trained on your ledger.”
+
+What I’d suggest you do (practical plan)
+1) Ringfence Xero data and remove “training” from the story
+Build a hard internal boundary:
+
+Xero-data zone: ageing, prioritisation, DSO, action lists = rules/heuristics + calculations (no model fitting).
+
+AI zone (inference only): email drafting, call script generation, call summaries, dispute categorisation, “next best action” explanations.
+
+No training pipeline fed by Xero API data. Document it for audits (they explicitly mention monitoring/audits). 
+Xero Developer
++1
+
+This keeps V1 sellable: “do today’s collections in 20 minutes” still works.
+
+2) Redefine “learning” as per-tenant configuration + memory (RAG), not model training
+Per tenant you can safely do:
+
+Playbooks and thresholds that adapt via settings (cooldown, escalation timing, VIP rules, channel preferences).
+
+A tenant memory store (notes, dispute reasons, PTPs, call outcomes) used for retrieval at runtime.
+
+“Thumbs up/down” that changes rules, not weights.
+That’s still genuinely better outcomes, without violating the “no training AI models on API Data” clause. 
+Xero Developer
++1
+
+3) Make “predictive” cashflow a scenario engine, not a trained model
+For cashflow forecasting, ship:
+
+“Base case”: due dates + known bills + VAT assumptions + historical average as a displayed heuristic (not a learned model).
+
+Scenarios: “if top 10 pay 7/14/30 days late…”
+
+Incorporate Promises-to-Pay captured by Qashivo (that data is generated in your app; just avoid turning it into a trained predictor using Xero-derived features). 
+Xero Developer
++1
+
+4) Invoice financing: treat as “pack + referral”, not marketplace / price comparison
+Xero also flags financial services as needing approval, and their financial services terms restrict marketplace/price-comparison behaviours. 
+Xero Developer
++1
+
+So for V1/V1.5:
+
+Provide a “finance readiness pack” (export of invoice list, debtor history, contact log) and let the user take it to their lender.
+
+If you do referrals, do one partner (or “bring your own lender”), not “compare offers”.
+
+5) Get consent right for any AI/voice provider “passthrough”
+If you send invoice/customer info to an LLM/voice provider, treat it as third-party data sharing:
+
+explicit consent in onboarding,
+
+minimise fields (send only what’s needed),
+
+choose vendors with clear “no training on your data” terms.
+Xero’s own FAQ highlights they’ve tightened policies around AI data use. 
+Xero Developer
++1
+
+The punchline
+You’re not screwed; you’re just pushed into the model most Xero will be comfortable with:
+
+“AI agents that use Xero data via tools, but don’t train on it.” (Which is also exactly why Xero is promoting an “AI toolkit” for agent integrations.) 
+Xero Developer
++1
+
+If you paste your current “Qashivo learns…” marketing sentence + the exact features you wanted to learn (channel choice? payment date prediction? debtor risk?), I’ll rewrite them into a compliant product spec + compliant marketing copy.
+
+You said:
+Bayesian Cashflow Forecasting That Learns
+Predict your cashflow 90 days out with machine learning that gets smarter with every invoice. Know exactly when you'll get paid — before it happens.
+
+90-Day Forecast
+ML-powered predictions with 95% accuracy
+
+Payment Behavior Analysis
+Learns each debtor's payment patterns over time
+
+Early Warning Alerts
+Get notified before you run short on cash
+ChatGPT said:
+
+Thought for 38s
+Yeah — that exact marketing copy is the bit that will get you in trouble.
+
+Phrases like “machine learning that gets smarter with every invoice” and “learns each debtor’s payment patterns over time” strongly imply you’re training/adapting a predictive model using Xero API data, which Xero’s terms explicitly prohibit (they call out ML/LLMs/predictive analytics and include data in “raw or processed form”). 
+Xero Developer
++1
+
+The good news: you can still sell a killer cashflow product. You just need to reposition it as forecasting + scenarios + collections intelligence, not “ML trained on ledger data”.
+
+What to do instead (and still win)
+1) Replace “ML that learns” with “scenario forecast + collections-driven certainty”
+Cashflow that’s valuable doesn’t require training a model. It requires:
+
+a solid base-case (due dates/AR/AP + known schedules),
+
+scenarios (“if customers pay 7/14/30 days late”),
+
+and PTP commitments captured by Qashivo (your credit control engine actually creates better forecast certainty).
+
+That’s compliant, and it’s honestly a better story than “95% accuracy” (which buyers will challenge).
+
+2) Keep AI, but make it “agentic + assistive”, not trained
+Xero is actively pushing “AI agents that integrate with Xero” (via their AI Toolkit/MCP), but that’s about using the data to automate work, not training on it. 
+Xero Developer
++2
+GitHub
++2
+
+3) Invoice financing: don’t build a marketplace
+If/when you do financing, note Xero flags financial services as requiring approval, and restricts building a price comparison tool/marketplace. 
+Xero Developer
+
+So your safest near-term move is “eligibility pack + single partner / bring-your-own-lender”, not “compare offers”.
+
+A compliant rewrite of your copy (drop-in)
+Cashflow Forecasting Powered by Collections
+Forecast 90 days out using your live Xero AR/AP plus what Qashivo learns from chasing—promises-to-pay, disputes, and real customer updates. Know what’s likely, what’s at risk, and what to do today to close the gap. 
+Xero Developer
+
+90-Day Forecast (Base + Scenarios)
+See best/base/worst-case cash positions with clear assumptions and ranges (not magic accuracy claims).
+
+Payment Timeline from Real Commitments
+Automatically reflects promised payment dates, dispute status, and follow-ups logged in Qashivo.
+
+Early Warning Alerts
+Get notified when your balance is projected to dip below your threshold under base-case or any scenario.
+
+If you want, I’ll also rewrite the product UI labels so they match this (e.g., “Confidence range” instead of “95% accuracy”, “Assumptions” panel, “PTP-adjusted forecast”).
+
+The bigger strategic point: this doesn’t screw you—it actually pushes you into the most defensible wedge: cashflow that improves because collections improves, not because you trained a black-box model on ledger data.
+
+You said:
+Do we need to change this?
+
+AI That Chases Invoices So You Don't Have To
+Not software for credit controllers — the AI is the credit controller. It works 24/7, detecting payment intent, sending personalized follow-ups, and escalating when needed.
+
+AI Voice Calls
+Automated calls that detect intent and sentiment in real-time
+
+Smart SMS & Email
+Personalized messages timed to maximize response rates
+
+Broken Promise Detection
+Auto-escalates when payment commitments aren't met
+ChatGPT said:
+
+Thought for 17s
+You should tweak it, but not because “AI credit controller” is banned — it’s because a couple of phrases imply optimisation/learning (and also may overpromise autonomy vs how you actually plan to ship V1).
+
+What to change and why
+“detecting payment intent” / “detect intent and sentiment in real-time”
+This is fine if it’s inference/classification on the conversation content (not trained on Xero API data). Keep it, just phrase it as “classifies” rather than “learns”.
+
+“timed to maximize response rates”
+This reads like you’re running a model that optimises timing from outcomes. Safer to make it rules + schedules + best-practice timing (or “based on due dates and your policy”).
+
+“It works 24/7… escalating when needed”
+Fine, but make sure it matches your product reality (e.g., if calls are manual-trigger in V1, don’t promise fully automated calling).
+
+Drop-in compliant rewrite (still punchy)
+AI That Chases Invoices So You Don’t Have To
+Not software for credit controllers — Qashivo automates the chasing workflow. It monitors overdue invoices, sends personalised follow-ups, captures promises-to-pay and disputes, and escalates based on your rules.
+
+AI Voice Calls
+Outbound AI calls that classify outcomes (promise-to-pay, dispute, wrong contact, no answer) and log a clear summary.
+
+Smart SMS & Email
+Personalised messages triggered by invoice status and your chase policy (e.g., newly overdue, 7/14/30+ days, missed PTP).
+
+Broken Promise Detection
+Automatically flags missed commitments and moves the account to the next step in your escalation path.
+
+If you want a more “autopilot” tone without triggering “learning”
+Swap in phrases like:
+
+“adapts the workflow” (not “learns the model”)
+
+“based on your policies and outcomes” (not “maximises response rates”)
+
+“AI-assisted decisions, human-controlled escalation” (if needed)
+
+If you paste what you’re actually shipping in V1 for voice (manual vs auto-dial, cooldown rules, etc.), I’ll tighten this copy so it’s both compliant and perfectly aligned to the demo.
+
+You said:
+yes swap in the phrases and re-write so I can drop in please?
+ChatGPT said:
+AI That Chases Invoices So You Don’t Have To
+Not software for credit controllers — Qashivo is the credit controller. It runs 24/7, monitoring overdue invoices, sending personalised follow-ups, capturing customer responses, and moving each account through your escalation path based on your policies and outcomes.
+
+AI Voice Calls
+Outbound AI calls that classify outcomes (promise-to-pay, dispute, wrong contact, no answer), capture key details, and log a clear summary for your team.
+
+Smart SMS & Email
+Personalised messages triggered by invoice status and your chase policy — timed around due dates, ageing, and recent contact so you stay consistent without over-chasing.
+
+Broken Promise Detection
+Automatically flags missed commitments and escalates to the next step, so broken promises don’t quietly turn into 60-day debt.
+
+You said:
+So one Qashivo has the Xero invoice data can it then learn from all the interactions with debtors i.e. response rates etc.?
+ChatGPT said:
+
+Thought for 1m 2s
+You can “learn” from debtor interactions, but you need to be super precise about what kind of learning.
+
+What Xero clearly forbids
+If the “learning” is training / fine-tuning / adapting / enhancing an AI model using anything that counts as “API Data” (and they define API Data very broadly: anything “accessed, received, transmitted, or generated through use of the APIs, whether in raw or processed form”), that’s prohibited. 
+developer.xero.com
+
+They also restate that API data can’t be used to “train or contribute to the creation” of an AI/ML model. 
+developer.xero.com
++1
+
+That means: once your “response-rate model” uses any Xero-derived fields (invoice value, days overdue, customer AR balance) or uses Xero payment outcomes as labels (“did they pay within 7 days?”), you’re very likely in the prohibited zone. 
+developer.xero.com
+
+What you can do safely (and it still feels like learning)
+You can absolutely improve per tenant using non-model approaches:
+
+Track per-tenant metrics (reply rate by channel/template, % PTP captured, “wrong contact” rate, etc.)
+
+Use rules / scorecards / A-B testing to pick the next template/time/channel (this is optimisation, but not “training an AI model”)
+
+Use AI at runtime to classify intent/sentiment and summarise calls/emails (inference), as long as you’re not training on Xero API data. 
+developer.xero.com
++1
+
+The “maybe, but don’t ship it without Xero blessing” option
+Training a model only on your own interaction data (message text, call transcripts, whether they replied, what they said) without joining to Xero invoice/payment fields is more defensible—but because Xero’s definition of API Data includes information “generated through use of the APIs,” it’s still a grey area if the whole dataset exists because you pulled invoices from Xero and orchestrated chases around them. 
+developer.xero.com
+
+If you want to do this, I’d get written confirmation from Xero.
+
+Practical recommendation for Qashivo V1/V2
+Do per-tenant “learning” as analytics + rules (best performing template/channel based on counts), not ML.
+
+Keep AI to drafting + summarisation + classification at inference time.
+
+Don’t train anything on “paid/not paid” outcomes coming from Xero.
+
+If you tell me the exact “learning loop” you want (e.g., “choose best channel,” “predict paid date,” “optimise send time”), I’ll map each one to a compliant implementation pattern.
+
+You said:
+OK maybe I just need to contac Xero and see what is actually permissable/
+ChatGPT said:
+Yes — that’s the right move. These terms are blunt, and the only safe way to do anything beyond “AI-assisted operations” is to get a written position from Xero.
+
+Here’s a tight outreach pack you can copy/paste.
+
+Email to Xero Developer / Partner team (copy/paste)
+Subject: Clarification request: permissible AI use of Xero API data for Qashivo
+
+Hi Xero team,
+We’re building Qashivo, a credit control and cashflow product for Xero customers. We’ve reviewed the updated Xero Developer Platform Terms (last updated 4 Dec 2025) and want to ensure full compliance.
+
+Could you confirm what is permissible regarding AI, specifically:
+
+AI inference vs training
+We will use Xero API data to display AR, ageing, action lists and dashboards. We may also send limited invoice/customer context to AI providers at runtime (for drafting emails, summarising call outcomes, and classifying debtor responses).
+
+Is this permitted provided we obtain the customer’s consent and ensure vendors do not train on the data?
+
+Per-tenant optimisation (no cross-tenant)
+Is it permitted to optimise workflows per tenant using non-ML methods (rules/A-B testing) based on interaction outcomes (reply rates, promise-to-pay captured), where we do not train or fine-tune models?
+
+Any ML / predictive analytics at all
+Is any form of predictive analytics permitted if:
+
+it is strictly per-tenant,
+
+models are trained only within that tenant,
+
+and the customer explicitly consents?
+Or is the prohibition absolute regardless of tenant and consent?
+
+Financial services / invoice financing
+If we provide invoice-finance eligibility insights or facilitate a referral to a single funding partner, does this fall under “financial services” requiring approval/additional terms? What approach would you consider compliant (e.g., “bring your own lender”, single partner referral, etc.)?
+
+We’d appreciate a written response so we can align product design, marketing language, and our technical controls. Happy to jump on a call if easier.
+
+Thanks,
+[Your name]
+[Role] — Qashivo
+[Email] | [Phone] | [Xero dev app name if you have it]
+
+The “one-liner” you should use internally until they reply
+“We do not train or fine-tune any models on Xero API data; we only use AI for runtime drafting/summarisation/classification and deterministic rules for prioritisation.”
+
+If you want, paste who you’re emailing (Hannah / partner manager / api@support.xero.com etc.) and I’ll tailor the tone + subject line to match the channel.
+
+You said:
+Also how do we need to update this.  Also to say this is via a single finance partner so it;s clear it's not proce comparison or a marketplace
+ChatGPT said:
+Yep — you should update the invoice finance wording so it’s clearly not a marketplace/price comparison, and that you’re either:
+
+introducing to one named partner, or
+
+providing a finance readiness pack + “bring your own lender”.
+
+Here are drop-in options you can paste (pick one).
+
+You said:
+Turn Approved Invoices Into Cash Within 24 Hours
+Don't wait 60+ days to get paid. Get up to 85% of your invoice value immediately, with transparent fees and no hidden costs.
+
+24-Hour Funding
+Get cash in your account within one business day
+
+85% Advance Rate
+Receive most of your invoice value upfront
+
+Transparent Pricing
+Simple daily fee with no hidden costs
+ChatGPT said:
+Here’s a safer, drop-in rewrite that makes it explicitly single-partner (not a marketplace) and avoids hard guarantees.
+
+Turn Eligible Invoices Into Cash — via Our Funding Partner
+Don’t wait 60+ days to get paid. If you choose to use our finance partner, you can access an advance against eligible invoices — with clear terms from a single provider (no price comparison, no marketplace).
+
+Fast Funding
+Typically receive funds within one business day (subject to approval and cut-off times).
+
+Up to 85% Advance
+Access up to 85% upfront on eligible invoices, depending on your account and debtor profile.
+
+Clear Fees
+One provider, one fee structure — you’ll see the partner’s terms and costs upfront before you proceed.
+
+Small disclaimer line (add under the section):
+Invoice finance is provided by a single third-party partner. Eligibility, advance rates, fees and funding times vary and are subject to the partner’s approval and terms.
+
+If you tell me the partner’s exact promise (e.g., “within 24 hours” vs “next business day”) I’ll tighten the language to match without overcommitting.
+
+You said:
+What should this be changed to?
+
+Explore our three core pillars: autonomous credit control, intelligent cashflow forecasting, and instant invoice financing. Try our live AI demos below.
+ChatGPT said:
+Change it to avoid “autonomous” (sounds like unsupervised automation + learning) and to make invoice finance clearly single-partner referral.
+
+Here are three drop-in options (pick the tone you like):
+
+Option A (clean + compliant)
+Explore our three core pillars: AI-assisted credit control, cashflow forecasting, and invoice finance via a single funding partner. Try the live AI demos below.
+
+Option B (more punchy)
+Explore three ways Qashivo helps you get paid faster: automated chasing workflows, 90-day cash visibility, and invoice finance via one trusted partner. Try the live AI demos below.
+
+Option C (most conservative / partner-friendly)
+Explore our three core pillars: collections automation, scenario-based cashflow forecasting, and invoice finance referrals (single partner — not a marketplace). Try the live AI demos below.
+
+You said:
+Credit control, cashflow forecasting, and invoice financing—fully integrated, fully autonomous, and working together to get you paid faster.
+ChatGPT said:
+Here are a few drop-in rewrites that keep the punch but avoid “fully autonomous” (and make financing clearly single-partner if you want it):
+
+Option A (closest to your original)
+Credit control, cashflow forecasting, and invoice finance—fully integrated and working together to help you get paid faster, with AI-assisted workflows and clear human controls.
+
+Option B (strong, salesy, still safe)
+Credit control, cashflow forecasting, and invoice finance—one connected system that automates the chasing workflow, improves cash visibility, and helps you unlock cash from eligible invoices.
+
+Option C (explicit single partner)
+Credit control, cashflow forecasting, and invoice finance—fully integrated and working together to get you paid faster, including invoice finance via a single funding partner (not a marketplace).
+
+If you tell me whether your V1 is “human-in-the-loop” or true autopilot for comms, I’ll pick the tightest phrasing that matches reality.
+
+You said:
+Is Xero saying that AI LLM's cannot be trained on the API data but can Qashivo use it to learn?  If we have a 'no learning' commitment from the LLM's we use?
+ChatGPT said:
+
+Thought for 27s
+Xero is saying you can’t use Xero API data to train (or “contribute to the creation of”) any AI/ML model — not just LLMs. Their FAQ spells it out that the update prohibits using data obtained through Xero’s APIs to train or contribute to the creation of any AI or machine learning model. 
+developer.xero.com
++2
+developer.xero.com
++2
+
+So:
+
+If “Qashivo learns” means model training/adaptation
+That’s not permitted if the learning uses API Data (and they define API Data very broadly: data accessed/received/generated through the APIs, raw or processed). 
+developer.xero.com
++1
+
+A “no learning / no training” commitment from your LLM vendor doesn’t change that — because the restriction is on your use of Xero API data for training, not only the model provider’s downstream use. 
+developer.xero.com
++1
+
+If “Qashivo learns” means non-model optimisation
+You can still improve outcomes without training models, e.g.:
+
+per-tenant rules that adjust based on outcomes (cooldowns, escalation steps)
+
+template performance analytics + A/B testing
+
+“next step” logic based on deterministic policies (“missed PTP → escalate”)
+
+That kind of “learning” is usually fine because it’s not “training or contributing to creation of an AI/ML model” — it’s product logic and analytics. 
+developer.xero.com
++1
+
+Using LLMs at runtime (drafting/summarising/classifying)
+This is generally the intended pattern Xero is pushing with its AI toolkit/agents (agents that use Xero data, not train on it). 
+developer.xero.com
++1
+
+But you must handle data passthrough properly: if you send API Data to any third party (LLM/voice/SMS/email provider), you need the associated user’s consent and your use must stay within your approved purpose/use case. 
+developer.xero.com
++1
+
+What I’d implement as your compliance line
+No training / fine-tuning / model updates on Xero API data (ever). 
+developer.xero.com
++1
+
+AI is inference-only (generate, summarise, classify) + strict vendor “no training” terms (helpful for customer trust, but not a loophole). 
+developer.xero.com
+
+“Learning” = rules + configuration + analytics, not ML.
+
+Explicit customer consent for any third-party processing of invoice/contact data. 
+developer.xero.com
++1
+
+If you want, paste your exact planned “learning loop” (inputs + what gets updated + outputs). I’ll label each part as OK / risky / not OK under these terms and suggest a compliant redesign.
+
+
+
+
+
+No file chosenNo file chosen
+ChatGPT can make mistakes. OpenAI doesn't use Qashivo workspace data to train its models.
