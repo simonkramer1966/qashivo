@@ -442,7 +442,7 @@ export default function Home() {
               <div className="w-14 h-14 bg-blue-500/10 rounded-xl flex items-center justify-center mb-6">
                 <BarChart3 className="h-7 w-7 text-blue-600" />
               </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-2">Predictive Cashflow Intelligence</h3>
+              <h3 className="text-xl font-bold text-gray-900 mb-2">Intelligent Cashflow</h3>
               <p className="text-blue-600 font-semibold text-sm mb-4">Forecasts that drive action</p>
               
               <div className="mb-6 flex-grow">
