@@ -627,7 +627,7 @@ export default function Demo() {
                     Cashflow Forecasting Powered by Collections
                   </h3>
                   <p className="text-lg text-gray-600">
-                    Forecast 90 days out using your live Xero AR/AP plus what Qashivo learns from chasing—promises-to-pay, disputes, and real customer updates. Know what's likely, what's at risk, and what to do today to close the gap.
+                    Forecast 90 days out using your live Xero AR/AP plus what Qashivo learns from chasing, promises-to-pay, disputes, and real customer updates. Know what's likely, what's at risk, and what to do today to close the gap.
                   </p>
                   <ul className="space-y-4">
                     <li className="flex items-start">
