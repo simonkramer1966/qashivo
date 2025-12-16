@@ -624,11 +624,10 @@ export default function Demo() {
                     <span className="font-semibold text-[#17B6C3]">THE CFO</span>
                   </div>
                   <h3 className="text-3xl font-bold text-gray-900">
-                    Bayesian Cashflow Forecasting That Learns
+                    Cashflow Forecasting Powered by Collections
                   </h3>
                   <p className="text-lg text-gray-600">
-                    Predict your cashflow 90 days out with machine learning that gets smarter with every invoice. 
-                    Know exactly when you'll get paid — before it happens.
+                    Forecast 90 days out using your live Xero AR/AP plus what Qashivo learns from chasing—promises-to-pay, disputes, and real customer updates. Know what's likely, what's at risk, and what to do today to close the gap.
                   </p>
                   <ul className="space-y-4">
                     <li className="flex items-start">
@@ -636,8 +635,8 @@ export default function Demo() {
                         <BarChart3 className="h-5 w-5 text-[#17B6C3]" />
                       </div>
                       <div>
-                        <h4 className="font-semibold text-gray-900">90-Day Forecast</h4>
-                        <p className="text-gray-600">ML-powered predictions with 95% accuracy</p>
+                        <h4 className="font-semibold text-gray-900">90-Day Forecast (Base + Scenarios)</h4>
+                        <p className="text-gray-600">See best/base/worst-case cash positions with clear assumptions and ranges (not magic accuracy claims).</p>
                       </div>
                     </li>
                     <li className="flex items-start">
@@ -645,8 +644,8 @@ export default function Demo() {
                         <Clock className="h-5 w-5 text-[#17B6C3]" />
                       </div>
                       <div>
-                        <h4 className="font-semibold text-gray-900">Payment Behavior Analysis</h4>
-                        <p className="text-gray-600">Learns each debtor's payment patterns over time</p>
+                        <h4 className="font-semibold text-gray-900">Payment Timeline from Real Commitments</h4>
+                        <p className="text-gray-600">Automatically reflects promised payment dates, dispute status, and follow-ups logged in Qashivo.</p>
                       </div>
                     </li>
                     <li className="flex items-start">
@@ -655,7 +654,7 @@ export default function Demo() {
                       </div>
                       <div>
                         <h4 className="font-semibold text-gray-900">Early Warning Alerts</h4>
-                        <p className="text-gray-600">Get notified before you run short on cash</p>
+                        <p className="text-gray-600">Get notified when your balance is projected to dip below your threshold under base-case or any scenario.</p>
                       </div>
                     </li>
                   </ul>
