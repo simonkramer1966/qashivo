@@ -1,0 +1,480 @@
+Qashivo V1 Comms Automation Spec
+
+Goal: Qashivo becomes the inbound + outbound communications credit control expert for a Xero-connected tenant, handling email, SMS, and voice with a strict policy engine and an exception workflow.
+
+0) V1 Success Definition
+
+Connect Xero + 1 comms stack (email + SMS + outbound AI voice; inbound voice optional but planned).
+
+Qashivo can receive inbound messages, classify intent, update debtor state, and respond (auto-send when safe, otherwise approve/escalate).
+
+Human time: “exceptions-only.” Everything is logged against debtor timeline.
+
+1) Scope
+Must-have (V1)
+
+Inbound email ingestion + threading + matching to debtor/invoices
+
+Two-way SMS (inbound replies + outbound)
+
+Outbound comms (email/SMS) from Action Centre + from automation scheduler
+
+Outbound AI voice calls (Retell) manual trigger + structured outcomes webhook
+
+Unified Inbox (all inbound) + Debtor Timeline (all in/out + outcomes)
+
+Policy engine + “Auto-send vs Approve vs Escalate” rules
+
+State machine for debtor/invoice context: Due / Overdue / PTP / Missed PTP / Dispute / Needs Review
+
+Nice-to-have (Phase 1.5)
+
+Attach statements / resend invoice PDFs in replies
+
+Payment link integration
+
+Multilingual templates (UK English only in V1)
+
+Non-goals (explicit)
+
+Full inbound call-centre / IVR routing queues (unless you choose the “AI receptionist” variant later)
+
+WhatsApp in V1
+
+Fully autonomous outbound voice dialing in bulk (keep manual trigger in V1)
+
+ML training / “learning” from customer data (store feedback only)
+
+2) System Architecture
+Components
+
+Ingestion layer
+
+Email webhook/connector (SendGrid Inbound Parse or Gmail/Outlook API watch; pick one)
+
+SMS webhook (Vonage inbound)
+
+Voice webhooks (Retell call events + summary + outcome)
+
+Event bus / queue
+
+Every inbound/outbound action creates an event: message.received, message.sent, call.completed, xero.sync.completed
+
+Processing pipeline
+
+Normalization → Matching → Intent classification → Entity extraction → Policy decision → Action (draft/auto-send/escalate)
+
+Core services
+
+MatchingService (debtor/invoice resolution)
+
+NLPService (intent/entities, can be LLM with guardrails)
+
+PolicyEngine (hard rules + tenant settings)
+
+Scheduler (cooldowns, next action)
+
+Storage
+
+DB tables below (Conversation Thread is the core object)
+
+Design principle
+
+Everything is a “Conversation Thread” attached to a Debtor. Channels are just transports.
+
+3) Data Model (minimum tables)
+Tenant + settings
+
+tenants(id, xero_org_id, name, timezone, base_currency, target_dso, created_at)
+
+tenant_comms_settings(tenant_id, email_mode, inbound_email_address, sms_number, cooloff_hours, auto_send_enabled, vip_requires_approval, out_of_hours_rules, ...)
+
+Debtors + invoices (from Xero)
+
+debtors(id, tenant_id, xero_contact_id, name, primary_email, phone, status_flags json, assigned_user_id, risk_score, created_at)
+
+invoices(id, tenant_id, xero_invoice_id, debtor_id, number, due_date, amount_due, status, updated_at)
+
+ptp_promises(id, tenant_id, debtor_id, invoice_id nullable, promised_date, promised_amount nullable, status, created_at)
+
+Conversations + messages (core)
+
+threads(id, tenant_id, debtor_id, status, last_activity_at, current_context, confidence, needs_review bool)
+
+messages(id, tenant_id, thread_id, channel, direction, from_addr, to_addr, subject, body_text, body_html, received_at, sent_at, provider_ids json, raw_ref json, intent, intent_confidence, entities json)
+
+attachments(id, message_id, filename, mime_type, storage_url, extracted_text nullable)
+
+Outcomes + tasks
+
+events(id, tenant_id, type, payload json, created_at)
+
+tasks(id, tenant_id, thread_id, debtor_id, type, due_at, status, suggested_channel, priority, reason, created_at)
+
+call_logs(id, tenant_id, thread_id, debtor_id, provider_call_id, status, outcome, summary, recording_url, started_at, ended_at)
+
+4) Matching Logic (how inbound gets tied to the right debtor/invoice)
+Inputs
+
+Email: from address, subject, body, thread headers (Message-ID/In-Reply-To), invoice numbers, customer name
+
+SMS: inbound number + sender number
+
+Voice: caller number + captured identifiers (invoice number/company name if available)
+
+Matching algorithm (deterministic first)
+
+Thread match
+
+If In-Reply-To / provider thread ID matches an existing thread → attach.
+
+Invoice number match
+
+Regex invoice number patterns (tenant-configurable prefix) in subject/body → link to invoice → debtor.
+
+Contact match
+
+Match sender email/phone to known debtor contacts (from Xero + added in Qashivo).
+
+Fallback: fuzzy match
+
+Domain match + name similarity + outstanding balance presence.
+
+If still uncertain → create thread in Unmatched state, route to Inbox “Needs review”.
+
+Store a match_confidence and only auto-act when above threshold.
+
+5) Intent Classification (V1 set)
+Intents (keep this tight)
+
+PAYMENT_PROMISE (PTP date given)
+
+PAID_ALREADY (claims paid; may include remittance)
+
+DISPUTE (invoice wrong / query / missing PO / quality issue)
+
+REQUEST_STATEMENT
+
+REQUEST_INVOICE_COPY
+
+CANT_PAY (cashflow issue)
+
+WRONG_CONTACT
+
+CALL_ME
+
+ABUSE_OR_LEGAL (threatening language, solicitor, harassment claims)
+
+OTHER/UNKNOWN
+
+Entities to extract
+
+ptp_date
+
+ptp_amount (optional)
+
+invoice_numbers[]
+
+reason_code (dispute reason / can’t pay reason)
+
+preferred_contact_channel
+
+callback_windows (if given)
+
+Implementation note: you can do intent/entities with an LLM, but wrap it:
+
+Provide only the minimal message text + invoice summaries needed
+
+Require JSON schema output
+
+Reject if schema invalid → fallback to manual
+
+6) Debtor State Machine (what Qashivo “believes”)
+
+At debtor level (thread context):
+
+DUE → OVERDUE → (PTP) PROMISE_TO_PAY → PAID or MISSED_PTP
+
+DISPUTE can overlay (and should change tone + routing)
+
+NEEDS_REVIEW for low confidence / risky content
+
+Rules:
+
+PTP set when intent is PAYMENT_PROMISE + date extracted with sufficient confidence.
+
+PTP missed when promised date passes and Xero sync hasn’t confirmed payment.
+
+Dispute opens when intent DISPUTE; keep chasing undisputed invoices but soften comms and highlight separation.
+
+7) Policy Engine (guardrails + decisioning)
+Hard rules (non-negotiable)
+
+Never provide/alter bank details.
+
+Never offer discounts/settlements.
+
+Never threaten legal action.
+
+Respect “do not contact / VIP manual only”.
+
+Cooldown: do not contact more than once within cooloff_hours unless PTP missed or debtor initiated inbound.
+
+Out-of-hours: no outbound between (e.g.) 20:00–08:00 tenant time.
+
+Decision outputs per inbound item
+
+AUTO_SEND_RESPONSE
+
+DRAFT_FOR_APPROVAL
+
+ESCALATE_TO_HUMAN
+
+NO_RESPONSE_NEEDED (e.g., “thanks”)
+
+Auto-send allowed only if:
+
+Match confidence >= threshold
+
+Intent in safe set (e.g., REQUEST_STATEMENT/INVOICE_COPY/PAYMENT_PROMISE acknowledgement)
+
+No hard-rule violations detected
+
+Tenant has auto_send_enabled = true
+
+8) Response Library (minimum viable templates)
+
+Templates exist per stage and intent. Each template has:
+
+Tone: friendly/firm
+
+Variables: debtor/contact name, invoice table, totals, due dates, payment instructions placeholder (but not bank details)
+
+Channel variants: email longform vs SMS short
+
+Must-have templates
+
+Acknowledgements
+
+PTP recorded: “Thanks—confirming you expect to pay on {date}. We’ll check back if anything changes.”
+
+Dispute received: “Thanks—please confirm which invoice(s) and the issue. We’ll pause those while reviewed.”
+
+Paid already: “Thanks—please share remittance/reference so we can match it.”
+
+Requests
+
+Statement requested: send statement or “we’ll email statement shortly” (Phase 1.5 attach)
+
+Invoice copy requested: resend invoice
+
+Wrong contact
+
+“Thanks—who is the right person for invoices?”
+
+Call me
+
+“Happy to—what time suits today/tomorrow?” (or propose slots)
+
+Abuse/legal
+
+No auto-response; escalate.
+
+9) UI Requirements
+A) Unified Inbox (new primary surface)
+
+Columns:
+
+Channel (Email/SMS/Voice)
+
+Debtor (or Unmatched)
+
+Intent + confidence
+
+Summary (first line)
+
+Recommended action: Auto-send / Approve / Escalate
+
+Timestamp
+
+Actions:
+
+View full message + linked invoices context
+
+Approve & send
+
+Edit draft
+
+Assign to user
+
+Mark resolved
+
+Link to debtor manually (for Unmatched)
+
+B) Debtor Timeline (existing tray becomes the “truth”)
+
+Show:
+
+All inbound/outbound messages (email/SMS)
+
+Voice calls (status + summary + outcome + recording link if enabled)
+
+State changes (PTP set, dispute opened, PTP missed)
+
+Manual notes
+
+C) Action Centre integration
+
+Tasks generated from:
+
+Overdue + no recent contact
+
+PTP due soon / PTP missed
+
+Dispute needs review
+
+Unmatched inbound items
+
+10) Integration Specs (practical picks)
+Email
+
+Pick one route for V1:
+
+SendGrid inbound parse (simple): customer forwards replies to a Qashivo inbound address
+or
+
+Gmail/Outlook API (best UX but heavier)
+
+Outbound: SendGrid API.
+
+SMS
+
+Vonage:
+
+inbound webhook → message.received
+
+outbound send → message.sent
+
+Voice
+
+Retell:
+
+Outbound call initiated from Action Centre
+
+Webhook events:
+
+call started
+
+call ended
+
+structured outcome + summary + recording URL
+Map outcomes into:
+
+PTP (date)
+
+Dispute
+
+Wrong contact
+
+No answer/voicemail
+
+Can’t pay
+
+11) Processing Flow (end-to-end)
+Inbound email/SMS
+
+Ingestion webhook receives payload
+
+Normalize into messages row + emit message.received
+
+MatchingService resolves debtor/thread (or Unmatched)
+
+NLPService assigns intent/entities + confidence
+
+PolicyEngine decides action
+
+If auto-send:
+
+generate response from template + context
+
+send via provider
+
+log outbound message
+
+update thread state (PTP/dispute/etc.)
+
+If approval:
+
+create draft message + Inbox item
+
+If escalate:
+
+create task assigned to user, mark thread needs_review
+
+Outbound scheduled
+
+Scheduler runs nightly + on state changes
+
+Creates tasks (“Send firm reminder”, “PTP reminder”, “Chase undisputed invoices”)
+
+Tasks appear in Action Centre; optional auto-send only for low-risk, tenant-enabled flows.
+
+12) Edge Cases (V1 handling)
+
+Multiple debtors emailing from same domain → require manual link if low confidence
+
+Debtor replies without invoice reference → ask a clarifying question (safe auto-reply)
+
+“Paid” but Xero doesn’t show payment yet → mark as PAID_CLAIMED, follow up after next sync
+
+Dispute for one invoice but others overdue → keep chasing others with “we note invoice X is in dispute” tone
+
+Aggressive/legal language → freeze automation, escalate
+
+13) Metrics to Track (for product + sales proof)
+
+Per tenant:
+
+Coverage: % overdue debtors contacted in last 7 days
+
+Reply rate by channel
+
+PTP captured count + kept vs missed
+
+Time-to-first-response on inbound
+
+Auto-resolve rate (auto-send without human)
+
+DSO baseline vs current (simple)
+
+14) Build Plan (fastest path)
+
+Sprint 1
+
+Thread/message model + unified timeline
+
+Outbound email + outbound SMS + logging
+
+Inbound SMS + basic matching (phone → debtor)
+
+Sprint 2
+
+Inbound email ingestion + thread matching
+
+Intent/entities extraction (PTP/dispute/paid/wrong contact)
+
+Policy engine + approval workflow in Inbox
+
+Sprint 3
+
+Retell outbound call + webhook outcomes → timeline + state updates
+
+Scheduler creating tasks from states (PTP due/missed, no contact, disputes)
+
+Sprint 4
+
+Hardening: confidence thresholds, unmatched workflow, audit logs, reporting tiles
+
+15) One-paragraph positioning (for your demo script)
+
+“Qashivo is not a collections dashboard. It’s your communications credit controller—it receives debtor replies by email and SMS, understands what they mean, responds safely, updates promises-to-pay and disputes, and schedules the next touch automatically. Your team only handles exceptions.”
