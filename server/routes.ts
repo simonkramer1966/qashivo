@@ -5259,7 +5259,10 @@ Guidelines:
       }
 
       const tenantId = user.tenantId;
+      // Normalize today to midnight for accurate day-based comparisons
+      // This ensures invoices due today are in "Due" not "Overdue"
       const today = new Date();
+      today.setHours(0, 0, 0, 0);
       
       // Get actions with smart filtering for performance
       // Load ALL OPEN actions with active intents, plus recent actions (last 90 days)
@@ -5902,10 +5905,16 @@ Guidelines:
           categorizedInvoices.promises.push(inv);
         } else if (vipContactIds.has(inv.contactId)) {
           categorizedInvoices.vip.push(inv);
-        } else if (new Date(inv.dueDate) < today) {
-          categorizedInvoices.overdue.push(inv);
         } else {
-          categorizedInvoices.due.push(inv);
+          // Normalize invoice due date to midnight for accurate day comparison
+          const invDueDate = new Date(inv.dueDate);
+          invDueDate.setHours(0, 0, 0, 0);
+          
+          if (invDueDate < today) {
+            categorizedInvoices.overdue.push(inv);
+          } else {
+            categorizedInvoices.due.push(inv);
+          }
         }
       }
       
