@@ -589,7 +589,8 @@ app.use((req, res, next) => {
   // Track handled sockets to prevent double-processing
   const handledSockets = new WeakSet();
   
-  server.prependListener('upgrade', (request: any, socket: any, head: any) => {
+  // Store our handler reference so we can identify it
+  const retellUpgradeHandler = (request: any, socket: any, head: any) => {
     const pathname = request.url || '';
     const protocol = request.headers['sec-websocket-protocol'];
     
@@ -602,7 +603,6 @@ app.use((req, res, next) => {
     if (pathname.includes('/retell-llm') || pathname.includes('/custom-llm')) {
       // Check if we've already handled this socket or if it's destroyed
       if (handledSockets.has(socket)) {
-        console.log(`[WebSocket] Socket already in handledSockets, skipping: ${pathname}`);
         return;
       }
       
@@ -611,27 +611,33 @@ app.use((req, res, next) => {
         return;
       }
       
-      // Mark socket as handled IMMEDIATELY to prevent other handlers from touching it
+      // Mark socket as handled IMMEDIATELY
       handledSockets.add(socket);
       
       console.log(`[WebSocket] Upgrading Retell connection for path: ${pathname}`);
       
-      // Add error handler for socket
-      socket.on('error', (err: Error) => {
-        console.error('[WebSocket] Socket error during upgrade:', err.message);
-      });
+      // Suppress errors on the socket - they're expected when Vite tries to interfere
+      socket.on('error', () => {});
+      
+      // Remove other upgrade listeners temporarily to prevent interference
+      const otherListeners = server.listeners('upgrade').filter((l: any) => l !== retellUpgradeHandler);
+      otherListeners.forEach((listener: any) => server.removeListener('upgrade', listener));
       
       wss.handleUpgrade(request, socket, head, (ws) => {
-        console.log(`[WebSocket] Upgrade complete, emitting connection event`);
+        console.log(`[WebSocket] Upgrade complete, connection established`);
+        
+        // Re-add other listeners after upgrade is complete
+        otherListeners.forEach((listener: any) => server.prependListener('upgrade', listener));
+        
         wss.emit('connection', ws, request);
       });
       
-      // Prevent other handlers from processing this socket by removing all other upgrade listeners temporarily
-      // This is a workaround for Vite interfering with our WebSocket
       return;
     }
     // Let Vite or other handlers deal with non-Retell WebSocket requests
-  });
+  };
+  
+  server.prependListener('upgrade', retellUpgradeHandler);
   
   console.log('🎙️ Retell Custom LLM WebSocket ready at /retell-llm');
 
