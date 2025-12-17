@@ -4078,6 +4078,174 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Customer Detail: Get full communication history for a contact
+  app.get("/api/contacts/:contactId/history", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { contactId } = req.params;
+      const limit = parseInt(req.query.limit as string) || 50;
+      
+      // Verify contact exists
+      const contact = await storage.getContact(contactId, user.tenantId);
+      if (!contact) {
+        return res.status(404).json({ message: "Contact not found" });
+      }
+
+      // Fetch all outbound actions for this contact
+      const outboundActions = await db
+        .select()
+        .from(actions)
+        .where(and(
+          eq(actions.contactId, contactId),
+          eq(actions.tenantId, user.tenantId),
+          inArray(actions.status, ['completed', 'failed', 'in_progress', 'sent'])
+        ))
+        .orderBy(desc(actions.createdAt))
+        .limit(limit);
+
+      // Fetch all inbound messages for this contact
+      const inbound = await db
+        .select()
+        .from(inboundMessages)
+        .where(and(
+          eq(inboundMessages.contactId, contactId),
+          eq(inboundMessages.tenantId, user.tenantId)
+        ))
+        .orderBy(desc(inboundMessages.createdAt))
+        .limit(limit);
+
+      // Fetch SMS messages (both directions)
+      const sms = await db
+        .select()
+        .from(smsMessages)
+        .where(and(
+          eq(smsMessages.contactId, contactId),
+          eq(smsMessages.tenantId, user.tenantId)
+        ))
+        .orderBy(desc(smsMessages.createdAt))
+        .limit(limit);
+
+      // Normalize and merge into unified timeline
+      type HistoryEntry = {
+        id: string;
+        channel: string;
+        direction: 'inbound' | 'outbound';
+        occurredAt: string;
+        status: string;
+        outcome?: string;
+        subject?: string;
+        bodySnippet?: string;
+        metadata?: Record<string, any>;
+      };
+
+      const history: HistoryEntry[] = [];
+
+      // Add outbound actions
+      for (const action of outboundActions) {
+        const meta = (action.metadata as Record<string, any>) || {};
+        const outcome = (action.outcome as Record<string, any>) || {};
+        history.push({
+          id: action.id,
+          channel: action.actionType || 'email',
+          direction: 'outbound',
+          occurredAt: (action.completedAt || action.executedAt || action.createdAt)?.toISOString() || new Date().toISOString(),
+          status: action.status || 'unknown',
+          outcome: outcome.type || outcome.outcome || action.feedbackOutcome || undefined,
+          subject: meta.subject || action.subject || undefined,
+          bodySnippet: meta.preview || (action.description?.substring(0, 150) + (action.description && action.description.length > 150 ? '...' : '')),
+          metadata: {
+            invoiceId: action.invoiceId,
+            priority: action.priority,
+            ptpAmount: outcome.ptpAmount || meta.ptpAmount,
+            ptpDate: outcome.ptpDate || meta.ptpDate,
+            callDuration: meta.callDuration,
+            sentiment: outcome.sentiment
+          }
+        });
+      }
+
+      // Track seen entries to avoid duplicates
+      // Use a dedup key based on providerMessageId or channel+direction+timestamp
+      const seenKeys = new Set<string>();
+
+      // Add inbound messages from inboundMessages table
+      for (const msg of inbound) {
+        const dedupKey = msg.providerMessageId || `${msg.channel}-inbound-${msg.from}-${msg.createdAt?.getTime()}`;
+        if (seenKeys.has(dedupKey)) continue;
+        seenKeys.add(dedupKey);
+        
+        history.push({
+          id: msg.id,
+          channel: msg.channel || 'email',
+          direction: 'inbound',
+          occurredAt: msg.createdAt?.toISOString() || new Date().toISOString(),
+          status: msg.providerStatus || 'received',
+          outcome: msg.intentType || undefined,
+          subject: msg.subject || undefined,
+          bodySnippet: msg.content?.substring(0, 150) + (msg.content && msg.content.length > 150 ? '...' : ''),
+          metadata: {
+            from: msg.from,
+            intentConfidence: msg.intentConfidence,
+            sentiment: msg.sentiment,
+            extractedEntities: msg.extractedEntities
+          }
+        });
+      }
+
+      // Add inbound SMS from smsMessages table (only if not already added from inboundMessages)
+      for (const msg of sms) {
+        // Skip outbound SMS - already in actions
+        if (msg.direction === 'outbound') continue;
+        
+        // Create dedup key matching inboundMessages pattern
+        const dedupKey = msg.vonageMessageId || msg.twilioMessageSid || `sms-inbound-${msg.fromNumber}-${msg.createdAt?.getTime()}`;
+        if (seenKeys.has(dedupKey)) continue;
+        seenKeys.add(dedupKey);
+        
+        history.push({
+          id: msg.id,
+          channel: 'sms',
+          direction: 'inbound',
+          occurredAt: (msg.sentAt || msg.createdAt)?.toISOString() || new Date().toISOString(),
+          status: msg.status || 'unknown',
+          outcome: msg.intent || undefined,
+          bodySnippet: msg.body?.substring(0, 150) + (msg.body && msg.body.length > 150 ? '...' : ''),
+          metadata: {
+            from: msg.fromNumber,
+            to: msg.toNumber,
+            sentiment: msg.sentiment,
+            segments: msg.numSegments
+          }
+        });
+      }
+
+      // Sort by occurredAt descending
+      history.sort((a, b) => new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime());
+
+      // Limit final results
+      const trimmedHistory = history.slice(0, limit);
+
+      res.json({ 
+        history: trimmedHistory,
+        total: history.length,
+        contact: {
+          id: contact.id,
+          name: contact.name,
+          companyName: contact.companyName,
+          email: contact.email,
+          phone: contact.phone
+        }
+      });
+    } catch (error) {
+      console.error("Error fetching contact history:", error);
+      res.status(500).json({ message: "Failed to fetch contact history" });
+    }
+  });
+
   // Customer Detail: Get learning profile
   app.get("/api/contacts/:contactId/learning-profile", isAuthenticated, async (req: any, res) => {
     try {
