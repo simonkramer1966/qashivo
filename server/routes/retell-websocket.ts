@@ -22,27 +22,38 @@ export function setupRetellWebSocket(wss: WebSocketServer): void {
       console.log('[Retell WebSocket] Extracted call_id from path:', callId);
     }
     
-    console.log('[Retell WebSocket] New Retell Custom LLM connection');
+    console.log('[Retell WebSocket] New Retell Custom LLM connection, readyState:', ws.readyState);
     
     let responseIdCounter = 0;
     
-    // Send begin message after connection is fully established
-    // Use setImmediate to ensure WebSocket is ready
-    setImmediate(() => {
-      if (ws.readyState === ws.OPEN) {
-        const beginMessage = {
-          response_type: "response",
-          response_id: responseIdCounter++,
-          content: "Hello! This is Charlie from Qashivo. How can I help you today?",
-          content_complete: true,
-          end_call: false
-        };
+    // Function to send begin message
+    const sendBeginMessage = () => {
+      const beginMessage = {
+        response_type: "response",
+        response_id: responseIdCounter++,
+        content: "Hello! This is Charlie from Qashivo. How can I help you today?",
+        content_complete: true,
+        end_call: false
+      };
+      try {
         ws.send(JSON.stringify(beginMessage));
-        console.log('[Retell WebSocket] Sent begin message, readyState:', ws.readyState);
-      } else {
-        console.log('[Retell WebSocket] WebSocket not ready, state:', ws.readyState);
+        console.log('[Retell WebSocket] Sent begin message successfully');
+      } catch (err) {
+        console.error('[Retell WebSocket] Error sending begin message:', err);
       }
-    });
+    };
+    
+    // WebSocket states: 0=CONNECTING, 1=OPEN, 2=CLOSING, 3=CLOSED
+    if (ws.readyState === 1) { // OPEN
+      sendBeginMessage();
+    } else if (ws.readyState === 0) { // CONNECTING
+      ws.once('open', () => {
+        console.log('[Retell WebSocket] WebSocket opened, sending begin message');
+        sendBeginMessage();
+      });
+    } else {
+      console.log('[Retell WebSocket] WebSocket already closing/closed, state:', ws.readyState);
+    }
     
     ws.on('message', async (data: Buffer) => {
       try {
