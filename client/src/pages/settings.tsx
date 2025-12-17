@@ -2205,29 +2205,6 @@ export default function Settings() {
                           </Button>
                         </div>
 
-                        {/* Sage Option */}
-                        <div className="flex items-center justify-between p-6 bg-slate-50/80 rounded-xl border border-slate-200/50 hover:border-[#17B6C3]/50 transition-colors">
-                          <div className="flex items-center space-x-4">
-                            <div className="p-3 bg-green-100 rounded-lg">
-                              <SiSage className="h-6 w-6 text-green-600" />
-                            </div>
-                            <div>
-                              <p className="font-semibold text-slate-900">Sage Business Cloud</p>
-                              <p className="text-sm text-slate-600">
-                                UK-focused accounting software
-                              </p>
-                            </div>
-                          </div>
-                          <Button 
-                            onClick={() => handleProviderConnect('sage', 'Sage Business Cloud')}
-                            disabled={isConnecting}
-                            className="bg-[#17B6C3] hover:bg-[#1396A1] text-white min-w-[100px]"
-                            data-testid="button-connect-sage"
-                          >
-                            {isConnecting ? "Connecting..." : "Connect"}
-                          </Button>
-                        </div>
-
                         {/* QuickBooks Option */}
                         <div className="flex items-center justify-between p-6 bg-slate-50/80 rounded-xl border border-slate-200/50 hover:border-[#17B6C3]/50 transition-colors">
                           <div className="flex items-center space-x-4">
