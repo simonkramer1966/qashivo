@@ -5259,10 +5259,10 @@ Guidelines:
       }
 
       const tenantId = user.tenantId;
-      // Use UTC day number for timezone-safe date comparisons
+      // Normalize today to UTC midnight for timezone-safe comparisons
       // This ensures invoices due today are in "Due" not "Overdue" regardless of server timezone
-      const now = new Date();
-      const todayUTC = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+      const today = new Date();
+      today.setUTCHours(0, 0, 0, 0);
       
       // Get actions with smart filtering for performance
       // Load ALL OPEN actions with active intents, plus recent actions (last 90 days)
@@ -5906,11 +5906,11 @@ Guidelines:
         } else if (vipContactIds.has(inv.contactId)) {
           categorizedInvoices.vip.push(inv);
         } else {
-          // Use UTC for timezone-safe comparison
+          // Normalize invoice due date to UTC midnight for comparison
           const invDueDate = new Date(inv.dueDate);
-          const dueUTC = Date.UTC(invDueDate.getUTCFullYear(), invDueDate.getUTCMonth(), invDueDate.getUTCDate());
+          invDueDate.setUTCHours(0, 0, 0, 0);
           
-          if (dueUTC < todayUTC) {
+          if (invDueDate < today) {
             categorizedInvoices.overdue.push(inv);
           } else {
             categorizedInvoices.due.push(inv);
