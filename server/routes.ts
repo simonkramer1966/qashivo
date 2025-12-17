@@ -6787,7 +6787,7 @@ Guidelines:
     }
   });
 
-  // Voice Call - initiate AI voice call via Retell
+  // Voice Call - initiate AI voice call via Retell (simplified - just sends variables to Retell)
   app.post("/api/actions/:id/voice-call", isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.id);
@@ -6795,21 +6795,9 @@ Guidelines:
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
 
-      // Validate Retell configuration upfront
-      if (!process.env.RETELL_API_KEY) {
-        return res.status(400).json({ message: "Retell API key not configured" });
-      }
-      if (!process.env.RETELL_AGENT_ID) {
-        return res.status(400).json({ message: "Retell agent not configured" });
-      }
-      const fromNumber = process.env.RETELL_FROM_NUMBER || process.env.VONAGE_PHONE_NUMBER || '';
-      if (!fromNumber) {
-        return res.status(400).json({ message: "No from number configured for voice calls" });
-      }
-
       const { id } = req.params;
 
-      // Get existing action with contact info
+      // Get action
       const existingAction = await db
         .select()
         .from(actions)
@@ -6822,66 +6810,65 @@ Guidelines:
 
       const action = existingAction[0];
       
-      // Get contact for phone number
+      // Get contact
       const contact = await storage.getContact(action.contactId, user.tenantId);
       if (!contact) {
         return res.status(404).json({ message: "Contact not found" });
       }
-
       if (!contact.phone) {
         return res.status(400).json({ message: "Contact has no phone number" });
       }
 
-      // Use centralized communications orchestrator for voice calls
-      const { communicationsOrchestrator } = await import('./services/communicationsOrchestrator');
+      // Get tenant for organization name
+      const tenant = await storage.getTenant(user.tenantId);
+
+      // Get invoices for this contact and filter for overdue
+      const allInvoices = await storage.getInvoicesByContact(action.contactId, user.tenantId);
+      const now = new Date();
+      const overdueInvoices = allInvoices.filter(inv => 
+        inv.status !== 'paid' && new Date(inv.dueDate) < now
+      );
       
-      // Get invoice IDs for the request
-      const invoiceIds = action.invoiceId ? [action.invoiceId] : [];
+      // Calculate totals
+      const totalOutstanding = overdueInvoices.reduce((sum, inv) => sum + Number(inv.amountDue || inv.amount || 0), 0);
+      const oldestDaysOverdue = overdueInvoices.length > 0 
+        ? Math.max(...overdueInvoices.map(inv => {
+            const due = new Date(inv.dueDate);
+            return Math.floor((Date.now() - due.getTime()) / (1000 * 60 * 60 * 24));
+          }))
+        : 0;
+      const invoiceNumbers = overdueInvoices.map(inv => inv.invoiceNumber).join(', ');
 
-      // Map action priority to valid orchestrator priority values
-      const priorityMap: Record<string, 'low' | 'normal' | 'high' | 'urgent'> = {
-        'low': 'low',
-        'normal': 'normal',
-        'medium': 'normal',  // Map medium to normal
-        'high': 'high',
-        'urgent': 'urgent',
+      // Build simple variables for Retell
+      const dynamicVariables = {
+        customerName: contact.name || 'Customer',
+        companyName: contact.companyName || contact.name || 'Customer',
+        organisationName: tenant?.name || 'our company',
+        invoiceCount: String(overdueInvoices.length),
+        invoiceNumbers: invoiceNumbers || 'outstanding invoices',
+        totalOutstanding: totalOutstanding.toFixed(2),
+        daysOverdue: String(oldestDaysOverdue),
+        contactPhone: contact.phone,
       };
-      const orchestratorPriority = priorityMap[action.priority || 'normal'] || 'normal';
 
-      // Map priority to appropriate tone
-      const toneMap: Record<string, 'friendly_assumptive' | 'firm_specific' | 'formal_consequence'> = {
-        'low': 'friendly_assumptive',
-        'normal': 'friendly_assumptive',
-        'high': 'firm_specific',
-        'urgent': 'formal_consequence',
-      };
-      const orchestratorTone = toneMap[orchestratorPriority];
-
-      const result = await communicationsOrchestrator.send({
-        tenantId: user.tenantId,
-        contactId: action.contactId,
-        channel: 'voice',
-        invoiceIds,
-        actionId: id,
-        priority: orchestratorPriority,
-        tone: orchestratorTone,
-        personalization: {
-          action_type: 'manual_voice_call',
-          initiated_by: user.id,
+      // Call Retell directly
+      const { createUnifiedRetellCall } = await import('./utils/retellCallHelper');
+      
+      const result = await createUnifiedRetellCall({
+        toNumber: contact.phone,
+        dynamicVariables,
+        metadata: {
+          actionId: id,
+          contactId: action.contactId,
+          tenantId: user.tenantId,
+          initiatedBy: user.id,
         },
+        context: 'ACTION_VOICE_CALL',
       });
 
-      if (!result.success) {
-        console.log(`🚫 Voice call blocked for action ${id}: ${result.blockedReason || result.error}`);
-        return res.status(400).json({ 
-          message: result.blockedReason || result.error || "Voice call could not be initiated",
-          status: result.status,
-        });
-      }
+      console.log(`🎙️ AI Voice call initiated: ${result.callId} for action ${id}`);
 
-      console.log(`🎙️ AI Voice call initiated from drawer: ${result.messageId} for action ${id}`);
-
-      // Update action status to show call was initiated
+      // Update action status
       await db
         .update(actions)
         .set({
@@ -6893,7 +6880,7 @@ Guidelines:
 
       res.json({ 
         message: "Voice call initiated successfully",
-        callId: result.messageId,
+        callId: result.callId,
         actionId: id,
         toNumber: contact.phone,
         status: result.status,
