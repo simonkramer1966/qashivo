@@ -15,11 +15,36 @@ export function setupRetellWebSocket(wss: WebSocketServer): void {
     const path = request?.url || '';
     console.log('[Retell WebSocket] Connection event received, path:', path);
     
-    // Path filtering already done in server/index.ts upgrade handler
-    // Just log and proceed
+    // Extract call_id from path: /retell-llm/{call_id}
+    const pathParts = path.split('/');
+    let callId: string | null = pathParts[pathParts.length - 1] || null;
+    if (callId && callId.startsWith('call_')) {
+      console.log('[Retell WebSocket] Extracted call_id from path:', callId);
+    }
+    
     console.log('[Retell WebSocket] New Retell Custom LLM connection');
     
-    let callId: string | null = null;
+    // Send config event (optional but recommended)
+    const configEvent = {
+      response_type: "config",
+      config: {
+        auto_reconnect: true,
+        call_details: true
+      }
+    };
+    ws.send(JSON.stringify(configEvent));
+    console.log('[Retell WebSocket] Sent config event');
+    
+    // Send initial begin message - Retell requires this!
+    const beginMessage = {
+      response_type: "response",
+      response_id: 0,
+      content: "Hello! This is Charlie from Qashivo. How can I help you today?",
+      content_complete: true,
+      end_call: false
+    };
+    ws.send(JSON.stringify(beginMessage));
+    console.log('[Retell WebSocket] Sent begin message');
     
     ws.on('message', async (data: Buffer) => {
       try {
