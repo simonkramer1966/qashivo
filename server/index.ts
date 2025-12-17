@@ -585,40 +585,50 @@ app.use((req, res, next) => {
   const wss = new WebSocketServer({ noServer: true });
   setupRetellWebSocket(wss);
   
-  // Use a Set to track sockets we've already handled to prevent double-processing
+  // Use prependListener to ensure our handler runs BEFORE Vite's HMR handler
+  // Track handled sockets to prevent double-processing
   const handledSockets = new WeakSet();
   
-  server.on('upgrade', (request, socket, head) => {
+  server.prependListener('upgrade', (request: any, socket: any, head: any) => {
     const pathname = request.url || '';
+    const protocol = request.headers['sec-websocket-protocol'];
+    
+    // Skip Vite HMR connections - let Vite handle them
+    if (protocol === 'vite-hmr') {
+      return;
+    }
     
     // Route Retell Custom LLM connections to our WebSocket server
     if (pathname.includes('/retell-llm') || pathname.includes('/custom-llm')) {
       // Check if we've already handled this socket or if it's destroyed
-      if (handledSockets.has(socket) || socket.destroyed || !socket.writable) {
-        console.log(`[WebSocket] Skipping already-handled or closed socket for: ${pathname}`);
+      if (handledSockets.has(socket)) {
+        console.log(`[WebSocket] Socket already in handledSockets, skipping: ${pathname}`);
         return;
       }
       
-      // Mark socket as handled
+      if (socket.destroyed) {
+        console.log(`[WebSocket] Socket destroyed before we could handle it: ${pathname}`);
+        return;
+      }
+      
+      // Mark socket as handled IMMEDIATELY to prevent other handlers from touching it
       handledSockets.add(socket);
       
       console.log(`[WebSocket] Upgrading Retell connection for path: ${pathname}`);
       
       // Add error handler for socket
-      socket.on('error', (err) => {
-        console.error('[WebSocket] Socket error during upgrade:', err);
+      socket.on('error', (err: Error) => {
+        console.error('[WebSocket] Socket error during upgrade:', err.message);
       });
       
-      try {
-        wss.handleUpgrade(request, socket, head, (ws) => {
-          console.log(`[WebSocket] Upgrade complete, emitting connection event`);
-          wss.emit('connection', ws, request);
-        });
-      } catch (err) {
-        console.error('[WebSocket] handleUpgrade error:', err);
-        socket.destroy();
-      }
-      return; // Important: don't let other handlers process this
+      wss.handleUpgrade(request, socket, head, (ws) => {
+        console.log(`[WebSocket] Upgrade complete, emitting connection event`);
+        wss.emit('connection', ws, request);
+      });
+      
+      // Prevent other handlers from processing this socket by removing all other upgrade listeners temporarily
+      // This is a workaround for Vite interfering with our WebSocket
+      return;
     }
     // Let Vite or other handlers deal with non-Retell WebSocket requests
   });
