@@ -2407,38 +2407,6 @@ export default function Settings() {
                 </CardContent>
               </Card>
 
-              {/* SMS Integration */}
-              <Card className="card-glass">
-                <CardHeader>
-                  <CardTitle className="text-xl font-bold flex items-center justify-between">
-                    <div className="flex items-center">
-                      <div className="p-2 bg-[#17B6C3]/10 rounded-lg mr-3">
-                        <MessageSquare className="h-5 w-5 text-[#17B6C3]" />
-                      </div>
-                      SMS Integration (Twilio)
-                    </div>
-                    <Badge className="bg-green-100 text-green-800 border-green-200" data-testid="badge-twilio-status">
-                      Connected
-                    </Badge>
-                  </CardTitle>
-                  <CardDescription className="text-base ml-11">
-                    Configure SMS settings for text message reminders
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="space-y-2">
-                    <Label htmlFor="smsFromNumber">From Phone Number</Label>
-                    <Input 
-                      id="smsFromNumber"
-                      placeholder="+1 (555) 123-4567"
-                      className="bg-white/70 border-gray-200/30"
-                      data-testid="input-sms-number"
-                    />
-                  </div>
-                  <Button className="bg-[#17B6C3] hover:bg-[#1396A1] text-white" data-testid="button-save-sms">Save SMS Settings</Button>
-                </CardContent>
-              </Card>
-
               {/* AI Integration */}
               <Card className="card-glass">
                 <CardHeader>
