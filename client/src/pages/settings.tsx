@@ -2365,48 +2365,6 @@ export default function Settings() {
                 </CardContent>
               </Card>
 
-              {/* Email Integration */}
-              <Card className="card-glass">
-                <CardHeader>
-                  <CardTitle className="text-xl font-bold flex items-center justify-between">
-                    <div className="flex items-center">
-                      <div className="p-2 bg-[#17B6C3]/10 rounded-lg mr-3">
-                        <Mail className="h-5 w-5 text-[#17B6C3]" />
-                      </div>
-                      Email Integration (SendGrid)
-                    </div>
-                    <Badge className="bg-green-100 text-green-800 border-green-200" data-testid="badge-sendgrid-status">
-                      Connected
-                    </Badge>
-                  </CardTitle>
-                  <CardDescription className="text-base ml-11">
-                    Configure email settings for automated reminders
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="space-y-2">
-                    <Label htmlFor="fromEmail">From Email Address</Label>
-                    <Input 
-                      id="fromEmail"
-                      type="email"
-                      placeholder="billing@yourcompany.com"
-                      className="bg-white/70 border-gray-200/30"
-                      data-testid="input-from-email"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="fromName">From Name</Label>
-                    <Input 
-                      id="fromName"
-                      placeholder="Your Company Billing"
-                      className="bg-white/70 border-gray-200/30"
-                      data-testid="input-from-name"
-                    />
-                  </div>
-                  <Button className="bg-[#17B6C3] hover:bg-[#1396A1] text-white" data-testid="button-save-email">Save Email Settings</Button>
-                </CardContent>
-              </Card>
-
               {/* AI Integration */}
               <Card className="card-glass">
                 <CardHeader>
