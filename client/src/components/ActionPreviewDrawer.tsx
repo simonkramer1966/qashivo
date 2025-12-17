@@ -19,7 +19,8 @@ import {
   AlertTriangle,
   Loader2,
   AlertCircle,
-  RefreshCw
+  RefreshCw,
+  Phone
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { DebtorTimeline } from '@/components/DebtorTimeline';
@@ -620,6 +621,20 @@ export function ActionPreviewDrawer({
             data-testid="button-drawer-vip"
           >
             {isEscalating ? 'Moving...' : 'Move to VIP'}
+          </Button>
+          <Button
+            variant="outline"
+            className="text-purple-600 border-purple-300 hover:bg-purple-50"
+            onClick={() => {
+              toast({
+                title: "AI Voice Call",
+                description: "Initiating AI voice call to " + action.contactName,
+              });
+            }}
+            data-testid="button-drawer-ai-voice"
+          >
+            <Phone className="w-4 h-4 mr-2" />
+            AI Voice
           </Button>
           <Button
             className="bg-[#17B6C3] hover:bg-[#1396A1] text-white flex-1"
