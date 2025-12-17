@@ -641,15 +641,15 @@ export default function InvestorDemo() {
               <span className="text-[#17B6C3] font-semibold">SEIS-Eligible Investment Opportunity (HMRC Advance Assurance WMBC/I&R/1183827082/VCRT)</span>
             </div>
             <h1 className="text-5xl lg:text-6xl font-bold text-gray-900 mb-6 leading-tight">
-              AI That Turns Late Payments Into<br />
+              Automation That Turns Late Payments Into<br />
               <span className="text-[#17B6C3]">Automated Cashflow</span>
             </h1>
             <p className="text-xl text-gray-600 mb-4 leading-relaxed max-w-4xl mx-auto">
-              The UK's first AI-powered credit control platform built on statutory rights. 
+              The UK's first automated credit control platform built on statutory rights. 
               Transforming the £11B late payment crisis into predictable revenue.
             </p>
             <p className="text-xl text-gray-600 mb-[80px] leading-relaxed max-w-4xl mx-auto">
-              <strong>We're not just automating credit control. We're creating a learning brain for SME finance.</strong>
+              <strong>We're not just automating credit control. We're building the execution engine for SME collections.</strong>
             </p>
           </div>
 
@@ -682,13 +682,13 @@ export default function InvestorDemo() {
                   The Future of B2B Credit Control
                 </h3>
                 <p className="text-gray-700 leading-relaxed mb-4">
-                  This is more than automation; it's intelligent learning that gets smarter with every interaction. 
-                  Our AI doesn't just send reminders; it detects intent, predicts payment behavior, and creates 
+                  This is more than automation; it's intelligent execution that follows your policies consistently. 
+                  Qashivo doesn't just send reminders; it detects intent, classifies responses in real-time, and creates 
                   statutory-compliant escalation paths automatically.
                 </p>
                 <p className="text-gray-700 leading-relaxed">
                   The result? <strong>40% faster collections</strong>, 
-                  <strong>95% forecast accuracy</strong>, and <strong>zero manual intervention</strong>.
+                  <strong>scenario-based forecasting</strong>, and <strong>zero manual intervention</strong>.
                 </p>
               </div>
             </div>
@@ -797,7 +797,7 @@ export default function InvestorDemo() {
           <div className="text-center mb-16">
             <h2 className="text-4xl font-bold text-gray-900 mb-4">The Qashivo Solution</h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              AI-powered credit control that combines behavioural intelligence, statutory compliance, and multi-channel automation
+              Automated credit control that combines real-time intent detection, statutory compliance, and multi-channel automation
             </p>
           </div>
 
@@ -854,8 +854,8 @@ export default function InvestorDemo() {
               </div>
               <div className="grid grid-cols-3 gap-4">
                 <div className="text-center p-3 bg-[#A98743]/5 rounded-lg" data-testid="card-solution-accuracy">
-                  <p className="text-2xl font-bold text-[#A98743]" data-testid="text-accuracy-rate">95%</p>
-                  <p className="text-xs text-gray-600">Forecast Accuracy</p>
+                  <p className="text-2xl font-bold text-[#A98743]" data-testid="text-accuracy-rate">3</p>
+                  <p className="text-xs text-gray-600">Scenario Options</p>
                 </div>
                 <div className="text-center p-3 bg-blue-50 rounded-lg" data-testid="card-solution-dso">
                   <p className="text-2xl font-bold text-[#0E131F]" data-testid="text-dso-reduction">-40%</p>
@@ -887,7 +887,7 @@ export default function InvestorDemo() {
                   </div>
                 </div>
                 <p className="text-gray-700 mb-6">
-                  Receive an AI-powered collection call. Our AI analyzes your responses in real-time, 
+                  Receive an automated collection call. Our system analyzes your responses in real-time, 
                   detecting intent, sentiment, and commitment to pay.
                 </p>
                 <div className="space-y-4">

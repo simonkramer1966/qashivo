@@ -60,7 +60,7 @@ export default function Homepage() {
             </div>
             <h1 className="text-4xl md:text-6xl font-bold text-gray-900 mb-6 leading-tight">
               Get Paid 60% Faster,{" "}
-              <span className="text-[#17B6C3]">AI Powered Cashflow Made Simple</span>
+              <span className="text-[#17B6C3]">Automated Cashflow Made Simple</span>
             </h1>
             <p className="text-lg md:text-xl text-gray-600 mb-8 max-w-4xl mx-auto leading-relaxed">
               Qashivo connects seamlessly with Xero to chase late invoices automatically, forecasts your cash flow and provides finance options to keep your business flowing. Backed by UK Chartered Accountants and built with bank-grade security, it's the stress-free way to stay in control of your business finances.
@@ -347,7 +347,7 @@ export default function Homepage() {
                 />
               </div>
               <h3 className="text-xl font-bold text-gray-900 mb-3">Multi-Channel Chasing</h3>
-              <p className="text-gray-600">Email, SMS, and AI-powered voice reminders</p>
+              <p className="text-gray-600">Email, SMS, and automated voice reminders</p>
             </Card>
 
             <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg p-8 text-center hover:shadow-xl transition-shadow" data-testid="card-feature-2">

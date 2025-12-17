@@ -210,7 +210,7 @@ export default function BetaPartner() {
           <div className="text-center mb-16">
             <h2 className="text-4xl font-bold text-gray-900 mb-4">The £4.8B Market Opportunity</h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              The UK credit control software market is ripe for disruption. AI-powered automation is transforming how businesses manage late payments.
+              The UK credit control software market is ripe for disruption. Intelligent automation is transforming how businesses manage late payments.
             </p>
           </div>
 
@@ -248,7 +248,7 @@ export default function BetaPartner() {
           <div className="text-center mb-16">
             <h2 className="text-4xl font-bold text-gray-900 mb-4">Grow Your Credit Control Practice</h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Transform your service delivery and profitability with AI-powered credit control
+              Transform your service delivery and profitability with automated credit control
             </p>
           </div>
 
@@ -332,7 +332,7 @@ export default function BetaPartner() {
                   Transform Your Practice Economics
                 </h3>
                 <p className="text-lg text-gray-700 leading-relaxed">
-                  By automating routine collection tasks, accounting practices can deliver credit control services to 3x more clients with the same team. Industry analysis suggests this efficiency gain, combined with premium positioning for AI-powered solutions, can drive margin improvements of 40% or more on collection services while accelerating client onboarding and improving retention.
+                  By automating routine collection tasks, accounting practices can deliver credit control services to 3x more clients with the same team. Industry analysis suggests this efficiency gain, combined with premium positioning for automated solutions, can drive margin improvements of 40% or more on collection services while accelerating client onboarding and improving retention.
                 </p>
               </div>
             </div>
@@ -387,7 +387,7 @@ export default function BetaPartner() {
               </div>
               <h3 className="text-xl font-bold text-gray-900 mb-3">First-Mover Advantage</h3>
               <p className="text-gray-600">
-                Launch with full production access before Accountex 2026. Be first to market with AI-powered credit control for your clients.
+                Launch with full production access before Accountex 2026. Be first to market with automated credit control for your clients.
               </p>
             </Card>
 

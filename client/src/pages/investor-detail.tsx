@@ -41,7 +41,7 @@ export default function InvestorDetail() {
             <span className="text-[#8B2635] font-semibold">Investment Opportunity</span>
           </div>
           <h1 className="text-5xl lg:text-6xl font-bold text-gray-900 mb-6 leading-tight">
-            AI That Gets <span className="text-[#17B6C3]">You Paid</span>
+            Automation That Gets <span className="text-[#17B6C3]">You Paid</span>
           </h1>
           <p className="text-2xl text-gray-700 max-w-4xl mx-auto mb-4">
             Qashivo automates every step of SME cashflow. From invoice to enforcement; turning compliance into cash.
@@ -79,7 +79,7 @@ export default function InvestorDetail() {
               <div className="p-3 bg-[#17B6C3]/10 rounded-xl w-fit mb-4">
                 <Brain className="w-8 h-8 text-[#17B6C3]" />
               </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-4">The Learning Brain for SME Finance</h3>
+              <h3 className="text-2xl font-bold text-gray-900 mb-4">The Execution Engine for SME Collections</h3>
               <p className="text-gray-600 leading-relaxed">
                 Qashivo and Qompliance are becoming the rails every SME will use to stay compliant, funded, and enforceable.
               </p>
@@ -89,10 +89,10 @@ export default function InvestorDetail() {
           <Card className="bg-gradient-to-br from-[#17B6C3]/5 via-[#A98743]/5 to-[#8B2635]/5 border-0 shadow-xl p-10" data-testid="card-vision">
             <div className="text-center">
               <h3 className="text-3xl font-bold text-gray-900 mb-4">
-                We're not just automating credit control.<br />We're creating a learning brain for SME finance.
+                We're not just automating credit control.<br />We're building the execution engine for SME collections.
               </h3>
               <p className="text-lg text-gray-700 max-w-4xl mx-auto">
-                The financial intelligence layer for the Late Payment economy. Learning from every invoice, dispute, and enforcement to optimise SME cashflow.
+                The automation layer for the Late Payment economy. Executing collections consistently across every invoice, dispute, and enforcement to optimise SME cashflow.
               </p>
             </div>
           </Card>

@@ -23,7 +23,7 @@ export default function Documentation() {
     { id: "sms", name: "SMS & WhatsApp", icon: MessageSquare },
     { id: "voice", name: "Voice & AI Calls", icon: Phone },
     { id: "collections", name: "Collections Automation", icon: Workflow },
-    { id: "ai-learning", name: "AI Learning System", icon: Bot },
+    { id: "ai-learning", name: "Policy Execution System", icon: Bot },
     { id: "comm-modes", name: "Communication Modes", icon: Settings },
     { id: "xero", name: "Xero Integration", icon: Database },
     { id: "stripe", name: "Payment Processing", icon: Lock },
@@ -149,8 +149,8 @@ export default function Documentation() {
                     <div>
                       <h3 className="font-semibold text-lg mb-3">What is Qashivo?</h3>
                       <p className="text-gray-600 mb-4">
-                        Qashivo is an intelligent accounts receivable and debt recovery platform that automates your collections process using AI and machine learning. 
-                        The system learns from every interaction to optimize communication strategies, improving cash flow and reducing days sales outstanding (DSO).
+                        Qashivo is an intelligent accounts receivable and debt recovery platform that automates your collections process. 
+                        The system executes your collection policies consistently across all channels, improving cash flow and reducing days sales outstanding (DSO).
                       </p>
                     </div>
 
@@ -167,9 +167,9 @@ export default function Documentation() {
                         <div className="p-3 bg-purple-50 rounded-lg">
                           <div className="flex items-center gap-2 mb-1">
                             <Bot className="h-4 w-4 text-purple-600" />
-                            <span className="font-medium text-sm">AI Learning Engine</span>
+                            <span className="font-medium text-sm">Intent Detection Engine</span>
                           </div>
-                          <p className="text-xs text-gray-600">Learns optimal strategies per customer</p>
+                          <p className="text-xs text-gray-600">Real-time response classification</p>
                         </div>
                         <div className="p-3 bg-green-50 rounded-lg">
                           <div className="flex items-center gap-2 mb-1">
@@ -610,7 +610,7 @@ export default function Documentation() {
                       <CardTitle className="text-2xl">Voice & AI Calls</CardTitle>
                     </div>
                     <CardDescription>
-                      AI-powered phone conversations for complex collection scenarios
+                      Automated phone conversations for complex collection scenarios
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
@@ -912,7 +912,7 @@ export default function Documentation() {
                 </Card>
               </section>
 
-              {/* AI Learning System */}
+              {/* Policy Execution System */}
               <section id="ai-learning">
                 <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
                   <CardHeader>
@@ -920,10 +920,10 @@ export default function Documentation() {
                       <div className="p-2 bg-[#17B6C3]/10 rounded-lg">
                         <Bot className="h-6 w-6 text-[#17B6C3]" />
                       </div>
-                      <CardTitle className="text-2xl">AI Learning System</CardTitle>
+                      <CardTitle className="text-2xl">Policy Execution System</CardTitle>
                     </div>
                     <CardDescription>
-                      How the AI learns and optimizes collection strategies over time
+                      How Qashivo executes and tracks your collection strategies
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
@@ -1433,7 +1433,7 @@ export default function Documentation() {
                           <li><strong>1. Payment Detection:</strong> Xero webhook notifies Qashivo of new payment</li>
                           <li><strong>2. Invoice Update:</strong> Associated invoice status updated to "paid" or "partially paid"</li>
                           <li><strong>3. Collection Stop:</strong> Automated collections immediately suspended for that invoice</li>
-                          <li><strong>4. AI Learning:</strong> Payment event recorded in customer learning profile</li>
+                          <li><strong>4. Profile Update:</strong> Payment event recorded in customer profile</li>
                           <li><strong>5. Notification:</strong> User notified of payment, action removed from Action Centre</li>
                         </ol>
                       </div>

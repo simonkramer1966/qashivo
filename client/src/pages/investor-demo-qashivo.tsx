@@ -469,15 +469,15 @@ export default function InvestorDemo() {
                 <span className="text-[#17B6C3] font-semibold">SEIS-Eligible Investment Opportunity</span>
               </div>
               <h1 className="text-5xl lg:text-6xl font-bold text-gray-900 mb-6 leading-tight">
-                AI That Turns Late Payments Into{" "}
+                Automation That Turns Late Payments Into{" "}
                 <span className="text-[#17B6C3]">Automated Cashflow</span>
               </h1>
               <p className="text-xl text-gray-600 mb-4 leading-relaxed">
-                The UK's first AI-powered credit control platform built on statutory rights. 
+                The UK's first automated credit control platform built on statutory rights. 
                 Transforming the £11B late payment crisis into predictable revenue.
               </p>
               <p className="text-xl text-gray-600 mb-8 leading-relaxed">
-                <strong>We're not just automating credit control. We're creating a learning brain for SME finance.</strong>
+                <strong>We're not just automating credit control. We're building the execution engine for SME collections.</strong>
               </p>
               
               <div className="flex gap-4">
@@ -593,7 +593,7 @@ export default function InvestorDemo() {
           <div className="text-center mb-16">
             <h2 className="text-4xl font-bold text-gray-900 mb-4">The Qashivo Solution</h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              AI-powered credit control that combines behavioural intelligence, statutory compliance, and multi-channel automation
+              Automated credit control that combines real-time intent detection, statutory compliance, and multi-channel automation
             </p>
           </div>
 
@@ -651,8 +651,8 @@ export default function InvestorDemo() {
               </div>
               <div className="grid grid-cols-3 gap-4">
                 <div className="text-center p-3 bg-[#A98743]/5 rounded-lg" data-testid="card-solution-accuracy">
-                  <p className="text-2xl font-bold text-[#A98743]" data-testid="text-accuracy-rate">95%</p>
-                  <p className="text-xs text-gray-600">Forecast Accuracy</p>
+                  <p className="text-2xl font-bold text-[#A98743]" data-testid="text-accuracy-rate">3</p>
+                  <p className="text-xs text-gray-600">Scenario Options</p>
                 </div>
                 <div className="text-center p-3 bg-blue-50 rounded-lg" data-testid="card-solution-dso">
                   <p className="text-2xl font-bold text-[#0E131F]" data-testid="text-dso-reduction">-40%</p>
@@ -684,7 +684,7 @@ export default function InvestorDemo() {
                   </div>
                 </div>
                 <p className="text-gray-700 mb-3">
-                  Receive an AI-powered collection call. Our AI analyzes your responses in real-time, 
+                  Receive an automated collection call. Our system analyzes your responses in real-time, 
                   detecting intent, sentiment, and commitment to pay.
                 </p>
                 <p className="text-gray-700 mb-6">

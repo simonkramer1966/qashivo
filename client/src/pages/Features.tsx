@@ -82,7 +82,7 @@ export default function Features() {
         
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24 text-center w-full">
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white leading-tight mb-6">
-            AI That Works <span className="text-[#17B6C3]">While You Sleep</span>
+            Automation That Works <span className="text-[#17B6C3]">While You Sleep</span>
           </h1>
           <p className="text-xl text-gray-200 max-w-3xl mx-auto">
             From chasing invoices to forecasting cashflow, Qashivo handles it all autonomously. 
@@ -91,12 +91,12 @@ export default function Features() {
         </div>
       </section>
 
-      {/* The AI-First Difference */}
+      {/* The Qashivo Difference */}
       <section className="py-16 md:py-24 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              The AI-First Difference
+              The Qashivo Difference
             </h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
               Traditional software assists you. Qashivo replaces the work entirely. 
@@ -121,7 +121,7 @@ export default function Features() {
               </div>
               <h3 className="text-xl font-bold text-gray-900 mb-3">Intelligent Prioritisation</h3>
               <p className="text-gray-600">
-                AI analyses payment behaviour and credit risk to prioritise high-value, high-risk invoices automatically.
+                Qashivo prioritises high-value, high-risk invoices automatically based on aging, amount, and customer tier.
               </p>
             </div>
             
@@ -146,7 +146,7 @@ export default function Features() {
               Three Pillars of Cashflow Excellence
             </h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              A complete AI-powered platform that handles collections, predicts cashflow, and provides instant funding.
+              A complete automated platform that handles collections, forecasts cashflow scenarios, and provides access to funding.
             </p>
           </div>
 
@@ -239,13 +239,13 @@ export default function Features() {
                   </div>
                   <h3 className="text-3xl font-bold text-gray-900 mb-4">Intelligent Cashflow Forecasting</h3>
                   <p className="text-lg text-gray-600 mb-6">
-                    See into the future with AI-powered predictions. Know exactly when payments will land, 
+                    Plan ahead with scenario-based forecasting. See best, base, and worst-case projections, 
                     identify potential shortfalls, and make confident decisions about your business.
                   </p>
                   <ul className="space-y-4">
                     <li className="flex items-start">
                       <CheckCircle2 className="h-6 w-6 text-blue-600 mr-3 flex-shrink-0 mt-0.5" />
-                      <span className="text-gray-700">30/60/90-day rolling forecasts with AI confidence scoring</span>
+                      <span className="text-gray-700">30/60/90-day rolling forecasts with scenario modelling</span>
                     </li>
                     <li className="flex items-start">
                       <CheckCircle2 className="h-6 w-6 text-blue-600 mr-3 flex-shrink-0 mt-0.5" />

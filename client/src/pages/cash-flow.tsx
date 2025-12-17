@@ -18,7 +18,7 @@ export default function CashFlow() {
                 </div>
                 <CardTitle className="text-2xl font-bold">Cash Flow Forecasting</CardTitle>
                 <CardDescription className="text-base">
-                  AI-powered cash flow projections and scenario planning
+                  Scenario-based cash flow projections and planning
                 </CardDescription>
               </CardHeader>
               <CardContent className="text-center">
@@ -27,8 +27,8 @@ export default function CashFlow() {
                   <span className="font-medium">Coming Soon</span>
                 </div>
                 <p className="mt-4 text-gray-600">
-                  Predict your future cash position with AI-driven forecasts based on your invoice data, 
-                  payment patterns, and seasonal trends.
+                  Plan your future cash position with scenario-based forecasts using your invoice data, 
+                  payment commitments, and seasonal patterns.
                 </p>
               </CardContent>
             </Card>

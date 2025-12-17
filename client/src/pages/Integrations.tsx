@@ -150,7 +150,7 @@ export default function Integrations() {
                 3
               </div>
               <h3 className="text-lg font-bold text-gray-900 mb-2">Analyse</h3>
-              <p className="text-gray-600">AI analyses payment behaviour and prioritises your receivables</p>
+              <p className="text-gray-600">Qashivo prioritises your receivables based on aging, amount, and risk rules</p>
             </div>
             
             <div className="text-center">
