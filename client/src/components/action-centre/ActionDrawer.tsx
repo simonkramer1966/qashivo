@@ -294,54 +294,6 @@ export function ActionDrawer({ open, onOpenChange, customer }: ActionDrawerProps
     
     return (
       <div className="space-y-4">
-        {/* Customer Summary */}
-        <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-md border border-gray-200/30 dark:border-gray-700/30 rounded-lg p-4">
-          <h3 className="text-sm font-semibold mb-3">Customer Summary</h3>
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-500 dark:text-gray-400">Customer:</span>
-              <span className="font-medium" data-testid="text-customer-name">{customer.contactName}</span>
-            </div>
-            {customer.email && (
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-500 dark:text-gray-400">Email:</span>
-                <span className="text-sm" data-testid="text-customer-email">{customer.email}</span>
-              </div>
-            )}
-            {customer.phone && (
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-500 dark:text-gray-400">Phone:</span>
-                <span className="text-sm" data-testid="text-customer-phone">{customer.phone}</span>
-              </div>
-            )}
-            <Separator />
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-2">
-                <DollarSign className="h-4 w-4" />
-                Total Outstanding:
-              </span>
-              <span className="font-bold text-lg text-red-600" data-testid="text-total-outstanding">
-                {formatCurrency(customer.totalOutstanding)}
-              </span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-2">
-                <Calendar className="h-4 w-4" />
-                {customer.daysOverdue >= 0 ? 'Days Overdue:' : 'Days Until Due:'}
-              </span>
-              <Badge variant={customer.daysOverdue > 0 ? "destructive" : "secondary"} data-testid="badge-days-overdue">
-                {Math.abs(customer.daysOverdue)} days
-              </Badge>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-500 dark:text-gray-400">Stage:</span>
-              <Badge className="capitalize" data-testid="badge-stage">
-                {customer.stage?.replace('_', ' ') || 'Due'}
-              </Badge>
-            </div>
-          </div>
-        </div>
-
         {/* Invoices List */}
         <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-md border border-gray-200/30 dark:border-gray-700/30 rounded-lg p-4">
           <h3 className="text-sm font-semibold mb-3">Outstanding Invoices ({customer.invoices.length})</h3>
