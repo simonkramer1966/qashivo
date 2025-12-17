@@ -25,13 +25,9 @@ export function setupRetellWebSocket(wss: WebSocketServer): void {
     console.log('[Retell WebSocket] New Retell Custom LLM connection, readyState:', ws.readyState);
     
     let responseIdCounter = 0;
-    let beginMessageSent = false;
     
-    // Function to send begin message
-    const sendBeginMessage = () => {
-      if (beginMessageSent) return;
-      beginMessageSent = true;
-      
+    // Send begin message IMMEDIATELY - simplest approach
+    if (ws.readyState === 1) {
       const beginMessage = {
         response_type: "response",
         response_id: responseIdCounter++,
@@ -39,25 +35,8 @@ export function setupRetellWebSocket(wss: WebSocketServer): void {
         content_complete: true,
         end_call: false
       };
-      try {
-        ws.send(JSON.stringify(beginMessage));
-        console.log('[Retell WebSocket] Sent begin message successfully');
-      } catch (err) {
-        console.error('[Retell WebSocket] Error sending begin message:', err);
-      }
-    };
-    
-    // Send config event first (per official Retell protocol)
-    if (ws.readyState === 1) {
-      const configEvent = {
-        response_type: "config",
-        config: {
-          auto_reconnect: true,
-          call_details: true
-        }
-      };
-      ws.send(JSON.stringify(configEvent));
-      console.log('[Retell WebSocket] Sent config event');
+      ws.send(JSON.stringify(beginMessage));
+      console.log('[Retell WebSocket] Sent begin message immediately');
     }
     
     ws.on('message', async (data: Buffer) => {
@@ -69,10 +48,9 @@ export function setupRetellWebSocket(wss: WebSocketServer): void {
           callId = message.call_id;
         }
         
-        // Handle call_details - send begin message after receiving this
+        // Handle call_details - just log it
         if (message.interaction_type === 'call_details') {
-          console.log('[Retell WebSocket] Received call_details, sending begin message');
-          sendBeginMessage();
+          console.log('[Retell WebSocket] Received call_details');
           return;
         }
         
