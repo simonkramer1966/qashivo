@@ -255,16 +255,70 @@ export function ActionPreviewDrawer({
         title: 'AI Voice Call Initiated',
         description: `Calling ${action?.contactName}...`,
       });
-      // Invalidate all relevant queries to refresh data
       queryClient.invalidateQueries({ queryKey: ['/api/automation/daily-plan'] });
       queryClient.invalidateQueries({ queryKey: ['/api/actions', action?.id, 'preview'] });
       queryClient.invalidateQueries({ queryKey: ['/api/contacts', action?.contactId, 'debtor-snapshot'] });
-      // Close the drawer after successful call initiation
       onOpenChange(false);
     },
     onError: (error: Error) => {
       toast({ 
         title: 'Failed to initiate call',
+        description: error.message,
+        variant: 'destructive' 
+      });
+    },
+  });
+
+  const emailMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest('POST', `/api/actions/${action?.id}/email`, {});
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ message: 'Failed to send email' }));
+        throw new Error(errorData.message || 'Failed to send email');
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ 
+        title: 'Email Sent',
+        description: `Email sent to ${action?.contactName}`,
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/automation/daily-plan'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/actions', action?.id, 'preview'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/contacts', action?.contactId, 'history'] });
+      onOpenChange(false);
+    },
+    onError: (error: Error) => {
+      toast({ 
+        title: 'Failed to send email',
+        description: error.message,
+        variant: 'destructive' 
+      });
+    },
+  });
+
+  const smsMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest('POST', `/api/actions/${action?.id}/sms`, {});
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ message: 'Failed to send SMS' }));
+        throw new Error(errorData.message || 'Failed to send SMS');
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ 
+        title: 'SMS Sent',
+        description: `SMS sent to ${action?.contactName}`,
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/automation/daily-plan'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/actions', action?.id, 'preview'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/contacts', action?.contactId, 'history'] });
+      onOpenChange(false);
+    },
+    onError: (error: Error) => {
+      toast({ 
+        title: 'Failed to send SMS',
         description: error.message,
         variant: 'destructive' 
       });
@@ -817,32 +871,64 @@ export function ActionPreviewDrawer({
         </Tabs>
 
         {/* Footer with actions */}
-        <div className="px-6 py-4 border-t bg-slate-50/80 flex items-center justify-between gap-3">
+        <div className="px-6 py-4 border-t bg-slate-50/80 flex items-center gap-2">
           <Button
             variant="outline"
+            size="sm"
             className="text-amber-600 border-amber-300 hover:bg-amber-50"
             onClick={() => onEscalateToVIP(action.id)}
             disabled={isEscalating}
             data-testid="button-drawer-vip"
           >
-            {isEscalating ? 'Moving...' : 'Move to VIP'}
+            {isEscalating ? 'Moving...' : 'VIP'}
           </Button>
           <Button
             variant="outline"
+            size="sm"
             className="text-purple-600 border-purple-300 hover:bg-purple-50"
             onClick={() => voiceCallMutation.mutate()}
             disabled={voiceCallMutation.isPending}
             data-testid="button-drawer-ai-voice"
           >
             {voiceCallMutation.isPending ? (
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              <Loader2 className="w-4 h-4 mr-1 animate-spin" />
             ) : (
-              <Phone className="w-4 h-4 mr-2" />
+              <Phone className="w-4 h-4 mr-1" />
             )}
-            {voiceCallMutation.isPending ? 'Calling...' : 'AI Voice'}
+            {voiceCallMutation.isPending ? 'Calling...' : 'Voice'}
           </Button>
           <Button
-            className="bg-[#17B6C3] hover:bg-[#1396A1] text-white flex-1"
+            variant="outline"
+            size="sm"
+            className="text-blue-600 border-blue-300 hover:bg-blue-50"
+            onClick={() => emailMutation.mutate()}
+            disabled={emailMutation.isPending}
+            data-testid="button-drawer-email"
+          >
+            {emailMutation.isPending ? (
+              <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+            ) : (
+              <Mail className="w-4 h-4 mr-1" />
+            )}
+            {emailMutation.isPending ? 'Sending...' : 'Email'}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="text-green-600 border-green-300 hover:bg-green-50"
+            onClick={() => smsMutation.mutate()}
+            disabled={smsMutation.isPending}
+            data-testid="button-drawer-sms"
+          >
+            {smsMutation.isPending ? (
+              <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+            ) : (
+              <MessageSquare className="w-4 h-4 mr-1" />
+            )}
+            {smsMutation.isPending ? 'Sending...' : 'SMS'}
+          </Button>
+          <Button
+            className="bg-[#17B6C3] hover:bg-[#1396A1] text-white flex-1 ml-auto"
             onClick={() => onApprove(action.id)}
             disabled={isApproving || action.status !== 'pending_approval'}
             data-testid="button-drawer-approve"

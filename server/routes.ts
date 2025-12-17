@@ -6892,6 +6892,169 @@ Guidelines:
     }
   });
 
+  // Email - send email for an action
+  app.post("/api/actions/:id/email", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { id } = req.params;
+
+      // Get action
+      const existingAction = await db
+        .select()
+        .from(actions)
+        .where(and(eq(actions.id, id), eq(actions.tenantId, user.tenantId)))
+        .limit(1);
+
+      if (!existingAction.length) {
+        return res.status(404).json({ message: "Action not found" });
+      }
+
+      const action = existingAction[0];
+      
+      // Get contact
+      const contact = await storage.getContact(action.contactId, user.tenantId);
+      if (!contact) {
+        return res.status(404).json({ message: "Contact not found" });
+      }
+      if (!contact.email) {
+        return res.status(400).json({ message: "Contact has no email address" });
+      }
+
+      // Use communications orchestrator for email
+      const { communicationsOrchestrator } = await import('./services/communicationsOrchestrator');
+      
+      const invoiceIds = action.invoiceId ? [action.invoiceId] : [];
+
+      const result = await communicationsOrchestrator.send({
+        tenantId: user.tenantId,
+        contactId: action.contactId,
+        channel: 'email',
+        invoiceIds,
+        actionId: id,
+        priority: 'normal',
+        tone: 'friendly_assumptive',
+        subject: action.subject || 'Invoice Reminder',
+        content: action.content || 'This is a reminder about your outstanding invoice.',
+      });
+
+      if (!result.success) {
+        return res.status(400).json({ 
+          message: result.blockedReason || result.error || "Email could not be sent",
+          status: result.status,
+        });
+      }
+
+      console.log(`📧 Email sent for action ${id}: ${result.messageId}`);
+
+      // Update action status
+      await db
+        .update(actions)
+        .set({
+          status: 'completed',
+          executedAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .where(eq(actions.id, id));
+
+      res.json({ 
+        message: "Email sent successfully",
+        messageId: result.messageId,
+        actionId: id,
+        toEmail: contact.email,
+        status: result.status,
+      });
+    } catch (error) {
+      console.error("Error sending email:", error);
+      const message = error instanceof Error ? error.message : "Failed to send email";
+      res.status(500).json({ message });
+    }
+  });
+
+  // SMS - send SMS for an action
+  app.post("/api/actions/:id/sms", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { id } = req.params;
+
+      // Get action
+      const existingAction = await db
+        .select()
+        .from(actions)
+        .where(and(eq(actions.id, id), eq(actions.tenantId, user.tenantId)))
+        .limit(1);
+
+      if (!existingAction.length) {
+        return res.status(404).json({ message: "Action not found" });
+      }
+
+      const action = existingAction[0];
+      
+      // Get contact
+      const contact = await storage.getContact(action.contactId, user.tenantId);
+      if (!contact) {
+        return res.status(404).json({ message: "Contact not found" });
+      }
+      if (!contact.phone) {
+        return res.status(400).json({ message: "Contact has no phone number" });
+      }
+
+      // Use communications orchestrator for SMS
+      const { communicationsOrchestrator } = await import('./services/communicationsOrchestrator');
+      
+      const invoiceIds = action.invoiceId ? [action.invoiceId] : [];
+
+      const result = await communicationsOrchestrator.send({
+        tenantId: user.tenantId,
+        contactId: action.contactId,
+        channel: 'sms',
+        invoiceIds,
+        actionId: id,
+        priority: 'normal',
+        tone: 'friendly_assumptive',
+        content: action.content || 'Reminder: You have an outstanding invoice. Please contact us to arrange payment.',
+      });
+
+      if (!result.success) {
+        return res.status(400).json({ 
+          message: result.blockedReason || result.error || "SMS could not be sent",
+          status: result.status,
+        });
+      }
+
+      console.log(`📱 SMS sent for action ${id}: ${result.messageId}`);
+
+      // Update action status
+      await db
+        .update(actions)
+        .set({
+          status: 'completed',
+          executedAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .where(eq(actions.id, id));
+
+      res.json({ 
+        message: "SMS sent successfully",
+        messageId: result.messageId,
+        actionId: id,
+        toPhone: contact.phone,
+        status: result.status,
+      });
+    } catch (error) {
+      console.error("Error sending SMS:", error);
+      const message = error instanceof Error ? error.message : "Failed to send SMS";
+      res.status(500).json({ message });
+    }
+  });
+
   // ============================================================================
   // End Action Centre Triage Endpoints
   // ============================================================================
