@@ -469,7 +469,7 @@ export default function NewSidebar() {
             <img src={nexusLogo} alt="Qashivo" className="w-full h-full object-contain" />
           </div>
           {!isCollapsed && (
-            <div>
+            <div className="text-left">
               <h1 className="text-xl font-semibold text-gray-900">
                 Qashivo
               </h1>
