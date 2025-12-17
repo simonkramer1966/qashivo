@@ -251,13 +251,20 @@ class CommunicationsOrchestrator {
       }
       
       const tenant = await storage.getTenant(request.tenantId);
-      const fromName = tenant?.name || 'Qashivo';
+      
+      // Get tenant's configured email sender (default one)
+      const emailSenders = await storage.getEmailSenders(request.tenantId);
+      const defaultSender = emailSenders.find(s => s.isDefault) || emailSenders[0];
+      
+      // Use tenant's sender email if configured, otherwise fall back to env var
+      const fromEmail = defaultSender?.email || process.env.SENDGRID_FROM_EMAIL || 'noreply@qashivo.com';
+      const fromName = defaultSender?.fromName || defaultSender?.name || tenant?.name || 'Qashivo';
       
       const result = await sendEmail({
         to: contact.email,
         subject: request.subject || 'Invoice Reminder',
         html: request.content,
-        from: `${fromName} <noreply@qashivo.com>`,
+        from: `${fromName} <${fromEmail}>`,
         invoiceId: request.invoiceIds?.[0],
         customerId: request.contactId,
       });
