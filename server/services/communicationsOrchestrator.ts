@@ -11,6 +11,7 @@ import {
 import { sendEmail } from './sendgrid';
 import { sendSMS } from './vonage';
 import { randomUUID } from 'crypto';
+import { wrapInHtmlEmailTemplate } from './messagePostProcessor';
 
 // Channel adapter interface - unified contract for all communication channels
 interface ChannelAdapter {
@@ -265,10 +266,18 @@ class CommunicationsOrchestrator {
       const recipientEmail = testEmailOverride;
       console.log(`📧 [TEST MODE] Redirecting email from ${contact.email} to ${recipientEmail}`);
       
+      // Wrap content in professional HTML email template
+      const companyName = tenant?.name || 'Qashivo';
+      const htmlContent = wrapInHtmlEmailTemplate(request.content, {
+        companyName,
+        companyEmail: fromEmail,
+        brandColor: '#17B6C3'
+      });
+      
       const result = await sendEmail({
         to: recipientEmail,
         subject: request.subject || 'Invoice Reminder',
-        html: request.content,
+        html: htmlContent,
         from: `${fromName} <${fromEmail}>`,
         invoiceId: request.invoiceIds?.[0],
         customerId: request.contactId,

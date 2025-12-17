@@ -210,3 +210,148 @@ export function buildSmsWithLimit(
   
   return result.trim();
 }
+
+/**
+ * Wraps email content in a professional HTML email template
+ */
+export interface EmailTemplateOptions {
+  companyName: string;
+  companyEmail?: string;
+  brandColor?: string;
+}
+
+export function wrapInHtmlEmailTemplate(
+  bodyContent: string,
+  options: EmailTemplateOptions
+): string {
+  const { companyName, companyEmail, brandColor = '#17B6C3' } = options;
+  
+  // Check if content is already a full HTML document - if so, extract body content
+  let contentToWrap = bodyContent;
+  if (/<html[\s>]/i.test(bodyContent)) {
+    // Extract content between <body> tags if present
+    const bodyMatch = bodyContent.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+    if (bodyMatch) {
+      contentToWrap = bodyMatch[1];
+    } else {
+      // Has <html> but no <body> - try to extract what's inside <html>
+      const htmlMatch = bodyContent.match(/<html[^>]*>([\s\S]*?)<\/html>/i);
+      if (htmlMatch) {
+        contentToWrap = htmlMatch[1];
+      }
+    }
+  }
+  
+  const processedBody = cleanEmailContent(contentToWrap);
+  
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Email from ${companyName}</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      font-size: 16px;
+      line-height: 1.6;
+      color: #333333;
+      background-color: #f5f5f5;
+    }
+    .email-wrapper {
+      max-width: 600px;
+      margin: 0 auto;
+      background-color: #ffffff;
+    }
+    .email-header {
+      background-color: ${brandColor};
+      padding: 24px 32px;
+      text-align: left;
+    }
+    .email-header h1 {
+      margin: 0;
+      font-size: 20px;
+      font-weight: 600;
+      color: #ffffff;
+    }
+    .email-body {
+      padding: 32px;
+      background-color: #ffffff;
+    }
+    .email-body p {
+      margin: 0 0 16px 0;
+      line-height: 1.6;
+    }
+    .email-body p:last-child {
+      margin-bottom: 0;
+    }
+    .email-body table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0;
+      font-size: 14px;
+    }
+    .email-body table th {
+      background-color: #f8f9fa;
+      border: 1px solid #e9ecef;
+      padding: 12px;
+      text-align: left;
+      font-weight: 600;
+      color: #495057;
+    }
+    .email-body table td {
+      border: 1px solid #e9ecef;
+      padding: 12px;
+      color: #495057;
+    }
+    .email-body table tr:nth-child(even) {
+      background-color: #f8f9fa;
+    }
+    .email-footer {
+      padding: 24px 32px;
+      background-color: #f8f9fa;
+      border-top: 1px solid #e9ecef;
+      font-size: 13px;
+      color: #6c757d;
+    }
+    .email-footer p {
+      margin: 0 0 8px 0;
+    }
+    .email-footer a {
+      color: ${brandColor};
+      text-decoration: none;
+    }
+    @media only screen and (max-width: 600px) {
+      .email-body {
+        padding: 20px;
+      }
+      .email-header {
+        padding: 16px 20px;
+      }
+      .email-footer {
+        padding: 16px 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="email-wrapper">
+    <div class="email-header">
+      <h1>${companyName}</h1>
+    </div>
+    <div class="email-body">
+      ${processedBody}
+    </div>
+    <div class="email-footer">
+      <p>This email was sent by ${companyName}.</p>
+      ${companyEmail ? `<p>Questions? Reply to this email or contact us at <a href="mailto:${companyEmail}">${companyEmail}</a></p>` : ''}
+      <p style="margin-top: 16px; font-size: 11px; color: #adb5bd;">
+        Please do not reply to this email if it was sent from a no-reply address.
+      </p>
+    </div>
+  </div>
+</body>
+</html>`;
+}
