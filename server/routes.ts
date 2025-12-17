@@ -5398,7 +5398,7 @@ Guidelines:
           ptpCount: ptpActions.length,
           commitments: Math.round(commitmentAmount),
           customers: uniqueCustomers,
-          coverage: uniqueCustomers > 0 ? `${Math.min(100, Math.round((uniqueCustomers / Math.max(1, overdueInvoicesRaw.length)) * 100))}%` : '0%',
+          coverage: uniqueCustomers > 0 ? `${Math.min(100, Math.round((uniqueCustomers / Math.max(1, allInvoices.filter(inv => inv.status === 'unpaid' || inv.status === 'overdue').length)) * 100))}%` : '0%',
           responseRate: actions.length > 0 ? Math.round((ptpActions.length / actions.length) * 100) : 0,
           responseChange: '—', // Will be calculated by comparing periods
           emailOpen: emailActions.length > 0 ? `${Math.round(emailActions.filter(a => a.metadata?.opened).length / emailActions.length * 100)}%` : '0%',
