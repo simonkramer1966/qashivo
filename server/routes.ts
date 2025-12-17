@@ -4345,7 +4345,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const limit = req.query.limit ? parseInt(req.query.limit) : undefined;
-      const actionsData = await storage.getActions(user.tenantId, limit);
+      const statusFilter = req.query.status as string | undefined;
+      let actionsData = await storage.getActions(user.tenantId, limit);
+      
+      // Filter by status if provided
+      if (statusFilter) {
+        actionsData = actionsData.filter(action => action.status === statusFilter);
+      }
       
       // Enrich actions with contact and invoice info
       const enrichedActions = await Promise.all(
