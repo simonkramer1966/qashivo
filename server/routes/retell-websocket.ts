@@ -24,18 +24,18 @@ export function setupRetellWebSocket(wss: WebSocketServer): void {
     
     console.log('[Retell WebSocket] New Retell Custom LLM connection');
     
-    // Send config event immediately - request call_details
-    const configEvent = {
-      response_type: "config",
-      config: {
-        auto_reconnect: true,
-        call_details: true
-      }
-    };
-    ws.send(JSON.stringify(configEvent));
-    console.log('[Retell WebSocket] Sent config event');
-    
     let responseIdCounter = 0;
+    
+    // Send begin message IMMEDIATELY upon connection (required by Retell)
+    const beginMessage = {
+      response_type: "response",
+      response_id: responseIdCounter++,
+      content: "Hello! This is Charlie from Qashivo. How can I help you today?",
+      content_complete: true,
+      end_call: false
+    };
+    ws.send(JSON.stringify(beginMessage));
+    console.log('[Retell WebSocket] Sent begin message immediately');
     
     ws.on('message', async (data: Buffer) => {
       try {
@@ -46,19 +46,9 @@ export function setupRetellWebSocket(wss: WebSocketServer): void {
           callId = message.call_id;
         }
         
-        // Handle different interaction types per Retell protocol
+        // Handle call_details - just log it
         if (message.interaction_type === 'call_details') {
-          // Received call details - NOW send the begin message
-          console.log('[Retell WebSocket] Received call_details, sending begin message');
-          const beginMessage = {
-            response_type: "response",
-            response_id: responseIdCounter++,
-            content: "Hello! This is Charlie from Qashivo. How can I help you today?",
-            content_complete: true,
-            end_call: false
-          };
-          ws.send(JSON.stringify(beginMessage));
-          console.log('[Retell WebSocket] Sent begin message');
+          console.log('[Retell WebSocket] Received call_details');
           return;
         }
         
