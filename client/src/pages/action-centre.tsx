@@ -1813,15 +1813,6 @@ export default function ActionCentre() {
                             <p className="text-sm text-slate-600">Review and approve to let AI proceed</p>
                           </div>
                         </div>
-                        <Button
-                          onClick={() => approvePlanMutation.mutate()}
-                          disabled={approvePlanMutation.isPending}
-                          className="bg-[#17B6C3] hover:bg-[#1396A1] text-white"
-                          data-testid="button-approve-pending"
-                        >
-                          <CheckCircle2 className="h-4 w-4 mr-2" />
-                          Approve All ({dailyPlan.actions.filter(a => a.status === 'pending_approval').length})
-                        </Button>
                       </div>
                       <div className="divide-y divide-slate-100">
                         {dailyPlan.actions.filter(a => a.status === 'pending_approval').map((item, idx) => {
