@@ -149,7 +149,7 @@ const getOutcomeIndicator = (outcome?: string, metadata?: TimelineEntry['metadat
     );
   }
   
-  if (metadata?.callbackRequested) {
+  if (metadata?.callbackRequested || outcome === 'callback_requested') {
     return (
       <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 text-xs">
         <PhoneCall className="h-3 w-3 mr-1" />
@@ -157,8 +157,43 @@ const getOutcomeIndicator = (outcome?: string, metadata?: TimelineEntry['metadat
       </Badge>
     );
   }
+
+  if (outcome === 'ptp_obtained' || outcome === 'promised_payment') {
+    return (
+      <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 text-xs">
+        <Banknote className="h-3 w-3 mr-1" />
+        PTP Obtained
+      </Badge>
+    );
+  }
+
+  if (outcome === 'dispute_raised') {
+    return (
+      <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 text-xs">
+        <AlertTriangle className="h-3 w-3 mr-1" />
+        Dispute
+      </Badge>
+    );
+  }
+
+  if (outcome === 'ptp_breach_followup') {
+    return (
+      <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 text-xs">
+        <AlertCircle className="h-3 w-3 mr-1" />
+        PTP Breach
+      </Badge>
+    );
+  }
+
+  if (outcome === 'voicemail_left') {
+    return (
+      <Badge variant="outline" className="bg-slate-50 text-slate-600 border-slate-200 text-xs">
+        Voicemail
+      </Badge>
+    );
+  }
   
-  if (outcome === 'completed' || outcome === 'delivered') {
+  if (outcome === 'completed' || outcome === 'delivered' || outcome === 'acknowledged') {
     return (
       <CheckCircle2 className="h-4 w-4 text-emerald-500" />
     );
@@ -173,6 +208,14 @@ const getOutcomeIndicator = (outcome?: string, metadata?: TimelineEntry['metadat
   if (outcome === 'scheduled' || outcome === 'pending') {
     return (
       <Clock className="h-4 w-4 text-amber-500" />
+    );
+  }
+
+  if (outcome === 'no_response') {
+    return (
+      <Badge variant="outline" className="bg-slate-50 text-slate-500 border-slate-200 text-xs">
+        No Response
+      </Badge>
     );
   }
   

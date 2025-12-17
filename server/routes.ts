@@ -4003,24 +4003,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const timeline = [
         ...recentActions.map(action => {
           const actionMeta = action.metadata as Record<string, any> || {};
+          const actionOutcome = action.outcome as Record<string, any> || {};
+          const ptpAmount = actionMeta.ptpAmount || actionMeta.promised_amount || actionOutcome.promisedAmount || undefined;
+          const ptpDate = actionMeta.ptpDate || actionMeta.promised_payment_date || actionOutcome.promisedDate || undefined;
+          const disputeReason = actionMeta.disputeReason || actionMeta.dispute_reason || actionOutcome.disputeReason || undefined;
+          const callbackTime = actionMeta.callbackTime || actionMeta.callback_time || actionOutcome.callbackTime || undefined;
+          const outcomeType = actionOutcome.outcome || action.status;
+          
+          const displayDate = action.completedAt || action.scheduledFor || action.createdAt || new Date();
           return {
             id: action.id,
             type: action.type as 'email' | 'sms' | 'voice' | 'note' | 'manual_call',
             direction: action.source === 'inbound' ? 'inbound' as const : 'outbound' as const,
             description: action.subject || action.content?.substring(0, 100) || `${action.type} action`,
-            outcome: action.status,
-            createdAt: action.createdAt?.toISOString() || new Date().toISOString(),
+            outcome: outcomeType,
+            status: action.status,
+            createdAt: displayDate instanceof Date ? displayDate.toISOString() : displayDate,
+            completedAt: action.completedAt?.toISOString() || undefined,
             createdBy: undefined,
             metadata: {
-              ptpAmount: actionMeta.ptpAmount || actionMeta.promised_amount || undefined,
-              ptpDate: actionMeta.ptpDate || actionMeta.promised_payment_date || undefined,
-              disputeReason: actionMeta.disputeReason || actionMeta.dispute_reason || undefined,
-              callbackRequested: actionMeta.callbackRequested || actionMeta.callback_requested || false,
-              callbackTime: actionMeta.callbackTime || actionMeta.callback_time || undefined,
+              ptpAmount: ptpAmount ? parseFloat(ptpAmount.toString()) / 100 : undefined,
+              ptpDate: ptpDate,
+              disputeReason: disputeReason,
+              callbackRequested: actionMeta.callbackRequested || actionMeta.callback_requested || actionOutcome.callback_requested || false,
+              callbackTime: callbackTime,
               callDuration: actionMeta.callDuration || actionMeta.call_duration || undefined,
               deliveryStatus: actionMeta.deliveryStatus || undefined,
               opened: actionMeta.opened || false,
-              replied: actionMeta.replied || false
+              replied: actionMeta.replied || false,
+              sentiment: actionOutcome.sentiment || undefined
             }
           };
         }),
