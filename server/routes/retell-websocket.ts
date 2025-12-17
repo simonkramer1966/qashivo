@@ -24,7 +24,7 @@ export function setupRetellWebSocket(wss: WebSocketServer): void {
     
     console.log('[Retell WebSocket] New Retell Custom LLM connection');
     
-    // Send config event (optional but recommended)
+    // Send config event immediately - request call_details
     const configEvent = {
       response_type: "config",
       config: {
@@ -35,50 +35,78 @@ export function setupRetellWebSocket(wss: WebSocketServer): void {
     ws.send(JSON.stringify(configEvent));
     console.log('[Retell WebSocket] Sent config event');
     
-    // Send initial begin message - Retell requires this!
-    const beginMessage = {
-      response_type: "response",
-      response_id: 0,
-      content: "Hello! This is Charlie from Qashivo. How can I help you today?",
-      content_complete: true,
-      end_call: false
-    };
-    ws.send(JSON.stringify(beginMessage));
-    console.log('[Retell WebSocket] Sent begin message');
+    let responseIdCounter = 0;
     
     ws.on('message', async (data: Buffer) => {
       try {
         const message = JSON.parse(data.toString());
-        console.log('[Retell WebSocket] Received:', JSON.stringify(message).substring(0, 200));
+        console.log('[Retell WebSocket] Received:', JSON.stringify(message).substring(0, 300));
         
         if (message.call_id) {
           callId = message.call_id;
         }
         
-        const request: RetellRequest = {
-          interaction_type: message.interaction_type || 'response_required',
-          transcript: message.transcript || [],
-          call_id: message.call_id || callId || 'unknown',
-          metadata: message.metadata || message.retell_llm_dynamic_variables || {},
-        };
+        // Handle different interaction types per Retell protocol
+        if (message.interaction_type === 'call_details') {
+          // Received call details - NOW send the begin message
+          console.log('[Retell WebSocket] Received call_details, sending begin message');
+          const beginMessage = {
+            response_type: "response",
+            response_id: responseIdCounter++,
+            content: "Hello! This is Charlie from Qashivo. How can I help you today?",
+            content_complete: true,
+            end_call: false
+          };
+          ws.send(JSON.stringify(beginMessage));
+          console.log('[Retell WebSocket] Sent begin message');
+          return;
+        }
         
-        const response = await handleRetellRequest(request);
+        if (message.interaction_type === 'ping_pong') {
+          // Respond to ping with pong
+          const pongResponse = {
+            response_type: "ping_pong",
+            timestamp: message.timestamp
+          };
+          ws.send(JSON.stringify(pongResponse));
+          return;
+        }
         
-        const retellResponse = {
-          response_id: response.response_id,
-          content: response.content,
-          content_complete: response.content_complete,
-          end_call: response.end_call,
-        };
+        if (message.interaction_type === 'update_only') {
+          // Just a transcript update, no response needed
+          console.log('[Retell WebSocket] Update only, no response needed');
+          return;
+        }
         
-        console.log('[Retell WebSocket] Sending:', JSON.stringify(retellResponse).substring(0, 200));
-        ws.send(JSON.stringify(retellResponse));
+        // Handle response_required and reminder_required
+        if (message.interaction_type === 'response_required' || message.interaction_type === 'reminder_required') {
+          const request: RetellRequest = {
+            interaction_type: message.interaction_type,
+            transcript: message.transcript || [],
+            call_id: message.call_id || callId || 'unknown',
+            metadata: message.metadata || message.retell_llm_dynamic_variables || {},
+          };
+          
+          const response = await handleRetellRequest(request);
+          
+          const retellResponse = {
+            response_type: "response",
+            response_id: responseIdCounter++,
+            content: response.content,
+            content_complete: response.content_complete,
+            end_call: response.end_call,
+          };
+          
+          console.log('[Retell WebSocket] Sending:', JSON.stringify(retellResponse).substring(0, 200));
+          ws.send(JSON.stringify(retellResponse));
+        }
         
       } catch (error) {
         console.error('[Retell WebSocket] Error processing message:', error);
         
         const errorResponse = {
-          response_id: 0,
+          response_type: "response",
+          response_id: responseIdCounter++,
           content: "I apologize, I'm having a technical issue. Let me connect you with someone who can help.",
           content_complete: true,
           end_call: true,
