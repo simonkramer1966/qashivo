@@ -1654,36 +1654,6 @@ export default function ActionCentre() {
                     </div>
                   </div>
 
-                  {/* Status Summary Badges */}
-                  <div className="flex flex-wrap gap-3">
-                    <Badge className={`text-sm py-1.5 px-3 ${dailyPlan.actions.filter(a => a.status === 'exception').length > 0 ? 'bg-amber-100 text-amber-700 border-amber-200' : 'bg-slate-100 text-slate-500 border-slate-200'}`}>
-                      <AlertTriangle className="h-3.5 w-3.5 mr-1.5" />
-                      {dailyPlan.actions.filter(a => a.status === 'exception').length} need review
-                    </Badge>
-                    <Badge className={`text-sm py-1.5 px-3 ${dailyPlan.actions.filter(a => a.status === 'pending_approval').length > 0 ? 'bg-indigo-100 text-indigo-700 border-indigo-200' : 'bg-slate-100 text-slate-500 border-slate-200'}`}>
-                      <Clock className="h-3.5 w-3.5 mr-1.5" />
-                      {dailyPlan.actions.filter(a => a.status === 'pending_approval').length} awaiting approval
-                    </Badge>
-                    <Badge className={`text-sm py-1.5 px-3 ${dailyPlan.actions.filter(a => a.status === 'scheduled').length > 0 ? 'bg-green-100 text-green-700 border-green-200' : 'bg-slate-100 text-slate-500 border-slate-200'}`}>
-                      <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" />
-                      {dailyPlan.actions.filter(a => a.status === 'scheduled').length} ready to execute
-                    </Badge>
-                    {completedActions.filter(a => {
-                      const completedDate = new Date(a.completedAt);
-                      const today = new Date();
-                      return completedDate.toDateString() === today.toDateString();
-                    }).length > 0 && (
-                      <Badge className="text-sm py-1.5 px-3 bg-teal-100 text-teal-700 border-teal-200">
-                        <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" />
-                        {completedActions.filter(a => {
-                          const completedDate = new Date(a.completedAt);
-                          const today = new Date();
-                          return completedDate.toDateString() === today.toDateString();
-                        }).length} executed today
-                      </Badge>
-                    )}
-                  </div>
-
                   {/* AI Activity Feed - What AI has done today */}
                   {completedActions.filter(a => {
                     const completedDate = new Date(a.completedAt);
