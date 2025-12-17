@@ -279,6 +279,44 @@ export class RetellService {
    * Process webhook data from Retell AI
    */
   processWebhookData(webhookData: any): Partial<InsertVoiceCall> {
+    const callAnalysis = webhookData.call_analysis || {};
+    
+    // Extract enhanced intelligence from Post-Call Data Extraction
+    // These fields should be configured in Retell dashboard under "Post-Call Data Extraction"
+    const customData = callAnalysis.custom_analysis_data || {};
+    
+    // Parse promised payment date if provided
+    let promisedDate: Date | undefined;
+    if (customData.promised_payment_date) {
+      try {
+        promisedDate = new Date(customData.promised_payment_date);
+      } catch (e) {
+        console.log('Could not parse promised_payment_date:', customData.promised_payment_date);
+      }
+    }
+    
+    // Determine call disposition based on available data
+    let callDisposition: string | undefined;
+    if (customData.wrong_number === true || customData.wrong_number === 'true') {
+      callDisposition = 'wrong_number';
+    } else if (customData.callback_requested === true || customData.callback_requested === 'true') {
+      callDisposition = 'callback_requested';
+    } else if (webhookData.call_status === 'voicemail') {
+      callDisposition = 'voicemail';
+    } else if (webhookData.call_status === 'no-answer' || webhookData.disconnection_reason === 'no_answer') {
+      callDisposition = 'no_answer';
+    } else if (customData.dispute_raised === true || customData.dispute_raised === 'true') {
+      callDisposition = 'connected_dispute';
+    } else if (customData.partial_payment_offered) {
+      callDisposition = 'connected_partial';
+    } else if (customData.payment_promised === true || customData.payment_promised === 'true' || customData.promised_amount) {
+      callDisposition = 'connected_ptp';
+    } else if (customData.payment_refused === true || customData.payment_refused === 'true') {
+      callDisposition = 'connected_refused';
+    } else if (webhookData.call_status === 'ended' && webhookData.duration_ms > 10000) {
+      callDisposition = 'connected'; // Call connected but no specific outcome extracted
+    }
+    
     return {
       retellCallId: webhookData.call_id,
       retellAgentId: webhookData.agent_id,
@@ -290,11 +328,23 @@ export class RetellService {
       transcript: webhookData.transcript,
       recordingUrl: webhookData.recording_url,
       callAnalysis: webhookData.call_analysis,
-      userSentiment: webhookData.call_analysis?.user_sentiment,
-      callSuccessful: webhookData.call_analysis?.call_successful,
+      userSentiment: callAnalysis.user_sentiment,
+      callSuccessful: callAnalysis.call_successful,
       disconnectionReason: webhookData.disconnection_reason,
       startedAt: webhookData.start_timestamp ? new Date(webhookData.start_timestamp) : undefined,
       endedAt: webhookData.end_timestamp ? new Date(webhookData.end_timestamp) : undefined,
+      
+      // Enhanced intelligence fields
+      callDisposition,
+      promisedAmount: customData.promised_amount ? String(customData.promised_amount) : undefined,
+      promisedDate,
+      disputeReason: customData.dispute_reason,
+      callbackRequested: customData.callback_requested === true || customData.callback_requested === 'true',
+      callbackTime: customData.callback_time || customData.preferred_callback_time,
+      financialHardship: customData.financial_hardship === true || customData.financial_hardship === 'true',
+      wrongNumber: customData.wrong_number === true || customData.wrong_number === 'true',
+      partialPaymentOffered: customData.partial_payment_offered ? String(customData.partial_payment_offered) : undefined,
+      customExtractedData: Object.keys(customData).length > 0 ? customData : undefined,
     };
   }
 

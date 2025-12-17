@@ -1145,6 +1145,19 @@ export const voiceCalls = pgTable("voice_calls", {
   disconnectionReason: varchar("disconnection_reason"), // Why the call ended
   customerResponse: varchar("customer_response"), // "payment_promised", "dispute", "no_response", etc.
   followUpRequired: boolean("follow_up_required").default(false),
+  
+  // Enhanced intelligence from Retell Post-Call Data Extraction
+  callDisposition: varchar("call_disposition"), // "connected_ptp", "connected_dispute", "connected_partial", "connected_refused", "voicemail", "no_answer", "wrong_number", "callback_requested"
+  promisedAmount: decimal("promised_amount", { precision: 10, scale: 2 }), // Amount customer promised to pay
+  promisedDate: timestamp("promised_date"), // Date customer promised to pay by
+  disputeReason: text("dispute_reason"), // If dispute raised, what's the reason
+  callbackRequested: boolean("callback_requested").default(false), // Customer asked for callback
+  callbackTime: varchar("callback_time"), // Preferred callback time/date mentioned
+  financialHardship: boolean("financial_hardship").default(false), // Customer indicated financial difficulty
+  wrongNumber: boolean("wrong_number").default(false), // This is not the right contact
+  partialPaymentOffered: decimal("partial_payment_offered", { precision: 10, scale: 2 }), // Partial amount offered
+  customExtractedData: jsonb("custom_extracted_data"), // Any other extracted fields from Retell
+  
   scheduledAt: timestamp("scheduled_at"), // When the call was scheduled
   startedAt: timestamp("started_at"), // When the call actually started
   endedAt: timestamp("ended_at"), // When the call ended
