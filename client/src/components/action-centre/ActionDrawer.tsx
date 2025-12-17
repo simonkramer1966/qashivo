@@ -294,7 +294,10 @@ export function ActionDrawer({ open, onOpenChange, customer }: ActionDrawerProps
       <div className="space-y-4">
         {/* Invoices List */}
         <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-md border border-gray-200/30 dark:border-gray-700/30 rounded-lg p-4">
-          <h3 className="text-sm font-semibold mb-3">Outstanding Invoices ({customer.invoices.length})</h3>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold">Outstanding Invoices ({customer.invoices.length})</h3>
+            <span className="font-bold text-red-600">{formatCurrency(customer.totalOutstanding)}</span>
+          </div>
           <div className="space-y-2">
             {customer.invoices.map((invoice) => (
               <div
