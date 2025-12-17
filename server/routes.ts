@@ -6838,14 +6838,33 @@ Guidelines:
       // Get invoice IDs for the request
       const invoiceIds = action.invoiceId ? [action.invoiceId] : [];
 
+      // Map action priority to valid orchestrator priority values
+      const priorityMap: Record<string, 'low' | 'normal' | 'high' | 'urgent'> = {
+        'low': 'low',
+        'normal': 'normal',
+        'medium': 'normal',  // Map medium to normal
+        'high': 'high',
+        'urgent': 'urgent',
+      };
+      const orchestratorPriority = priorityMap[action.priority || 'normal'] || 'normal';
+
+      // Map priority to appropriate tone
+      const toneMap: Record<string, 'friendly_assumptive' | 'firm_specific' | 'formal_consequence'> = {
+        'low': 'friendly_assumptive',
+        'normal': 'friendly_assumptive',
+        'high': 'firm_specific',
+        'urgent': 'formal_consequence',
+      };
+      const orchestratorTone = toneMap[orchestratorPriority];
+
       const result = await communicationsOrchestrator.send({
         tenantId: user.tenantId,
         contactId: action.contactId,
         channel: 'voice',
         invoiceIds,
         actionId: id,
-        priority: (action.priority as 'low' | 'medium' | 'high') || 'medium',
-        tone: 'professional',
+        priority: orchestratorPriority,
+        tone: orchestratorTone,
         personalization: {
           action_type: 'manual_voice_call',
           initiated_by: user.id,
