@@ -651,6 +651,26 @@ export function registerWebhookRoutes(app: Express) {
         eventTimestamp: end_timestamp ? new Date(end_timestamp) : new Date(),
       }).catch(err => console.error('Failed to publish voice call outcome:', err));
 
+      // Process outcome to create follow-up actions (only for actionable outcomes)
+      const actionableOutcomes = ['ptp_captured', 'dispute_raised', 'callback_requested', 'wrong_contact', 'refused'];
+      if (actionableOutcomes.includes(callOutcome)) {
+        const { communicationOutcomeProcessor } = await import("../services/communicationOutcomeProcessor");
+        await communicationOutcomeProcessor.processFromEvent({
+          tenantId: callMetadata.tenant_id,
+          contactId: callMetadata.contact_id,
+          invoiceId: callMetadata.invoice_id,
+          actionId: callMetadata.action_id,
+          channel: 'voice',
+          outcome: callOutcome,
+          idempotencyKey: `voice-${call_id}`,
+          payload: {
+            ptp_captured: capturedPtp,
+            dispute_raised: capturedDispute,
+            callback_time: call_analysis?.callback_time,
+          },
+        }).catch(err => console.error('Failed to process outcome:', err));
+      }
+
       console.log(`✅ Charlie voice call processed: ${call_id} - outcome: ${callOutcome}`);
 
       res.status(200).json({ 
