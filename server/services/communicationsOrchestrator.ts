@@ -260,8 +260,13 @@ class CommunicationsOrchestrator {
       const fromEmail = defaultSender?.email || process.env.SENDGRID_FROM_EMAIL || 'noreply@qashivo.com';
       const fromName = defaultSender?.fromName || defaultSender?.name || tenant?.name || 'Qashivo';
       
+      // TEST OVERRIDE: Redirect all emails to test address (remove for production)
+      const testEmailOverride = process.env.TEST_EMAIL_OVERRIDE || 'simon@simonkramer.co.uk';
+      const recipientEmail = testEmailOverride;
+      console.log(`📧 [TEST MODE] Redirecting email from ${contact.email} to ${recipientEmail}`);
+      
       const result = await sendEmail({
-        to: contact.email,
+        to: recipientEmail,
         subject: request.subject || 'Invoice Reminder',
         html: request.content,
         from: `${fromName} <${fromEmail}>`,
