@@ -34,7 +34,8 @@ import {
   UserPlus,
   Wallet,
   Brain,
-  Shield
+  Shield,
+  Workflow
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -74,6 +75,7 @@ const navigationItems = [
   
   // Section 3: Tertiary (Settings)
   { name: "Automation", href: "/automation", icon: Bot },
+  { name: "Workflows", href: "/workflows", icon: Workflow },
   { name: "Settings", href: "/settings", icon: Settings },
 ];
 

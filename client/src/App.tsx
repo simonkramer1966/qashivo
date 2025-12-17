@@ -55,6 +55,7 @@ const ConnectionError = lazy(() => import("@/pages/connection-error"));
 const CashFlow = lazy(() => import("@/pages/cash-flow"));
 const Financing = lazy(() => import("@/pages/financing"));
 const Automation = lazy(() => import("@/pages/automation"));
+const Workflows = lazy(() => import("@/pages/workflows"));
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -150,6 +151,7 @@ function Router() {
           <Route path="/cash-flow" component={CashFlow} />
           <Route path="/financing" component={Financing} />
           <Route path="/automation" component={Automation} />
+          <Route path="/workflows" component={Workflows} />
           <Route path="/cashboard-experimental" component={CashboardExperimental} />
           <Route path="/" component={Cashboard} />
           <Route path="/:rest*" component={NotFound} />
