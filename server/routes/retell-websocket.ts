@@ -26,16 +26,23 @@ export function setupRetellWebSocket(wss: WebSocketServer): void {
     
     let responseIdCounter = 0;
     
-    // Send begin message IMMEDIATELY upon connection (required by Retell)
-    const beginMessage = {
-      response_type: "response",
-      response_id: responseIdCounter++,
-      content: "Hello! This is Charlie from Qashivo. How can I help you today?",
-      content_complete: true,
-      end_call: false
-    };
-    ws.send(JSON.stringify(beginMessage));
-    console.log('[Retell WebSocket] Sent begin message immediately');
+    // Send begin message after connection is fully established
+    // Use setImmediate to ensure WebSocket is ready
+    setImmediate(() => {
+      if (ws.readyState === ws.OPEN) {
+        const beginMessage = {
+          response_type: "response",
+          response_id: responseIdCounter++,
+          content: "Hello! This is Charlie from Qashivo. How can I help you today?",
+          content_complete: true,
+          end_call: false
+        };
+        ws.send(JSON.stringify(beginMessage));
+        console.log('[Retell WebSocket] Sent begin message, readyState:', ws.readyState);
+      } else {
+        console.log('[Retell WebSocket] WebSocket not ready, state:', ws.readyState);
+      }
+    });
     
     ws.on('message', async (data: Buffer) => {
       try {
