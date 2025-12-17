@@ -22,6 +22,7 @@ import {
   RefreshCw
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { DebtorTimeline } from '@/components/DebtorTimeline';
 
 interface DailyPlanAction {
   id: string;
@@ -498,7 +499,7 @@ export function ActionPreviewDrawer({
         {/* Communications Timeline */}
         <div>
           <div className="flex justify-between items-center mb-3">
-            <div className="text-xs text-slate-500 uppercase tracking-wide">Recent Communications</div>
+            <div className="text-xs text-slate-500 uppercase tracking-wide">Communications Timeline</div>
             {!isAddingNote && (
               <button
                 onClick={() => setIsAddingNote(true)}
@@ -542,31 +543,13 @@ export function ActionPreviewDrawer({
             </div>
           )}
 
-          {timeline && timeline.length > 0 ? (
-            <div className="space-y-3">
-              {timeline.slice(0, 10).map((entry) => (
-                <div key={entry.id} className="text-sm border-b border-slate-100 pb-2 last:border-0">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <span className="text-slate-700">
-                        {getChannelLabel(entry.type)}
-                        {entry.direction === 'inbound' && ' (inbound)'}
-                      </span>
-                      {entry.outcome && (
-                        <span className="text-slate-500"> — {entry.outcome}</span>
-                      )}
-                    </div>
-                    <span className="text-xs text-slate-400">{formatSmartTime(entry.createdAt)}</span>
-                  </div>
-                  <p className="text-slate-600 text-xs mt-0.5 line-clamp-2">{entry.description}</p>
-                  {entry.createdBy && (
-                    <p className="text-xs text-slate-400 mt-0.5">by {entry.createdBy}</p>
-                  )}
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-sm text-slate-400">No communications yet</p>
+          {action?.contactId && (
+            <DebtorTimeline 
+              contactId={action.contactId} 
+              maxItems={10} 
+              showDateGroups={false}
+              timeline={debtorData?.timeline}
+            />
           )}
         </div>
       </div>

@@ -3999,17 +3999,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       });
 
-      // Combine and sort timeline entries
+      // Combine and sort timeline entries with rich metadata
       const timeline = [
-        ...recentActions.map(action => ({
-          id: action.id,
-          type: action.type as 'email' | 'sms' | 'voice' | 'note',
-          direction: action.source === 'inbound' ? 'inbound' as const : 'outbound' as const,
-          description: action.subject || action.content?.substring(0, 100) || `${action.type} action`,
-          outcome: action.status,
-          createdAt: action.createdAt?.toISOString() || new Date().toISOString(),
-          createdBy: undefined
-        })),
+        ...recentActions.map(action => {
+          const actionMeta = action.metadata as Record<string, any> || {};
+          return {
+            id: action.id,
+            type: action.type as 'email' | 'sms' | 'voice' | 'note' | 'manual_call',
+            direction: action.source === 'inbound' ? 'inbound' as const : 'outbound' as const,
+            description: action.subject || action.content?.substring(0, 100) || `${action.type} action`,
+            outcome: action.status,
+            createdAt: action.createdAt?.toISOString() || new Date().toISOString(),
+            createdBy: undefined,
+            metadata: {
+              ptpAmount: actionMeta.ptpAmount || actionMeta.promised_amount || undefined,
+              ptpDate: actionMeta.ptpDate || actionMeta.promised_payment_date || undefined,
+              disputeReason: actionMeta.disputeReason || actionMeta.dispute_reason || undefined,
+              callbackRequested: actionMeta.callbackRequested || actionMeta.callback_requested || false,
+              callbackTime: actionMeta.callbackTime || actionMeta.callback_time || undefined,
+              callDuration: actionMeta.callDuration || actionMeta.call_duration || undefined,
+              deliveryStatus: actionMeta.deliveryStatus || undefined,
+              opened: actionMeta.opened || false,
+              replied: actionMeta.replied || false
+            }
+          };
+        }),
         ...recentNotes.map(note => ({
           id: note.id,
           type: 'note' as const,
@@ -4017,10 +4031,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           description: note.content,
           outcome: undefined,
           createdAt: note.createdAt?.toISOString() || new Date().toISOString(),
-          createdBy: note.createdByUser?.firstName || 'User'
+          createdBy: note.createdByUser?.firstName || 'User',
+          metadata: {}
         }))
       ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-       .slice(0, 10);
+       .slice(0, 20);
 
       // Build debtor snapshot
       const debtor = {
