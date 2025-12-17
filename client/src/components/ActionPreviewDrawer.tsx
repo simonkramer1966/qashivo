@@ -200,6 +200,36 @@ export function ActionPreviewDrawer({
     },
   });
 
+  const voiceCallMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest('POST', `/api/actions/${action?.id}/voice-call`, {});
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ message: 'Failed to initiate voice call' }));
+        throw new Error(errorData.message || 'Failed to initiate voice call');
+      }
+      return res.json();
+    },
+    onSuccess: (data) => {
+      toast({ 
+        title: 'AI Voice Call Initiated',
+        description: `Calling ${action?.contactName}...`,
+      });
+      // Invalidate all relevant queries to refresh data
+      queryClient.invalidateQueries({ queryKey: ['/api/automation/daily-plan'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/actions', action?.id, 'preview'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/contacts', action?.contactId, 'debtor-snapshot'] });
+      // Close the drawer after successful call initiation
+      onOpenChange(false);
+    },
+    onError: (error: Error) => {
+      toast({ 
+        title: 'Failed to initiate call',
+        description: error.message,
+        variant: 'destructive' 
+      });
+    },
+  });
+
   if (!action) return null;
 
   const getActionTypeLabel = () => {
@@ -625,16 +655,16 @@ export function ActionPreviewDrawer({
           <Button
             variant="outline"
             className="text-purple-600 border-purple-300 hover:bg-purple-50"
-            onClick={() => {
-              toast({
-                title: "AI Voice Call",
-                description: "Initiating AI voice call to " + action.contactName,
-              });
-            }}
+            onClick={() => voiceCallMutation.mutate()}
+            disabled={voiceCallMutation.isPending}
             data-testid="button-drawer-ai-voice"
           >
-            <Phone className="w-4 h-4 mr-2" />
-            AI Voice
+            {voiceCallMutation.isPending ? (
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            ) : (
+              <Phone className="w-4 h-4 mr-2" />
+            )}
+            {voiceCallMutation.isPending ? 'Calling...' : 'AI Voice'}
           </Button>
           <Button
             className="bg-[#17B6C3] hover:bg-[#1396A1] text-white flex-1"

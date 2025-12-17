@@ -6619,6 +6619,105 @@ Guidelines:
     }
   });
 
+  // Voice Call - initiate AI voice call via Retell
+  app.post("/api/actions/:id/voice-call", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      // Validate Retell configuration upfront
+      if (!process.env.RETELL_API_KEY) {
+        return res.status(400).json({ message: "Retell API key not configured" });
+      }
+      if (!process.env.RETELL_AGENT_ID) {
+        return res.status(400).json({ message: "Retell agent not configured" });
+      }
+      const fromNumber = process.env.RETELL_FROM_NUMBER || process.env.VONAGE_PHONE_NUMBER || '';
+      if (!fromNumber) {
+        return res.status(400).json({ message: "No from number configured for voice calls" });
+      }
+
+      const { id } = req.params;
+
+      // Get existing action with contact info
+      const existingAction = await db
+        .select()
+        .from(actions)
+        .where(and(eq(actions.id, id), eq(actions.tenantId, user.tenantId)))
+        .limit(1);
+
+      if (!existingAction.length) {
+        return res.status(404).json({ message: "Action not found" });
+      }
+
+      const action = existingAction[0];
+      
+      // Get contact for phone number
+      const contact = await storage.getContact(action.contactId, user.tenantId);
+      if (!contact) {
+        return res.status(404).json({ message: "Contact not found" });
+      }
+
+      if (!contact.phone) {
+        return res.status(400).json({ message: "Contact has no phone number" });
+      }
+
+      // Use centralized communications orchestrator for voice calls
+      const { communicationsOrchestrator } = await import('./services/communicationsOrchestrator');
+      
+      // Get invoice IDs for the request
+      const invoiceIds = action.invoiceId ? [action.invoiceId] : [];
+
+      const result = await communicationsOrchestrator.send({
+        tenantId: user.tenantId,
+        contactId: action.contactId,
+        channel: 'voice',
+        invoiceIds,
+        actionId: id,
+        priority: (action.priority as 'low' | 'medium' | 'high') || 'medium',
+        tone: 'professional',
+        personalization: {
+          action_type: 'manual_voice_call',
+          initiated_by: user.id,
+        },
+      });
+
+      if (!result.success) {
+        console.log(`🚫 Voice call blocked for action ${id}: ${result.blockedReason || result.error}`);
+        return res.status(400).json({ 
+          message: result.blockedReason || result.error || "Voice call could not be initiated",
+          status: result.status,
+        });
+      }
+
+      console.log(`🎙️ AI Voice call initiated from drawer: ${result.messageId} for action ${id}`);
+
+      // Update action status to show call was initiated
+      await db
+        .update(actions)
+        .set({
+          status: 'in_progress',
+          executedAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .where(eq(actions.id, id));
+
+      res.json({ 
+        message: "Voice call initiated successfully",
+        callId: result.messageId,
+        actionId: id,
+        toNumber: contact.phone,
+        status: result.status,
+      });
+    } catch (error) {
+      console.error("Error initiating voice call:", error);
+      const message = error instanceof Error ? error.message : "Failed to initiate voice call";
+      res.status(500).json({ message });
+    }
+  });
+
   // ============================================================================
   // End Action Centre Triage Endpoints
   // ============================================================================
