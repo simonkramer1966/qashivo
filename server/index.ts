@@ -591,10 +591,21 @@ app.use((req, res, next) => {
     // Route Retell Custom LLM connections to our WebSocket server
     if (pathname.includes('/retell-llm') || pathname.includes('/custom-llm')) {
       console.log(`[WebSocket] Upgrading Retell connection for path: ${pathname}`);
-      wss.handleUpgrade(request, socket, head, (ws) => {
-        console.log(`[WebSocket] Upgrade complete, emitting connection event`);
-        wss.emit('connection', ws, request);
+      
+      // Add error handler for socket
+      socket.on('error', (err) => {
+        console.error('[WebSocket] Socket error during upgrade:', err);
       });
+      
+      try {
+        wss.handleUpgrade(request, socket, head, (ws) => {
+          console.log(`[WebSocket] Upgrade complete, emitting connection event`);
+          wss.emit('connection', ws, request);
+        });
+      } catch (err) {
+        console.error('[WebSocket] handleUpgrade error:', err);
+        socket.destroy();
+      }
       return; // Important: don't let other handlers process this
     }
     // Let Vite or other handlers deal with non-Retell WebSocket requests
