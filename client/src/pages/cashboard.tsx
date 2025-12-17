@@ -226,7 +226,7 @@ export default function Cashboard() {
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <div className="card-apple p-2.5 bg-[#F0F9FF] border border-[#E6E8EA] cursor-help" data-testid="card-interest">
+                  <div className="card-apple p-2.5 bg-white border border-[#E6E8EA] cursor-help" data-testid="card-interest">
                     <div className="flex items-start justify-between">
                       <div className="flex-1 min-w-0">
                         <p className="text-sm text-slate-600 mb-0.5">Interest Accrued</p>
@@ -255,7 +255,7 @@ export default function Cashboard() {
             </TooltipProvider>
 
             {/* Payment Plans */}
-            <div className="card-apple p-2.5 bg-[#F9FAFB] border border-[#E6E8EA]" data-testid="card-payment-plans">
+            <div className="card-apple p-2.5 bg-white border border-[#E6E8EA]" data-testid="card-payment-plans">
               <div className="flex items-start justify-between">
                 <div className="flex-1 min-w-0">
                   <p className="text-sm text-slate-600 mb-0.5">Payment Plans</p>
@@ -274,7 +274,7 @@ export default function Cashboard() {
             </div>
 
             {/* Disputes */}
-            <div className="card-apple p-2.5 bg-[#FFF5F5] border border-[#E6E8EA]" data-testid="card-disputes">
+            <div className="card-apple p-2.5 bg-white border border-[#E6E8EA]" data-testid="card-disputes">
               <div className="flex items-start justify-between">
                 <div className="flex-1 min-w-0">
                   <p className="text-sm text-slate-600 mb-0.5">Disputes</p>
@@ -293,7 +293,7 @@ export default function Cashboard() {
             </div>
 
             {/* Debt Recovery */}
-            <div className="card-apple p-2.5 bg-[#FFF5F5] border border-[#E6E8EA]" data-testid="card-debt-recovery">
+            <div className="card-apple p-2.5 bg-white border border-[#E6E8EA]" data-testid="card-debt-recovery">
               <div className="flex items-start justify-between">
                 <div className="flex-1 min-w-0">
                   <p className="text-sm text-slate-600 mb-0.5">Debt Recovery</p>
@@ -312,7 +312,7 @@ export default function Cashboard() {
             </div>
 
             {/* Legal */}
-            <div className="card-apple p-2.5 bg-[#FFF5F5] border border-[#E6E8EA]" data-testid="card-legal">
+            <div className="card-apple p-2.5 bg-white border border-[#E6E8EA]" data-testid="card-legal">
               <div className="flex items-start justify-between">
                 <div className="flex-1 min-w-0">
                   <p className="text-sm text-slate-600 mb-0.5">Legal Cases</p>
@@ -364,7 +364,7 @@ export default function Cashboard() {
             </div>
 
             {/* Interest */}
-            <div className="card-apple p-2 bg-[#F0F9FF]" data-testid="card-interest">
+            <div className="card-apple p-2 bg-white" data-testid="card-interest">
               <p className="text-xs text-slate-600 mb-0.5">Interest</p>
               {leaderboardsLoading ? (
                 <div className="h-5 w-20 bg-slate-200 animate-pulse rounded"></div>
@@ -374,25 +374,25 @@ export default function Cashboard() {
             </div>
 
             {/* Payment Plans */}
-            <div className="card-apple p-2 bg-[#F9FAFB]" data-testid="card-payment-plans">
+            <div className="card-apple p-2 bg-white" data-testid="card-payment-plans">
               <p className="text-xs text-slate-600 mb-0.5">Plans</p>
               <p className="text-base font-bold text-slate-900">{formatCurrency(metrics?.paymentPlansValue || 0)}</p>
             </div>
 
             {/* Disputes */}
-            <div className="card-apple p-2 bg-[#FFF5F5]" data-testid="card-disputes">
+            <div className="card-apple p-2 bg-white" data-testid="card-disputes">
               <p className="text-xs text-slate-600 mb-0.5">Disputes</p>
               <p className="text-base font-bold text-slate-900">{formatCurrency(metrics?.disputesValue || 0)}</p>
             </div>
 
             {/* Debt Recovery */}
-            <div className="card-apple p-2 bg-[#FFF5F5]" data-testid="card-debt-recovery">
+            <div className="card-apple p-2 bg-white" data-testid="card-debt-recovery">
               <p className="text-xs text-slate-600 mb-0.5">Recovery</p>
               <p className="text-base font-bold text-slate-900">{formatCurrency(metrics?.debtRecoveryValue || 0)}</p>
             </div>
 
             {/* Legal */}
-            <div className="card-apple p-2 bg-[#FFF5F5]" data-testid="card-legal">
+            <div className="card-apple p-2 bg-white" data-testid="card-legal">
               <p className="text-xs text-slate-600 mb-0.5">Legal</p>
               <p className="text-base font-bold text-slate-900">{formatCurrency(metrics?.legalValue || 0)}</p>
             </div>
