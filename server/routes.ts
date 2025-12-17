@@ -14748,6 +14748,98 @@ Return only JSON with keys: intent, sentiment, confidence, keyInsights, actionIt
     }
   });
 
+  app.get('/api/tenant/settings', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const tenant = await storage.getTenant(user.tenantId);
+      if (!tenant) {
+        return res.status(404).json({ message: "Tenant not found" });
+      }
+
+      res.json({
+        id: tenant.id,
+        name: tenant.name,
+        approvalMode: tenant.approvalMode || 'manual',
+        approvalTimeoutHours: tenant.approvalTimeoutHours || 12,
+        executionTime: tenant.executionTime || '09:00',
+        executionTimezone: tenant.executionTimezone || 'Europe/London',
+        dailyLimits: tenant.dailyLimits || { email: 100, sms: 50, voice: 20 },
+        minConfidence: tenant.minConfidence || { email: 0.8, sms: 0.85, voice: 0.9 },
+        exceptionRules: tenant.exceptionRules || {
+          flagFirstContact: true,
+          flagHighValue: 10000,
+          flagDisputeKeywords: true,
+          flagVipCustomers: true,
+        },
+        channelCooldowns: tenant.channelCooldowns || { email: 3, sms: 5, voice: 7 },
+        businessHoursStart: tenant.businessHoursStart || '08:00',
+        businessHoursEnd: tenant.businessHoursEnd || '18:00',
+        maxTouchesPerWindow: tenant.maxTouchesPerWindow || 3,
+        contactWindowDays: tenant.contactWindowDays || 14,
+        tenantStyle: tenant.tenantStyle || 'STANDARD',
+        collectionsAutomationEnabled: tenant.collectionsAutomationEnabled ?? true,
+      });
+    } catch (error) {
+      console.error("Error fetching tenant settings:", error);
+      res.status(500).json({ message: "Failed to fetch tenant settings" });
+    }
+  });
+
+  app.patch('/api/tenant/settings', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const currentTenant = await storage.getTenant(user.tenantId);
+      if (!currentTenant) {
+        return res.status(404).json({ message: "Tenant not found" });
+      }
+
+      const allowedFields = [
+        'approvalMode', 'approvalTimeoutHours', 'executionTime', 'executionTimezone',
+        'dailyLimits', 'minConfidence', 'exceptionRules', 'channelCooldowns',
+        'businessHoursStart', 'businessHoursEnd', 'maxTouchesPerWindow', 
+        'contactWindowDays', 'tenantStyle', 'collectionsAutomationEnabled'
+      ];
+
+      const nestedFields = ['dailyLimits', 'minConfidence', 'exceptionRules', 'channelCooldowns'];
+      const defaults: Record<string, any> = {
+        dailyLimits: { email: 100, sms: 50, voice: 20 },
+        minConfidence: { email: 0.8, sms: 0.85, voice: 0.9 },
+        exceptionRules: { flagFirstContact: true, flagHighValue: 10000, flagDisputeKeywords: true, flagVipCustomers: true },
+        channelCooldowns: { email: 3, sms: 5, voice: 7 }
+      };
+
+      const updates: any = {};
+      for (const field of allowedFields) {
+        if (req.body[field] !== undefined) {
+          if (nestedFields.includes(field)) {
+            const currentValue = (currentTenant as any)[field] || defaults[field];
+            updates[field] = { ...currentValue, ...req.body[field] };
+          } else {
+            updates[field] = req.body[field];
+          }
+        }
+      }
+
+      if (Object.keys(updates).length === 0) {
+        return res.status(400).json({ message: "No valid fields to update" });
+      }
+
+      const tenant = await storage.updateTenant(user.tenantId!, updates);
+      res.json(tenant);
+    } catch (error) {
+      console.error("Error updating tenant automation settings:", error);
+      res.status(500).json({ message: "Failed to update tenant settings" });
+    }
+  });
+
   // Playbook settings endpoints - AI-Driven Collections Configuration
   app.get('/api/settings/playbook', isAuthenticated, async (req: any, res) => {
     try {
