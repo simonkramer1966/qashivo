@@ -1232,7 +1232,7 @@ export default function ActionCentre() {
                 }`}
                 data-testid="tab-due"
               >
-                Due ({tabData?.due?.count ?? 0})
+                Due ({tabData?.due?.invoiceCount ?? tabData?.due?.count ?? 0})
               </button>
               
               <button
@@ -1244,7 +1244,7 @@ export default function ActionCentre() {
                 }`}
                 data-testid="tab-overdue"
               >
-                Overdue ({tabData?.overdue?.count ?? 0})
+                Overdue ({tabData?.overdue?.invoiceCount ?? tabData?.overdue?.count ?? 0})
               </button>
               
               <button
@@ -2079,7 +2079,7 @@ export default function ActionCentre() {
                       <div className="px-4 h-12 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 flex items-center">Customer</div>
                       <div className="px-4 h-12 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 flex items-center">Invoice #</div>
                       <div className="px-4 h-12 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 text-right flex items-center justify-end">Amount</div>
-                      <div className="px-4 h-12 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 text-right flex items-center justify-end">Days Overdue</div>
+                      <div className="px-4 h-12 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 text-right flex items-center justify-end">{activeTab === 'due' ? 'Due In' : 'Days Overdue'}</div>
                       <div className="px-4 h-12 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 flex items-center">Status</div>
                       <div className="px-4 h-12 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 sticky top-0 z-10 flex items-center"></div>
                     </>
@@ -2110,8 +2110,8 @@ export default function ActionCentre() {
                       } else if (item.invoiceId) {
                         setLocation(`/invoices/${item.invoiceId}`);
                       }
-                    } else if (activeTab === 'overdue' && item.invoices) {
-                      // Customer group from Overdue tab - use direct fields
+                    } else if ((activeTab === 'overdue' || activeTab === 'due') && item.invoices) {
+                      // Customer group from Overdue/Due tab - use direct fields
                       const daysOverdue = item.oldestDueDate 
                         ? Math.max(0, Math.floor((new Date().getTime() - new Date(item.oldestDueDate).getTime()) / (1000 * 60 * 60 * 24)))
                         : 0;
@@ -2133,7 +2133,7 @@ export default function ActionCentre() {
                         oldestInvoiceDueDate: item.oldestDueDate || '',
                         daysOverdue: daysOverdue,
                         invoices: formattedInvoices,
-                        stage: 'overdue',
+                        stage: activeTab === 'overdue' ? 'overdue' : 'due',
                       });
                       setIsActionDrawerOpen(true);
                     } else {
@@ -2231,9 +2231,9 @@ export default function ActionCentre() {
                             </div>
                           </div>
 
-                          {/* Invoice Number / Count - handle customer groups for Overdue tab */}
+                          {/* Invoice Number / Count - handle customer groups for Due/Overdue tabs */}
                           <div className="px-4 h-12 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center" onClick={handleClick}>
-                            {activeTab === 'overdue' && item.invoiceCount ? (
+                            {(activeTab === 'overdue' || activeTab === 'due') && item.invoiceCount ? (
                               <span className="text-sm text-[#17B6C3] font-medium">
                                 {item.invoiceCount === 1 && item.invoices?.[0]?.invoiceNumber 
                                   ? item.invoices[0].invoiceNumber 
@@ -2246,18 +2246,24 @@ export default function ActionCentre() {
 
                           {/* Amount - use totalOutstanding for customer groups */}
                           <div className="px-4 h-12 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center justify-end" onClick={handleClick}>
-                            {activeTab === 'overdue' && item.totalOutstanding !== undefined ? (
+                            {(activeTab === 'overdue' || activeTab === 'due') && item.totalOutstanding !== undefined ? (
                               <span className="font-bold text-sm text-slate-900">{formatCurrency(item.totalOutstanding)}</span>
                             ) : (
                               <span className="font-bold text-sm text-slate-900">{item.invoiceAmount ? formatCurrency(parseFloat(item.invoiceAmount)) : '—'}</span>
                             )}
                           </div>
 
-                          {/* Days Overdue - calculate from oldestDueDate for customer groups */}
+                          {/* Days Overdue / Days Until Due - calculate from oldestDueDate for customer groups */}
                           <div className="px-4 h-12 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors flex items-center justify-end" onClick={handleClick}>
-                            {activeTab === 'overdue' && item.oldestDueDate ? (
+                            {(activeTab === 'overdue' || activeTab === 'due') && item.oldestDueDate ? (
                               <span className="text-sm text-slate-700">
-                                {Math.max(0, Math.floor((new Date().getTime() - new Date(item.oldestDueDate).getTime()) / (1000 * 60 * 60 * 24)))}d
+                                {(() => {
+                                  const days = Math.floor((new Date().getTime() - new Date(item.oldestDueDate).getTime()) / (1000 * 60 * 60 * 24));
+                                  if (activeTab === 'due') {
+                                    return days < 0 ? `${Math.abs(days)}d until due` : `Due today`;
+                                  }
+                                  return `${Math.max(0, days)}d`;
+                                })()}
                               </span>
                             ) : (
                               <span className="text-sm text-slate-700">{item.metadata?.daysOverdue || 0}d</span>
