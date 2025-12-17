@@ -25,9 +25,13 @@ export function setupRetellWebSocket(wss: WebSocketServer): void {
     console.log('[Retell WebSocket] New Retell Custom LLM connection, readyState:', ws.readyState);
     
     let responseIdCounter = 0;
+    let beginMessageSent = false;
     
     // Function to send begin message
     const sendBeginMessage = () => {
+      if (beginMessageSent) return;
+      beginMessageSent = true;
+      
       const beginMessage = {
         response_type: "response",
         response_id: responseIdCounter++,
@@ -43,16 +47,17 @@ export function setupRetellWebSocket(wss: WebSocketServer): void {
       }
     };
     
-    // WebSocket states: 0=CONNECTING, 1=OPEN, 2=CLOSING, 3=CLOSED
-    if (ws.readyState === 1) { // OPEN
-      sendBeginMessage();
-    } else if (ws.readyState === 0) { // CONNECTING
-      ws.once('open', () => {
-        console.log('[Retell WebSocket] WebSocket opened, sending begin message');
-        sendBeginMessage();
-      });
-    } else {
-      console.log('[Retell WebSocket] WebSocket already closing/closed, state:', ws.readyState);
+    // Send config event first (per official Retell protocol)
+    if (ws.readyState === 1) {
+      const configEvent = {
+        response_type: "config",
+        config: {
+          auto_reconnect: true,
+          call_details: true
+        }
+      };
+      ws.send(JSON.stringify(configEvent));
+      console.log('[Retell WebSocket] Sent config event');
     }
     
     ws.on('message', async (data: Buffer) => {
@@ -64,9 +69,10 @@ export function setupRetellWebSocket(wss: WebSocketServer): void {
           callId = message.call_id;
         }
         
-        // Handle call_details - just log it
+        // Handle call_details - send begin message after receiving this
         if (message.interaction_type === 'call_details') {
-          console.log('[Retell WebSocket] Received call_details');
+          console.log('[Retell WebSocket] Received call_details, sending begin message');
+          sendBeginMessage();
           return;
         }
         
