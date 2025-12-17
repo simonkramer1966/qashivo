@@ -1,10 +1,8 @@
 import express, { type Request, Response, NextFunction } from "express";
 import path from "path";
-import { WebSocketServer } from "ws";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import debtorRoutes from "./debtor-routes";
-import { setupRetellWebSocket } from "./routes/retell-websocket";
 
 const app = express();
 
@@ -580,66 +578,6 @@ app.use((req, res, next) => {
       }
     }
   });
-
-  // Setup Retell Custom LLM WebSocket server BEFORE Vite (which has its own WS handler)
-  const wss = new WebSocketServer({ noServer: true });
-  setupRetellWebSocket(wss);
-  
-  // Use prependListener to ensure our handler runs BEFORE Vite's HMR handler
-  // Track handled sockets to prevent double-processing
-  const handledSockets = new WeakSet();
-  
-  // Store our handler reference so we can identify it
-  const retellUpgradeHandler = (request: any, socket: any, head: any) => {
-    const pathname = request.url || '';
-    const protocol = request.headers['sec-websocket-protocol'];
-    
-    // Skip Vite HMR connections - let Vite handle them
-    if (protocol === 'vite-hmr') {
-      return;
-    }
-    
-    // Route Retell Custom LLM connections to our WebSocket server
-    if (pathname.includes('/retell-llm') || pathname.includes('/custom-llm')) {
-      // Check if we've already handled this socket or if it's destroyed
-      if (handledSockets.has(socket)) {
-        return;
-      }
-      
-      if (socket.destroyed) {
-        console.log(`[WebSocket] Socket destroyed before we could handle it: ${pathname}`);
-        return;
-      }
-      
-      // Mark socket as handled IMMEDIATELY
-      handledSockets.add(socket);
-      
-      console.log(`[WebSocket] Upgrading Retell connection for path: ${pathname}`);
-      
-      // Suppress errors on the socket - they're expected when Vite tries to interfere
-      socket.on('error', () => {});
-      
-      // Remove other upgrade listeners temporarily to prevent interference
-      const otherListeners = server.listeners('upgrade').filter((l: any) => l !== retellUpgradeHandler);
-      otherListeners.forEach((listener: any) => server.removeListener('upgrade', listener));
-      
-      wss.handleUpgrade(request, socket, head, (ws) => {
-        console.log(`[WebSocket] Upgrade complete, connection established`);
-        
-        // Re-add other listeners after upgrade is complete
-        otherListeners.forEach((listener: any) => server.prependListener('upgrade', listener));
-        
-        wss.emit('connection', ws, request);
-      });
-      
-      return;
-    }
-    // Let Vite or other handlers deal with non-Retell WebSocket requests
-  };
-  
-  server.prependListener('upgrade', retellUpgradeHandler);
-  
-  console.log('🎙️ Retell Custom LLM WebSocket ready at /retell-llm');
 
   // importantly only setup vite in development and after
   // setting up all the other routes so the catch-all route
