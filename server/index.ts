@@ -585,11 +585,23 @@ app.use((req, res, next) => {
   const wss = new WebSocketServer({ noServer: true });
   setupRetellWebSocket(wss);
   
+  // Use a Set to track sockets we've already handled to prevent double-processing
+  const handledSockets = new WeakSet();
+  
   server.on('upgrade', (request, socket, head) => {
     const pathname = request.url || '';
     
     // Route Retell Custom LLM connections to our WebSocket server
     if (pathname.includes('/retell-llm') || pathname.includes('/custom-llm')) {
+      // Check if we've already handled this socket or if it's destroyed
+      if (handledSockets.has(socket) || socket.destroyed || !socket.writable) {
+        console.log(`[WebSocket] Skipping already-handled or closed socket for: ${pathname}`);
+        return;
+      }
+      
+      // Mark socket as handled
+      handledSockets.add(socket);
+      
       console.log(`[WebSocket] Upgrading Retell connection for path: ${pathname}`);
       
       // Add error handler for socket
