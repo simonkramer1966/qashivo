@@ -581,6 +581,27 @@ app.use((req, res, next) => {
     }
   });
 
+  // Setup Retell Custom LLM WebSocket server BEFORE Vite (which has its own WS handler)
+  const wss = new WebSocketServer({ noServer: true });
+  setupRetellWebSocket(wss);
+  
+  server.on('upgrade', (request, socket, head) => {
+    const pathname = request.url || '';
+    
+    // Route Retell Custom LLM connections to our WebSocket server
+    if (pathname.includes('/retell-llm') || pathname.includes('/custom-llm')) {
+      console.log(`[WebSocket] Upgrading Retell connection for path: ${pathname}`);
+      wss.handleUpgrade(request, socket, head, (ws) => {
+        console.log(`[WebSocket] Upgrade complete, emitting connection event`);
+        wss.emit('connection', ws, request);
+      });
+      return; // Important: don't let other handlers process this
+    }
+    // Let Vite or other handlers deal with non-Retell WebSocket requests
+  });
+  
+  console.log('🎙️ Retell Custom LLM WebSocket ready at /retell-llm');
+
   // importantly only setup vite in development and after
   // setting up all the other routes so the catch-all route
   // doesn't interfere with the other routes
@@ -602,25 +623,4 @@ app.use((req, res, next) => {
   }, () => {
     log(`serving on port ${port}`);
   });
-
-  // Setup Retell Custom LLM WebSocket server
-  const wss = new WebSocketServer({ noServer: true });
-  setupRetellWebSocket(wss);
-  
-  server.on('upgrade', (request, socket, head) => {
-    const pathname = request.url || '';
-    
-    // Route Retell Custom LLM connections to our WebSocket server
-    if (pathname.includes('/retell-llm') || pathname.includes('/custom-llm')) {
-      console.log(`[WebSocket] Upgrading connection for path: ${pathname}`);
-      wss.handleUpgrade(request, socket, head, (ws) => {
-        wss.emit('connection', ws, request);
-      });
-    } else {
-      // Reject non-Retell WebSocket connections
-      socket.destroy();
-    }
-  });
-  
-  console.log('🎙️ Retell Custom LLM WebSocket ready at /retell-llm');
 })();

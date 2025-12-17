@@ -12,12 +12,11 @@ export function setupRetellWebSocket(wss: WebSocketServer): void {
   console.log('[Retell WebSocket] Setting up Custom LLM WebSocket handler');
   
   wss.on('connection', (ws: WebSocket, request: any) => {
-    const path = request.url || '';
+    const path = request?.url || '';
+    console.log('[Retell WebSocket] Connection event received, path:', path);
     
-    if (!path.includes('/retell-llm') && !path.includes('/custom-llm')) {
-      return;
-    }
-    
+    // Path filtering already done in server/index.ts upgrade handler
+    // Just log and proceed
     console.log('[Retell WebSocket] New Retell Custom LLM connection');
     
     let callId: string | null = null;
