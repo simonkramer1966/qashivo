@@ -383,7 +383,54 @@ app.use((req, res, next) => {
         }
       });
       
-      console.log("✅ Portfolio controller cron jobs started (2am nightly, 6h planning)");
+      // Overnight daily plan generation at 2am UK time
+      // Uses cron timezone option to run at 2:00 UK time (handles GMT/BST)
+      const { generateDailyPlan } = await import("./services/dailyPlanGenerator");
+      const { tenants: tenantsSchema, users } = await import("@shared/schema");
+      
+      cron.default.schedule("0 2 * * *", async () => {
+        try {
+          console.log("🌙 Running overnight daily plan generation for all tenants...");
+          
+          // Get all tenants with collections automation enabled
+          const activeTenants = await db
+            .select({ id: tenantsSchema.id, name: tenantsSchema.name })
+            .from(tenantsSchema)
+            .where(eq(tenantsSchema.collectionsAutomationEnabled, true));
+          
+          console.log(`📋 Found ${activeTenants.length} tenants with automation enabled`);
+          
+          for (const tenant of activeTenants) {
+            try {
+              // Get a user for the tenant (any user works, just needed for audit trail)
+              const [tenantUser] = await db
+                .select({ id: users.id })
+                .from(users)
+                .where(eq(users.tenantId, tenant.id))
+                .limit(1);
+              
+              if (!tenantUser) {
+                console.log(`⏭️ Skipping tenant ${tenant.name} - no users found`);
+                continue;
+              }
+              
+              // Generate daily plan (regenerate=true to refresh the plan)
+              const plan = await generateDailyPlan(tenant.id, tenantUser.id, true);
+              console.log(`✅ Generated ${plan.actions.length} actions for ${tenant.name}`);
+            } catch (tenantError) {
+              console.error(`❌ Failed to generate plan for tenant ${tenant.name}:`, tenantError);
+            }
+          }
+          
+          console.log("✅ Overnight daily plan generation complete");
+        } catch (error) {
+          console.error("❌ Overnight daily plan generation error:", error);
+        }
+      }, {
+        timezone: "Europe/London"
+      });
+      
+      console.log("✅ Portfolio controller cron jobs started (2am nightly, 6h planning, 2am UK daily plans)");
     } catch (error) {
       console.error("❌ Failed to initialize portfolio controller:", error);
     }
