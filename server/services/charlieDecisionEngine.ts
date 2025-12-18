@@ -164,7 +164,8 @@ class CharlieDecisionEngine {
     
     const { invoice, contact } = result;
     
-    // Get last action for contact
+    // Get last EXECUTED action for contact (completed or sent)
+    // Pending/scheduled actions shouldn't affect cadence timing
     const [lastAction] = await db
       .select()
       .from(actions)
@@ -175,12 +176,15 @@ class CharlieDecisionEngine {
           eq(actions.type, 'email'),
           eq(actions.type, 'sms'),
           eq(actions.type, 'call')
-        )
+        ),
+        sql`${actions.status} IN ('completed', 'sent')`
       ))
       .orderBy(desc(actions.createdAt))
       .limit(1);
     
-    // Count actions in the last 7 days for weekly cadence check
+    // Count EXECUTED actions in the last 7 days for weekly cadence check
+    // Only count completed/sent actions - not pending_approval or scheduled
+    // This prevents the cadence check from blocking all actions due to pending plans
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
     
@@ -195,6 +199,8 @@ class CharlieDecisionEngine {
           eq(actions.type, 'sms'),
           eq(actions.type, 'call')
         ),
+        // Only count actually executed actions
+        sql`${actions.status} IN ('completed', 'sent')`,
         gt(actions.createdAt, sevenDaysAgo)
       ));
     
