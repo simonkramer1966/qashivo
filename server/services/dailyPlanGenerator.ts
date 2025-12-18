@@ -275,11 +275,24 @@ async function generateDailyPlanWithCharlie(
   };
   
   // Filter actionable decisions (not excluded, within cadence)
+  // Debug: Log filter breakdown to understand why decisions may be dropped
+  const notExcluded = charliePlan.decisions.filter(d => d.priorityTier !== 'excluded');
+  const hasChannel = charliePlan.decisions.filter(d => d.recommendedChannel !== 'none');
+  const withinCadence = charliePlan.decisions.filter(d => d.isWithinCadence);
+  
+  console.log(`🔍 Decision filter breakdown:`);
+  console.log(`   Total: ${charliePlan.decisions.length}`);
+  console.log(`   Not excluded: ${notExcluded.length}`);
+  console.log(`   Has channel: ${hasChannel.length}`);
+  console.log(`   Within cadence: ${withinCadence.length}`);
+  
   const actionableDecisions = charliePlan.decisions.filter(d => 
     d.priorityTier !== 'excluded' && 
     d.recommendedChannel !== 'none' &&
     d.isWithinCadence
   );
+  
+  console.log(`   All filters passed: ${actionableDecisions.length}`);
   
   // Sort by priority score (highest first)
   actionableDecisions.sort((a, b) => b.priorityScore - a.priorityScore);
