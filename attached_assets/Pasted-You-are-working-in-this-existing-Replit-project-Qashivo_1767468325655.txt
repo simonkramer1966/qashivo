@@ -1,0 +1,95 @@
+You are working in this existing Replit project “Qashivo”.
+
+Goal:
+Create a “Version 1 spine” (the only thing we build/modify for the next milestone) without rewriting the whole app. The spine must support the supervised autonomy loop:
+
+Xero Sync → Scoring/Prioritisation → Daily Plan → User Approval → Execute Actions → Log Outcomes → Exceptions Queue → Audit Trail
+
+Key rule:
+Do NOT attempt a full refactor or rewrite. Do NOT beautify unrelated code. This is a surgical “ring-fence and extract” job.
+
+Deliverables (must do):
+1) Create a new folder/module boundary called:
+   /src/core_autonomy
+   with these submodules (create folders/files as needed):
+   - daily_plan
+   - approval
+   - policy
+   - executor
+   - outcome_log
+   - exceptions
+   - audit
+
+2) Identify the existing code that already implements parts of the above (Xero sync, scoring, scheduler/executor, action log, etc.). Do not duplicate it. Wrap it or move it into /src/core_autonomy so the spine has one clear entry point.
+
+3) Create a single “Spine API” with clear endpoints (or routes) that the UI will use:
+   - GET  /api/autonomy/daily-plan        (returns proposed actions for today)
+   - POST /api/autonomy/approve-plan      (stores approval + approved actions list)
+   - POST /api/autonomy/run-executor      (runs execution ONLY for approved plan)
+   - GET  /api/autonomy/activity          (timeline of what AI executed + outcomes)
+   - GET  /api/autonomy/exceptions        (items needing human review)
+
+4) Approval gating (non-negotiable):
+   No outbound action (email/SMS/WhatsApp/voice) may execute unless:
+   - there is an approved daily plan for the tenant for today, AND
+   - the action passes policy rules (limits, quiet hours, min confidence, etc.)
+
+   Implement this as a single guard in the executor so it cannot be bypassed.
+
+5) Feature flags / ring-fencing:
+   Add a simple feature flag system (environment variables or tenant settings) so these are OFF by default:
+   - voice calling
+   - debtor self-service portal
+   - advanced workflow customisation
+   - invoice financing / anything financial
+   - WhatsApp (keep gated; can remain disabled)
+
+   Ensure none of these appear in the main v1 onboarding or navigation when disabled.
+
+6) Exceptions:
+   Implement a simple exceptions rule set inside /src/core_autonomy/exceptions:
+   - invoice amount > £10,000
+   - low confidence score (below minConfidence)
+   - disputes / negative intent
+   - VIP / protected contacts (if such a field exists)
+   Exceptions should be visible in a dedicated queue and NOT auto-executed.
+
+7) Audit trail:
+   Every action must record:
+   - who/what initiated it (AI executor)
+   - timestamp
+   - channel (email/SMS/etc.)
+   - message content or template used (or reference)
+   - outcome status (sent, delivered, replied, promise to pay, dispute, paid, failed)
+   - links to any related invoice/contact IDs
+   Ensure the audit data can be shown in the “activity” timeline.
+
+8) UI wiring (minimal changes):
+   Do not redesign the whole UI.
+   Add only what is needed for v1:
+   - A “Daily Plan” panel/modal showing proposed actions + “Approve” button
+   - An “Activity” timeline (what was executed + outcomes)
+   - An “Exceptions” tab/section
+
+9) Remove dangerous automation:
+   If there are background jobs that auto-run actions without approval, disable them or put them behind the approval gate + feature flag. The system must be safe by default.
+
+10) Documentation:
+   Create /V1_CONTRACT.md in the repo root with:
+   - What is included in V1 (spine only)
+   - What is explicitly excluded (voice-first UX, portals, financing, deep workflows)
+   - The endpoints created
+   - Where the spine code lives (/src/core_autonomy)
+   Keep it short and plain English.
+
+Working style:
+- Make small, safe commits.
+- Prefer moving/wrapping code over rewriting logic.
+- Keep changes local to the spine.
+- If you encounter duplicated logic (multiple executors, multiple send-message functions), choose ONE canonical path and route all spine calls through it.
+
+Output:
+When done, provide:
+- A checklist of completed items
+- A brief map of the new spine folder structure
+- Notes on any areas that were too tangled and what minimal workaround you used
