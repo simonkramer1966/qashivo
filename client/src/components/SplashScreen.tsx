@@ -64,12 +64,6 @@ export default function SplashScreen({ onEnter }: SplashScreenProps) {
           </Button>
         </div>
 
-        {/* Footer Info */}
-        <div className="animate-fade-in-delay-4 pt-8">
-          <p className="text-xs sm:text-sm text-white/50">
-            Click the Qashivo logo to lock screen
-          </p>
-        </div>
       </div>
 
       {/* Animated Background Elements */}
