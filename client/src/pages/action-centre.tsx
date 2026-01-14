@@ -261,7 +261,21 @@ export default function ActionCentreV2() {
       </div>
       
       <main className="flex-1 overflow-y-auto main-with-bottom-nav">
-        <Header title="Action Centre" subtitle="Manage your collection actions" />
+        <Header 
+          title="Action Centre" 
+          subtitle={activeTab === 'planned' && dailyPlan?.tenantPolicies?.executionTime 
+            ? `Today's Plan · Executes at ${dailyPlan.tenantPolicies.executionTime}`
+            : activeTab === 'planned' ? "Today's Plan" : ""}
+          action={activeTab === 'planned' && (dailyPlan?.actions?.length ?? 0) > 0 ? (
+            <button
+              onClick={() => approvePlanMutation.mutate()}
+              disabled={approvePlanMutation.isPending || (dailyPlan?.actions?.filter((a: any) => a.status === 'pending_approval').length || 0) === 0}
+              className="h-8 px-4 text-[13px] font-medium bg-slate-900 hover:bg-slate-800 text-white rounded disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {approvePlanMutation.isPending ? 'Approving...' : `Approve All`}
+            </button>
+          ) : undefined}
+        />
         
         <div className="p-6 lg:p-8 space-y-6 bg-white min-h-[calc(100vh-80px)]">
           <div className="flex items-center gap-6 border-b border-slate-100">
@@ -288,14 +302,10 @@ export default function ActionCentreV2() {
               dailyPlan={dailyPlan}
               isLoading={isLoadingPlan}
               onGeneratePlan={() => generatePlanMutation.mutate()}
-              onApprovePlan={() => approvePlanMutation.mutate()}
-              onDeletePlan={() => deletePlanMutation.mutate()}
               onPreviewAction={handlePreviewAction}
               onBulkAttention={handleBulkAttention}
               onBulkSkip={handleBulkSkip}
               isGenerating={generatePlanMutation.isPending}
-              isApproving={approvePlanMutation.isPending}
-              isDeleting={deletePlanMutation.isPending}
             />
           )}
 
@@ -418,14 +428,10 @@ interface PlannedTabContentProps {
   dailyPlan: any;
   isLoading: boolean;
   onGeneratePlan: () => void;
-  onApprovePlan: () => void;
-  onDeletePlan: () => void;
   onPreviewAction: (action: any) => void;
   onBulkAttention: (actionIds: number[]) => void;
   onBulkSkip: (actionIds: number[], days: number) => void;
   isGenerating: boolean;
-  isApproving: boolean;
-  isDeleting: boolean;
 }
 
 type ChannelFilter = 'all' | 'email' | 'sms' | 'voice';
@@ -434,14 +440,10 @@ function PlannedTabContent({
   dailyPlan,
   isLoading,
   onGeneratePlan,
-  onApprovePlan,
-  onDeletePlan,
   onPreviewAction,
   onBulkAttention,
   onBulkSkip,
   isGenerating,
-  isApproving,
-  isDeleting,
 }: PlannedTabContentProps) {
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [bulkSkipDays, setBulkSkipDays] = useState('7');
@@ -498,7 +500,6 @@ function PlannedTabContent({
     return dailyPlan.actions;
   }, [dailyPlan?.actions, channelFilter]);
 
-  const pendingCount = dailyPlan?.actions?.filter((a: any) => a.status === 'pending_approval').length || 0;
   const allSelected = filteredActions.length > 0 && filteredActions.every((a: any) => selectedIds.has(a.id));
 
   const getChannelLabel = (channel: string) => {
@@ -552,41 +553,26 @@ function PlannedTabContent({
   ].filter(Boolean).join(' · ');
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <div className="space-y-1">
-          <p className="text-[13px] text-slate-400 font-normal tracking-wide">
-            {statsLine}
-            {dailyPlan.tenantPolicies?.executionTime && (
-              <span> · Executes at {dailyPlan.tenantPolicies.executionTime}</span>
-            )}
-          </p>
+        <p className="text-[13px] text-slate-400">
+          {statsLine}
+        </p>
+        <div className="flex items-center gap-1">
+          {(['all', 'email', 'sms', 'voice'] as const).map(ch => (
+            <button
+              key={ch}
+              onClick={() => setChannelFilter(ch)}
+              className={`px-2.5 py-1 text-[12px] font-medium transition-colors rounded ${
+                channelFilter === ch 
+                  ? 'bg-slate-100 text-slate-900' 
+                  : 'text-slate-400 hover:text-slate-600'
+              }`}
+            >
+              {ch === 'all' ? 'All' : ch === 'sms' ? 'SMS' : ch.charAt(0).toUpperCase() + ch.slice(1)}
+            </button>
+          ))}
         </div>
-        
-        <Button
-          size="sm"
-          onClick={onApprovePlan}
-          disabled={isApproving || pendingCount === 0}
-          className="h-8 px-4 text-[13px] font-medium bg-slate-900 hover:bg-slate-800 text-white rounded-md"
-        >
-          {isApproving ? 'Approving...' : `Approve All (${pendingCount})`}
-        </Button>
-      </div>
-
-      <div className="flex items-center gap-1">
-        {(['all', 'email', 'sms', 'voice'] as const).map(ch => (
-          <button
-            key={ch}
-            onClick={() => setChannelFilter(ch)}
-            className={`px-2.5 py-1 text-[12px] font-medium transition-colors rounded ${
-              channelFilter === ch 
-                ? 'bg-slate-100 text-slate-900' 
-                : 'text-slate-400 hover:text-slate-600'
-            }`}
-          >
-            {ch === 'all' ? 'All' : ch === 'sms' ? 'SMS' : ch.charAt(0).toUpperCase() + ch.slice(1)}
-          </button>
-        ))}
       </div>
 
       {hasSelection && (

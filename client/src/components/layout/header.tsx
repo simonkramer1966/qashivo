@@ -202,20 +202,8 @@ export default function Header({ title, subtitle, action, noBorder = true, title
   const showConnectionBar = xeroHealth?.connectionStatus && xeroHealth.connectionStatus !== 'not_configured';
 
   return (
-    <header className="sticky top-0 z-40 bg-white glass-card border-0 rounded-none shadow-glass [scrollbar-gutter:stable]">
-      {/* Connection indicator bar - teal when connected, red when disconnected/error */}
-      {showConnectionBar && (
-        <div 
-          className={`h-[5px] -mx-0 ${
-            needsXeroReconnect 
-              ? "bg-gradient-to-r from-red-500 to-red-600" 
-              : "bg-gradient-to-r from-[#17B6C3] to-[#0ea5e9]"
-          }`}
-          data-testid={needsXeroReconnect ? "indicator-accounting-disconnected" : "indicator-accounting-connected"}
-        />
-      )}
-      
-      <div className="px-4 sm:px-6 py-4 sm:py-6">
+    <header className="sticky top-0 z-40 bg-white border-b border-slate-100 [scrollbar-gutter:stable]">
+      <div className="px-6 lg:px-8 py-5">
 
       {/* Mobile View - Logo, Name, and Page Title */}
       <div className="lg:hidden">
@@ -300,37 +288,26 @@ export default function Header({ title, subtitle, action, noBorder = true, title
       {/* Desktop View - Page Title and Actions */}
       <div className="hidden lg:flex items-center justify-between">
         <div>
-          <h2 className={`${titleSize} font-semibold text-foreground`} data-testid="text-page-title">
+          <h2 className="text-[17px] font-semibold text-slate-900 tracking-tight" data-testid="text-page-title">
             {title}
           </h2>
-          <p className={`${subtitleSize} text-muted-foreground`} data-testid="text-page-subtitle">
-            {subtitle}
-          </p>
+          {subtitle && (
+            <p className="text-[13px] text-slate-400 mt-0.5" data-testid="text-page-subtitle">
+              {subtitle}
+            </p>
+          )}
         </div>
-        <div className="flex items-center space-x-2 sm:space-x-4">
+        <div className="flex items-center gap-2">
           {/* Onboarding Resume Button - Only show if onboarding is not complete */}
           {onboardingStatus && !onboardingStatus.completed && (
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    onClick={() => setLocation("/onboarding")}
-                    variant="ghost"
-                    size="sm"
-                    className="h-10 px-3 gap-2 bg-amber-600/20 hover:bg-amber-600/30 text-amber-700 border border-amber-600/30 animate-pulse"
-                    data-testid="button-resume-onboarding"
-                  >
-                    <ListTodo className="h-4 w-4" />
-                    <span className="hidden lg:inline font-medium">Complete Setup</span>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Resume onboarding setup</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+            <button
+              onClick={() => setLocation("/onboarding")}
+              className="h-8 px-3 text-[13px] font-medium text-amber-600 hover:bg-amber-50 rounded transition-colors"
+              data-testid="button-resume-onboarding"
+            >
+              Complete Setup
+            </button>
           )}
-
           {action}
         </div>
       </div>
