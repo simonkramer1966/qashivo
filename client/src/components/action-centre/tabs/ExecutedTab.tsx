@@ -1,7 +1,6 @@
 import { useState, useMemo } from 'react';
 import { ExecutedAction } from '../types';
 import { formatCurrencyCompact, getChannelLabel, formatRelativeTime } from '../utils';
-import { Mail, Phone, MessageSquare } from 'lucide-react';
 
 interface ExecutedTabProps {
   actions: ExecutedAction[];
@@ -11,6 +10,19 @@ interface ExecutedTabProps {
 
 type ChannelFilter = 'all' | 'email' | 'sms' | 'voice';
 type DateFilter = 'today' | 'week' | 'all';
+
+const CHANNEL_OPTIONS: { value: ChannelFilter; label: string }[] = [
+  { value: 'all', label: 'All' },
+  { value: 'email', label: 'Email' },
+  { value: 'sms', label: 'SMS' },
+  { value: 'voice', label: 'Voice' },
+];
+
+const DATE_OPTIONS: { value: DateFilter; label: string }[] = [
+  { value: 'today', label: 'Today' },
+  { value: 'week', label: '7 days' },
+  { value: 'all', label: 'All time' },
+];
 
 export function ExecutedTab({ actions, onSelectDebtor, isLoading }: ExecutedTabProps) {
   const [channelFilter, setChannelFilter] = useState<ChannelFilter>('all');
@@ -37,33 +49,37 @@ export function ExecutedTab({ actions, onSelectDebtor, isLoading }: ExecutedTabP
     return result;
   }, [actions, channelFilter, dateFilter]);
 
-  const getChannelIcon = (channel: string) => {
-    switch (channel) {
-      case 'email': return <Mail className="h-3.5 w-3.5" />;
-      case 'sms': return <MessageSquare className="h-3.5 w-3.5" />;
-      case 'voice': return <Phone className="h-3.5 w-3.5" />;
-      default: return <Mail className="h-3.5 w-3.5" />;
-    }
+  const getOutcomeStyle = (status: string) => {
+    const styles: Record<string, string> = {
+      sent: 'text-slate-500',
+      delivered: 'text-slate-700',
+      failed: 'text-red-600',
+      no_answer: 'text-slate-500',
+      ptp: 'text-slate-700',
+      dispute: 'text-red-600',
+      query: 'text-slate-600',
+    };
+    return styles[status] || 'text-slate-500';
   };
 
-  const getOutcomeDisplay = (status: string) => {
-    const displays: Record<string, { label: string; color: string }> = {
-      sent: { label: 'Sent', color: 'text-slate-500' },
-      delivered: { label: 'Delivered', color: 'text-emerald-600' },
-      failed: { label: 'Failed', color: 'text-red-500' },
-      no_answer: { label: 'No Answer', color: 'text-amber-500' },
-      ptp: { label: 'PTP', color: 'text-blue-600' },
-      dispute: { label: 'Dispute', color: 'text-rose-600' },
-      query: { label: 'Query', color: 'text-purple-600' },
+  const getOutcomeLabel = (status: string) => {
+    const labels: Record<string, string> = {
+      sent: 'Sent',
+      delivered: 'Delivered',
+      failed: 'Failed',
+      no_answer: 'No answer',
+      ptp: 'PTP',
+      dispute: 'Dispute',
+      query: 'Query',
     };
-    return displays[status] || { label: status, color: 'text-slate-500' };
+    return labels[status] || status;
   };
 
   if (isLoading) {
     return (
       <div className="space-y-2">
         {[...Array(5)].map((_, i) => (
-          <div key={i} className="h-14 bg-slate-100 animate-pulse rounded" />
+          <div key={i} className="h-12 bg-slate-50 animate-pulse rounded" />
         ))}
       </div>
     );
@@ -71,103 +87,95 @@ export function ExecutedTab({ actions, onSelectDebtor, isLoading }: ExecutedTabP
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-4 text-sm">
-        <div className="flex items-center gap-2">
-          <span className="text-slate-500">Channel:</span>
-          <div className="flex gap-1">
-            {(['all', 'email', 'sms', 'voice'] as const).map(ch => (
-              <button
-                key={ch}
-                onClick={() => setChannelFilter(ch)}
-                className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-                  channelFilter === ch 
-                    ? 'bg-slate-900 text-white' 
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                }`}
-              >
-                {ch === 'all' ? 'All' : getChannelLabel(ch)}
-              </button>
-            ))}
-          </div>
+      <div className="flex items-center gap-6 text-[12px]">
+        <div className="flex items-center gap-3">
+          {CHANNEL_OPTIONS.map(opt => (
+            <button
+              key={opt.value}
+              onClick={() => setChannelFilter(opt.value)}
+              className={`pb-1 border-b-2 transition-colors ${
+                channelFilter === opt.value 
+                  ? 'border-slate-900 text-slate-900 font-medium' 
+                  : 'border-transparent text-slate-400 hover:text-slate-600'
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
         </div>
-        <div className="flex items-center gap-2">
-          <span className="text-slate-500">Period:</span>
-          <div className="flex gap-1">
-            {([
-              { value: 'today' as const, label: 'Today' },
-              { value: 'week' as const, label: 'Last 7 days' },
-              { value: 'all' as const, label: 'All' },
-            ]).map(opt => (
-              <button
-                key={opt.value}
-                onClick={() => setDateFilter(opt.value)}
-                className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-                  dateFilter === opt.value 
-                    ? 'bg-slate-900 text-white' 
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                }`}
-              >
-                {opt.label}
-              </button>
-            ))}
-          </div>
+        <div className="w-px h-4 bg-slate-200" />
+        <div className="flex items-center gap-3">
+          {DATE_OPTIONS.map(opt => (
+            <button
+              key={opt.value}
+              onClick={() => setDateFilter(opt.value)}
+              className={`pb-1 border-b-2 transition-colors ${
+                dateFilter === opt.value 
+                  ? 'border-slate-900 text-slate-900 font-medium' 
+                  : 'border-transparent text-slate-400 hover:text-slate-600'
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
         </div>
       </div>
 
       {filteredActions.length === 0 ? (
         <div className="py-16 text-center">
-          <p className="text-slate-500 text-sm">No executed actions found</p>
+          <p className="text-slate-400 text-[13px]">No executed actions found</p>
         </div>
       ) : (
-        <div className="border border-slate-200/60 rounded-lg overflow-hidden">
-          <table className="w-full text-sm">
+        <div className="overflow-x-auto">
+          <table className="w-full" style={{ minWidth: '700px', tableLayout: 'fixed' }}>
+            <colgroup>
+              <col style={{ width: '12%' }} />
+              <col style={{ width: '22%' }} />
+              <col style={{ width: '10%' }} />
+              <col style={{ width: '18%' }} />
+              <col style={{ width: '22%' }} />
+              <col style={{ width: '16%' }} />
+            </colgroup>
             <thead>
-              <tr className="bg-slate-50/80 border-b border-slate-200/60">
-                <th className="text-left py-3 px-4 font-medium text-slate-600 text-xs uppercase tracking-wide">Executed</th>
-                <th className="text-left py-3 px-4 font-medium text-slate-600 text-xs uppercase tracking-wide">Debtor</th>
-                <th className="text-left py-3 px-4 font-medium text-slate-600 text-xs uppercase tracking-wide">Channel</th>
-                <th className="text-left py-3 px-4 font-medium text-slate-600 text-xs uppercase tracking-wide">Action</th>
-                <th className="text-right py-3 px-4 font-medium text-slate-600 text-xs uppercase tracking-wide">Invoices</th>
-                <th className="text-left py-3 px-4 font-medium text-slate-600 text-xs uppercase tracking-wide">Outcome</th>
+              <tr className="border-b border-slate-100">
+                <th className="py-2 text-left text-[11px] font-medium text-slate-400 uppercase tracking-wider">When</th>
+                <th className="py-2 text-left text-[11px] font-medium text-slate-400 uppercase tracking-wider">Customer</th>
+                <th className="py-2 text-left text-[11px] font-medium text-slate-400 uppercase tracking-wider">Channel</th>
+                <th className="py-2 text-left text-[11px] font-medium text-slate-400 uppercase tracking-wider">Action</th>
+                <th className="py-2 text-right text-[11px] font-medium text-slate-400 uppercase tracking-wider">Amount</th>
+                <th className="py-2 text-left text-[11px] font-medium text-slate-400 uppercase tracking-wider">Outcome</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
-              {filteredActions.map(action => {
-                const outcome = getOutcomeDisplay(action.status);
-                return (
-                  <tr 
-                    key={action.id}
-                    onClick={() => onSelectDebtor(action.debtorId, action.id)}
-                    className="hover:bg-slate-50/60 cursor-pointer transition-colors"
-                  >
-                    <td className="py-3 px-4 text-slate-500 tabular-nums">
-                      {formatRelativeTime(action.executedAt)}
-                    </td>
-                    <td className="py-3 px-4">
-                      <span className="font-medium text-slate-900">{action.debtorName}</span>
-                    </td>
-                    <td className="py-3 px-4">
-                      <span className="inline-flex items-center gap-1.5 text-slate-600">
-                        {getChannelIcon(action.channel)}
-                        {getChannelLabel(action.channel)}
-                      </span>
-                    </td>
-                    <td className="py-3 px-4 text-slate-600">
-                      {action.actionType}
-                    </td>
-                    <td className="py-3 px-4 text-right">
-                      <span className="font-medium tabular-nums">{formatCurrencyCompact(action.totalAmount)}</span>
-                      <span className="text-slate-400 ml-1">· {action.invoiceCount}</span>
-                      {action.oldestDaysOverdue > 0 && (
-                        <span className="text-slate-400 ml-1">· {action.oldestDaysOverdue}d</span>
-                      )}
-                    </td>
-                    <td className="py-3 px-4">
-                      <span className={`${outcome.color} font-medium`}>{outcome.label}</span>
-                    </td>
-                  </tr>
-                );
-              })}
+            <tbody>
+              {filteredActions.map(action => (
+                <tr 
+                  key={action.id}
+                  onClick={() => onSelectDebtor(action.debtorId, action.id)}
+                  className="border-b border-slate-50 hover:bg-slate-50/50 cursor-pointer transition-colors"
+                >
+                  <td className="py-3 text-[12px] text-slate-400 tabular-nums">
+                    {formatRelativeTime(action.executedAt)}
+                  </td>
+                  <td className="py-3">
+                    <span className="text-[14px] font-medium text-slate-900 truncate block">{action.debtorName}</span>
+                  </td>
+                  <td className="py-3 text-[13px] text-slate-500">
+                    {getChannelLabel(action.channel)}
+                  </td>
+                  <td className="py-3 text-[13px] text-slate-600 truncate">
+                    {action.actionType}
+                  </td>
+                  <td className="py-3 text-right">
+                    <span className="text-[14px] font-semibold tabular-nums text-slate-900">{formatCurrencyCompact(action.totalAmount)}</span>
+                    <span className="text-[12px] text-slate-400 ml-1">· {action.invoiceCount} inv</span>
+                  </td>
+                  <td className="py-3">
+                    <span className={`text-[13px] font-medium ${getOutcomeStyle(action.status)}`}>
+                      {getOutcomeLabel(action.status)}
+                    </span>
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
