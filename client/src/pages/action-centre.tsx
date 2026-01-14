@@ -603,33 +603,6 @@ function PlannedTabContent({
         </div>
         
         <div className="flex items-center gap-2">
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={isDeleting}
-                className="text-red-600 border-red-200 hover:bg-red-50"
-              >
-                <Trash2 className="h-4 w-4 mr-1" />
-                Delete
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Delete All Planned Actions?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  This will remove all {dailyPlan.actions.length} planned actions. This cannot be undone.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={onDeletePlan} className="bg-red-600 hover:bg-red-700">
-                  Delete All
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
           <Button
             variant="outline"
             size="sm"
