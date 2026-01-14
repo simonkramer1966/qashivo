@@ -87,23 +87,7 @@ export function ExecutedTab({ actions, onSelectDebtor, isLoading }: ExecutedTabP
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-6 text-[12px]">
-        <div className="flex items-center gap-3">
-          {CHANNEL_OPTIONS.map(opt => (
-            <button
-              key={opt.value}
-              onClick={() => setChannelFilter(opt.value)}
-              className={`pb-1 border-b-2 transition-colors ${
-                channelFilter === opt.value 
-                  ? 'border-slate-900 text-slate-900 font-medium' 
-                  : 'border-transparent text-slate-400 hover:text-slate-600'
-              }`}
-            >
-              {opt.label}
-            </button>
-          ))}
-        </div>
-        <div className="w-px h-4 bg-slate-200" />
+      <div className="flex items-center justify-between text-[12px]">
         <div className="flex items-center gap-3">
           {DATE_OPTIONS.map(opt => (
             <button
@@ -113,6 +97,21 @@ export function ExecutedTab({ actions, onSelectDebtor, isLoading }: ExecutedTabP
                 dateFilter === opt.value 
                   ? 'border-slate-900 text-slate-900 font-medium' 
                   : 'border-transparent text-slate-400 hover:text-slate-600'
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+        <div className="flex items-center gap-1">
+          {CHANNEL_OPTIONS.map(opt => (
+            <button
+              key={opt.value}
+              onClick={() => setChannelFilter(opt.value)}
+              className={`px-2 py-1 rounded transition-colors ${
+                channelFilter === opt.value 
+                  ? 'bg-slate-100 text-slate-900 font-medium' 
+                  : 'text-slate-400 hover:text-slate-600'
               }`}
             >
               {opt.label}
