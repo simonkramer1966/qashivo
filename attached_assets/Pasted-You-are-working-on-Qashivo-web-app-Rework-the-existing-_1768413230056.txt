@@ -1,0 +1,181 @@
+You are working on Qashivo (web app). Rework the existing Action Centre screen so it has 5 tabs:
+1) Planned
+2) Executed
+3) Attention
+4) Cashboard
+5) Forecast
+
+CRITICAL UI / DESIGN REQUIREMENTS (must follow)
+- The UI must feel “Apple-like”: calm, minimal, high-quality spacing, strong hierarchy, subtle borders, soft shadows (very light), no heavy outlines, no noisy gradients, no garish colors.
+- Adhere to Edward Tufte + Stephen Few principles:
+  - Maximise data-ink ratio: remove decorative chrome, avoid unnecessary icons, avoid thick gridlines.
+  - Use subtle separators, whitespace, and alignment to create structure instead of boxes everywhere.
+  - Prefer small multiples, clear labels, and restrained annotation over flashy visuals.
+  - Use muted color sparingly and only to highlight exceptions or status.
+  - Avoid chartjunk: no 3D effects, no overly thick bars, no distracting backgrounds.
+  - Numbers should be readable and comparable: align amounts, use tabular numerals, consistent currency formatting.
+- Typography:
+  - Use system font stack (SF-like): -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial.
+  - Use a small set of sizes with consistent scale (e.g. 24/18/14/12).
+  - Use font weight + spacing for hierarchy, not color.
+  - Use tabular-nums for currency columns.
+- Color:
+  - Default is monochrome / neutral.
+  - Only use restrained accent color for primary action and subtle status dots.
+  - Use semantic color ONLY for exceptions (Dispute/Query/Broken) and keep it muted.
+- Layout:
+  - Responsive, but optimized for desktop first.
+  - Plenty of whitespace, consistent paddings, and clear alignment.
+  - Sticky header for tab bar and table headers where applicable.
+- Avoid “SaaS dashboard clutter”: no dense cards, no oversized icons, no “tiles everywhere”.
+
+GOAL
+- Keep the current “Planned” tab behaviour exactly as it is today (daily plan presented for approval).
+- Add the other 4 tabs with V1 functionality, minimal UI complexity, and maximum reuse of existing components.
+- Use a consistent layout: top-level tabs, then content area, with the existing right-side debtor drawer/panel reused across all tabs.
+- The entire Action Centre should feel like one coherent, premium product surface.
+
+NAV / UI
+- Add a tab bar at the top of the Action Centre page with these labels: Planned, Executed, Attention, Cashboard, Forecast.
+- Persist the selected tab in the URL querystring (e.g. ?tab=planned) so refresh/deep links work.
+- Default tab = Planned.
+- Use the same typography + styling conventions as the current app.
+- Tab styling: minimal underline / pill indicator, subtle hover state, no heavy borders.
+
+DATA MODEL (add if missing)
+Create a small shared domain model to support the 5 tabs, based on debtors/customers rather than individual invoices where possible.
+
+Types (TypeScript):
+- Debtor {
+    id, name,
+    primaryContactName?, email?, phone?,
+    totalOutstanding, totalOverdue,
+    oldestDaysOverdue, invoiceCount,
+    lastActionAt?, lastActionChannel?,
+    status,
+    ptpDate?, disputeFlag?, queryFlag?
+  }
+- Action {
+    id, debtorId, executedAt,
+    channel: 'email'|'sms'|'voice',
+    actionType,
+    status: 'sent'|'delivered'|'failed'|'no_answer'|'ptp'|'dispute'|'query',
+    summary?, meta?
+  }
+- ForecastCell {
+    debtorId, weekStartISO,
+    expectedAmount,
+    confidence: 'high'|'medium'|'low',
+    source: 'ptp'|'confirmed_paid'|'historical'|'inferred',
+    detail?
+  }
+
+Create mock data if backend endpoints do not exist yet, but implement the UI in a way that can be wired to real endpoints later.
+
+SHARED COMPONENTS (must reuse)
+- Reuse the existing debtor details side panel/drawer (timeline/profile view) when the user clicks a row/cell in any tab.
+- Add a single selection state: selectedDebtorId. Clicking an item sets it and opens the drawer.
+- Keep interactions consistent: click reveals detail, hover reveals a minimal tooltip.
+
+GLOBAL FORMATTING RULES
+- Currency formatting: GBP by default (£), use Intl.NumberFormat, no decimals unless needed, negatives in parentheses.
+- Align currency values right; use tabular numerals.
+- Use subtle secondary text for metadata (e.g. “21 invoices · Oldest 117d”).
+- Use restrained micro-indicators:
+  - Tiny status dot (muted) or short label (e.g. “PTP”, “Broken”, “Dispute”).
+  - Do not spam icons; one small icon max per row if needed.
+
+TAB 1: PLANNED (existing)
+- Keep existing list + approval controls.
+- No functional changes besides wrapping it as the Planned tab.
+- Style pass: ensure spacing, alignment, and typography match the new premium aesthetic.
+
+TAB 2: EXECUTED (new)
+Purpose: show tasks already executed (proof of work).
+- Render a table/list of Actions (most recent first).
+- Table style: minimal lines, subtle row hover, sticky header, no heavy zebra striping.
+- Columns:
+  Executed At, Debtor, Channel, Action Type,
+  Invoice Summary (count + £ + oldest days),
+  Outcome/Status (short text or subtle dot + label).
+- Filters (small, unobtrusive):
+  Channel (All/Email/SMS/Voice) and Date range (Today/Last 7 days).
+- Clicking a row opens debtor drawer AND anchors timeline to that action if possible.
+
+TAB 3: ATTENTION (new)
+Purpose: exceptions requiring human judgement.
+- Show grouped sections by exception type:
+  - Dispute
+  - Query
+  - Wrong contact / Contact issue
+  - Repeated no response (e.g. 3 attempts)
+  - High value & ageing threshold breached
+- Each group shows a compact list with minimal chrome:
+  Debtor, £ impacted, oldest days overdue, reason, last action, CTA “Review”.
+- Clicking opens debtor drawer.
+- Keep this list intentionally short: only include debtors with exception flags, not all overdue.
+- Visual emphasis: muted warning highlight ONLY for the exception rows (subtle tinted background or left border; no loud colors).
+
+TAB 4: CASHBOARD (new)
+Purpose: “where is the money right now” as a debtor-centric matrix (NOT draggable Kanban).
+- Layout: left fixed debtor column, right columns for money states:
+  Due, Overdue, No Contact, Promised, Broken, Dispute, Query, Paid
+- Each debtor appears once, with exactly one active state cell populated (current status). Other cells blank.
+- Column headers show totals: total £ and debtor count per column (small but clear).
+- Grid style:
+  - No heavy gridlines; use hairline separators or subtle column dividers.
+  - Keep high data density but breathable spacing.
+  - Sticky left debtor column and sticky header row.
+- Hovering a populated cell shows a minimal tooltip:
+  “£X · N invoices
+   Oldest: Yd
+   Last action: (channel + when)
+   PTP date: (if promised)”
+- Clicking a populated cell opens debtor drawer.
+
+Status rules (simple V1):
+- Due: not yet overdue
+- Overdue: overdue but no outbound attempt logged recently
+- No Contact: outbound attempt exists but no response/outcome within cooldown window
+- Promised: ptpDate set in future
+- Broken: ptpDate in past and still unpaid
+- Dispute: disputeFlag true
+- Query: queryFlag true
+- Paid: totalOutstanding == 0 (or recently paid)
+
+TAB 5: FORECAST (new)
+Purpose: debtor-level cash-in timing, weekly columns (Tufte/Few: clear labels, comparable quantities).
+- Layout: left fixed debtor column, right columns = weeks (This week, Next week, Week +2, Week +3, Week +4+)
+  Prefer showing actual week commencing dates in the header (e.g. “w/c 15 Jan”) as a secondary label.
+- Each cell shows expected amount for that debtor in that week.
+- Column headers show total expected £ for the week.
+- Show confidence subtly (e.g. small dot or “H/M/L” in tooltip; avoid loud badges).
+- Hover tooltip:
+  “£X expected
+   Confidence: High/Medium/Low
+   Source: PTP/Confirmed Paid/Historical/Inferred
+   Promised date: (if relevant)
+   Invoices: N”
+- Clicking opens debtor drawer.
+
+V1 forecast logic:
+- If debtor has ptpDate => allocate min(totalOutstanding, totalOverdue) to the week containing ptpDate with confidence=high and source=ptp.
+- If debtor has “confirmed paid but not reconciled” flag (if available) allocate to this week with confidence=high.
+- Else allocate 0 in V1 (do not guess), OR if you must, allocate a small inferred value with confidence=low (make it obvious).
+
+ENGINEERING REQUIREMENTS
+- Implement tabs as components under ActionCentrePage.
+- Keep code clean: small components, no huge files.
+- Add utility functions:
+  - getDebtorStatus(debtor, actions): Status
+  - buildCashboardMatrix(debtors, actions)
+  - buildWeeklyForecast(debtors, actions, weekBuckets)
+- Use lightweight state management (React state is fine).
+- Ensure empty states are well-designed (e.g., “No exceptions — you’re all caught up.”) and keep them minimal.
+- Add basic loading and error placeholders.
+- Ensure accessibility: keyboard tab navigation for the tab bar; tooltips accessible via focus.
+
+DELIVERABLE
+- Provide the full updated code for the Action Centre page and any new components/types/utilities you add.
+- Ensure it runs without backend changes by using mock data if needed.
+- After implementation, do a final pass to simplify visuals (remove unnecessary borders, reduce visual noise) while keeping clarity.
