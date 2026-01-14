@@ -595,7 +595,7 @@ function PlannedTabContent({
                       : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                   }`}
                 >
-                  {ch === 'all' ? 'All' : ch.charAt(0).toUpperCase() + ch.slice(1)}
+                  {ch === 'all' ? 'All' : ch === 'sms' ? 'SMS' : ch.charAt(0).toUpperCase() + ch.slice(1)}
                 </button>
               ))}
             </div>
@@ -748,7 +748,7 @@ function PlannedTabContent({
                     <td className="px-3 py-3">
                       <span className="flex items-center gap-1.5 text-slate-500">
                         {getChannelIcon(item.actionType)}
-                        <span className="capitalize">{item.actionType}</span>
+                        <span>{item.actionType === 'sms' ? 'SMS' : item.actionType.charAt(0).toUpperCase() + item.actionType.slice(1)}</span>
                       </span>
                     </td>
                     <td className="px-3 py-3 text-right">
