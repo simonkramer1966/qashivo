@@ -428,7 +428,6 @@ interface PlannedTabContentProps {
   isDeleting: boolean;
 }
 
-type StatusFilter = 'all' | 'approved' | 'pending';
 type ChannelFilter = 'all' | 'email' | 'sms' | 'voice';
 
 function PlannedTabContent({
@@ -447,7 +446,6 @@ function PlannedTabContent({
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [bulkSkipDays, setBulkSkipDays] = useState('7');
   const [isBulkSkipOpen, setIsBulkSkipOpen] = useState(false);
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [channelFilter, setChannelFilter] = useState<ChannelFilter>('all');
 
   const handleSelect = (actionId: number, selected: boolean) => {
@@ -493,23 +491,14 @@ function PlannedTabContent({
   const filteredActions = useMemo(() => {
     if (!dailyPlan?.actions) return [];
     
-    let result = [...dailyPlan.actions];
-    
-    if (statusFilter === 'approved') {
-      result = result.filter((a: any) => a.status === 'scheduled');
-    } else if (statusFilter === 'pending') {
-      result = result.filter((a: any) => a.status === 'pending_approval');
-    }
-    
     if (channelFilter !== 'all') {
-      result = result.filter((a: any) => a.actionType === channelFilter);
+      return dailyPlan.actions.filter((a: any) => a.actionType === channelFilter);
     }
     
-    return result;
-  }, [dailyPlan?.actions, statusFilter, channelFilter]);
+    return dailyPlan.actions;
+  }, [dailyPlan?.actions, channelFilter]);
 
   const pendingCount = dailyPlan?.actions?.filter((a: any) => a.status === 'pending_approval').length || 0;
-  const scheduledCount = dailyPlan?.actions?.filter((a: any) => a.status === 'scheduled').length || 0;
   const allSelected = filteredActions.length > 0 && filteredActions.every((a: any) => selectedIds.has(a.id));
 
   const getChannelLabel = (channel: string) => {
@@ -584,42 +573,20 @@ function PlannedTabContent({
         </Button>
       </div>
 
-      <div className="flex items-center gap-4">
-        <div className="flex gap-1">
-          {([
-            { value: 'all' as const, label: 'All' },
-            { value: 'approved' as const, label: 'Approved' },
-            { value: 'pending' as const, label: 'Pending' },
-          ]).map(opt => (
-            <button
-              key={opt.value}
-              onClick={() => setStatusFilter(opt.value)}
-              className={`px-2.5 py-1 text-[12px] font-medium transition-colors rounded ${
-                statusFilter === opt.value 
-                  ? 'bg-slate-100 text-slate-900' 
-                  : 'text-slate-400 hover:text-slate-600'
-              }`}
-            >
-              {opt.label}
-            </button>
-          ))}
-        </div>
-        <div className="w-px h-4 bg-slate-200" />
-        <div className="flex gap-1">
-          {(['all', 'email', 'sms', 'voice'] as const).map(ch => (
-            <button
-              key={ch}
-              onClick={() => setChannelFilter(ch)}
-              className={`px-2.5 py-1 text-[12px] font-medium transition-colors rounded ${
-                channelFilter === ch 
-                  ? 'bg-slate-100 text-slate-900' 
-                  : 'text-slate-400 hover:text-slate-600'
-              }`}
-            >
-              {ch === 'all' ? 'All' : ch === 'sms' ? 'SMS' : ch.charAt(0).toUpperCase() + ch.slice(1)}
-            </button>
-          ))}
-        </div>
+      <div className="flex items-center gap-1">
+        {(['all', 'email', 'sms', 'voice'] as const).map(ch => (
+          <button
+            key={ch}
+            onClick={() => setChannelFilter(ch)}
+            className={`px-2.5 py-1 text-[12px] font-medium transition-colors rounded ${
+              channelFilter === ch 
+                ? 'bg-slate-100 text-slate-900' 
+                : 'text-slate-400 hover:text-slate-600'
+            }`}
+          >
+            {ch === 'all' ? 'All' : ch === 'sms' ? 'SMS' : ch.charAt(0).toUpperCase() + ch.slice(1)}
+          </button>
+        ))}
       </div>
 
       {hasSelection && (
