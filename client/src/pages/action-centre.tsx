@@ -263,21 +263,21 @@ export default function ActionCentreV2() {
       <main className="flex-1 overflow-y-auto main-with-bottom-nav">
         <Header title="Action Centre" subtitle="Manage your collection actions" />
         
-        <div className="p-4 lg:p-6 space-y-6 bg-gradient-to-br from-slate-50 via-blue-50 to-teal-50 min-h-[calc(100vh-80px)]">
-          <div className="flex items-center gap-1 border-b border-slate-200/60">
+        <div className="p-6 lg:p-8 space-y-6 bg-white min-h-[calc(100vh-80px)]">
+          <div className="flex items-center gap-6 border-b border-slate-100">
             {TABS.map(tab => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`px-4 py-3 text-sm font-medium transition-colors relative ${
+                className={`pb-3 text-[13px] font-medium transition-colors relative ${
                   activeTab === tab.id
                     ? 'text-slate-900'
-                    : 'text-slate-500 hover:text-slate-700'
+                    : 'text-slate-400 hover:text-slate-600'
                 }`}
               >
                 {tab.label}
                 {activeTab === tab.id && (
-                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-slate-900" />
+                  <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-slate-900 rounded-full" />
                 )}
               </button>
             ))}
@@ -512,21 +512,19 @@ function PlannedTabContent({
   const scheduledCount = dailyPlan?.actions?.filter((a: any) => a.status === 'scheduled').length || 0;
   const allSelected = filteredActions.length > 0 && filteredActions.every((a: any) => selectedIds.has(a.id));
 
-  const getChannelIcon = (channel: string) => {
+  const getChannelLabel = (channel: string) => {
     switch (channel) {
-      case 'email': return <Mail className="h-3.5 w-3.5" />;
-      case 'sms': return <MessageSquare className="h-3.5 w-3.5" />;
-      case 'voice': return <Phone className="h-3.5 w-3.5" />;
-      default: return <Mail className="h-3.5 w-3.5" />;
+      case 'email': return 'Email';
+      case 'sms': return 'SMS';
+      case 'voice': return 'Call';
+      default: return 'Email';
     }
   };
 
-  const getStatusDisplay = (status: string) => {
-    if (status === 'scheduled') {
-      return { label: 'Approved', color: 'text-emerald-600' };
-    }
-    return { label: 'Pending', color: 'text-amber-600' };
-  };
+  const emailCount = dailyPlan?.actions?.filter((a: any) => a.actionType === 'email').length || 0;
+  const smsCount = dailyPlan?.actions?.filter((a: any) => a.actionType === 'sms').length || 0;
+  const voiceCount = dailyPlan?.actions?.filter((a: any) => a.actionType === 'voice').length || 0;
+  const totalAmount = dailyPlan?.summary?.totalAmount || 0;
 
   if (isLoading) {
     return (
@@ -556,87 +554,97 @@ function PlannedTabContent({
     );
   }
 
+  const statsLine = [
+    `${dailyPlan.actions.length} actions`,
+    formatCurrency(totalAmount),
+    emailCount > 0 ? `${emailCount} email${emailCount > 1 ? 's' : ''}` : null,
+    smsCount > 0 ? `${smsCount} SMS` : null,
+    voiceCount > 0 ? `${voiceCount} call${voiceCount > 1 ? 's' : ''}` : null,
+  ].filter(Boolean).join(' · ');
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4 text-sm">
-          <div className="flex items-center gap-2">
-            <span className="text-slate-500">Status:</span>
-            <div className="flex gap-1">
-              {([
-                { value: 'all' as const, label: 'All' },
-                { value: 'approved' as const, label: `Approved (${scheduledCount})` },
-                { value: 'pending' as const, label: `Pending (${pendingCount})` },
-              ]).map(opt => (
-                <button
-                  key={opt.value}
-                  onClick={() => setStatusFilter(opt.value)}
-                  className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-                    statusFilter === opt.value 
-                      ? 'bg-slate-900 text-white' 
-                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                  }`}
-                >
-                  {opt.label}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-slate-500">Channel:</span>
-            <div className="flex gap-1">
-              {(['all', 'email', 'sms', 'voice'] as const).map(ch => (
-                <button
-                  key={ch}
-                  onClick={() => setChannelFilter(ch)}
-                  className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-                    channelFilter === ch 
-                      ? 'bg-slate-900 text-white' 
-                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                  }`}
-                >
-                  {ch === 'all' ? 'All' : ch === 'sms' ? 'SMS' : ch.charAt(0).toUpperCase() + ch.slice(1)}
-                </button>
-              ))}
-            </div>
-          </div>
+        <div className="space-y-1">
+          <p className="text-[13px] text-slate-400 font-normal tracking-wide">
+            {statsLine}
+            {dailyPlan.tenantPolicies?.executionTime && (
+              <span> · Executes at {dailyPlan.tenantPolicies.executionTime}</span>
+            )}
+          </p>
         </div>
         
         <Button
           size="sm"
           onClick={onApprovePlan}
           disabled={isApproving || pendingCount === 0}
-          className="bg-slate-900 hover:bg-slate-800 text-white"
+          className="h-8 px-4 text-[13px] font-medium bg-slate-900 hover:bg-slate-800 text-white rounded-md"
         >
-          <CheckCircle2 className="h-4 w-4 mr-1" />
           {isApproving ? 'Approving...' : `Approve All (${pendingCount})`}
         </Button>
       </div>
 
+      <div className="flex items-center gap-4">
+        <div className="flex gap-1">
+          {([
+            { value: 'all' as const, label: 'All' },
+            { value: 'approved' as const, label: 'Approved' },
+            { value: 'pending' as const, label: 'Pending' },
+          ]).map(opt => (
+            <button
+              key={opt.value}
+              onClick={() => setStatusFilter(opt.value)}
+              className={`px-2.5 py-1 text-[12px] font-medium transition-colors rounded ${
+                statusFilter === opt.value 
+                  ? 'bg-slate-100 text-slate-900' 
+                  : 'text-slate-400 hover:text-slate-600'
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+        <div className="w-px h-4 bg-slate-200" />
+        <div className="flex gap-1">
+          {(['all', 'email', 'sms', 'voice'] as const).map(ch => (
+            <button
+              key={ch}
+              onClick={() => setChannelFilter(ch)}
+              className={`px-2.5 py-1 text-[12px] font-medium transition-colors rounded ${
+                channelFilter === ch 
+                  ? 'bg-slate-100 text-slate-900' 
+                  : 'text-slate-400 hover:text-slate-600'
+              }`}
+            >
+              {ch === 'all' ? 'All' : ch === 'sms' ? 'SMS' : ch.charAt(0).toUpperCase() + ch.slice(1)}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {hasSelection && (
-        <div className="sticky top-0 z-10 bg-white border border-slate-200 rounded-lg p-3 shadow-sm flex items-center justify-between">
+        <div className="sticky top-0 z-10 py-3 flex items-center justify-between border-y border-slate-100 bg-white">
           <div className="flex items-center gap-3">
-            <span className="text-sm font-medium text-slate-700">
+            <span className="text-[13px] font-medium text-slate-700">
               {selectedIds.size} selected
             </span>
             <button
               onClick={clearSelection}
-              className="text-xs text-slate-500 hover:text-slate-700 flex items-center gap-1"
+              className="text-[12px] text-slate-400 hover:text-slate-600"
             >
-              <X className="h-3 w-3" />
               Clear
             </button>
           </div>
           <div className="flex items-center gap-2">
             <Popover open={isBulkSkipOpen} onOpenChange={setIsBulkSkipOpen}>
               <PopoverTrigger asChild>
-                <Button variant="outline" size="sm" className="h-8 text-xs">
-                  Skip Selected
-                </Button>
+                <button className="px-3 py-1.5 text-[12px] font-medium text-slate-600 hover:bg-slate-50 rounded transition-colors">
+                  Skip
+                </button>
               </PopoverTrigger>
               <PopoverContent className="w-48 p-3" align="end">
                 <form onSubmit={handleBulkSkipSubmit} className="space-y-2">
-                  <label className="text-xs text-slate-500">Skip all for how many days?</label>
+                  <label className="text-[12px] text-slate-500">Skip for how many days?</label>
                   <Input
                     type="number"
                     min="1"
@@ -646,92 +654,79 @@ function PlannedTabContent({
                     className="h-8 text-sm"
                     autoFocus
                   />
-                  <Button type="submit" size="sm" className="w-full h-7 text-xs">
-                    Skip {selectedIds.size} Actions
+                  <Button type="submit" size="sm" className="w-full h-7 text-[12px]">
+                    Skip {selectedIds.size}
                   </Button>
                 </form>
               </PopoverContent>
             </Popover>
-            <Button
+            <button
               onClick={handleBulkAttention}
-              size="sm"
-              className="h-8 text-xs bg-amber-500 hover:bg-amber-600 text-white"
+              className="px-3 py-1.5 text-[12px] font-medium text-amber-600 hover:bg-amber-50 rounded transition-colors"
             >
-              Move to Attention
-            </Button>
+              Attention
+            </button>
           </div>
         </div>
       )}
 
       {filteredActions.length === 0 ? (
         <div className="py-16 text-center">
-          <p className="text-slate-500 text-sm">No actions match the current filters</p>
+          <p className="text-slate-400 text-[13px]">No actions match filters</p>
         </div>
       ) : (
-        <div className="border border-slate-200/60 rounded-lg overflow-hidden">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-slate-50/80 border-b border-slate-200/60">
-                <th className="w-10 px-3 py-3 text-left">
+        <table className="w-full">
+          <thead>
+            <tr className="border-b border-slate-100">
+              <th className="w-10 py-2 text-left">
+                <Checkbox
+                  checked={allSelected}
+                  onCheckedChange={(checked) => handleSelectAll(checked as boolean)}
+                />
+              </th>
+              <th className="py-2 text-left text-[11px] font-medium text-slate-400 uppercase tracking-wider">Customer</th>
+              <th className="py-2 text-left text-[11px] font-medium text-slate-400 uppercase tracking-wider w-16">Channel</th>
+              <th className="py-2 text-right text-[11px] font-medium text-slate-400 uppercase tracking-wider w-24">Overdue</th>
+              <th className="py-2 text-right text-[11px] font-medium text-slate-400 uppercase tracking-wider w-28">Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredActions.map((item: any) => (
+              <tr 
+                key={item.id}
+                onClick={() => onPreviewAction(item)}
+                className={`border-b border-slate-50 cursor-pointer transition-colors ${
+                  selectedIds.has(item.id) ? 'bg-slate-50' : 'hover:bg-slate-50/50'
+                }`}
+              >
+                <td className="py-3" onClick={(e) => e.stopPropagation()}>
                   <Checkbox
-                    checked={allSelected}
-                    onCheckedChange={(checked) => handleSelectAll(checked as boolean)}
+                    checked={selectedIds.has(item.id)}
+                    onCheckedChange={(checked) => handleSelect(item.id, checked as boolean)}
                   />
-                </th>
-                <th className="px-3 py-3 text-left font-medium text-slate-600">Customer</th>
-                <th className="px-3 py-3 text-left font-medium text-slate-600 w-20">Channel</th>
-                <th className="px-3 py-3 text-right font-medium text-slate-600 w-28">Amount</th>
-                <th className="px-3 py-3 text-right font-medium text-slate-600 w-24">Days Overdue</th>
-                <th className="px-3 py-3 text-left font-medium text-slate-600 w-24">Status</th>
+                </td>
+                <td className="py-3">
+                  <span className="text-[14px] font-medium text-slate-900">
+                    {item.companyName || item.contactName || 'Unknown'}
+                  </span>
+                </td>
+                <td className="py-3">
+                  <span className="text-[13px] text-slate-400">
+                    {getChannelLabel(item.actionType)}
+                  </span>
+                </td>
+                <td className="py-3 text-right">
+                  <span className="text-[13px] tabular-nums text-slate-500">{item.daysOverdue}d</span>
+                </td>
+                <td className="py-3 text-right">
+                  <span className="text-[14px] font-semibold tabular-nums text-slate-900">
+                    {formatCurrency(parseFloat(item.amount))}
+                  </span>
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {filteredActions.map((item: any) => {
-                const status = getStatusDisplay(item.status);
-                return (
-                  <tr 
-                    key={item.id}
-                    onClick={() => onPreviewAction(item)}
-                    className={`border-b border-slate-100 last:border-0 cursor-pointer transition-colors ${
-                      selectedIds.has(item.id) ? 'bg-blue-50' : 'hover:bg-slate-50/60'
-                    }`}
-                  >
-                    <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
-                      <Checkbox
-                        checked={selectedIds.has(item.id)}
-                        onCheckedChange={(checked) => handleSelect(item.id, checked as boolean)}
-                      />
-                    </td>
-                    <td className="px-3 py-3">
-                      <span className="font-medium text-slate-900">
-                        {item.companyName || item.contactName || 'Unknown'}
-                      </span>
-                    </td>
-                    <td className="px-3 py-3">
-                      <span className="flex items-center gap-1.5 text-slate-500">
-                        {getChannelIcon(item.actionType)}
-                        <span>{item.actionType === 'sms' ? 'SMS' : item.actionType.charAt(0).toUpperCase() + item.actionType.slice(1)}</span>
-                      </span>
-                    </td>
-                    <td className="px-3 py-3 text-right">
-                      <span className="font-medium tabular-nums text-slate-900">
-                        {formatCurrency(parseFloat(item.amount))}
-                      </span>
-                    </td>
-                    <td className="px-3 py-3 text-right">
-                      <span className="tabular-nums text-slate-600">{item.daysOverdue}d</span>
-                    </td>
-                    <td className="px-3 py-3">
-                      <span className={`text-xs font-medium ${status.color}`}>
-                        {status.label}
-                      </span>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+            ))}
+          </tbody>
+        </table>
       )}
     </div>
   );
