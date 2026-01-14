@@ -263,9 +263,16 @@ export default function ActionCentreV2() {
       <main className="flex-1 overflow-y-auto main-with-bottom-nav">
         <Header 
           title="Action Centre" 
-          subtitle={activeTab === 'planned' && dailyPlan?.tenantPolicies?.executionTime 
-            ? `Today's Plan · Executes at ${dailyPlan.tenantPolicies.executionTime}`
-            : activeTab === 'planned' ? "Today's Plan" : ""}
+          subtitle={
+            activeTab === 'planned' && dailyPlan?.tenantPolicies?.executionTime 
+              ? `Today's Plan · Executes at ${dailyPlan.tenantPolicies.executionTime}`
+              : activeTab === 'planned' ? "Today's Plan"
+              : activeTab === 'executed' ? "Completed actions"
+              : activeTab === 'attention' ? "Items needing review"
+              : activeTab === 'cashboard' ? "Customer overview"
+              : activeTab === 'forecast' ? "Cash flow projections"
+              : "Manage your collection actions"
+          }
           action={activeTab === 'planned' && (dailyPlan?.actions?.length ?? 0) > 0 ? (
             <button
               onClick={() => approvePlanMutation.mutate()}
