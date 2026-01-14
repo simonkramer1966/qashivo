@@ -428,6 +428,9 @@ interface PlannedTabContentProps {
   isDeleting: boolean;
 }
 
+type StatusFilter = 'all' | 'approved' | 'pending';
+type ChannelFilter = 'all' | 'email' | 'sms' | 'voice';
+
 function PlannedTabContent({
   dailyPlan,
   isLoading,
@@ -444,6 +447,8 @@ function PlannedTabContent({
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [bulkSkipDays, setBulkSkipDays] = useState('7');
   const [isBulkSkipOpen, setIsBulkSkipOpen] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [channelFilter, setChannelFilter] = useState<ChannelFilter>('all');
 
   const handleSelect = (actionId: number, selected: boolean) => {
     setSelectedIds(prev => {
@@ -457,18 +462,12 @@ function PlannedTabContent({
     });
   };
 
-  const handleSelectAll = (items: any[], selected: boolean) => {
-    setSelectedIds(prev => {
-      const newSet = new Set(prev);
-      items.forEach(item => {
-        if (selected) {
-          newSet.add(item.id);
-        } else {
-          newSet.delete(item.id);
-        }
-      });
-      return newSet;
-    });
+  const handleSelectAll = (checked: boolean) => {
+    if (checked && filteredActions) {
+      setSelectedIds(new Set(filteredActions.map((a: any) => a.id)));
+    } else {
+      setSelectedIds(new Set());
+    }
   };
 
   const clearSelection = () => {
@@ -491,16 +490,50 @@ function PlannedTabContent({
 
   const hasSelection = selectedIds.size > 0;
 
+  const filteredActions = useMemo(() => {
+    if (!dailyPlan?.actions) return [];
+    
+    let result = [...dailyPlan.actions];
+    
+    if (statusFilter === 'approved') {
+      result = result.filter((a: any) => a.status === 'scheduled');
+    } else if (statusFilter === 'pending') {
+      result = result.filter((a: any) => a.status === 'pending_approval');
+    }
+    
+    if (channelFilter !== 'all') {
+      result = result.filter((a: any) => a.actionType === channelFilter);
+    }
+    
+    return result;
+  }, [dailyPlan?.actions, statusFilter, channelFilter]);
+
+  const pendingCount = dailyPlan?.actions?.filter((a: any) => a.status === 'pending_approval').length || 0;
+  const scheduledCount = dailyPlan?.actions?.filter((a: any) => a.status === 'scheduled').length || 0;
+  const allSelected = filteredActions.length > 0 && filteredActions.every((a: any) => selectedIds.has(a.id));
+
+  const getChannelIcon = (channel: string) => {
+    switch (channel) {
+      case 'email': return <Mail className="h-3.5 w-3.5" />;
+      case 'sms': return <MessageSquare className="h-3.5 w-3.5" />;
+      case 'voice': return <Phone className="h-3.5 w-3.5" />;
+      default: return <Mail className="h-3.5 w-3.5" />;
+    }
+  };
+
+  const getStatusDisplay = (status: string) => {
+    if (status === 'scheduled') {
+      return { label: 'Approved', color: 'text-emerald-600' };
+    }
+    return { label: 'Pending', color: 'text-amber-600' };
+  };
+
   if (isLoading) {
     return (
-      <div className="space-y-4">
-        <div className="h-16 bg-slate-100 animate-pulse rounded-lg" />
-        <div className="grid grid-cols-4 gap-4">
-          {[...Array(4)].map((_, i) => (
-            <div key={i} className="h-24 bg-slate-100 animate-pulse rounded-lg" />
-          ))}
-        </div>
-        <div className="h-64 bg-slate-100 animate-pulse rounded-lg" />
+      <div className="space-y-2">
+        {[...Array(5)].map((_, i) => (
+          <div key={i} className="h-14 bg-slate-100 animate-pulse rounded" />
+        ))}
       </div>
     );
   }
@@ -509,10 +542,8 @@ function PlannedTabContent({
     return (
       <div className="py-16 text-center">
         <Clock className="h-12 w-12 mx-auto mb-4 text-slate-300" />
-        <h3 className="text-lg font-semibold text-slate-900 mb-2">No Planned Actions</h3>
-        <p className="text-slate-500 text-sm max-w-md mx-auto mb-6">
-          AI generates action plans based on your overdue invoices and customer behaviour patterns.
-        </p>
+        <p className="text-slate-600 font-medium">No planned actions</p>
+        <p className="text-slate-400 text-sm mt-1 mb-6">AI generates action plans based on your overdue invoices</p>
         <Button
           onClick={onGeneratePlan}
           disabled={isGenerating}
@@ -525,21 +556,52 @@ function PlannedTabContent({
     );
   }
 
-  const pendingCount = dailyPlan.actions.filter((a: any) => a.status === 'pending_approval').length;
-  const scheduledCount = dailyPlan.actions.filter((a: any) => a.status === 'scheduled').length;
-
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-semibold text-slate-900">Today's Plan</h2>
-          <p className="text-sm text-slate-500 mt-0.5">
-            Review and approve actions for AI execution
-            {dailyPlan.tenantPolicies?.executionTime && (
-              <span className="ml-2 text-blue-600">· Executes at {dailyPlan.tenantPolicies.executionTime}</span>
-            )}
-          </p>
+        <div className="flex items-center gap-4 text-sm">
+          <div className="flex items-center gap-2">
+            <span className="text-slate-500">Status:</span>
+            <div className="flex gap-1">
+              {([
+                { value: 'all' as const, label: 'All' },
+                { value: 'approved' as const, label: `Approved (${scheduledCount})` },
+                { value: 'pending' as const, label: `Pending (${pendingCount})` },
+              ]).map(opt => (
+                <button
+                  key={opt.value}
+                  onClick={() => setStatusFilter(opt.value)}
+                  className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                    statusFilter === opt.value 
+                      ? 'bg-slate-900 text-white' 
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-slate-500">Channel:</span>
+            <div className="flex gap-1">
+              {(['all', 'email', 'sms', 'voice'] as const).map(ch => (
+                <button
+                  key={ch}
+                  onClick={() => setChannelFilter(ch)}
+                  className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                    channelFilter === ch 
+                      ? 'bg-slate-900 text-white' 
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
+                >
+                  {ch === 'all' ? 'All' : ch.charAt(0).toUpperCase() + ch.slice(1)}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
+        
         <div className="flex items-center gap-2">
           <AlertDialog>
             <AlertDialogTrigger asChild>
@@ -587,41 +649,6 @@ function PlannedTabContent({
             {isApproving ? 'Approving...' : `Approve All (${pendingCount})`}
           </Button>
         </div>
-      </div>
-
-      <div className="grid grid-cols-4 gap-4">
-        <SummaryCard
-          icon={Clock}
-          iconBg="bg-slate-100"
-          iconColor="text-slate-600"
-          label="Total Actions"
-          value={dailyPlan.summary.totalActions}
-          subtext={formatCurrency(dailyPlan.summary.totalAmount)}
-        />
-        <SummaryCard
-          icon={Mail}
-          iconBg="bg-blue-50"
-          iconColor="text-blue-600"
-          label="Emails"
-          value={dailyPlan.summary.byType.email}
-          subtext="Payment reminders"
-        />
-        <SummaryCard
-          icon={MessageSquare}
-          iconBg="bg-purple-50"
-          iconColor="text-purple-600"
-          label="SMS"
-          value={dailyPlan.summary.byType.sms}
-          subtext="Follow-ups"
-        />
-        <SummaryCard
-          icon={Phone}
-          iconBg="bg-green-50"
-          iconColor="text-green-600"
-          label="Voice"
-          value={dailyPlan.summary.byType.voice}
-          subtext="Collection calls"
-        />
       </div>
 
       {hasSelection && (
@@ -674,134 +701,76 @@ function PlannedTabContent({
         </div>
       )}
 
-      {scheduledCount > 0 && (() => {
-        const scheduledItems = dailyPlan.actions.filter((a: any) => a.status === 'scheduled');
-        const displayItems = scheduledItems.slice(0, 5);
-        const allScheduledSelected = displayItems.every((item: any) => selectedIds.has(item.id));
-        
-        return (
-          <div className="border border-emerald-200/60 bg-emerald-50/40 rounded-lg p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <Checkbox
-                checked={allScheduledSelected}
-                onCheckedChange={(checked) => handleSelectAll(displayItems, checked as boolean)}
-                className="flex-shrink-0"
-              />
-              <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-              <span className="text-sm font-medium text-emerald-800">Approved & Scheduled ({scheduledCount})</span>
-            </div>
-            <div className="space-y-1">
-              {displayItems.map((item: any) => (
-                <ActionRow 
-                  key={item.id} 
-                  item={item} 
-                  onClick={() => onPreviewAction(item)}
-                  isSelected={selectedIds.has(item.id)}
-                  onSelect={handleSelect}
-                />
-              ))}
-              {scheduledCount > 5 && (
-                <p className="text-xs text-emerald-600 pl-6">+ {scheduledCount - 5} more scheduled</p>
-              )}
-            </div>
-          </div>
-        );
-      })()}
-
-      {pendingCount > 0 && (() => {
-        const pendingItems = dailyPlan.actions.filter((a: any) => a.status === 'pending_approval');
-        const allPendingSelected = pendingItems.every((item: any) => selectedIds.has(item.id));
-        
-        return (
-          <div className="border border-slate-200/60 bg-white rounded-lg p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <Checkbox
-                checked={allPendingSelected}
-                onCheckedChange={(checked) => handleSelectAll(pendingItems, checked as boolean)}
-                className="flex-shrink-0"
-              />
-              <Clock className="h-4 w-4 text-slate-500" />
-              <span className="text-sm font-medium text-slate-700">Awaiting Approval ({pendingCount})</span>
-            </div>
-            <div className="space-y-1">
-              {pendingItems.map((item: any) => (
-                <ActionRow 
-                  key={item.id} 
-                  item={item} 
-                  onClick={() => onPreviewAction(item)}
-                  isSelected={selectedIds.has(item.id)}
-                  onSelect={handleSelect}
-                />
-              ))}
-            </div>
-          </div>
-        );
-      })()}
-    </div>
-  );
-}
-
-function SummaryCard({ icon: Icon, iconBg, iconColor, label, value, subtext }: {
-  icon: any;
-  iconBg: string;
-  iconColor: string;
-  label: string;
-  value: number;
-  subtext: string;
-}) {
-  return (
-    <div className="bg-white border border-slate-200/60 rounded-lg p-4">
-      <div className="flex items-center gap-2 mb-2">
-        <div className={`p-1.5 rounded-lg ${iconBg}`}>
-          <Icon className={`h-4 w-4 ${iconColor}`} />
+      {filteredActions.length === 0 ? (
+        <div className="py-16 text-center">
+          <p className="text-slate-500 text-sm">No actions match the current filters</p>
         </div>
-        <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">{label}</span>
-      </div>
-      <div className="text-2xl font-semibold text-slate-900 tabular-nums">{value}</div>
-      <div className="text-xs text-slate-400 mt-0.5">{subtext}</div>
-    </div>
-  );
-}
-
-function ActionRow({ item, onClick, isSelected, onSelect }: { 
-  item: any; 
-  onClick: () => void;
-  isSelected: boolean;
-  onSelect: (actionId: number, selected: boolean) => void;
-}) {
-  const getIcon = () => {
-    switch (item.actionType) {
-      case 'email': return Mail;
-      case 'voice': return Phone;
-      case 'sms': return MessageSquare;
-      default: return Mail;
-    }
-  };
-  const Icon = getIcon();
-
-  return (
-    <div className={`flex items-center gap-3 py-2 px-2 -mx-2 rounded transition-colors ${isSelected ? 'bg-blue-50' : 'hover:bg-slate-50'}`}>
-      <Checkbox
-        checked={isSelected}
-        onCheckedChange={(checked) => onSelect(item.id, checked as boolean)}
-        onClick={(e) => e.stopPropagation()}
-        className="flex-shrink-0"
-      />
-      <button
-        onClick={onClick}
-        className="flex-1 flex items-center gap-3 text-left min-w-0"
-      >
-        <Icon className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
-        <span className="flex-1 text-sm text-slate-700 truncate">
-          {item.companyName || item.contactName || 'Unknown'}
-        </span>
-        {item.invoiceCount > 1 && (
-          <span className="text-xs text-slate-400 flex-shrink-0">{item.invoiceCount} inv</span>
-        )}
-        <span className="text-sm font-medium text-slate-900 tabular-nums flex-shrink-0">
-          {formatCurrency(parseFloat(item.amount))}
-        </span>
-      </button>
+      ) : (
+        <div className="border border-slate-200/60 rounded-lg overflow-hidden">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-slate-50/80 border-b border-slate-200/60">
+                <th className="w-10 px-3 py-3 text-left">
+                  <Checkbox
+                    checked={allSelected}
+                    onCheckedChange={(checked) => handleSelectAll(checked as boolean)}
+                  />
+                </th>
+                <th className="px-3 py-3 text-left font-medium text-slate-600">Customer</th>
+                <th className="px-3 py-3 text-left font-medium text-slate-600 w-20">Channel</th>
+                <th className="px-3 py-3 text-right font-medium text-slate-600 w-28">Amount</th>
+                <th className="px-3 py-3 text-right font-medium text-slate-600 w-24">Days Overdue</th>
+                <th className="px-3 py-3 text-left font-medium text-slate-600 w-24">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredActions.map((item: any) => {
+                const status = getStatusDisplay(item.status);
+                return (
+                  <tr 
+                    key={item.id}
+                    onClick={() => onPreviewAction(item)}
+                    className={`border-b border-slate-100 last:border-0 cursor-pointer transition-colors ${
+                      selectedIds.has(item.id) ? 'bg-blue-50' : 'hover:bg-slate-50/60'
+                    }`}
+                  >
+                    <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
+                      <Checkbox
+                        checked={selectedIds.has(item.id)}
+                        onCheckedChange={(checked) => handleSelect(item.id, checked as boolean)}
+                      />
+                    </td>
+                    <td className="px-3 py-3">
+                      <span className="font-medium text-slate-900">
+                        {item.companyName || item.contactName || 'Unknown'}
+                      </span>
+                    </td>
+                    <td className="px-3 py-3">
+                      <span className="flex items-center gap-1.5 text-slate-500">
+                        {getChannelIcon(item.actionType)}
+                        <span className="capitalize">{item.actionType}</span>
+                      </span>
+                    </td>
+                    <td className="px-3 py-3 text-right">
+                      <span className="font-medium tabular-nums text-slate-900">
+                        {formatCurrency(parseFloat(item.amount))}
+                      </span>
+                    </td>
+                    <td className="px-3 py-3 text-right">
+                      <span className="tabular-nums text-slate-600">{item.daysOverdue}d</span>
+                    </td>
+                    <td className="px-3 py-3">
+                      <span className={`text-xs font-medium ${status.color}`}>
+                        {status.label}
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }
