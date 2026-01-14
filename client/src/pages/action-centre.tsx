@@ -602,26 +602,15 @@ function PlannedTabContent({
           </div>
         </div>
         
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onGeneratePlan}
-            disabled={isGenerating}
-          >
-            <RefreshCw className={`h-4 w-4 mr-1 ${isGenerating ? 'animate-spin' : ''}`} />
-            Regenerate
-          </Button>
-          <Button
-            size="sm"
-            onClick={onApprovePlan}
-            disabled={isApproving || pendingCount === 0}
-            className="bg-slate-900 hover:bg-slate-800 text-white"
-          >
-            <CheckCircle2 className="h-4 w-4 mr-1" />
-            {isApproving ? 'Approving...' : `Approve All (${pendingCount})`}
-          </Button>
-        </div>
+        <Button
+          size="sm"
+          onClick={onApprovePlan}
+          disabled={isApproving || pendingCount === 0}
+          className="bg-slate-900 hover:bg-slate-800 text-white"
+        >
+          <CheckCircle2 className="h-4 w-4 mr-1" />
+          {isApproving ? 'Approving...' : `Approve All (${pendingCount})`}
+        </Button>
       </div>
 
       {hasSelection && (
