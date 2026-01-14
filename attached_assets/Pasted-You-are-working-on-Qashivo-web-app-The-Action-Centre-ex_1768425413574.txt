@@ -1,0 +1,105 @@
+You are working on Qashivo (web app). The Action Centre exists, but it currently looks like a generic SaaS dashboard. Rework the Action Centre UI to feel “Apple-like” and adhere to Tufte + Stephen Few principles, WITHOUT changing core functionality.
+
+PRIMARY GOAL
+- Make the Action Centre feel calm, premium, minimal, and information-first.
+- Remove “dashboard furniture” (cards, heavy containers, excessive icons).
+- Use whitespace, alignment, and typography for hierarchy instead of boxes.
+- Keep existing behaviour intact (especially the Planned tab approval flow).
+
+ABSOLUTE DESIGN RULES (must follow)
+1) Remove cards wherever possible
+- No KPI tiles/cards on Planned (the 4 summary cards must be removed).
+- Avoid wrapping everything in rounded rectangles.
+- Use ONE main content surface; content should feel like it sits on a clean page.
+
+2) Maximise data-ink ratio (Tufte/Few)
+- No decorative icons in headers.
+- No thick borders, no heavy shadows, no strong gradients.
+- Minimise dividers: use subtle 1px hairlines only where needed (low-contrast).
+- Avoid “widgets” and “tiles” unless absolutely necessary.
+
+3) Typography is the hierarchy
+- Use system font stack: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial.
+- Use 3–4 sizes max (e.g. 24, 16, 14, 12) and consistent weights.
+- Use tabular numerals for amounts (CSS: font-variant-numeric: tabular-nums).
+- Amounts right-aligned and slightly heavier than metadata.
+- Prefer weight + spacing, not color, to signal importance.
+
+4) Color is only for meaning
+- Default UI is neutral/monochrome.
+- Accent color only for primary action (Approve) and selection state.
+- Muted semantic tints only for exceptions (Attention, Dispute, Query, Broken).
+- No colorful icons, no bright badges everywhere.
+
+5) Layout: calm, aligned, breathable
+- Increase whitespace: larger top/bottom padding, clear spacing between sections.
+- Sticky tab bar and sticky table headers where applicable.
+- Lists should resemble Apple Wallet / iCloud tables: clean rows, subtle hover, clear columns.
+
+SCOPE
+- Keep the five Action Centre tabs: Planned, Executed, Attention, Cashboard, Forecast.
+- This prompt is focused on the VISUAL redesign + layout cleanup (especially Planned), not business logic changes.
+
+SPECIFIC REQUIRED CHANGES (DO THESE)
+A) Header + actions
+- Keep “Action Centre” title.
+- Subheader should be a single line: “Today’s Plan · Executes at 09:00” (or dynamic time if available).
+- Right-align actions as a compact action cluster:
+  - Primary: “Approve all”
+  - Secondary: “Regenerate”
+  - Tertiary/danger: “Delete”
+- Make buttons smaller and less “pill-y”: subtle rounding, no heavy outlines.
+
+B) Remove the 4 summary cards on Planned
+- Replace with a single minimal “stats line” beneath the header, like:
+  “20 actions · £97,574 total · 18 emails · 1 SMS · 1 call”
+- This line must be small, neutral text (not a card).
+
+C) Make the approvals list the hero (Planned)
+- Remove outer card backgrounds around the list.
+- Use a table/list with subtle row separators (hairline).
+- Each row should read like:
+  Left: Debtor name (primary), contact (secondary)
+  Middle: “11 invoices · 97d overdue · Final notice” (secondary)
+  Right: Amount (£6,388) right-aligned, heavier weight, tabular numerals
+- Reduce icons in rows:
+  - No leading envelope icons per row unless essential.
+  - If a channel indicator is needed, use a small muted label like “Email” rather than an icon.
+- Keep row hover subtle (light background tint).
+- Keep selection state clear (slightly stronger tint or left marker line).
+
+D) Reduce container noise across all tabs
+- Replace large rounded “cards” with:
+  - Section headers
+  - Minimal dividers
+  - White space
+- Any remaining surfaces should be extremely subtle (very light background).
+
+E) Tabs styling
+- Tabs should look like Apple/Safari style:
+  - Small labels
+  - Minimal underline for active tab (thin)
+  - Subtle hover
+  - No big pill backgrounds
+
+IMPLEMENTATION NOTES
+- Keep current components but refactor styling:
+  - Remove KPI card components from Planned.
+  - Create reusable minimalist components:
+    - <SectionHeader title subtitle rightActions />
+    - <StatsLine text />
+    - <MinimalTable /> or <MinimalList />
+- Use CSS/Tailwind consistent with the existing codebase.
+- Ensure responsive behaviour remains acceptable, but prioritize desktop clarity.
+
+ENGINEERING DELIVERABLE
+- Provide the updated Action Centre page code and any refactored components/styles required.
+- Do not break existing data fetching or actions.
+- After implementation, do a “de-clutter pass”: remove any remaining unnecessary borders/icons/boxes.
+
+ACCEPTANCE CRITERIA (visual)
+- Planned tab has NO KPI cards. Only a single stats line.
+- The approvals list is visually dominant and easy to scan.
+- Amounts are right-aligned and clearly readable.
+- Overall page feels calm, minimal, and premium (Apple-like).
+- Color is restrained; exceptions are the only items that draw semantic attention.
