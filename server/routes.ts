@@ -63,7 +63,8 @@ import {
   investorLeads,
   onboardingProgress,
   messageDrafts,
-  tenants
+  tenants,
+  paymentPromises
 } from "@shared/schema";
 import { getOverdueCategoryFromDueDate } from "@shared/utils/overdueUtils";
 import { calculateLatePaymentInterest } from "./utils/interestCalculator";
@@ -5312,6 +5313,27 @@ Guidelines:
         )
         .orderBy(desc(invoices.dueDate));
       
+      // Get pending payment promises for forecast
+      const pendingPromises = await db
+        .select()
+        .from(paymentPromises)
+        .where(
+          and(
+            eq(paymentPromises.tenantId, tenantId),
+            eq(paymentPromises.status, 'pending'),
+            gte(paymentPromises.promisedDate, today)
+          )
+        )
+        .orderBy(paymentPromises.promisedDate);
+      
+      // Build a map of contactId -> earliest pending promise date
+      const contactPtpMap = new Map<string, Date>();
+      for (const promise of pendingPromises) {
+        if (promise.contactId && !contactPtpMap.has(promise.contactId)) {
+          contactPtpMap.set(promise.contactId, new Date(promise.promisedDate!));
+        }
+      }
+      
       // Get formal disputes from debtor portal (needed for filtering)
       const formalDisputes = await db
         .select({
@@ -5937,6 +5959,9 @@ Guidelines:
               }
             } catch (e) {}
             
+            // Get ptpDate from payment promises map
+            const ptpDate = contactPtpMap.get(contactId);
+            
             debtorMap.set(contactId, {
               contactId,
               companyName,
@@ -5946,6 +5971,7 @@ Guidelines:
               invoiceCount: 0,
               invoices: [],
               oldestDueDate: inv.dueDate,
+              ptpDate: ptpDate ? ptpDate.toISOString() : null,
             });
           }
           
