@@ -10522,6 +10522,112 @@ Payment required immediately to avoid collection action. Contact us NOW.`
     }
   });
 
+  // Skip action - delay action by X days
+  app.post("/api/automation/skip-action/:actionId", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const actionId = parseInt(req.params.actionId);
+      const { days } = req.body;
+
+      if (!days || days < 1 || days > 90) {
+        return res.status(400).json({ message: "Days must be between 1 and 90" });
+      }
+
+      // Find the action and verify it belongs to this tenant
+      const [action] = await db.select()
+        .from(actions)
+        .where(
+          and(
+            eq(actions.id, actionId),
+            eq(actions.tenantId, user.tenantId)
+          )
+        )
+        .limit(1);
+
+      if (!action) {
+        return res.status(404).json({ message: "Action not found" });
+      }
+
+      // Calculate new scheduled date - set to X days from now
+      const newScheduledFor = new Date();
+      newScheduledFor.setDate(newScheduledFor.getDate() + days);
+      // Set time to 9am on that day for scheduling
+      newScheduledFor.setHours(9, 0, 0, 0);
+
+      // Update action with new scheduled date and set to pending so it appears in future plans
+      await db.update(actions)
+        .set({
+          status: 'pending',
+          scheduledFor: newScheduledFor,
+          notes: `Skipped until ${newScheduledFor.toLocaleDateString('en-GB')} (${days} days delay)`,
+          updatedAt: new Date(),
+        })
+        .where(eq(actions.id, actionId));
+
+      console.log(`✅ Rescheduled action ${actionId} for ${days} days later (${newScheduledFor.toISOString()})`);
+
+      res.json({
+        message: `Action rescheduled for ${days} days`,
+        actionId,
+        newScheduledFor: newScheduledFor.toISOString(),
+      });
+    } catch (error: any) {
+      console.error("Error skipping action:", error);
+      res.status(500).json({ message: `Failed to skip action: ${error.message}` });
+    }
+  });
+
+  // Mark debtor for attention - moves to attention queue for human review
+  app.post("/api/automation/mark-attention/:actionId", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const actionId = parseInt(req.params.actionId);
+
+      // Find the action and verify it belongs to this tenant
+      const [action] = await db.select()
+        .from(actions)
+        .where(
+          and(
+            eq(actions.id, actionId),
+            eq(actions.tenantId, user.tenantId)
+          )
+        )
+        .limit(1);
+
+      if (!action) {
+        return res.status(404).json({ message: "Action not found" });
+      }
+
+      // Update action status to flagged for human attention
+      await db.update(actions)
+        .set({
+          status: 'requires_attention',
+          escalationLevel: 1,
+          notes: 'Manually flagged for human attention',
+          updatedAt: new Date(),
+        })
+        .where(eq(actions.id, actionId));
+
+      console.log(`✅ Marked action ${actionId} for attention`);
+
+      res.json({
+        message: "Debtor marked for attention",
+        actionId,
+      });
+    } catch (error: any) {
+      console.error("Error marking action for attention:", error);
+      res.status(500).json({ message: `Failed to mark for attention: ${error.message}` });
+    }
+  });
+
   // Communication Mode Management
   app.get("/api/communications/mode", isAuthenticated, async (req: any, res) => {
     try {

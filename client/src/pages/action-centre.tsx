@@ -41,6 +41,13 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Input } from "@/components/ui/input";
+import { SkipForward, AlertTriangle } from "lucide-react";
 
 type TabId = 'planned' | 'executed' | 'attention' | 'cashboard' | 'forecast';
 
@@ -160,6 +167,39 @@ export default function ActionCentreV2() {
     },
   });
 
+  const skipActionMutation = useMutation({
+    mutationFn: ({ actionId, days }: { actionId: number; days: number }) => 
+      apiRequest('POST', `/api/automation/skip-action/${actionId}`, { days }),
+    onSuccess: (_, { days }) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/automation/daily-plan'] });
+      toast({ title: "Action rescheduled", description: `Will appear in the plan again in ${days} days` });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to reschedule action", variant: "destructive" });
+    },
+  });
+
+  const markAttentionMutation = useMutation({
+    mutationFn: (actionId: number) => 
+      apiRequest('POST', `/api/automation/mark-attention/${actionId}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/automation/daily-plan'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/actions'] });
+      toast({ title: "Marked for attention", description: "Debtor moved to Attention tab" });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to mark for attention", variant: "destructive" });
+    },
+  });
+
+  const handleSkipAction = (actionId: number, days: number) => {
+    skipActionMutation.mutate({ actionId, days });
+  };
+
+  const handleAttentionAction = (actionId: number) => {
+    markAttentionMutation.mutate(actionId);
+  };
+
   const handleSelectDebtor = (debtorId: string) => {
     let debtor = debtors.find(d => d.id === debtorId);
     
@@ -250,6 +290,8 @@ export default function ActionCentreV2() {
               onApprovePlan={() => approvePlanMutation.mutate()}
               onDeletePlan={() => deletePlanMutation.mutate()}
               onPreviewAction={handlePreviewAction}
+              onSkipAction={handleSkipAction}
+              onAttentionAction={handleAttentionAction}
               isGenerating={generatePlanMutation.isPending}
               isApproving={approvePlanMutation.isPending}
               isDeleting={deletePlanMutation.isPending}
@@ -378,6 +420,8 @@ interface PlannedTabContentProps {
   onApprovePlan: () => void;
   onDeletePlan: () => void;
   onPreviewAction: (action: any) => void;
+  onSkipAction: (actionId: number, days: number) => void;
+  onAttentionAction: (actionId: number) => void;
   isGenerating: boolean;
   isApproving: boolean;
   isDeleting: boolean;
@@ -390,6 +434,8 @@ function PlannedTabContent({
   onApprovePlan,
   onDeletePlan,
   onPreviewAction,
+  onSkipAction,
+  onAttentionAction,
   isGenerating,
   isApproving,
   isDeleting,
@@ -535,7 +581,13 @@ function PlannedTabContent({
           </div>
           <div className="space-y-1">
             {dailyPlan.actions.filter((a: any) => a.status === 'scheduled').slice(0, 5).map((item: any) => (
-              <ActionRow key={item.id} item={item} onClick={() => onPreviewAction(item)} />
+              <ActionRow 
+                key={item.id} 
+                item={item} 
+                onClick={() => onPreviewAction(item)}
+                onSkip={onSkipAction}
+                onAttention={onAttentionAction}
+              />
             ))}
             {scheduledCount > 5 && (
               <p className="text-xs text-emerald-600 pl-6">+ {scheduledCount - 5} more scheduled</p>
@@ -552,7 +604,13 @@ function PlannedTabContent({
           </div>
           <div className="space-y-1">
             {dailyPlan.actions.filter((a: any) => a.status === 'pending_approval').map((item: any) => (
-              <ActionRow key={item.id} item={item} onClick={() => onPreviewAction(item)} />
+              <ActionRow 
+                key={item.id} 
+                item={item} 
+                onClick={() => onPreviewAction(item)}
+                onSkip={onSkipAction}
+                onAttention={onAttentionAction}
+              />
             ))}
           </div>
         </div>
@@ -583,7 +641,15 @@ function SummaryCard({ icon: Icon, iconBg, iconColor, label, value, subtext }: {
   );
 }
 
-function ActionRow({ item, onClick }: { item: any; onClick: () => void }) {
+function ActionRow({ item, onClick, onSkip, onAttention }: { 
+  item: any; 
+  onClick: () => void;
+  onSkip: (actionId: number, days: number) => void;
+  onAttention: (actionId: number) => void;
+}) {
+  const [skipDays, setSkipDays] = useState('7');
+  const [isSkipOpen, setIsSkipOpen] = useState(false);
+  
   const getIcon = () => {
     switch (item.actionType) {
       case 'email': return Mail;
@@ -594,22 +660,72 @@ function ActionRow({ item, onClick }: { item: any; onClick: () => void }) {
   };
   const Icon = getIcon();
 
+  const handleSkipSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const days = parseInt(skipDays) || 7;
+    onSkip(item.id, days);
+    setIsSkipOpen(false);
+    setSkipDays('7');
+  };
+
   return (
-    <button
-      onClick={onClick}
-      className="w-full flex items-center gap-3 py-2 px-2 -mx-2 rounded hover:bg-slate-50 transition-colors text-left"
-    >
-      <span className="text-xs text-slate-400 w-12 tabular-nums">{item.daysOverdue}d</span>
-      <Icon className="h-3.5 w-3.5 text-slate-400" />
-      <span className="flex-1 text-sm text-slate-700 truncate">
-        {item.companyName || item.contactName || 'Unknown'}
-      </span>
-      {item.invoiceCount > 1 && (
-        <span className="text-xs text-slate-400">{item.invoiceCount} inv</span>
-      )}
-      <span className="text-sm font-medium text-slate-900 tabular-nums">
-        {formatCurrency(parseFloat(item.amount))}
-      </span>
-    </button>
+    <div className="flex items-center gap-3 py-2 px-2 -mx-2 rounded hover:bg-slate-50 transition-colors">
+      <button
+        onClick={onClick}
+        className="flex-1 flex items-center gap-3 text-left min-w-0"
+      >
+        <Icon className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
+        <span className="flex-1 text-sm text-slate-700 truncate">
+          {item.companyName || item.contactName || 'Unknown'}
+        </span>
+        {item.invoiceCount > 1 && (
+          <span className="text-xs text-slate-400 flex-shrink-0">{item.invoiceCount} inv</span>
+        )}
+        <span className="text-sm font-medium text-slate-900 tabular-nums flex-shrink-0">
+          {formatCurrency(parseFloat(item.amount))}
+        </span>
+      </button>
+      
+      <div className="flex items-center gap-1 flex-shrink-0">
+        <Popover open={isSkipOpen} onOpenChange={setIsSkipOpen}>
+          <PopoverTrigger asChild>
+            <button
+              onClick={(e) => e.stopPropagation()}
+              className="px-2 py-1 text-xs font-medium text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded transition-colors"
+            >
+              Skip
+            </button>
+          </PopoverTrigger>
+          <PopoverContent className="w-48 p-3" align="end">
+            <form onSubmit={handleSkipSubmit} className="space-y-2">
+              <label className="text-xs text-slate-500">Skip for how many days?</label>
+              <Input
+                type="number"
+                min="1"
+                max="90"
+                value={skipDays}
+                onChange={(e) => setSkipDays(e.target.value)}
+                className="h-8 text-sm"
+                autoFocus
+              />
+              <Button type="submit" size="sm" className="w-full h-7 text-xs">
+                Confirm
+              </Button>
+            </form>
+          </PopoverContent>
+        </Popover>
+        
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onAttention(item.id);
+          }}
+          className="px-2 py-1 text-xs font-medium text-amber-600 hover:text-amber-700 hover:bg-amber-50 rounded transition-colors"
+        >
+          Attention
+        </button>
+      </div>
+    </div>
   );
 }
