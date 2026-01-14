@@ -47,7 +47,8 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
-import { SkipForward, AlertTriangle } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { SkipForward, AlertTriangle, X } from "lucide-react";
 
 type TabId = 'planned' | 'executed' | 'attention' | 'cashboard' | 'forecast';
 
@@ -192,12 +193,45 @@ export default function ActionCentreV2() {
     },
   });
 
+  const bulkSkipMutation = useMutation({
+    mutationFn: ({ actionIds, days }: { actionIds: number[]; days: number }) => 
+      apiRequest('POST', '/api/automation/bulk-skip', { actionIds, days }),
+    onSuccess: (_, { actionIds, days }) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/automation/daily-plan'] });
+      toast({ title: "Actions rescheduled", description: `${actionIds.length} actions will appear again in ${days} days` });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to reschedule actions", variant: "destructive" });
+    },
+  });
+
+  const bulkAttentionMutation = useMutation({
+    mutationFn: (actionIds: number[]) => 
+      apiRequest('POST', '/api/automation/bulk-attention', { actionIds }),
+    onSuccess: (_, actionIds) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/automation/daily-plan'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/actions'] });
+      toast({ title: "Marked for attention", description: `${actionIds.length} debtors moved to Attention tab` });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to mark for attention", variant: "destructive" });
+    },
+  });
+
   const handleSkipAction = (actionId: number, days: number) => {
     skipActionMutation.mutate({ actionId, days });
   };
 
   const handleAttentionAction = (actionId: number) => {
     markAttentionMutation.mutate(actionId);
+  };
+
+  const handleBulkSkip = (actionIds: number[], days: number) => {
+    bulkSkipMutation.mutate({ actionIds, days });
+  };
+
+  const handleBulkAttention = (actionIds: number[]) => {
+    bulkAttentionMutation.mutate(actionIds);
   };
 
   const handleSelectDebtor = (debtorId: string) => {
@@ -292,6 +326,8 @@ export default function ActionCentreV2() {
               onPreviewAction={handlePreviewAction}
               onSkipAction={handleSkipAction}
               onAttentionAction={handleAttentionAction}
+              onBulkAttention={handleBulkAttention}
+              onBulkSkip={handleBulkSkip}
               isGenerating={generatePlanMutation.isPending}
               isApproving={approvePlanMutation.isPending}
               isDeleting={deletePlanMutation.isPending}
@@ -422,6 +458,8 @@ interface PlannedTabContentProps {
   onPreviewAction: (action: any) => void;
   onSkipAction: (actionId: number, days: number) => void;
   onAttentionAction: (actionId: number) => void;
+  onBulkAttention: (actionIds: number[]) => void;
+  onBulkSkip: (actionIds: number[], days: number) => void;
   isGenerating: boolean;
   isApproving: boolean;
   isDeleting: boolean;
@@ -436,10 +474,62 @@ function PlannedTabContent({
   onPreviewAction,
   onSkipAction,
   onAttentionAction,
+  onBulkAttention,
+  onBulkSkip,
   isGenerating,
   isApproving,
   isDeleting,
 }: PlannedTabContentProps) {
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [bulkSkipDays, setBulkSkipDays] = useState('7');
+  const [isBulkSkipOpen, setIsBulkSkipOpen] = useState(false);
+
+  const handleSelect = (actionId: number, selected: boolean) => {
+    setSelectedIds(prev => {
+      const newSet = new Set(prev);
+      if (selected) {
+        newSet.add(actionId);
+      } else {
+        newSet.delete(actionId);
+      }
+      return newSet;
+    });
+  };
+
+  const handleSelectAll = (items: any[], selected: boolean) => {
+    setSelectedIds(prev => {
+      const newSet = new Set(prev);
+      items.forEach(item => {
+        if (selected) {
+          newSet.add(item.id);
+        } else {
+          newSet.delete(item.id);
+        }
+      });
+      return newSet;
+    });
+  };
+
+  const clearSelection = () => {
+    setSelectedIds(new Set());
+  };
+
+  const handleBulkAttention = () => {
+    onBulkAttention(Array.from(selectedIds));
+    clearSelection();
+  };
+
+  const handleBulkSkipSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const days = parseInt(bulkSkipDays) || 7;
+    onBulkSkip(Array.from(selectedIds), days);
+    setIsBulkSkipOpen(false);
+    setBulkSkipDays('7');
+    clearSelection();
+  };
+
+  const hasSelection = selectedIds.size > 0;
+
   if (isLoading) {
     return (
       <div className="space-y-4">
@@ -573,48 +663,127 @@ function PlannedTabContent({
         />
       </div>
 
-      {scheduledCount > 0 && (
-        <div className="border border-emerald-200/60 bg-emerald-50/40 rounded-lg p-4">
-          <div className="flex items-center gap-2 mb-3">
-            <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-            <span className="text-sm font-medium text-emerald-800">Approved & Scheduled ({scheduledCount})</span>
+      {hasSelection && (
+        <div className="sticky top-0 z-10 bg-white border border-slate-200 rounded-lg p-3 shadow-sm flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <span className="text-sm font-medium text-slate-700">
+              {selectedIds.size} selected
+            </span>
+            <button
+              onClick={clearSelection}
+              className="text-xs text-slate-500 hover:text-slate-700 flex items-center gap-1"
+            >
+              <X className="h-3 w-3" />
+              Clear
+            </button>
           </div>
-          <div className="space-y-1">
-            {dailyPlan.actions.filter((a: any) => a.status === 'scheduled').slice(0, 5).map((item: any) => (
-              <ActionRow 
-                key={item.id} 
-                item={item} 
-                onClick={() => onPreviewAction(item)}
-                onSkip={onSkipAction}
-                onAttention={onAttentionAction}
-              />
-            ))}
-            {scheduledCount > 5 && (
-              <p className="text-xs text-emerald-600 pl-6">+ {scheduledCount - 5} more scheduled</p>
-            )}
+          <div className="flex items-center gap-2">
+            <Popover open={isBulkSkipOpen} onOpenChange={setIsBulkSkipOpen}>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className="h-8 text-xs">
+                  Skip Selected
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-48 p-3" align="end">
+                <form onSubmit={handleBulkSkipSubmit} className="space-y-2">
+                  <label className="text-xs text-slate-500">Skip all for how many days?</label>
+                  <Input
+                    type="number"
+                    min="1"
+                    max="90"
+                    value={bulkSkipDays}
+                    onChange={(e) => setBulkSkipDays(e.target.value)}
+                    className="h-8 text-sm"
+                    autoFocus
+                  />
+                  <Button type="submit" size="sm" className="w-full h-7 text-xs">
+                    Skip {selectedIds.size} Actions
+                  </Button>
+                </form>
+              </PopoverContent>
+            </Popover>
+            <Button
+              onClick={handleBulkAttention}
+              size="sm"
+              className="h-8 text-xs bg-amber-500 hover:bg-amber-600 text-white"
+            >
+              Move to Attention
+            </Button>
           </div>
         </div>
       )}
 
-      {pendingCount > 0 && (
-        <div className="border border-slate-200/60 bg-white rounded-lg p-4">
-          <div className="flex items-center gap-2 mb-3">
-            <Clock className="h-4 w-4 text-slate-500" />
-            <span className="text-sm font-medium text-slate-700">Awaiting Approval ({pendingCount})</span>
-          </div>
-          <div className="space-y-1">
-            {dailyPlan.actions.filter((a: any) => a.status === 'pending_approval').map((item: any) => (
-              <ActionRow 
-                key={item.id} 
-                item={item} 
-                onClick={() => onPreviewAction(item)}
-                onSkip={onSkipAction}
-                onAttention={onAttentionAction}
+      {scheduledCount > 0 && (() => {
+        const scheduledItems = dailyPlan.actions.filter((a: any) => a.status === 'scheduled');
+        const displayItems = scheduledItems.slice(0, 5);
+        const allScheduledSelected = displayItems.every((item: any) => selectedIds.has(item.id));
+        const someScheduledSelected = displayItems.some((item: any) => selectedIds.has(item.id));
+        
+        return (
+          <div className="border border-emerald-200/60 bg-emerald-50/40 rounded-lg p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <Checkbox
+                checked={allScheduledSelected}
+                onCheckedChange={(checked) => handleSelectAll(displayItems, checked as boolean)}
+                className="flex-shrink-0"
               />
-            ))}
+              <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+              <span className="text-sm font-medium text-emerald-800">Approved & Scheduled ({scheduledCount})</span>
+            </div>
+            <div className="space-y-1">
+              {displayItems.map((item: any) => (
+                <ActionRow 
+                  key={item.id} 
+                  item={item} 
+                  onClick={() => onPreviewAction(item)}
+                  onSkip={onSkipAction}
+                  onAttention={onAttentionAction}
+                  isSelected={selectedIds.has(item.id)}
+                  onSelect={handleSelect}
+                  hasSelection={hasSelection}
+                />
+              ))}
+              {scheduledCount > 5 && (
+                <p className="text-xs text-emerald-600 pl-6">+ {scheduledCount - 5} more scheduled</p>
+              )}
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
+
+      {pendingCount > 0 && (() => {
+        const pendingItems = dailyPlan.actions.filter((a: any) => a.status === 'pending_approval');
+        const allPendingSelected = pendingItems.every((item: any) => selectedIds.has(item.id));
+        const somePendingSelected = pendingItems.some((item: any) => selectedIds.has(item.id));
+        
+        return (
+          <div className="border border-slate-200/60 bg-white rounded-lg p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <Checkbox
+                checked={allPendingSelected}
+                onCheckedChange={(checked) => handleSelectAll(pendingItems, checked as boolean)}
+                className="flex-shrink-0"
+              />
+              <Clock className="h-4 w-4 text-slate-500" />
+              <span className="text-sm font-medium text-slate-700">Awaiting Approval ({pendingCount})</span>
+            </div>
+            <div className="space-y-1">
+              {pendingItems.map((item: any) => (
+                <ActionRow 
+                  key={item.id} 
+                  item={item} 
+                  onClick={() => onPreviewAction(item)}
+                  onSkip={onSkipAction}
+                  onAttention={onAttentionAction}
+                  isSelected={selectedIds.has(item.id)}
+                  onSelect={handleSelect}
+                  hasSelection={hasSelection}
+                />
+              ))}
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
@@ -641,11 +810,14 @@ function SummaryCard({ icon: Icon, iconBg, iconColor, label, value, subtext }: {
   );
 }
 
-function ActionRow({ item, onClick, onSkip, onAttention }: { 
+function ActionRow({ item, onClick, onSkip, onAttention, isSelected, onSelect, hasSelection }: { 
   item: any; 
   onClick: () => void;
   onSkip: (actionId: number, days: number) => void;
   onAttention: (actionId: number) => void;
+  isSelected: boolean;
+  onSelect: (actionId: number, selected: boolean) => void;
+  hasSelection: boolean;
 }) {
   const [skipDays, setSkipDays] = useState('7');
   const [isSkipOpen, setIsSkipOpen] = useState(false);
@@ -670,7 +842,13 @@ function ActionRow({ item, onClick, onSkip, onAttention }: {
   };
 
   return (
-    <div className="flex items-center gap-3 py-2 px-2 -mx-2 rounded hover:bg-slate-50 transition-colors">
+    <div className={`flex items-center gap-3 py-2 px-2 -mx-2 rounded transition-colors ${isSelected ? 'bg-blue-50' : 'hover:bg-slate-50'}`}>
+      <Checkbox
+        checked={isSelected}
+        onCheckedChange={(checked) => onSelect(item.id, checked as boolean)}
+        onClick={(e) => e.stopPropagation()}
+        className="flex-shrink-0"
+      />
       <button
         onClick={onClick}
         className="flex-1 flex items-center gap-3 text-left min-w-0"
@@ -687,45 +865,47 @@ function ActionRow({ item, onClick, onSkip, onAttention }: {
         </span>
       </button>
       
-      <div className="flex items-center gap-1 flex-shrink-0">
-        <Popover open={isSkipOpen} onOpenChange={setIsSkipOpen}>
-          <PopoverTrigger asChild>
-            <button
-              onClick={(e) => e.stopPropagation()}
-              className="px-2 py-1 text-xs font-medium text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded transition-colors"
-            >
-              Skip
-            </button>
-          </PopoverTrigger>
-          <PopoverContent className="w-48 p-3" align="end">
-            <form onSubmit={handleSkipSubmit} className="space-y-2">
-              <label className="text-xs text-slate-500">Skip for how many days?</label>
-              <Input
-                type="number"
-                min="1"
-                max="90"
-                value={skipDays}
-                onChange={(e) => setSkipDays(e.target.value)}
-                className="h-8 text-sm"
-                autoFocus
-              />
-              <Button type="submit" size="sm" className="w-full h-7 text-xs">
-                Confirm
-              </Button>
-            </form>
-          </PopoverContent>
-        </Popover>
-        
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onAttention(item.id);
-          }}
-          className="px-2 py-1 text-xs font-medium text-amber-600 hover:text-amber-700 hover:bg-amber-50 rounded transition-colors"
-        >
-          Attention
-        </button>
-      </div>
+      {!hasSelection && (
+        <div className="flex items-center gap-1 flex-shrink-0">
+          <Popover open={isSkipOpen} onOpenChange={setIsSkipOpen}>
+            <PopoverTrigger asChild>
+              <button
+                onClick={(e) => e.stopPropagation()}
+                className="px-2 py-1 text-xs font-medium text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded transition-colors"
+              >
+                Skip
+              </button>
+            </PopoverTrigger>
+            <PopoverContent className="w-48 p-3" align="end">
+              <form onSubmit={handleSkipSubmit} className="space-y-2">
+                <label className="text-xs text-slate-500">Skip for how many days?</label>
+                <Input
+                  type="number"
+                  min="1"
+                  max="90"
+                  value={skipDays}
+                  onChange={(e) => setSkipDays(e.target.value)}
+                  className="h-8 text-sm"
+                  autoFocus
+                />
+                <Button type="submit" size="sm" className="w-full h-7 text-xs">
+                  Confirm
+                </Button>
+              </form>
+            </PopoverContent>
+          </Popover>
+          
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onAttention(item.id);
+            }}
+            className="px-2 py-1 text-xs font-medium text-amber-600 hover:text-amber-700 hover:bg-amber-50 rounded transition-colors"
+          >
+            Attention
+          </button>
+        </div>
+      )}
     </div>
   );
 }

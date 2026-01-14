@@ -10628,6 +10628,98 @@ Payment required immediately to avoid collection action. Contact us NOW.`
     }
   });
 
+  // Bulk skip actions - reschedule multiple actions by X days
+  app.post("/api/automation/bulk-skip", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { actionIds, days } = req.body;
+
+      if (!actionIds || !Array.isArray(actionIds) || actionIds.length === 0) {
+        return res.status(400).json({ message: "actionIds must be a non-empty array" });
+      }
+
+      if (!days || days < 1 || days > 90) {
+        return res.status(400).json({ message: "Days must be between 1 and 90" });
+      }
+
+      // Calculate new scheduled date
+      const newScheduledFor = new Date();
+      newScheduledFor.setDate(newScheduledFor.getDate() + days);
+      newScheduledFor.setHours(9, 0, 0, 0);
+
+      // Update all actions
+      await db.update(actions)
+        .set({
+          status: 'pending',
+          scheduledFor: newScheduledFor,
+          notes: `Bulk skipped until ${newScheduledFor.toLocaleDateString('en-GB')} (${days} days delay)`,
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(actions.tenantId, user.tenantId),
+            inArray(actions.id, actionIds)
+          )
+        );
+
+      console.log(`✅ Bulk skipped ${actionIds.length} actions for ${days} days`);
+
+      res.json({
+        message: `${actionIds.length} actions rescheduled for ${days} days`,
+        count: actionIds.length,
+        newScheduledFor: newScheduledFor.toISOString(),
+      });
+    } catch (error: any) {
+      console.error("Error bulk skipping actions:", error);
+      res.status(500).json({ message: `Failed to bulk skip: ${error.message}` });
+    }
+  });
+
+  // Bulk mark for attention - move multiple actions to attention queue
+  app.post("/api/automation/bulk-attention", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { actionIds } = req.body;
+
+      if (!actionIds || !Array.isArray(actionIds) || actionIds.length === 0) {
+        return res.status(400).json({ message: "actionIds must be a non-empty array" });
+      }
+
+      // Update all actions to requires_attention
+      await db.update(actions)
+        .set({
+          status: 'requires_attention',
+          escalationLevel: 1,
+          notes: 'Bulk flagged for human attention',
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(actions.tenantId, user.tenantId),
+            inArray(actions.id, actionIds)
+          )
+        );
+
+      console.log(`✅ Bulk marked ${actionIds.length} actions for attention`);
+
+      res.json({
+        message: `${actionIds.length} debtors marked for attention`,
+        count: actionIds.length,
+      });
+    } catch (error: any) {
+      console.error("Error bulk marking for attention:", error);
+      res.status(500).json({ message: `Failed to bulk mark for attention: ${error.message}` });
+    }
+  });
+
   // Communication Mode Management
   app.get("/api/communications/mode", isAuthenticated, async (req: any, res) => {
     try {
