@@ -214,14 +214,15 @@ export default function ActionCentreV2() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-teal-50">
-      <NewSidebar />
-      <BottomNav />
+    <div className="flex h-screen bg-white">
+      <div className="hidden lg:block">
+        <NewSidebar />
+      </div>
       
-      <main className="lg:pl-64 min-h-screen pb-20 lg:pb-0">
+      <main className="flex-1 overflow-y-auto main-with-bottom-nav">
         <Header title="Action Centre" subtitle="Manage your collection actions" />
         
-        <div className="p-4 lg:p-6 space-y-6">
+        <div className="p-4 lg:p-6 space-y-6 bg-gradient-to-br from-slate-50 via-blue-50 to-teal-50 min-h-[calc(100vh-80px)]">
           <div className="flex items-center gap-1 border-b border-slate-200/60">
             {TABS.map(tab => (
               <button
@@ -364,6 +365,8 @@ export default function ActionCentreV2() {
           )}
         </SheetContent>
       </Sheet>
+
+      <BottomNav />
     </div>
   );
 }
