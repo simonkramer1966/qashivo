@@ -639,7 +639,8 @@ function PlannedTabContent({
               </th>
               <th className="py-2 text-left text-[11px] font-medium text-slate-400 uppercase tracking-wider">Customer</th>
               <th className="py-2 text-left text-[11px] font-medium text-slate-400 uppercase tracking-wider w-16">Channel</th>
-              <th className="py-2 text-right text-[11px] font-medium text-slate-400 uppercase tracking-wider w-24">Overdue</th>
+              <th className="py-2 text-right text-[11px] font-medium text-slate-400 uppercase tracking-wider w-20">Overdue</th>
+              <th className="py-2 text-right text-[11px] font-medium text-slate-400 uppercase tracking-wider w-20">Invoices</th>
               <th className="py-2 text-right text-[11px] font-medium text-slate-400 uppercase tracking-wider w-28">Amount</th>
             </tr>
           </thead>
@@ -670,6 +671,9 @@ function PlannedTabContent({
                 </td>
                 <td className="py-3 text-right">
                   <span className="text-[13px] tabular-nums text-slate-500">{item.daysOverdue}d</span>
+                </td>
+                <td className="py-3 text-right">
+                  <span className="text-[13px] tabular-nums text-slate-500">{item.invoiceCount || 1}</span>
                 </td>
                 <td className="py-3 text-right">
                   <span className="text-[14px] font-semibold tabular-nums text-slate-900">
