@@ -37,9 +37,15 @@ export function CashboardTab({ debtors, onSelectDebtor, isLoading }: CashboardTa
     <TooltipProvider delayDuration={200}>
       <div className="overflow-x-auto">
         <table className="w-full" style={{ minWidth: '900px', tableLayout: 'fixed' }}>
+          <colgroup>
+            <col style={{ width: '18%' }} />
+            {STATUS_ORDER.map(status => (
+              <col key={status} style={{ width: `${82 / STATUS_ORDER.length}%` }} />
+            ))}
+          </colgroup>
           <thead>
             <tr className="border-b border-slate-100">
-              <th className="py-2 text-left text-[11px] font-medium text-slate-400 uppercase tracking-wider sticky left-0 bg-white z-10" style={{ width: '180px' }}>
+              <th className="py-2 text-left text-[11px] font-medium text-slate-400 uppercase tracking-wider sticky left-0 bg-white z-10">
                 Customer
               </th>
               {STATUS_ORDER.map(status => (
