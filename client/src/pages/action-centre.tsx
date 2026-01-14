@@ -168,31 +168,6 @@ export default function ActionCentreV2() {
     },
   });
 
-  const skipActionMutation = useMutation({
-    mutationFn: ({ actionId, days }: { actionId: number; days: number }) => 
-      apiRequest('POST', `/api/automation/skip-action/${actionId}`, { days }),
-    onSuccess: (_, { days }) => {
-      queryClient.invalidateQueries({ queryKey: ['/api/automation/daily-plan'] });
-      toast({ title: "Action rescheduled", description: `Will appear in the plan again in ${days} days` });
-    },
-    onError: () => {
-      toast({ title: "Error", description: "Failed to reschedule action", variant: "destructive" });
-    },
-  });
-
-  const markAttentionMutation = useMutation({
-    mutationFn: (actionId: number) => 
-      apiRequest('POST', `/api/automation/mark-attention/${actionId}`),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/automation/daily-plan'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/actions'] });
-      toast({ title: "Marked for attention", description: "Debtor moved to Attention tab" });
-    },
-    onError: () => {
-      toast({ title: "Error", description: "Failed to mark for attention", variant: "destructive" });
-    },
-  });
-
   const bulkSkipMutation = useMutation({
     mutationFn: ({ actionIds, days }: { actionIds: number[]; days: number }) => 
       apiRequest('POST', '/api/automation/bulk-skip', { actionIds, days }),
@@ -217,14 +192,6 @@ export default function ActionCentreV2() {
       toast({ title: "Error", description: "Failed to mark for attention", variant: "destructive" });
     },
   });
-
-  const handleSkipAction = (actionId: number, days: number) => {
-    skipActionMutation.mutate({ actionId, days });
-  };
-
-  const handleAttentionAction = (actionId: number) => {
-    markAttentionMutation.mutate(actionId);
-  };
 
   const handleBulkSkip = (actionIds: number[], days: number) => {
     bulkSkipMutation.mutate({ actionIds, days });
@@ -324,8 +291,6 @@ export default function ActionCentreV2() {
               onApprovePlan={() => approvePlanMutation.mutate()}
               onDeletePlan={() => deletePlanMutation.mutate()}
               onPreviewAction={handlePreviewAction}
-              onSkipAction={handleSkipAction}
-              onAttentionAction={handleAttentionAction}
               onBulkAttention={handleBulkAttention}
               onBulkSkip={handleBulkSkip}
               isGenerating={generatePlanMutation.isPending}
@@ -456,8 +421,6 @@ interface PlannedTabContentProps {
   onApprovePlan: () => void;
   onDeletePlan: () => void;
   onPreviewAction: (action: any) => void;
-  onSkipAction: (actionId: number, days: number) => void;
-  onAttentionAction: (actionId: number) => void;
   onBulkAttention: (actionIds: number[]) => void;
   onBulkSkip: (actionIds: number[], days: number) => void;
   isGenerating: boolean;
@@ -472,8 +435,6 @@ function PlannedTabContent({
   onApprovePlan,
   onDeletePlan,
   onPreviewAction,
-  onSkipAction,
-  onAttentionAction,
   onBulkAttention,
   onBulkSkip,
   isGenerating,
@@ -717,7 +678,6 @@ function PlannedTabContent({
         const scheduledItems = dailyPlan.actions.filter((a: any) => a.status === 'scheduled');
         const displayItems = scheduledItems.slice(0, 5);
         const allScheduledSelected = displayItems.every((item: any) => selectedIds.has(item.id));
-        const someScheduledSelected = displayItems.some((item: any) => selectedIds.has(item.id));
         
         return (
           <div className="border border-emerald-200/60 bg-emerald-50/40 rounded-lg p-4">
@@ -736,11 +696,8 @@ function PlannedTabContent({
                   key={item.id} 
                   item={item} 
                   onClick={() => onPreviewAction(item)}
-                  onSkip={onSkipAction}
-                  onAttention={onAttentionAction}
                   isSelected={selectedIds.has(item.id)}
                   onSelect={handleSelect}
-                  hasSelection={hasSelection}
                 />
               ))}
               {scheduledCount > 5 && (
@@ -754,7 +711,6 @@ function PlannedTabContent({
       {pendingCount > 0 && (() => {
         const pendingItems = dailyPlan.actions.filter((a: any) => a.status === 'pending_approval');
         const allPendingSelected = pendingItems.every((item: any) => selectedIds.has(item.id));
-        const somePendingSelected = pendingItems.some((item: any) => selectedIds.has(item.id));
         
         return (
           <div className="border border-slate-200/60 bg-white rounded-lg p-4">
@@ -773,11 +729,8 @@ function PlannedTabContent({
                   key={item.id} 
                   item={item} 
                   onClick={() => onPreviewAction(item)}
-                  onSkip={onSkipAction}
-                  onAttention={onAttentionAction}
                   isSelected={selectedIds.has(item.id)}
                   onSelect={handleSelect}
-                  hasSelection={hasSelection}
                 />
               ))}
             </div>
@@ -810,18 +763,12 @@ function SummaryCard({ icon: Icon, iconBg, iconColor, label, value, subtext }: {
   );
 }
 
-function ActionRow({ item, onClick, onSkip, onAttention, isSelected, onSelect, hasSelection }: { 
+function ActionRow({ item, onClick, isSelected, onSelect }: { 
   item: any; 
   onClick: () => void;
-  onSkip: (actionId: number, days: number) => void;
-  onAttention: (actionId: number) => void;
   isSelected: boolean;
   onSelect: (actionId: number, selected: boolean) => void;
-  hasSelection: boolean;
 }) {
-  const [skipDays, setSkipDays] = useState('7');
-  const [isSkipOpen, setIsSkipOpen] = useState(false);
-  
   const getIcon = () => {
     switch (item.actionType) {
       case 'email': return Mail;
@@ -831,15 +778,6 @@ function ActionRow({ item, onClick, onSkip, onAttention, isSelected, onSelect, h
     }
   };
   const Icon = getIcon();
-
-  const handleSkipSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    const days = parseInt(skipDays) || 7;
-    onSkip(item.id, days);
-    setIsSkipOpen(false);
-    setSkipDays('7');
-  };
 
   return (
     <div className={`flex items-center gap-3 py-2 px-2 -mx-2 rounded transition-colors ${isSelected ? 'bg-blue-50' : 'hover:bg-slate-50'}`}>
@@ -864,48 +802,6 @@ function ActionRow({ item, onClick, onSkip, onAttention, isSelected, onSelect, h
           {formatCurrency(parseFloat(item.amount))}
         </span>
       </button>
-      
-      {!hasSelection && (
-        <div className="flex items-center gap-1 flex-shrink-0">
-          <Popover open={isSkipOpen} onOpenChange={setIsSkipOpen}>
-            <PopoverTrigger asChild>
-              <button
-                onClick={(e) => e.stopPropagation()}
-                className="px-2 py-1 text-xs font-medium text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded transition-colors"
-              >
-                Skip
-              </button>
-            </PopoverTrigger>
-            <PopoverContent className="w-48 p-3" align="end">
-              <form onSubmit={handleSkipSubmit} className="space-y-2">
-                <label className="text-xs text-slate-500">Skip for how many days?</label>
-                <Input
-                  type="number"
-                  min="1"
-                  max="90"
-                  value={skipDays}
-                  onChange={(e) => setSkipDays(e.target.value)}
-                  className="h-8 text-sm"
-                  autoFocus
-                />
-                <Button type="submit" size="sm" className="w-full h-7 text-xs">
-                  Confirm
-                </Button>
-              </form>
-            </PopoverContent>
-          </Popover>
-          
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onAttention(item.id);
-            }}
-            className="px-2 py-1 text-xs font-medium text-amber-600 hover:text-amber-700 hover:bg-amber-50 rounded transition-colors"
-          >
-            Attention
-          </button>
-        </div>
-      )}
     </div>
   );
 }
