@@ -102,6 +102,13 @@ const formatChannelLabel = (channel?: string): string => {
   return labels[channel.toLowerCase()] || channel;
 };
 
+interface Invoice {
+  id: string;
+  invoiceNumber: string;
+  amount: string;
+  dueDate: string;
+}
+
 export function ActionDrawer({ 
   open, 
   onOpenChange, 
@@ -116,10 +123,27 @@ export function ActionDrawer({
     enabled: open && !!customer?.contactId && historyOpen,
   });
 
+  const hasPrefetchedInvoices = Array.isArray(customer?.invoices) && customer.invoices.length > 0;
+  
+  const invoicesQuery = useQuery<Invoice[]>({
+    queryKey: [`/api/invoices/outstanding/${customer?.contactId}`],
+    enabled: open && !!customer?.contactId && !hasPrefetchedInvoices,
+  });
+
   if (!customer) return null;
 
   const history = historyQuery.data?.history || [];
   const recentHistory = history.slice(0, 3);
+  
+  const customerInvoices = Array.isArray(customer.invoices) ? customer.invoices : [];
+  const invoices = customerInvoices.length > 0 
+    ? customerInvoices 
+    : (invoicesQuery.data || []).map((inv: any) => ({
+        id: String(inv.id),
+        invoiceNumber: String(inv.invoiceNumber),
+        amount: String(inv.amount),
+        dueDate: String(inv.dueDate),
+      }));
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -211,11 +235,13 @@ export function ActionDrawer({
               <h3 className="text-[12px] font-semibold text-slate-500 mb-3">
                 Outstanding invoices
               </h3>
-              {customer.invoices.length === 0 ? (
+              {invoicesQuery.isFetching ? (
+                <p className="text-[13px] text-slate-400">Loading invoices...</p>
+              ) : invoices.length === 0 ? (
                 <p className="text-[13px] text-slate-400">No invoice details available.</p>
               ) : (
                 <div className="space-y-2">
-                  {customer.invoices.map((invoice) => (
+                  {invoices.map((invoice) => (
                     <div 
                       key={invoice.id} 
                       className="flex items-center justify-between py-2 border-b border-slate-50 last:border-0"
