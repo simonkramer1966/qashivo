@@ -117,6 +117,7 @@ export function ActionDrawer({
   onAttention,
 }: ActionDrawerProps) {
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [invoicesOpen, setInvoicesOpen] = useState(false);
 
   const historyQuery = useQuery<{ history: HistoryEntry[]; total: number }>({
     queryKey: [`/api/contacts/${customer?.contactId}/history`],
@@ -136,7 +137,7 @@ export function ActionDrawer({
   const recentHistory = history.slice(0, 3);
   
   const customerInvoices = Array.isArray(customer.invoices) ? customer.invoices : [];
-  const invoices = customerInvoices.length > 0 
+  const allInvoices = customerInvoices.length > 0 
     ? customerInvoices 
     : (invoicesQuery.data || []).map((inv: any) => ({
         id: String(inv.id),
@@ -144,6 +145,14 @@ export function ActionDrawer({
         amount: String(inv.amount),
         dueDate: String(inv.dueDate),
       }));
+  
+  // Filter to only show overdue invoices (past due date)
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const overdueInvoices = allInvoices.filter(inv => {
+    const dueDate = new Date(inv.dueDate);
+    return dueDate < today;
+  });
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -230,39 +239,32 @@ export function ActionDrawer({
               </CollapsibleContent>
             </Collapsible>
 
-            {/* 5. Outstanding invoices */}
-            <div>
-              <h3 className="text-[12px] font-semibold text-slate-500 mb-3">
-                Outstanding invoices
-              </h3>
-              {invoicesQuery.isFetching ? (
-                <p className="text-[13px] text-slate-400">Loading invoices...</p>
-              ) : invoices.length === 0 ? (
-                <p className="text-[13px] text-slate-400">No invoice details available.</p>
-              ) : (
-                <div className="space-y-2">
-                  {invoices.map((invoice) => (
-                    <div 
-                      key={invoice.id} 
-                      className="flex items-center justify-between py-2 border-b border-slate-50 last:border-0"
-                    >
-                      <div>
-                        <span className="text-[13px] text-slate-700">{invoice.invoiceNumber}</span>
-                        <span className="text-[12px] text-slate-400 ml-2">
-                          Due {new Date(invoice.dueDate).toLocaleDateString('en-GB', { 
-                            day: 'numeric', 
-                            month: 'short' 
-                          })}
-                        </span>
-                      </div>
-                      <span className="text-[14px] font-medium text-slate-900 tabular-nums">
-                        {formatCurrency(parseFloat(invoice.amount))}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+            {/* 5. Overdue invoices - collapsible, collapsed by default */}
+            <Collapsible open={invoicesOpen} onOpenChange={setInvoicesOpen}>
+              <CollapsibleTrigger className="flex items-center justify-between w-full group">
+                <h3 className="text-[12px] font-semibold text-slate-500">
+                  Overdue invoices
+                </h3>
+                <ChevronDown 
+                  className={`h-4 w-4 text-slate-300 transition-transform ${invoicesOpen ? 'rotate-180' : ''}`} 
+                />
+              </CollapsibleTrigger>
+              <CollapsibleContent className="pt-3">
+                {invoicesQuery.isFetching ? (
+                  <p className="text-[13px] text-slate-400">Loading...</p>
+                ) : overdueInvoices.length === 0 ? (
+                  <p className="text-[13px] text-slate-400">No overdue invoices.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {overdueInvoices.map((invoice) => (
+                      <p key={invoice.id} className="text-[13px] text-slate-600">
+                        {invoice.invoiceNumber} · {formatCurrency(parseFloat(invoice.amount))} · Due {new Date(invoice.dueDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+                      </p>
+                    ))}
+                  </div>
+                )}
+              </CollapsibleContent>
+            </Collapsible>
 
           </div>
         </ScrollArea>
