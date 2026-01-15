@@ -167,6 +167,13 @@ export function ActionDrawer({
   const totalDue = allInvoices.reduce((sum, inv) => sum + parseAmount(inv.amount), 0);
   // Show secondary context only when total > amount being chased
   const showTotalDue = totalDue > amountBeingChased && amountBeingChased > 0;
+  
+  // Sum of overdue invoices - check if it matches the amount being chased
+  const overdueSum = overdueInvoices.reduce((sum, inv) => sum + parseAmount(inv.amount), 0);
+  // Allow small tolerance for floating point differences (within £0.01)
+  const invoicesSumMatch = Math.abs(overdueSum - amountBeingChased) < 0.01;
+  // Only show invoice list if we can reliably match the invoices to the chase amount
+  const canShowInvoiceList = invoicesSumMatch && overdueInvoices.length > 0;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -261,32 +268,28 @@ export function ActionDrawer({
               </CollapsibleContent>
             </Collapsible>
 
-            {/* 6. Overdue invoices - collapsible, collapsed by default */}
-            <Collapsible open={invoicesOpen} onOpenChange={setInvoicesOpen}>
-              <CollapsibleTrigger className="flex items-center justify-between w-full group">
-                <h3 className="text-[12px] font-semibold text-slate-500">
-                  Overdue invoices
-                </h3>
-                <ChevronDown 
-                  className={`h-4 w-4 text-slate-300 transition-transform ${invoicesOpen ? 'rotate-180' : ''}`} 
-                />
-              </CollapsibleTrigger>
-              <CollapsibleContent className="pt-3">
-                {invoicesQuery.isFetching ? (
-                  <p className="text-[13px] text-slate-400">Loading...</p>
-                ) : overdueInvoices.length === 0 ? (
-                  <p className="text-[13px] text-slate-400">No overdue invoices.</p>
-                ) : (
+            {/* 6. Invoices being chased - only show if invoices sum matches amount being chased */}
+            {canShowInvoiceList && (
+              <Collapsible open={invoicesOpen} onOpenChange={setInvoicesOpen}>
+                <CollapsibleTrigger className="flex items-center justify-between w-full group">
+                  <h3 className="text-[12px] font-semibold text-slate-500">
+                    Invoices being chased
+                  </h3>
+                  <ChevronDown 
+                    className={`h-4 w-4 text-slate-300 transition-transform ${invoicesOpen ? 'rotate-180' : ''}`} 
+                  />
+                </CollapsibleTrigger>
+                <CollapsibleContent className="pt-3">
                   <div className="space-y-2">
                     {overdueInvoices.map((invoice) => (
                       <p key={invoice.id} className="text-[13px] text-slate-600">
-                        {invoice.invoiceNumber} · {formatCurrency(parseFloat(invoice.amount))} · Due {new Date(invoice.dueDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+                        {invoice.invoiceNumber} · {formatCurrency(parseAmount(invoice.amount))} · Due {new Date(invoice.dueDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
                       </p>
                     ))}
                   </div>
-                )}
-              </CollapsibleContent>
-            </Collapsible>
+                </CollapsibleContent>
+              </Collapsible>
+            )}
 
           </div>
         </ScrollArea>
