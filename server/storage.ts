@@ -241,6 +241,9 @@ export interface IStorage {
     avgDaysToPay: number;
     collectionsWithinTerms: number;
     dso: number;
+    collectedThisMonth: number;
+    collectedThisWeek: number;
+    onTimePaymentRate: number;
   }>;
   getOverdueCategorySummary(tenantId: string): Promise<Record<OverdueCategory, { count: number; totalAmount: number }>>;
   getInvoicesWithOverdueCategory(tenantId: string, limit?: number): Promise<(Invoice & { contact: Contact; overdueCategory: OverdueCategory; overdueCategoryInfo: OverdueCategoryInfo })[]>;
@@ -1376,6 +1379,20 @@ export class DatabaseStorage implements IStorage {
         WHERE tenant_id = ${tenantId}
           AND status = 'paid'
           AND paid_date IS NOT NULL
+      ),
+      collected_this_month AS (
+        SELECT COALESCE(SUM(CAST(amount_paid AS DECIMAL)), 0) as total
+        FROM invoices
+        WHERE tenant_id = ${tenantId}
+          AND status = 'paid'
+          AND paid_date >= DATE_TRUNC('month', CURRENT_DATE)
+      ),
+      collected_this_week AS (
+        SELECT COALESCE(SUM(CAST(amount_paid AS DECIMAL)), 0) as total
+        FROM invoices
+        WHERE tenant_id = ${tenantId}
+          AND status = 'paid'
+          AND paid_date >= DATE_TRUNC('week', CURRENT_DATE)
       )
       SELECT 
         o.total as total_outstanding,
@@ -1388,13 +1405,17 @@ export class DatabaseStorage implements IStorage {
         ps.avg_days as avg_days_to_pay,
         wt.total_paid,
         wt.within_terms,
-        d.avg_dso
+        d.avg_dso,
+        cm.total as collected_this_month,
+        cw.total as collected_this_week
       FROM outstanding o
       CROSS JOIN overdue_stats os
       CROSS JOIN paid_stats ps
       CROSS JOIN total_invoices ti
       CROSS JOIN within_terms wt
       CROSS JOIN dso_calc d
+      CROSS JOIN collected_this_month cm
+      CROSS JOIN collected_this_week cw
     `);
 
     const row = result.rows[0] as any;
@@ -1409,9 +1430,12 @@ export class DatabaseStorage implements IStorage {
     const totalPaid = Math.max(Number(row.total_paid) || 1, 1);
     const withinTerms = Number(row.within_terms) || 0;
     const dso = Number(row.avg_dso) || 0;
+    const collectedThisMonth = Number(row.collected_this_month) || 0;
+    const collectedThisWeek = Number(row.collected_this_week) || 0;
 
     const collectionRate = (paidCount / totalCount) * 100;
     const collectionsWithinTerms = (withinTerms / totalPaid) * 100;
+    const onTimePaymentRate = (withinTerms / totalPaid) * 100;
 
     return {
       totalOutstanding,
@@ -1423,6 +1447,9 @@ export class DatabaseStorage implements IStorage {
       avgDaysOverdue: Math.round(avgDaysOverdue),
       collectionsWithinTerms: Number(collectionsWithinTerms.toFixed(1)),
       dso: Math.round(dso),
+      collectedThisMonth,
+      collectedThisWeek,
+      onTimePaymentRate: Number(onTimePaymentRate.toFixed(1)),
     };
   }
 

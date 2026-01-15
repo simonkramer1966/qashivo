@@ -27,6 +27,9 @@ interface CashMetrics {
   debtRecoveryValue: number;
   legalCount: number;
   legalValue: number;
+  collectedThisMonth: number;
+  collectedThisWeek: number;
+  onTimePaymentRate: number;
 }
 
 interface CashFlowData {
@@ -147,7 +150,7 @@ export default function Cashboard() {
           <div className="hidden sm:block mb-8">
             <div className="bg-white border border-slate-100 rounded-lg">
               {/* Row 1: State of Cash */}
-              <div className="px-4 py-3 border-b border-slate-100">
+              <div className="px-4 py-3">
                 <p className="text-[10px] text-slate-400 uppercase tracking-wider mb-3">State of Cash</p>
                 <div className="flex divide-x divide-slate-100">
                   {/* Total Outstanding */}
@@ -174,90 +177,26 @@ export default function Cashboard() {
                     )}
                   </div>
 
-                  {/* Avg Days Late */}
-                  <div className="flex-1 px-6" data-testid="card-avg-days">
-                    <p className="text-[12px] text-slate-500 mb-1">Avg Days Late</p>
-                    {metricsLoading ? (
-                      <div className="h-6 w-16 bg-slate-100 animate-pulse rounded"></div>
-                    ) : (
-                      <p className="text-[20px] font-semibold text-slate-900 tabular-nums">
-                        {avgDaysOverdue.toFixed(0)}
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Interest Accrued */}
-                  <div className="flex-1 pl-6">
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <div className="cursor-help" data-testid="card-interest">
-                            <p className="text-[12px] text-slate-400 mb-1">Interest Accrued</p>
-                            {leaderboardsLoading ? (
-                              <div className="h-6 w-24 bg-slate-100 animate-pulse rounded"></div>
-                            ) : (
-                              <p className="text-[20px] font-semibold text-slate-400 tabular-nums">
-                                {formatCurrency(leaderboards?.summary?.totalInterest || 0)}
-                              </p>
-                            )}
-                          </div>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p className="text-sm">
-                            {leaderboards?.summary 
-                              ? `BoE + 8% (${leaderboards.summary.combinedRate.toFixed(1)}% annual)`
-                              : 'BoE + 8% annual rate'}
-                          </p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  </div>
-                </div>
-              </div>
-
-              {/* Row 2: System Performance */}
-              <div className="px-4 py-3">
-                <p className="text-[10px] text-slate-400 uppercase tracking-wider mb-3">System Performance</p>
-                <div className="flex divide-x divide-slate-100">
-                  {/* Collection Progress - stubbed */}
-                  <div className="flex-1 pr-6" data-testid="card-collection-progress">
-                    <p className="text-[12px] text-slate-400 mb-1">Collection Progress</p>
-                    <p className="text-[20px] font-semibold text-slate-300 tabular-nums">—</p>
-                    <p className="text-[10px] text-slate-300">Coming soon</p>
-                  </div>
-
-                  {/* Payment Plans */}
-                  <div className="flex-1 px-6" data-testid="card-payment-plans">
-                    <p className="text-[12px] text-slate-500 mb-1">Payment Plans</p>
+                  {/* Collected This Month */}
+                  <div className="flex-1 px-6" data-testid="card-collected-month">
+                    <p className="text-[12px] text-slate-500 mb-1">Collected This Month</p>
                     {metricsLoading ? (
                       <div className="h-6 w-24 bg-slate-100 animate-pulse rounded"></div>
                     ) : (
-                      <p className="text-[20px] font-semibold text-slate-900 tabular-nums">
-                        {formatCurrency(metrics?.paymentPlansValue || 0)} <span className="text-[12px] font-normal text-slate-400">({metrics?.paymentPlansCount || 0})</span>
+                      <p className="text-[20px] font-semibold text-emerald-600 tabular-nums">
+                        {formatCurrency(metrics?.collectedThisMonth || 0)}
                       </p>
                     )}
                   </div>
 
-                  {/* Disputes */}
-                  <div className="flex-1 px-6" data-testid="card-disputes">
-                    <p className="text-[12px] text-slate-500 mb-1">Disputes</p>
+                  {/* Collected This Week */}
+                  <div className="flex-1 pl-6" data-testid="card-collected-week">
+                    <p className="text-[12px] text-slate-500 mb-1">Collected This Week</p>
                     {metricsLoading ? (
                       <div className="h-6 w-24 bg-slate-100 animate-pulse rounded"></div>
                     ) : (
-                      <p className="text-[20px] font-semibold text-slate-900 tabular-nums">
-                        {formatCurrency(metrics?.disputesValue || 0)} <span className="text-[12px] font-normal text-slate-400">({metrics?.disputesCount || 0})</span>
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Resolution Rate */}
-                  <div className="flex-1 pl-6" data-testid="card-resolution-rate">
-                    <p className="text-[12px] text-slate-500 mb-1">Resolution Rate</p>
-                    {metricsLoading ? (
-                      <div className="h-6 w-16 bg-slate-100 animate-pulse rounded"></div>
-                    ) : (
-                      <p className="text-[20px] font-semibold text-slate-900 tabular-nums">
-                        {collectionRate.toFixed(0)}%
+                      <p className="text-[20px] font-semibold text-emerald-600 tabular-nums">
+                        {formatCurrency(metrics?.collectedThisWeek || 0)}
                       </p>
                     )}
                   </div>
@@ -268,8 +207,7 @@ export default function Cashboard() {
 
           {/* Mobile: Compact metrics */}
           <div className="sm:hidden mb-6">
-            <div className="bg-white border border-slate-100 rounded-lg divide-y divide-slate-100">
-              {/* State of Cash */}
+            <div className="bg-white border border-slate-100 rounded-lg">
               <div className="p-3">
                 <p className="text-[10px] text-slate-400 uppercase tracking-wider mb-2">State of Cash</p>
                 <div className="grid grid-cols-2 gap-4">
@@ -281,35 +219,13 @@ export default function Cashboard() {
                     <p className="text-[11px] text-slate-500">Overdue</p>
                     <p className="text-[16px] font-semibold text-slate-900 tabular-nums">{formatCurrency(overdueAmount)}</p>
                   </div>
-                  <div data-testid="card-avg-days">
-                    <p className="text-[11px] text-slate-500">Avg Days Late</p>
-                    <p className="text-[16px] font-semibold text-slate-900 tabular-nums">{avgDaysOverdue.toFixed(0)}</p>
+                  <div data-testid="card-collected-month">
+                    <p className="text-[11px] text-slate-500">Collected (Month)</p>
+                    <p className="text-[16px] font-semibold text-emerald-600 tabular-nums">{formatCurrency(metrics?.collectedThisMonth || 0)}</p>
                   </div>
-                  <div data-testid="card-interest">
-                    <p className="text-[11px] text-slate-400">Interest</p>
-                    <p className="text-[16px] font-semibold text-slate-400 tabular-nums">{formatCurrency(leaderboards?.summary?.totalInterest || 0)}</p>
-                  </div>
-                </div>
-              </div>
-              {/* System Performance */}
-              <div className="p-3">
-                <p className="text-[10px] text-slate-400 uppercase tracking-wider mb-2">System Performance</p>
-                <div className="grid grid-cols-2 gap-4">
-                  <div data-testid="card-collection-progress">
-                    <p className="text-[11px] text-slate-400">Progress</p>
-                    <p className="text-[16px] font-semibold text-slate-300 tabular-nums">—</p>
-                  </div>
-                  <div data-testid="card-payment-plans">
-                    <p className="text-[11px] text-slate-500">Plans</p>
-                    <p className="text-[16px] font-semibold text-slate-900 tabular-nums">{formatCurrency(metrics?.paymentPlansValue || 0)}</p>
-                  </div>
-                  <div data-testid="card-disputes">
-                    <p className="text-[11px] text-slate-500">Disputes</p>
-                    <p className="text-[16px] font-semibold text-slate-900 tabular-nums">{formatCurrency(metrics?.disputesValue || 0)}</p>
-                  </div>
-                  <div data-testid="card-resolution-rate">
-                    <p className="text-[11px] text-slate-500">Resolution</p>
-                    <p className="text-[16px] font-semibold text-slate-900 tabular-nums">{collectionRate.toFixed(0)}%</p>
+                  <div data-testid="card-collected-week">
+                    <p className="text-[11px] text-slate-500">Collected (Week)</p>
+                    <p className="text-[16px] font-semibold text-emerald-600 tabular-nums">{formatCurrency(metrics?.collectedThisWeek || 0)}</p>
                   </div>
                 </div>
               </div>
@@ -378,6 +294,57 @@ export default function Cashboard() {
                   </BarChart>
                 </ResponsiveContainer>
               )}
+            </div>
+          </div>
+
+          {/* Collection Performance Section */}
+          <div className="mt-8 bg-white border border-slate-100 rounded-lg">
+            <div className="px-4 py-3">
+              <p className="text-[10px] text-slate-400 uppercase tracking-wider mb-3">Collection Performance</p>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-0 sm:flex sm:divide-x sm:divide-slate-100">
+                {/* Avg Days Late */}
+                <div className="sm:flex-1 sm:pr-6" data-testid="card-perf-avg-days-late">
+                  <p className="text-[12px] text-slate-500 mb-1">Avg Days Late</p>
+                  {metricsLoading ? (
+                    <div className="h-6 w-16 bg-slate-100 animate-pulse rounded"></div>
+                  ) : (
+                    <p className="text-[20px] font-semibold text-slate-900 tabular-nums">
+                      {avgDaysOverdue.toFixed(0)} <span className="text-[12px] font-normal text-slate-400">days</span>
+                    </p>
+                  )}
+                </div>
+
+                {/* Avg Days to Pay */}
+                <div className="sm:flex-1 sm:px-6" data-testid="card-perf-avg-days-pay">
+                  <p className="text-[12px] text-slate-500 mb-1">Avg Days to Pay</p>
+                  {metricsLoading ? (
+                    <div className="h-6 w-16 bg-slate-100 animate-pulse rounded"></div>
+                  ) : (
+                    <p className="text-[20px] font-semibold text-slate-900 tabular-nums">
+                      {avgDaysToPay.toFixed(0)} <span className="text-[12px] font-normal text-slate-400">days</span>
+                    </p>
+                  )}
+                </div>
+
+                {/* On-time Rate */}
+                <div className="sm:flex-1 sm:px-6" data-testid="card-perf-ontime-rate">
+                  <p className="text-[12px] text-slate-500 mb-1">On-time Rate</p>
+                  {metricsLoading ? (
+                    <div className="h-6 w-16 bg-slate-100 animate-pulse rounded"></div>
+                  ) : (
+                    <p className="text-[20px] font-semibold text-emerald-600 tabular-nums">
+                      {(metrics?.onTimePaymentRate || 0).toFixed(0)}%
+                    </p>
+                  )}
+                </div>
+
+                {/* Payment Promises Kept */}
+                <div className="sm:flex-1 sm:pl-6" data-testid="card-perf-promises-kept">
+                  <p className="text-[12px] text-slate-400 mb-1">Promises Kept</p>
+                  <p className="text-[20px] font-semibold text-slate-300 tabular-nums">—</p>
+                  <p className="text-[10px] text-slate-300">Coming soon</p>
+                </div>
+              </div>
             </div>
           </div>
 

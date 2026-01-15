@@ -1,0 +1,67 @@
+You are working on Qashivo (web app). Refactor the Cashboard page to REMOVE all “card” UI (rounded bordered containers, shadows, boxed KPI tiles) while preserving the current layout, alignment, and spacing. The result should match the Action Centre’s Apple-like, Tufte/Few minimal style: a single continuous surface with typography-led hierarchy and whitespace, not widgets.
+
+GOAL
+- Keep the same information and overall section order:
+  1) Page header + subtitle + reassurance line
+  2) State of Cash metrics row
+  3) System Performance metrics row
+  4) Cash Inflow Forecast chart + range toggles
+  5) (Later) bottom performance KPIs
+- Remove all card borders/backgrounds/shadows without causing the layout to collapse or lose structure.
+
+NON-NEGOTIABLE VISUAL RULES
+- No rounded rectangles around KPI groups or chart containers.
+- No drop shadows anywhere on the Cashboard.
+- No visible “widget boxes”. Use whitespace and typography to separate sections.
+- Use hairline dividers ONLY between major sections (optional), not as boxes.
+
+IMPLEMENTATION REQUIREMENTS
+1) Replace Card components with semantic sections
+- If the page uses <Card>, <CardContent>, or “card” class wrappers, remove/replace them with:
+  - <section> wrappers (or <div>) that have NO border, NO background, NO shadow.
+- Preserve grid structure (same columns/rows), just remove the container styling.
+
+2) Preserve layout with spacing + max-width
+- Keep the same max-width and horizontal padding of the page content.
+- Keep the same grid columns for metrics (4 across on desktop).
+- Add consistent vertical rhythm between sections:
+  - 28–40px between major sections
+  - 12–16px between a section label and its content
+- Do NOT introduce new large gaps.
+
+3) Metrics presentation (no tiles)
+- “State of Cash” and “System Performance” should be rendered as two simple grid rows on a flat background:
+  - Each metric block contains:
+    - label (muted, small)
+    - value (prominent)
+    - optional count (muted)
+- Remove icon bubbles and any chip-like decoration from metrics (or reduce to subtle monochrome glyphs only if already required).
+- Keep values aligned and readable; use tabular numerals for currency.
+
+4) Chart container (no card)
+- Keep the chart area as a flat section:
+  - No border
+  - No rounding
+  - No shadow
+- Use a section header (“Cash Inflow Forecast”) and whitespace to frame it.
+- Keep range toggles (1M/3M/6M) but make them subtle (no heavy pills).
+
+5) Optional hairline dividers (sparingly)
+- If the page needs visual separation, add a single hairline divider between major sections:
+  - 1px line, very low contrast (e.g. opacity 8–12%)
+- Do not box sections with dividers.
+
+6) Consistency with Action Centre
+- Reuse typography, spacing, and muted label colors from Action Centre.
+- Keep the page calm and premium; avoid dashboard “widget” feel.
+
+DELIVERABLE
+- Update the Cashboard page JSX and CSS/Tailwind classes to remove all cards while keeping the layout stable.
+- Provide updated components if necessary (e.g., create a small <MetricBlock> component used in both rows).
+- Ensure nothing looks clickable unless it actually navigates.
+
+ACCEPTANCE CHECK
+- After the change, the page should read as a single continuous surface:
+  - Metrics are arranged in clean grids with no boxes.
+  - The chart is framed by whitespace and a header, not a container.
+  - No borders/shadows/rounded cards remain on the Cashboard page.
