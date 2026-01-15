@@ -28,6 +28,7 @@ interface ActionDrawerProps {
     daysOverdue: number;
     channel?: string;
     stage?: string;
+    invoiceCount?: number;
     invoices: Array<{
       id: string;
       invoiceNumber: string;
@@ -67,7 +68,7 @@ const getReasonForAction = (customer: ActionDrawerProps['customer']): string => 
   
   const days = customer.daysOverdue;
   const amount = formatCurrency(customer.totalOutstanding);
-  const invoiceCount = customer.invoices.length;
+  const invoiceCount = customer.invoiceCount || customer.invoices.length;
   
   if (days > 90) {
     return `${invoiceCount} invoice${invoiceCount > 1 ? 's' : ''} are ${days} days overdue, totalling ${amount}.`;
@@ -120,7 +121,8 @@ export function ActionDrawer({
       }))
     : customer.daysOverdue;
 
-  const invoiceSummary = `${customer.invoices.length} invoice${customer.invoices.length !== 1 ? 's' : ''} · ${formatCurrency(customer.totalOutstanding)} total · Oldest ${oldestInvoiceDays}d`;
+  const effectiveInvoiceCount = customer.invoiceCount || customer.invoices.length;
+  const invoiceSummary = `${effectiveInvoiceCount} invoice${effectiveInvoiceCount !== 1 ? 's' : ''} · ${formatCurrency(customer.totalOutstanding)} total · Oldest ${oldestInvoiceDays}d`;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -263,10 +265,8 @@ export function ActionDrawer({
 
         {/* 6. Footer - Skip / Attention */}
         <div className="px-6 py-4 border-t border-slate-100 flex items-center gap-3">
-          <Button
-            variant="outline"
-            size="sm"
-            className="flex-1 h-9 text-[13px] border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300"
+          <button
+            className="flex-1 py-2 text-[13px] font-medium text-slate-500 hover:text-slate-700 hover:bg-slate-50 rounded transition-colors"
             onClick={() => {
               if (onSkip && customer.contactId) {
                 onSkip(customer.contactId);
@@ -275,11 +275,9 @@ export function ActionDrawer({
             }}
           >
             Skip
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="flex-1 h-9 text-[13px] border-amber-200 text-amber-700 hover:bg-amber-50 hover:border-amber-300"
+          </button>
+          <button
+            className="flex-1 py-2 text-[13px] font-medium text-amber-600 hover:text-amber-700 hover:bg-amber-50 rounded transition-colors"
             onClick={() => {
               if (onAttention && customer.contactId) {
                 onAttention(customer.contactId);
@@ -288,7 +286,7 @@ export function ActionDrawer({
             }}
           >
             Attention
-          </Button>
+          </button>
         </div>
       </SheetContent>
     </Sheet>

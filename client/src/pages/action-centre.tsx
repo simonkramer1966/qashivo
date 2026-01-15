@@ -409,6 +409,7 @@ export default function ActionCentreV2() {
           daysOverdue: selectedPlanAction.daysOverdue || 0,
           channel: selectedPlanAction.actionType,
           stage: selectedPlanAction.stage,
+          invoiceCount: selectedPlanAction.invoiceCount,
           invoices: selectedPlanAction.invoices || [],
         } : null}
         onSkip={(contactId) => {
