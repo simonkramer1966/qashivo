@@ -273,12 +273,21 @@ export function ActionDrawer({
                   />
                 </CollapsibleTrigger>
                 <CollapsibleContent className="pt-3">
-                  <div className="space-y-2">
-                    {allInvoices.map((invoice) => (
-                      <p key={invoice.id} className="text-[13px] text-slate-600">
-                        {invoice.invoiceNumber} · {formatCurrency(parseAmount(invoice.amount))}{invoice.dueDate && ` · Due ${new Date(invoice.dueDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}`}
-                      </p>
-                    ))}
+                  <div className="space-y-1">
+                    {allInvoices.map((invoice: any) => {
+                      const daysOverdue = invoice.daysOverdue || 0;
+                      const invoiceDate = invoice.invoiceDate || invoice.dueDate;
+                      return (
+                        <div key={invoice.id} className="grid grid-cols-[auto_1fr_auto_auto] gap-3 text-[13px] text-slate-600">
+                          <span className="tabular-nums">
+                            {invoiceDate ? new Date(invoiceDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' }) : '—'}
+                          </span>
+                          <span className="truncate">{invoice.invoiceNumber}</span>
+                          <span className="tabular-nums text-slate-400">{daysOverdue}D</span>
+                          <span className="tabular-nums text-right">{formatCurrency(parseAmount(invoice.amount))}</span>
+                        </div>
+                      );
+                    })}
                   </div>
                 </CollapsibleContent>
               </Collapsible>
