@@ -656,7 +656,7 @@ function PlannedTabContent({
               <tr 
                 key={item.id}
                 onClick={() => onPreviewAction(item)}
-                className={`border-b border-slate-50 cursor-pointer transition-colors ${
+                className={`group border-b border-slate-50 cursor-pointer transition-colors ${
                   selectedIds.has(item.id) ? 'bg-slate-50' : 'hover:bg-slate-50/50'
                 }`}
               >
