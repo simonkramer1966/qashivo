@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
-import { Input } from "@/components/ui/input";
 import { 
   Search, 
   ChevronRight,
@@ -140,73 +139,69 @@ export default function Customers() {
             </section>
 
             {/* Divider */}
-            <div className="border-t border-slate-100/80 mb-6 flex-shrink-0" />
+            <div className="border-t border-slate-100/80 mb-4 flex-shrink-0" />
 
-            {/* Table Controls Row */}
-            <div className="flex items-center gap-4 mb-4 flex-shrink-0">
-              <p className="text-[12px] text-slate-400 whitespace-nowrap">
-                {pagination.total} customer{pagination.total !== 1 ? 's' : ''}
-              </p>
+            {/* Table Header Row - Count left, Search right */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3 flex-shrink-0">
+              <div className="flex items-center gap-3">
+                <p className="text-[12px] text-slate-400 whitespace-nowrap">
+                  {pagination.total} customer{pagination.total !== 1 ? 's' : ''}
+                </p>
+                {pagination.totalPages > 1 && (
+                  <div className="hidden sm:flex items-center gap-1 text-[11px] text-slate-400">
+                    <button
+                      onClick={() => setPage(Math.max(1, page - 1))}
+                      disabled={page === 1}
+                      className="hover:text-slate-600 disabled:text-slate-300 disabled:cursor-not-allowed"
+                      data-testid="button-previous-page"
+                    >
+                      ←
+                    </button>
+                    <span>{page}/{pagination.totalPages}</span>
+                    <button
+                      onClick={() => setPage(Math.min(pagination.totalPages, page + 1))}
+                      disabled={page === pagination.totalPages}
+                      className="hover:text-slate-600 disabled:text-slate-300 disabled:cursor-not-allowed"
+                      data-testid="button-next-page"
+                    >
+                      →
+                    </button>
+                  </div>
+                )}
+              </div>
               
-              <div className="relative flex-1 max-w-sm">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
-                <Input
+              <div className="relative w-full sm:w-[280px]">
+                <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 text-slate-300" />
+                <input
                   type="text"
-                  placeholder="Search customers…"
+                  placeholder="Find a customer…"
                   value={search}
                   onChange={(e) => handleSearchChange(e.target.value)}
-                  className="pl-9 h-8 text-[13px] bg-white/70 border-slate-200/50"
+                  className="w-full pl-8 pr-3 h-7 text-[12px] text-slate-600 placeholder:text-slate-300 bg-transparent border border-slate-200/60 rounded focus:outline-none focus:border-slate-300 transition-colors"
                   data-testid="input-search-customers"
                 />
               </div>
-
-              {/* Pagination Controls - Desktop */}
-              {pagination.totalPages > 1 && (
-                <div className="hidden sm:flex gap-1.5 items-center text-[12px]">
-                  <button
-                    onClick={() => setPage(Math.max(1, page - 1))}
-                    disabled={page === 1}
-                    className="px-2 py-1 text-slate-500 hover:text-slate-700 disabled:text-slate-300 disabled:cursor-not-allowed"
-                    data-testid="button-previous-page"
-                  >
-                    Prev
-                  </button>
-                  <span className="text-slate-400">
-                    {page} of {pagination.totalPages}
-                  </span>
-                  <button
-                    onClick={() => setPage(Math.min(pagination.totalPages, page + 1))}
-                    disabled={page === pagination.totalPages}
-                    className="px-2 py-1 text-slate-500 hover:text-slate-700 disabled:text-slate-300 disabled:cursor-not-allowed"
-                    data-testid="button-next-page"
-                  >
-                    Next
-                  </button>
-                </div>
-              )}
             </div>
 
             {/* Mobile Pagination */}
             {pagination.totalPages > 1 && (
-              <div className="sm:hidden flex justify-center items-center gap-2 mb-4 text-[12px]">
+              <div className="sm:hidden flex justify-center items-center gap-2 mb-3 text-[11px] text-slate-400">
                 <button
                   onClick={() => setPage(Math.max(1, page - 1))}
                   disabled={page === 1}
-                  className="px-2 py-1 text-slate-500 hover:text-slate-700 disabled:text-slate-300"
+                  className="hover:text-slate-600 disabled:text-slate-300"
                   data-testid="button-previous-page-mobile"
                 >
-                  Prev
+                  ← Prev
                 </button>
-                <span className="text-slate-400">
-                  {page} of {pagination.totalPages}
-                </span>
+                <span>{page} of {pagination.totalPages}</span>
                 <button
                   onClick={() => setPage(Math.min(pagination.totalPages, page + 1))}
                   disabled={page === pagination.totalPages}
-                  className="px-2 py-1 text-slate-500 hover:text-slate-700 disabled:text-slate-300"
+                  className="hover:text-slate-600 disabled:text-slate-300"
                   data-testid="button-next-page-mobile"
                 >
-                  Next
+                  Next →
                 </button>
               </div>
             )}
