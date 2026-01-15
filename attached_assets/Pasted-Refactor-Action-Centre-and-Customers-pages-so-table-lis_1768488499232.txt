@@ -1,0 +1,54 @@
+Refactor Action Centre and Customers pages so table/list headings remain visible while scrolling (“sticky headers”), without introducing heavy UI chrome. Must work across all Action Centre tabs (Planned, Executed, Attention, Cashboard, Forecast) and the Customers table page.
+
+NON-NEGOTIABLE DESIGN
+- Sticky elements must feel “Apple-like”: subtle, calm, minimal.
+- Use a light background (same as page background), optional hairline divider at the bottom, no drop shadows (or at most an extremely subtle shadow only while stuck).
+- Preserve existing spacing, typography, and layout. No cards added. No new controls.
+
+SCOPE
+1) Action Centre:
+   - Make the Action Centre header area sticky so that when the user scrolls the list, they keep context.
+   - Sticky stack should include:
+     A) Page title row (“Action Centre” + top-right actions like Approve All)
+     B) Tabs row (Planned / Executed / Attention / Cashboard / Forecast)
+     C) The list/table header row for the active tab (e.g., CUSTOMER / CHANNEL / OVERDUE / INVOICES / AMOUNT)
+   - The sticky stack should NOT include the sidebar nav.
+   - The sticky stack must work with the side drawer open (drawer should overlay as it does now; sticky header should not jump or resize).
+
+2) Customers page:
+   - Make the Customers table header row sticky (column headings).
+   - Also keep the “table tools row” sticky (left: “X customers”, right: search input) so the user can search without scrolling back up.
+   - The KPI “Debtor Behaviour Profiles” section should NOT be sticky. Only the table tools row + column headings should stick.
+
+SCROLLING ARCHITECTURE (IMPORTANT)
+- Implement sticky headers correctly by ensuring there is ONE primary scroll container:
+  Option A (preferred): the main content area scrolls (not the entire window).
+  Option B: window scroll is ok if that’s already how the app works, but sticky must reference the correct parent and not be trapped by overflow: hidden.
+- Avoid nesting scroll containers (this breaks sticky). If a nested scroll container exists, refactor so the table/list scrolls within the main content area cleanly.
+
+TECHNICAL REQUIREMENTS
+- Use CSS `position: sticky; top: <value>; z-index: <value>;`
+- Ensure correct z-index layering so sticky headers stay above table rows but below the drawer overlay.
+- When sticky is active, add a hairline bottom border (e.g., 1px neutral-200/300) to separate it from scrolling content.
+- Ensure the sticky header background is opaque to prevent text overlap from content behind.
+
+SPECIFIC OFFSETS
+- Action Centre sticky stack:
+  - Title row sticks to top (top: 0)
+  - Tabs row sticks directly under title row
+  - Column header sticks directly under tabs row
+  - If these are separate elements, compute their top offsets based on actual rendered heights (or wrap them in a single sticky container to avoid manual offsets).
+
+- Customers sticky:
+  - Table tools row (count + search) sticky near top of content
+  - Column headings sticky directly under the tools row
+
+QUALITY CHECKS
+- Scrolling down preserves context (tabs + headings visible).
+- No jitter / layout shift when the header becomes sticky.
+- No overlap with content: first visible row should not hide under the sticky header (add appropriate padding/margin).
+- Works on smaller screens (responsive): sticky still functions; tools row may stack vertically but stays sticky.
+
+DELIVERABLE
+- Update the relevant layout components for Action Centre and Customers to implement the sticky header behavior.
+- Keep styling minimal and consistent with the Action Centre aesthetic.
