@@ -74,7 +74,6 @@ const navigationSections = [
     label: "SYSTEM",
     items: [
       { name: "Workflows", href: "/workflows", icon: null },
-      { name: "Settings", href: "/settings", icon: null },
     ]
   }
 ];
@@ -682,6 +681,11 @@ export default function NewSidebar() {
                 <User className="mr-2 h-4 w-4" />
                 Profile
               </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setLocation('/settings')} className="text-sm cursor-pointer" data-testid="menu-item-settings-profile">
+                <Settings className="mr-2 h-4 w-4" />
+                Settings
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
               <DropdownMenuItem onClick={handleLogout} className="text-sm cursor-pointer" data-testid="menu-item-logout">
                 <LogOut className="mr-2 h-4 w-4" />
                 Log out
@@ -720,6 +724,11 @@ export default function NewSidebar() {
                 <User className="mr-2 h-4 w-4" />
                 Profile
               </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setLocation('/settings')} className="text-sm cursor-pointer" data-testid="menu-item-settings-profile-collapsed">
+                <Settings className="mr-2 h-4 w-4" />
+                Settings
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
               <DropdownMenuItem onClick={handleLogout} className="text-sm cursor-pointer" data-testid="menu-item-logout">
                 <LogOut className="mr-2 h-4 w-4" />
                 Log out
