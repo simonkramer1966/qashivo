@@ -1,0 +1,39 @@
+Update the Cashboard layout so the page fits within the viewport without scrolling on normal laptop screens by making the chart section flex to fill available height. “State of cash” (top) and “Collection performance” (bottom) must be fixed-height sections. The chart container should expand/contract based on screen height, with sensible min/max heights. Preserve the existing visual style.
+
+REQUIREMENTS
+1) Viewport-fit layout
+- The main Cashboard content area should be height: calc(100vh - headerHeight) (account for any top app header if present).
+- Use a vertical flex layout:
+  - Top metrics section: fixed height (content-defined, no flex-grow)
+  - Chart section: flex: 1 (grows to fill remaining height)
+  - Bottom metrics section: fixed height (content-defined, no flex-grow)
+- The user should not need to scroll on typical screens.
+
+2) Chart responsiveness
+- Remove any hardcoded chart height (e.g. h-[320px]).
+- Give the chart wrapper a height of 100% of its flex container.
+- Implement min/max heights:
+  - min-height: 260px (or similar)
+  - max-height: 520px (or similar)
+- Ensure Recharts/Chart library is using a responsive container (e.g. ResponsiveContainer) so it fills parent height/width.
+
+3) Small screens fallback
+- If viewport height is too small to fit all sections (or user zoom is high), allow the page to scroll naturally:
+  - Use min-height rules and allow overflow-y: auto on the main content wrapper.
+- Do NOT squash the fixed sections; only the chart should shrink first.
+
+4) Preserve spacing
+- Keep calm whitespace, but tighten vertical spacing slightly if needed to avoid unnecessary scroll.
+- Maintain the same typography + minimal style.
+
+IMPLEMENTATION HINTS
+- Wrap the Cashboard content (inside the main area, not the sidebar) in a container like:
+  display: flex; flex-direction: column; height: 100%;
+- Ensure parents of the flex container have explicit heights:
+  - page layout container
+  - main content container
+- Use `min-h-0` on flex children that need to shrink properly (common React/Tailwind flex issue).
+
+DELIVERABLE
+- Update the Cashboard page component layout/CSS so the chart flexes with viewport height.
+- Verify on a laptop-sized viewport that “State of cash”, chart, and “Collection performance” are visible without scrolling.

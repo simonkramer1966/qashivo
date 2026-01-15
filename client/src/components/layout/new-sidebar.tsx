@@ -140,16 +140,27 @@ const addToRecentOrganizations = (orgId: string) => {
 // NavSection component for consistent section styling
 function NavSection({ 
   label, 
-  children 
+  children,
+  isCollapsed = false,
+  hideWhenCollapsed = false
 }: { 
   label: string; 
   children: React.ReactNode;
+  isCollapsed?: boolean;
+  hideWhenCollapsed?: boolean;
 }) {
+  // Hide entire section when collapsed if specified
+  if (isCollapsed && hideWhenCollapsed) {
+    return null;
+  }
+  
   return (
     <div className="mb-6">
-      <p className="text-[11px] uppercase tracking-wider text-slate-400 font-medium mb-2 px-3">
-        {label}
-      </p>
+      {!isCollapsed && (
+        <p className="text-[11px] uppercase tracking-wider text-slate-400 font-medium mb-2 px-3">
+          {label}
+        </p>
+      )}
       <ul className="space-y-0.5">
         {children}
       </ul>
@@ -173,8 +184,10 @@ function NavItem({
   onClick: () => void;
   isCollapsed: boolean;
 }) {
-  // Get first letter for collapsed state when no icon
-  const initial = name.charAt(0).toUpperCase();
+  // Hide items without icons when sidebar is collapsed
+  if (isCollapsed && !Icon) {
+    return null;
+  }
   
   return (
     <li>
@@ -194,14 +207,7 @@ function NavItem({
           <span className="absolute left-0 top-1 bottom-1 w-0.5 bg-[#17B6C3] rounded-full" />
         )}
         
-        {/* Show icon if available, otherwise show initial in collapsed mode */}
-        {Icon ? (
-          <Icon className={cn("w-4 h-4 flex-shrink-0", isCollapsed ? "" : "mr-3", isActive ? "text-[#17B6C3]" : "text-slate-400")} />
-        ) : isCollapsed ? (
-          <span className={cn("w-4 h-4 flex items-center justify-center text-[11px] font-medium", isActive ? "text-[#17B6C3]" : "text-slate-400")}>
-            {initial}
-          </span>
-        ) : null}
+        {Icon && <Icon className={cn("w-4 h-4 flex-shrink-0", isCollapsed ? "" : "mr-3", isActive ? "text-[#17B6C3]" : "text-slate-400")} />}
         {!isCollapsed && <span>{name}</span>}
       </button>
     </li>
@@ -616,8 +622,17 @@ export default function NewSidebar() {
       {/* Navigation - Clean sections with typography hierarchy */}
       <nav className={cn("flex-1 overflow-y-auto", isCollapsed ? "px-2" : "px-3")}>
         <TooltipProvider delayDuration={0}>
-          {currentNavigationSections.map((section) => (
-            <NavSection key={section.label} label={isCollapsed ? "" : section.label}>
+          {currentNavigationSections.map((section) => {
+            // Check if section has any items with icons
+            const hasIconItems = section.items.some((item: any) => item.icon);
+            
+            return (
+            <NavSection 
+              key={section.label} 
+              label={section.label}
+              isCollapsed={isCollapsed}
+              hideWhenCollapsed={!hasIconItems}
+            >
               {section.items.map((item) => {
                 const navContent = (
                   <NavItem
@@ -647,7 +662,8 @@ export default function NewSidebar() {
                 return navContent;
               })}
             </NavSection>
-          ))}
+          );
+          })}
         </TooltipProvider>
       </nav>
 
