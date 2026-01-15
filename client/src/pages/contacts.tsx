@@ -5,9 +5,7 @@ import { Input } from "@/components/ui/input";
 import { 
   Search, 
   ChevronRight,
-  User,
-  ShieldCheck,
-  Shield
+  User
 } from "lucide-react";
 import NewSidebar from "@/components/layout/new-sidebar";
 import BottomNav from "@/components/layout/bottom-nav";
@@ -246,13 +244,8 @@ export default function Customers() {
                   >
                     <div className="flex items-center justify-between gap-3">
                       <div className="flex-1 min-w-0">
-                        <p className="text-[14px] font-medium text-slate-900 truncate flex items-center gap-1.5">
+                        <p className="text-[14px] font-medium text-slate-900 truncate">
                           {contact.companyName || contact.name}
-                          {contact.riskBand ? (
-                            <ShieldCheck className="h-3.5 w-3.5 text-[#4FAD80] flex-shrink-0" />
-                          ) : (
-                            <Shield className="h-3.5 w-3.5 text-slate-300 flex-shrink-0" />
-                          )}
                         </p>
                         <div className="flex items-center gap-4 mt-1 text-[12px] text-slate-500">
                           <span className="tabular-nums">{formatCurrency(contact.outstandingAmount)}</span>
@@ -309,13 +302,8 @@ export default function Customers() {
                         >
                           {/* Customer */}
                           <td className="py-3 pr-4">
-                            <p className="text-[13px] font-medium text-slate-900 truncate flex items-center gap-1.5">
+                            <p className="text-[13px] font-medium text-slate-900 truncate">
                               {contact.companyName || contact.name}
-                              {contact.riskBand ? (
-                                <ShieldCheck className="h-3.5 w-3.5 text-[#4FAD80] flex-shrink-0" />
-                              ) : (
-                                <Shield className="h-3.5 w-3.5 text-slate-300 flex-shrink-0" />
-                              )}
                             </p>
                           </td>
 
