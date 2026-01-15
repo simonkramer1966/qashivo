@@ -139,14 +139,10 @@ export default function Cashboard() {
         <Header 
           title="Cashboard" 
           subtitle="Real-time cashflow and receivables overview"
+          systemMessage="Qashivo is continuously managing receivables. No action is required unless something is flagged in Attention."
         />
         
         <div className="container-apple py-4 sm:py-6 lg:py-8">
-          {/* Calm system message */}
-          <p className="text-[13px] text-slate-400 mb-6">
-            Qashivo is continuously managing receivables. No action is required unless something is flagged in Attention.
-          </p>
-
           {/* Desktop: Unified Metrics Strip */}
           <div className="hidden sm:block mb-8">
             <div className="bg-white border border-slate-100 rounded-lg">
@@ -272,9 +268,6 @@ export default function Cashboard() {
 
           {/* Mobile: Compact metrics */}
           <div className="sm:hidden mb-6">
-            <p className="text-[13px] text-slate-400 mb-4">
-              Qashivo is continuously managing receivables.
-            </p>
             <div className="bg-white border border-slate-100 rounded-lg divide-y divide-slate-100">
               {/* State of Cash */}
               <div className="p-3">

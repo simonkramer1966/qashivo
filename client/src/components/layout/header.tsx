@@ -14,13 +14,14 @@ import nexusLogo from "@assets/Main Nexus Logo copy_1756923544828.png";
 interface HeaderProps {
   title: string;
   subtitle: string;
+  systemMessage?: string;
   action?: React.ReactNode;
   noBorder?: boolean;
   titleSize?: string;
   subtitleSize?: string;
 }
 
-export default function Header({ title, subtitle, action, noBorder = true, titleSize = "text-2xl", subtitleSize = "text-base" }: HeaderProps) {
+export default function Header({ title, subtitle, systemMessage, action, noBorder = true, titleSize = "text-2xl", subtitleSize = "text-base" }: HeaderProps) {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
@@ -294,6 +295,11 @@ export default function Header({ title, subtitle, action, noBorder = true, title
           {subtitle && (
             <p className="text-[13px] text-slate-400 mt-0.5" data-testid="text-page-subtitle">
               {subtitle}
+            </p>
+          )}
+          {systemMessage && (
+            <p className="text-[12px] text-slate-400 mt-1" data-testid="text-system-message">
+              {systemMessage}
             </p>
           )}
         </div>
