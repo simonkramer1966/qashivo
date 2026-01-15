@@ -169,7 +169,7 @@ export default function CashFlow() {
                 <ResponsiveContainer width="100%" height="100%">
                   <ComposedChart 
                     data={forecastData}
-                    margin={{ top: 20, right: 20, bottom: 20, left: 10 }}
+                    margin={{ top: 20, right: 20, bottom: 35, left: 10 }}
                   >
                     <CartesianGrid 
                       strokeDasharray="3 3" 

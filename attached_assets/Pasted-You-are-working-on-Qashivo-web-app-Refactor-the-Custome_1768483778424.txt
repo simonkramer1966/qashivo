@@ -1,0 +1,75 @@
+You are working on Qashivo (web app). Refactor the Customers (debtors) page to match the Apple-like, Tufte/Stephen Few minimal style used in the Action Centre and Cashboard. The page must feel calm, uncluttered, and typography-led (high data-ink ratio). Remove card-y UI, heavy borders, and decorative chrome. Preserve routes and functionality.
+
+PRIMARY GOALS
+1) Make the Customers page visually consistent with Action Centre/Cashboard:
+   - No “dashboard tiles” with thick borders/shadows
+   - Use whitespace, clean type hierarchy, and hairline dividers
+   - Only one strong accent color (Qashivo teal) for active/selection
+2) Introduce a “Debtor behaviour profiles” KPI section with 4 metrics:
+   - 38% usually pay on time
+   - 44% pay late but reliably
+   - 12% inconsistent
+   - 6% high risk
+   These should be shown as simple, readable metrics (NOT cards), ideally in a 4-column row.
+
+INFORMATION ARCHITECTURE (new layout)
+A) Header
+- Title: “Customers”
+- Subtitle (muted): “Debtor overview and payment behaviour”
+- Optional reassurance line (muted, single sentence): “Qashivo manages collections automatically. Review is only needed when something is flagged in Attention.”
+
+B) KPI section: Debtor behaviour profiles (NEW)
+- Section label (small uppercase, muted): “DEBTOR BEHAVIOUR PROFILES”
+- 4 KPI blocks in one row on desktop (stack 2x2 on small screens)
+  Each KPI block includes:
+   - Big value: “38%”
+   - Label: “Usually pay on time”
+  Repeat for:
+   - 44% “Pay late but reliably”
+   - 12% “Inconsistent”
+   - 6% “High risk”
+- Styling rules:
+   - No cards, no shadows, no borders
+   - Use whitespace separation and optional hairline divider under the KPI section
+   - Use tabular numerals for percentages
+   - Keep the “High risk” KPI subtle (no alarming red in V1; use muted tone)
+
+C) Table controls row (clean)
+- Left: “20 customers” (muted)
+- Center/right: search input “Search customers…” (existing functionality)
+- Optional: a minimal filter chip row (only if already implemented). If not implemented, don’t add.
+
+D) Customers table
+- Keep the table as the primary content.
+- Apply Tufte/Few table styling:
+   - Sticky table header (important)
+   - Very light row separators (hairline)
+   - No heavy outer border around the table container
+   - Zebra striping OFF (prefer clean white; use subtle hover highlight only)
+- Improve column hierarchy (reduce noise):
+   - Primary: Customer name + small status indicator (optional)
+   - Secondary (muted): Outstanding, Overdue, APDP, Last Payment
+   - De-emphasise or remove “Risk” pill styling; use plain text (e.g., “Risk B”) with subtle tint only if necessary.
+- Ensure currency uses tabular numerals; amounts right-aligned.
+
+DESIGN RULES (non-negotiable)
+- Remove the three top “tiles/cards” (Total, High Risk, Outstanding) and replace with the new Behaviour Profiles KPI row.
+- No rounded cards around KPI sections.
+- No shadows on the Customers page.
+- Use hairline dividers sparingly between major sections only.
+- Keep the visual language consistent with Action Centre (same font sizes, spacing, muted greys).
+
+RESPONSIVE
+- KPI row becomes 2 columns on medium screens and 1 column on small screens.
+- Table remains scrollable horizontally only if needed; avoid overflow where possible.
+
+DELIVERABLE
+- Update Customers page JSX + Tailwind/CSS to implement the new structure and styling.
+- Add a small reusable <KpiStat value label /> component (same style as Cashboard bottom KPIs) and use it for the 4 behaviour profile KPIs.
+- Ensure table header is sticky and remains visible when scrolling.
+
+ACCEPTANCE CHECK
+- The page feels like a calm “system view” (not a dashboard of widgets).
+- Behaviour profile KPIs are immediately readable at a glance.
+- Table remains the main focus and is easier to scan.
+- No heavy borders/cards/shadows remain.
