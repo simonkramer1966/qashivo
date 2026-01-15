@@ -29,6 +29,8 @@ interface ActionDrawerProps {
     channel?: string;
     stage?: string;
     invoiceCount?: number;
+    ptpDate?: string;
+    ptpBreached?: boolean;
     invoices: Array<{
       id: string;
       invoiceNumber: string;
@@ -68,14 +70,21 @@ const getReasonForAction = (customer: ActionDrawerProps['customer']): string => 
   
   const days = customer.daysOverdue;
   const amount = formatCurrency(customer.totalOutstanding);
-  const invoiceCount = customer.invoiceCount || customer.invoices.length;
+  
+  if (customer.ptpBreached && customer.ptpDate) {
+    const ptpDateFormatted = new Date(customer.ptpDate).toLocaleDateString('en-GB', {
+      day: 'numeric',
+      month: 'short',
+    });
+    return `A promise to pay was missed on ${ptpDateFormatted}.`;
+  }
   
   if (days > 90) {
-    return `${invoiceCount} invoice${invoiceCount > 1 ? 's' : ''} are ${days} days overdue, totalling ${amount}.`;
+    return `Invoices totalling ${amount} are significantly overdue at ${days} days.`;
   } else if (days > 60) {
-    return `Outstanding balance of ${amount} is ${days} days past due.`;
+    return `Invoices are ${days} days overdue, totalling ${amount}.`;
   } else if (days > 30) {
-    return `${days} days overdue with ${amount} outstanding.`;
+    return `Overdue balance of ${amount} requires follow-up.`;
   } else if (days > 0) {
     return `Invoices totalling ${amount} are ${days} days overdue.`;
   }
@@ -155,7 +164,7 @@ export function ActionDrawer({
 
             {/* 2. Reason for action */}
             <div>
-              <h3 className="text-[11px] font-medium text-slate-400 uppercase tracking-wide mb-2">
+              <h3 className="text-[12px] font-semibold text-slate-500 mb-2">
                 Reason for action
               </h3>
               <p className="text-[14px] text-slate-700 leading-relaxed">
@@ -163,24 +172,24 @@ export function ActionDrawer({
               </p>
             </div>
 
-            {/* 3. Action summary - minimal key/value */}
+            {/* 3. Action summary - Amount emphasized */}
             <div className="space-y-3">
               <div className="flex justify-between items-baseline">
-                <span className="text-[13px] text-slate-400">Channel</span>
-                <span className="text-[14px] text-slate-900">
-                  {formatChannelLabel(customer.channel)}
+                <span className="text-[13px] text-slate-400">Amount</span>
+                <span className="text-[15px] font-semibold text-slate-900 tabular-nums">
+                  {formatCurrency(customer.totalOutstanding)}
                 </span>
               </div>
               <div className="flex justify-between items-baseline">
-                <span className="text-[13px] text-slate-400">Amount</span>
-                <span className="text-[14px] font-medium text-slate-900 tabular-nums">
-                  {formatCurrency(customer.totalOutstanding)}
+                <span className="text-[13px] text-slate-400">Channel</span>
+                <span className="text-[14px] text-slate-600">
+                  {formatChannelLabel(customer.channel)}
                 </span>
               </div>
               {customer.daysOverdue > 0 && (
                 <div className="flex justify-between items-baseline">
                   <span className="text-[13px] text-slate-400">Days overdue</span>
-                  <span className="text-[14px] text-slate-900 tabular-nums">
+                  <span className="text-[14px] text-slate-600 tabular-nums">
                     {customer.daysOverdue}
                   </span>
                 </div>
@@ -193,7 +202,7 @@ export function ActionDrawer({
             {/* 4. Recent contact history - collapsible */}
             <Collapsible open={historyOpen} onOpenChange={setHistoryOpen}>
               <CollapsibleTrigger className="flex items-center justify-between w-full group">
-                <h3 className="text-[11px] font-medium text-slate-400 uppercase tracking-wide">
+                <h3 className="text-[12px] font-semibold text-slate-500">
                   Recent contact history
                 </h3>
                 <ChevronDown 
@@ -220,7 +229,7 @@ export function ActionDrawer({
             {/* 5. Outstanding invoices - collapsible */}
             <Collapsible open={invoicesOpen} onOpenChange={setInvoicesOpen}>
               <CollapsibleTrigger className="flex items-center justify-between w-full group">
-                <h3 className="text-[11px] font-medium text-slate-400 uppercase tracking-wide">
+                <h3 className="text-[12px] font-semibold text-slate-500">
                   Outstanding invoices
                 </h3>
                 <ChevronDown 

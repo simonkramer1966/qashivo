@@ -410,6 +410,8 @@ export default function ActionCentreV2() {
           channel: selectedPlanAction.actionType,
           stage: selectedPlanAction.stage,
           invoiceCount: selectedPlanAction.invoiceCount,
+          ptpDate: selectedPlanAction.ptpDate,
+          ptpBreached: selectedPlanAction.ptpBreached,
           invoices: selectedPlanAction.invoices || [],
         } : null}
         onSkip={(contactId) => {
