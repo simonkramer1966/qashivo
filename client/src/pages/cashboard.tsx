@@ -15,7 +15,6 @@ import {
   Target,
   ArrowRight,
   ChevronRight,
-  ChevronDown,
   FileText,
   MessageSquare,
   Scale,
@@ -103,7 +102,6 @@ export default function Cashboard() {
   const [, setLocation] = useLocation();
   const { formatCurrency } = useCurrency();
   const [forecastPeriod, setForecastPeriod] = useState<"1" | "3" | "6">("1");
-  const [showInterest, setShowInterest] = useState(false);
 
   const { data: metrics, isLoading: metricsLoading } = useQuery<CashMetrics>({
     queryKey: ["/api/dashboard/metrics"],
@@ -229,50 +227,37 @@ export default function Cashboard() {
                   </div>
                 </div>
 
-                {/* Interest Accrued - toggleable */}
-                {showInterest ? (
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <div className="card-apple p-2.5 bg-white border border-[#E6E8EA] cursor-help" data-testid="card-interest">
-                          <div className="flex items-start justify-between">
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm text-slate-600 mb-0.5">Interest Accrued</p>
-                              {leaderboardsLoading ? (
-                                <div className="h-6 w-24 bg-slate-200 animate-pulse rounded"></div>
-                              ) : (
-                                <p className="text-xl font-bold text-slate-900 tabular-nums">
-                                  {formatCurrency(leaderboards?.summary?.totalInterest || 0)}
-                                </p>
-                              )}
-                            </div>
-                            <div className="p-1.5 bg-blue-500/10 rounded-lg flex-shrink-0 ml-2">
-                              <Percent className="h-4 w-4 text-blue-600" />
-                            </div>
+                {/* Interest Accrued */}
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="card-apple p-2.5 bg-white border border-[#E6E8EA] cursor-help" data-testid="card-interest">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm text-slate-600 mb-0.5">Interest Accrued</p>
+                            {leaderboardsLoading ? (
+                              <div className="h-6 w-24 bg-slate-200 animate-pulse rounded"></div>
+                            ) : (
+                              <p className="text-xl font-bold text-slate-900 tabular-nums">
+                                {formatCurrency(leaderboards?.summary?.totalInterest || 0)}
+                              </p>
+                            )}
+                          </div>
+                          <div className="p-1.5 bg-blue-500/10 rounded-lg flex-shrink-0 ml-2">
+                            <Percent className="h-4 w-4 text-blue-600" />
                           </div>
                         </div>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p className="text-sm">
-                          {leaderboards?.summary 
-                            ? `BoE + 8% (${leaderboards.summary.combinedRate.toFixed(1)}% annual)`
-                            : 'BoE + 8% annual rate'}
-                        </p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                ) : (
-                  <button 
-                    onClick={() => setShowInterest(true)}
-                    className="card-apple p-2.5 bg-white/50 border border-dashed border-slate-200 hover:border-slate-300 hover:bg-white/70 transition-colors flex items-center justify-center"
-                    data-testid="card-interest-toggle"
-                  >
-                    <span className="text-xs text-slate-400 flex items-center gap-1">
-                      <ChevronDown className="h-3 w-3" />
-                      Show interest
-                    </span>
-                  </button>
-                )}
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p className="text-sm">
+                        {leaderboards?.summary 
+                          ? `BoE + 8% (${leaderboards.summary.combinedRate.toFixed(1)}% annual)`
+                          : 'BoE + 8% annual rate'}
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               </div>
             </div>
 
@@ -388,28 +373,15 @@ export default function Cashboard() {
               )}
             </div>
 
-            {/* Interest - toggleable */}
-            {showInterest ? (
-              <div className="card-apple p-2 bg-white" data-testid="card-interest">
-                <p className="text-xs text-slate-600 mb-0.5">Interest</p>
-                {leaderboardsLoading ? (
-                  <div className="h-5 w-20 bg-slate-200 animate-pulse rounded"></div>
-                ) : (
-                  <p className="text-base font-bold text-slate-900 tabular-nums">{formatCurrency(leaderboards?.summary?.totalInterest || 0)}</p>
-                )}
-              </div>
-            ) : (
-              <button 
-                onClick={() => setShowInterest(true)}
-                className="card-apple p-2 bg-white/50 border border-dashed border-slate-200 flex items-center justify-center"
-                data-testid="card-interest-toggle"
-              >
-                <span className="text-[10px] text-slate-400 flex items-center gap-1">
-                  <ChevronDown className="h-3 w-3" />
-                  Interest
-                </span>
-              </button>
-            )}
+            {/* Interest */}
+            <div className="card-apple p-2 bg-white" data-testid="card-interest">
+              <p className="text-xs text-slate-600 mb-0.5">Interest</p>
+              {leaderboardsLoading ? (
+                <div className="h-5 w-20 bg-slate-200 animate-pulse rounded"></div>
+              ) : (
+                <p className="text-base font-bold text-slate-900 tabular-nums">{formatCurrency(leaderboards?.summary?.totalInterest || 0)}</p>
+              )}
+            </div>
 
             {/* Row 2: System Performance */}
             {/* Collection Progress - stubbed */}
