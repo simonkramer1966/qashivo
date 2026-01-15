@@ -116,11 +116,14 @@ export default function CashFlow() {
   
   const maxCashFlow = Math.max(...forecastData.map(d => Math.max(d.cashIn, Math.abs(d.cashOut))));
   
-  // Calculate dynamic Y-axis domain with ~25% padding below minimum for visual breathing room
+  // Calculate dynamic Y-axis domain with ~12% padding below minimum for visual breathing room
+  // Cap at roughly one tick interval (~£50k) to prevent excessive gaps
   const minNetCash = Math.min(...forecastData.map(d => d.ci95Lower));
   const maxNetCash = Math.max(...forecastData.map(d => d.ci95Upper));
   const cashRange = maxNetCash - minNetCash;
-  const yAxisMin = minNetCash - (cashRange * 0.25);
+  const calculatedPadding = cashRange * 0.12;
+  const maxPadding = 50000; // Cap at ~£50k (roughly one tick interval)
+  const yAxisMin = minNetCash - Math.min(calculatedPadding, maxPadding);
 
   return (
     <div className="flex h-screen bg-white">
