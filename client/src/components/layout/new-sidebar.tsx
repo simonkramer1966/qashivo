@@ -53,12 +53,12 @@ import nexusLogo from "@assets/Main Nexus Logo copy_1756923544828.png";
 import UserProfileDialog from "./UserProfileDialog";
 
 // Navigation structure with 3 sections: ACTION, REFERENCE, SYSTEM
-// Icons only for ACTION items (Cashboard + Action Centre)
+// Icons only for ACTION items (Overview + Action Centre)
 const navigationSections = [
   {
     label: "ACTION",
     items: [
-      { name: "Cashboard", href: "/", icon: Gauge },
+      { name: "Overview", href: "/", icon: Gauge },
       { name: "Action Centre", href: "/action-centre", icon: Target },
     ]
   },
