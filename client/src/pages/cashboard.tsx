@@ -140,7 +140,7 @@ export default function Cashboard() {
       {/* Main Content - Flex column for viewport fit */}
       <main className="flex-1 flex flex-col min-h-0 main-with-bottom-nav">
         <Header 
-          title="Cashboard" 
+          title="Overview" 
           subtitle=""
           systemMessage="Qashivo is continuously managing receivables. No action is required unless something is flagged in Attention."
         />
