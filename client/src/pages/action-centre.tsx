@@ -667,6 +667,11 @@ function PlannedTabContent({
                   <span className="text-[14px] font-medium text-slate-900">
                     {item.companyName || item.contactName || 'Unknown'}
                   </span>
+                  {item.companyName && item.contactName && (
+                    <span className="text-[13px] text-slate-400 ml-2">
+                      {item.contactName}
+                    </span>
+                  )}
                 </td>
                 <td className="py-3">
                   <span className="text-[13px] text-slate-400">
