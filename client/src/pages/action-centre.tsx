@@ -26,7 +26,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import NewSidebar from "@/components/layout/new-sidebar";
 import BottomNav from "@/components/layout/bottom-nav";
-import Header from "@/components/layout/header";
 import { formatCurrency } from "@/lib/utils";
 import { ExecutedTab, AttentionTab, CashboardTab, ForecastTab } from "@/components/action-centre/tabs";
 import { ActionDrawer } from "@/components/action-centre/ActionDrawer";
@@ -262,48 +261,64 @@ export default function ActionCentreV2() {
       </div>
       
       <main className="flex-1 overflow-y-auto main-with-bottom-nav">
-        <Header 
-          title="Action Centre" 
-          subtitle={
-            activeTab === 'planned' && dailyPlan?.tenantPolicies?.executionTime 
-              ? `Today's Plan · Executes at ${dailyPlan.tenantPolicies.executionTime}`
-              : activeTab === 'planned' ? "Today's Plan"
-              : activeTab === 'executed' ? "Completed actions"
-              : activeTab === 'attention' ? "Items needing review"
-              : activeTab === 'cashboard' ? "Customer overview"
-              : activeTab === 'forecast' ? "Cash flow projections"
-              : "Manage your collection actions"
-          }
-          action={activeTab === 'planned' && (dailyPlan?.actions?.length ?? 0) > 0 ? (
-            <button
-              onClick={() => approvePlanMutation.mutate()}
-              disabled={approvePlanMutation.isPending || (dailyPlan?.actions?.filter((a: any) => a.status === 'pending_approval').length || 0) === 0}
-              className="h-8 px-4 text-[13px] font-medium bg-slate-900 hover:bg-slate-800 text-white rounded disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              {approvePlanMutation.isPending ? 'Approving...' : `Approve All`}
-            </button>
-          ) : undefined}
-        />
-        
-        <div className="p-6 lg:p-8 space-y-6 bg-white min-h-[calc(100vh-80px)]">
-          <div className="flex items-center gap-2 border-b border-slate-100">
-            {TABS.map(tab => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`px-4 pb-3 text-[13px] font-medium transition-colors relative ${
-                  activeTab === tab.id
-                    ? 'text-slate-900'
-                    : 'text-slate-400 hover:text-slate-600'
-                }`}
-              >
-                {tab.label}
-                {activeTab === tab.id && (
-                  <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-slate-900 rounded-full" />
-                )}
-              </button>
-            ))}
+        {/* Combined sticky header with title + tabs */}
+        <div className="sticky top-0 z-40 bg-white">
+          {/* Title row */}
+          <div className="px-6 lg:px-8 py-5 border-b border-slate-100">
+            <div className="hidden lg:flex items-center justify-between">
+              <div>
+                <h2 className="text-[17px] font-semibold text-slate-900 tracking-tight">Action Centre</h2>
+                <p className="text-[13px] text-slate-400 mt-0.5">
+                  {activeTab === 'planned' && dailyPlan?.tenantPolicies?.executionTime 
+                    ? `Today's Plan · Executes at ${dailyPlan.tenantPolicies.executionTime}`
+                    : activeTab === 'planned' ? "Today's Plan"
+                    : activeTab === 'executed' ? "Completed actions"
+                    : activeTab === 'attention' ? "Items needing review"
+                    : activeTab === 'cashboard' ? "Customer overview"
+                    : activeTab === 'forecast' ? "Cash flow projections"
+                    : "Manage your collection actions"}
+                </p>
+              </div>
+              {activeTab === 'planned' && (dailyPlan?.actions?.length ?? 0) > 0 && (
+                <button
+                  onClick={() => approvePlanMutation.mutate()}
+                  disabled={approvePlanMutation.isPending || (dailyPlan?.actions?.filter((a: any) => a.status === 'pending_approval').length || 0) === 0}
+                  className="h-8 px-4 text-[13px] font-medium bg-slate-900 hover:bg-slate-800 text-white rounded disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  {approvePlanMutation.isPending ? 'Approving...' : `Approve All`}
+                </button>
+              )}
+            </div>
+            {/* Mobile title */}
+            <div className="lg:hidden text-center">
+              <h2 className="text-xl font-semibold text-slate-900">Action Centre</h2>
+            </div>
           </div>
+          
+          {/* Tabs row */}
+          <div className="bg-white border-b border-slate-100 px-6 lg:px-8">
+            <div className="flex items-center gap-2">
+              {TABS.map(tab => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`px-4 py-3 text-[13px] font-medium transition-colors relative ${
+                    activeTab === tab.id
+                      ? 'text-slate-900'
+                      : 'text-slate-400 hover:text-slate-600'
+                  }`}
+                >
+                  {tab.label}
+                  {activeTab === tab.id && (
+                    <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-slate-900 rounded-full" />
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="p-6 lg:p-8 space-y-6 bg-white min-h-[calc(100vh-140px)]">
 
           {activeTab === 'planned' && (
             <PlannedTabContent
@@ -643,19 +658,19 @@ function PlannedTabContent({
         </div>
       ) : (
         <table className="w-full">
-          <thead>
+          <thead className="lg:sticky lg:top-[120px] z-20 bg-white">
             <tr className="border-b border-slate-100">
-              <th className="w-10 py-2 text-left">
+              <th className="w-10 py-2 text-left bg-white">
                 <Checkbox
                   checked={allSelected}
                   onCheckedChange={(checked) => handleSelectAll(checked as boolean)}
                 />
               </th>
-              <th className="py-2 text-left text-[11px] font-medium text-slate-400 uppercase tracking-wider">Customer</th>
-              <th className="py-2 text-left text-[11px] font-medium text-slate-400 uppercase tracking-wider w-16">Channel</th>
-              <th className="py-2 text-right text-[11px] font-medium text-slate-400 uppercase tracking-wider w-20">Overdue</th>
-              <th className="py-2 text-right text-[11px] font-medium text-slate-400 uppercase tracking-wider w-20">Invoices</th>
-              <th className="py-2 text-right text-[11px] font-medium text-slate-400 uppercase tracking-wider w-28">Amount</th>
+              <th className="py-2 text-left text-[11px] font-medium text-slate-400 uppercase tracking-wider bg-white">Customer</th>
+              <th className="py-2 text-left text-[11px] font-medium text-slate-400 uppercase tracking-wider w-16 bg-white">Channel</th>
+              <th className="py-2 text-right text-[11px] font-medium text-slate-400 uppercase tracking-wider w-20 bg-white">Overdue</th>
+              <th className="py-2 text-right text-[11px] font-medium text-slate-400 uppercase tracking-wider w-20 bg-white">Invoices</th>
+              <th className="py-2 text-right text-[11px] font-medium text-slate-400 uppercase tracking-wider w-28 bg-white">Amount</th>
             </tr>
           </thead>
           <tbody>

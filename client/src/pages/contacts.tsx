@@ -141,8 +141,8 @@ export default function Customers() {
             {/* Divider */}
             <div className="border-t border-slate-100/80 mb-4 flex-shrink-0" />
 
-            {/* Table Header Row - Count left, Search right */}
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3 flex-shrink-0">
+            {/* Table Header Row - Count left, Search right (Sticky on desktop) */}
+            <div className="sm:sticky sm:top-0 z-20 bg-white pt-2 pb-3 -mt-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 flex-shrink-0">
               <div className="flex items-center gap-3">
                 <p className="text-[12px] text-slate-400 whitespace-nowrap">
                   {pagination.total} customer{pagination.total !== 1 ? 's' : ''}
@@ -267,14 +267,14 @@ export default function Customers() {
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full">
-                    <thead className="sticky top-0 bg-white z-10">
+                    <thead className="sm:sticky sm:top-[40px] bg-white z-10">
                       <tr className="border-b border-slate-200">
-                        <th className="text-left py-2 pr-4 text-[11px] font-medium text-slate-500 uppercase tracking-wider">Customer</th>
-                        <th className="text-right py-2 px-4 text-[11px] font-medium text-slate-500 uppercase tracking-wider">Outstanding</th>
-                        <th className="text-right py-2 px-4 text-[11px] font-medium text-slate-500 uppercase tracking-wider">Overdue</th>
-                        <th className="text-right py-2 px-4 text-[11px] font-medium text-slate-500 uppercase tracking-wider">ADPD</th>
-                        <th className="text-right py-2 px-4 text-[11px] font-medium text-slate-500 uppercase tracking-wider">Last Payment</th>
-                        <th className="text-right py-2 pl-4 text-[11px] font-medium text-slate-500 uppercase tracking-wider">Risk</th>
+                        <th className="text-left py-2 pr-4 text-[11px] font-medium text-slate-500 uppercase tracking-wider bg-white">Customer</th>
+                        <th className="text-right py-2 px-4 text-[11px] font-medium text-slate-500 uppercase tracking-wider bg-white">Outstanding</th>
+                        <th className="text-right py-2 px-4 text-[11px] font-medium text-slate-500 uppercase tracking-wider bg-white">Overdue</th>
+                        <th className="text-right py-2 px-4 text-[11px] font-medium text-slate-500 uppercase tracking-wider bg-white">ADPD</th>
+                        <th className="text-right py-2 px-4 text-[11px] font-medium text-slate-500 uppercase tracking-wider bg-white">Last Payment</th>
+                        <th className="text-right py-2 pl-4 text-[11px] font-medium text-slate-500 uppercase tracking-wider bg-white">Risk</th>
                       </tr>
                     </thead>
                     <tbody>
