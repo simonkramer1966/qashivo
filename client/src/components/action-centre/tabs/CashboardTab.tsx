@@ -1,9 +1,7 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { Debtor, DebtorStatus } from '../types';
 import { buildCashboardMatrix, formatCurrencyCompact, getStatusLabel, getChannelLabel, formatRelativeTime } from '../utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { formatCurrency } from '@/lib/utils';
-import { ChevronDown } from 'lucide-react';
 
 interface CashboardTabProps {
   debtors: Debtor[];
@@ -13,52 +11,8 @@ interface CashboardTabProps {
 
 const STATUS_ORDER: DebtorStatus[] = ['due', 'overdue', 'no_contact', 'promised', 'broken', 'dispute', 'query', 'paid'];
 
-interface MetricCardProps {
-  label: string;
-  value: string | number;
-  sublabel?: string;
-  muted?: boolean;
-}
-
-function MetricCard({ label, value, sublabel, muted }: MetricCardProps) {
-  return (
-    <div className={`flex flex-col ${muted ? 'opacity-50' : ''}`}>
-      <span className="text-[11px] text-slate-400 uppercase tracking-wider">{label}</span>
-      <span className="text-[18px] font-semibold text-slate-900 tabular-nums">{value}</span>
-      {sublabel && <span className="text-[11px] text-slate-400">{sublabel}</span>}
-    </div>
-  );
-}
-
 export function CashboardTab({ debtors, onSelectDebtor, isLoading }: CashboardTabProps) {
-  const [showInterest, setShowInterest] = useState(false);
   const matrix = useMemo(() => buildCashboardMatrix(debtors), [debtors]);
-
-  const metrics = useMemo(() => {
-    const totalOutstanding = debtors.reduce((sum, d) => sum + (d.totalOutstanding || 0), 0);
-    const overdueDebtors = debtors.filter(d => d.oldestDaysOverdue > 0);
-    const overdueAmount = overdueDebtors.reduce((sum, d) => sum + (d.totalOverdue || d.totalOutstanding || 0), 0);
-    const overdueCount = overdueDebtors.length;
-    const avgDaysLate = overdueDebtors.length > 0 
-      ? Math.round(overdueDebtors.reduce((sum, d) => sum + d.oldestDaysOverdue, 0) / overdueDebtors.length)
-      : 0;
-    
-    const disputeCount = debtors.filter(d => d.status === 'dispute').length;
-    const promisedCount = debtors.filter(d => d.status === 'promised').length;
-    const paidCount = debtors.filter(d => d.status === 'paid').length;
-    const resolvedCount = paidCount + promisedCount;
-    const resolutionRate = debtors.length > 0 ? Math.round((resolvedCount / debtors.length) * 100) : 0;
-
-    return {
-      totalOutstanding,
-      overdueAmount,
-      overdueCount,
-      avgDaysLate,
-      disputeCount,
-      promisedCount,
-      resolutionRate,
-    };
-  }, [debtors]);
 
   if (isLoading) {
     return (
@@ -80,73 +34,6 @@ export function CashboardTab({ debtors, onSelectDebtor, isLoading }: CashboardTa
   }
 
   return (
-    <div className="space-y-6">
-      {/* Metric Cards */}
-      <div className="space-y-4">
-        {/* Row 1: State of Cash */}
-        <div>
-          <p className="text-[10px] text-slate-400 uppercase tracking-wider mb-2">State of Cash</p>
-          <div className="grid grid-cols-4 gap-6">
-            <MetricCard 
-              label="Total Outstanding" 
-              value={formatCurrency(metrics.totalOutstanding)} 
-            />
-            <MetricCard 
-              label="Overdue Invoices" 
-              value={formatCurrency(metrics.overdueAmount)}
-              sublabel={`${metrics.overdueCount} customers`}
-            />
-            <MetricCard 
-              label="Avg Days Late" 
-              value={`${metrics.avgDaysLate}d`} 
-            />
-            {showInterest ? (
-              <MetricCard 
-                label="Interest Accrued" 
-                value="—" 
-                sublabel="Not configured"
-              />
-            ) : (
-              <button 
-                onClick={() => setShowInterest(true)}
-                className="text-[11px] text-slate-400 hover:text-slate-600 flex items-center gap-1 self-center"
-              >
-                <ChevronDown className="h-3 w-3" />
-                Show interest
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Row 2: System Performance */}
-        <div className="border-t border-slate-100 pt-4">
-          <p className="text-[10px] text-slate-400 uppercase tracking-wider mb-2">System Performance</p>
-          <div className="grid grid-cols-4 gap-6">
-            <MetricCard 
-              label="Collection Progress" 
-              value="—"
-              sublabel="Coming soon"
-            />
-            <MetricCard 
-              label="Payment Plans" 
-              value={metrics.promisedCount}
-              sublabel="Active"
-            />
-            <MetricCard 
-              label="Disputes" 
-              value={metrics.disputeCount}
-              sublabel="Open"
-            />
-            <MetricCard 
-              label="Resolution Rate" 
-              value={`${metrics.resolutionRate}%`}
-              sublabel="This month"
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Existing Matrix Table */}
     <TooltipProvider delayDuration={200}>
       <div className="overflow-x-auto">
         <table className="w-full" style={{ minWidth: '900px', tableLayout: 'fixed' }}>
@@ -228,6 +115,5 @@ export function CashboardTab({ debtors, onSelectDebtor, isLoading }: CashboardTa
         </table>
       </div>
     </TooltipProvider>
-    </div>
   );
 }
