@@ -250,7 +250,7 @@ export default function Cashboard() {
               </div>
             </div>
             {/* Chart container with min/max height constraints */}
-            <div className="bg-slate-50/50 rounded-sm p-4 sm:p-6 flex-1 min-h-[200px] max-h-[480px]">
+            <div className="flex-1 min-h-[200px] max-h-[480px]">
               {cashflowLoading ? (
                 <div className="h-full flex items-center justify-center">
                   <div className="text-slate-400 text-sm">Loading chart...</div>
