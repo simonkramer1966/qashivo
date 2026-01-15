@@ -570,35 +570,6 @@ export default function NewSidebar() {
                 Settings
               </DropdownMenuItem>
               
-              <DropdownMenuSeparator />
-              
-              <div className="px-2 py-1.5 text-xs text-slate-400">
-                More
-              </div>
-              
-              <DropdownMenuItem 
-                className="text-sm cursor-pointer"
-                onClick={() => setLocation('/call-logs')}
-                data-testid="menu-item-call-logs"
-              >
-                Call Logs
-              </DropdownMenuItem>
-              
-              <DropdownMenuItem 
-                className="text-sm cursor-pointer"
-                onClick={() => setLocation('/payment-plans')}
-                data-testid="menu-item-payment-plans"
-              >
-                Payment Plans
-              </DropdownMenuItem>
-              
-              <DropdownMenuItem 
-                className="text-sm cursor-pointer"
-                onClick={() => setLocation('/activity-log')}
-                data-testid="menu-item-activity-log"
-              >
-                Activity Log
-              </DropdownMenuItem>
               
               {(user as any)?.role === "partner" && (
                 <>
