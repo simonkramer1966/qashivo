@@ -51,7 +51,6 @@ import {
 } from "@/components/ui/tooltip";
 import nexusLogo from "@assets/Main Nexus Logo copy_1756923544828.png";
 import UserProfileDialog from "./UserProfileDialog";
-import DemoModeToggle from "./DemoModeToggle";
 
 // Navigation structure with 3 sections: ACTION, REFERENCE, SYSTEM
 // Icons only for ACTION items (Cashboard + Action Centre)
@@ -637,9 +636,6 @@ export default function NewSidebar() {
       {/* Footer - Simplified and quiet */}
       {!isCollapsed && (
         <div className="mt-auto p-3 space-y-2">
-          {/* Demo Mode Toggle */}
-          <DemoModeToggle collapsed={false} />
-          
           {/* User Profile - Minimal */}
           <DropdownMenu>
             <DropdownMenuTrigger className="w-full flex items-center space-x-2.5 hover:bg-slate-50 rounded px-2 py-2 transition-colors" data-testid="button-user-menu">
@@ -698,8 +694,6 @@ export default function NewSidebar() {
       {/* Collapsed State Footer */}
       {isCollapsed && (
         <div className="mt-auto p-2 space-y-1">
-          <DemoModeToggle collapsed={true} />
-          
           <DropdownMenu>
             <DropdownMenuTrigger className="w-full flex items-center justify-center hover:bg-slate-50 rounded p-2 transition-colors" data-testid="button-user-menu-collapsed">
               <Avatar className="h-7 w-7" data-testid="avatar-user-collapsed">
