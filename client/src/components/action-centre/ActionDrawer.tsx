@@ -11,7 +11,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { ChevronDown, X } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 
 interface ActionDrawerProps {
@@ -139,14 +139,6 @@ export function ActionDrawer({
         side="right" 
         className="w-full sm:max-w-md p-0 flex flex-col bg-white border-l border-slate-100"
       >
-        {/* Close button */}
-        <button
-          onClick={() => onOpenChange(false)}
-          className="absolute right-4 top-4 p-1.5 rounded-full hover:bg-slate-100 transition-colors z-10"
-        >
-          <X className="h-4 w-4 text-slate-400" />
-        </button>
-
         <ScrollArea className="flex-1">
           <div className="px-6 py-8 space-y-8">
             
