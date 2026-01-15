@@ -23,7 +23,8 @@ interface ActionDrawerProps {
     contactId: string;
     email?: string;
     phone?: string;
-    totalOutstanding: number;
+    amount: number;  // Overdue amount being chased
+    totalOutstanding: number;  // Total of all unpaid invoices
     oldestInvoiceDueDate: string;
     daysOverdue: number;
     channel?: string;
@@ -36,6 +37,7 @@ interface ActionDrawerProps {
       invoiceNumber: string;
       amount: string;
       dueDate: string;
+      daysOverdue?: number;
     }>;
   } | null;
   onSkip?: (contactId: string) => void;
@@ -69,7 +71,7 @@ const getReasonForAction = (customer: ActionDrawerProps['customer']): string => 
   if (!customer) return '';
   
   const days = customer.daysOverdue;
-  const amount = formatCurrency(customer.totalOutstanding);
+  const amount = formatCurrency(customer.amount || customer.totalOutstanding);
   
   if (customer.ptpBreached && customer.ptpDate) {
     const ptpDateFormatted = new Date(customer.ptpDate).toLocaleDateString('en-GB', {
@@ -158,15 +160,18 @@ export function ActionDrawer({
   // Use plan invoices if available, otherwise use fetched invoices
   const allInvoices = hasInvoicesFromPlan ? customerInvoices : fetchedInvoices;
   
-  // Amount being chased = customer.totalOutstanding (matches planned list and reason)
-  const amountBeingChased = customer.totalOutstanding;
-  // Total due = sum of all invoices
-  const totalDue = allInvoices.reduce((sum, inv) => sum + parseAmount(inv.amount), 0);
+  // Filter to only show overdue invoices (daysOverdue > 0)
+  const overdueInvoices = allInvoices.filter(inv => (inv.daysOverdue ?? 0) > 0);
+  
+  // Amount being chased = overdue invoices only (from customer.amount)
+  const amountBeingChased = customer.amount || 0;
+  // Total due = all unpaid invoices (from customer.totalOutstanding)
+  const totalDue = customer.totalOutstanding || 0;
   // Show secondary context only when total > amount being chased
   const showTotalDue = totalDue > amountBeingChased && amountBeingChased > 0;
   
-  // Show invoice list if we have invoices from the plan (authoritative) or if fetched invoices exist
-  const canShowInvoiceList = allInvoices.length > 0;
+  // Show invoice list if we have overdue invoices from the plan (authoritative) or if fetched invoices exist
+  const canShowInvoiceList = overdueInvoices.length > 0;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -274,7 +279,7 @@ export function ActionDrawer({
                 </CollapsibleTrigger>
                 <CollapsibleContent className="pt-3">
                   <div className="space-y-1">
-                    {allInvoices.map((invoice: any) => {
+                    {overdueInvoices.map((invoice: any) => {
                       const daysOverdue = invoice.daysOverdue || 0;
                       const invoiceDate = invoice.invoiceDate || invoice.dueDate;
                       return (

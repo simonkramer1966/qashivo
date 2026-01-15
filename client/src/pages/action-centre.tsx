@@ -404,6 +404,7 @@ export default function ActionCentreV2() {
           contactId: selectedPlanAction.contactId || '',
           email: selectedPlanAction.email,
           phone: selectedPlanAction.phone,
+          amount: parseFloat(selectedPlanAction.amount) || 0,  // Overdue amount being chased
           totalOutstanding: selectedPlanAction.totalOutstanding ?? (parseFloat(selectedPlanAction.amount) || 0),
           oldestInvoiceDueDate: selectedPlanAction.oldestDueDate || new Date().toISOString(),
           daysOverdue: selectedPlanAction.daysOverdue || 0,
@@ -417,6 +418,7 @@ export default function ActionCentreV2() {
             invoiceNumber: inv.number || inv.invoiceNumber,
             amount: String(inv.amount),
             dueDate: inv.dueDate,
+            daysOverdue: inv.daysOverdue || 0,
           })),
         } : null}
         onSkip={(contactId) => {
