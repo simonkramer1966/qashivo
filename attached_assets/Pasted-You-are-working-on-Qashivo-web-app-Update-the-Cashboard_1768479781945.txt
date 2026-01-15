@@ -1,0 +1,102 @@
+You are working on Qashivo (web app). Update the Cashboard (dashboard) page to match the same Apple-like, Tufte/Stephen Few design language used in the Action Centre tabs (Planned / Executed / Attention / Cashboard / Forecast). The dashboard must feel informative and confidence-building, and MUST NOT suggest the user needs to “do work” (other than approving Planned actions in the Action Centre).
+
+PRIMARY GOAL
+- Make the Cashboard feel like a calm “confidence console” (executive overview), not a task manager.
+- Apply the same visual rules as the Action Centre: minimal chrome, no heavy cards, typography-led hierarchy, hairline dividers, restrained color, high data-ink ratio.
+- Remove any language that implies urgency or manual work.
+
+DESIGN GUIDELINES (must follow)
+1) Apple-like minimalism
+- Remove heavy card borders/shadows; prefer flat surfaces with hairline dividers.
+- Avoid stacked rounded rectangles everywhere.
+- Use whitespace, alignment, and typography for structure.
+
+2) Tufte/Few (data-ink ratio)
+- Remove decorative icons and badge clutter.
+- Use color only to encode meaning (not decoration).
+- Avoid “widgets” that feel like dashboard furniture.
+
+3) Typography-led hierarchy
+- System font stack (same as Action Centre).
+- Use limited font sizes (e.g. 24/16/14/12).
+- Currency uses tabular numerals; amounts right-aligned where relevant.
+- Labels muted; values prominent.
+
+4) “No work required”
+- No “Priority actions”, “Requires attention”, “Review settings”, “View all” CTAs in V1 dashboard.
+- Any drill-down links must be visually quiet and optional.
+- The dashboard should reassure: Qashivo is already managing this.
+
+PAGE STRUCTURE (update to this)
+A) Header
+- Title: “Cashboard”
+- Subtitle: “Real-time cashflow and receivables overview”
+- Add a single calm system message under subtitle (small, muted):
+  “Qashivo is continuously managing receivables. No action is required unless something is flagged in Attention.”
+
+B) Replace “KPI tiles” with a cleaner “Metrics strip” layout
+- Convert the top KPI cards into a single, unified metrics strip (one surface) with 2 rows:
+  Row label: “State of cash”
+    - Total Outstanding
+    - Overdue Invoices
+    - Avg Days Late
+    - Interest Accrued (optional; keep but de-emphasise)
+  Row label: “System performance”
+    - Collection Progress (if not implemented, show “Coming soon” but style it quietly)
+    - Payment Plans
+    - Disputes
+    - Resolution Rate
+- Each metric should be a compact block with:
+  label (muted, small)
+  value (prominent)
+  small count in parentheses (muted)
+- Remove large icon bubbles from KPI blocks, or reduce to subtle monochrome glyphs only if needed.
+
+C) Forecast chart (keep as hero, simplify presentation)
+- Keep “Cash Inflow Forecast” as the main visual hero.
+- Ensure the chart container matches Action Centre styling: minimal border, hairline divider, no drop shadows.
+- Keep time range toggles (1/3/6 months) but make them subtle (small, muted, segmented or pills with minimal treatment).
+- Ensure axes and labels are minimal but readable; no extra chart decoration.
+
+D) Lists below (Payment patterns / Top outstanding)
+- Reframe these as informational sections with calm titles and no implied actions.
+- Rename:
+  “Payment Behavior” -> “Payment patterns”
+  “Needs Attention” -> “Slower-paying customers” (avoid warning language)
+  “Top Outstanding Value” can stay, but keep it neutral.
+- Remove any “View All” CTA or make it very subtle (text only, muted, optional).
+- Reduce any red/alert styling. If needed, use a subtle accent only (no alarm icons).
+- Use clean rows with hairline separators; no heavy card wrapping.
+
+E) Remove/avoid action-driving modules
+- Remove “Priority Actions” completely on the Cashboard.
+  If it must exist, rename to “System signals” and ensure every item is purely descriptive (no imperative language).
+  Example items (descriptive):
+    “Overdue invoices are being actively managed”
+    “Collection rate is being monitored”
+- Nothing should say “requires immediate attention” on the dashboard.
+
+INTERACTIONS
+- Clicking a metric or list row may navigate, but the UI must not “ask” the user to click.
+- Keep hover states subtle.
+- Maintain sticky headings if the page scrolls long (optional, but follow the Action Centre sticky pattern if present).
+
+CONSISTENCY REQUIREMENTS
+- Match spacing/rhythm used in Action Centre:
+  - minimal containers
+  - hairline dividers
+  - tight but breathable spacing
+- Reuse existing typography + colors from the updated Action Centre.
+- Use the same component patterns where possible (minimal lists, disclosure rows, etc.).
+
+DELIVERABLE
+- Update the Cashboard page layout and styling to match Action Centre design guidelines.
+- Remove action-implying copy and “Priority Actions” behaviour.
+- Ensure the page looks calm, premium, and informative, with a clear focus on “cash-in”.
+- Provide the updated code for the Cashboard page and any small reusable components you create (e.g. MetricsStrip, SectionHeader, MinimalList).
+
+ACCEPTANCE CRITERIA
+- Dashboard does not feel like a work queue.
+- No urgent CTAs or “do this now” wording.
+- Visual style matches Action Centre (Apple-like, minimal, typography-led).
+- Forecast remains the primary “hero” content.
