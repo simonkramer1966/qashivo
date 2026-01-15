@@ -404,7 +404,7 @@ export default function ActionCentreV2() {
           contactId: selectedPlanAction.contactId || '',
           email: selectedPlanAction.email,
           phone: selectedPlanAction.phone,
-          totalOutstanding: selectedPlanAction.totalOutstanding ?? parseFloat(selectedPlanAction.amount) || 0,
+          totalOutstanding: selectedPlanAction.totalOutstanding ?? (parseFloat(selectedPlanAction.amount) || 0),
           oldestInvoiceDueDate: selectedPlanAction.oldestDueDate || new Date().toISOString(),
           daysOverdue: selectedPlanAction.daysOverdue || 0,
           channel: selectedPlanAction.actionType,
