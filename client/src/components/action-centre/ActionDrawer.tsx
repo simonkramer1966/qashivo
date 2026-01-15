@@ -110,7 +110,6 @@ export function ActionDrawer({
   onAttention,
 }: ActionDrawerProps) {
   const [historyOpen, setHistoryOpen] = useState(false);
-  const [invoicesOpen, setInvoicesOpen] = useState(false);
 
   const historyQuery = useQuery<{ history: HistoryEntry[]; total: number }>({
     queryKey: [`/api/contacts/${customer?.contactId}/history`],
@@ -121,17 +120,6 @@ export function ActionDrawer({
 
   const history = historyQuery.data?.history || [];
   const recentHistory = history.slice(0, 3);
-
-  const oldestInvoiceDays = customer.invoices.length > 0 
-    ? Math.max(...customer.invoices.map(inv => {
-        const due = new Date(inv.dueDate);
-        const now = new Date();
-        return Math.floor((now.getTime() - due.getTime()) / 86400000);
-      }))
-    : customer.daysOverdue;
-
-  const effectiveInvoiceCount = customer.invoiceCount || customer.invoices.length;
-  const invoiceSummary = `${effectiveInvoiceCount} invoice${effectiveInvoiceCount !== 1 ? 's' : ''} · ${formatCurrency(customer.totalOutstanding)} total · Oldest ${oldestInvoiceDays}d`;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -218,25 +206,14 @@ export function ActionDrawer({
               </CollapsibleContent>
             </Collapsible>
 
-            {/* 5. Outstanding invoices - collapsible */}
-            <Collapsible open={invoicesOpen} onOpenChange={setInvoicesOpen}>
-              <CollapsibleTrigger className="flex items-center justify-between w-full group">
-                <h3 className="text-[12px] font-semibold text-slate-500">
-                  Outstanding invoices
-                </h3>
-                <ChevronDown 
-                  className={`h-4 w-4 text-slate-300 transition-transform ${invoicesOpen ? 'rotate-180' : ''}`} 
-                />
-              </CollapsibleTrigger>
-              
-              {/* Collapsed summary */}
-              {!invoicesOpen && (
-                <p className="text-[13px] text-slate-500 mt-2">
-                  {invoiceSummary}
-                </p>
-              )}
-              
-              <CollapsibleContent className="pt-3">
+            {/* 5. Outstanding invoices */}
+            <div>
+              <h3 className="text-[12px] font-semibold text-slate-500 mb-3">
+                Outstanding invoices
+              </h3>
+              {customer.invoices.length === 0 ? (
+                <p className="text-[13px] text-slate-400">No invoice details available.</p>
+              ) : (
                 <div className="space-y-2">
                   {customer.invoices.map((invoice) => (
                     <div 
@@ -258,8 +235,8 @@ export function ActionDrawer({
                     </div>
                   ))}
                 </div>
-              </CollapsibleContent>
-            </Collapsible>
+              )}
+            </div>
 
           </div>
         </ScrollArea>
