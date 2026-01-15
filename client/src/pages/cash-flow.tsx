@@ -5,6 +5,7 @@ import Header from "@/components/layout/header";
 import { useCurrency } from "@/hooks/useCurrency";
 import { 
   ComposedChart, 
+  BarChart,
   Line, 
   Area, 
   Bar, 
@@ -12,7 +13,8 @@ import {
   YAxis, 
   ResponsiveContainer, 
   Tooltip as RechartsTooltip,
-  ReferenceLine
+  ReferenceLine,
+  CartesianGrid
 } from 'recharts';
 
 type ForecastRange = "4W" | "13W" | "6M" | "12M";
@@ -158,7 +160,8 @@ export default function CashFlow() {
                 </div>
               </div>
               
-              <div className="flex-1 min-h-[300px] max-h-[500px] relative">
+              {/* Main net cash chart */}
+              <div className="flex-1 min-h-[220px] max-h-[380px] relative">
                 <p className="absolute top-2 right-4 text-[10px] text-slate-400 z-10">
                   Shaded = confidence range
                 </p>
@@ -166,8 +169,14 @@ export default function CashFlow() {
                 <ResponsiveContainer width="100%" height="100%">
                   <ComposedChart 
                     data={forecastData}
-                    margin={{ top: 20, right: 20, bottom: 60, left: 10 }}
+                    margin={{ top: 20, right: 20, bottom: 20, left: 10 }}
                   >
+                    <CartesianGrid 
+                      strokeDasharray="3 3" 
+                      stroke="#f1f5f9" 
+                      horizontal={true} 
+                      vertical={false} 
+                    />
                     <XAxis 
                       dataKey="weekLabel" 
                       tick={{ fontSize: 10, fill: '#94a3b8' }}
@@ -176,7 +185,6 @@ export default function CashFlow() {
                       interval={forecastRange === "4W" ? 0 : forecastRange === "13W" ? 1 : forecastRange === "6M" ? 3 : 7}
                     />
                     <YAxis 
-                      yAxisId="cash"
                       tick={{ fontSize: 10, fill: '#94a3b8' }}
                       tickLine={false}
                       axisLine={false}
@@ -184,21 +192,10 @@ export default function CashFlow() {
                       width={55}
                       domain={['auto', 'auto']}
                     />
-                    <YAxis 
-                      yAxisId="flow"
-                      orientation="right"
-                      tick={false}
-                      tickLine={false}
-                      axisLine={false}
-                      width={0}
-                      domain={[-maxCashFlow, maxCashFlow * 8]}
-                    />
                     
                     <RechartsTooltip
                       formatter={(value: any, name: string) => {
                         if (name === 'netCash') return [formatCurrency(value), 'Net Cash'];
-                        if (name === 'cashIn') return [formatCurrency(value), 'Cash In'];
-                        if (name === 'cashOut') return [formatCurrency(Math.abs(value)), 'Cash Out'];
                         return null;
                       }}
                       filterNull={true}
@@ -213,7 +210,6 @@ export default function CashFlow() {
                     />
                     
                     <Area
-                      yAxisId="cash"
                       type="monotone"
                       dataKey="ci95Upper"
                       stroke="none"
@@ -222,7 +218,6 @@ export default function CashFlow() {
                       isAnimationActive={false}
                     />
                     <Area
-                      yAxisId="cash"
                       type="monotone"
                       dataKey="ci95Lower"
                       stroke="none"
@@ -231,7 +226,6 @@ export default function CashFlow() {
                       isAnimationActive={false}
                     />
                     <Area
-                      yAxisId="cash"
                       type="monotone"
                       dataKey="ci80Upper"
                       stroke="none"
@@ -240,7 +234,6 @@ export default function CashFlow() {
                       isAnimationActive={false}
                     />
                     <Area
-                      yAxisId="cash"
                       type="monotone"
                       dataKey="ci80Lower"
                       stroke="none"
@@ -249,27 +242,7 @@ export default function CashFlow() {
                       isAnimationActive={false}
                     />
                     
-                    <ReferenceLine yAxisId="flow" y={0} stroke="#e2e8f0" strokeDasharray="3 3" />
-                    
-                    <Bar 
-                      yAxisId="flow"
-                      dataKey="cashIn" 
-                      fill="#10b981" 
-                      fillOpacity={0.4}
-                      radius={[1, 1, 0, 0]}
-                      barSize={forecastRange === "4W" ? 12 : forecastRange === "13W" ? 8 : 4}
-                    />
-                    <Bar 
-                      yAxisId="flow"
-                      dataKey="cashOut" 
-                      fill="#ef4444" 
-                      fillOpacity={0.4}
-                      radius={[0, 0, 1, 1]}
-                      barSize={forecastRange === "4W" ? 12 : forecastRange === "13W" ? 8 : 4}
-                    />
-                    
                     <Line
-                      yAxisId="cash"
                       type="monotone"
                       dataKey="netCash"
                       stroke="#17B6C3"
@@ -279,13 +252,79 @@ export default function CashFlow() {
                     />
                   </ComposedChart>
                 </ResponsiveContainer>
+              </div>
+              
+              {/* Cash in/out micro-bar strip - separate chart below */}
+              <div className="h-[80px] flex-shrink-0 relative">
+                <div className="flex items-center justify-between mb-1 px-1">
+                  <p className="text-[10px] text-slate-400">Weekly cash in/out</p>
+                  <div className="flex items-center gap-3 text-[9px] text-slate-400">
+                    <span className="flex items-center gap-1">
+                      <span className="w-2 h-2 bg-emerald-500/40 rounded-sm"></span> In
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <span className="w-2 h-2 bg-red-500/40 rounded-sm"></span> Out
+                    </span>
+                  </div>
+                </div>
+                <ResponsiveContainer width="100%" height={55}>
+                  <BarChart 
+                    data={forecastData}
+                    margin={{ top: 0, right: 20, bottom: 0, left: 10 }}
+                  >
+                    <XAxis 
+                      dataKey="weekLabel" 
+                      tick={false}
+                      tickLine={false}
+                      axisLine={false}
+                    />
+                    <YAxis 
+                      tick={false}
+                      tickLine={false}
+                      axisLine={false}
+                      width={55}
+                      domain={[-maxCashFlow * 1.1, maxCashFlow * 1.1]}
+                    />
+                    <ReferenceLine y={0} stroke="#e2e8f0" />
+                    <RechartsTooltip
+                      formatter={(value: any, name: string) => {
+                        if (name === 'cashIn') return [formatCurrency(value), 'Cash In'];
+                        if (name === 'cashOut') return [formatCurrency(Math.abs(value)), 'Cash Out'];
+                        return null;
+                      }}
+                      filterNull={true}
+                      contentStyle={{
+                        backgroundColor: 'white',
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '4px',
+                        padding: '6px 10px',
+                        fontSize: '11px',
+                        boxShadow: 'none'
+                      }}
+                    />
+                    <Bar 
+                      dataKey="cashIn" 
+                      fill="#10b981" 
+                      fillOpacity={0.5}
+                      radius={[1, 1, 0, 0]}
+                      barSize={forecastRange === "4W" ? 14 : forecastRange === "13W" ? 10 : 5}
+                    />
+                    <Bar 
+                      dataKey="cashOut" 
+                      fill="#ef4444" 
+                      fillOpacity={0.5}
+                      radius={[0, 0, 1, 1]}
+                      barSize={forecastRange === "4W" ? 14 : forecastRange === "13W" ? 10 : 5}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
                 
                 {largestInflowWeek && (
                   <div 
                     className="absolute text-[9px] text-emerald-600 bg-white/90 px-1.5 py-0.5 rounded pointer-events-none"
                     style={{ 
-                      bottom: '70px', 
-                      left: `${(forecastData.indexOf(largestInflowWeek) / forecastData.length) * 80 + 10}%` 
+                      top: '2px', 
+                      left: `${(forecastData.indexOf(largestInflowWeek) / forecastData.length) * 75 + 12}%` 
                     }}
                   >
                     Largest inflow
@@ -295,8 +334,8 @@ export default function CashFlow() {
                   <div 
                     className="absolute text-[9px] text-red-500 bg-white/90 px-1.5 py-0.5 rounded pointer-events-none"
                     style={{ 
-                      bottom: '55px', 
-                      left: `${(forecastData.indexOf(highestOutflowWeek) / forecastData.length) * 80 + 10}%` 
+                      bottom: '8px', 
+                      left: `${(forecastData.indexOf(highestOutflowWeek) / forecastData.length) * 75 + 12}%` 
                     }}
                   >
                     Highest outflow
