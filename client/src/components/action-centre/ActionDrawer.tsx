@@ -161,8 +161,8 @@ export function ActionDrawer({
     return parseFloat(cleaned) || 0;
   };
   
-  // Amount being chased = sum of overdue invoices (the ones we're actioning)
-  const amountBeingChased = overdueInvoices.reduce((sum, inv) => sum + parseAmount(inv.amount), 0);
+  // Amount being chased = customer.totalOutstanding (matches planned list and reason)
+  const amountBeingChased = customer.totalOutstanding;
   // Total due = sum of all outstanding invoices
   const totalDue = allInvoices.reduce((sum, inv) => sum + parseAmount(inv.amount), 0);
   // Show secondary context only when total > amount being chased
