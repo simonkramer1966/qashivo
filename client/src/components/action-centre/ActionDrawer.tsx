@@ -153,6 +153,20 @@ export function ActionDrawer({
     const dueDate = new Date(inv.dueDate);
     return dueDate < today;
   });
+  
+  // Helper to parse amount strings (handles commas, currency symbols)
+  const parseAmount = (amt: string | number): number => {
+    if (typeof amt === 'number') return amt;
+    const cleaned = String(amt).replace(/[^0-9.-]/g, '');
+    return parseFloat(cleaned) || 0;
+  };
+  
+  // Amount being chased = sum of overdue invoices (the ones we're actioning)
+  const amountBeingChased = overdueInvoices.reduce((sum, inv) => sum + parseAmount(inv.amount), 0);
+  // Total due = sum of all outstanding invoices
+  const totalDue = allInvoices.reduce((sum, inv) => sum + parseAmount(inv.amount), 0);
+  // Show secondary context only when total > amount being chased
+  const showTotalDue = totalDue > amountBeingChased && amountBeingChased > 0;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -185,14 +199,28 @@ export function ActionDrawer({
               </p>
             </div>
 
-            {/* 3. Action summary - Amount emphasized */}
-            <div className="space-y-3">
-              <div className="flex justify-between items-baseline">
-                <span className="text-[13px] text-slate-400">Amount</span>
-                <span className="text-[15px] font-semibold text-slate-900 tabular-nums">
-                  {formatCurrency(customer.totalOutstanding)}
-                </span>
+            {/* 3. Amounts block */}
+            <div className="border-t border-slate-50 pt-6">
+              <p className="text-[12px] font-medium text-slate-400 mb-3">
+                Amounts
+              </p>
+              <div>
+                <p className="text-[12px] font-medium text-slate-500 mb-1">
+                  Amount being chased
+                </p>
+                <p className="text-[18px] font-semibold text-slate-900 tabular-nums">
+                  {formatCurrency(amountBeingChased)}
+                  {showTotalDue && (
+                    <span className="text-[14px] font-normal text-slate-400 ml-2">
+                      of {formatCurrency(totalDue)} total due
+                    </span>
+                  )}
+                </p>
               </div>
+            </div>
+
+            {/* 4. Channel and Days */}
+            <div className="space-y-2">
               <div className="flex justify-between items-baseline">
                 <span className="text-[13px] text-slate-400">Channel</span>
                 <span className="text-[14px] text-slate-600">
@@ -209,10 +237,7 @@ export function ActionDrawer({
               )}
             </div>
 
-            {/* Hairline divider */}
-            <div className="border-t border-slate-100" />
-
-            {/* 4. Recent contact history - collapsible */}
+            {/* 5. Recent contact history - collapsible */}
             <Collapsible open={historyOpen} onOpenChange={setHistoryOpen}>
               <CollapsibleTrigger className="flex items-center justify-between w-full group">
                 <h3 className="text-[12px] font-semibold text-slate-500">
@@ -239,7 +264,7 @@ export function ActionDrawer({
               </CollapsibleContent>
             </Collapsible>
 
-            {/* 5. Overdue invoices - collapsible, collapsed by default */}
+            {/* 6. Overdue invoices - collapsible, collapsed by default */}
             <Collapsible open={invoicesOpen} onOpenChange={setInvoicesOpen}>
               <CollapsibleTrigger className="flex items-center justify-between w-full group">
                 <h3 className="text-[12px] font-semibold text-slate-500">
