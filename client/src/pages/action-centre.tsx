@@ -404,7 +404,7 @@ export default function ActionCentreV2() {
           contactId: selectedPlanAction.contactId || '',
           email: selectedPlanAction.email,
           phone: selectedPlanAction.phone,
-          totalOutstanding: parseFloat(selectedPlanAction.amount) || 0,
+          totalOutstanding: selectedPlanAction.totalOutstanding ?? parseFloat(selectedPlanAction.amount) || 0,
           oldestInvoiceDueDate: selectedPlanAction.oldestDueDate || new Date().toISOString(),
           daysOverdue: selectedPlanAction.daysOverdue || 0,
           channel: selectedPlanAction.actionType,
@@ -412,7 +412,12 @@ export default function ActionCentreV2() {
           invoiceCount: selectedPlanAction.invoiceCount,
           ptpDate: selectedPlanAction.ptpDate,
           ptpBreached: selectedPlanAction.ptpBreached,
-          invoices: selectedPlanAction.invoices || [],
+          invoices: (selectedPlanAction.invoices || []).map((inv: any) => ({
+            id: inv.id,
+            invoiceNumber: inv.number || inv.invoiceNumber,
+            amount: String(inv.amount),
+            dueDate: inv.dueDate,
+          })),
         } : null}
         onSkip={(contactId) => {
           if (selectedPlanAction?.id) {

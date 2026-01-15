@@ -136,24 +136,6 @@ export function ActionDrawer({
   const history = historyQuery.data?.history || [];
   const recentHistory = history.slice(0, 3);
   
-  const customerInvoices = Array.isArray(customer.invoices) ? customer.invoices : [];
-  const allInvoices = customerInvoices.length > 0 
-    ? customerInvoices 
-    : (invoicesQuery.data || []).map((inv: any) => ({
-        id: String(inv.id),
-        invoiceNumber: String(inv.invoiceNumber),
-        amount: String(inv.amount),
-        dueDate: String(inv.dueDate),
-      }));
-  
-  // Filter to only show overdue invoices (past due date)
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const overdueInvoices = allInvoices.filter(inv => {
-    const dueDate = new Date(inv.dueDate);
-    return dueDate < today;
-  });
-  
   // Helper to parse amount strings (handles commas, currency symbols)
   const parseAmount = (amt: string | number): number => {
     if (typeof amt === 'number') return amt;
@@ -161,19 +143,30 @@ export function ActionDrawer({
     return parseFloat(cleaned) || 0;
   };
   
+  // Use invoices from plan/customer prop directly if available (they're authoritative)
+  const customerInvoices = Array.isArray(customer.invoices) ? customer.invoices : [];
+  const hasInvoicesFromPlan = customerInvoices.length > 0;
+  
+  // Fallback: fetch from API only if no invoices provided
+  const fetchedInvoices = (invoicesQuery.data || []).map((inv: any) => ({
+    id: String(inv.id),
+    invoiceNumber: String(inv.invoiceNumber),
+    amount: String(inv.amount),
+    dueDate: String(inv.dueDate),
+  }));
+  
+  // Use plan invoices if available, otherwise use fetched invoices
+  const allInvoices = hasInvoicesFromPlan ? customerInvoices : fetchedInvoices;
+  
   // Amount being chased = customer.totalOutstanding (matches planned list and reason)
   const amountBeingChased = customer.totalOutstanding;
-  // Total due = sum of all outstanding invoices
+  // Total due = sum of all invoices
   const totalDue = allInvoices.reduce((sum, inv) => sum + parseAmount(inv.amount), 0);
   // Show secondary context only when total > amount being chased
   const showTotalDue = totalDue > amountBeingChased && amountBeingChased > 0;
   
-  // Sum of overdue invoices - check if it matches the amount being chased
-  const overdueSum = overdueInvoices.reduce((sum, inv) => sum + parseAmount(inv.amount), 0);
-  // Allow small tolerance for floating point differences (within £0.01)
-  const invoicesSumMatch = Math.abs(overdueSum - amountBeingChased) < 0.01;
-  // Only show invoice list if we can reliably match the invoices to the chase amount
-  const canShowInvoiceList = invoicesSumMatch && overdueInvoices.length > 0;
+  // Show invoice list if we have invoices from the plan (authoritative) or if fetched invoices exist
+  const canShowInvoiceList = allInvoices.length > 0;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -281,9 +274,9 @@ export function ActionDrawer({
                 </CollapsibleTrigger>
                 <CollapsibleContent className="pt-3">
                   <div className="space-y-2">
-                    {overdueInvoices.map((invoice) => (
+                    {allInvoices.map((invoice) => (
                       <p key={invoice.id} className="text-[13px] text-slate-600">
-                        {invoice.invoiceNumber} · {formatCurrency(parseAmount(invoice.amount))} · Due {new Date(invoice.dueDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+                        {invoice.invoiceNumber} · {formatCurrency(parseAmount(invoice.amount))}{invoice.dueDate && ` · Due ${new Date(invoice.dueDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}`}
                       </p>
                     ))}
                   </div>

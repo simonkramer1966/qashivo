@@ -2880,6 +2880,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Get outstanding invoices for a specific contact (for payment plan creation)
+  // Matches the planned list criteria from /api/action-centre/tabs
   async getOutstandingInvoicesByContact(tenantId: string, contactId: string): Promise<OutstandingInvoiceSummary[]> {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -2892,6 +2893,8 @@ export class DatabaseStorage implements IStorage {
         dueDate: invoices.dueDate,
         contactId: invoices.contactId,
         contactName: contacts.name,
+        status: invoices.status,
+        stage: invoices.stage,
       })
       .from(invoices)
       .innerJoin(contacts, eq(invoices.contactId, contacts.id))
@@ -2899,9 +2902,18 @@ export class DatabaseStorage implements IStorage {
         and(
           eq(invoices.tenantId, tenantId),
           eq(invoices.contactId, contactId),
+          or(
+            eq(invoices.status, 'overdue'),
+            eq(invoices.status, 'unpaid')
+          ),
           ne(invoices.status, 'paid'),
           ne(invoices.status, 'cancelled'),
-          eq(invoices.isOnHold, false)
+          eq(invoices.isOnHold, false),
+          sql`${invoices.dueDate} < ${today.toISOString()}`,
+          or(
+            isNull(invoices.stage),
+            eq(invoices.stage, 'overdue')
+          )
         )
       )
       .orderBy(invoices.dueDate);

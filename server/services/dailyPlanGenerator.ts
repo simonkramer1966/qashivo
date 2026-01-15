@@ -6,6 +6,14 @@ import { setupDefaultWorkflow } from "./defaultWorkflowSetup";
 import { charlieDecisionEngine, type CharlieDecision, type DailyPlan } from "./charlieDecisionEngine";
 import { charliePlaybook, prepareMessageFromDecision } from "./charliePlaybook";
 
+export interface InvoiceSummary {
+  id: string;
+  number: string;
+  amount: number;
+  daysOverdue: number;
+  dueDate: string;
+}
+
 export interface DailyPlanAction {
   id: string;
   contactId: string;
@@ -23,6 +31,8 @@ export interface DailyPlanAction {
   exceptionReason?: string;
   priority: string;
   invoiceCount?: number;
+  invoices?: InvoiceSummary[];
+  totalOutstanding?: number;
 }
 
 export interface DailyPlanResponse {
@@ -180,24 +190,52 @@ export async function generateDailyPlan(
  * Helper: Build plan summary from existing action records
  */
 function buildPlanSummary(existingActions: any[], tenant: any): DailyPlanResponse {
-  const planActions: DailyPlanAction[] = existingActions.map(action => ({
-    id: action.id,
-    contactId: action.contactId,
-    contactName: action.contact?.name || 'Unknown',
-    companyName: action.contact?.companyName || undefined,
-    invoiceId: action.invoiceId || '',
-    invoiceNumber: action.invoice?.invoiceNumber || 'N/A',
-    amount: action.invoice?.amount || '0',
-    daysOverdue: action.metadata?.daysOverdue || 0,
-    actionType: action.type as 'email' | 'sms' | 'voice',
-    status: action.status,
-    subject: action.subject || undefined,
-    content: action.content || undefined,
-    confidenceScore: parseFloat(action.confidenceScore || '0.85'),
-    exceptionReason: action.exceptionReason || undefined,
-    priority: action.metadata?.priority || 'normal',
-    invoiceCount: action.metadata?.invoiceCount || 1,
-  }));
+  const planActions: DailyPlanAction[] = existingActions.map(action => {
+    // Parse invoices from metadata (stored as invoiceDetails)
+    const invoiceDetails = action.metadata?.invoiceDetails || [];
+    let invoices: InvoiceSummary[] = invoiceDetails.map((inv: any) => ({
+      id: inv.id,
+      number: inv.number,
+      amount: parseFloat(inv.amount) || 0,
+      daysOverdue: inv.daysOverdue || 0,
+      dueDate: inv.dueDate || '',
+    }));
+    
+    // Fallback for legacy actions: create single invoice entry from action's invoice
+    if (invoices.length === 0 && action.invoice) {
+      invoices = [{
+        id: action.invoiceId || '',
+        number: action.invoice.invoiceNumber || 'N/A',
+        amount: parseFloat(action.invoice.amount) || 0,
+        daysOverdue: action.metadata?.daysOverdue || 0,
+        dueDate: action.invoice.dueDate ? new Date(action.invoice.dueDate).toISOString() : '',
+      }];
+    }
+    
+    // Total outstanding from metadata amount or invoice amount
+    const totalOutstanding = parseFloat(action.metadata?.amount || action.invoice?.amount || '0');
+    
+    return {
+      id: action.id,
+      contactId: action.contactId,
+      contactName: action.contact?.name || 'Unknown',
+      companyName: action.contact?.companyName || undefined,
+      invoiceId: action.invoiceId || '',
+      invoiceNumber: action.invoice?.invoiceNumber || 'N/A',
+      amount: action.metadata?.amount || action.invoice?.amount || '0',
+      daysOverdue: action.metadata?.daysOverdue || 0,
+      actionType: action.type as 'email' | 'sms' | 'voice',
+      status: action.status,
+      subject: action.subject || undefined,
+      content: action.content || undefined,
+      confidenceScore: parseFloat(action.confidenceScore || '0.85'),
+      exceptionReason: action.exceptionReason || undefined,
+      priority: action.metadata?.priority || 'normal',
+      invoiceCount: action.metadata?.invoiceCount || 1,
+      invoices: invoices.length > 0 ? invoices : undefined,
+      totalOutstanding,
+    };
+  });
 
   const totalValue = planActions.reduce((sum, a) => sum + parseFloat(a.amount), 0);
   const exceptionsCount = planActions.filter(a => a.status === 'exception').length;
@@ -418,16 +456,27 @@ async function generateDailyPlanWithCharlie(
           number: d.invoice.invoiceNumber,
           amount: d.invoice.amount,
           daysOverdue: d.invoice.daysOverdue,
+          dueDate: d.invoice.dueDate ? new Date(d.invoice.dueDate).toISOString() : '',
         })),
       },
       aiGenerated: true,
       source: 'automated',
     }).returning();
     
+    // Build invoices array for drawer display
+    const invoicesSummary: InvoiceSummary[] = contactDecisions.map(d => ({
+      id: d.invoiceId,
+      number: d.invoice.invoiceNumber,
+      amount: d.invoice.amount,
+      daysOverdue: d.invoice.daysOverdue,
+      dueDate: d.invoice.dueDate ? new Date(d.invoice.dueDate).toISOString() : '',
+    }));
+    
     planActions.push({
       id: newAction.id,
       contactId: primaryDecision.contactId,
       contactName: primaryDecision.contact.name,
+      companyName: primaryDecision.contact.companyName,
       invoiceId: primaryDecision.invoiceId,
       invoiceNumber: invoiceCount > 1 
         ? `${invoiceCount} invoices`
@@ -441,6 +490,8 @@ async function generateDailyPlanWithCharlie(
       confidenceScore: primaryDecision.confidence,
       priority,
       invoiceCount,
+      invoices: invoicesSummary,
+      totalOutstanding: totalAmount,
     });
     
     channelCounts[limitChannel]++;
