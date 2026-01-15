@@ -137,17 +137,19 @@ export default function Cashboard() {
         <NewSidebar />
       </div>
 
-      {/* Main Content */}
-      <main className="flex-1 overflow-y-auto main-with-bottom-nav">
+      {/* Main Content - Flex column for viewport fit */}
+      <main className="flex-1 flex flex-col min-h-0 main-with-bottom-nav">
         <Header 
           title="Cashboard" 
           subtitle=""
           systemMessage="Qashivo is continuously managing receivables. No action is required unless something is flagged in Attention."
         />
         
-        <div className="container-apple py-4 sm:py-6 lg:py-8">
-          {/* Desktop: State of Cash - Flat Section */}
-          <section className="hidden sm:block mb-10">
+        {/* Content wrapper - flex column to distribute height */}
+        <div className="flex-1 flex flex-col min-h-0 overflow-y-auto">
+          <div className="container-apple py-4 sm:py-6 flex-1 flex flex-col min-h-0">
+          {/* Desktop: State of Cash - Fixed height section */}
+          <section className="hidden sm:block mb-6 flex-shrink-0">
             <p className="text-[10px] text-slate-400 uppercase tracking-wider mb-4">State of Cash</p>
             <div className="grid grid-cols-4 gap-8">
               {/* Total Outstanding */}
@@ -200,8 +202,8 @@ export default function Cashboard() {
             </div>
           </section>
 
-          {/* Mobile: State of Cash - Flat Section */}
-          <section className="sm:hidden mb-8">
+          {/* Mobile: State of Cash - Fixed height section */}
+          <section className="sm:hidden mb-6 flex-shrink-0">
             <p className="text-[10px] text-slate-400 uppercase tracking-wider mb-3">State of Cash</p>
             <div className="grid grid-cols-2 gap-4">
               <div data-testid="card-total-outstanding">
@@ -224,11 +226,11 @@ export default function Cashboard() {
           </section>
 
           {/* Hairline divider */}
-          <div className="border-t border-slate-100/80 mb-10" />
+          <div className="border-t border-slate-100/80 mb-6 flex-shrink-0" />
 
-          {/* Cashflow Chart - Flat Section with subtle canvas */}
-          <section className="mb-10" data-testid="card-cashflow-chart">
-            <div className="flex items-center justify-between mb-4">
+          {/* Cashflow Chart - Flex-1 section that grows to fill available space */}
+          <section className="flex-1 flex flex-col min-h-0 mb-6" data-testid="card-cashflow-chart">
+            <div className="flex items-center justify-between mb-3 flex-shrink-0">
               <h3 className="text-[14px] font-medium text-slate-900">{getForecastTitle()}</h3>
               <div className="flex items-center gap-0.5" data-testid="radio-forecast-period">
                 {["1", "3", "6"].map((period) => (
@@ -247,13 +249,14 @@ export default function Cashboard() {
                 ))}
               </div>
             </div>
-            <div className="bg-slate-50/50 rounded-sm p-4 sm:p-6">
+            {/* Chart container with min/max height constraints */}
+            <div className="bg-slate-50/50 rounded-sm p-4 sm:p-6 flex-1 min-h-[200px] max-h-[480px]">
               {cashflowLoading ? (
-                <div className="h-64 flex items-center justify-center">
+                <div className="h-full flex items-center justify-center">
                   <div className="text-slate-400 text-sm">Loading chart...</div>
                 </div>
               ) : (
-                <ResponsiveContainer width="100%" height={250}>
+                <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={formatChartData()}>
                     <XAxis 
                       dataKey="date" 
@@ -293,10 +296,10 @@ export default function Cashboard() {
           </section>
 
           {/* Hairline divider */}
-          <div className="border-t border-slate-100/80 mb-10" />
+          <div className="border-t border-slate-100/80 mb-6 flex-shrink-0" />
 
-          {/* Collection Performance - Flat Section */}
-          <section className="mb-8">
+          {/* Collection Performance - Fixed height section */}
+          <section className="flex-shrink-0 pb-4">
             <p className="text-[10px] text-slate-400 uppercase tracking-wider mb-4">Collection Performance</p>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 sm:gap-8">
               {/* Avg Days Late */}
@@ -344,6 +347,7 @@ export default function Cashboard() {
             </div>
           </section>
 
+          </div>
         </div>
       </main>
 
