@@ -327,7 +327,8 @@ async function generateDailyPlanWithCharlie(
   const actionableDecisions = charliePlan.decisions.filter(d => 
     d.priorityTier !== 'excluded' && 
     d.recommendedChannel !== 'none' &&
-    d.isWithinCadence
+    d.isWithinCadence &&
+    d.invoice.daysOverdue > 0  // Only include actually overdue invoices
   );
   
   console.log(`   All filters passed: ${actionableDecisions.length}`);
