@@ -1,0 +1,49 @@
+Refactor the Cash Flow page (currently “Coming Soon”) into a calm, Apple-like “Cash Flow Forecast” preview that demonstrates FULL cash in/out + net cash position with Bayesian confidence, in a way that is extremely easy to read (Tufte/Few).
+
+PAGE CONTENT
+1) Header:
+- Title: “Cash Flow”
+- Subtitle: “Cash in, cash out, and projected cash position”
+- Reassurance line (muted): “Qashivo continuously forecasts cashflow using your accounting data. No setup required.”
+
+2) Hero chart (mock data is fine):
+- Title: “Projected cash position”
+- Subtitle: “Net cash over time, with confidence intervals. Updates automatically.”
+- Range toggle (subtle): 4W / 13W / 6M / 12M
+
+CHART DESIGN (must follow)
+A) Main plot:
+- Net cash position as a single line (dominant).
+- Two confidence bands around the line:
+  - 80% credible interval (light band)
+  - 95% credible interval (very light band)
+- No legend. Add small inline text in the chart top-right: “Shaded = confidence range”.
+
+B) Supporting cash in/out:
+- Add a small “cash in/out weekly” micro-bar strip at the bottom of the same chart:
+  - cash in bars above baseline
+  - cash out bars below baseline
+- Keep bars visually secondary so the net line remains the hero.
+
+C) Simplicity:
+- Minimal axes, readable £ ticks, weekly x labels (not dense).
+- No point markers on every datapoint.
+- Annotate only two events with small text callouts:
+  - “Largest expected inflow”
+  - “Highest outflow week”
+
+3) Beneath chart: “Forecast quality & cashflow health” (no cards)
+Render 4 metric lines in a clean 4-column grid (no borders/cards):
+- Forecast confidence (next 30d): High · 92%
+- Expected net cash change (30d): +£48,200
+- Cash runway (current): 4.6 months
+- Volatility: Low
+
+STYLE
+- No cards, no shadows, minimal borders (hairline dividers only if needed).
+- Typography-led hierarchy like Action Centre.
+- High data-ink ratio: no decorative icons.
+
+DELIVERABLE
+- Implement this page UI with mock data and a responsive chart.
+- Ensure it matches the clean Qashivo style and feels informative, not like a task list.
