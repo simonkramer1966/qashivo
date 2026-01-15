@@ -115,6 +115,12 @@ export default function CashFlow() {
   const highestOutflowWeek = forecastData.find(d => d.isHighestOutflow);
   
   const maxCashFlow = Math.max(...forecastData.map(d => Math.max(d.cashIn, Math.abs(d.cashOut))));
+  
+  // Calculate dynamic Y-axis domain with ~25% padding below minimum for visual breathing room
+  const minNetCash = Math.min(...forecastData.map(d => d.ci95Lower));
+  const maxNetCash = Math.max(...forecastData.map(d => d.ci95Upper));
+  const cashRange = maxNetCash - minNetCash;
+  const yAxisMin = minNetCash - (cashRange * 0.25);
 
   return (
     <div className="flex h-screen bg-white">
@@ -169,7 +175,7 @@ export default function CashFlow() {
                 <ResponsiveContainer width="100%" height="100%">
                   <ComposedChart 
                     data={forecastData}
-                    margin={{ top: 20, right: 20, bottom: 35, left: 10 }}
+                    margin={{ top: 20, right: 20, bottom: 20, left: 10 }}
                   >
                     <CartesianGrid 
                       strokeDasharray="3 3" 
@@ -188,9 +194,9 @@ export default function CashFlow() {
                       tick={{ fontSize: 10, fill: '#94a3b8' }}
                       tickLine={false}
                       axisLine={false}
-                      tickFormatter={(value) => formatCompactCurrency(value)}
+                      tickFormatter={(value) => value < minNetCash ? '' : formatCompactCurrency(value)}
                       width={55}
-                      domain={['auto', 'auto']}
+                      domain={[yAxisMin, 'auto']}
                     />
                     
                     <RechartsTooltip
