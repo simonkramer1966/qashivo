@@ -1,0 +1,220 @@
+1. Top metrics — final V1 set (above the chart)
+
+You’re replacing anxiety metrics with progress metrics. This is exactly right.
+
+✅ Replace:
+
+Interest Accrued → Collected this month
+
+Avg Days Late → Collected this week
+
+Final top strip (State of Cash)
+
+STATE OF CASH
+
+Total outstanding
+£1,008,133 (352)
+
+Overdue invoices
+£541,285 (199)
+
+Collected this month
+£184,200
+
+Collected this week
+£42,600
+
+Why this works
+
+The user sees what’s stuck and what’s moving in the same glance
+
+“Collected” is emotionally positive and reinforces system effectiveness
+
+Week + month gives short-term momentum without urgency
+
+Subtle but important: these numbers quietly answer
+“Is Qashivo actually doing anything?”
+without ever saying it.
+
+2. Bottom metrics block (beneath the forecast chart)
+
+This should feel like a quiet performance summary, not a control panel.
+
+Placement
+
+Full-width section directly beneath the Cash Inflow Forecast
+
+Single row on desktop (4 metrics)
+
+Hairline divider above
+
+Labelled clearly as performance, not actions
+
+Section header (exact copy)
+
+COLLECTION PERFORMANCE
+
+Subtle subtext (optional, muted):
+
+Rolling indicators of debtor behaviour and payment outcomes
+
+Layout rules (important)
+
+No cards if possible — or very light containers
+
+Metrics evenly spaced
+
+No icons unless extremely subtle
+
+Use trend indicators sparingly (↑ ↓ only if meaningful)
+
+3. The four killer KPIs (final recommendation)
+1️⃣ Average days late
+
+(You already have this — keep it, but move it here)
+
+Copy
+
+Average days late
+16 days
+
+Optional trend:
+
+↓ 4 days · last 30 days
+
+Why it matters
+
+Familiar accounting metric
+
+Good for accountants, partners, and CFOs
+
+Validates system improvement over time
+
+2️⃣ Average days to pay (rolling)
+
+Copy
+
+Average days to pay
+43 days
+
+Optional:
+
+Rolling 90-day average
+
+Why this is powerful
+
+This is a behavioural metric, not just overdue status
+
+Shows structural improvement, not just firefighting
+
+Pairs beautifully with Avg Days Late
+
+Together these answer:
+
+“Are customers actually learning to pay better?”
+
+3️⃣ On-time payment rate
+
+Copy
+
+On-time payment rate
+72%
+
+Optional:
+
+↑ 6% · last 60 days
+
+Why this is essential
+
+This is your north-star behaviour KPI
+
+It reframes credit control as behaviour change, not chasing
+
+Feels modern, intelligent, and non-aggressive
+
+This metric quietly says:
+
+“The system is training your debtors.”
+
+4️⃣ The missing killer KPI: Payment promise kept rate
+
+This is the one I strongly recommend.
+
+Why this over other options
+
+You could choose:
+
+Collection rate
+
+Dispute resolution time
+
+% overdue value
+
+But Payment Promise Kept Rate is uniquely Qashivo.
+
+It leverages:
+
+Voice
+
+Two-way comms
+
+Debtor intent
+
+Your “cash-in reflects real debtor intent” spine
+
+Final KPI #4 — Payment promise kept
+
+Copy
+
+Payment promises kept
+81%
+
+Optional subtext:
+
+% of agreed payment dates met
+
+Why this is gold
+
+Competitors don’t have this
+
+Humans intuitively understand it
+
+It directly supports your AI voice + intent differentiation
+
+It’s outcome-focused, not threatening
+
+This metric alone can anchor demos and investor conversations.
+
+4. Final bottom metrics set (summary)
+
+COLLECTION PERFORMANCE
+
+Average days late
+
+Average days to pay (rolling)
+
+On-time payment rate
+
+Payment promises kept
+
+No actions. No warnings. No “fix this”.
+
+Just:
+
+“Here’s how well the system is performing.”
+
+5. Strategic check (very important)
+
+With these changes:
+
+The top of the page says: “Cash is moving.”
+
+The middle says: “Here’s what’s coming next.”
+
+The bottom says: “The system is improving behaviour.”
+
+And nowhere does it say:
+
+“You should do something.”
+
+That is exactly the V1 promise of Qashivo.

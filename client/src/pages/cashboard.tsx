@@ -138,7 +138,7 @@ export default function Cashboard() {
       <main className="flex-1 overflow-y-auto main-with-bottom-nav">
         <Header 
           title="Cashboard" 
-          subtitle="Real-time cashflow and receivables overview"
+          subtitle=""
           systemMessage="Qashivo is continuously managing receivables. No action is required unless something is flagged in Attention."
         />
         
