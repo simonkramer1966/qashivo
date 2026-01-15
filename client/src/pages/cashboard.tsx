@@ -146,105 +146,99 @@ export default function Cashboard() {
         />
         
         <div className="container-apple py-4 sm:py-6 lg:py-8">
-          {/* Desktop: Unified Metrics Strip */}
-          <div className="hidden sm:block mb-8">
-            <div className="bg-white border border-slate-100 rounded-lg">
-              {/* Row 1: State of Cash */}
-              <div className="px-4 py-3">
-                <p className="text-[10px] text-slate-400 uppercase tracking-wider mb-3">State of Cash</p>
-                <div className="flex divide-x divide-slate-100">
-                  {/* Total Outstanding */}
-                  <div className="flex-1 pr-6" data-testid="card-total-outstanding">
-                    <p className="text-[12px] text-slate-500 mb-1">Total Outstanding</p>
-                    {metricsLoading ? (
-                      <div className="h-6 w-24 bg-slate-100 animate-pulse rounded"></div>
-                    ) : (
-                      <p className="text-[20px] font-semibold text-slate-900 tabular-nums">
-                        {formatCurrency(totalOutstanding)} <span className="text-[12px] font-normal text-slate-400">({totalInvoiceCount})</span>
-                      </p>
-                    )}
-                  </div>
+          {/* Desktop: State of Cash - Flat Section */}
+          <section className="hidden sm:block mb-10">
+            <p className="text-[10px] text-slate-400 uppercase tracking-wider mb-4">State of Cash</p>
+            <div className="grid grid-cols-4 gap-8">
+              {/* Total Outstanding */}
+              <div data-testid="card-total-outstanding">
+                <p className="text-[12px] text-slate-500 mb-1">Total Outstanding</p>
+                {metricsLoading ? (
+                  <div className="h-6 w-24 bg-slate-50 animate-pulse rounded"></div>
+                ) : (
+                  <p className="text-[20px] font-semibold text-slate-900 tabular-nums">
+                    {formatCurrency(totalOutstanding)} <span className="text-[12px] font-normal text-slate-400">({totalInvoiceCount})</span>
+                  </p>
+                )}
+              </div>
 
-                  {/* Overdue Invoices */}
-                  <div className="flex-1 px-6" data-testid="card-overdue">
-                    <p className="text-[12px] text-slate-500 mb-1">Overdue</p>
-                    {metricsLoading ? (
-                      <div className="h-6 w-24 bg-slate-100 animate-pulse rounded"></div>
-                    ) : (
-                      <p className="text-[20px] font-semibold text-slate-900 tabular-nums">
-                        {formatCurrency(overdueAmount)} <span className="text-[12px] font-normal text-slate-400">({overdueCount})</span>
-                      </p>
-                    )}
-                  </div>
+              {/* Overdue Invoices */}
+              <div data-testid="card-overdue">
+                <p className="text-[12px] text-slate-500 mb-1">Overdue</p>
+                {metricsLoading ? (
+                  <div className="h-6 w-24 bg-slate-50 animate-pulse rounded"></div>
+                ) : (
+                  <p className="text-[20px] font-semibold text-slate-900 tabular-nums">
+                    {formatCurrency(overdueAmount)} <span className="text-[12px] font-normal text-slate-400">({overdueCount})</span>
+                  </p>
+                )}
+              </div>
 
-                  {/* Collected This Month */}
-                  <div className="flex-1 px-6" data-testid="card-collected-month">
-                    <p className="text-[12px] text-slate-500 mb-1">Collected This Month</p>
-                    {metricsLoading ? (
-                      <div className="h-6 w-24 bg-slate-100 animate-pulse rounded"></div>
-                    ) : (
-                      <p className="text-[20px] font-semibold text-emerald-600 tabular-nums">
-                        {formatCurrency(metrics?.collectedThisMonth || 0)}
-                      </p>
-                    )}
-                  </div>
+              {/* Collected This Month */}
+              <div data-testid="card-collected-month">
+                <p className="text-[12px] text-slate-500 mb-1">Collected This Month</p>
+                {metricsLoading ? (
+                  <div className="h-6 w-24 bg-slate-50 animate-pulse rounded"></div>
+                ) : (
+                  <p className="text-[20px] font-semibold text-emerald-600 tabular-nums">
+                    {formatCurrency(metrics?.collectedThisMonth || 0)}
+                  </p>
+                )}
+              </div>
 
-                  {/* Collected This Week */}
-                  <div className="flex-1 pl-6" data-testid="card-collected-week">
-                    <p className="text-[12px] text-slate-500 mb-1">Collected This Week</p>
-                    {metricsLoading ? (
-                      <div className="h-6 w-24 bg-slate-100 animate-pulse rounded"></div>
-                    ) : (
-                      <p className="text-[20px] font-semibold text-emerald-600 tabular-nums">
-                        {formatCurrency(metrics?.collectedThisWeek || 0)}
-                      </p>
-                    )}
-                  </div>
-                </div>
+              {/* Collected This Week */}
+              <div data-testid="card-collected-week">
+                <p className="text-[12px] text-slate-500 mb-1">Collected This Week</p>
+                {metricsLoading ? (
+                  <div className="h-6 w-24 bg-slate-50 animate-pulse rounded"></div>
+                ) : (
+                  <p className="text-[20px] font-semibold text-emerald-600 tabular-nums">
+                    {formatCurrency(metrics?.collectedThisWeek || 0)}
+                  </p>
+                )}
               </div>
             </div>
-          </div>
+          </section>
 
-          {/* Mobile: Compact metrics */}
-          <div className="sm:hidden mb-6">
-            <div className="bg-white border border-slate-100 rounded-lg">
-              <div className="p-3">
-                <p className="text-[10px] text-slate-400 uppercase tracking-wider mb-2">State of Cash</p>
-                <div className="grid grid-cols-2 gap-4">
-                  <div data-testid="card-total-outstanding">
-                    <p className="text-[11px] text-slate-500">Outstanding</p>
-                    <p className="text-[16px] font-semibold text-slate-900 tabular-nums">{formatCurrency(totalOutstanding)}</p>
-                  </div>
-                  <div data-testid="card-overdue">
-                    <p className="text-[11px] text-slate-500">Overdue</p>
-                    <p className="text-[16px] font-semibold text-slate-900 tabular-nums">{formatCurrency(overdueAmount)}</p>
-                  </div>
-                  <div data-testid="card-collected-month">
-                    <p className="text-[11px] text-slate-500">Collected (Month)</p>
-                    <p className="text-[16px] font-semibold text-emerald-600 tabular-nums">{formatCurrency(metrics?.collectedThisMonth || 0)}</p>
-                  </div>
-                  <div data-testid="card-collected-week">
-                    <p className="text-[11px] text-slate-500">Collected (Week)</p>
-                    <p className="text-[16px] font-semibold text-emerald-600 tabular-nums">{formatCurrency(metrics?.collectedThisWeek || 0)}</p>
-                  </div>
-                </div>
+          {/* Mobile: State of Cash - Flat Section */}
+          <section className="sm:hidden mb-8">
+            <p className="text-[10px] text-slate-400 uppercase tracking-wider mb-3">State of Cash</p>
+            <div className="grid grid-cols-2 gap-4">
+              <div data-testid="card-total-outstanding">
+                <p className="text-[11px] text-slate-500">Outstanding</p>
+                <p className="text-[16px] font-semibold text-slate-900 tabular-nums">{formatCurrency(totalOutstanding)}</p>
+              </div>
+              <div data-testid="card-overdue">
+                <p className="text-[11px] text-slate-500">Overdue</p>
+                <p className="text-[16px] font-semibold text-slate-900 tabular-nums">{formatCurrency(overdueAmount)}</p>
+              </div>
+              <div data-testid="card-collected-month">
+                <p className="text-[11px] text-slate-500">Collected (Month)</p>
+                <p className="text-[16px] font-semibold text-emerald-600 tabular-nums">{formatCurrency(metrics?.collectedThisMonth || 0)}</p>
+              </div>
+              <div data-testid="card-collected-week">
+                <p className="text-[11px] text-slate-500">Collected (Week)</p>
+                <p className="text-[16px] font-semibold text-emerald-600 tabular-nums">{formatCurrency(metrics?.collectedThisWeek || 0)}</p>
               </div>
             </div>
-          </div>
+          </section>
 
-          {/* Cashflow Chart - Hero */}
-          <div className="bg-white border border-slate-100 rounded-lg p-4 sm:p-6" data-testid="card-cashflow-chart">
+          {/* Hairline divider */}
+          <div className="border-t border-slate-100/80 mb-10" />
+
+          {/* Cashflow Chart - Flat Section with subtle canvas */}
+          <section className="mb-10" data-testid="card-cashflow-chart">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-[16px] font-semibold text-slate-900">{getForecastTitle()}</h3>
-              <div className="flex items-center gap-1 bg-slate-50 rounded-lg p-0.5" data-testid="radio-forecast-period">
+              <h3 className="text-[14px] font-medium text-slate-900">{getForecastTitle()}</h3>
+              <div className="flex items-center gap-0.5" data-testid="radio-forecast-period">
                 {["1", "3", "6"].map((period) => (
                   <button
                     key={period}
                     onClick={() => setForecastPeriod(period as "1" | "3" | "6")}
-                    className={`px-3 py-1 text-[12px] rounded-md transition-colors ${
+                    className={`px-2.5 py-1 text-[11px] transition-colors ${
                       forecastPeriod === period 
-                        ? "bg-white text-slate-900 shadow-sm" 
-                        : "text-slate-500 hover:text-slate-700"
+                        ? "text-slate-900 font-medium" 
+                        : "text-slate-400 hover:text-slate-600"
                     }`}
                     data-testid={`radio-period-${period}`}
                   >
@@ -253,7 +247,7 @@ export default function Cashboard() {
                 ))}
               </div>
             </div>
-            <div className="border-t border-slate-100 pt-4">
+            <div className="bg-slate-50/50 rounded-sm p-4 sm:p-6">
               {cashflowLoading ? (
                 <div className="h-64 flex items-center justify-center">
                   <div className="text-slate-400 text-sm">Loading chart...</div>
@@ -279,15 +273,16 @@ export default function Cashboard() {
                       contentStyle={{
                         backgroundColor: 'white',
                         border: '1px solid #e2e8f0',
-                        borderRadius: '8px',
+                        borderRadius: '4px',
                         padding: '8px 12px',
-                        fontSize: '13px'
+                        fontSize: '13px',
+                        boxShadow: 'none'
                       }}
                     />
                     <Bar 
                       dataKey="amount" 
                       fill="#17B6C3" 
-                      radius={[4, 4, 0, 0]}
+                      radius={[2, 2, 0, 0]}
                       animationDuration={600}
                       animationEasing="ease-out"
                     />
@@ -295,58 +290,59 @@ export default function Cashboard() {
                 </ResponsiveContainer>
               )}
             </div>
-          </div>
+          </section>
 
-          {/* Collection Performance Section */}
-          <div className="mt-8 bg-white border border-slate-100 rounded-lg">
-            <div className="px-4 py-3">
-              <p className="text-[10px] text-slate-400 uppercase tracking-wider mb-3">Collection Performance</p>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-0 sm:flex sm:divide-x sm:divide-slate-100">
-                {/* Avg Days Late */}
-                <div className="sm:flex-1 sm:pr-6" data-testid="card-perf-avg-days-late">
-                  <p className="text-[12px] text-slate-500 mb-1">Avg Days Late</p>
-                  {metricsLoading ? (
-                    <div className="h-6 w-16 bg-slate-100 animate-pulse rounded"></div>
-                  ) : (
-                    <p className="text-[20px] font-semibold text-slate-900 tabular-nums">
-                      {avgDaysOverdue.toFixed(0)} <span className="text-[12px] font-normal text-slate-400">days</span>
-                    </p>
-                  )}
-                </div>
+          {/* Hairline divider */}
+          <div className="border-t border-slate-100/80 mb-10" />
 
-                {/* Avg Days to Pay */}
-                <div className="sm:flex-1 sm:px-6" data-testid="card-perf-avg-days-pay">
-                  <p className="text-[12px] text-slate-500 mb-1">Avg Days to Pay</p>
-                  {metricsLoading ? (
-                    <div className="h-6 w-16 bg-slate-100 animate-pulse rounded"></div>
-                  ) : (
-                    <p className="text-[20px] font-semibold text-slate-900 tabular-nums">
-                      {avgDaysToPay.toFixed(0)} <span className="text-[12px] font-normal text-slate-400">days</span>
-                    </p>
-                  )}
-                </div>
+          {/* Collection Performance - Flat Section */}
+          <section className="mb-8">
+            <p className="text-[10px] text-slate-400 uppercase tracking-wider mb-4">Collection Performance</p>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 sm:gap-8">
+              {/* Avg Days Late */}
+              <div data-testid="card-perf-avg-days-late">
+                <p className="text-[12px] text-slate-500 mb-1">Avg Days Late</p>
+                {metricsLoading ? (
+                  <div className="h-6 w-16 bg-slate-50 animate-pulse rounded"></div>
+                ) : (
+                  <p className="text-[20px] font-semibold text-slate-900 tabular-nums">
+                    {avgDaysOverdue.toFixed(0)} <span className="text-[12px] font-normal text-slate-400">days</span>
+                  </p>
+                )}
+              </div>
 
-                {/* On-time Rate */}
-                <div className="sm:flex-1 sm:px-6" data-testid="card-perf-ontime-rate">
-                  <p className="text-[12px] text-slate-500 mb-1">On-time Rate</p>
-                  {metricsLoading ? (
-                    <div className="h-6 w-16 bg-slate-100 animate-pulse rounded"></div>
-                  ) : (
-                    <p className="text-[20px] font-semibold text-emerald-600 tabular-nums">
-                      {(metrics?.onTimePaymentRate || 0).toFixed(0)}%
-                    </p>
-                  )}
-                </div>
+              {/* Avg Days to Pay */}
+              <div data-testid="card-perf-avg-days-pay">
+                <p className="text-[12px] text-slate-500 mb-1">Avg Days to Pay</p>
+                {metricsLoading ? (
+                  <div className="h-6 w-16 bg-slate-50 animate-pulse rounded"></div>
+                ) : (
+                  <p className="text-[20px] font-semibold text-slate-900 tabular-nums">
+                    {avgDaysToPay.toFixed(0)} <span className="text-[12px] font-normal text-slate-400">days</span>
+                  </p>
+                )}
+              </div>
 
-                {/* Payment Promises Kept */}
-                <div className="sm:flex-1 sm:pl-6" data-testid="card-perf-promises-kept">
-                  <p className="text-[12px] text-slate-400 mb-1">Promises Kept</p>
-                  <p className="text-[20px] font-semibold text-slate-300 tabular-nums">—</p>
-                  <p className="text-[10px] text-slate-300">Coming soon</p>
-                </div>
+              {/* On-time Rate */}
+              <div data-testid="card-perf-ontime-rate">
+                <p className="text-[12px] text-slate-500 mb-1">On-time Rate</p>
+                {metricsLoading ? (
+                  <div className="h-6 w-16 bg-slate-50 animate-pulse rounded"></div>
+                ) : (
+                  <p className="text-[20px] font-semibold text-emerald-600 tabular-nums">
+                    {(metrics?.onTimePaymentRate || 0).toFixed(0)}%
+                  </p>
+                )}
+              </div>
+
+              {/* Payment Promises Kept */}
+              <div data-testid="card-perf-promises-kept">
+                <p className="text-[12px] text-slate-400 mb-1">Promises Kept</p>
+                <p className="text-[20px] font-semibold text-slate-300 tabular-nums">—</p>
+                <p className="text-[10px] text-slate-300">Coming soon</p>
               </div>
             </div>
-          </div>
+          </section>
 
         </div>
       </main>

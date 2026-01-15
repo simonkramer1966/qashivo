@@ -1,0 +1,74 @@
+You are working on Qashivo (web app). Refactor the LEFT-HAND NAVIGATION to be simpler, cleaner, and more “Apple-like” in line with Tufte/Stephen Few principles and the Action Centre design language. The nav must feel calm and uncluttered and MUST NOT create a “work to-do list” vibe. Preserve existing routes and functionality; this is a visual + IA refactor only.
+
+PRIMARY GOAL
+- Reduce visual noise (icons, dividers, heavy backgrounds).
+- Introduce clear hierarchy: Primary surfaces vs Reference vs System.
+- Make only the current location feel active; everything else should be quiet.
+- Keep it minimal and consistent with Action Centre typography and spacing.
+
+INFORMATION ARCHITECTURE (grouping)
+Group items into 3 sections with minimal labels:
+1) ACTION
+   - Cashboard
+   - Action Centre
+2) REFERENCE
+   - Customers
+   - Invoices
+   - Cash Flow (if currently used; otherwise keep but deemphasise)
+3) SYSTEM
+   - Financing
+   - Automation
+   - Workflows
+   - Settings
+
+IMPORTANT: Do not remove any pages. Just regroup and restyle.
+
+VISUAL SPEC (non-negotiable)
+1) Remove clutter
+- Remove heavy section divider lines and card-like nav backgrounds.
+- Remove badges/counters in the nav (none in V1).
+- Avoid “pill” styling for every item; only the active item gets emphasis.
+
+2) Icons
+- Keep icons ONLY for the two primary items (Cashboard + Action Centre).
+- For all other items:
+  - remove icons entirely OR reduce them to a very subtle monochrome at ~40% opacity.
+- No colorful icon bubbles.
+
+3) Typography & spacing
+- Use the same font + sizing approach as Action Centre.
+- Nav item label: 14px, medium/regular.
+- Section label (ACTION/REFERENCE/SYSTEM): 11–12px, uppercase, letter-spacing slight, muted.
+- Vertical rhythm:
+  - 8–12px gap between groups
+  - 6–8px padding inside each nav row
+  - consistent left alignment
+
+4) Active state
+- Active item should be the ONLY strong cue:
+  - subtle accent (Qashivo teal) as a left 2px indicator OR a very light background tint
+  - text slightly darker/bolder
+- Avoid big rounded pills.
+- Hover state: very subtle background only (no border).
+
+5) Sidebar structure
+- Keep tenant/company switcher (“Nexus KPI Limited”) but simplify:
+  - remove heavy border/shadow
+  - align with nav width and typography
+- Keep footer (Demo mode + user profile) but make it visually quiet (muted, smaller).
+
+IMPLEMENTATION NOTES
+- Create a reusable <NavSection title="ACTION"> component and <NavItem> component.
+- Ensure keyboard focus states are accessible but subtle (only on keyboard focus, not mouse click).
+- Ensure the nav still collapses/works as before if a collapse feature exists.
+- Preserve routing and onClick behaviour exactly.
+
+DELIVERABLE
+- Update the sidebar/nav component(s) to implement the above.
+- The result should look like a calm Apple-style sidebar (Mail/Finder-like): minimal, grouped, typography-led, no visual noise.
+
+ACCEPTANCE CHECK
+- At a glance, the nav feels “quiet” and not demanding.
+- Only the current page stands out.
+- Everything else is visually secondary.
+- No heavy dividers, no pill buttons for every item, no icon clutter.
