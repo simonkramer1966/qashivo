@@ -115,13 +115,6 @@ export default function Customers() {
         <div className="flex-1 flex flex-col min-h-0 overflow-y-auto">
           <div className="container-apple py-4 sm:py-6 flex-1 flex flex-col min-h-0">
             
-            {/* Reassurance line */}
-            <p className="text-[12px] text-slate-400 mb-6 flex-shrink-0">
-              Qashivo manages collections automatically. Review is only needed when something is flagged.
-            </p>
-
-            {/* Divider */}
-            <div className="border-t border-slate-100/80 mb-6 flex-shrink-0" />
 
             {/* Debtor Behaviour Profiles - KPI Section */}
             <section className="mb-6 flex-shrink-0">
