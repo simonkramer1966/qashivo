@@ -74,8 +74,6 @@ const navigationSections = [
   {
     label: "SYSTEM",
     items: [
-      { name: "Financing", href: "/financing", icon: null },
-      { name: "Automation", href: "/automation", icon: null },
       { name: "Workflows", href: "/workflows", icon: null },
       { name: "Settings", href: "/settings", icon: null },
     ]
