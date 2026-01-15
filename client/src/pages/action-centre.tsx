@@ -286,12 +286,12 @@ export default function ActionCentreV2() {
         />
         
         <div className="p-6 lg:p-8 space-y-6 bg-white min-h-[calc(100vh-80px)]">
-          <div className="flex items-center gap-6 border-b border-slate-100">
+          <div className="flex items-center gap-2 border-b border-slate-100">
             {TABS.map(tab => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`pb-3 text-[13px] font-medium transition-colors relative ${
+                className={`px-4 pb-3 text-[13px] font-medium transition-colors relative ${
                   activeTab === tab.id
                     ? 'text-slate-900'
                     : 'text-slate-400 hover:text-slate-600'
