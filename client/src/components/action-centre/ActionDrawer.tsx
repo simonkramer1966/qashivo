@@ -283,7 +283,7 @@ export function ActionDrawer({
                       const daysOverdue = invoice.daysOverdue || 0;
                       const invoiceDate = invoice.invoiceDate || invoice.dueDate;
                       return (
-                        <div key={invoice.id} className="grid grid-cols-[60px_1fr_45px_85px] gap-2 text-[13px] text-slate-600">
+                        <div key={invoice.id} className="grid grid-cols-[72px_1fr_45px_85px] gap-2 text-[13px] text-slate-600">
                           <span className="tabular-nums">
                             {invoiceDate ? new Date(invoiceDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' }) : '—'}
                           </span>
