@@ -1,0 +1,91 @@
+You are working on Qashivo (web app). Refactor the existing right-hand side drawer (currently “Action Preview”) used on the Planned tab into a clean, Apple-like “Debtor Interaction” drawer that follows Tufte/Stephen Few principles (minimal chrome, high information density, progressive disclosure).
+
+IMPORTANT
+- This drawer is opened from the Planned list, so DO NOT show “Status” (assume pending approval).
+- Do not add new backend requirements. Use existing data already available in the selected row/debtor object. If some fields are missing, show graceful placeholders or hide the section.
+- Keep the drawer read-only for now (no editing forms). This is an explanation/audit surface, not a workspace.
+
+DESIGN PRINCIPLES (must follow)
+- Apple-like: calm, minimal, premium, lots of whitespace, subtle hairline dividers only.
+- No heavy cards/containers inside the drawer.
+- Typography does the hierarchy (system font stack, limited sizes).
+- Labels are light; values are darker.
+- Use tabular numerals for currency.
+- Progressive disclosure: show key info first, collapse details (history, invoices).
+
+DRAWER INFORMATION ARCHITECTURE (top → bottom)
+
+1) Header (identity)
+- Large customer name (primary)
+- Smaller contact name beneath (secondary) if available
+Example:
+  Metro Events Group
+  Michael Chen
+
+2) Reason for action (MOST IMPORTANT)
+- Title: “Reason for action”
+- One sentence, human-readable reason (from existing fields if available, else fallback)
+Examples:
+  “Invoices are 97 days overdue.”
+  “A promise to pay was missed.”
+  “High value overdue balance with no response.”
+
+Rules:
+- Keep it to 1 sentence (max 120 chars). If longer, truncate and add “View more” to expand.
+- No AI scores, no rules language, no percentages.
+
+3) Action summary (facts)
+- Minimal two-column key/value list (no borders, just spacing)
+- Include only:
+  - Channel (Email / SMS / Call)
+  - Amount (formatted currency, right-aligned)
+  - Days overdue (integer)
+- If any value missing, hide that row (don’t show “—” unless necessary).
+
+4) Recent contact history (collapsed by default)
+- Section title: “Recent contact history”
+- Show last 2–3 items when expanded.
+- Each line should be short, e.g.:
+  “Email · Final notice · 3 days ago”
+  “Call · No answer · 6 days ago”
+- If there’s no history, show a single quiet line: “No recent contact recorded.”
+
+Implementation:
+- Use an accordion/disclosure component or simple “Show/Hide” toggle.
+- No icons required; if you keep one, make it very subtle.
+
+5) Outstanding invoices (collapsed by default)
+- Section title: “Outstanding invoices”
+- In collapsed state, show summary:
+  “21 invoices · £6,388 total · Oldest 97d”
+- Expanded state: simple table/list with:
+  Invoice #, Due date, Amount
+- Keep it read-only, no actions.
+
+6) Footer (optional minimal actions)
+- Only include:
+  - “Move to Attention”
+  - “Snooze”
+If these actions already exist elsewhere, keep them; otherwise omit footer entirely.
+Do not add “Send email/SMS/call” controls here.
+
+INTERACTIONS
+- Drawer should open with focus on customer name.
+- Provide a subtle close button (top right) and allow ESC to close.
+- Clicking outside closes if that’s consistent with current app behaviour.
+
+ENGINEERING REQUIREMENTS
+- Refactor the drawer component into smaller subcomponents:
+  - DrawerHeader
+  - ReasonBlock
+  - SummaryFacts
+  - CollapsibleHistory
+  - CollapsibleInvoiceList
+- Ensure consistent spacing tokens and typography across sections.
+- Avoid new dependencies. Use existing UI primitives if present.
+
+DELIVERABLE
+- Update the drawer layout per above and remove Status entirely.
+- Ensure the drawer renders gracefully even if some debtor fields are missing.
+- Keep the styling consistent with the newly “Apple-like” Planned list (hairline dividers, minimal borders, calm typography).
+- Provide the updated code for the drawer component and any supporting subcomponents/utilities you create.
