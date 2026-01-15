@@ -139,12 +139,6 @@ export default function CashFlow() {
         
         <div className="flex-1 flex flex-col min-h-0 overflow-y-auto">
           <div className="container-apple py-4 sm:py-6 flex-1 flex flex-col min-h-0">
-            
-            <p className="text-[12px] text-slate-400 mb-6 flex-shrink-0">
-              Qashivo continuously forecasts cashflow using your accounting data. No setup required.
-            </p>
-
-            <div className="border-t border-slate-100/80 mb-6 flex-shrink-0" />
 
             <section className="flex-1 flex flex-col min-h-0 mb-6">
               <div className="flex items-center justify-between mb-3 flex-shrink-0">
