@@ -29,6 +29,7 @@ import BottomNav from "@/components/layout/bottom-nav";
 import Header from "@/components/layout/header";
 import { formatCurrency } from "@/lib/utils";
 import { ExecutedTab, AttentionTab, CashboardTab, ForecastTab } from "@/components/action-centre/tabs";
+import { ActionDrawer } from "@/components/action-centre/ActionDrawer";
 import { 
   transformActionsToExecuted, 
   transformActionsToAttention,
@@ -394,37 +395,33 @@ export default function ActionCentreV2() {
         </SheetContent>
       </Sheet>
 
-      <Sheet open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
-        <SheetContent className="w-[400px] sm:w-[540px]">
-          <SheetHeader>
-            <SheetTitle>Action Preview</SheetTitle>
-          </SheetHeader>
-          {selectedPlanAction && (
-            <div className="mt-6 space-y-4">
-              <div className="flex justify-between text-sm">
-                <span className="text-slate-500">Customer</span>
-                <span className="font-medium">{selectedPlanAction.companyName || selectedPlanAction.contactName}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-slate-500">Channel</span>
-                <span className="capitalize">{selectedPlanAction.actionType}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-slate-500">Amount</span>
-                <span className="font-medium tabular-nums">{formatCurrency(parseFloat(selectedPlanAction.amount))}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-slate-500">Days Overdue</span>
-                <span>{selectedPlanAction.daysOverdue}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-slate-500">Status</span>
-                <span className="capitalize">{selectedPlanAction.status?.replace('_', ' ')}</span>
-              </div>
-            </div>
-          )}
-        </SheetContent>
-      </Sheet>
+      <ActionDrawer
+        open={isPreviewOpen}
+        onOpenChange={setIsPreviewOpen}
+        customer={selectedPlanAction ? {
+          contactName: selectedPlanAction.contactName || 'Unknown',
+          companyName: selectedPlanAction.companyName,
+          contactId: selectedPlanAction.contactId || '',
+          email: selectedPlanAction.email,
+          phone: selectedPlanAction.phone,
+          totalOutstanding: parseFloat(selectedPlanAction.amount) || 0,
+          oldestInvoiceDueDate: selectedPlanAction.oldestDueDate || new Date().toISOString(),
+          daysOverdue: selectedPlanAction.daysOverdue || 0,
+          channel: selectedPlanAction.actionType,
+          stage: selectedPlanAction.stage,
+          invoices: selectedPlanAction.invoices || [],
+        } : null}
+        onSkip={(contactId) => {
+          if (selectedPlanAction?.id) {
+            bulkSkipMutation.mutate({ actionIds: [selectedPlanAction.id], days: 7 });
+          }
+        }}
+        onAttention={(contactId) => {
+          if (selectedPlanAction?.id) {
+            bulkAttentionMutation.mutate([selectedPlanAction.id]);
+          }
+        }}
+      />
 
       <BottomNav />
     </div>
