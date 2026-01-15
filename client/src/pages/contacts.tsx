@@ -7,14 +7,12 @@ import {
   ChevronRight,
   User,
   ShieldCheck,
-  Shield,
-  Plus
+  Shield
 } from "lucide-react";
 import NewSidebar from "@/components/layout/new-sidebar";
 import BottomNav from "@/components/layout/bottom-nav";
 import Header from "@/components/layout/header";
 import { useCurrency } from "@/hooks/useCurrency";
-import AddCustomerDialog from "@/components/credit/AddCustomerDialog";
 import { CustomerDetailDialog } from "@/components/contacts/CustomerDetailDialog";
 
 interface Contact {
@@ -42,7 +40,6 @@ export default function Customers() {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const limit = 20;
-  const [showAddCustomerDialog, setShowAddCustomerDialog] = useState(false);
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
   const [showCustomerDetail, setShowCustomerDetail] = useState(false);
 
@@ -172,16 +169,6 @@ export default function Customers() {
                 />
               </div>
 
-              {/* Add Customer Button */}
-              <button
-                onClick={() => setShowAddCustomerDialog(true)}
-                className="hidden sm:flex items-center gap-1.5 text-[12px] text-[#17B6C3] hover:text-[#1396A1] transition-colors"
-                data-testid="button-add-customer"
-              >
-                <Plus className="h-4 w-4" />
-                Add
-              </button>
-
               {/* Pagination Controls - Desktop */}
               {pagination.totalPages > 1 && (
                 <div className="hidden sm:flex gap-1.5 items-center text-[12px]">
@@ -208,41 +195,30 @@ export default function Customers() {
               )}
             </div>
 
-            {/* Mobile: Add Button + Pagination */}
-            <div className="sm:hidden flex justify-between items-center mb-4">
-              <button
-                onClick={() => setShowAddCustomerDialog(true)}
-                className="flex items-center gap-1.5 text-[12px] text-[#17B6C3] hover:text-[#1396A1] transition-colors"
-                data-testid="button-add-customer-mobile"
-              >
-                <Plus className="h-4 w-4" />
-                Add
-              </button>
-              
-              {pagination.totalPages > 1 && (
-                <div className="flex items-center gap-2 text-[12px]">
-                  <button
-                    onClick={() => setPage(Math.max(1, page - 1))}
-                    disabled={page === 1}
-                    className="px-2 py-1 text-slate-500 hover:text-slate-700 disabled:text-slate-300"
-                    data-testid="button-previous-page-mobile"
-                  >
-                    Prev
-                  </button>
-                  <span className="text-slate-400">
-                    {page} of {pagination.totalPages}
-                  </span>
-                  <button
-                    onClick={() => setPage(Math.min(pagination.totalPages, page + 1))}
-                    disabled={page === pagination.totalPages}
-                    className="px-2 py-1 text-slate-500 hover:text-slate-700 disabled:text-slate-300"
-                    data-testid="button-next-page-mobile"
-                  >
-                    Next
-                  </button>
-                </div>
-              )}
-            </div>
+            {/* Mobile Pagination */}
+            {pagination.totalPages > 1 && (
+              <div className="sm:hidden flex justify-center items-center gap-2 mb-4 text-[12px]">
+                <button
+                  onClick={() => setPage(Math.max(1, page - 1))}
+                  disabled={page === 1}
+                  className="px-2 py-1 text-slate-500 hover:text-slate-700 disabled:text-slate-300"
+                  data-testid="button-previous-page-mobile"
+                >
+                  Prev
+                </button>
+                <span className="text-slate-400">
+                  {page} of {pagination.totalPages}
+                </span>
+                <button
+                  onClick={() => setPage(Math.min(pagination.totalPages, page + 1))}
+                  disabled={page === pagination.totalPages}
+                  className="px-2 py-1 text-slate-500 hover:text-slate-700 disabled:text-slate-300"
+                  data-testid="button-next-page-mobile"
+                >
+                  Next
+                </button>
+              </div>
+            )}
 
             {/* Mobile View - Clean List */}
             <div className="space-y-0 sm:hidden flex-1">
@@ -401,15 +377,6 @@ export default function Customers() {
 
       {/* Mobile Bottom Navigation */}
       <BottomNav />
-
-      {/* Add Customer Dialog */}
-      <AddCustomerDialog
-        open={showAddCustomerDialog}
-        onOpenChange={setShowAddCustomerDialog}
-        onSuccess={() => {
-          setShowAddCustomerDialog(false);
-        }}
-      />
 
       {/* Customer Detail Dialog */}
       <CustomerDetailDialog
