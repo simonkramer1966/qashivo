@@ -1,26 +1,18 @@
-import { useState, useEffect } from "react";
-import { useLocation } from "wouter";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { 
   DollarSign, 
-  TrendingUp, 
   AlertTriangle,
   Clock,
-  Target,
-  ArrowRight,
-  ChevronRight,
   FileText,
   MessageSquare,
-  Scale,
-  Gavel,
   Percent,
-  Activity
+  Activity,
+  TrendingUp
 } from "lucide-react";
 import NewSidebar from "@/components/layout/new-sidebar";
 import BottomNav from "@/components/layout/bottom-nav";
@@ -99,7 +91,6 @@ interface Leaderboard {
 }
 
 export default function Cashboard() {
-  const [, setLocation] = useLocation();
   const { formatCurrency } = useCurrency();
   const [forecastPeriod, setForecastPeriod] = useState<"1" | "3" | "6">("1");
 
@@ -477,195 +468,6 @@ export default function Cashboard() {
             </CardContent>
           </div>
 
-          {/* Leaderboards */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-            {/* Payment Behavior Leaderboard */}
-            <div className="card-apple p-4 sm:p-6" data-testid="card-payment-behavior">
-              <h3 className="text-lg sm:text-xl font-bold mb-4">Payment Behavior</h3>
-              
-              {leaderboardsLoading ? (
-                <div className="h-64 flex items-center justify-center">
-                  <div className="text-slate-400">Loading...</div>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {/* Best Payers */}
-                  <div>
-                    <h4 className="text-sm font-semibold text-green-600 mb-2 flex items-center gap-2">
-                      <div className="p-1 bg-green-100 rounded">
-                        <TrendingUp className="h-4 w-4" />
-                      </div>
-                      Best Payers
-                    </h4>
-                    <div className="space-y-2">
-                      {leaderboards?.bestPayers.slice(0, 5).map((payer) => (
-                        <div 
-                          key={payer.contactId}
-                          className="flex items-center justify-between p-2 rounded-lg hover:bg-slate-50 cursor-pointer"
-                          onClick={() => setLocation(`/contacts/${payer.contactId}`)}
-                        >
-                          <div className="flex items-center gap-3">
-                            <Badge variant="outline" className="w-8 h-8 flex items-center justify-center text-xs font-bold">
-                              {payer.rank}
-                            </Badge>
-                            <div>
-                              <p className="font-medium text-sm">{payer.contactName}</p>
-                              <p className="text-xs text-slate-500">{payer.paidCount} invoices paid</p>
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <p className="font-semibold text-green-600">{payer.avgDaysToPay} days</p>
-                            <p className="text-xs text-slate-500">{formatCurrency(payer.totalPaid)}</p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Worst Payers */}
-                  <div>
-                    <h4 className="text-sm font-semibold text-red-600 mb-2 flex items-center gap-2">
-                      <div className="p-1 bg-red-100 rounded">
-                        <AlertTriangle className="h-4 w-4" />
-                      </div>
-                      Needs Attention
-                    </h4>
-                    <div className="space-y-2">
-                      {leaderboards?.worstPayers.slice(0, 5).map((payer) => (
-                        <div 
-                          key={payer.contactId}
-                          className="flex items-center justify-between p-2 rounded-lg hover:bg-slate-50 cursor-pointer"
-                          onClick={() => setLocation(`/contacts/${payer.contactId}`)}
-                        >
-                          <div className="flex items-center gap-3">
-                            <Badge variant="outline" className="w-8 h-8 flex items-center justify-center text-xs font-bold bg-red-50 border-red-200">
-                              {payer.rank}
-                            </Badge>
-                            <div>
-                              <p className="font-medium text-sm">{payer.contactName}</p>
-                              <p className="text-xs text-slate-500">{payer.paidCount} invoices paid</p>
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <p className="font-semibold text-red-600">{payer.avgDaysToPay} days</p>
-                            <p className="text-xs text-slate-500">{formatCurrency(payer.totalPaid)}</p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Top Outstanding Value */}
-            <div className="card-apple p-4 sm:p-6" data-testid="card-top-outstanding">
-              <h3 className="text-lg sm:text-xl font-bold mb-4">Top Outstanding Value</h3>
-              
-              {leaderboardsLoading ? (
-                <div className="h-64 flex items-center justify-center">
-                  <div className="text-slate-400">Loading...</div>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {leaderboards?.topOutstanding.map((customer) => (
-                    <div 
-                      key={customer.contactId}
-                      className="flex items-center justify-between p-3 rounded-lg hover:bg-slate-50 cursor-pointer"
-                      onClick={() => setLocation(`/contacts/${customer.contactId}`)}
-                    >
-                      <div className="flex items-center gap-3">
-                        <Badge 
-                          variant="outline" 
-                          className={`w-8 h-8 flex items-center justify-center text-xs font-bold ${
-                            customer.rank <= 3 ? 'bg-[#E8A23B]/10 border-[#E8A23B] text-[#E8A23B]' : ''
-                          }`}
-                        >
-                          {customer.rank}
-                        </Badge>
-                        <div>
-                          <p className="font-medium text-sm">{customer.contactName}</p>
-                          <p className="text-xs text-slate-500">
-                            {customer.overdueCount} overdue invoice{customer.overdueCount !== 1 ? 's' : ''}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-semibold text-[#E8A23B]">{formatCurrency(customer.outstanding)}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Action Items */}
-          <div className="card-apple p-4 sm:p-6" data-testid="card-actions">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg sm:text-xl font-bold">Priority Actions</h3>
-              <Button 
-                variant="ghost" 
-                size="sm"
-                onClick={() => setLocation('/action-centre')}
-                className="text-[#17B6C3] hover:text-[#1396A1]"
-                data-testid="button-view-all-actions"
-              >
-                View All
-                <ChevronRight className="ml-1 h-4 w-4" />
-              </Button>
-            </div>
-
-            <div className="space-y-3">
-              {/* Overdue Invoices Action */}
-              {overdueCount > 0 && (
-                <div 
-                  className="card-apple-hover p-4 cursor-pointer"
-                  onClick={() => setLocation('/action-centre')}
-                  data-testid="action-overdue-invoices"
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-[#E8A23B]/10 rounded-xl">
-                        <AlertTriangle className="h-5 w-5 text-[#E8A23B]" />
-                      </div>
-                      <div>
-                        <h4 className="font-semibold text-slate-900">
-                          {overdueCount} Overdue Invoices
-                        </h4>
-                        <p className="text-sm text-slate-600">Require immediate attention</p>
-                      </div>
-                    </div>
-                    <ChevronRight className="h-5 w-5 text-slate-400" />
-                  </div>
-                </div>
-              )}
-
-              {/* Low Collection Rate Action */}
-              {collectionRate < 75 && (
-                <div 
-                  className="card-apple-hover p-4 cursor-pointer"
-                  onClick={() => setLocation('/settings')}
-                  data-testid="action-collection-rate"
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-[#C75C5C]/10 rounded-xl">
-                        <Target className="h-5 w-5 text-[#C75C5C]" />
-                      </div>
-                      <div>
-                        <h4 className="font-semibold text-slate-900">
-                          Low Collection Rate
-                        </h4>
-                        <p className="text-sm text-slate-600">Review playbook settings</p>
-                      </div>
-                    </div>
-                    <ChevronRight className="h-5 w-5 text-slate-400" />
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
         </div>
       </main>
 
