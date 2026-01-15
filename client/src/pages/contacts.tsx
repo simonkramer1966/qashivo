@@ -109,7 +109,7 @@ export default function Customers() {
       <main className="flex-1 flex flex-col min-h-0 main-with-bottom-nav">
         <Header 
           title="Customers" 
-          subtitle="Debtor overview and payment behaviour"
+          subtitle="Qashivo manages collections automatically. Review is only needed when something is flagged."
         />
         
         <div className="flex-1 flex flex-col min-h-0 overflow-y-auto">
