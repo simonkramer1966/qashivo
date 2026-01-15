@@ -161,7 +161,7 @@ export default function CashFlow() {
               </div>
               
               {/* Main net cash chart */}
-              <div className="flex-1 min-h-[220px] max-h-[380px] relative">
+              <div className="flex-1 min-h-[200px] relative">
                 <p className="absolute top-2 right-4 text-[10px] text-slate-400 z-10">
                   Shaded = confidence range
                 </p>
