@@ -212,8 +212,8 @@ function buildPlanSummary(existingActions: any[], tenant: any): DailyPlanRespons
       }];
     }
     
-    // Total outstanding from metadata amount or invoice amount
-    const totalOutstanding = parseFloat(action.metadata?.amount || action.invoice?.amount || '0');
+    // Total outstanding from metadata (all unpaid invoices for contact, not just overdue)
+    const totalOutstanding = parseFloat(action.metadata?.totalOutstanding || action.metadata?.amount || action.invoice?.amount || '0');
     
     return {
       id: action.id,
@@ -365,9 +365,22 @@ async function generateDailyPlanWithCharlie(
       continue;
     }
     
-    // Calculate consolidated amounts from all invoices for this contact
+    // Calculate consolidated amounts from all OVERDUE invoices for this contact (amount being chased)
     const totalAmount = contactDecisions.reduce((sum, d) => sum + d.invoice.amount, 0);
     const invoiceCount = contactDecisions.length;
+    
+    // Query total outstanding for ALL unpaid invoices for this contact (not just overdue)
+    const allUnpaidInvoices = await db.query.invoices.findMany({
+      where: and(
+        eq(invoices.contactId, contactId),
+        eq(invoices.tenantId, tenantId),
+        sql`${invoices.status} NOT IN ('paid', 'voided', 'deleted')`
+      ),
+    });
+    const contactTotalOutstanding = allUnpaidInvoices.reduce(
+      (sum, inv) => sum + parseFloat(inv.amount?.toString() || '0'), 
+      0
+    );
     const maxDaysOverdue = Math.max(...contactDecisions.map(d => d.invoice.daysOverdue));
     
     // Find the oldest due date (earliest date = most overdue)
@@ -438,6 +451,7 @@ async function generateDailyPlanWithCharlie(
       metadata: {
         daysOverdue: maxDaysOverdue,
         amount: totalAmount.toString(),
+        totalOutstanding: contactTotalOutstanding.toString(),
         priority,
         generatedBy: 'charlie_decision_engine',
         charlieState: primaryDecision.charlieState,
@@ -491,7 +505,7 @@ async function generateDailyPlanWithCharlie(
       priority,
       invoiceCount,
       invoices: invoicesSummary,
-      totalOutstanding: totalAmount,
+      totalOutstanding: contactTotalOutstanding,
     });
     
     channelCounts[limitChannel]++;
