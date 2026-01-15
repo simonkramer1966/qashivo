@@ -6,18 +6,9 @@ import { apiRequest } from "@/lib/queryClient";
 import { useState, useEffect, useMemo } from "react";
 import { useSplash } from "@/contexts/SplashContext";
 import { 
-  BarChart3, 
-  FileText, 
-  Users, 
-  Bot, 
-  BarChart, 
-  Settings, 
   LogOut,
-  TrendingUp,
   User,
   Building2,
-  ExternalLink,
-  Activity,
   Menu,
   ChevronDown,
   Check,
@@ -27,15 +18,17 @@ import {
   X,
   Gauge,
   Target,
-  Phone,
-  CreditCard,
-  BookOpen,
-  Calculator,
-  UserPlus,
+  Users,
+  FileText,
+  TrendingUp,
   Wallet,
-  Brain,
+  Bot,
+  Workflow,
+  Settings,
   Shield,
-  Workflow
+  CreditCard,
+  Calculator,
+  BookOpen
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -60,36 +53,51 @@ import nexusLogo from "@assets/Main Nexus Logo copy_1756923544828.png";
 import UserProfileDialog from "./UserProfileDialog";
 import DemoModeToggle from "./DemoModeToggle";
 
-const navigationItems = [
-  // Section 1: Primary (Daily Usage)
-  { name: "Cashboard", href: "/", icon: Gauge },
-  { name: "Action Centre", href: "/action-centre", icon: Target },
-  { name: "Customers", href: "/contacts", icon: Users },
-  { name: "Invoices", href: "/invoices", icon: FileText },
-  { name: "divider", href: "#", icon: null },
-  
-  // Section 2: Secondary (Strategic)
-  { name: "Cash Flow", href: "/cash-flow", icon: TrendingUp },
-  { name: "Financing", href: "/financing", icon: Wallet },
-  { name: "divider", href: "#", icon: null },
-  
-  // Section 3: Tertiary (Settings)
-  { name: "Automation", href: "/automation", icon: Bot },
-  { name: "Workflows", href: "/workflows", icon: Workflow },
-  { name: "Settings", href: "/settings", icon: Settings },
+// Navigation structure with 3 sections: ACTION, REFERENCE, SYSTEM
+// Icons only for ACTION items (Cashboard + Action Centre)
+const navigationSections = [
+  {
+    label: "ACTION",
+    items: [
+      { name: "Cashboard", href: "/", icon: Gauge },
+      { name: "Action Centre", href: "/action-centre", icon: Target },
+    ]
+  },
+  {
+    label: "REFERENCE",
+    items: [
+      { name: "Customers", href: "/contacts", icon: null },
+      { name: "Invoices", href: "/invoices", icon: null },
+      { name: "Cash Flow", href: "/cash-flow", icon: null },
+    ]
+  },
+  {
+    label: "SYSTEM",
+    items: [
+      { name: "Financing", href: "/financing", icon: null },
+      { name: "Automation", href: "/automation", icon: null },
+      { name: "Workflows", href: "/workflows", icon: null },
+      { name: "Settings", href: "/settings", icon: null },
+    ]
+  }
 ];
 
 // Partner-specific sidebar navigation (for accounting firms managing multiple clients)
-const partnerNavigationItems = [
-  { name: "My Clients", href: "/partner", icon: Building2 },
-  { name: "divider", href: "#", icon: null },
-  { name: "Team & Users", href: "/partner/team", icon: Users },
-  { name: "Settings", href: "/partner/settings", icon: Settings },
+const partnerNavigationSections = [
+  {
+    label: "CLIENTS",
+    items: [
+      { name: "My Clients", href: "/partner", icon: Building2 },
+    ]
+  },
+  {
+    label: "MANAGE",
+    items: [
+      { name: "Team & Users", href: "/partner/team", icon: null },
+      { name: "Settings", href: "/partner/settings", icon: null },
+    ]
+  }
 ];
-
-
-// Owner-only navigation items
-const ownerNavigationItems: typeof navigationItems = [];
 
 // Helper function to generate company initials
 const getCompanyInitials = (companyName: string): string => {
@@ -125,9 +133,80 @@ const saveRecentOrganizations = (orgIds: string[]) => {
 const addToRecentOrganizations = (orgId: string) => {
   const recent = getRecentOrganizations();
   const filtered = recent.filter(id => id !== orgId);
-  const updated = [orgId, ...filtered].slice(0, 5); // Keep only last 5
+  const updated = [orgId, ...filtered].slice(0, 5);
   saveRecentOrganizations(updated);
 };
+
+// NavSection component for consistent section styling
+function NavSection({ 
+  label, 
+  children 
+}: { 
+  label: string; 
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="mb-6">
+      <p className="text-[11px] uppercase tracking-wider text-slate-400 font-medium mb-2 px-3">
+        {label}
+      </p>
+      <ul className="space-y-0.5">
+        {children}
+      </ul>
+    </div>
+  );
+}
+
+// NavItem component for consistent item styling
+function NavItem({ 
+  name, 
+  href, 
+  icon: Icon, 
+  isActive, 
+  onClick,
+  isCollapsed 
+}: { 
+  name: string;
+  href: string;
+  icon: any;
+  isActive: boolean;
+  onClick: () => void;
+  isCollapsed: boolean;
+}) {
+  // Get first letter for collapsed state when no icon
+  const initial = name.charAt(0).toUpperCase();
+  
+  return (
+    <li>
+      <button
+        onClick={onClick}
+        className={cn(
+          "w-full flex items-center text-[14px] transition-colors duration-150 relative",
+          isCollapsed ? "justify-center px-2 py-2" : "px-3 py-2",
+          isActive
+            ? "text-slate-900 font-medium"
+            : "text-slate-500 hover:text-slate-700 hover:bg-slate-50/50"
+        )}
+        data-testid={`nav-${name.toLowerCase().replace(/\s+/g, '-')}`}
+      >
+        {/* Active indicator: 2px teal left border */}
+        {isActive && (
+          <span className="absolute left-0 top-1 bottom-1 w-0.5 bg-[#17B6C3] rounded-full" />
+        )}
+        
+        {/* Show icon if available, otherwise show initial in collapsed mode */}
+        {Icon ? (
+          <Icon className={cn("w-4 h-4 flex-shrink-0", isCollapsed ? "" : "mr-3", isActive ? "text-[#17B6C3]" : "text-slate-400")} />
+        ) : isCollapsed ? (
+          <span className={cn("w-4 h-4 flex items-center justify-center text-[11px] font-medium", isActive ? "text-[#17B6C3]" : "text-slate-400")}>
+            {initial}
+          </span>
+        ) : null}
+        {!isCollapsed && <span>{name}</span>}
+      </button>
+    </li>
+  );
+}
 
 export default function NewSidebar() {
   const { user } = useAuth();
@@ -155,11 +234,11 @@ export default function NewSidebar() {
   }>({
     queryKey: ['/api/tenant'],
     enabled: !!user,
-    staleTime: 15 * 60 * 1000, // 15 minutes
-    gcTime: 30 * 60 * 1000, // 30 minutes
+    staleTime: 15 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
   });
 
-  // Fetch accessible tenants for organization dropdown (Enhanced for Partner-Client System)
+  // Fetch accessible tenants for organization dropdown
   const { data: accessibleTenants = [] } = useQuery<Array<{
     id: string;
     name: string;
@@ -177,8 +256,8 @@ export default function NewSidebar() {
   }>>({
     queryKey: ['/api/user/accessible-tenants'],
     enabled: !!user,
-    staleTime: 15 * 60 * 1000, // 15 minutes
-    gcTime: 30 * 60 * 1000, // 30 minutes
+    staleTime: 15 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
   });
 
   // Switch tenant mutation
@@ -188,113 +267,7 @@ export default function NewSidebar() {
       return response.json();
     },
     onSuccess: () => {
-      // Comprehensive query invalidation to ensure complete tenant isolation
-      
-      // Core tenant and user data
-      queryClient.invalidateQueries({ queryKey: ['/api/tenant'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/user/accessible-tenants'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
-      
-      // Dashboard core metrics and components
-      queryClient.invalidateQueries({ queryKey: ['/api/dashboard/metrics'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/dashboard/recent-activity'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/dashboard/top-debtors'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/dashboard/exceptions'] });
-      
-      // Analytics queries (including aging analysis)
-      queryClient.invalidateQueries({ predicate: (query) => {
-        const key = query.queryKey[0];
-        return typeof key === 'string' && key.startsWith('/api/analytics/');
-      }});
-      
-      // Action Centre queries
-      queryClient.invalidateQueries({ predicate: (query) => {
-        const key = query.queryKey[0];
-        return typeof key === 'string' && key.startsWith('/api/action-centre/');
-      }});
-      
-      // Sync and data management queries
-      queryClient.invalidateQueries({ predicate: (query) => {
-        const key = query.queryKey[0];
-        return typeof key === 'string' && key.startsWith('/api/sync/');
-      }});
-      
-      // Bills and financial queries (using both /api/bills and /api/bills/)
-      queryClient.invalidateQueries({ predicate: (query) => {
-        const key = query.queryKey[0];
-        return typeof key === 'string' && (key.startsWith('/api/bills') || key.startsWith('/api/bank-accounts'));
-      }});
-      
-      // Cashflow and forecasting queries
-      queryClient.invalidateQueries({ predicate: (query) => {
-        const key = query.queryKey[0];
-        return typeof key === 'string' && key.startsWith('/api/cashflow/');
-      }});
-      
-      // Customer risk and performance queries
-      queryClient.invalidateQueries({ predicate: (query) => {
-        const key = query.queryKey[0];
-        return typeof key === 'string' && (key.startsWith('/api/customer/') || key.includes('customer-risk'));
-      }});
-      
-      // Core business data
-      queryClient.invalidateQueries({ queryKey: ['/api/invoices'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/contacts'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/collections'] });
-      
-      // Business analytics and partner system
-      queryClient.invalidateQueries({ predicate: (query) => {
-        const key = query.queryKey[0];
-        return typeof key === 'string' && key.startsWith('/api/business/');
-      }});
-      
-      // ML and AI analytics
-      queryClient.invalidateQueries({ predicate: (query) => {
-        const key = query.queryKey[0];
-        return typeof key === 'string' && key.startsWith('/api/ml/');
-      }});
-      
-      // Collections and AI learning
-      queryClient.invalidateQueries({ predicate: (query) => {
-        const key = query.queryKey[0];
-        return typeof key === 'string' && (
-          key.startsWith('/api/collections/') ||
-          key.startsWith('/api/ai/')
-        );
-      }});
-      
-      // Voice and call data
-      queryClient.invalidateQueries({ predicate: (query) => {
-        const key = query.queryKey[0];
-        return typeof key === 'string' && key.startsWith('/api/voice/');
-      }});
-      
-      // Integration-specific data
-      queryClient.invalidateQueries({ predicate: (query) => {
-        const key = query.queryKey[0];
-        return typeof key === 'string' && (
-          key.startsWith('/api/xero/') ||
-          key.startsWith('/api/quickbooks/') ||
-          key.startsWith('/api/sage/') ||
-          key.startsWith('/api/retell/')
-        );
-      }});
-      
-      // Settings and configuration
-      queryClient.invalidateQueries({ predicate: (query) => {
-        const key = query.queryKey[0];
-        return typeof key === 'string' && (
-          key.startsWith('/api/accounting/') ||
-          key.startsWith('/api/subscription/') ||
-          key.startsWith('/api/rbac/')
-        );
-      }});
-
-      // COMPREHENSIVE FIX: Clear all cached data to force complete refresh
-      console.log('🔄 Comprehensive cache clear - removing ALL queries for tenant switch');
       queryClient.clear();
-      
-      // Hard page refresh to ensure clean slate for new tenant
       window.location.reload();
     },
   });
@@ -308,19 +281,12 @@ export default function NewSidebar() {
       return await apiRequest("POST", "/api/logout", {});
     },
     onSuccess: () => {
-      // Clear all React Query cache
       queryClient.clear();
-      
-      // Clear any local/session storage if needed
       localStorage.clear();
       sessionStorage.clear();
-      
-      // Navigate to login
       setLocation("/login");
     },
-    onError: (error: any) => {
-      console.error('Logout error:', error);
-      // Even if logout fails, clear cache and redirect
+    onError: () => {
       queryClient.clear();
       localStorage.clear();
       sessionStorage.clear();
@@ -336,56 +302,61 @@ export default function NewSidebar() {
     if (href === "/") {
       return location === "/";
     }
-    // Exact match or starts with the href followed by a slash or query parameter
     return location === href || location.startsWith(href + "/") || location.startsWith(href + "?");
   };
 
-  // Get all navigation items based on current context (Route-Based Sidebar Navigation)
-  // Uses wouter's reactive location to properly detect route changes within the SPA
-  const currentNavigationItems = useMemo(() => {
-    // For business dashboard, show business management items
+  // Get navigation sections based on current context
+  const currentNavigationSections = useMemo(() => {
+    // Business dashboard
     if (location === '/business-dashboard' || location.startsWith('/business-dashboard')) {
       return [
-        { name: "Dashboard", href: "/business-dashboard", icon: Gauge },
-        { name: "Clients", href: "/business-dashboard/clients", icon: Users },
-        { name: "Partners", href: "/business-dashboard/partners", icon: Building2 },
-        { name: "Prices & Plans", href: "/business-dashboard/pricing", icon: CreditCard },
-        { name: "Payment Processing", href: "/business-dashboard/payments", icon: Calculator },
-        { name: "Accounting", href: "/business-dashboard/accounting", icon: BookOpen }
+        {
+          label: "DASHBOARD",
+          items: [
+            { name: "Dashboard", href: "/business-dashboard", icon: Gauge },
+          ]
+        },
+        {
+          label: "MANAGE",
+          items: [
+            { name: "Clients", href: "/business-dashboard/clients", icon: null },
+            { name: "Partners", href: "/business-dashboard/partners", icon: null },
+            { name: "Prices & Plans", href: "/business-dashboard/pricing", icon: null },
+            { name: "Payment Processing", href: "/business-dashboard/payments", icon: null },
+            { name: "Accounting", href: "/business-dashboard/accounting", icon: null }
+          ]
+        }
       ];
     }
     
-    // Platform admin page gets minimal navigation
+    // Platform admin
     if (location === '/qashivo-admin' || location.startsWith('/qashivo-admin')) {
       return [
-        { name: "Platform Admin", href: "/qashivo-admin", icon: Shield },
+        {
+          label: "ADMIN",
+          items: [
+            { name: "Platform Admin", href: "/qashivo-admin", icon: Shield },
+          ]
+        }
       ];
     }
     
-    // Partner portal pages (My Qashivo) show partner management sidebar
+    // Partner portal
     if (location === '/partner' || location.startsWith('/partner/')) {
-      return partnerNavigationItems;
+      return partnerNavigationSections;
     }
     
-    // Default: Regular Qashivo operational sidebar (for all users working in tenant context)
-    let allItems = [...navigationItems];
-    
-    // Add owner-only items if user is an owner
-    if ((user as any)?.role === "owner") {
-      allItems = [...allItems, ...ownerNavigationItems];
-    }
-    
-    return allItems;
-  }, [location, user]);
+    // Default: Regular Qashivo operational sidebar
+    return navigationSections;
+  }, [location]);
 
-  // Enhanced logic for partner-client system: only partners can switch organizations
-  // Owners and non-partners (collectors, managers, regular users) only see their single tenant
+  // Partner can switch organizations
   const canSwitchOrganizations = (
     (user as any)?.role === "partner" && 
     accessibleTenants.length > 0
   );
   
-  // Separate tenants by access type for better UX
+  // Separate tenants by type
   const tenantsByType = useMemo(() => {
     const systemTenants = accessibleTenants.filter(t => t.accessType === 'system');
     const ownedTenants = accessibleTenants.filter(t => t.accessType === 'owner');
@@ -398,24 +369,20 @@ export default function NewSidebar() {
     };
   }, [accessibleTenants]);
 
-  // Computed properties for organization filtering
+  // Organization filtering
   const organizationsToShow = useMemo(() => {
     if (orgSearchQuery.trim()) {
-      // Show search results
       return accessibleTenants.filter(org => {
         const companyName = org.settings?.companyName || org.name;
         return companyName.toLowerCase().includes(orgSearchQuery.toLowerCase());
       });
     } else {
-      // Show recent organizations (last 5 selected)
       const recentOrgs = recentOrgIds
         .map(id => accessibleTenants.find(org => org.id === id))
         .filter(Boolean) as typeof accessibleTenants;
       
-      // If we have fewer recent orgs than available, fill with remaining ones
       if (recentOrgs.length < 5) {
         const remainingOrgs = accessibleTenants.filter(org => !recentOrgIds.includes(org.id));
-        // Sort remaining orgs alphabetically by company name
         const sortedRemainingOrgs = remainingOrgs.sort((a, b) => {
           const nameA = a.settings?.companyName || a.name;
           const nameB = b.settings?.companyName || b.name;
@@ -428,437 +395,274 @@ export default function NewSidebar() {
     }
   }, [accessibleTenants, recentOrgIds, orgSearchQuery]);
 
-  // Handle organization selection with recent tracking
   const handleOrganizationSelect = (orgId: string) => {
     const isCurrentOrg = orgId === tenant?.id;
     
     if (!isCurrentOrg) {
-      // Add to recent selections before switching
       addToRecentOrganizations(orgId);
       setRecentOrgIds(getRecentOrganizations());
-      
-      // Switch tenant
       switchTenantMutation.mutate(orgId);
     }
     
-    // Clear search query
     setOrgSearchQuery("");
   };
 
   return (
     <>
     <aside className={cn(
-      "hidden lg:flex glass-card-strong border-0 border-r border-white/30 flex-col h-full transition-all duration-300 rounded-none",
-      isCollapsed ? "w-16" : "w-64"
+      "hidden lg:flex bg-white border-r border-slate-100 flex-col h-full transition-all duration-300",
+      isCollapsed ? "w-16" : "w-56"
     )}>
-      {/* Header */}
+      {/* Header - Simplified */}
       <div className={cn(
-        "flex items-center justify-between p-4",
-        isCollapsed ? "flex-col space-y-2" : "space-x-3"
+        "flex items-center p-4",
+        isCollapsed ? "flex-col space-y-2 justify-center" : "justify-between"
       )}>
         <button
           onClick={triggerSplash}
           className={cn(
             "flex items-center hover:opacity-80 transition-opacity cursor-pointer",
-            isCollapsed ? "flex-col space-y-2" : "space-x-3"
+            isCollapsed ? "flex-col" : "space-x-2"
           )}
           title="Click to lock screen"
           data-testid="button-logo-splash"
         >
-          <div className="w-10 h-10 rounded-lg flex items-center justify-center">
+          <div className="w-8 h-8 flex items-center justify-center">
             <img src={nexusLogo} alt="Qashivo" className="w-full h-full object-contain" />
           </div>
           {!isCollapsed && (
-            <div className="text-left">
-              <h1 className="text-xl font-semibold text-gray-900">
-                Qashivo
-              </h1>
-              <p className="text-sm text-gray-500">
-                Cashflow Simplified
-              </p>
-            </div>
+            <span className="text-[15px] font-semibold text-slate-900">Qashivo</span>
           )}
         </button>
         <Button
           variant="ghost"
           size="sm"
           onClick={() => setIsCollapsed(!isCollapsed)}
-          className="h-8 w-8 p-0"
+          className="h-7 w-7 p-0 text-slate-400 hover:text-slate-600 hover:bg-slate-50"
           data-testid="button-toggle-sidebar"
         >
           <Menu className="h-4 w-4" />
         </Button>
       </div>
 
-      {/* Organization Dropdown - Visible for everyone, switching only for partners */}
+      {/* Organization Dropdown - Simplified styling */}
       {!isCollapsed && location !== '/business-dashboard' && (
-        <div className="px-4 pb-4 mt-2.5">
+        <div className="px-3 pb-4">
           <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="outline"
-                  className="w-full justify-between px-4 py-3 glass-card-light hover:glass-card-strong border-gray-300 transition-all duration-200"
-                  disabled={switchTenantMutation.isPending}
-                  data-testid="button-organization-dropdown"
-                >
-                  <div className="font-medium text-sm">
-                    {switchTenantMutation.isPending 
-                      ? "Switching..." 
-                      : (tenant?.settings?.companyName || tenant?.name || "Loading...")
-                    }
-                  </div>
-                  {switchTenantMutation.isPending ? (
-                    <RefreshCw className="h-4 w-4 text-gray-400 animate-spin" />
-                  ) : (
-                    <ChevronDown className="h-4 w-4 text-gray-400" />
-                  )}
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-56 glass-card-strong border-white/30 overflow-visible" align="start" side="bottom">
-                {/* Change Organisation - Submenu (only for partners) */}
-                {canSwitchOrganizations && (
-                  <DropdownMenuSub>
-                    <DropdownMenuSubTrigger className="pl-7 pr-3 py-3 text-[#17B6C3]" data-testid="menu-item-change-organization">
-                      <div className="font-medium text-sm text-[#17B6C3]">Change organisation</div>
-                    </DropdownMenuSubTrigger>
-                    <DropdownMenuSubContent className="w-64 bg-white border-gray-200 z-[60] shadow-lg border !opacity-100 !visible !block">
-                      {/* Search Bar */}
-                      <div className="relative p-2">
-                        <Search className="absolute left-5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-                        <Input
-                          placeholder="Search organisations"
-                          value={orgSearchQuery}
-                          onChange={(e) => setOrgSearchQuery(e.target.value)}
-                          className="pl-10 pr-10 h-8 text-sm bg-white border-gray-200"
-                          data-testid="input-organization-search"
-                        />
-                        {orgSearchQuery && (
-                          <button
-                            onClick={() => setOrgSearchQuery("")}
-                            className="absolute right-5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                            data-testid="button-clear-search"
-                          >
-                            <X className="h-4 w-4" />
-                          </button>
-                        )}
-                      </div>
-                      
-                      {/* Enhanced Organization List with Partner-Client Support */}
-                      <div className="max-h-64 overflow-y-auto">
-                        {organizationsToShow.length > 0 ? (
-                          <div>
-                            {/* Show search results without categorization */}
-                            {orgSearchQuery.trim() ? (
-                              organizationsToShow.map((org) => {
-                                const companyName = org.settings?.companyName || org.name;
-                                const initials = getCompanyInitials(companyName);
-                                const isCurrentOrg = org.id === tenant?.id;
-                                const accessBadge = org.accessType === 'partner_client' ? 'Client' : 
-                                                   org.accessType === 'system' ? 'System' : 'Owned';
-                                
-                                return (
-                                  <DropdownMenuItem
-                                    key={org.id}
-                                    className={cn(
-                                      "pl-3 pr-3 py-3 mx-2",
-                                      switchTenantMutation.isPending 
-                                        ? "opacity-50 cursor-not-allowed" 
-                                        : "cursor-pointer hover:bg-gray-50"
-                                    )}
-                                    onClick={() => !switchTenantMutation.isPending && handleOrganizationSelect(org.id)}
-                                    data-testid={`dropdown-organization-${org.id}`}
-                                  >
-                                    <div className="flex items-center space-x-3 w-full">
-                                      <div className="w-8 h-8 rounded-lg bg-[#17B6C3] flex items-center justify-center text-white font-bold text-xs">
-                                        {initials}
-                                      </div>
-                                      <div className="flex-1 text-left">
-                                        <div className="font-medium text-sm text-gray-900">{companyName}</div>
-                                        <div className="text-xs text-gray-500">{accessBadge}</div>
-                                      </div>
-                                      {isCurrentOrg && (
-                                        <Check className="h-4 w-4 text-[#17B6C3] stroke-[3]" />
-                                      )}
-                                    </div>
-                                  </DropdownMenuItem>
-                                );
-                              })
-                            ) : (
-                              /* Categorized view for non-search */
-                              <div>
-                                {/* My Clients Section (for partners) */}
-                                {tenantsByType.partnerClients.length > 0 && (
-                                  <>
-                                    <div className="px-3 py-2 text-xs font-medium text-gray-500 bg-gray-50">
-                                      My Clients
-                                    </div>
-                                    {tenantsByType.partnerClients.map((org) => {
-                                      const companyName = org.settings?.companyName || org.name;
-                                      const initials = getCompanyInitials(companyName);
-                                      const isCurrentOrg = org.id === tenant?.id;
-                                      const lastAccessed = org.relationship?.lastAccessedAt ? 
-                                        new Date(org.relationship.lastAccessedAt).toLocaleDateString() : null;
-                                      
-                                      return (
-                                        <DropdownMenuItem
-                                          key={org.id}
-                                          className={cn(
-                                            "pl-3 pr-3 py-3 mx-2",
-                                            switchTenantMutation.isPending 
-                                              ? "opacity-50 cursor-not-allowed" 
-                                              : "cursor-pointer hover:bg-gray-50"
-                                          )}
-                                          onClick={() => !switchTenantMutation.isPending && handleOrganizationSelect(org.id)}
-                                          data-testid={`dropdown-client-${org.id}`}
-                                        >
-                                          <div className="flex items-center space-x-3 w-full">
-                                            <div className="w-8 h-8 rounded-lg bg-[#17B6C3] flex items-center justify-center text-white font-bold text-xs">
-                                              {initials}
-                                            </div>
-                                            <div className="flex-1 text-left">
-                                              <div className="font-medium text-sm text-gray-900">{companyName}</div>
-                                              <div className="text-xs text-gray-500">
-                                                {org.relationship?.accessLevel} access
-                                                {lastAccessed && ` • Last: ${lastAccessed}`}
-                                              </div>
-                                            </div>
-                                            {isCurrentOrg && (
-                                              <Check className="h-4 w-4 text-[#17B6C3] stroke-[3]" />
-                                            )}
-                                          </div>
-                                        </DropdownMenuItem>
-                                      );
-                                    })}
-                                    {(tenantsByType.system.length > 0 || tenantsByType.owned.length > 0) && (
-                                      <div className="mx-4 my-2 h-px bg-gray-200"></div>
-                                    )}
-                                  </>
+            <DropdownMenuTrigger asChild>
+              <button
+                className="w-full flex items-center justify-between px-3 py-2 text-left text-[13px] text-slate-600 hover:bg-slate-50 rounded transition-colors"
+                disabled={switchTenantMutation.isPending}
+                data-testid="button-organization-dropdown"
+              >
+                <span className="font-medium truncate">
+                  {switchTenantMutation.isPending 
+                    ? "Switching..." 
+                    : (tenant?.settings?.companyName || tenant?.name || "Loading...")
+                  }
+                </span>
+                {switchTenantMutation.isPending ? (
+                  <RefreshCw className="h-3.5 w-3.5 text-slate-400 animate-spin flex-shrink-0" />
+                ) : (
+                  <ChevronDown className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
+                )}
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-56 bg-white border-slate-200" align="start" side="bottom">
+              {/* Change Organisation - Submenu (only for partners) */}
+              {canSwitchOrganizations && (
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger className="text-[#17B6C3] text-sm" data-testid="menu-item-change-organization">
+                    Change organisation
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuSubContent className="w-64 bg-white border-slate-200">
+                    {/* Search Bar */}
+                    <div className="relative p-2">
+                      <Search className="absolute left-5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                      <Input
+                        placeholder="Search organisations"
+                        value={orgSearchQuery}
+                        onChange={(e) => setOrgSearchQuery(e.target.value)}
+                        className="pl-10 pr-10 h-8 text-sm bg-white border-slate-200"
+                        data-testid="input-organization-search"
+                      />
+                      {orgSearchQuery && (
+                        <button
+                          onClick={() => setOrgSearchQuery("")}
+                          className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                          data-testid="button-clear-search"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      )}
+                    </div>
+                    
+                    {/* Organization List */}
+                    <div className="max-h-64 overflow-y-auto">
+                      {organizationsToShow.length > 0 ? (
+                        organizationsToShow.map((org) => {
+                          const companyName = org.settings?.companyName || org.name;
+                          const initials = getCompanyInitials(companyName);
+                          const isCurrentOrg = org.id === tenant?.id;
+                          
+                          return (
+                            <DropdownMenuItem
+                              key={org.id}
+                              className={cn(
+                                "px-3 py-2.5",
+                                switchTenantMutation.isPending 
+                                  ? "opacity-50 cursor-not-allowed" 
+                                  : "cursor-pointer hover:bg-slate-50"
+                              )}
+                              onClick={() => !switchTenantMutation.isPending && handleOrganizationSelect(org.id)}
+                              data-testid={`dropdown-organization-${org.id}`}
+                            >
+                              <div className="flex items-center space-x-3 w-full">
+                                <div className="w-7 h-7 rounded bg-[#17B6C3] flex items-center justify-center text-white font-medium text-xs">
+                                  {initials}
+                                </div>
+                                <span className="flex-1 text-sm text-slate-700 truncate">{companyName}</span>
+                                {isCurrentOrg && (
+                                  <Check className="h-4 w-4 text-[#17B6C3]" />
                                 )}
-                                
-                                {/* System & Owned Organizations */}
-                                {[...tenantsByType.system, ...tenantsByType.owned].map((org) => {
-                                  const companyName = org.settings?.companyName || org.name;
-                                  const initials = getCompanyInitials(companyName);
-                                  const isCurrentOrg = org.id === tenant?.id;
-                                  
-                                  return (
-                                    <DropdownMenuItem
-                                      key={org.id}
-                                      className={cn(
-                                        "pl-3 pr-3 py-3 mx-2",
-                                        switchTenantMutation.isPending 
-                                          ? "opacity-50 cursor-not-allowed" 
-                                          : "cursor-pointer hover:bg-gray-50"
-                                      )}
-                                      onClick={() => !switchTenantMutation.isPending && handleOrganizationSelect(org.id)}
-                                      data-testid={`dropdown-organization-${org.id}`}
-                                    >
-                                      <div className="flex items-center space-x-3 w-full">
-                                        <div className="w-8 h-8 rounded-lg bg-[#17B6C3] flex items-center justify-center text-white font-bold text-xs">
-                                          {initials}
-                                        </div>
-                                        <div className="flex-1 text-left">
-                                          <div className="font-medium text-sm text-gray-900">{companyName}</div>
-                                        </div>
-                                        {isCurrentOrg && (
-                                          <Check className="h-4 w-4 text-[#17B6C3] stroke-[3]" />
-                                        )}
-                                      </div>
-                                    </DropdownMenuItem>
-                                  );
-                                })}
                               </div>
-                            )}
-                          </div>
-                        ) : (
-                          <div className="px-5 py-3 text-sm text-gray-500 text-center">
-                            {orgSearchQuery ? "No organizations found" : "No organizations available"}
-                          </div>
-                        )}
-                      </div>
-                      
-                      {/* Grey dividing line */}
-                      <div className="mx-4 my-2 h-px bg-gray-200"></div>
-                      
-                      {/* Add a new organisation - Only for partners */}
-                      {(user as any)?.role === "partner" && (
+                            </DropdownMenuItem>
+                          );
+                        })
+                      ) : (
+                        <div className="px-3 py-3 text-sm text-slate-500 text-center">
+                          {orgSearchQuery ? "No organizations found" : "No organizations available"}
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* Add new organisation (partners only) */}
+                    {(user as any)?.role === "partner" && (
+                      <>
+                        <DropdownMenuSeparator />
                         <DropdownMenuItem 
-                          className="pl-3 pr-3 py-3 cursor-pointer hover:bg-gray-50 mx-2"
-                          onClick={() => {
-                            // For now, just close the dropdown - placeholder for future functionality
-                            setOrgSearchQuery("");
-                          }}
+                          className="px-3 py-2.5 cursor-pointer"
+                          onClick={() => setOrgSearchQuery("")}
                           data-testid="dropdown-add-organization"
                         >
                           <div className="flex items-center space-x-3 w-full text-[#17B6C3]">
-                            <div className="w-8 h-8 rounded-lg border-2 border-dashed border-[#17B6C3] flex items-center justify-center">
-                              <Plus className="h-4 w-4 text-[#17B6C3]" />
+                            <div className="w-7 h-7 rounded border border-dashed border-[#17B6C3] flex items-center justify-center">
+                              <Plus className="h-3.5 w-3.5" />
                             </div>
-                            <div className="flex-1 text-left">
-                              <div className="font-medium text-sm text-[#17B6C3]">Add a new organisation</div>
-                            </div>
+                            <span className="text-sm font-medium">Add organisation</span>
                           </div>
                         </DropdownMenuItem>
-                      )}
+                      </>
+                    )}
                   </DropdownMenuSubContent>
                 </DropdownMenuSub>
-                )}
-                
-                {/* Core Menu Items */}
-                <DropdownMenuItem 
-                  className="pl-7 pr-3 py-3 cursor-pointer hover:bg-gray-50"
-                  onClick={() => setLocation('/settings')}
-                  data-testid="menu-item-settings"
-                >
-                  <div className="font-medium text-sm">Settings</div>
-                </DropdownMenuItem>
-                
-                <DropdownMenuSeparator />
-                
-                {/* Section Header */}
-                <div className="pl-7 pr-3 py-3 text-xs font-medium text-gray-500 bg-gray-50">
-                  Do more with Qashivo
-                </div>
-                
-                {/* Nexus-specific Items */}
-                <DropdownMenuItem 
-                  className="pl-7 pr-3 py-3 cursor-pointer hover:bg-gray-50"
-                  onClick={() => setLocation('/call-logs')}
-                  data-testid="menu-item-call-logs"
-                >
-                  <div className="font-medium text-sm">Call Logs</div>
-                </DropdownMenuItem>
-                
-                <DropdownMenuItem 
-                  className="pl-7 pr-3 py-3 cursor-pointer hover:bg-gray-50"
-                  onClick={() => setLocation('/payment-plans')}
-                  data-testid="menu-item-payment-plans"
-                >
-                  <div className="font-medium text-sm">Payment Plans</div>
-                </DropdownMenuItem>
-                
-                <DropdownMenuItem 
-                  className="pl-7 pr-3 py-3 cursor-pointer hover:bg-gray-50"
-                  onClick={() => setLocation('/activity-log')}
-                  data-testid="menu-item-activity-log"
-                >
-                  <div className="font-medium text-sm">Activity Log</div>
-                </DropdownMenuItem>
-                
-                <DropdownMenuItem 
-                  className="pl-7 pr-3 py-3 cursor-pointer hover:bg-gray-50"
-                  onClick={() => setLocation('/documentation')}
-                  data-testid="menu-item-documentation"
-                >
-                  <div className="font-medium text-sm">Documentation</div>
-                </DropdownMenuItem>
-                
-                <DropdownMenuItem 
-                  className="pl-7 pr-3 py-3 cursor-pointer hover:bg-gray-50"
-                  onClick={() => setLocation('/documentation-review')}
-                  data-testid="menu-item-documentation-review"
-                >
-                  <div className="font-medium text-sm">📝 Doc Review</div>
-                </DropdownMenuItem>
-                
-                <div className="mx-4 my-2 h-px bg-gray-200"></div>
-                
-                {/* Bottom Section - Partner Dashboard Link (only for partners) */}
-                {(user as any)?.role === "partner" && (
+              )}
+              
+              <DropdownMenuItem 
+                className="text-sm cursor-pointer"
+                onClick={() => setLocation('/settings')}
+                data-testid="menu-item-settings"
+              >
+                Settings
+              </DropdownMenuItem>
+              
+              <DropdownMenuSeparator />
+              
+              <div className="px-2 py-1.5 text-xs text-slate-400">
+                More
+              </div>
+              
+              <DropdownMenuItem 
+                className="text-sm cursor-pointer"
+                onClick={() => setLocation('/call-logs')}
+                data-testid="menu-item-call-logs"
+              >
+                Call Logs
+              </DropdownMenuItem>
+              
+              <DropdownMenuItem 
+                className="text-sm cursor-pointer"
+                onClick={() => setLocation('/payment-plans')}
+                data-testid="menu-item-payment-plans"
+              >
+                Payment Plans
+              </DropdownMenuItem>
+              
+              <DropdownMenuItem 
+                className="text-sm cursor-pointer"
+                onClick={() => setLocation('/activity-log')}
+                data-testid="menu-item-activity-log"
+              >
+                Activity Log
+              </DropdownMenuItem>
+              
+              {(user as any)?.role === "partner" && (
+                <>
+                  <DropdownMenuSeparator />
                   <DropdownMenuItem 
-                    className="pl-7 pr-3 py-3 cursor-pointer hover:bg-gray-50"
+                    className="text-sm cursor-pointer"
                     onClick={() => setLocation('/partner')}
                     data-testid="menu-item-my-qashivo"
                   >
-                    <div className="font-medium text-sm">My Qashivo</div>
+                    My Qashivo
                   </DropdownMenuItem>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
+                </>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       )}
       
-      {/* Navigation */}
-      <nav className={cn("flex-1 mt-2.5", isCollapsed ? "px-2" : "px-4")}>
+      {/* Navigation - Clean sections with typography hierarchy */}
+      <nav className={cn("flex-1 overflow-y-auto", isCollapsed ? "px-2" : "px-3")}>
         <TooltipProvider delayDuration={0}>
-          <ul className="space-y-1">
-            {currentNavigationItems.map((item, index) => {
-              // Render divider
-              if (item.name === "divider") {
-                return (
-                  <li key={`divider-${index}`} className="my-3">
-                    <div className="h-px bg-gray-300" />
-                  </li>
+          {currentNavigationSections.map((section) => (
+            <NavSection key={section.label} label={isCollapsed ? "" : section.label}>
+              {section.items.map((item) => {
+                const navContent = (
+                  <NavItem
+                    key={item.name}
+                    name={item.name}
+                    href={item.href}
+                    icon={item.icon}
+                    isActive={isActivePath(item.href)}
+                    onClick={() => handleNavigation(item.href)}
+                    isCollapsed={isCollapsed}
+                  />
                 );
-              }
-              
-              const isActive = isActivePath(item.href);
-              const Icon = item.icon;
-              
-              const navButton = (
-                <button
-                  onClick={() => handleNavigation(item.href)}
-                  className={cn(
-                    "w-full flex items-center rounded-lg text-sm font-medium transition-all duration-200 text-left",
-                    isCollapsed ? "justify-center px-2 py-3" : "space-x-3 px-4 py-3",
-                    isActive
-                      ? "bg-[#17B6C3] text-white shadow-lg"
-                      : "text-slate-600 hover:glass-card-light hover:text-slate-900 hover:shadow-md",
-                    (item as any).ownerOnly && !isCollapsed && "border-t border-gray-300 mt-2 pt-2"
-                  )}
-                  data-testid={`nav-${item.name.toLowerCase().replace(/\s+/g, '-')}`}
-                >
-                  {Icon && <Icon className="w-5 h-5" />}
-                  {!isCollapsed && (
-                    <>
-                      <span>{item.name}</span>
-                      {(item as any).ownerOnly && (
-                        <span className="ml-auto bg-amber-100 text-amber-800 px-2 py-1 rounded text-xs font-medium">
-                          Owner
-                        </span>
-                      )}
-                    </>
-                  )}
-                </button>
-              );
-              
-              return (
-                <li key={item.name}>
-                  {isCollapsed ? (
-                    <Tooltip>
+                
+                if (isCollapsed) {
+                  return (
+                    <Tooltip key={item.name}>
                       <TooltipTrigger asChild>
-                        {navButton}
+                        <div>{navContent}</div>
                       </TooltipTrigger>
-                      <TooltipContent side="right" className="font-medium">
+                      <TooltipContent side="right" className="text-sm">
                         {item.name}
                       </TooltipContent>
                     </Tooltip>
-                  ) : (
-                    navButton
-                  )}
-                </li>
-              );
-            })}
-          </ul>
+                  );
+                }
+                
+                return navContent;
+              })}
+            </NavSection>
+          ))}
         </TooltipProvider>
       </nav>
 
-      {/* User Profile Section - Footer */}
+      {/* Footer - Simplified and quiet */}
       {!isCollapsed && (
-        <div className="border-t border-gray-200 p-4 mt-auto space-y-3">
+        <div className="mt-auto p-3 space-y-2">
           {/* Demo Mode Toggle */}
           <DemoModeToggle collapsed={false} />
           
-          {/* User Profile Dropdown */}
+          {/* User Profile - Minimal */}
           <DropdownMenu>
-            <DropdownMenuTrigger className="w-full flex items-center space-x-3 hover:bg-accent hover:text-accent-foreground rounded-lg px-3 py-2 transition-colors" data-testid="button-user-menu">
-              <Avatar className="h-10 w-10" data-testid="avatar-user">
-                <AvatarImage src={(user as any)?.profileImageUrl || ""} alt={(() => {
-                  const firstName = (user as any)?.firstName || "";
-                  const lastName = (user as any)?.lastName || "";
-                  return firstName && lastName ? `${firstName} ${lastName}` : (user as any)?.email || "";
-                })()} />
-                <AvatarFallback className="bg-[#17B6C3] text-white font-semibold">
+            <DropdownMenuTrigger className="w-full flex items-center space-x-2.5 hover:bg-slate-50 rounded px-2 py-2 transition-colors" data-testid="button-user-menu">
+              <Avatar className="h-7 w-7" data-testid="avatar-user">
+                <AvatarImage src={(user as any)?.profileImageUrl || ""} />
+                <AvatarFallback className="bg-slate-200 text-slate-600 text-xs font-medium">
                   {(() => {
                     const firstName = (user as any)?.firstName || "";
                     const lastName = (user as any)?.lastName || "";
@@ -872,8 +676,8 @@ export default function NewSidebar() {
                   })()}
                 </AvatarFallback>
               </Avatar>
-              <div className="flex-1 text-left">
-                <p className="text-sm font-medium text-foreground" data-testid="text-user-name">
+              <div className="flex-1 text-left min-w-0">
+                <p className="text-[13px] text-slate-700 truncate" data-testid="text-user-name">
                   {(() => {
                     const firstName = (user as any)?.firstName;
                     const lastName = (user as any)?.lastName;
@@ -886,42 +690,33 @@ export default function NewSidebar() {
                     return "User";
                   })()}
                 </p>
-                <p className="text-xs text-muted-foreground truncate" data-testid="text-user-email">
-                  {(user as any)?.email || ""}
-                </p>
               </div>
-              <ChevronDown className="h-4 w-4 text-gray-400" />
+              <ChevronDown className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56 bg-white border-gray-200">
-              <DropdownMenuItem onClick={() => setIsProfileDialogOpen(true)} className="cursor-pointer" data-testid="menu-item-profile">
+            <DropdownMenuContent align="end" className="w-48 bg-white border-slate-200">
+              <DropdownMenuItem onClick={() => setIsProfileDialogOpen(true)} className="text-sm cursor-pointer" data-testid="menu-item-profile">
                 <User className="mr-2 h-4 w-4" />
-                <span>Profile</span>
+                Profile
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleLogout} className="cursor-pointer" data-testid="menu-item-logout">
+              <DropdownMenuItem onClick={handleLogout} className="text-sm cursor-pointer" data-testid="menu-item-logout">
                 <LogOut className="mr-2 h-4 w-4" />
-                <span>Log out</span>
+                Log out
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
       )}
 
-      {/* Collapsed State - Show User Avatar Only */}
+      {/* Collapsed State Footer */}
       {isCollapsed && (
-        <div className="border-t border-gray-200 p-2 mt-auto space-y-2">
-          {/* Demo Mode Toggle - Collapsed */}
+        <div className="mt-auto p-2 space-y-1">
           <DemoModeToggle collapsed={true} />
           
-          {/* User Profile Dropdown - Collapsed */}
           <DropdownMenu>
-            <DropdownMenuTrigger className="w-full flex items-center justify-center hover:bg-accent rounded-lg p-2 transition-colors" data-testid="button-user-menu-collapsed">
-              <Avatar className="h-8 w-8" data-testid="avatar-user-collapsed">
-                <AvatarImage src={(user as any)?.profileImageUrl || ""} alt={(() => {
-                  const firstName = (user as any)?.firstName || "";
-                  const lastName = (user as any)?.lastName || "";
-                  return firstName && lastName ? `${firstName} ${lastName}` : (user as any)?.email || "";
-                })()} />
-                <AvatarFallback className="bg-[#17B6C3] text-white font-semibold text-xs">
+            <DropdownMenuTrigger className="w-full flex items-center justify-center hover:bg-slate-50 rounded p-2 transition-colors" data-testid="button-user-menu-collapsed">
+              <Avatar className="h-7 w-7" data-testid="avatar-user-collapsed">
+                <AvatarImage src={(user as any)?.profileImageUrl || ""} />
+                <AvatarFallback className="bg-slate-200 text-slate-600 text-xs font-medium">
                   {(() => {
                     const firstName = (user as any)?.firstName || "";
                     const lastName = (user as any)?.lastName || "";
@@ -936,26 +731,25 @@ export default function NewSidebar() {
                 </AvatarFallback>
               </Avatar>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56 bg-white border-gray-200">
-              <DropdownMenuItem onClick={() => setIsProfileDialogOpen(true)} className="cursor-pointer" data-testid="menu-item-profile">
+            <DropdownMenuContent align="end" className="w-48 bg-white border-slate-200">
+              <DropdownMenuItem onClick={() => setIsProfileDialogOpen(true)} className="text-sm cursor-pointer" data-testid="menu-item-profile">
                 <User className="mr-2 h-4 w-4" />
-                <span>Profile</span>
+                Profile
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleLogout} className="cursor-pointer" data-testid="menu-item-logout">
+              <DropdownMenuItem onClick={handleLogout} className="text-sm cursor-pointer" data-testid="menu-item-logout">
                 <LogOut className="mr-2 h-4 w-4" />
-                <span>Log out</span>
+                Log out
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
       )}
-
     </aside>
-
+    
+    {/* User Profile Dialog */}
     <UserProfileDialog 
       open={isProfileDialogOpen} 
       onOpenChange={setIsProfileDialogOpen}
-      onLogout={handleLogout}
     />
     </>
   );
