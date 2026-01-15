@@ -201,9 +201,6 @@ export function ActionDrawer({
 
             {/* 3. Amounts block */}
             <div className="border-t border-slate-50 pt-6">
-              <p className="text-[12px] font-medium text-slate-400 mb-3">
-                Amounts
-              </p>
               <div>
                 <p className="text-[12px] font-medium text-slate-500 mb-1">
                   Amount being chased
