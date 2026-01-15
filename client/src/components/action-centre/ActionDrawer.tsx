@@ -180,122 +180,116 @@ export function ActionDrawer({
         className="w-full sm:max-w-md p-0 flex flex-col bg-white border-l border-slate-100"
       >
         <ScrollArea className="flex-1">
-          <div className="px-6 py-8 space-y-8">
+          <div className="p-5 space-y-3">
             
             {/* 1. Header - Identity */}
-            <div>
-              <h2 className="text-[20px] font-semibold text-slate-900 leading-tight">
+            <div className="pb-2">
+              <h2 className="text-[18px] font-semibold text-slate-900 leading-tight">
                 {customer.companyName || customer.contactName}
               </h2>
               {customer.companyName && customer.contactName && (
-                <p className="text-[14px] text-slate-500 mt-1">
+                <p className="text-[13px] text-slate-500 mt-0.5">
                   {customer.contactName}
                 </p>
               )}
             </div>
 
             {/* 2. Reason for action */}
-            <div>
-              <h3 className="text-[12px] font-semibold text-slate-500 mb-2">
-                Reason for action
-              </h3>
-              <p className="text-[14px] text-slate-700 leading-relaxed">
+            <div className="border-t border-slate-100 pt-2">
+              <p className="text-[12px] text-slate-400 mb-1">Reason for action</p>
+              <p className="text-[13px] text-slate-700 leading-relaxed">
                 {getReasonForAction(customer)}
               </p>
             </div>
 
             {/* 3. Amounts block */}
-            <div className="border-t border-slate-50 pt-6">
-              <div>
-                <p className="text-[12px] font-medium text-slate-500 mb-1">
-                  Amount being chased
-                </p>
-                <p className="text-[18px] font-semibold text-slate-900 tabular-nums">
-                  {formatCurrency(amountBeingChased)}
-                  {showTotalDue && (
-                    <span className="text-[14px] font-normal text-slate-400 ml-2">
-                      of {formatCurrency(totalDue)} total due
-                    </span>
-                  )}
-                </p>
-              </div>
+            <div className="border-t border-slate-100 pt-2">
+              <p className="text-[12px] text-slate-400 mb-1">Amount being chased</p>
+              <p className="text-[17px] font-semibold text-slate-900 tabular-nums">
+                {formatCurrency(amountBeingChased)}
+                {showTotalDue && (
+                  <span className="text-[13px] font-normal text-slate-400 ml-2">
+                    of {formatCurrency(totalDue)} total due
+                  </span>
+                )}
+              </p>
             </div>
 
             {/* 4. Channel and Days */}
-            <div className="space-y-2">
+            <div className="border-t border-slate-100 pt-2 space-y-1">
               <div className="flex justify-between items-baseline">
-                <span className="text-[13px] text-slate-400">Channel</span>
-                <span className="text-[14px] text-slate-600">
+                <span className="text-[12px] text-slate-400">Channel</span>
+                <span className="text-[13px] text-slate-600">
                   {formatChannelLabel(customer.channel)}
                 </span>
               </div>
               {customer.daysOverdue > 0 && (
                 <div className="flex justify-between items-baseline">
-                  <span className="text-[13px] text-slate-400">Days overdue</span>
-                  <span className="text-[14px] text-slate-600 tabular-nums">
+                  <span className="text-[12px] text-slate-400">Days overdue</span>
+                  <span className="text-[13px] text-slate-600 tabular-nums">
                     {customer.daysOverdue}
                   </span>
                 </div>
               )}
             </div>
 
-            {/* 5. Recent contact history - collapsible */}
-            <Collapsible open={historyOpen} onOpenChange={setHistoryOpen}>
-              <CollapsibleTrigger className="flex items-center justify-between w-full group">
-                <h3 className="text-[12px] font-semibold text-slate-500">
-                  Recent contact history
-                </h3>
-                <ChevronDown 
-                  className={`h-4 w-4 text-slate-300 transition-transform ${historyOpen ? 'rotate-180' : ''}`} 
-                />
-              </CollapsibleTrigger>
-              <CollapsibleContent className="pt-3">
-                {historyQuery.isLoading ? (
-                  <p className="text-[13px] text-slate-400">Loading...</p>
-                ) : recentHistory.length === 0 ? (
-                  <p className="text-[13px] text-slate-400">No recent contact recorded.</p>
-                ) : (
-                  <div className="space-y-2">
-                    {recentHistory.map((entry) => (
-                      <p key={entry.id} className="text-[13px] text-slate-600">
-                        {formatChannelLabel(entry.channel)} · {entry.outcome || entry.status} · {formatSmartTime(entry.occurredAt)}
-                      </p>
-                    ))}
-                  </div>
-                )}
-              </CollapsibleContent>
-            </Collapsible>
-
-            {/* 6. Invoices being chased - only show if invoices sum matches amount being chased */}
-            {canShowInvoiceList && (
-              <Collapsible open={invoicesOpen} onOpenChange={setInvoicesOpen}>
-                <CollapsibleTrigger className="flex items-center justify-between w-full group">
-                  <h3 className="text-[12px] font-semibold text-slate-500">
-                    Invoices being chased
-                  </h3>
+            {/* 5. Recent contact history - disclosure row */}
+            <div className="border-t border-slate-100 pt-2">
+              <Collapsible open={historyOpen} onOpenChange={setHistoryOpen}>
+                <CollapsibleTrigger className="flex items-center justify-between w-full py-1 -mx-1 px-1 rounded hover:bg-slate-50 transition-colors">
+                  <span className="text-[12px] text-slate-400">Recent contact history</span>
                   <ChevronDown 
-                    className={`h-4 w-4 text-slate-300 transition-transform ${invoicesOpen ? 'rotate-180' : ''}`} 
+                    className={`h-3.5 w-3.5 text-slate-300 transition-transform ${historyOpen ? 'rotate-180' : ''}`} 
                   />
                 </CollapsibleTrigger>
-                <CollapsibleContent className="pt-3">
-                  <div className="space-y-1">
-                    {overdueInvoices.map((invoice: any) => {
-                      const daysOverdue = invoice.daysOverdue || 0;
-                      const invoiceDate = invoice.invoiceDate || invoice.dueDate;
-                      return (
-                        <div key={invoice.id} className="grid grid-cols-[72px_1fr_45px_85px] gap-2 text-[13px] text-slate-600">
-                          <span className="tabular-nums">
-                            {invoiceDate ? new Date(invoiceDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' }) : '—'}
-                          </span>
-                          <span className="truncate">{invoice.invoiceNumber}</span>
-                          <span className="tabular-nums text-slate-400 text-right">{daysOverdue}D</span>
-                          <span className="tabular-nums text-right">{formatCurrency(parseAmount(invoice.amount))}</span>
-                        </div>
-                      );
-                    })}
-                  </div>
+                <CollapsibleContent className="pt-2">
+                  {historyQuery.isLoading ? (
+                    <p className="text-[12px] text-slate-400">Loading...</p>
+                  ) : recentHistory.length === 0 ? (
+                    <p className="text-[12px] text-slate-400">No recent contact recorded.</p>
+                  ) : (
+                    <div className="space-y-1">
+                      {recentHistory.map((entry) => (
+                        <p key={entry.id} className="text-[12px] text-slate-600">
+                          {formatChannelLabel(entry.channel)} · {entry.outcome || entry.status} · {formatSmartTime(entry.occurredAt)}
+                        </p>
+                      ))}
+                    </div>
+                  )}
                 </CollapsibleContent>
               </Collapsible>
+            </div>
+
+            {/* 6. Invoices being chased - disclosure row */}
+            {canShowInvoiceList && (
+              <div className="border-t border-slate-100 pt-2">
+                <Collapsible open={invoicesOpen} onOpenChange={setInvoicesOpen}>
+                  <CollapsibleTrigger className="flex items-center justify-between w-full py-1 -mx-1 px-1 rounded hover:bg-slate-50 transition-colors">
+                    <span className="text-[12px] text-slate-400">Invoices being chased</span>
+                    <ChevronDown 
+                      className={`h-3.5 w-3.5 text-slate-300 transition-transform ${invoicesOpen ? 'rotate-180' : ''}`} 
+                    />
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="pt-2">
+                    <div className="space-y-0.5">
+                      {overdueInvoices.map((invoice: any) => {
+                        const daysOverdue = invoice.daysOverdue || 0;
+                        const invoiceDate = invoice.invoiceDate || invoice.dueDate;
+                        return (
+                          <div key={invoice.id} className="grid grid-cols-[72px_1fr_45px_85px] gap-2 text-[12px] text-slate-600">
+                            <span className="tabular-nums">
+                              {invoiceDate ? new Date(invoiceDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' }) : '—'}
+                            </span>
+                            <span className="truncate">{invoice.invoiceNumber}</span>
+                            <span className="tabular-nums text-slate-400 text-right">{daysOverdue}D</span>
+                            <span className="tabular-nums text-right">{formatCurrency(parseAmount(invoice.amount))}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
+              </div>
             )}
 
           </div>
