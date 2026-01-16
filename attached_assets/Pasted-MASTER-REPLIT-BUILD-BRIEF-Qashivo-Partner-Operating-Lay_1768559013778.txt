@@ -1,0 +1,538 @@
+MASTER REPLIT BUILD BRIEF
+Qashivo — Partner Operating Layer + SME Invite & Onboarding (MVP)
+
+You are building the Partner (Accounting Firm) operating layer for Qashivo, including:
+
+Partner / Practice portfolio view
+
+Credit controller filtered operational view
+
+Partner → SME invite and onboarding workflow
+
+Optional partner white-labelling (branding + emails)
+
+Exact UI and email copy (do not paraphrase)
+
+This must feel calm, professional, and trust-first, suitable for accountants introducing it directly to their clients.
+
+0) Core Product Principles (Non-Negotiable)
+
+Qashivo operates on supervised autonomy:
+
+The system recommends
+
+Humans approve
+
+Nothing executes automatically
+
+UX must reduce anxiety:
+
+White space
+
+Clear status
+
+Minimal CTAs
+
+This is portfolio control, not practice management
+
+Partners are operators, not just admins
+
+Language must be accountant-calm:
+
+No hype
+
+No urgency
+
+No “AI magic” language
+
+1) Roles & Access Model (RBAC)
+
+Implement these roles:
+
+PARTNER_ADMIN
+
+CREDIT_CONTROLLER
+
+SME_ADMIN
+
+Rules:
+
+Users belong to a PartnerFirm
+
+SME clients belong to exactly one PartnerFirm
+
+CREDIT_CONTROLLER can only see SME clients assigned to them
+
+PARTNER_ADMIN can:
+
+See all SME clients
+
+Invite SMEs
+
+Assign credit controllers
+
+Manage branding
+
+View contract metadata
+
+2) Data Model (Minimum Required Tables)
+PartnerFirm
+
+id
+
+name
+
+slug (unique, used in URLs /p/:slug)
+
+status
+
+createdAt
+
+PartnerBranding
+
+partnerFirmId
+
+brandName
+
+logoUrl
+
+primaryColor (hex)
+
+accentColor (hex)
+
+emailFromName
+
+emailReplyTo
+
+emailFooterText
+
+updatedAt
+
+PartnerUser
+
+userId
+
+partnerFirmId
+
+role (PARTNER_ADMIN | CREDIT_CONTROLLER)
+
+SMEClient
+
+id
+
+partnerFirmId
+
+name
+
+status (DRAFT | INVITED | ACCEPTED | CONNECTED | ACTIVE | PAUSED)
+
+primaryCreditControllerId
+
+createdAt
+
+SMEContact
+
+smeClientId
+
+name
+
+email
+
+phone
+
+isPrimaryCreditControlContact
+
+isEscalationContact
+
+source (XERO | QASHIVO)
+
+PartnerContract
+
+smeClientId
+
+contractStartDate
+
+contractEndDate
+
+pricingTier (PILOT | STANDARD | PRO | CUSTOM)
+
+billingMode (BILLED_TO_SME | BILLED_TO_PARTNER)
+
+PartnerContractFile
+
+partnerContractId
+
+type (SIGNED_CONTRACT | SIGNED_TCS)
+
+fileUrl
+
+uploadedAt
+
+InviteToken
+
+smeClientId
+
+partnerFirmId
+
+email
+
+tokenHash
+
+status (SENT | ACCEPTED | EXPIRED)
+
+expiresAt
+
+sentAt
+
+acceptedAt
+
+AuditLog
+
+actorUserId
+
+eventType
+
+targetId
+
+metadata
+
+createdAt
+
+3) Routing & White-Labelling
+
+All partner-facing routes live under:
+
+/p/:partnerSlug/...
+
+
+Branding rules:
+
+Load PartnerBranding by partnerSlug
+
+Apply:
+
+Logo in header
+
+Brand name in header
+
+Primary button color
+
+Keep rest of UI neutral
+
+Emails use partner branding automatically
+
+4) Partner Practice Dashboard
+
+Route: /p/:slug/practice
+
+Purpose:
+Answer “How is my portfolio doing?” in under 30 seconds.
+
+UI Sections
+
+Top KPIs (4 cards):
+
+Active clients
+
+Total outstanding
+
+Expected cash (30 days)
+
+Exceptions requiring judgement
+
+Workload table:
+
+Credit controller
+
+assigned clients
+
+Outstanding
+
+Exceptions
+
+Clients needing attention (top 10):
+
+Client name
+
+Outstanding
+
+Exceptions
+
+Assigned controller
+
+No charts. Numbers only. Calm layout.
+
+5) Partner Clients List (Portfolio View)
+
+Route: /p/:slug/clients
+
+Primary CTA: Invite client
+
+Table Columns
+
+Client name
+
+Status (pill)
+
+Outstanding
+
+Confidence split (High / Med / Low amounts)
+
+Exceptions
+
+Primary controller
+
+Contract end date
+
+Filters
+
+Status
+
+Credit controller
+
+Search
+
+Row click → Client Detail page.
+
+6) Credit Controller View
+
+Route: /p/:slug/my-clients
+
+Same table component as Partner Clients List, but:
+
+Auto-filtered to assigned clients
+
+No contract columns
+
+Purely operational
+
+7) Partner Client Detail Page
+
+Route: /p/:slug/clients/:smeClientId
+
+Tabs
+Overview
+
+KPIs
+
+Current status
+
+“What happens next” panel:
+
+INVITED → Waiting for acceptance
+
+ACCEPTED → Waiting for accounting connection
+
+CONNECTED → Generate first daily plan
+
+ACTIVE → Link to Action Centre
+
+Contacts
+
+List contacts
+
+Mark primary credit control contact
+
+Add/edit Qashivo contacts
+
+Contract
+
+Start / end dates
+
+Pricing tier
+
+Billing mode
+
+Upload signed contract + T&Cs
+
+Assignments
+
+Set primary credit controller
+
+Log assignment changes to audit log
+
+Activity
+
+Timeline of:
+
+Invite sent
+
+Invite accepted
+
+Accounting connected
+
+Assignments changed
+
+8) Partner → SME Invite Workflow
+8.1 Invite Creation (Partner Admin)
+
+From Clients page → Invite client
+
+Fields:
+
+Client name
+
+Primary contact name
+
+Primary contact email
+
+Assign credit controller
+
+On submit:
+
+Create SMEClient (status = INVITED)
+
+Create InviteToken (7-day expiry)
+
+Send invite email (copy below)
+
+Log audit event
+
+8.2 Invite Email (Exact Copy — Do Not Paraphrase)
+
+Subject:
+“{PartnerFirm.name} has invited you to Qashivo”
+
+Body:
+
+Hi {FirstName},
+
+{PartnerFirm.name} has invited you to use Qashivo, a credit control and cashflow visibility platform they use to support clients.
+
+Qashivo helps manage outstanding invoices in a structured, supervised way — capturing real customer responses (such as promises to pay or disputes) so cashflow expectations are clearer and chasing is more focused.
+
+Nothing happens automatically.
+All actions are reviewed and approved by your accountant or their credit control team before anything is sent.
+
+Once you accept:
+
+You’ll connect your accounting system (read-only receivables access)
+
+You’ll confirm who Qashivo should contact
+
+Your accountant will approve the first action plan
+
+Accept invitation
+
+You stay in control at all times. You can disconnect Qashivo whenever you wish.
+
+Introduced by {PartnerFirm.name}
+Powered by Qashivo
+
+9) Invite Acceptance Screen
+
+Route: /p/:slug/invite/:token
+
+Exact UI Copy
+
+Title:
+You’ve been invited to Qashivo
+
+Intro:
+{PartnerFirm.name} uses Qashivo to support clients with structured, supervised credit control.
+
+Consent checkboxes (required):
+
+☐ I confirm I am authorised to act for {SMEClient.name}
+
+☐ I understand no customer communications are sent without human approval
+
+☐ I understand I can disconnect Qashivo at any time
+
+Primary CTA:
+Accept invitation and continue
+
+10) SME Onboarding Wizard
+
+Route: /p/:slug/onboarding/:smeClientId
+
+Step 1 — Welcome
+
+Title: Let’s get things set up
+Text: This will only take a few minutes. Your accountant will review everything before Qashivo becomes active.
+
+Step 2 — Connect Accounting
+
+Text:
+
+Qashivo connects to read open invoices and payment status only.
+It does not store full ledgers or use accounting data for AI training.
+
+CTA: Connect to Xero (or mock connect)
+
+Step 3 — Confirm Contacts
+
+Text:
+
+These details are used for credit control communications.
+You can change them at any time.
+
+Fields:
+
+Primary credit control contact
+
+Optional escalation contact
+
+Completion Screen
+
+Title: You’re all set
+Text:
+
+Your accountant has been notified and will review the first action plan.
+
+Status pill: Connected – awaiting approval
+
+11) Language & Microcopy Rules (Global)
+
+Always say:
+
+“Actions” not “automations”
+
+“Review and approve” not “AI decides”
+
+“Expected cash” not “forecasted revenue”
+
+“Customer responses” not “AI interpretation”
+
+Never say:
+
+“AI-powered”
+
+“Collect faster”
+
+“Optimise collections”
+
+12) Explicitly Out of Scope (Do Not Build)
+
+SME self-serve signup
+
+Billing or invoicing automation
+
+Revenue share calculations
+
+Custom domains (use /p/:slug)
+
+Multi-partner SMEs
+
+13) Definition of Done
+
+The MVP is complete when:
+
+A partner can invite an SME
+
+SME accepts, consents, and connects accounting
+
+Partner sees SME status change clearly
+
+Credit controller sees only their clients
+
+Branding applies consistently to UI + email
+
+No customer communications execute automatically
+
+Final Instruction to Replit
+
+Treat this brief as production specification, not placeholder.
+Do not reword copy.
+Do not add extra features.
+Optimise for clarity, trust, and speed to demo.
