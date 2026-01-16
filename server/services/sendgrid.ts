@@ -26,6 +26,8 @@ export async function sendEmail(params: {
   subject: string;
   html: string;
   text?: string;
+  replyTo?: string;
+  headers?: Record<string, string>;
   invoiceId?: string;
   customerId?: string;
 }): Promise<{ success: boolean; messageId?: string; error?: string }> {
@@ -55,7 +57,9 @@ export async function sendEmail(params: {
       from: parseEmailAddress(params.from),
       subject: params.subject,
       htmlContent: params.html,
-      textContent: params.text
+      textContent: params.text,
+      replyTo: params.replyTo ? { email: params.replyTo } : undefined,
+      customHeaders: params.headers,
     };
 
     const result = await emailService.sendEmail(message);
