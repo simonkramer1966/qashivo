@@ -614,6 +614,7 @@ export const actions = pgTable("actions", {
   
   // Response tracking (for outbound communications)
   hasResponse: boolean("has_response").default(false),
+  emailReplyToken: varchar("email_reply_token"), // Token for routing inbound email replies
   
   // Experimentation tracking (A/B testing)
   experimentVariant: varchar("experiment_variant"), // STATIC, ADAPTIVE, etc.
@@ -708,6 +709,101 @@ export const inboundMessages = pgTable("inbound_messages", {
   index("idx_inbound_tenant").on(table.tenantId),
   index("idx_inbound_contact").on(table.contactId),
   index("idx_inbound_analyzed").on(table.intentAnalyzed),
+]);
+
+// Email Messages table - unified outbound/inbound email tracking with threading
+export const emailMessages = pgTable("email_messages", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  
+  // Direction and linking
+  direction: varchar("direction").notNull(), // OUTBOUND, INBOUND
+  channel: varchar("channel").notNull().default("EMAIL"),
+  actionId: varchar("action_id").references(() => actions.id),
+  contactId: varchar("contact_id").references(() => contacts.id),
+  invoiceId: varchar("invoice_id").references(() => invoices.id),
+  smeClientId: varchar("sme_client_id"),
+  partnerId: varchar("partner_id"),
+  
+  // Outbound fields
+  toEmail: varchar("to_email"),
+  toName: varchar("to_name"),
+  fromEmail: varchar("from_email"),
+  fromName: varchar("from_name"),
+  subject: varchar("subject"),
+  textBody: text("text_body"),
+  htmlBody: text("html_body"),
+  
+  // SendGrid metadata
+  sendgridMessageId: varchar("sendgrid_message_id"),
+  inReplyTo: varchar("in_reply_to"),
+  references: text("references"),
+  threadKey: varchar("thread_key"),
+  replyToken: varchar("reply_token"),
+  
+  // Inbound fields
+  inboundFromEmail: varchar("inbound_from_email"),
+  inboundFromName: varchar("inbound_from_name"),
+  inboundToEmail: varchar("inbound_to_email"),
+  inboundCc: jsonb("inbound_cc"),
+  inboundSubject: varchar("inbound_subject"),
+  inboundText: text("inbound_text"),
+  inboundHtml: text("inbound_html"),
+  inboundHeaders: jsonb("inbound_headers"),
+  inboundAttachmentsMeta: jsonb("inbound_attachments_meta"),
+  
+  // Status and timestamps
+  status: varchar("status").notNull().default("QUEUED"), // QUEUED, SENT, DELIVERED, BOUNCED, FAILED, RECEIVED, PARSED
+  error: text("error"),
+  receivedAt: timestamp("received_at"),
+  sentAt: timestamp("sent_at"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_email_messages_tenant").on(table.tenantId),
+  index("idx_email_messages_contact").on(table.contactId),
+  index("idx_email_messages_invoice").on(table.invoiceId),
+  index("idx_email_messages_action").on(table.actionId),
+  index("idx_email_messages_thread").on(table.threadKey),
+  index("idx_email_messages_direction").on(table.tenantId, table.direction),
+  index("idx_email_messages_reply_token").on(table.replyToken),
+]);
+
+// Detected Outcomes - structured outcome detection from inbound emails
+export const detectedOutcomes = pgTable("detected_outcomes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  emailMessageId: varchar("email_message_id").notNull().references(() => emailMessages.id),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  contactId: varchar("contact_id").references(() => contacts.id),
+  invoiceId: varchar("invoice_id").references(() => invoices.id),
+  
+  // Outcome classification
+  outcomeType: varchar("outcome_type").notNull(), // PROMISE_TO_PAY, REQUEST_MORE_TIME, PAYMENT_PLAN_REQUEST, DISPUTE, ALREADY_PAID, WRONG_CONTACT, UNKNOWN
+  
+  // Extracted data
+  promiseDate: timestamp("promise_date"),
+  amount: decimal("amount", { precision: 10, scale: 2 }),
+  notes: text("notes"),
+  
+  // Confidence and review
+  confidence: decimal("confidence", { precision: 3, scale: 2 }).notNull(), // 0.00 to 1.00
+  needsReview: boolean("needs_review").notNull().default(false),
+  reviewedBy: varchar("reviewed_by").references(() => users.id),
+  reviewedAt: timestamp("reviewed_at"),
+  
+  // Original vs confirmed values
+  originalOutcomeType: varchar("original_outcome_type"),
+  originalConfidence: decimal("original_confidence", { precision: 3, scale: 2 }),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_detected_outcomes_email").on(table.emailMessageId),
+  index("idx_detected_outcomes_tenant").on(table.tenantId),
+  index("idx_detected_outcomes_contact").on(table.contactId),
+  index("idx_detected_outcomes_invoice").on(table.invoiceId),
+  index("idx_detected_outcomes_needs_review").on(table.tenantId, table.needsReview),
 ]);
 
 // Contact Outcomes - unified log of all contact attempt outcomes
@@ -2437,6 +2533,18 @@ export const insertInboundMessageSchema = createInsertSchema(inboundMessages).om
   updatedAt: true,
 });
 
+export const insertEmailMessageSchema = createInsertSchema(emailMessages).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertDetectedOutcomeSchema = createInsertSchema(detectedOutcomes).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export const insertContactOutcomeSchema = createInsertSchema(contactOutcomes).omit({
   id: true,
   createdAt: true,
@@ -2671,7 +2779,11 @@ export type Action = typeof actions.$inferSelect;
 export type InsertMessageDraft = z.infer<typeof insertMessageDraftSchema>;
 export type MessageDraft = typeof messageDrafts.$inferSelect;
 export type InsertInboundMessage = z.infer<typeof insertInboundMessageSchema>;
-export type InboundMessage = typeof inboundMessages.$inferSelect;
+export type InboundMessageRecord = typeof inboundMessages.$inferSelect;
+export type InsertEmailMessage = z.infer<typeof insertEmailMessageSchema>;
+export type EmailMessageRecord = typeof emailMessages.$inferSelect;
+export type InsertDetectedOutcome = z.infer<typeof insertDetectedOutcomeSchema>;
+export type DetectedOutcome = typeof detectedOutcomes.$inferSelect;
 export type InsertContactOutcome = z.infer<typeof insertContactOutcomeSchema>;
 export type ContactOutcome = typeof contactOutcomes.$inferSelect;
 export type InsertPolicyDecision = z.infer<typeof insertPolicyDecisionSchema>;
