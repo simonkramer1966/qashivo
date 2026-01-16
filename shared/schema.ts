@@ -1447,6 +1447,116 @@ export const debtorPayments = pgTable("debtor_payments", {
   index("idx_debtor_payments_status").on(table.status),
 ]);
 
+// Customer communication preferences (separate from contacts for clean override pattern)
+export const customerPreferences = pgTable("customer_preferences", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  contactId: varchar("contact_id").notNull().references(() => contacts.id).unique(),
+  
+  // Trading name override (Qashivo-specific, not synced to Xero)
+  tradingName: varchar("trading_name"),
+  
+  // Channel opt-outs
+  emailEnabled: boolean("email_enabled").default(true),
+  smsEnabled: boolean("sms_enabled").default(true),
+  voiceEnabled: boolean("voice_enabled").default(true),
+  
+  // Best time to contact
+  bestContactWindowStart: varchar("best_contact_window_start"), // e.g. "09:00"
+  bestContactWindowEnd: varchar("best_contact_window_end"), // e.g. "17:00"
+  bestContactDays: jsonb("best_contact_days"), // e.g. ["monday", "tuesday", "wednesday", "thursday", "friday"]
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_customer_preferences_tenant").on(table.tenantId),
+  index("idx_customer_preferences_contact").on(table.contactId),
+]);
+
+// Customer contact roles (credit control contact, escalation contact, etc.)
+export const customerContactRoles = pgTable("customer_contact_roles", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  customerId: varchar("customer_id").notNull().references(() => contacts.id), // The customer this role belongs to
+  
+  // Role type
+  role: varchar("role").notNull(), // credit_control, escalation, other
+  isPrimary: boolean("is_primary").default(true),
+  
+  // Contact details
+  name: varchar("name"),
+  email: varchar("email"),
+  phone: varchar("phone"),
+  
+  // Source tracking (Xero vs Qashivo override)
+  nameSource: varchar("name_source").default("qashivo"), // xero, qashivo
+  emailSource: varchar("email_source").default("qashivo"),
+  phoneSource: varchar("phone_source").default("qashivo"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_customer_contact_roles_tenant").on(table.tenantId),
+  index("idx_customer_contact_roles_customer").on(table.customerId),
+  index("idx_customer_contact_roles_role").on(table.role),
+]);
+
+// Unified Timeline Events table for complete communication/activity history
+export const timelineEvents = pgTable("timeline_events", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  customerId: varchar("customer_id").notNull().references(() => contacts.id),
+  invoiceId: varchar("invoice_id").references(() => invoices.id),
+  
+  // Event timing
+  occurredAt: timestamp("occurred_at").notNull(),
+  
+  // Direction and channel
+  direction: varchar("direction").notNull(), // outbound, inbound, internal
+  channel: varchar("channel").notNull(), // email, sms, voice, note, system
+  
+  // Content
+  summary: text("summary").notNull(), // One-line description (required)
+  preview: text("preview"), // Short preview for tooltips (max 240 chars)
+  subject: varchar("subject"), // Email subject
+  body: text("body"), // Full message body/transcript/note content
+  
+  // Participants
+  participantsFrom: varchar("participants_from"),
+  participantsTo: jsonb("participants_to"), // string[]
+  
+  // Outcome detection
+  outcomeType: varchar("outcome_type"), // promise_to_pay, request_more_time, payment_plan, dispute, wrong_contact, paid_confirmed, refused, no_response, other
+  outcomeConfidence: decimal("outcome_confidence", { precision: 3, scale: 2 }), // 0.00 to 1.00
+  outcomeExtracted: jsonb("outcome_extracted"), // { promiseDate, amount, etc. }
+  outcomeRequiresReview: boolean("outcome_requires_review").default(false),
+  
+  // Delivery status
+  status: varchar("status"), // sent, delivered, failed, received, transcribed
+  
+  // Provider references
+  provider: varchar("provider"), // sendgrid, vonage, retell, stripe, xero
+  providerMessageId: varchar("provider_message_id"),
+  
+  // Created by
+  createdByType: varchar("created_by_type").notNull().default("system"), // system, user
+  createdByUserId: varchar("created_by_user_id").references(() => users.id),
+  createdByName: varchar("created_by_name"),
+  
+  // Link to existing action if applicable
+  actionId: varchar("action_id").references(() => actions.id),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_timeline_events_tenant").on(table.tenantId),
+  index("idx_timeline_events_customer").on(table.customerId),
+  index("idx_timeline_events_invoice").on(table.invoiceId),
+  index("idx_timeline_events_occurred").on(table.tenantId, table.customerId, table.occurredAt),
+  index("idx_timeline_events_channel").on(table.channel),
+  index("idx_timeline_events_outcome").on(table.outcomeType),
+  index("idx_timeline_events_review").on(table.outcomeRequiresReview),
+]);
+
 // Define relations
 export const usersRelations = relations(users, ({ one, many }) => ({
   tenant: one(tenants, {
