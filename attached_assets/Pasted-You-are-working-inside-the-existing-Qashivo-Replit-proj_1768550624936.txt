@@ -1,0 +1,368 @@
+You are working inside the existing Qashivo Replit project:
+
+- Frontend: client/ (React + Vite + TypeScript)
+- Backend: server/ (Express + TypeScript)
+- Shared: shared/ (Drizzle ORM schemas + shared types)
+- DB: Postgres (Neon) via Drizzle
+- Existing UI patterns: right-hand drawers, calm tables, sticky headers. Preserve and reuse these patterns.
+
+GOAL
+Implement the complete Customer Detail experience with the correct access pattern:
+1) Customer List row click opens a RIGHT-HAND DRAWER preview ONLY (no navigation)
+2) The preview drawer includes a single explicit “View customer” link/button which navigates to /customers/:customerId
+3) /customers/:customerId is a full Customer Detail page with: profile + role-based contacts, preferences + best contact time, outstanding invoices, payment details placeholder, and a reusable “Timeline” component (messages + notes + key system events) with progressive disclosure and its own item-detail drawer.
+
+NON-NEGOTIABLE DESIGN PRINCIPLES (ENFORCE)
+- Outcome-first, calm by default, progressive disclosure
+- Minimise the feeling of “work”: NO task lists, NO “next action”, NO “chase now”, NO CRM/inbox UI chrome
+- Trust through explainability: DO NOT show internal model plumbing (ci80/ci95, weights, rules)
+- Tufte/Few style: whitespace, typography hierarchy, hairline dividers, minimal colour, no heavy cards, no badge noise
+- Consistency: same table styles, sticky headers, drawers across the app
+
+========================================================
+1) CUSTOMER LIST → PREVIEW DRAWER (PREVIEW ONLY)
+========================================================
+
+Where the Customers list row click currently opens a right-hand drawer, KEEP that interaction and update the drawer to the new calm style and strict preview scope.
+
+Drawer content MUST be lightweight and in this order:
+
+A) Header (compact)
+- Customer name (primary)
+- Muted behaviour label (if available, else “Behaviour: —”)
+- Total outstanding (prominent but secondary to name)
+- Overdue amount (muted secondary)
+
+B) Key contact (single line)
+- “Credit control contact: Name · Email/Phone” if known, else “Credit control contact: —”
+
+C) Latest activity snapshot (NOT an inbox)
+- Show the most recent 1–3 timeline summaries (one-line each):
+  - subtle channel glyph + direction + summary + relative time
+  - no bodies, no long previews, no filters
+- Empty state: “No communication history yet.”
+
+D) Messaging status (quiet)
+- Only show meaningful opt-outs (e.g., “SMS paused”, “Voice disabled”) if present
+- NO toggles here, NO configuration
+
+E) Single explicit CTA (the only prominent interaction)
+- Add “View customer” link/button -> /customers/:customerId
+- Style it as a quiet text link or secondary button, placed bottom-right
+- Do NOT add any additional CTAs (no Edit, Send, Call, Chase, Add note) in the preview drawer
+
+Behavior rules:
+- Row click opens preview drawer (no route change)
+- “View customer” is the intentional threshold to go deep
+
+Backend support for preview drawer:
+- Add GET /api/customers/:customerId/preview
+Return:
+  - customer: id, name, behaviourLabel?, outstandingTotal, overdueTotal
+  - creditControlContact?: { name?, email?, phone? }
+  - messagingStatus?: { emailOptedOut?, smsOptedOut?, voiceOptedOut? }
+  - latestTimeline: up to 3 items with fields:
+    { id, occurredAt, channel, direction, summary, status? }
+
+========================================================
+2) ROUTING — FULL CUSTOMER DETAIL PAGE
+========================================================
+
+Add a route:
+- /customers/:customerId -> CustomerDetailPage
+
+The CustomerDetailPage MUST be a dedicated full page (not a giant drawer) and must follow calm vertical sections with hairline dividers and generous whitespace.
+
+PAGE HEADER (sticky)
+- Customer name (primary)
+- Muted behaviour label (optional placeholder if not available)
+- Total outstanding + Overdue amount (prominent but below name)
+- Quiet messaging status indicators (e.g., “SMS paused”, “Voice enabled”) if available
+- No primary action buttons in header
+
+Then render these vertical sections:
+
+--------------------------------------------------------
+SECTION 1: Customer Profile (Trust + Accuracy)
+--------------------------------------------------------
+
+Purpose: show authoritative Xero identity + allow Qashivo operational overrides without “CRM sprawl”.
+
+Show Xero read-only fields:
+- Legal name (from Xero if stored)
+- Xero reference/id (small muted)
+- Registered email/phone if available (read-only)
+
+Qashivo override fields (editable):
+- Trading name (editable)
+
+Contacts MUST be role-based (not list-first):
+- Credit control contact (role)
+  - Name, Email, Phone
+  - Source indicator per field: “Xero” or “Qashivo” (small muted)
+  - Edit action (quiet)
+- Escalation contact (role)
+  - Name, Email, Phone
+  - Source indicator
+  - Edit action (quiet)
+
+Allow additional contacts, but keep UI minimal:
+- “Other contacts” collapsed by default; expand to view/edit
+Rules:
+- One primary per role (credit control, escalation)
+- The UI must never feel like a CRM contact manager
+
+Backend:
+- GET /api/customers/:customerId returns:
+  - Xero customer core fields (as stored)
+  - Qashivo overrides
+  - contacts + role assignments + source flags
+
+--------------------------------------------------------
+SECTION 2: Communication Preferences & Best Time to Contact (Quiet Controls)
+--------------------------------------------------------
+
+Channel preferences (muted toggles):
+- Email enabled/disabled
+- SMS enabled/disabled
+- Voice enabled/disabled
+
+Best time to contact:
+- Contact window start/end (e.g. 09:00–12:00)
+- Optional days of week
+- Make this clearly feed scheduling (small helper text)
+
+Rules:
+- Controls are secondary and calm
+- No workflow/cadence configuration; no knobs/rules UI
+
+Backend:
+- PATCH /api/customers/:customerId/preferences (or include within a general update endpoint)
+Body:
+  { emailEnabled, smsEnabled, voiceEnabled, bestContactWindowStart, bestContactWindowEnd, bestContactDays? }
+
+--------------------------------------------------------
+SECTION 3: Outstanding Invoices (Context, Not Work)
+--------------------------------------------------------
+
+A calm table (no heavy cards) with sticky table header and hairline dividers.
+
+Columns:
+- Invoice #
+- Due date
+- Amount
+- Status (muted text label; avoid bright badges)
+- Latest outcome (if any) (muted)
+
+Row click behavior:
+- If an invoice drawer/detail already exists, reuse it
+- If not, open a placeholder drawer (right-hand) with invoice summary + “View invoice” link (future)
+
+Rules:
+- No bulk actions
+- No “Send reminder” / “Chase” buttons here
+
+Backend:
+- Include outstanding invoices in GET /api/customers/:customerId
+or provide GET /api/customers/:customerId/invoices
+
+--------------------------------------------------------
+SECTION 4: Communications & Notes Timeline (MOST IMPORTANT)
+--------------------------------------------------------
+
+Implement a reusable Timeline component (see spec below) and embed it here.
+
+At top of the timeline section:
+- Inline “Add note…” input:
+  - single-line -> expands to multiline on focus
+  - “Add note” button is quiet/secondary
+  - On submit: creates an internal note timeline item and shows immediately in the list
+
+Timeline supports minimal filtering via a small “Filter” text button that opens a popover (NOT a sidebar).
+
+Backend endpoints:
+- GET /api/customers/:customerId/timeline?cursor=...&limit=50&channel=...&direction=...&outcomesOnly=...&needsReviewOnly=...
+- POST /api/customers/:customerId/notes { body: string }
+
+--------------------------------------------------------
+SECTION 5: Payment Details (Stripe Placeholder, Informational Only)
+--------------------------------------------------------
+
+Show informational placeholders only:
+- Payment method on file: —
+- Payment link enabled: —
+- Label: “Managed by Stripe” (placeholder)
+Rules:
+- DO NOT store or display sensitive payment data (no card numbers etc.)
+- Keep this section calm and secondary
+
+========================================================
+3) TIMELINE COMPONENT — PRECISE SPEC (REUSABLE)
+========================================================
+
+Create reusable components:
+- client/src/components/timeline/Timeline.tsx
+- client/src/components/timeline/TimelineItemRow.tsx
+- client/src/components/timeline/TimelineItemDrawer.tsx
+- client/src/components/timeline/TimelineFilterPopover.tsx
+
+Timeline API:
+<Timeline customerId={string} invoiceId?={string} />
+
+Shared type (MUST be in shared/types/timeline.ts):
+type TimelineItem = {
+  id: string;
+  occurredAt: string; // ISO datetime (UTC)
+  direction: "outbound" | "inbound" | "internal";
+  channel: "email" | "sms" | "voice" | "note" | "system";
+  summary: string;
+  preview?: string;
+  body?: string;
+  subject?: string;
+  participants?: { from?: string; to?: string[] };
+  outcome?: {
+    type:
+      | "promise_to_pay"
+      | "request_more_time"
+      | "payment_plan"
+      | "dispute"
+      | "wrong_contact"
+      | "paid_confirmed"
+      | "refused"
+      | "no_response"
+      | "other";
+    confidence: number; // 0..1
+    extracted?: Record<string, any>;
+    requiresReview?: boolean;
+  };
+  status?: "sent" | "delivered" | "failed" | "received" | "transcribed";
+  externalRefs?: {
+    provider?: "sendgrid" | "vonage" | "retell" | "stripe" | "xero";
+    providerMessageId?: string;
+  };
+  createdBy?: { type: "system" | "user"; name?: string; userId?: string };
+};
+
+TIMELINE UI RULES (CALM + PROGRESSIVE DISCLOSURE)
+1) Default:
+- newest first
+- load last 50 items with “Load more” at bottom
+- optional quiet date separators: Today / Yesterday / DD Mon
+
+2) Row anatomy:
+- subtle channel glyph + direction indicator
+- one-line summary (required) as primary text
+- secondary line: relative time + muted status
+- optional outcome label (muted text, not bright badge)
+- No heavy borders/cards; hairline dividers and whitespace
+
+3) Confidence display:
+- NEVER show numeric confidence by default
+- Map:
+  - >=0.85 => “High confidence”
+  - 0.65–0.84 => “Medium confidence”
+  - <0.65 OR requiresReview => “Needs review”
+
+4) Hover:
+- reveal subtle “View” affordance
+- optional tooltip preview (max 240 chars) if preview exists; preserve line breaks
+
+5) Click:
+- opens a right-hand item detail drawer with:
+  - channel + direction + exact timestamp
+  - subject/body/transcript/note body (plain text or safely sanitized)
+  - participants (from/to)
+  - outcome panel (if present):
+    - human label for outcome type
+    - extracted entities (e.g., promised date)
+    - confidence label (High/Medium/Needs review)
+    - if requiresReview: show “Needs review” (neutral)
+  - collapsed “Details” disclosure for provider refs/status IDs
+
+6) Filters:
+- hidden by default
+- small “Filter” text button opens a POPOVER with:
+  - Channel: Email / SMS / Voice / Notes
+  - Direction: Inbound / Outbound / Internal
+  - Toggle: “Show outcomes”
+  - Toggle: “Needs review only”
+- No search bar; no sidebar
+
+7) Notes:
+- created as TimelineItem channel="note" direction="internal"
+- displayed inline in stream with “Note” label (muted)
+
+8) System events:
+- include ONLY meaningful state changes:
+  - chasing paused until X
+  - channel disabled due to opt-out
+  - escalated for review
+  - payment detected in Xero (partial/full)
+  - contact role updated
+- Do not include noisy micro-events
+
+9) Accessibility:
+- rows focusable, Enter opens drawer, Esc closes
+
+========================================================
+4) DATABASE (ONLY IF NEEDED MINIMALLY)
+========================================================
+
+If you do not already have a unified store for message logs + notes that can serve the timeline, add a minimal table in shared/schema:
+
+timeline_events
+- id (uuid)
+- orgId
+- customerId
+- invoiceId (nullable)
+- occurredAt (timestamp)
+- direction (enum)
+- channel (enum)
+- summary (text)
+- preview (text nullable)
+- subject (text nullable)
+- body (text nullable)
+- participantsFrom (text nullable)
+- participantsTo (jsonb nullable)
+- outcomeType (enum nullable)
+- outcomeConfidence (numeric nullable)
+- outcomeExtracted (jsonb nullable)
+- outcomeRequiresReview (boolean default false)
+- status (enum nullable)
+- provider (enum nullable)
+- providerMessageId (text nullable)
+- createdByType (enum: system/user)
+- createdByUserId (nullable)
+- createdAt
+
+Also ensure customer overrides exist (either in existing customers table or a separate customer_overrides table) to store:
+- tradingName
+- creditControlContact role assignment
+- escalationContact role assignment
+- channel opt-out flags
+- best contact window (+ days)
+
+Keep v1 minimal; do not over-normalize.
+
+========================================================
+5) ACCEPTANCE CRITERIA (DONE = TRUE)
+========================================================
+
+A) Customers list:
+- Row click opens preview drawer (no navigation)
+- Drawer contains: header summary, credit control contact, latest 1–3 timeline summaries, quiet opt-out status, and ONLY ONE CTA: “View customer”
+- “View customer” navigates to /customers/:customerId
+
+B) Customer detail page:
+- /customers/:id renders sticky header + 5 sections (profile/contacts, preferences/timing, invoices, timeline/notes, payment placeholder)
+- Timeline loads from API, paginates, supports minimal popover filters
+- Hover preview tooltips work when preview exists
+- Clicking a timeline row opens item-detail drawer
+- Adding a note creates and immediately displays a new note item in timeline
+
+C) Principles:
+- No task list language or chase CTAs on customer surfaces
+- No model plumbing shown anywhere
+- Styling matches calm Qashivo direction (whitespace, hairline dividers, muted labels)
+
+Now implement this end-to-end, reusing existing table/drawer/sticky header components where possible, and keep all new UI consistent with the latest Qashivo style.
