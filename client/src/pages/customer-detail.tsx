@@ -20,8 +20,8 @@ interface Contact {
   name: string;
   email?: string;
   phone?: string;
+  arContactPhone?: string;
   companyName?: string;
-  creditLimit?: number;
   xeroContactId?: string;
 }
 
@@ -206,12 +206,13 @@ export default function CustomerDetailPage() {
                         </div>
                       </div>
                     )}
-                    {contact.creditLimit && (
+                    {contact.arContactPhone && (
                       <div>
-                        <p className="text-[11px] text-slate-400 mb-1">Credit Limit</p>
-                        <p className="text-sm text-slate-700 tabular-nums">
-                          {formatCurrency(contact.creditLimit)}
-                        </p>
+                        <p className="text-[11px] text-slate-400 mb-1">SMS Phone</p>
+                        <div className="flex items-center gap-1.5 text-sm text-slate-700">
+                          <MessageSquare className="h-3.5 w-3.5 text-slate-400" />
+                          <span>{contact.arContactPhone}</span>
+                        </div>
                       </div>
                     )}
                   </div>
