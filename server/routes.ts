@@ -3946,6 +3946,160 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Customer Preview endpoint for drawer (calm preview, not full detail)
+  app.get("/api/contacts/:contactId/preview", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { contactId } = req.params;
+      const { customerTimelineService } = await import("./services/customerTimelineService");
+      
+      const preview = await customerTimelineService.getCustomerPreview(user.tenantId, contactId);
+      if (!preview) {
+        return res.status(404).json({ message: "Customer not found" });
+      }
+
+      res.json(preview);
+    } catch (error) {
+      console.error("Error fetching customer preview:", error);
+      res.status(500).json({ message: "Failed to fetch customer preview" });
+    }
+  });
+
+  // Customer Timeline endpoint with cursor pagination and filters
+  app.get("/api/contacts/:contactId/timeline", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { contactId } = req.params;
+      const { cursor, limit, channel, direction, outcomesOnly, needsReviewOnly, invoiceId } = req.query;
+      
+      // Verify contact exists
+      const contact = await storage.getContact(contactId, user.tenantId);
+      if (!contact) {
+        return res.status(404).json({ message: "Customer not found" });
+      }
+
+      const { customerTimelineService } = await import("./services/customerTimelineService");
+      
+      const timeline = await customerTimelineService.getTimeline(user.tenantId, contactId, {
+        cursor: cursor as string | undefined,
+        limit: limit ? parseInt(limit as string, 10) : 50,
+        invoiceId: invoiceId as string | undefined,
+        filters: {
+          channel: channel ? (channel as string).split(",") as any[] : undefined,
+          direction: direction ? (direction as string).split(",") as any[] : undefined,
+          outcomesOnly: outcomesOnly === "true",
+          needsReviewOnly: needsReviewOnly === "true"
+        }
+      });
+
+      res.json(timeline);
+    } catch (error) {
+      console.error("Error fetching customer timeline:", error);
+      res.status(500).json({ message: "Failed to fetch customer timeline" });
+    }
+  });
+
+  // Create timeline note endpoint
+  app.post("/api/contacts/:contactId/timeline/notes", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { contactId } = req.params;
+      const { body, invoiceId } = req.body;
+      
+      if (!body || typeof body !== "string" || body.trim().length === 0) {
+        return res.status(400).json({ message: "Note body is required" });
+      }
+
+      // Verify contact exists
+      const contact = await storage.getContact(contactId, user.tenantId);
+      if (!contact) {
+        return res.status(404).json({ message: "Customer not found" });
+      }
+
+      const { customerTimelineService } = await import("./services/customerTimelineService");
+      
+      const userName = [user.firstName, user.lastName].filter(Boolean).join(" ") || user.email;
+      const note = await customerTimelineService.createNote(
+        user.tenantId,
+        contactId,
+        user.id,
+        userName,
+        body.trim(),
+        invoiceId
+      );
+
+      res.status(201).json(note);
+    } catch (error) {
+      console.error("Error creating timeline note:", error);
+      res.status(500).json({ message: "Failed to create note" });
+    }
+  });
+
+  // Customer preferences endpoint
+  app.get("/api/contacts/:contactId/preferences", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { contactId } = req.params;
+      
+      // Verify contact exists
+      const contact = await storage.getContact(contactId, user.tenantId);
+      if (!contact) {
+        return res.status(404).json({ message: "Customer not found" });
+      }
+
+      const { customerTimelineService } = await import("./services/customerTimelineService");
+      const preferences = await customerTimelineService.getPreferences(user.tenantId, contactId);
+
+      res.json(preferences);
+    } catch (error) {
+      console.error("Error fetching customer preferences:", error);
+      res.status(500).json({ message: "Failed to fetch customer preferences" });
+    }
+  });
+
+  // Update customer preferences endpoint
+  app.patch("/api/contacts/:contactId/preferences", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { contactId } = req.params;
+      const updates = req.body;
+      
+      // Verify contact exists
+      const contact = await storage.getContact(contactId, user.tenantId);
+      if (!contact) {
+        return res.status(404).json({ message: "Customer not found" });
+      }
+
+      const { customerTimelineService } = await import("./services/customerTimelineService");
+      const preferences = await customerTimelineService.updatePreferences(user.tenantId, contactId, updates);
+
+      res.json(preferences);
+    } catch (error) {
+      console.error("Error updating customer preferences:", error);
+      res.status(500).json({ message: "Failed to update customer preferences" });
+    }
+  });
+
   // Debtor Snapshot endpoint for Action Centre drawer
   app.get("/api/contacts/:contactId/debtor-snapshot", isAuthenticated, async (req: any, res) => {
     try {
