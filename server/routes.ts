@@ -3550,6 +3550,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { id } = req.params;
       const tenantId = user.tenantId;
 
+      const { customerTimelineService } = await import("./services/customerTimelineService");
+
       // Fetch all data in parallel for speed
       const [contact, invoicesResult, preferences, timeline] = await Promise.all([
         storage.getContact(id, tenantId),

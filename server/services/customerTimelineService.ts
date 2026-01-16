@@ -253,13 +253,16 @@ export class CustomerTimelineService {
       )
     });
 
+    // Default values: 09:00-17:30, Monday-Friday
+    const defaultDays = ["monday", "tuesday", "wednesday", "thursday", "friday"];
+    
     return {
       emailEnabled: prefs?.emailEnabled ?? true,
       smsEnabled: prefs?.smsEnabled ?? true,
       voiceEnabled: prefs?.voiceEnabled ?? true,
-      bestContactWindowStart: prefs?.bestContactWindowStart || undefined,
-      bestContactWindowEnd: prefs?.bestContactWindowEnd || undefined,
-      bestContactDays: prefs?.bestContactDays as string[] | undefined
+      bestContactWindowStart: prefs?.bestContactWindowStart || "09:00",
+      bestContactWindowEnd: prefs?.bestContactWindowEnd || "17:30",
+      bestContactDays: (prefs?.bestContactDays as string[] | undefined) || defaultDays
     };
   }
 
