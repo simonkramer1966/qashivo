@@ -1,0 +1,162 @@
+Goal: Replace mock/hardcoded inflow data on the Dashboard/Overview page with real, computed data from Postgres (Neon) using Drizzle, based on open invoices and outcome events / intent fields already in the system. Do not touch the Cashflow (In/Out) page (leave dummy).
+
+1) Scope & Non-goals
+
+✅ Update Dashboard/Overview cash inflow chart to show real data
+
+✅ Use existing tables: Invoice, Contact, Action (+ any existing outcome/intents fields you already store)
+
+✅ Compute expected cash-in by day/week for the next 30/60/90 days
+
+✅ Include confidence-weighted line (or bars) and raw expected line (if chart supports 2 series)
+
+❌ Do not modify Cashflow (In/Out) page
+
+❌ Do not build “perfect forecasting” or ML models
+
+❌ Do not refactor large parts of the codebase except where needed to add a clean endpoint
+
+2) Add a Backend Endpoint
+
+Create a new route module if you have modular routing, otherwise add minimally to existing routes:
+
+GET /api/dashboard/cash-inflow?range=30|60|90&bucket=day|week
+
+Returns:
+
+type CashInflowPoint = {
+  date: string; // ISO date for bucket start
+  expectedAmount: number; // sum of invoice expected amounts
+  confidenceWeightedAmount: number; // sum(expectedAmount * confidence)
+  invoiceCount: number;
+};
+
+type CashInflowResponse = {
+  rangeDays: number;
+  bucket: "day" | "week";
+  points: CashInflowPoint[];
+  asOf: string; // ISO timestamp
+};
+
+3) Implement the Forecast Calculation (Simple + Explainable)
+
+Compute expected cash-in from open invoices only:
+
+Include invoices where status IN ('pending','overdue')
+
+remaining = amount - amountPaid (skip if remaining <= 0)
+
+For each invoice, determine:
+
+expectedDate
+
+confidence (0–1)
+
+Use this logic (MVP-grade and deterministic):
+
+A) If invoice has an outcome/intention recorded (existing fields on Action/Invoice):
+
+PROMISE_TO_PAY with a date → expectedDate = promiseDate, confidence = 0.85 (adjust by contact riskBand)
+
+REQUEST_MORE_TIME → expectedDate = today + 14 days, confidence = 0.55
+
+DISPUTE → exclude from forecast (or include with confidence 0 and amount 0); also count separately if you track it
+
+PAYMENT_MADE_CONFIRMATION → expectedDate = today + 2 days, confidence = 0.9
+
+NO_RESPONSE / UNKNOWN → fall through to B)
+
+B) Otherwise fallback to due-date-based heuristic:
+
+if overdue: expectedDate = today + 7 days, confidence = 0.35
+
+if due in future: expectedDate = dueDate, confidence = 0.5
+
+Risk adjustment (optional but quick):
+
+If contact.riskBand exists:
+
+LOW: +0.10 confidence (cap at 0.95)
+
+MED: +0.00
+
+HIGH: -0.15 (floor at 0.10)
+
+Note: Use whatever intent/outcome fields actually exist in your codebase. If outcomes are on Action (latest inbound/outbound), use the most recent relevant event per invoice.
+
+4) Bucket & Aggregate
+
+Create buckets for the selected range (30/60/90 days)
+
+Bucket by:
+
+day: group by date
+
+week: group by Monday-start week
+
+Sum:
+
+expectedAmount += remaining
+
+confidenceWeightedAmount += remaining * confidence
+
+invoiceCount += 1
+
+Ensure output includes empty buckets (0 values) so the chart is continuous.
+
+5) Wire the Dashboard Chart to the Endpoint
+
+On the Dashboard/Overview page:
+
+Replace mock data feeding the inflow chart with GET /api/dashboard/cash-inflow?range=60&bucket=week (default)
+
+Add a simple UI control if it exists already (or keep it hidden) to switch range 30/60/90
+
+If the chart supports two series:
+
+Series 1: expectedAmount
+
+Series 2: confidenceWeightedAmount
+If only one series is supported, show confidenceWeightedAmount and label it clearly (“Confidence-weighted expected cash in”).
+
+6) Add a Small “Under the Bonnet” Drill (Optional but Valuable)
+
+Below the chart (or in a drawer):
+
+Top 10 invoices contributing to next 14 days
+
+Show: invoiceNumber, debtor, remaining, expectedDate, confidence, reason (Promise / Due / Overdue fallback)
+
+This makes conservative accountants trust it.
+
+7) Tests / Validation Checklist
+
+Add a lightweight dev-only script or seed scenario:
+
+Invoice overdue, no outcomes → shows in next 7 days low confidence
+
+Invoice with PROMISE_TO_PAY date → shows on that date high confidence
+
+Disputed invoice → excluded
+
+Partial payment → only remaining amount counted
+
+8) Do Not Break Existing Flows
+
+No changes to daily plan generation, approval, execution logic
+
+Forecast calc should be read-only, derived from current DB state
+
+Deliverable definition of done:
+
+Dashboard inflow chart is driven by live data for a real tenant with Xero invoices
+
+Changing an invoice’s latest outcome updates the chart after refresh
+
+Cashflow (In/Out) page remains dummy and untouched
+
+Small note on your architecture
+
+Given you already have Invoice / Contact / Action and intent fields, this should be an additive change: one endpoint + one dashboard wiring change. Keep it explainable, auditable, and deterministic — perfectly aligned with the “supervised autonomy + outcomes” thesis in the deck. 
+
+Qashivo Deck

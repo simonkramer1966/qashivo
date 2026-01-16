@@ -1,0 +1,156 @@
+To very quickly and accurately understand where you are in Replit right now, I don’t need everything — I need a small, high-signal snapshot across four layers: repo structure, data model, workflow state, and execution plumbing.
+
+Here’s the minimum set that will let me orient in <30 minutes and then give you precise next steps (or Replit prompts) instead of generic advice.
+
+1. Replit Access Snapshot (Most Important)
+
+One of the following is enough:
+
+🔗 Replit project link (read-only is fine), or
+
+📦 A zip / repo tree paste of the project
+
+If you can’t share access yet, paste:
+
+top-level folders
+
+main entry files
+
+README (if any)
+
+This tells me instantly:
+
+stack choice
+
+maturity level (scaffold vs live flows)
+
+whether we’re building or rescuing
+
+2. Current Stack & Infrastructure (Bullet Answers)
+
+Just answer inline:
+
+Frontend: (Next.js / React / plain HTML / other)
+
+Backend: (Node / Express / Next API routes / other)
+
+Database: (Postgres / SQLite / Supabase / Prisma / none yet)
+
+Auth: (Clerk / Auth.js / Supabase / none)
+
+Email: (mock / Resend / SendGrid / Gmail test inbox)
+
+SMS: (mock / Twilio / none)
+
+AI: (OpenAI / Anthropic / not wired yet)
+
+This lets me align advice to Replit-safe defaults instead of theoretical best practice.
+
+3. Data Model Reality Check (High Signal)
+
+Paste actual schemas or placeholders, even if ugly:
+
+Invoice
+
+Customer / Debtor
+
+Action / Task
+
+Outcome (if exists)
+
+Approval (if exists)
+
+Even pseudocode like:
+
+Invoice {
+  id
+  customerId
+  dueDate
+  amount
+  status
+}
+
+
+This tells me:
+
+whether the outcomes spine is present
+
+whether forecast logic can exist yet
+
+how much refactoring is ahead (or not)
+
+4. Workflow Spine Status (Yes / No)
+
+For each step, just answer yes / no / mocked:
+
+Invoices imported (CSV or mock)
+
+Invoices scored / prioritised
+
+Daily action plan generated
+
+Human approval step exists
+
+Emails/SMS can be sent
+
+Replies are ingested
+
+Replies classified into outcomes
+
+Forecast view updates from outcomes
+
+This maps directly to your V1 Spine and shows where to focus next.
+
+5. What Is Already “Live” vs Fake
+
+Please mark clearly:
+
+🟢 Actually working end-to-end
+
+🟡 Partially working / hardcoded
+
+🔴 UI only / placeholder
+
+Especially for:
+
+Action Centre
+
+Cashflow view
+
+Approvals
+
+Messaging
+
+This prevents me from suggesting work you’ve already done.
+
+6. Any Known Pain or “We’re Stuck Here”
+
+Optional but valuable:
+
+“We hacked this and regret it”
+
+“This part feels wrong but works”
+
+“Replit keeps breaking when we add X”
+
+“AI responses aren’t reliable yet”
+
+These usually reveal architecture traps early.
+
+What I Will Do Once You Share This
+
+Within the next response, I will:
+
+Map your current state to the Qashivo V1 Spine
+
+Identify what to keep, what to delete, what to fake
+
+Give you:
+
+exact Replit prompts to move forward
+
+a 72-hour focus plan
+
+a hard recommendation on what not to touch before Accountex
+
+No fluff, no re-explaining the deck — just execution.
