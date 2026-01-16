@@ -56,6 +56,7 @@ const CashFlow = lazy(() => import("@/pages/cash-flow"));
 const Financing = lazy(() => import("@/pages/financing"));
 const Automation = lazy(() => import("@/pages/automation"));
 const Workflows = lazy(() => import("@/pages/workflows"));
+const CustomerDetail = lazy(() => import("@/pages/customer-detail"));
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -141,6 +142,8 @@ function Router() {
           <Route path="/onboarding" component={UserOnboarding} />
           <Route path="/connection-error" component={ConnectionError} />
           <Route path="/contacts" component={Contacts} />
+          <Route path="/customers" component={Contacts} />
+          <Route path="/customers/:customerId" component={CustomerDetail} />
           <Route path="/invoices" component={Invoices} />
           <Route path="/action-centre" component={ActionCentre} />
           <Route path="/activity-log" component={ActivityLog} />

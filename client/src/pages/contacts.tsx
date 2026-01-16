@@ -10,7 +10,7 @@ import NewSidebar from "@/components/layout/new-sidebar";
 import BottomNav from "@/components/layout/bottom-nav";
 import Header from "@/components/layout/header";
 import { useCurrency } from "@/hooks/useCurrency";
-import { CustomerDetailDialog } from "@/components/contacts/CustomerDetailDialog";
+import { CustomerPreviewDrawer } from "@/components/customers/CustomerPreviewDrawer";
 
 interface Contact {
   id: string;
@@ -37,8 +37,8 @@ export default function Customers() {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const limit = 20;
-  const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
-  const [showCustomerDetail, setShowCustomerDetail] = useState(false);
+  const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
+  const [showPreviewDrawer, setShowPreviewDrawer] = useState(false);
 
   // Format date as dd/mm/yy
   const formatDateShort = (dateStr: string | null) => {
@@ -62,16 +62,7 @@ export default function Customers() {
   const aggregates = contactsResponse?.aggregates || { totalOutstanding: 0, highRiskCount: 0, totalContacts: 0 };
   const pagination = contactsResponse?.pagination || { total: 0, page: 1, limit: 20, totalPages: 1 };
 
-  // Update selectedContact when contacts data changes (e.g., after workflow assignment)
-  useEffect(() => {
-    if (selectedContact && contacts.length > 0) {
-      const updatedContact = contacts.find(c => c.id === selectedContact.id);
-      if (updatedContact && updatedContact.workflowId !== selectedContact.workflowId) {
-        setSelectedContact(updatedContact);
-      }
-    }
-  }, [contacts]);
-
+  
   // Reset to page 1 when search changes
   const handleSearchChange = (value: string) => {
     setSearch(value);
@@ -225,8 +216,8 @@ export default function Customers() {
                     key={contact.id} 
                     className={`py-3 cursor-pointer hover:bg-slate-50/50 transition-colors ${idx !== contacts.length - 1 ? 'border-b border-slate-100' : ''}`}
                     onClick={() => {
-                      setSelectedContact(contact);
-                      setShowCustomerDetail(true);
+                      setSelectedContactId(contact.id);
+                      setShowPreviewDrawer(true);
                     }}
                     data-testid={`customer-item-${contact.id}`}
                   >
@@ -283,8 +274,8 @@ export default function Customers() {
                           key={contact.id}
                           className="border-b border-slate-100 hover:bg-slate-50/50 cursor-pointer transition-colors"
                           onClick={() => {
-                            setSelectedContact(contact);
-                            setShowCustomerDetail(true);
+                            setSelectedContactId(contact.id);
+                            setShowPreviewDrawer(true);
                           }}
                           data-testid={`customer-item-${contact.id}`}
                         >
@@ -354,11 +345,11 @@ export default function Customers() {
       {/* Mobile Bottom Navigation */}
       <BottomNav />
 
-      {/* Customer Detail Dialog */}
-      <CustomerDetailDialog
-        contact={selectedContact}
-        open={showCustomerDetail}
-        onOpenChange={setShowCustomerDetail}
+      {/* Customer Preview Drawer */}
+      <CustomerPreviewDrawer
+        customerId={selectedContactId}
+        open={showPreviewDrawer}
+        onOpenChange={setShowPreviewDrawer}
       />
     </div>
   );
