@@ -60,6 +60,7 @@ const CustomerDetail = lazy(() => import("@/pages/customer-detail"));
 const PartnerPractice = lazy(() => import("@/pages/partner-practice"));
 const PartnerClients = lazy(() => import("@/pages/partner-clients"));
 const PartnerClientDetail = lazy(() => import("@/pages/partner-client-detail"));
+const AcceptInvite = lazy(() => import("@/pages/accept-invite"));
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -115,6 +116,7 @@ function Router() {
           <Route path="/forgot-password" component={ForgotPassword} />
           <Route path="/reset-password" component={ResetPassword} />
           <Route path="/signin" component={SignIn} />
+          <Route path="/accept-invite" component={AcceptInvite} />
           <Route path="/" component={Home} />
           <Route path="/:rest*" component={Home} />
         </Switch>
@@ -163,6 +165,7 @@ function Router() {
           <Route path="/p/:partnerSlug/clients/:smeClientId" component={PartnerClientDetail} />
           <Route path="/p/:partnerSlug/clients" component={PartnerClients} />
           <Route path="/p/:partnerSlug" component={PartnerPractice} />
+          <Route path="/accept-invite" component={AcceptInvite} />
           <Route path="/" component={Cashboard} />
           <Route path="/:rest*" component={NotFound} />
         </Switch>
