@@ -3576,6 +3576,123 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get email messages for a contact
+  app.get("/api/contacts/:id/messages", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { id } = req.params;
+      const { invoiceId } = req.query;
+      
+      const { emailMessages } = await import("@shared/schema");
+      
+      let query;
+      if (invoiceId) {
+        query = db.select()
+          .from(emailMessages)
+          .where(and(
+            eq(emailMessages.tenantId, user.tenantId),
+            eq(emailMessages.invoiceId, invoiceId as string)
+          ))
+          .orderBy(desc(emailMessages.createdAt));
+      } else {
+        query = db.select()
+          .from(emailMessages)
+          .where(and(
+            eq(emailMessages.tenantId, user.tenantId),
+            eq(emailMessages.contactId, id)
+          ))
+          .orderBy(desc(emailMessages.createdAt));
+      }
+      
+      const messages = await query;
+      res.json(messages);
+    } catch (error) {
+      console.error("Error fetching contact messages:", error);
+      res.status(500).json({ message: "Failed to fetch messages" });
+    }
+  });
+
+  // Get inbox - detected outcomes needing review
+  app.get("/api/inbox", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { detectedOutcomes, emailMessages, contacts } = await import("@shared/schema");
+      
+      const outcomes = await db.select({
+        outcome: detectedOutcomes,
+        email: emailMessages,
+        contact: contacts,
+      })
+        .from(detectedOutcomes)
+        .leftJoin(emailMessages, eq(detectedOutcomes.emailMessageId, emailMessages.id))
+        .leftJoin(contacts, eq(detectedOutcomes.contactId, contacts.id))
+        .where(and(
+          eq(detectedOutcomes.tenantId, user.tenantId),
+          eq(detectedOutcomes.needsReview, true)
+        ))
+        .orderBy(desc(detectedOutcomes.createdAt))
+        .limit(100);
+      
+      res.json(outcomes);
+    } catch (error) {
+      console.error("Error fetching inbox:", error);
+      res.status(500).json({ message: "Failed to fetch inbox" });
+    }
+  });
+
+  // Confirm/update detected outcome
+  app.post("/api/outcomes/:id/confirm", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { id } = req.params;
+      const { outcomeType, promiseDate, amount, notes } = req.body;
+      
+      const { detectedOutcomes } = await import("@shared/schema");
+      
+      // Verify outcome belongs to tenant
+      const [existing] = await db.select()
+        .from(detectedOutcomes)
+        .where(eq(detectedOutcomes.id, id))
+        .limit(1);
+      
+      if (!existing || existing.tenantId !== user.tenantId) {
+        return res.status(404).json({ message: "Outcome not found" });
+      }
+      
+      // Update outcome
+      const [updated] = await db.update(detectedOutcomes)
+        .set({
+          outcomeType: outcomeType || existing.outcomeType,
+          promiseDate: promiseDate ? new Date(promiseDate) : existing.promiseDate,
+          amount: amount || existing.amount,
+          notes: notes || existing.notes,
+          needsReview: false,
+          reviewedBy: req.user.id,
+          reviewedAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .where(eq(detectedOutcomes.id, id))
+        .returning();
+      
+      res.json(updated);
+    } catch (error) {
+      console.error("Error confirming outcome:", error);
+      res.status(500).json({ message: "Failed to confirm outcome" });
+    }
+  });
+
   // Update AR contact details (collections-specific overlay)
   app.patch("/api/contacts/:id/ar-details", isAuthenticated, async (req: any, res) => {
     try {
