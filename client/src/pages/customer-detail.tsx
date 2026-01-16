@@ -226,8 +226,11 @@ export default function CustomerDetailPage() {
 
             {/* Section 3: Outstanding Invoices */}
             <section>
-              <p className="text-[10px] text-slate-400 uppercase tracking-wider mb-4">
+              <p className="text-[10px] text-slate-400 uppercase tracking-wider mb-1">
                 Outstanding Invoices ({outstandingInvoices.length})
+              </p>
+              <p className="text-xs text-slate-400 mb-4">
+                Invoices with unresolved outcomes
               </p>
               
               {loadingInvoices ? (
