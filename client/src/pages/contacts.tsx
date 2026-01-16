@@ -11,6 +11,7 @@ import BottomNav from "@/components/layout/bottom-nav";
 import Header from "@/components/layout/header";
 import { useCurrency } from "@/hooks/useCurrency";
 import { CustomerPreviewDrawer } from "@/components/customers/CustomerPreviewDrawer";
+import { getBehaviourLabel } from "@/lib/behaviourLabels";
 
 interface Contact {
   id: string;
@@ -69,23 +70,10 @@ export default function Customers() {
     setPage(1);
   };
 
-  // Simple text-based risk display (no pill styling)
-  const getRiskText = (riskBand?: string | null) => {
-    if (!riskBand) return <span className="text-slate-400">-</span>;
-    
-    const textColors: Record<string, string> = {
-      'A': 'text-[#4FAD80]',
-      'B': 'text-blue-600',
-      'C': 'text-amber-600',
-      'D': 'text-[#E8A23B]',
-      'E': 'text-[#C75C5C]',
-    };
-    
-    return (
-      <span className={`text-sm ${textColors[riskBand] || 'text-slate-500'}`}>
-        {riskBand}
-      </span>
-    );
+  // Behaviour-based display (no scores, no traffic lights)
+  const getBehaviourText = (riskBand?: string | null, riskScore?: number | null) => {
+    const { label } = getBehaviourLabel(riskBand, riskScore);
+    return <span className="text-[12px] text-slate-600">{label}</span>;
   };
 
   return (
@@ -265,7 +253,7 @@ export default function Customers() {
                         <th className="text-right py-2 px-4 text-[11px] font-medium text-slate-500 uppercase tracking-wider bg-white">Overdue</th>
                         <th className="text-right py-2 px-4 text-[11px] font-medium text-slate-500 uppercase tracking-wider bg-white">ADPD</th>
                         <th className="text-right py-2 px-4 text-[11px] font-medium text-slate-500 uppercase tracking-wider bg-white">Last Payment</th>
-                        <th className="text-right py-2 pl-4 text-[11px] font-medium text-slate-500 uppercase tracking-wider bg-white">Risk</th>
+                        <th className="text-right py-2 pl-4 text-[11px] font-medium text-slate-500 uppercase tracking-wider bg-white">Behaviour</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -326,9 +314,9 @@ export default function Customers() {
                             </span>
                           </td>
 
-                          {/* Risk */}
+                          {/* Behaviour */}
                           <td className="py-3 pl-4 text-right">
-                            {getRiskText(contact.riskBand)}
+                            {getBehaviourText(contact.riskBand, contact.riskScore)}
                           </td>
                         </tr>
                       ))}

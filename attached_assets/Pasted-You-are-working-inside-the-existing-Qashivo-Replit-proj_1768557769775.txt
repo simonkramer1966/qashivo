@@ -1,0 +1,186 @@
+You are working inside the existing Qashivo Replit project.
+
+OBJECTIVE
+Replace all score-based, abstract, or model-centric “risk” language (e.g. A/B/C/D bands, risk scores, high/medium/low risk) with clear, human-readable, behaviour-based labels across the UI.
+
+This change is PRESENTATIONAL + COPY-LEVEL.
+Internal scoring, ranking, and prioritisation logic may remain unchanged but must not be surfaced directly in the UI.
+
+CORE PRINCIPLE (DO NOT VIOLATE)
+Risk belongs to the system.
+Behaviour belongs to the user.
+
+The UI must describe observed payment behaviour in plain language, not abstract scores.
+
+========================================================
+1) REMOVE / REPLACE ALL SCORE-BASED UI COPY
+========================================================
+
+Search the frontend for the following terms (case-insensitive) and remove or replace them in ALL user-facing copy:
+
+- “Risk band”
+- “Risk score”
+- “Risk level”
+- “High risk”
+- “Medium risk”
+- “Low risk”
+- “A”, “B”, “C”, “D” (when used as customer classifications)
+- Any numeric score implying credit or payment risk
+
+This includes (but is not limited to):
+- Customer list columns
+- Customer preview drawer
+- Customer detail page
+- Dashboard widgets
+- Tooltips
+- Empty states
+- Labels and headings
+- Helper text
+- Status pills or badges
+
+DO NOT remove internal variables, enums, or database fields unless explicitly required.
+This task is about **UI language and presentation**, not changing core logic.
+
+========================================================
+2) INTRODUCE BEHAVIOUR-BASED PAYMENT TAXONOMY (UI STANDARD)
+========================================================
+
+Define a single, shared behaviour taxonomy for customers, used consistently across the UI.
+
+PRIMARY BEHAVIOUR LABELS (V1 – DEFAULT)
+
+Use exactly these labels (string literals) in the UI:
+
+1. “Pays on time”
+   Meaning:
+   - Invoices are usually settled on or before due date
+   - Minimal follow-up required
+
+2. “Pays late but reliable”
+   Meaning:
+   - Regularly pays after due date
+   - Behaviour is predictable
+   - Cash timing can be forecast with confidence
+
+3. “Inconsistent”
+   Meaning:
+   - Payment timing varies
+   - Promises may be broken or delayed
+   - Requires closer supervision
+
+4. “Unknown”
+   Meaning:
+   - Insufficient interaction or history
+   - New customer or limited data
+
+These labels MUST:
+- Be neutral and descriptive
+- Avoid judgemental or alarmist language
+- Avoid implying blame or control
+
+========================================================
+3) OPTIONAL SECONDARY CONTEXT (WHEN DATA IS AVAILABLE)
+========================================================
+
+Where space allows (e.g. Customer Detail header, tooltips, drawers), optionally add ONE line of contextual copy beneath the behaviour label:
+
+Examples:
+- “Typically pays 10–15 days after due date”
+- “Payment timing varies month to month”
+- “Limited payment history”
+
+Rules:
+- This line is OPTIONAL
+- It must never expose model internals
+- It must never reference scores, bands, or confidence percentages
+
+========================================================
+4) VISUAL TREATMENT RULES
+========================================================
+
+Behaviour labels must be:
+- Muted text (not bright badges)
+- Secondary to monetary values
+- Free of red/amber/green traffic-light semantics
+
+DO NOT:
+- Use coloured pills to imply severity
+- Rank behaviour labels visually (no “best” vs “worst” styling)
+- Add icons that suggest danger or alerts
+
+Typography and spacing should communicate hierarchy, not colour.
+
+========================================================
+5) WHERE TO APPLY BEHAVIOUR LABELS
+========================================================
+
+Apply the behaviour taxonomy consistently in these places:
+
+- Customer List rows (behaviour column or subtext)
+- Customer Preview Drawer (behaviour summary)
+- Customer Detail page header
+- Dashboard aggregate metrics (e.g. “38% pay on time”)
+- Any summary or snapshot view where customer quality is referenced
+
+DO NOT add behaviour labels to:
+- Individual invoice rows (unless explicitly summarising customer behaviour)
+- Low-level system logs or internal admin views
+
+========================================================
+6) INTERNAL SCORING (KEEP, BUT HIDE)
+========================================================
+
+If the system currently calculates:
+- A/B/C/D bands
+- Numeric risk scores
+- Confidence weights
+
+These may remain:
+- In the database
+- In services
+- In prioritisation logic
+
+But:
+- They must NOT be shown directly to users
+- They must NOT leak into copy, labels, or tooltips
+- Any UI mapping must convert internal scores → behaviour labels
+
+Example (conceptual mapping only, not UI):
+- Internal A/B → “Pays on time”
+- Internal C → “Pays late but reliable”
+- Internal D → “Inconsistent”
+- No data → “Unknown”
+
+Exact thresholds can remain internal and are not part of the UI contract.
+
+========================================================
+7) COPY SAFETY CHECK (FINAL PASS)
+========================================================
+
+Before completing this task, ensure:
+
+- No UI text requires the user to interpret a score
+- No label invites the question “Why is this a C?”
+- Behaviour descriptions feel observational, not evaluative
+- The UI communicates confidence and calm, not judgement
+
+If any remaining copy implies:
+- “This customer is bad”
+- “You should worry”
+- “The system has judged this”
+
+Rewrite it to describe behaviour instead.
+
+========================================================
+8) ACCEPTANCE CRITERIA
+========================================================
+
+This change is complete when:
+
+- No A/B/C/D or risk-score language is visible anywhere in the user-facing UI
+- All customer classification is expressed in plain behavioural terms
+- Behaviour labels are consistent across all pages
+- Internal scoring still functions without UI dependency
+- The product feels clearer, calmer, and easier to understand without explanation
+
+Implement these changes now, touching only UI copy, labels, and presentation logic where necessary.
