@@ -143,7 +143,7 @@ export default function CashFlow() {
             <section className="flex-1 flex flex-col min-h-0 mb-6">
               <div className="flex items-center justify-between mb-3 flex-shrink-0">
                 <div>
-                  <h3 className="text-[14px] font-medium text-slate-900">Projected cash position</h3>
+                  <h3 className="text-[14px] font-medium text-slate-900">Expected cash position</h3>
                   <p className="text-[11px] text-slate-400 mt-0.5">Net cash over time, with confidence intervals. Updates automatically.</p>
                 </div>
                 <div className="flex items-center gap-0.5">
