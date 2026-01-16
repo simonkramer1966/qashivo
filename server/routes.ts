@@ -20520,13 +20520,18 @@ ${tenant.name}
         return res.status(404).json({ message: "User not found" });
       }
 
-      // Only partners can access this endpoint
-      if (user.role !== 'partner') {
-        return res.status(403).json({ message: "Access denied. Partner role required." });
+      // Users with a partnerId can access their partner's clients
+      if (!user.partnerId) {
+        return res.status(403).json({ message: "Access denied. You are not associated with a partner organization." });
       }
 
-      const relationships = await storage.getPartnerClientRelationships(user.id);
-      res.json(relationships);
+      // Get SME clients for this partner
+      const clients = await db
+        .select()
+        .from(smeClients)
+        .where(eq(smeClients.partnerId, user.partnerId));
+      
+      res.json(clients);
     } catch (error) {
       console.error("Error fetching partner clients:", error);
       res.status(500).json({ message: "Failed to fetch client relationships" });
