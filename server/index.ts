@@ -3,6 +3,7 @@ import path from "path";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import debtorRoutes from "./debtor-routes";
+import { registerPartnerRoutes } from "./routes/partnerRoutes";
 
 const app = express();
 
@@ -140,6 +141,9 @@ app.use((req, res, next) => {
   
   // Register debtor portal routes (magic link authentication for external debtors)
   app.use(debtorRoutes);
+  
+  // Register partner operating layer routes
+  registerPartnerRoutes(app);
 
   // Initialize API Middleware for provider integrations
   if (process.env.NODE_ENV !== 'test') {

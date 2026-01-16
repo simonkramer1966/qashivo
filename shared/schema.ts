@@ -4041,6 +4041,7 @@ export const partners = pgTable("partners", {
   
   // Partner details
   name: varchar("name").notNull(), // Accounting firm name
+  slug: varchar("slug").notNull().unique(), // URL-friendly identifier for /p/:slug routes
   email: varchar("email").notNull(),
   phone: varchar("phone"),
   website: varchar("website"),
@@ -4053,9 +4054,14 @@ export const partners = pgTable("partners", {
   postalCode: varchar("postal_code"),
   country: varchar("country").default("GB"),
   
-  // Branding
+  // Branding (white-labelling)
   logoUrl: varchar("logo_url"),
-  brandColor: varchar("brand_color").default("#17B6C3"),
+  brandColor: varchar("brand_color").default("#17B6C3"), // Primary color
+  accentColor: varchar("accent_color").default("#1396A1"), // Secondary/accent color
+  brandName: varchar("brand_name"), // Display name for white-labelling
+  emailFromName: varchar("email_from_name"), // Sender name for branded emails
+  emailReplyTo: varchar("email_reply_to"), // Reply-to address for branded emails
+  emailFooterText: text("email_footer_text"), // Custom footer text for branded emails
   
   // Subscription and billing
   subscriptionPlanId: varchar("subscription_plan_id").references(() => subscriptionPlans.id),
@@ -4075,6 +4081,146 @@ export const partners = pgTable("partners", {
 }, (table) => [
   index("idx_partners_email").on(table.email),
   index("idx_partners_status").on(table.isActive),
+  index("idx_partners_slug").on(table.slug),
+]);
+
+// SME Clients - Businesses managed by partners
+export const smeClients = pgTable("sme_clients", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Partner relationship
+  partnerId: varchar("partner_id").notNull().references(() => partners.id),
+  
+  // Client details
+  name: varchar("name").notNull(),
+  
+  // Status: DRAFT | INVITED | ACCEPTED | CONNECTED | ACTIVE | PAUSED
+  status: varchar("status").notNull().default("DRAFT"),
+  
+  // Assignment (credit controller)
+  primaryCreditControllerId: varchar("primary_credit_controller_id").references(() => users.id),
+  
+  // Link to tenant (created after SME connects their accounting system)
+  tenantId: varchar("tenant_id").references(() => tenants.id),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_sme_clients_partner").on(table.partnerId),
+  index("idx_sme_clients_status").on(table.status),
+  index("idx_sme_clients_controller").on(table.primaryCreditControllerId),
+]);
+
+// SME Contacts - Contact persons within SME clients
+export const smeContacts = pgTable("sme_contacts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  smeClientId: varchar("sme_client_id").notNull().references(() => smeClients.id, { onDelete: "cascade" }),
+  
+  // Contact details
+  name: varchar("name").notNull(),
+  email: varchar("email"),
+  phone: varchar("phone"),
+  
+  // Contact roles
+  isPrimaryCreditContact: boolean("is_primary_credit_contact").default(false),
+  isEscalationContact: boolean("is_escalation_contact").default(false),
+  
+  // Source: XERO | QASHIVO
+  source: varchar("source").notNull().default("QASHIVO"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_sme_contacts_client").on(table.smeClientId),
+]);
+
+// Partner Contracts - Contract details for SME clients
+export const partnerContracts = pgTable("partner_contracts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  smeClientId: varchar("sme_client_id").notNull().references(() => smeClients.id, { onDelete: "cascade" }),
+  
+  // Contract dates
+  contractStartDate: timestamp("contract_start_date"),
+  contractEndDate: timestamp("contract_end_date"),
+  
+  // Pricing: PILOT | STANDARD | PRO | CUSTOM
+  pricingTier: varchar("pricing_tier").default("STANDARD"),
+  
+  // Billing: BILLED_TO_SME | BILLED_TO_PARTNER
+  billingMode: varchar("billing_mode").default("BILLED_TO_PARTNER"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_partner_contracts_client").on(table.smeClientId),
+]);
+
+// Partner Contract Files - Uploaded contract documents
+export const partnerContractFiles = pgTable("partner_contract_files", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  partnerContractId: varchar("partner_contract_id").notNull().references(() => partnerContracts.id, { onDelete: "cascade" }),
+  
+  // File type: SIGNED_CONTRACT | SIGNED_TCS
+  type: varchar("type").notNull(),
+  
+  fileUrl: varchar("file_url").notNull(),
+  
+  uploadedAt: timestamp("uploaded_at").defaultNow(),
+}, (table) => [
+  index("idx_partner_contract_files_contract").on(table.partnerContractId),
+]);
+
+// SME Invite Tokens - Tokens for SME client onboarding
+export const smeInviteTokens = pgTable("sme_invite_tokens", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  smeClientId: varchar("sme_client_id").notNull().references(() => smeClients.id, { onDelete: "cascade" }),
+  partnerId: varchar("partner_id").notNull().references(() => partners.id),
+  
+  // Invite details
+  email: varchar("email").notNull(),
+  tokenHash: varchar("token_hash").notNull(),
+  
+  // Status: SENT | ACCEPTED | EXPIRED
+  status: varchar("status").notNull().default("SENT"),
+  
+  // Timestamps
+  expiresAt: timestamp("expires_at").notNull(),
+  sentAt: timestamp("sent_at").defaultNow(),
+  acceptedAt: timestamp("accepted_at"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_sme_invite_tokens_client").on(table.smeClientId),
+  index("idx_sme_invite_tokens_token").on(table.tokenHash),
+  index("idx_sme_invite_tokens_status").on(table.status),
+]);
+
+// Partner Audit Log - Tracks partner-related events
+export const partnerAuditLog = pgTable("partner_audit_log", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  actorUserId: varchar("actor_user_id").references(() => users.id),
+  
+  // Event type: INVITE_SENT | INVITE_ACCEPTED | ACCOUNTING_CONNECTED | ASSIGNMENT_CHANGED | STATUS_CHANGED
+  eventType: varchar("event_type").notNull(),
+  
+  // Target entity
+  targetId: varchar("target_id").notNull(),
+  targetType: varchar("target_type").notNull(), // SME_CLIENT | SME_CONTACT | PARTNER_CONTRACT
+  
+  // Event metadata
+  metadata: jsonb("metadata").default("{}"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_partner_audit_log_actor").on(table.actorUserId),
+  index("idx_partner_audit_log_target").on(table.targetType, table.targetId),
+  index("idx_partner_audit_log_event").on(table.eventType),
+  index("idx_partner_audit_log_created").on(table.createdAt),
 ]);
 
 // User contact assignments - For assigning specific contacts to team members (collectors)
@@ -4113,6 +4259,66 @@ export const partnersRelations = relations(partners, ({ one, many }) => ({
     references: [subscriptionPlans.id],
   }),
   users: many(users),
+  smeClients: many(smeClients),
+}));
+
+// Relations for SME/Partner Operating Layer
+export const smeClientsRelations = relations(smeClients, ({ one, many }) => ({
+  partner: one(partners, {
+    fields: [smeClients.partnerId],
+    references: [partners.id],
+  }),
+  primaryCreditController: one(users, {
+    fields: [smeClients.primaryCreditControllerId],
+    references: [users.id],
+  }),
+  tenant: one(tenants, {
+    fields: [smeClients.tenantId],
+    references: [tenants.id],
+  }),
+  contacts: many(smeContacts),
+  contracts: many(partnerContracts),
+  inviteTokens: many(smeInviteTokens),
+}));
+
+export const smeContactsRelations = relations(smeContacts, ({ one }) => ({
+  smeClient: one(smeClients, {
+    fields: [smeContacts.smeClientId],
+    references: [smeClients.id],
+  }),
+}));
+
+export const partnerContractsRelations = relations(partnerContracts, ({ one, many }) => ({
+  smeClient: one(smeClients, {
+    fields: [partnerContracts.smeClientId],
+    references: [smeClients.id],
+  }),
+  files: many(partnerContractFiles),
+}));
+
+export const partnerContractFilesRelations = relations(partnerContractFiles, ({ one }) => ({
+  contract: one(partnerContracts, {
+    fields: [partnerContractFiles.partnerContractId],
+    references: [partnerContracts.id],
+  }),
+}));
+
+export const smeInviteTokensRelations = relations(smeInviteTokens, ({ one }) => ({
+  smeClient: one(smeClients, {
+    fields: [smeInviteTokens.smeClientId],
+    references: [smeClients.id],
+  }),
+  partner: one(partners, {
+    fields: [smeInviteTokens.partnerId],
+    references: [partners.id],
+  }),
+}));
+
+export const partnerAuditLogRelations = relations(partnerAuditLog, ({ one }) => ({
+  actor: one(users, {
+    fields: [partnerAuditLog.actorUserId],
+    references: [users.id],
+  }),
 }));
 
 export const userContactAssignmentsRelations = relations(userContactAssignments, ({ one }) => ({
@@ -4241,6 +4447,59 @@ export type InsertTenantInvitation = z.infer<typeof insertTenantInvitationSchema
 
 export type TenantMetadata = typeof tenantMetadata.$inferSelect;
 export type InsertTenantMetadata = z.infer<typeof insertTenantMetadataSchema>;
+
+// Insert schemas for SME/Partner Operating Layer
+export const insertSmeClientSchema = createInsertSchema(smeClients).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertSmeContactSchema = createInsertSchema(smeContacts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertPartnerContractSchema = createInsertSchema(partnerContracts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertPartnerContractFileSchema = createInsertSchema(partnerContractFiles).omit({
+  id: true,
+  uploadedAt: true,
+});
+
+export const insertSmeInviteTokenSchema = createInsertSchema(smeInviteTokens).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertPartnerAuditLogSchema = createInsertSchema(partnerAuditLog).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Type exports for SME/Partner Operating Layer
+export type SmeClient = typeof smeClients.$inferSelect;
+export type InsertSmeClient = z.infer<typeof insertSmeClientSchema>;
+
+export type SmeContact = typeof smeContacts.$inferSelect;
+export type InsertSmeContact = z.infer<typeof insertSmeContactSchema>;
+
+export type PartnerContract = typeof partnerContracts.$inferSelect;
+export type InsertPartnerContract = z.infer<typeof insertPartnerContractSchema>;
+
+export type PartnerContractFile = typeof partnerContractFiles.$inferSelect;
+export type InsertPartnerContractFile = z.infer<typeof insertPartnerContractFileSchema>;
+
+export type SmeInviteToken = typeof smeInviteTokens.$inferSelect;
+export type InsertSmeInviteToken = z.infer<typeof insertSmeInviteTokenSchema>;
+
+export type PartnerAuditLog = typeof partnerAuditLog.$inferSelect;
+export type InsertPartnerAuditLog = z.infer<typeof insertPartnerAuditLogSchema>;
 
 // Activity Logs schema and types
 export const insertActivityLogSchema = createInsertSchema(activityLogs).omit({
