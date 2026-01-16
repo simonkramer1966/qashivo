@@ -1,6 +1,7 @@
+import { useState, useEffect } from "react";
 import { useRoute, Link } from "wouter";
-import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, Mail, Phone, MessageSquare, Mic, ExternalLink } from "lucide-react";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { ArrowLeft, Mail, Phone, MessageSquare, Mic, ExternalLink, Clock } from "lucide-react";
 import NewSidebar from "@/components/layout/new-sidebar";
 import BottomNav from "@/components/layout/bottom-nav";
 import Header from "@/components/layout/header";
@@ -8,8 +9,10 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useCurrency } from "@/hooks/useCurrency";
 import { Timeline } from "@/components/customers/Timeline";
+import { queryClient, apiRequest } from "@/lib/queryClient";
 import type { CustomerPreferences } from "@shared/types/timeline";
 
 interface Contact {
@@ -33,10 +36,19 @@ interface Invoice {
   status: string;
 }
 
+const TIME_OPTIONS = [
+  "00:00", "01:00", "02:00", "03:00", "04:00", "05:00",
+  "06:00", "07:00", "08:00", "09:00", "10:00", "11:00", "12:00",
+  "13:00", "14:00", "15:00", "16:00", "17:00", "18:00", "19:00", 
+  "20:00", "21:00", "22:00", "23:00"
+];
+
 export default function CustomerDetailPage() {
   const [match, params] = useRoute("/customers/:customerId");
   const customerId = params?.customerId;
   const { formatCurrency } = useCurrency();
+
+  const [localPrefs, setLocalPrefs] = useState<Partial<CustomerPreferences>>({});
 
   const { data: contact, isLoading: loadingContact } = useQuery<Contact>({
     queryKey: [`/api/contacts/${customerId}`],
@@ -52,6 +64,50 @@ export default function CustomerDetailPage() {
     queryKey: [`/api/contacts/${customerId}/preferences`],
     enabled: !!customerId,
   });
+
+  useEffect(() => {
+    if (preferences) {
+      setLocalPrefs(preferences);
+    }
+  }, [preferences]);
+
+  const updatePreferencesMutation = useMutation({
+    mutationFn: async (updates: Partial<CustomerPreferences>) => {
+      if (!customerId) throw new Error("No customer selected");
+      return apiRequest("PATCH", `/api/contacts/${customerId}/preferences`, updates);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/contacts/${customerId}/preferences`] });
+    },
+    onError: () => {
+      if (preferences) {
+        setLocalPrefs(preferences);
+      }
+    }
+  });
+
+  const canEdit = !!customerId && !loadingPreferences;
+
+  const handleToggle = (field: keyof CustomerPreferences, value: boolean) => {
+    if (!canEdit) return;
+    const previousPrefs = { ...localPrefs };
+    const newPrefs = { ...localPrefs, [field]: value };
+    setLocalPrefs(newPrefs);
+    updatePreferencesMutation.mutate({ [field]: value }, {
+      onError: () => setLocalPrefs(previousPrefs)
+    });
+  };
+
+  const handleTimeChange = (field: "bestContactWindowStart" | "bestContactWindowEnd", value: string) => {
+    if (!canEdit) return;
+    const previousPrefs = { ...localPrefs };
+    const actualValue = value === "" ? undefined : value;
+    const newPrefs = { ...localPrefs, [field]: actualValue };
+    setLocalPrefs(newPrefs);
+    updatePreferencesMutation.mutate({ [field]: actualValue }, {
+      onError: () => setLocalPrefs(previousPrefs)
+    });
+  };
 
   const invoices = invoicesData?.invoices || [];
   const outstandingInvoices = invoices.filter(inv => 
@@ -178,46 +234,90 @@ export default function CustomerDetailPage() {
                   <Skeleton className="h-8 w-full" />
                 </div>
               ) : (
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between py-2">
-                    <div className="flex items-center gap-3">
-                      <Mail className="h-4 w-4 text-slate-400" />
-                      <span className="text-sm text-slate-700">Email</span>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  {/* Left: Channel Toggles */}
+                  <div className="space-y-3">
+                    <p className="text-[11px] text-slate-400 mb-2">Allowed Channels</p>
+                    <div className="flex items-center justify-between py-2">
+                      <div className="flex items-center gap-3">
+                        <Mail className="h-4 w-4 text-slate-400" />
+                        <span className="text-sm text-slate-700">Email</span>
+                      </div>
+                      <Switch 
+                        checked={localPrefs.emailEnabled ?? true}
+                        onCheckedChange={(checked) => handleToggle("emailEnabled", checked)}
+                        disabled={!canEdit || updatePreferencesMutation.isPending}
+                      />
                     </div>
-                    <Switch 
-                      checked={preferences?.emailEnabled ?? true}
-                      disabled
-                    />
-                  </div>
-                  <div className="flex items-center justify-between py-2">
-                    <div className="flex items-center gap-3">
-                      <MessageSquare className="h-4 w-4 text-slate-400" />
-                      <span className="text-sm text-slate-700">SMS</span>
+                    <div className="flex items-center justify-between py-2">
+                      <div className="flex items-center gap-3">
+                        <MessageSquare className="h-4 w-4 text-slate-400" />
+                        <span className="text-sm text-slate-700">SMS</span>
+                      </div>
+                      <Switch 
+                        checked={localPrefs.smsEnabled ?? true}
+                        onCheckedChange={(checked) => handleToggle("smsEnabled", checked)}
+                        disabled={!canEdit || updatePreferencesMutation.isPending}
+                      />
                     </div>
-                    <Switch 
-                      checked={preferences?.smsEnabled ?? true}
-                      disabled
-                    />
-                  </div>
-                  <div className="flex items-center justify-between py-2">
-                    <div className="flex items-center gap-3">
-                      <Mic className="h-4 w-4 text-slate-400" />
-                      <span className="text-sm text-slate-700">Voice</span>
+                    <div className="flex items-center justify-between py-2">
+                      <div className="flex items-center gap-3">
+                        <Mic className="h-4 w-4 text-slate-400" />
+                        <span className="text-sm text-slate-700">Voice</span>
+                      </div>
+                      <Switch 
+                        checked={localPrefs.voiceEnabled ?? true}
+                        onCheckedChange={(checked) => handleToggle("voiceEnabled", checked)}
+                        disabled={!canEdit || updatePreferencesMutation.isPending}
+                      />
                     </div>
-                    <Switch 
-                      checked={preferences?.voiceEnabled ?? true}
-                      disabled
-                    />
                   </div>
-                  
-                  {preferences?.bestContactWindowStart && preferences?.bestContactWindowEnd && (
-                    <div className="mt-4 pt-4 border-t border-slate-100">
-                      <p className="text-[11px] text-slate-400 mb-1">Best Contact Window</p>
-                      <p className="text-sm text-slate-700">
-                        {preferences.bestContactWindowStart} - {preferences.bestContactWindowEnd}
+
+                  {/* Right: Best Contact Window */}
+                  <div className="space-y-3">
+                    <p className="text-[11px] text-slate-400 mb-2">Best Contact Window</p>
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-3">
+                        <Clock className="h-4 w-4 text-slate-400" />
+                        <div className="flex items-center gap-2 flex-1">
+                          <Select
+                            value={localPrefs.bestContactWindowStart || ""}
+                            onValueChange={(value) => handleTimeChange("bestContactWindowStart", value === "clear" ? "" : value)}
+                            disabled={!canEdit || updatePreferencesMutation.isPending}
+                          >
+                            <SelectTrigger className="w-24 h-9 text-sm bg-white/70 border-gray-200/50">
+                              <SelectValue placeholder="Start" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="clear" className="text-slate-400">Clear</SelectItem>
+                              {TIME_OPTIONS.map((time) => (
+                                <SelectItem key={time} value={time}>{time}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <span className="text-slate-400 text-sm">to</span>
+                          <Select
+                            value={localPrefs.bestContactWindowEnd || ""}
+                            onValueChange={(value) => handleTimeChange("bestContactWindowEnd", value === "clear" ? "" : value)}
+                            disabled={!canEdit || updatePreferencesMutation.isPending}
+                          >
+                            <SelectTrigger className="w-24 h-9 text-sm bg-white/70 border-gray-200/50">
+                              <SelectValue placeholder="End" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="clear" className="text-slate-400">Clear</SelectItem>
+                              {TIME_OPTIONS.map((time) => (
+                                <SelectItem key={time} value={time}>{time}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                      <p className="text-xs text-slate-400 pl-7">
+                        Preferred hours for outbound contact
                       </p>
                     </div>
-                  )}
+                  </div>
                 </div>
               )}
             </section>
