@@ -64,7 +64,8 @@ import {
   onboardingProgress,
   messageDrafts,
   tenants,
-  paymentPromises
+  paymentPromises,
+  smeClients
 } from "@shared/schema";
 import { getOverdueCategoryFromDueDate } from "@shared/utils/overdueUtils";
 import { calculateLatePaymentInterest } from "./utils/interestCalculator";
