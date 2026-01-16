@@ -109,6 +109,30 @@ export default function CustomerDetailPage() {
     });
   };
 
+  const handleDayToggle = (day: string) => {
+    if (!canEdit) return;
+    const previousPrefs = { ...localPrefs };
+    const currentDays = localPrefs.bestContactDays || [];
+    const newDays = currentDays.includes(day)
+      ? currentDays.filter(d => d !== day)
+      : [...currentDays, day];
+    const newPrefs = { ...localPrefs, bestContactDays: newDays };
+    setLocalPrefs(newPrefs);
+    updatePreferencesMutation.mutate({ bestContactDays: newDays }, {
+      onError: () => setLocalPrefs(previousPrefs)
+    });
+  };
+
+  const DAYS_OF_WEEK = [
+    { key: "monday", label: "Mon" },
+    { key: "tuesday", label: "Tue" },
+    { key: "wednesday", label: "Wed" },
+    { key: "thursday", label: "Thu" },
+    { key: "friday", label: "Fri" },
+    { key: "saturday", label: "Sat" },
+    { key: "sunday", label: "Sun" }
+  ];
+
   const invoices = invoicesData?.invoices || [];
   const outstandingInvoices = invoices.filter(inv => 
     inv.status === "pending" || inv.status === "overdue"
@@ -316,6 +340,31 @@ export default function CustomerDetailPage() {
                       <p className="text-xs text-slate-400 pl-7">
                         Preferred hours for outbound contact
                       </p>
+                      
+                      {/* Days of Week */}
+                      <div className="pt-3">
+                        <p className="text-[11px] text-slate-400 mb-2">Allowed Days</p>
+                        <div className="flex flex-wrap gap-2">
+                          {DAYS_OF_WEEK.map(({ key, label }) => {
+                            const isSelected = (localPrefs.bestContactDays || []).includes(key);
+                            return (
+                              <button
+                                key={key}
+                                type="button"
+                                onClick={() => handleDayToggle(key)}
+                                disabled={!canEdit || updatePreferencesMutation.isPending}
+                                className={`px-3 py-1.5 text-xs rounded-md border transition-colors ${
+                                  isSelected
+                                    ? "bg-[#17B6C3] text-white border-[#17B6C3]"
+                                    : "bg-white/70 text-slate-600 border-slate-200 hover:border-slate-300"
+                                } disabled:opacity-50 disabled:cursor-not-allowed`}
+                              >
+                                {label}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
