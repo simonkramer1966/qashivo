@@ -1,0 +1,289 @@
+You are working inside the existing Qashivo codebase on Replit.
+
+GOAL
+Implement end-to-end email communications via our existing SendGrid integration:
+1) Outbound: send emails to debtor contacts from Qashivo with correct threading + tracking tokens.
+2) Inbound: capture replies via SendGrid Inbound Parse webhook, link them to the correct Customer/Invoice/Action, store the raw message, and generate a structured “Detected Outcome” record with confidence.
+3) UI: show a conversation thread on Customer + Invoice pages and a simple “Inbound Inbox” review list for low-confidence parsing.
+
+NON-NEGOTIABLES
+- Human-approved actions only: emails are only sent from approved Actions.
+- Every outbound email must be traceable to a single Action and (optionally) Invoice.
+- Every inbound email must be stored as immutable raw content + parsed fields.
+- Do NOT store customer mailbox credentials. This is pure SendGrid outbound + inbound parse.
+
+ASSUMED EXISTING ENTITIES (adapt names to actual schema)
+- Partner, SME, Customer, Invoice
+- Action (represents “send email” chase action; has approval status + scheduledAt + executedAt)
+If any of these don’t exist, create minimal versions without breaking existing app.
+
+========================================================
+A) ENV VARS (add if missing)
+========================================================
+- SENDGRID_API_KEY=...
+- SENDGRID_FROM_EMAIL=notifications@<ourdomain>   (or existing default)
+- SENDGRID_FROM_NAME=Qashivo
+- SENDGRID_INBOUND_SIGNING_KEY=... (optional; if we use signed inbound, otherwise omit)
+- APP_BASE_URL=https://<replit-public-url>
+- EMAIL_REPLY_DOMAIN=in.qashivo.com (or whatever domain is configured in SendGrid Inbound Parse)
+- EMAIL_REPLY_PREFIX=reply         (so replies go to reply+token@in.qashivo.com)
+
+If inbound parse is already configured, confirm the webhook points to:
+POST /api/webhooks/sendgrid/inbound
+
+========================================================
+B) DATABASE: COMMUNICATIONS + OUTCOMES
+========================================================
+Create the following tables/models (Prisma or equivalent). Use exact naming conventions consistent with the codebase.
+
+1) EmailMessage
+- id (uuid)
+- direction ENUM('OUTBOUND','INBOUND')
+- channel ENUM('EMAIL')
+- actionId (nullable) FK -> Action
+- customerId FK -> Customer
+- invoiceId (nullable) FK -> Invoice
+- smeId (nullable) FK -> SME
+- partnerId (nullable) FK -> Partner
+
+Outbound fields:
+- toEmail
+- toName (nullable)
+- fromEmail
+- fromName
+- subject
+- textBody (nullable)
+- htmlBody (nullable)
+
+SendGrid metadata:
+- sendgridMessageId (nullable)  // from response headers if available
+- inReplyTo (nullable)
+- references (nullable)
+- threadKey (nullable)          // our internal thread grouping
+
+Inbound fields:
+- inboundFromEmail
+- inboundFromName (nullable)
+- inboundToEmail
+- inboundCc (nullable json)
+- inboundSubject (nullable)
+- inboundText (nullable)
+- inboundHtml (nullable)
+- inboundHeaders (nullable json) // raw headers
+- inboundAttachmentsMeta (nullable json)
+
+Shared:
+- receivedAt (nullable datetime) // for inbound
+- sentAt (nullable datetime)     // for outbound
+- status ENUM('QUEUED','SENT','DELIVERED','BOUNCED','FAILED','RECEIVED','PARSED')
+- error (nullable text)
+
+2) DetectedOutcome
+- id (uuid)
+- emailMessageId FK -> EmailMessage
+- customerId FK -> Customer
+- invoiceId (nullable) FK -> Invoice
+- outcomeType ENUM(
+  'PROMISE_TO_PAY',
+  'REQUEST_MORE_TIME',
+  'PAYMENT_PLAN_REQUEST',
+  'DISPUTE',
+  'ALREADY_PAID',
+  'WRONG_CONTACT',
+  'UNKNOWN'
+)
+- promiseDate (nullable date)
+- amount (nullable decimal)
+- notes (nullable text)
+- confidence (decimal 0..1)
+- needsReview (boolean default false)
+- createdAt datetime
+
+3) Optional: EmailThread
+If you prefer normalized threads, add:
+- id
+- threadKey unique
+- customerId
+- invoiceId nullable
+But you can also use EmailMessage.threadKey only.
+
+Run migrations.
+
+========================================================
+C) OUTBOUND SENDING PIPELINE
+========================================================
+1) Create/extend a service: sendgridEmailService.ts
+Function: sendActionEmail(actionId: string): Promise<{emailMessageId}>
+Steps:
+- Load Action + related Customer + Invoice (if any) + SME/Partner.
+- Assert Action.status is APPROVED (or equivalent).
+- Build tracking + reply routing token:
+  - token = base64url( actionId + "." + customerId + "." + (invoiceId||"none") + "." + randomShort )
+  - store token on Action (new field action.emailReplyToken) OR store on EmailMessage.
+- Set Reply-To to: `${EMAIL_REPLY_PREFIX}+${token}@${EMAIL_REPLY_DOMAIN}`
+- Also include custom headers:
+  - X-Qashivo-Action-Id: <actionId>
+  - X-Qashivo-Customer-Id: <customerId>
+  - X-Qashivo-Invoice-Id: <invoiceId or empty>
+  - X-Qashivo-Thread-Key: <threadKey>
+- Determine threadKey:
+  - If invoiceId exists: `inv_<invoiceId>`
+  - Else: `cust_<customerId>`
+- Subject rules:
+  - If invoice: `Invoice <invoiceNumber> — <CompanyName>`
+  - Else: `Quick reminder — <CompanyName>`
+- Body rules:
+  - Use existing template system if present; otherwise implement a minimal templater:
+    variables: {{customerName}}, {{companyName}}, {{invoiceNumber}}, {{amountDue}}, {{dueDate}}, {{payLink}}
+- Create EmailMessage row with direction OUTBOUND, status QUEUED.
+- Send via SendGrid:
+  - Use @sendgrid/mail if already installed; otherwise add it.
+  - Capture sendgrid message id if available (some libs provide it in response headers).
+- Update EmailMessage status SENT, sentAt now.
+- Update Action.executedAt now; Action.status EXECUTED (or existing).
+- Append a Timeline event if Qashivo has an activity/timeline model already.
+
+2) Hook into existing execution flow:
+Wherever Qashivo “executes” approved actions, ensure EMAIL actions call sendActionEmail(actionId).
+If no executor exists yet, create:
+POST /api/actions/:id/execute
+- Auth required, role allowed.
+- Calls sendActionEmail and returns success.
+
+========================================================
+D) INBOUND: SENDGRID INBOUND PARSE WEBHOOK
+========================================================
+Implement endpoint:
+POST /api/webhooks/sendgrid/inbound
+This must accept multipart/form-data SendGrid payload fields such as:
+- from, to, subject, text, html, headers
+- attachments info (optional)
+- envelope (json) sometimes
+- Inbound Parse may include "attachments" and multiple attachment files.
+
+Steps:
+1) Parse multipart safely:
+- Use existing middleware (busboy/multer/nextjs body parser off).
+- Store attachments meta only for MVP (filename, contentType, size). Do not store raw files unless easy; if stored, put in object storage later.
+
+2) Identify the token and link records:
+Primary method (preferred):
+- Extract recipient address from "to"
+- Find pattern: `${EMAIL_REPLY_PREFIX}+<token>@${EMAIL_REPLY_DOMAIN}`
+- If token found:
+  - decode token to get actionId/customerId/invoiceId (if you encoded them)
+  - else: look up EmailMessage where replyToken==token or Action.emailReplyToken==token
+Fallback methods:
+- Read headers for X-Qashivo-Action-Id etc.
+- Parse In-Reply-To / References and match to EmailMessage.sendgridMessageId (best-effort).
+
+3) Create inbound EmailMessage:
+- direction INBOUND, status RECEIVED initially
+- set customerId/invoiceId/actionId based on match
+- store inbound fields (from/to/subject/text/html/headers json)
+- set receivedAt now
+
+4) Outcome detection (MVP heuristic + placeholder for LLM):
+Create a function detectOutcomeFromText(text: string, subject: string): { outcomeType, promiseDate?, confidence, notes, needsReview }
+MVP heuristic rules (fast + deterministic):
+- If contains “paid” / “payment made” / “sent the transfer” => ALREADY_PAID (confidence 0.7)
+- If contains “dispute” / “wrong” / “not ours” / “query” / “credit note” => DISPUTE (0.7)
+- If contains a date pattern (e.g. 12/02/2026, 12 Feb) plus phrases “will pay” / “can pay” => PROMISE_TO_PAY with parsed date (0.75)
+- If contains “more time” / “next week” / “end of month” => REQUEST_MORE_TIME (0.6)
+- If contains “payment plan” / “installments” => PAYMENT_PLAN_REQUEST (0.7)
+- If contains “not the right person” / “no longer here” => WRONG_CONTACT (0.8)
+- Else UNKNOWN (0.3)
+
+Date parsing:
+- Implement robust parsing for UK formats (DD/MM/YYYY, “12 Feb”, “12th February”).
+- If relative dates like “next Friday”, convert using Europe/London timezone.
+
+5) Create DetectedOutcome linked to inbound EmailMessage.
+- Set needsReview=true if confidence < 0.65 or outcomeType==UNKNOWN
+- status on EmailMessage becomes PARSED
+
+6) Update business state (minimal, safe):
+- If PROMISE_TO_PAY with date:
+  - Update Invoice.expectedPaymentDate and Invoice.intentConfidence (if fields exist)
+  - OR create a separate “InvoiceIntent” record if your system already models intent.
+- If DISPUTE or PAYMENT_PLAN_REQUEST:
+  - Flag Invoice as “needs attention” / create Exception record if that exists.
+Do NOT auto-close invoices.
+
+7) Respond 200 quickly:
+Return { ok: true } within <2 seconds. Do not do heavy processing inline.
+If the codebase already uses a job queue, enqueue parse. If not, keep it inline but lightweight.
+
+========================================================
+E) SECURITY + HARDENING
+========================================================
+- Validate inbound requests:
+  - If SendGrid signed webhook verification is already used, keep it.
+  - Otherwise, implement a shared secret query param on the inbound URL:
+    /api/webhooks/sendgrid/inbound?key=INBOUND_SECRET
+    Compare to env var SENDGRID_INBOUND_SIGNING_KEY (even if not “true signing”, it blocks random internet spam).
+- Rate limit inbound endpoint (basic in-memory is fine for MVP).
+- Never trust inbound “from” for identity. Always treat as untrusted input.
+- Store raw inbound headers for audit.
+
+========================================================
+F) UI: CONVERSATIONS + INBOUND REVIEW
+========================================================
+1) Customer Detail page
+Add a “Conversations” section:
+- Show thread grouped by threadKey (customer-level thread + invoice-level threads)
+- For each message show:
+  - direction badge (Sent / Received)
+  - timestamp
+  - subject (small)
+  - excerpt (first 140 chars)
+  - click to expand full text/html (render safely; strip scripts)
+- Also show “Detected outcome” chip on inbound messages:
+  - e.g. “Promise to pay — 12 Feb” with confidence % and “Needs review” if flagged
+
+2) Invoice Detail page
+Add a “Conversation for this invoice” panel filtered by invoiceId, ordered asc.
+
+3) Inbound Inbox (simple review queue)
+New page: /inbox
+- Filter EmailMessages where direction=INBOUND and exists DetectedOutcome.needsReview=true
+- Columns: receivedAt, from, customer, invoice (optional), detected outcome, confidence, status
+- Clicking a row opens a drawer:
+  - shows raw message
+  - shows proposed outcome + editable fields (outcomeType, promiseDate, notes)
+  - “Confirm outcome” button sets needsReview=false and updates invoice intent fields if relevant
+
+Make sure UI copy is “accountant calm”:
+- Use neutral language: “Detected outcome”, “Needs review”, “Confirmed”
+- Avoid hypey AI wording.
+
+========================================================
+G) API ENDPOINTS FOR UI
+========================================================
+Implement:
+GET /api/customers/:id/messages?threadKey=&invoiceId=
+GET /api/inbox?needsReview=true
+POST /api/outcomes/:id/confirm   (body can override outcomeType/promiseDate/notes)
+All require auth and role checks (Partner/SME/Controller as appropriate).
+
+========================================================
+H) TESTING: LOCAL + MANUAL
+========================================================
+Add a simple dev script or instructions:
+- For inbound parse testing, provide a curl example posting multipart fields.
+- Create a seed customer/invoice/action and run:
+  - approve action
+  - execute action -> sends email with Reply-To token
+  - simulate inbound reply by calling inbound webhook with “to” set to reply+token@in.qashivo.com
+Verify:
+- Outbound EmailMessage created
+- Inbound EmailMessage created + linked
+- DetectedOutcome created
+- UI shows conversation thread + inbox item if low confidence
+
+DELIVERABLE
+- Working outbound send for approved actions
+- Working inbound reply capture + linking + stored messages + detected outcomes
+- Conversations UI on Customer and Invoice pages
+- Inbound Inbox review page
+- No breaking changes to existing flows
