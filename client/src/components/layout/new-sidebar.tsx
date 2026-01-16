@@ -28,7 +28,8 @@ import {
   Shield,
   CreditCard,
   Calculator,
-  BookOpen
+  BookOpen,
+  Inbox
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -60,6 +61,7 @@ const navigationSections = [
     items: [
       { name: "Overview", href: "/", icon: Gauge },
       { name: "Action Centre", href: "/action-centre", icon: Target },
+      { name: "Inbox", href: "/inbox", icon: Inbox },
       { name: "Cash Flow", href: "/cash-flow", icon: TrendingUp },
     ]
   },

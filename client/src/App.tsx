@@ -62,6 +62,7 @@ const PartnerClients = lazy(() => import("@/pages/partner-clients"));
 const PartnerClientDetail = lazy(() => import("@/pages/partner-client-detail"));
 const AcceptInvite = lazy(() => import("@/pages/accept-invite"));
 const SmeOnboarding = lazy(() => import("@/pages/sme-onboarding"));
+const Inbox = lazy(() => import("@/pages/inbox"));
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -153,6 +154,7 @@ function Router() {
           <Route path="/customers/:customerId" component={CustomerDetail} />
           <Route path="/invoices" component={Invoices} />
           <Route path="/action-centre" component={ActionCentre} />
+          <Route path="/inbox" component={Inbox} />
           <Route path="/activity-log" component={ActivityLog} />
           <Route path="/documentation" component={Documentation} />
           <Route path="/documentation-review" component={DocumentationReview} />
