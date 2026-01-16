@@ -57,6 +57,9 @@ const Financing = lazy(() => import("@/pages/financing"));
 const Automation = lazy(() => import("@/pages/automation"));
 const Workflows = lazy(() => import("@/pages/workflows"));
 const CustomerDetail = lazy(() => import("@/pages/customer-detail"));
+const PartnerPractice = lazy(() => import("@/pages/partner-practice"));
+const PartnerClients = lazy(() => import("@/pages/partner-clients"));
+const PartnerClientDetail = lazy(() => import("@/pages/partner-client-detail"));
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -156,6 +159,10 @@ function Router() {
           <Route path="/automation" component={Automation} />
           <Route path="/workflows" component={Workflows} />
           <Route path="/cashboard-experimental" component={CashboardExperimental} />
+          <Route path="/p/:partnerSlug/practice" component={PartnerPractice} />
+          <Route path="/p/:partnerSlug/clients/:smeClientId" component={PartnerClientDetail} />
+          <Route path="/p/:partnerSlug/clients" component={PartnerClients} />
+          <Route path="/p/:partnerSlug" component={PartnerPractice} />
           <Route path="/" component={Cashboard} />
           <Route path="/:rest*" component={NotFound} />
         </Switch>
