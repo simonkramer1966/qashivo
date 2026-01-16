@@ -189,8 +189,8 @@ export function InvoiceDetailDialog({ invoice, open, onOpenChange, onDemoStart, 
                       <p className="text-sm text-slate-600">Credit Limit</p>
                       <p className="font-semibold">£20,000</p>
                     </div>
-                    <Badge variant="outline" className="text-amber-600 border-amber-300">
-                      Medium Risk
+                    <Badge variant="outline" className="text-slate-600 border-slate-300">
+                      Pays late but reliable
                     </Badge>
                   </div>
                 </div>

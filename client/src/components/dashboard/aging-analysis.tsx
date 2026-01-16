@@ -252,7 +252,7 @@ export default function AgingAnalysisHeatmap() {
       testId: "metric-average-age"
     },
     {
-      title: "Critical Risk",
+      title: "Needs Attention",
       value: `${criticalPercentage}%`,
       change: `$${criticalAmount.toLocaleString()}`,
       changeType: criticalPercentage > 30 ? "negative" : "positive",
@@ -637,7 +637,7 @@ export default function AgingAnalysisHeatmap() {
               <p className="font-medium mb-1">Aging Analysis Insights</p>
               <p>
                 This analysis categorizes your outstanding receivables by overdue periods. 
-                Focus collection efforts on accounts in the 61-90 and 90+ day buckets to minimize bad debt risk.
+                Focus collection efforts on accounts in the 61-90 and 90+ day buckets to minimize bad debt exposure.
                 Industry benchmark: Keep 60+ day receivables under 25% of total outstanding.
               </p>
             </div>

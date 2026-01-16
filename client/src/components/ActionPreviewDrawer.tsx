@@ -539,21 +539,15 @@ export function ActionPreviewDrawer({
 
         <Separator />
 
-        {/* Risk & Behavior */}
+        {/* Payment Behavior */}
         <div>
-          <div className="text-xs text-slate-500 mb-3 uppercase tracking-wide">Risk & Behavior</div>
+          <div className="text-xs text-slate-500 mb-3 uppercase tracking-wide">Payment Behaviour</div>
           <div className="space-y-2 text-sm">
             {debtor.vipFlag && (
               <div className="text-amber-700 font-medium">VIP Customer - Manual review required</div>
             )}
             <div className="flex justify-between">
-              <span className="text-slate-500">Risk Score</span>
-              <span className="text-slate-900 font-medium">
-                {debtor.riskScore !== undefined ? `${debtor.riskScore}/100` : '—'}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-slate-500">Payment Behavior</span>
+              <span className="text-slate-500">Payment Pattern</span>
               <span className="text-slate-900">{debtor.paymentBehavior || '—'}</span>
             </div>
             <div className="flex justify-between">

@@ -152,9 +152,9 @@ const CustomTooltip = ({ active, payload, label }: TooltipProps) => {
         <Separator className="bg-slate-200" />
         
         <div className="flex justify-between items-center">
-          <span className="text-slate-600">Risk Level:</span>
+          <span className="text-slate-600">Status:</span>
           <span className={`font-medium capitalize ${getRiskColor(data.riskLevel)}`}>
-            {data.riskLevel}
+            {data.riskLevel === 'low' ? 'Healthy' : data.riskLevel === 'medium' ? 'Monitor' : 'Attention needed'}
           </span>
         </div>
         
@@ -471,7 +471,7 @@ export default function CashFlowForecast() {
               
               {highRiskPeriods.length > 0 && (
                 <Badge variant="outline" className="text-xs border-orange-300 text-orange-700" data-testid="badge-risk-warning">
-                  {highRiskPeriods.length} high risk days
+                  {highRiskPeriods.length} days need attention
                 </Badge>
               )}
             </div>
@@ -725,11 +725,11 @@ export default function CashFlowForecast() {
                 </div>
               </div>
 
-              {/* Risk Metrics */}
+              {/* Exposure Analysis */}
               <div className="glass-card p-6">
                 <h3 className="text-lg font-semibold mb-4 flex items-center">
                   <Shield className="h-5 w-5 mr-2 text-[#17B6C3]" />
-                  Risk Analysis
+                  Exposure Analysis
                 </h3>
                 <div className="space-y-4">
                   <div className="flex justify-between items-center">

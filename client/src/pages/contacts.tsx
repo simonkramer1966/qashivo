@@ -111,7 +111,7 @@ export default function Customers() {
                   <p className="text-[20px] font-semibold text-slate-900 tabular-nums">12%</p>
                 </div>
                 <div>
-                  <p className="text-[12px] text-slate-500 mb-1">High risk</p>
+                  <p className="text-[12px] text-slate-500 mb-1">Unknown</p>
                   <p className="text-[20px] font-semibold text-slate-500 tabular-nums">6%</p>
                 </div>
               </div>

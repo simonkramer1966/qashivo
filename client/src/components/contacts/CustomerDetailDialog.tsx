@@ -41,6 +41,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import EditARContactDialog from "./EditARContactDialog";
+import { getBehaviourLabel } from "@/lib/behaviourLabels";
 
 interface Contact {
   id: string;
@@ -136,22 +137,7 @@ export function CustomerDetailDialog({ contact, open, onOpenChange }: CustomerDe
     return diff > 0 ? diff : 0;
   }
 
-  function getRiskBadge(riskBand?: string | null) {
-    switch (riskBand) {
-      case 'A':
-        return <Badge className="bg-emerald-500 text-white">Low Risk</Badge>;
-      case 'B':
-        return <Badge className="bg-blue-500 text-white">Medium-Low</Badge>;
-      case 'C':
-        return <Badge className="bg-amber-500 text-white">Medium</Badge>;
-      case 'D':
-        return <Badge className="bg-orange-500 text-white">Medium-High</Badge>;
-      case 'E':
-        return <Badge className="bg-red-500 text-white">High Risk</Badge>;
-      default:
-        return <Badge variant="outline">Not Assessed</Badge>;
-    }
-  }
+  const behaviourInfo = getBehaviourLabel(contact.riskBand);
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -176,7 +162,9 @@ export function CustomerDetailDialog({ contact, open, onOpenChange }: CustomerDe
                   {formatCurrency(totalOutstanding)}
                 </div>
                 <div className="mt-2">
-                  {getRiskBadge(contact.riskBand)}
+                  <Badge className={behaviourInfo.label === "Unknown" ? "border-slate-300 text-slate-600" : "bg-slate-500 text-white"} variant={behaviourInfo.label === "Unknown" ? "outline" : "default"}>
+                    {behaviourInfo.label}
+                  </Badge>
                 </div>
               </div>
             </div>

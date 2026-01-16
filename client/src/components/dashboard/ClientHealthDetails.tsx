@@ -168,7 +168,7 @@ function HealthScorePieChart({ healthScore }: { healthScore: ClientHealthScore }
           Health Score Breakdown
         </CardTitle>
         <CardDescription>
-          Overall Score: {healthScore.overallScore}% ({healthScore.riskLevel} risk)
+          Overall Score: {healthScore.overallScore}%
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -427,7 +427,7 @@ export default function ClientHealthDetails({ tenantId }: ClientHealthDetailsPro
             {healthDetails.client.name} - Health Details
           </h2>
           <p className="text-slate-600 mt-1">
-            Comprehensive health assessment and risk analysis
+            Comprehensive health assessment
           </p>
         </div>
         

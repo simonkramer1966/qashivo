@@ -287,11 +287,11 @@ export default function ClientDirectory() {
                 <SelectValue placeholder="Health Score" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Health Scores</SelectItem>
-                <SelectItem value="low">Low Risk (80-100%)</SelectItem>
-                <SelectItem value="medium">Medium Risk (60-79%)</SelectItem>
-                <SelectItem value="high">High Risk (40-59%)</SelectItem>
-                <SelectItem value="critical">Critical Risk (0-39%)</SelectItem>
+                <SelectItem value="all">All Behaviours</SelectItem>
+                <SelectItem value="low">Pays on time (80-100%)</SelectItem>
+                <SelectItem value="medium">Pays late but reliable (60-79%)</SelectItem>
+                <SelectItem value="high">Inconsistent (40-59%)</SelectItem>
+                <SelectItem value="critical">Needs attention (0-39%)</SelectItem>
               </SelectContent>
             </Select>
 
