@@ -369,9 +369,9 @@ export default function Cashboard() {
           {/* Hairline divider */}
           <div className="border-t border-slate-100/80 mb-6 flex-shrink-0" />
 
-          {/* Collection Performance - Fixed height section */}
+          {/* Behaviour Performance - Fixed height section */}
           <section className="flex-shrink-0 pb-4">
-            <p className="text-[10px] text-slate-400 uppercase tracking-wider mb-4">Collection Performance</p>
+            <p className="text-[10px] text-slate-400 uppercase tracking-wider mb-4">Behaviour Performance</p>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 sm:gap-8">
               {/* Avg Days Late */}
               <div data-testid="card-perf-avg-days-late">
