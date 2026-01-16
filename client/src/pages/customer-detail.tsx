@@ -79,9 +79,6 @@ export default function CustomerDetailPage() {
       if (!customerId) throw new Error("No customer selected");
       return apiRequest("PATCH", `/api/contacts/${customerId}/preferences`, updates);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/contacts/${customerId}/full-profile`] });
-    },
     onError: () => {
       if (preferences) {
         setLocalPrefs(preferences);
