@@ -41,7 +41,7 @@ export default function AcceptInvite() {
       return response.json();
     },
     onSuccess: (data) => {
-      setLocation(`/onboarding?smeClientId=${data.smeClientId}`);
+      setLocation(`/sme-onboarding?smeClientId=${data.smeClientId}&token=${token}`);
     },
   });
 

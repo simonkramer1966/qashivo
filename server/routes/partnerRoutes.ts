@@ -692,4 +692,175 @@ export function registerPartnerRoutes(app: Express) {
       }
     }
   );
+
+  async function verifySmeClientAccess(smeClientId: string, token: string | undefined): Promise<boolean> {
+    if (!token) return false;
+    
+    const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+    const [invite] = await db
+      .select()
+      .from(smeInviteTokens)
+      .where(
+        and(
+          eq(smeInviteTokens.smeClientId, smeClientId),
+          eq(smeInviteTokens.tokenHash, tokenHash),
+          eq(smeInviteTokens.status, "ACCEPTED")
+        )
+      )
+      .limit(1);
+    
+    return !!invite;
+  }
+
+  app.get("/api/sme-onboarding/:smeClientId", async (req: Request, res: Response) => {
+    try {
+      const { smeClientId } = req.params;
+      const token = req.query.token as string | undefined;
+
+      const hasAccess = await verifySmeClientAccess(smeClientId, token);
+      if (!hasAccess) {
+        return res.status(403).json({ message: "Access denied - invalid or missing token" });
+      }
+
+      const [client] = await db
+        .select()
+        .from(smeClients)
+        .where(eq(smeClients.id, smeClientId))
+        .limit(1);
+
+      if (!client) {
+        return res.status(404).json({ message: "Client not found" });
+      }
+
+      const [partner] = await db
+        .select({
+          name: partners.name,
+          brandName: partners.brandName,
+          brandColor: partners.brandColor,
+          logoUrl: partners.logoUrl,
+        })
+        .from(partners)
+        .where(eq(partners.id, client.partnerId))
+        .limit(1);
+
+      const xeroConnected = client.status === "CONNECTED" || client.status === "ACTIVE";
+
+      let contacts: { id: string; name: string; email: string | null; isPrimaryCreditContact: boolean }[] = [];
+      if (client.tenantId) {
+        const { contacts: tenantContacts } = await import("@shared/schema");
+        const contactRows = await db
+          .select({
+            id: tenantContacts.id,
+            name: tenantContacts.name,
+            email: tenantContacts.email,
+          })
+          .from(tenantContacts)
+          .where(eq(tenantContacts.tenantId, client.tenantId))
+          .limit(50);
+        
+        contacts = contactRows.map((c, i) => ({
+          ...c,
+          isPrimaryCreditContact: i === 0,
+        }));
+      }
+
+      res.json({
+        smeClient: {
+          id: client.id,
+          name: client.name,
+          status: client.status,
+        },
+        partner,
+        xeroConnected,
+        contacts,
+      });
+    } catch (error) {
+      console.error("Get SME onboarding data error:", error);
+      res.status(500).json({ message: "Failed to load onboarding data" });
+    }
+  });
+
+  app.get("/api/sme-onboarding/:smeClientId/xero-auth-url", async (req: Request, res: Response) => {
+    try {
+      const { smeClientId } = req.params;
+      const token = req.query.token as string | undefined;
+
+      const hasAccess = await verifySmeClientAccess(smeClientId, token);
+      if (!hasAccess) {
+        return res.status(403).json({ message: "Access denied - invalid or missing token" });
+      }
+
+      const [client] = await db
+        .select()
+        .from(smeClients)
+        .where(eq(smeClients.id, smeClientId))
+        .limit(1);
+
+      if (!client) {
+        return res.status(404).json({ message: "Client not found" });
+      }
+
+      const xeroClientId = process.env.XERO_CLIENT_ID;
+      const baseUrl = process.env.REPLIT_DEV_DOMAIN
+        ? `https://${process.env.REPLIT_DEV_DOMAIN}`
+        : process.env.APP_URL || "https://qashivo.com";
+
+      const redirectUri = `${baseUrl}/api/sme-onboarding/xero-callback`;
+      const state = Buffer.from(JSON.stringify({ smeClientId, token })).toString("base64");
+      
+      const scopes = [
+        "openid",
+        "profile",
+        "email",
+        "accounting.transactions.read",
+        "accounting.contacts.read",
+        "accounting.settings.read",
+        "offline_access",
+      ].join(" ");
+
+      const authUrl = `https://login.xero.com/identity/connect/authorize?` +
+        `response_type=code` +
+        `&client_id=${xeroClientId}` +
+        `&redirect_uri=${encodeURIComponent(redirectUri)}` +
+        `&scope=${encodeURIComponent(scopes)}` +
+        `&state=${encodeURIComponent(state)}`;
+
+      res.json({ authUrl });
+    } catch (error) {
+      console.error("Get Xero auth URL error:", error);
+      res.status(500).json({ message: "Failed to generate Xero auth URL" });
+    }
+  });
+
+  app.post("/api/sme-onboarding/:smeClientId/complete", async (req: Request, res: Response) => {
+    try {
+      const { smeClientId } = req.params;
+      const { token } = req.body;
+
+      const hasAccess = await verifySmeClientAccess(smeClientId, token);
+      if (!hasAccess) {
+        return res.status(403).json({ message: "Access denied - invalid or missing token" });
+      }
+
+      const [client] = await db
+        .select()
+        .from(smeClients)
+        .where(eq(smeClients.id, smeClientId))
+        .limit(1);
+
+      if (!client) {
+        return res.status(404).json({ message: "Client not found" });
+      }
+
+      await db
+        .update(smeClients)
+        .set({ status: "ACTIVE", updatedAt: new Date() })
+        .where(eq(smeClients.id, smeClientId));
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Complete SME onboarding error:", error);
+      res.status(500).json({ message: "Failed to complete onboarding" });
+    }
+  });
 }
