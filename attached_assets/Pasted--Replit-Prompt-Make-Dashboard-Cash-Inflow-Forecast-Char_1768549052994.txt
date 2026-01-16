@@ -1,0 +1,193 @@
+## Replit Prompt: Make Dashboard “Cash Inflow Forecast” Chart Real (Option A: Bar + Line)
+
+### Goal
+Replace the mock/hardcoded data powering the **Dashboard/Overview Cash Inflow Forecast** chart with real data computed from Postgres (Neon) via Drizzle. Use a **simple Bar + Line** chart:
+
+- **Bars:** total expected cash-in per bucket (day/week)
+- **Line:** confidence-weighted expected cash-in per bucket (expectedAmount * confidence)
+
+Do **NOT** modify the separate **Cashflow (In/Out)** page (it stays dummy until V2).
+
+---
+
+## 1) Scope & Non-goals
+
+### In scope
+- Add backend endpoint: `GET /api/dashboard/cash-inflow?range=30|60|90&bucket=day|week`
+- Compute expected cash-in from open invoices + latest outcomes/intents
+- Return series suitable for Bar + Line chart
+- Wire Dashboard chart (cashboard.tsx / Overview page) to this endpoint
+- Add tooltip showing the confidence breakdown (high/medium/low) for transparency
+
+### Out of scope (do not touch)
+- Cashflow (In/Out) page
+- Daily plan generation, approval, execution logic
+- Large refactors (except minimal route modularization if necessary)
+
+---
+
+## 2) API Response Shape
+
+Return totals + weighted totals, and also tier breakdown for tooltips:
+
+```ts
+type CashInflowPoint = {
+  date: string; // ISO date for bucket start
+  expectedAmount: number; // total expected cash-in (sum of remaining)
+  confidenceWeightedAmount: number; // sum(remaining * confidence)
+
+  // optional but recommended for tooltip breakdown
+  highConfidence: number;   // confidence >= 0.7
+  mediumConfidence: number; // 0.4 <= confidence < 0.7
+  lowConfidence: number;    // confidence < 0.4
+
+  invoiceCount: number;
+};
+
+type CashInflowResponse = {
+  rangeDays: number;
+  bucket: "day" | "week";
+  points: CashInflowPoint[];
+  asOf: string; // ISO timestamp
+};
+3) Confidence & Expected Date Logic (Deterministic MVP Rules)
+Compute forecast from open invoices only:
+
+status IN ('pending', 'overdue')
+
+remaining = amount - amountPaid
+
+skip if remaining <= 0
+
+For each invoice determine:
+
+expectedDate
+
+confidence (0–1)
+
+A) If a recent outcome/intent exists on related Actions (use what exists in the codebase)
+Use latest relevant intent for that invoice/contact.
+
+Outcome/Intent	Expected Date	Base Confidence
+promise_to_pay with date	promise date	0.85
+payment_made confirmation	today + 2 days	0.90
+request_more_time	today + 14 days	0.55
+dispute	exclude from forecast	n/a
+
+B) Fallback (no outcome)
+Condition	Expected Date	Base Confidence
+invoice overdue	today + 7 days	0.35
+due in future	dueDate	0.50
+
+Risk band adjustment (Contact.riskBand)
+Adjust confidence after base confidence:
+
+A (Low): +0.10 (cap 0.95)
+
+B: +0.05
+
+C: +0.00
+
+D: -0.10
+
+E (High): -0.15 (floor 0.10)
+
+4) Bucketing & Aggregation
+Support bucket=day and bucket=week
+
+Range is 30/60/90 days into the future from “today” (tenant timezone if available, otherwise server)
+
+Group each invoice into the bucket containing its expectedDate
+
+Include empty buckets so the chart remains continuous
+
+Per bucket sum:
+
+expectedAmount += remaining
+
+confidenceWeightedAmount += remaining * confidence
+
+Tier sums:
+
+if confidence >= 0.7 → highConfidence += remaining
+
+else if confidence >= 0.4 → mediumConfidence += remaining
+
+else → lowConfidence += remaining
+
+invoiceCount += 1
+
+5) Backend Implementation Steps
+Add a new route handler:
+
+GET /api/dashboard/cash-inflow
+
+Query invoices + contacts + latest relevant outcome/intent per invoice (use existing joins/data access patterns)
+
+Implement forecast computation in a service module (e.g. dashboardCashInflowService.ts) for testability.
+
+Ensure idempotent, read-only behavior (no DB writes).
+
+Return CashInflowResponse.
+
+6) Frontend (Dashboard) Wiring — Bar + Line in Recharts
+In cashboard.tsx (Overview page):
+
+Remove mock data feeding the cash inflow chart.
+
+Fetch: /api/dashboard/cash-inflow?range=60&bucket=week (default)
+
+Render Recharts chart:
+
+<Bar dataKey="expectedAmount" />
+
+<Line dataKey="confidenceWeightedAmount" />
+
+Tooltip should show:
+
+Total expected
+
+Confidence-weighted expected
+
+High / Medium / Low breakdown (from API)
+
+Invoice count
+
+Add lightweight controls if already present (or add minimal):
+
+Range: 30 / 60 / 90
+
+Bucket: Day / Week
+
+Styling guidance (trust-first)
+Bars: single neutral/brand color (no stacking by default)
+
+Line: same palette but visually distinct (stroke only)
+
+Keep chart clean; no heavy legends unless needed
+
+7) Validation Checklist (Must Pass)
+For a tenant with Xero invoices:
+
+Chart loads real data (not hardcoded)
+
+Overdue invoices appear in near-term buckets
+
+Promise-to-pay outcomes move cash into the promised date bucket
+
+Disputed invoices do not contribute
+
+Partial payments only count remaining balances
+
+Changing an invoice’s latest outcome changes the chart after refresh
+
+Cashflow (In/Out) page remains unchanged/dummy
+
+8) Deliverable Definition of Done
+Dashboard/Overview cash inflow chart is fully driven by /api/dashboard/cash-inflow
+
+Shows Bar (expected) + Line (confidence-weighted)
+
+Tooltips provide confidence breakdown + invoice count
+
+No regressions to Action Centre, approvals, execution, or Cashflow page

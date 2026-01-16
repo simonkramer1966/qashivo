@@ -5,7 +5,24 @@ import NewSidebar from "@/components/layout/new-sidebar";
 import BottomNav from "@/components/layout/bottom-nav";
 import Header from "@/components/layout/header";
 import { useCurrency } from "@/hooks/useCurrency";
-import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip as RechartsTooltip } from 'recharts';
+import { ComposedChart, Bar, Line, XAxis, YAxis, ResponsiveContainer, Tooltip as RechartsTooltip } from 'recharts';
+
+interface CashInflowPoint {
+  date: string;
+  expectedAmount: number;
+  confidenceWeightedAmount: number;
+  highConfidence: number;
+  mediumConfidence: number;
+  lowConfidence: number;
+  invoiceCount: number;
+}
+
+interface CashInflowResponse {
+  rangeDays: number;
+  bucket: "day" | "week";
+  points: CashInflowPoint[];
+  asOf: string;
+}
 
 interface CashMetrics {
   totalOutstanding: number;
@@ -32,20 +49,6 @@ interface CashMetrics {
   onTimePaymentRate: number;
 }
 
-interface CashFlowData {
-  forecast: Array<{
-    date: string;
-    expectedInflow: number;
-    optimisticInflow: number;
-    pessimisticInflow: number;
-    runningBalance: number;
-  }>;
-  summary: {
-    totalExpected: number;
-    totalOptimistic: number;
-    totalPessimistic: number;
-  };
-}
 
 interface Leaderboard {
   bestPayers: Array<{
@@ -82,14 +85,20 @@ interface Leaderboard {
 
 export default function Cashboard() {
   const { formatCurrency } = useCurrency();
-  const [forecastPeriod, setForecastPeriod] = useState<"1" | "3" | "6">("1");
+  const [forecastRange, setForecastRange] = useState<30 | 60 | 90>(60);
+  const [forecastBucket, setForecastBucket] = useState<"day" | "week">("week");
 
   const { data: metrics, isLoading: metricsLoading } = useQuery<CashMetrics>({
     queryKey: ["/api/dashboard/metrics"],
   });
 
-  const { data: cashflowData, isLoading: cashflowLoading } = useQuery<CashFlowData>({
-    queryKey: ["/api/analytics/cashflow-forecast"],
+  const { data: cashInflowData, isLoading: cashInflowLoading } = useQuery<CashInflowResponse>({
+    queryKey: ["/api/dashboard/cash-inflow", forecastRange, forecastBucket],
+    queryFn: async () => {
+      const res = await fetch(`/api/dashboard/cash-inflow?range=${forecastRange}&bucket=${forecastBucket}`);
+      if (!res.ok) throw new Error('Failed to fetch cash inflow');
+      return res.json();
+    }
   });
 
   const { data: leaderboards, isLoading: leaderboardsLoading } = useQuery<Leaderboard>({
@@ -105,18 +114,21 @@ export default function Cashboard() {
   const avgDaysOverdue = metrics?.avgDaysOverdue || 0;
 
   const formatChartData = () => {
-    if (!cashflowData?.forecast) return [];
-    const days = forecastPeriod === "1" ? 30 : forecastPeriod === "3" ? 90 : 180;
-    return cashflowData.forecast.slice(0, days).map(day => ({
-      date: new Date(day.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-      amount: day.expectedInflow
+    if (!cashInflowData?.points) return [];
+    return cashInflowData.points.map(point => ({
+      date: new Date(point.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      expectedAmount: point.expectedAmount,
+      confidenceWeightedAmount: point.confidenceWeightedAmount,
+      highConfidence: point.highConfidence,
+      mediumConfidence: point.mediumConfidence,
+      lowConfidence: point.lowConfidence,
+      invoiceCount: point.invoiceCount
     }));
   };
 
   const getForecastTitle = () => {
-    if (forecastPeriod === "1") return "Cash Inflow Forecast (1 Month)";
-    if (forecastPeriod === "3") return "Cash Inflow Forecast (3 Months)";
-    return "Cash Inflow Forecast (6 Months)";
+    const rangeLabel = forecastRange === 30 ? "1 Month" : forecastRange === 60 ? "2 Months" : "3 Months";
+    return `Cash Inflow Forecast (${rangeLabel})`;
   };
 
   const formatCompactCurrency = (value: number) => {
@@ -232,32 +244,51 @@ export default function Cashboard() {
           <section className="flex-1 flex flex-col min-h-0 mb-6" data-testid="card-cashflow-chart">
             <div className="flex items-center justify-between mb-3 flex-shrink-0">
               <h3 className="text-[14px] font-medium text-slate-900">{getForecastTitle()}</h3>
-              <div className="flex items-center gap-0.5" data-testid="radio-forecast-period">
-                {["1", "3", "6"].map((period) => (
-                  <button
-                    key={period}
-                    onClick={() => setForecastPeriod(period as "1" | "3" | "6")}
-                    className={`px-2.5 py-1 text-[11px] transition-colors ${
-                      forecastPeriod === period 
-                        ? "text-slate-900 font-medium" 
-                        : "text-slate-400 hover:text-slate-600"
-                    }`}
-                    data-testid={`radio-period-${period}`}
-                  >
-                    {period}M
-                  </button>
-                ))}
+              <div className="flex items-center gap-2" data-testid="radio-forecast-period">
+                <div className="flex items-center gap-0.5">
+                  {([30, 60, 90] as const).map((range) => (
+                    <button
+                      key={range}
+                      onClick={() => setForecastRange(range)}
+                      className={`px-2.5 py-1 text-[11px] transition-colors ${
+                        forecastRange === range 
+                          ? "text-slate-900 font-medium" 
+                          : "text-slate-400 hover:text-slate-600"
+                      }`}
+                      data-testid={`radio-range-${range}`}
+                    >
+                      {range}d
+                    </button>
+                  ))}
+                </div>
+                <div className="w-px h-4 bg-slate-200" />
+                <div className="flex items-center gap-0.5">
+                  {(["day", "week"] as const).map((b) => (
+                    <button
+                      key={b}
+                      onClick={() => setForecastBucket(b)}
+                      className={`px-2.5 py-1 text-[11px] transition-colors ${
+                        forecastBucket === b 
+                          ? "text-slate-900 font-medium" 
+                          : "text-slate-400 hover:text-slate-600"
+                      }`}
+                      data-testid={`radio-bucket-${b}`}
+                    >
+                      {b === "day" ? "Daily" : "Weekly"}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
             {/* Chart container with min/max height constraints */}
             <div className="flex-1 min-h-[200px] max-h-[480px]">
-              {cashflowLoading ? (
+              {cashInflowLoading ? (
                 <div className="h-full flex items-center justify-center">
                   <div className="text-slate-400 text-sm">Loading chart...</div>
                 </div>
               ) : (
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={formatChartData()}>
+                  <ComposedChart data={formatChartData()}>
                     <XAxis 
                       dataKey="date" 
                       tick={{ fontSize: 11, fill: '#94a3b8' }}
@@ -269,27 +300,67 @@ export default function Cashboard() {
                       tickLine={false}
                       axisLine={false}
                       tickFormatter={(value) => formatCompactCurrency(value)}
-                      width={50}
+                      width={55}
                     />
                     <RechartsTooltip
-                      formatter={(value: any) => [formatCurrency(value), 'Expected']}
-                      contentStyle={{
-                        backgroundColor: 'white',
-                        border: '1px solid #e2e8f0',
-                        borderRadius: '4px',
-                        padding: '8px 12px',
-                        fontSize: '13px',
-                        boxShadow: 'none'
+                      content={({ active, payload, label }) => {
+                        if (!active || !payload || !payload.length) return null;
+                        const data = payload[0]?.payload;
+                        if (!data) return null;
+                        return (
+                          <div className="bg-white border border-slate-200 rounded-md p-3 shadow-sm text-[12px]">
+                            <p className="font-medium text-slate-900 mb-2">{label}</p>
+                            <div className="space-y-1">
+                              <div className="flex justify-between gap-4">
+                                <span className="text-slate-500">Total Expected</span>
+                                <span className="font-medium tabular-nums">{formatCurrency(data.expectedAmount)}</span>
+                              </div>
+                              <div className="flex justify-between gap-4">
+                                <span className="text-slate-500">Confidence-Weighted</span>
+                                <span className="font-medium tabular-nums text-[#17B6C3]">{formatCurrency(data.confidenceWeightedAmount)}</span>
+                              </div>
+                              <div className="border-t border-slate-100 my-2 pt-2">
+                                <p className="text-[10px] text-slate-400 uppercase tracking-wider mb-1">By Confidence</p>
+                                <div className="flex justify-between gap-4">
+                                  <span className="text-[#17B6C3]">High</span>
+                                  <span className="tabular-nums">{formatCurrency(data.highConfidence)}</span>
+                                </div>
+                                <div className="flex justify-between gap-4">
+                                  <span className="text-[#B87333]">Medium</span>
+                                  <span className="tabular-nums">{formatCurrency(data.mediumConfidence)}</span>
+                                </div>
+                                <div className="flex justify-between gap-4">
+                                  <span className="text-slate-400">Low</span>
+                                  <span className="tabular-nums">{formatCurrency(data.lowConfidence)}</span>
+                                </div>
+                              </div>
+                              <div className="text-slate-400 text-[10px]">
+                                {data.invoiceCount} invoice{data.invoiceCount !== 1 ? 's' : ''}
+                              </div>
+                            </div>
+                          </div>
+                        );
                       }}
                     />
                     <Bar 
-                      dataKey="amount" 
-                      fill="#17B6C3" 
+                      dataKey="expectedAmount" 
+                      fill="#E2E8F0"
                       radius={[2, 2, 0, 0]}
                       animationDuration={600}
                       animationEasing="ease-out"
+                      name="Total Expected"
                     />
-                  </BarChart>
+                    <Line 
+                      type="monotone"
+                      dataKey="confidenceWeightedAmount" 
+                      stroke="#17B6C3"
+                      strokeWidth={2}
+                      dot={false}
+                      animationDuration={600}
+                      animationEasing="ease-out"
+                      name="Confidence-Weighted"
+                    />
+                  </ComposedChart>
                 </ResponsiveContainer>
               )}
             </div>

@@ -280,6 +280,7 @@ import { cleanEmailContent } from "./services/messagePostProcessor";
 import { clientPartnerService } from "./services/clientPartnerService";
 import { signalCollector } from "./lib/signal-collector";
 import { getDashboardMetrics } from "./services/metricsService";
+import { computeCashInflow } from "./services/dashboardCashInflowService";
 
 // Initialize Stripe (lazy initialization - only fails when actually used)
 let stripe: Stripe | null = null;
@@ -2224,6 +2225,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching dashboard metrics:", error);
       res.status(500).json({ message: "Failed to fetch metrics" });
+    }
+  });
+
+  // Dashboard cash inflow forecast (real data from invoices + outcomes)
+  app.get("/api/dashboard/cash-inflow", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const range = parseInt(req.query.range as string) || 60;
+      const bucket = (req.query.bucket as "day" | "week") || "week";
+      
+      const validRanges = [30, 60, 90];
+      const rangeDays = validRanges.includes(range) ? range : 60;
+      const bucketType = bucket === "day" ? "day" : "week";
+
+      const result = await computeCashInflow(user.tenantId, rangeDays, bucketType);
+      res.json(result);
+    } catch (error) {
+      console.error("Error computing cash inflow forecast:", error);
+      res.status(500).json({ message: "Failed to compute cash inflow forecast" });
     }
   });
 
