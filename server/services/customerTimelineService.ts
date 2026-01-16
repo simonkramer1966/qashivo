@@ -278,15 +278,29 @@ export class CustomerTimelineService {
       )
     });
 
-    const updateData = {
-      emailEnabled: updates.emailEnabled,
-      smsEnabled: updates.smsEnabled,
-      voiceEnabled: updates.voiceEnabled,
-      bestContactWindowStart: updates.bestContactWindowStart || null,
-      bestContactWindowEnd: updates.bestContactWindowEnd || null,
-      bestContactDays: updates.bestContactDays || null,
+    // Only include fields that were explicitly passed in the update
+    const updateData: Record<string, any> = {
       updatedAt: new Date()
     };
+    
+    if (updates.emailEnabled !== undefined) {
+      updateData.emailEnabled = updates.emailEnabled;
+    }
+    if (updates.smsEnabled !== undefined) {
+      updateData.smsEnabled = updates.smsEnabled;
+    }
+    if (updates.voiceEnabled !== undefined) {
+      updateData.voiceEnabled = updates.voiceEnabled;
+    }
+    if (updates.bestContactWindowStart !== undefined) {
+      updateData.bestContactWindowStart = updates.bestContactWindowStart || null;
+    }
+    if (updates.bestContactWindowEnd !== undefined) {
+      updateData.bestContactWindowEnd = updates.bestContactWindowEnd || null;
+    }
+    if (updates.bestContactDays !== undefined) {
+      updateData.bestContactDays = updates.bestContactDays || null;
+    }
 
     if (existing) {
       await db
@@ -294,10 +308,17 @@ export class CustomerTimelineService {
         .set(updateData)
         .where(eq(customerPreferences.id, existing.id));
     } else {
+      // For new records, include defaults for required fields
       await db.insert(customerPreferences).values({
         tenantId,
         contactId: customerId,
-        ...updateData
+        emailEnabled: updates.emailEnabled ?? true,
+        smsEnabled: updates.smsEnabled ?? true,
+        voiceEnabled: updates.voiceEnabled ?? true,
+        bestContactWindowStart: updates.bestContactWindowStart || null,
+        bestContactWindowEnd: updates.bestContactWindowEnd || null,
+        bestContactDays: updates.bestContactDays || null,
+        updatedAt: new Date()
       });
     }
 
