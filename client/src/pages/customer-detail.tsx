@@ -166,7 +166,7 @@ export default function CustomerDetailPage() {
             {/* Section 2: Preferences */}
             <section>
               <p className="text-[10px] text-slate-400 uppercase tracking-wider mb-1">
-                Communication Preferences
+                Communication Constraints
               </p>
               <p className="text-xs text-slate-400 mb-4">
                 Qashivo respects these contact preferences when managing communications
