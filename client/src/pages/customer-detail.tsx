@@ -21,7 +21,6 @@ interface Contact {
   email?: string;
   phone?: string;
   companyName?: string;
-  riskBand?: string;
   creditLimit?: number;
   xeroContactId?: string;
 }
@@ -205,12 +204,6 @@ export default function CustomerDetailPage() {
                           <Phone className="h-3.5 w-3.5 text-slate-400" />
                           <span>{contact.phone}</span>
                         </div>
-                      </div>
-                    )}
-                    {contact.riskBand && (
-                      <div>
-                        <p className="text-[11px] text-slate-400 mb-1">Risk Band</p>
-                        <p className="text-sm text-slate-700">{contact.riskBand}</p>
                       </div>
                     )}
                     {contact.creditLimit && (
