@@ -1,7 +1,8 @@
 import type { Express, Request, Response } from "express";
 import { db } from "../db";
-import { inboundMessages, contacts } from "@shared/schema";
+import { inboundMessages, contacts, emailMessages, detectedOutcomes, actions, invoices } from "@shared/schema";
 import { intentAnalyst } from "../services/intentAnalyst";
+import { detectOutcomeFromText } from "../services/outcomeDetection";
 import { eq, or } from "drizzle-orm";
 import crypto from "crypto";
 
@@ -14,6 +15,8 @@ export function registerWebhookRoutes(app: Express) {
   /**
    * SendGrid Inbound Email Webhook
    * https://docs.sendgrid.com/for-developers/parsing-email/setting-up-the-inbound-parse-webhook
+   * 
+   * Enhanced to support reply token parsing for email threading
    */
   app.post("/api/webhooks/sendgrid/inbound", async (req: Request, res: Response) => {
     try {
@@ -28,31 +31,116 @@ export function registerWebhookRoutes(app: Express) {
         envelope 
       } = req.body;
 
-      if (!from || !text) {
+      if (!from || (!text && !html)) {
         return res.status(400).json({ error: 'Missing required fields' });
       }
 
       // Extract email address from "Name <email>" format
       const fromEmail = extractEmail(from);
       
-      // Find contact by email
-      const [contact] = await db
-        .select()
-        .from(contacts)
-        .where(eq(contacts.email, fromEmail))
-        .limit(1);
+      // Parse reply token from To address (format: reply+TOKEN@in.qashivo.com)
+      const replyToken = extractReplyToken(to);
+      let linkedAction: any = null;
+      let linkedContact: any = null;
+      let linkedInvoice: any = null;
+      
+      if (replyToken) {
+        // Decode reply token: base64url -> actionId.contactId.invoiceId.random
+        try {
+          const decodedToken = Buffer.from(replyToken, 'base64url').toString();
+          const [actionId, contactId, invoiceId] = decodedToken.split('.');
+          
+          console.log(`📨 Parsed reply token: action=${actionId}, contact=${contactId}, invoice=${invoiceId}`);
+          
+          // Get the linked action
+          if (actionId) {
+            const [action] = await db
+              .select()
+              .from(actions)
+              .where(eq(actions.id, actionId))
+              .limit(1);
+            if (action) {
+              linkedAction = action;
+            }
+          }
+          
+          // Get the linked invoice
+          if (invoiceId && invoiceId !== 'none') {
+            const [invoice] = await db
+              .select()
+              .from(invoices)
+              .where(eq(invoices.id, invoiceId))
+              .limit(1);
+            if (invoice) {
+              linkedInvoice = invoice;
+            }
+          }
+          
+          // Get the linked contact
+          if (contactId) {
+            const [contact] = await db
+              .select()
+              .from(contacts)
+              .where(eq(contacts.id, contactId))
+              .limit(1);
+            if (contact) {
+              linkedContact = contact;
+            }
+          }
+        } catch (tokenErr) {
+          console.log('⚠️  Failed to parse reply token:', tokenErr);
+        }
+      }
+      
+      // Fallback: find contact by email if no reply token
+      if (!linkedContact) {
+        const [contact] = await db
+          .select()
+          .from(contacts)
+          .where(eq(contacts.email, fromEmail))
+          .limit(1);
+        linkedContact = contact;
+      }
 
-      if (!contact) {
+      if (!linkedContact) {
         console.log(`⚠️  No contact found for email: ${fromEmail}`);
         return res.status(200).json({ message: 'No matching contact' });
       }
 
-      // Store inbound message
-      const [message] = await db
+      // Store in emailMessages table (new unified table)
+      const threadKey = linkedInvoice?.id ? `inv_${linkedInvoice.id}` : `cust_${linkedContact.id}`;
+      
+      const [emailMessage] = await db
+        .insert(emailMessages)
+        .values({
+          tenantId: linkedContact.tenantId,
+          direction: 'INBOUND',
+          channel: 'EMAIL',
+          actionId: linkedAction?.id || null,
+          contactId: linkedContact.id,
+          invoiceId: linkedInvoice?.id || null,
+          inboundToEmail: to,
+          inboundFromEmail: fromEmail,
+          inboundFromName: extractName(from),
+          inboundSubject: subject || '(No Subject)',
+          inboundText: text || null,
+          inboundHtml: html || null,
+          inboundHeaders: { envelope },
+          threadKey,
+          replyToken: replyToken || null,
+          status: 'RECEIVED',
+          receivedAt: new Date(),
+        })
+        .returning();
+
+      console.log(`✅ Inbound email stored in emailMessages: ${emailMessage.id}`);
+      
+      // Also store in legacy inboundMessages table for backward compatibility
+      const [legacyMessage] = await db
         .insert(inboundMessages)
         .values({
-          tenantId: contact.tenantId,
-          contactId: contact.id,
+          tenantId: linkedContact.tenantId,
+          contactId: linkedContact.id,
           channel: 'email',
           from: fromEmail,
           to: to,
@@ -64,31 +152,38 @@ export function registerWebhookRoutes(app: Express) {
             subject,
             text,
             html,
-            envelope
+            envelope,
+            emailMessageId: emailMessage.id
           },
         })
         .returning();
 
-      console.log(`✅ Inbound email stored: ${message.id}`);
+      console.log(`✅ Legacy inbound message stored: ${legacyMessage.id}`);
 
       // Record email reply signal
       const { signalCollector } = await import("../lib/signal-collector");
       signalCollector.recordChannelEvent({
-        contactId: contact.id,
-        tenantId: contact.tenantId,
+        contactId: linkedContact.id,
+        tenantId: linkedContact.tenantId,
         channel: 'email',
         eventType: 'replied',
         timestamp: new Date(),
       }).catch(err => console.error('Failed to record email signal:', err));
 
-      // Trigger intent analysis asynchronously
-      intentAnalyst.processInboundMessage(message.id).catch(err => 
+      // Trigger outcome detection asynchronously
+      processInboundEmailOutcome(emailMessage.id, text || html || '', linkedContact, linkedAction, linkedInvoice).catch(err => 
+        console.error('❌ Outcome detection error:', err)
+      );
+      
+      // Trigger legacy intent analysis asynchronously
+      intentAnalyst.processInboundMessage(legacyMessage.id).catch(err => 
         console.error('❌ Intent analysis error:', err)
       );
 
       res.status(200).json({ 
         message: 'Email received', 
-        messageId: message.id 
+        emailMessageId: emailMessage.id,
+        legacyMessageId: legacyMessage.id 
       });
 
     } catch (error) {
@@ -788,4 +883,90 @@ function normalizePhone(phone: string): string {
   }
   
   return cleaned;
+}
+
+/**
+ * Extract reply token from To address
+ * Format: reply+TOKEN@in.qashivo.com
+ */
+function extractReplyToken(toAddress: string): string | null {
+  if (!toAddress) return null;
+  
+  // Handle multiple To addresses
+  const addresses = toAddress.split(',').map(a => a.trim());
+  
+  for (const addr of addresses) {
+    const email = extractEmail(addr);
+    // Match reply+TOKEN@domain or reply-TOKEN@domain
+    const match = email.match(/^reply[+-]([a-zA-Z0-9_-]+)@/i);
+    if (match) {
+      return match[1];
+    }
+  }
+  
+  return null;
+}
+
+/**
+ * Extract name from "Name <email@domain.com>" format
+ */
+function extractName(emailString: string): string | null {
+  const match = emailString.match(/^(.+?)\s*</);
+  if (match) {
+    return match[1].replace(/"/g, '').trim() || null;
+  }
+  return null;
+}
+
+/**
+ * Process inbound email to detect outcomes (MVP heuristics)
+ */
+async function processInboundEmailOutcome(
+  emailMessageId: string,
+  messageText: string,
+  contact: any,
+  action: any | null,
+  invoice: any | null
+): Promise<void> {
+  try {
+    const detection = detectOutcomeFromText(messageText);
+    
+    if (!detection.outcomeType) {
+      console.log(`📧 No outcome detected for email ${emailMessageId}`);
+      return;
+    }
+    
+    console.log(`📧 Detected outcome: ${detection.outcomeType} (${detection.confidence})`);
+    
+    // Store in detectedOutcomes table
+    await db
+      .insert(detectedOutcomes)
+      .values({
+        tenantId: contact.tenantId,
+        emailMessageId,
+        contactId: contact.id,
+        invoiceId: invoice?.id || null,
+        outcomeType: detection.outcomeType,
+        confidence: detection.confidence.toString(),
+        amount: detection.extractedAmount || null,
+        promiseDate: detection.extractedDate || null,
+        notes: detection.extractedReason || null,
+        needsReview: detection.confidence < 0.65,
+        originalOutcomeType: detection.outcomeType,
+        originalConfidence: detection.confidence.toString(),
+      });
+    
+    // Update email message with outcome
+    await db
+      .update(emailMessages)
+      .set({
+        status: 'PARSED',
+        updatedAt: new Date(),
+      })
+      .where(eq(emailMessages.id, emailMessageId));
+    
+    console.log(`✅ Outcome stored for email ${emailMessageId}`);
+  } catch (error) {
+    console.error('Failed to process email outcome:', error);
+  }
 }
