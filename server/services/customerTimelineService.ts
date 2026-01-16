@@ -104,6 +104,7 @@ export class CustomerTimelineService {
       customer: {
         id: customer.id,
         name: customer.name,
+        companyName: customer.companyName || undefined,
         behaviourLabel,
         outstandingTotal,
         overdueTotal

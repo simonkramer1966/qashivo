@@ -75,6 +75,7 @@ export interface CustomerPreview {
   customer: {
     id: string;
     name: string;
+    companyName?: string;
     behaviourLabel?: string;
     outstandingTotal: number;
     overdueTotal: number;

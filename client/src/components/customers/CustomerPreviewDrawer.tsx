@@ -79,7 +79,7 @@ export function CustomerPreviewDrawer({
             {isLoading ? (
               <Skeleton className="h-6 w-40" />
             ) : (
-              preview?.customer.name || "Customer"
+              preview?.customer.companyName || preview?.customer.name || "Customer"
             )}
           </SheetTitle>
           <SheetDescription className="sr-only">
