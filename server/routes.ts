@@ -3539,6 +3539,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Combined endpoint for customer detail page - fetches all data in one request
+  app.get("/api/contacts/:id/full-profile", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { id } = req.params;
+      const tenantId = user.tenantId;
+
+      // Fetch all data in parallel for speed
+      const [contact, invoicesResult, preferences, timeline] = await Promise.all([
+        storage.getContact(id, tenantId),
+        storage.getContactInvoices(id, tenantId),
+        customerTimelineService.getPreferences(tenantId, id),
+        customerTimelineService.getTimeline(tenantId, id, { limit: 50 })
+      ]);
+
+      if (!contact) {
+        return res.status(404).json({ message: "Contact not found" });
+      }
+
+      res.json({
+        contact,
+        invoices: invoicesResult,
+        preferences,
+        timeline
+      });
+    } catch (error) {
+      console.error("Error fetching customer full profile:", error);
+      res.status(500).json({ message: "Failed to fetch customer profile" });
+    }
+  });
+
   // Update AR contact details (collections-specific overlay)
   app.patch("/api/contacts/:id/ar-details", isAuthenticated, async (req: any, res) => {
     try {

@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useCurrency } from "@/hooks/useCurrency";
 import { Timeline } from "@/components/customers/Timeline";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import type { CustomerPreferences } from "@shared/types/timeline";
+import type { CustomerPreferences, TimelineResponse } from "@shared/types/timeline";
 
 interface Contact {
   id: string;
@@ -36,6 +36,13 @@ interface Invoice {
   status: string;
 }
 
+interface FullProfileResponse {
+  contact: Contact;
+  invoices: Invoice[];
+  preferences: CustomerPreferences;
+  timeline: TimelineResponse;
+}
+
 const TIME_OPTIONS = [
   "00:00", "01:00", "02:00", "03:00", "04:00", "05:00",
   "06:00", "07:00", "08:00", "09:00", "10:00", "11:00", "12:00",
@@ -50,20 +57,16 @@ export default function CustomerDetailPage() {
 
   const [localPrefs, setLocalPrefs] = useState<Partial<CustomerPreferences>>({});
 
-  const { data: contact, isLoading: loadingContact } = useQuery<Contact>({
-    queryKey: [`/api/contacts/${customerId}`],
+  // Single combined query for all customer data
+  const { data: profile, isLoading: loadingProfile } = useQuery<FullProfileResponse>({
+    queryKey: [`/api/contacts/${customerId}/full-profile`],
     enabled: !!customerId,
   });
 
-  const { data: invoicesData, isLoading: loadingInvoices } = useQuery<{ invoices: Invoice[] }>({
-    queryKey: ["/api/invoices", { contactId: customerId }],
-    enabled: !!customerId,
-  });
-
-  const { data: preferences, isLoading: loadingPreferences } = useQuery<CustomerPreferences>({
-    queryKey: [`/api/contacts/${customerId}/preferences`],
-    enabled: !!customerId,
-  });
+  const contact = profile?.contact;
+  const invoices = profile?.invoices || [];
+  const preferences = profile?.preferences;
+  const initialTimeline = profile?.timeline;
 
   useEffect(() => {
     if (preferences) {
@@ -77,7 +80,7 @@ export default function CustomerDetailPage() {
       return apiRequest("PATCH", `/api/contacts/${customerId}/preferences`, updates);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/contacts/${customerId}/preferences`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/contacts/${customerId}/full-profile`] });
     },
     onError: () => {
       if (preferences) {
@@ -86,7 +89,7 @@ export default function CustomerDetailPage() {
     }
   });
 
-  const canEdit = !!customerId && !loadingPreferences;
+  const canEdit = !!customerId && !loadingProfile;
 
   const handleToggle = (field: keyof CustomerPreferences, value: boolean) => {
     if (!canEdit) return;
@@ -133,7 +136,6 @@ export default function CustomerDetailPage() {
     { key: "sunday", label: "Sun" }
   ];
 
-  const invoices = invoicesData?.invoices || [];
   const outstandingInvoices = invoices.filter(inv => 
     inv.status === "pending" || inv.status === "overdue"
   );
@@ -162,7 +164,7 @@ export default function CustomerDetailPage() {
 
       <main className="flex-1 flex flex-col min-h-0 main-with-bottom-nav">
         <Header 
-          title={loadingContact ? "Loading..." : (contact?.companyName || contact?.name || "Customer")}
+          title={loadingProfile ? "Loading..." : (contact?.companyName || contact?.name || "Customer")}
           subtitle="Full customer profile and communication history"
         />
         
@@ -181,7 +183,7 @@ export default function CustomerDetailPage() {
             <section>
               <p className="text-[10px] text-slate-400 uppercase tracking-wider mb-4">Profile</p>
               
-              {loadingContact ? (
+              {loadingProfile ? (
                 <div className="space-y-3">
                   <Skeleton className="h-5 w-48" />
                   <Skeleton className="h-4 w-32" />
@@ -252,7 +254,7 @@ export default function CustomerDetailPage() {
                 Qashivo respects these contact preferences when managing communications
               </p>
               
-              {loadingPreferences ? (
+              {loadingProfile ? (
                 <div className="space-y-3">
                   <Skeleton className="h-8 w-full" />
                   <Skeleton className="h-8 w-full" />
@@ -382,7 +384,7 @@ export default function CustomerDetailPage() {
                 Invoices with unresolved outcomes
               </p>
               
-              {loadingInvoices ? (
+              {loadingProfile ? (
                 <div className="space-y-3">
                   <Skeleton className="h-12 w-full" />
                   <Skeleton className="h-12 w-full" />
@@ -440,7 +442,7 @@ export default function CustomerDetailPage() {
                 Activity Timeline
               </p>
               {customerId && (
-                <Timeline customerId={customerId} />
+                <Timeline customerId={customerId} initialData={initialTimeline} />
               )}
             </section>
 

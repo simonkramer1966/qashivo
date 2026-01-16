@@ -38,6 +38,7 @@ interface TimelineProps {
   customerId: string;
   invoiceId?: string;
   compact?: boolean;
+  initialData?: TimelineResponse;
 }
 
 const channelIcons: Partial<Record<TimelineChannel, typeof Mail>> = {
@@ -73,7 +74,7 @@ function getConfidenceLabel(score: number): string {
   return "low";
 }
 
-export function Timeline({ customerId, invoiceId, compact = false }: TimelineProps) {
+export function Timeline({ customerId, invoiceId, compact = false, initialData }: TimelineProps) {
   const { toast } = useToast();
   const [filters, setFilters] = useState<TimelineFilters>({});
   const [accumulatedItems, setAccumulatedItems] = useState<TimelineItem[]>([]);
@@ -84,6 +85,7 @@ export function Timeline({ customerId, invoiceId, compact = false }: TimelinePro
   const [showNoteInput, setShowNoteInput] = useState(false);
   const [noteText, setNoteText] = useState("");
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [hasAppliedFilters, setHasAppliedFilters] = useState(false);
 
   const buildQueryParams = useCallback(() => {
     const params: Record<string, any> = {};
@@ -97,18 +99,32 @@ export function Timeline({ customerId, invoiceId, compact = false }: TimelinePro
 
   const baseQueryKey = [`/api/contacts/${customerId}/timeline`, buildQueryParams()];
 
+  // Skip the query if we have initialData and no filters have been applied
+  const shouldSkipQuery = !!initialData && !hasAppliedFilters && !invoiceId;
+
   const { data, isLoading } = useQuery<TimelineResponse>({
     queryKey: baseQueryKey,
-    enabled: !!customerId,
+    enabled: !!customerId && !shouldSkipQuery,
   });
 
+  // Use initialData on first load, then switch to query data when filters change
+  const effectiveData = shouldSkipQuery ? initialData : data;
+
   useEffect(() => {
-    if (data) {
-      setAccumulatedItems(data.items);
-      setNextCursor(data.nextCursor);
-      setHasMore(data.hasMore);
+    if (effectiveData) {
+      setAccumulatedItems(effectiveData.items);
+      setNextCursor(effectiveData.nextCursor);
+      setHasMore(effectiveData.hasMore);
     }
-  }, [data]);
+  }, [effectiveData]);
+
+  // Track when filters are applied so we know to use the query
+  useEffect(() => {
+    const hasFilters = !!(filters.channel?.length || filters.direction?.length || filters.outcomesOnly || filters.needsReviewOnly);
+    if (hasFilters) {
+      setHasAppliedFilters(true);
+    }
+  }, [filters]);
 
   useEffect(() => {
     setAccumulatedItems([]);
