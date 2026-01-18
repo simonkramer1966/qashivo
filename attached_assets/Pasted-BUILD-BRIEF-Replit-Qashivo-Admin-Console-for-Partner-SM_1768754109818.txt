@@ -1,0 +1,287 @@
+BUILD BRIEF (Replit): Qashivo Admin Console for Partner + SME Provisioning (Pilot)
+
+CONTEXT
+We need an internal-only Admin Console that allows Qashivo staff to create and manage:
+- Partners (accounting firms)
+- SMEs (client businesses attached to a Partner during pilot)
+- Users (partner staff + SME staff)
+Plus a simple provisioning workflow (Created → Invited → Accepted → Connected → Imported → Ready), import jobs, integration connections, and a full audit log.
+
+NON-NEGOTIABLE PRINCIPLES
+- Internal-only: gated behind role=QASHIVO_ADMIN (and QASHIVO_SUPER_ADMIN).
+- Strict tenancy: SME belongs to exactly one Partner in pilot.
+- Audit-first: all create/edit/invite actions must write to AuditLog.
+- “Accountant calm” UI: Apple-like minimalism, hairline dividers, no heavy cards, muted labels, clean typography, no clutter.
+- No “work-y” CTAs: Admin pages can have actions, but user-facing pages remain calm. This console is for ops.
+
+TECH ASSUMPTIONS
+- Existing Qashivo stack: Next.js/React + Tailwind + existing layout components.
+- Existing auth: user session contains role and scopes (partnerId/smeId).
+- DB: use Prisma (or your existing ORM). If Prisma exists, extend schema; otherwise create minimal tables using whatever DB layer is in the repo.
+- Use existing UI primitives (Buttons, Inputs, Table). Avoid introducing new design systems.
+
+SCOPE (MVP)
+Create new route group: /admin/*
+Pages:
+1) /admin/partners            (list + create partner)
+2) /admin/partners/[id]       (partner detail, settings, users, SMEs)
+3) /admin/smes                (list + create SME)
+4) /admin/smes/[id]           (SME detail, provisioning, integrations, imports, kill switch)
+5) /admin/users               (list + invite user)
+6) /admin/provisioning        (queue view of onboarding status + blockers)
+7) /admin/imports             (import jobs list + re-run)
+8) /admin/audit               (audit log viewer)
+
+DATA MODEL (extend DB)
+Create/extend these tables:
+
+Partner
+- id (uuid)
+- name
+- brandName (nullable)
+- status enum: PILOT | ACTIVE | PAUSED
+- defaultExecutionTime (string "09:00")
+- channelsEnabled: { email:boolean, sms:boolean, voice:boolean }
+- whitelabelEnabled boolean
+- createdAt, updatedAt
+- notes (text nullable)
+
+SME
+- id (uuid)
+- partnerId (fk)
+- legalName
+- tradingName (nullable)
+- status enum: CREATED | INVITED | ACTIVE | PAUSED
+- industry (nullable)
+- timezone (default "Europe/London")
+- currency (default "GBP")
+- approvalMode enum: REQUIRED (MVP only)
+- voiceEnabled boolean
+- sendKillSwitch boolean (default true until ready)
+- createdAt, updatedAt
+
+User
+- id (uuid)
+- email (unique)
+- name
+- role enum:
+  QASHIVO_SUPER_ADMIN | QASHIVO_ADMIN | QASHIVO_SUPPORT |
+  PARTNER_OWNER | PARTNER_MANAGER | CREDIT_CONTROLLER |
+  SME_OWNER | SME_APPROVER | SME_VIEWER
+- partnerId nullable
+- smeId nullable
+- status enum: INVITED | ACTIVE | DISABLED
+- createdAt, updatedAt
+
+IntegrationConnection
+- id (uuid)
+- ownerType enum: SME | PARTNER
+- ownerId (uuid)
+- provider enum: XERO | CSV | SENDGRID | TWILIO
+- status enum: NOT_CONNECTED | CONNECTED | ERROR
+- metadata json
+- lastSyncAt nullable
+- createdAt, updatedAt
+
+ImportJob
+- id (uuid)
+- smeId (fk)
+- type enum: INVOICES | CONTACTS | PAYMENTS
+- status enum: QUEUED | RUNNING | SUCCESS | ERROR
+- startedAt, finishedAt nullable
+- counts json (e.g. { inserted: n, updated:n })
+- errorSummary text nullable
+
+AuditLog
+- id (uuid)
+- actorUserId (fk)
+- scopePartnerId nullable
+- scopeSmeId nullable
+- action string (e.g. "PARTNER_CREATED", "SME_INVITED", "IMPORT_RERUN")
+- entityType string
+- entityId string
+- diff json nullable (before/after)
+- createdAt
+
+ProvisioningStatus (computed, not stored unless you prefer)
+For each SME compute:
+- Created: SME exists
+- Invited: SME owner user exists with status INVITED + invite sent timestamp
+- Accepted: SME owner status ACTIVE
+- Connected: Accounting provider connected OR CSV import exists
+- Imported: last ImportJob SUCCESS for invoices+contacts
+- Ready: sendKillSwitch=false and approvalMode=REQUIRED and at least one planned action can be generated (stub ok)
+
+BACKEND: API ROUTES
+Implement API routes under /api/admin/* with strict admin auth guard.
+
+Required endpoints:
+- GET /api/admin/partners
+- POST /api/admin/partners
+- GET /api/admin/partners/:id
+- PATCH /api/admin/partners/:id
+- POST /api/admin/partners/:id/invite-owner   (creates Partner Owner user if missing, generates invite token, sends email stub)
+- GET /api/admin/smes
+- POST /api/admin/smes
+- GET /api/admin/smes/:id
+- PATCH /api/admin/smes/:id
+- POST /api/admin/smes/:id/invite-owner
+- POST /api/admin/smes/:id/toggle-kill-switch   (true/false)
+- GET /api/admin/users
+- POST /api/admin/users/invite
+- GET /api/admin/provisioning   (returns SMEs with status + blockers)
+- GET /api/admin/imports
+- POST /api/admin/imports/:id/rerun
+- GET /api/admin/audit?scopePartnerId=&scopeSmeId=&q=&limit=
+
+INVITES (MVP)
+- Generate an invite token stored in DB (can be a simple InviteToken table: token, userId, expiresAt, usedAt).
+- Email sending can be stubbed (log to console) if email infra isn’t wired for admin yet.
+- On invite acceptance route (/invite/:token), set password or magic link flow (minimal). If auth already supports invites, integrate with it instead of reinventing.
+
+UI / UX (Admin)
+Design: minimalist, dense, professional.
+- Use a simple admin shell: left nav + content.
+- Typography: 20px page title, 13px muted subtitles, 11px uppercase section labels.
+- Use tables with sticky headers (hairline top/bottom borders), no card boxes.
+- Actions in row overflow menu (•••) where possible.
+
+Admin shell nav:
+- Partners
+- SMEs
+- Users
+- Provisioning
+- Imports & Sync
+- Audit Log
+
+PAGE SPECS
+
+1) /admin/partners (List)
+- Table columns: Partner | Status | SMEs | Users | Created
+- Right side: “Create partner” button
+- Row click opens /admin/partners/[id]
+
+Create Partner modal/drawer:
+Fields:
+- Partner name
+- Brand name (optional)
+- Status (default PILOT)
+- Default execution time (09:00)
+- Channels enabled toggles (Email on, SMS off, Voice off by default)
+- Whitelabel enabled toggle
+- Notes
+
+On submit:
+- Create Partner
+- Write AuditLog: PARTNER_CREATED
+
+2) /admin/partners/[id] (Detail)
+Sections (hairline separated):
+- Partner header: name + status pill + small meta
+- Settings: defaults (execution time, channels, whitelabel)
+- Users table: list + “Invite user”
+- SMEs table: list + “Create SME for this partner”
+- Actions:
+  - Invite Partner Owner (button)
+  - Pause/Resume partner
+Every action writes AuditLog.
+
+3) /admin/smes (List)
+- Columns: SME | Partner | Provisioning status | Kill switch | Last import | Created
+- “Create SME” button
+
+Create SME flow (single modal with grouped fields):
+Step-like layout but single form:
+A) Basics
+- Partner select (required)
+- Legal name
+- Trading name
+- Industry
+- Timezone
+- Currency
+B) Ops defaults
+- Approval mode = REQUIRED (locked)
+- Voice enabled toggle
+- Kill switch default ON (true)
+C) Initial integration choice
+- Provider: CSV | XERO (CSV default)
+- (No actual Xero OAuth needed for MVP—just create IntegrationConnection row and mark NOT_CONNECTED)
+
+On submit: create SME + AuditLog: SME_CREATED
+
+4) /admin/smes/[id] (Detail)
+Header: SME name + Partner link + provisioning status chip + Kill switch toggle
+Sections:
+- Provisioning (shows checklist):
+  - Owner invited / accepted
+  - Integration connected
+  - Imports completed
+  - Ready (kill switch off)
+- Integrations: list IntegrationConnection rows + “Mark connected” (admin override for pilot) + view metadata
+- Imports: list recent ImportJobs + “Run import” + “Re-run”
+- Users: SME users + invite
+- Safety:
+  - Kill switch toggle (on/off)
+  - Daily caps (optional placeholder)
+All actions write AuditLog.
+
+5) /admin/users (List)
+Columns: Name | Email | Role | Scope | Status | Created
+Actions: Invite user
+Invite user form:
+- Email, name
+- Role dropdown
+- Scope selector appears depending on role:
+  - Partner roles → select Partner
+  - SME roles → select SME
+On submit create User INVITED + invite token + AuditLog
+
+6) /admin/provisioning (Queue)
+A single table of SMEs sorted by “least ready first”.
+Columns:
+- SME / Partner
+- Status: Created → Invited → Accepted → Connected → Imported → Ready
+- Blockers (comma list): “No owner”, “Integration not connected”, “Invoices import missing”, etc.
+- Actions:
+  - Invite owner
+  - Run import
+  - Open SME
+This is the primary pilot operations screen.
+
+7) /admin/imports
+Table of ImportJobs with filters by SME, status.
+Action: rerun.
+
+8) /admin/audit
+Search + filter by Partner/SME + free-text.
+Show newest first. Row shows: time, actor, action, entity, scope.
+
+AUTH GUARD
+- If current user role is not QASHIVO_ADMIN or QASHIVO_SUPER_ADMIN (and optionally QASHIVO_SUPPORT for read-only), redirect away.
+- Add server-side protection on every /api/admin route.
+
+STYLING REQUIREMENTS (IMPORTANT)
+- Do NOT use heavy cards with borders/shadows.
+- Use whitespace + hairline dividers (#EEF2F6).
+- Use sticky table headers across all admin tables.
+- Use subtle muted text for labels; numbers in tabular format align right.
+- Primary action color: existing Qashivo teal.
+- Avoid icon noise; use icons only in nav.
+
+DONE WHEN
+- Admin can create a Partner.
+- Admin can create an SME under a Partner.
+- Admin can invite Partner Owner + SME Owner.
+- Provisioning queue shows correct statuses and blockers.
+- All actions are logged in AuditLog.
+- No runtime errors; pages follow the calm Qashivo aesthetic.
+
+IMPLEMENTATION INSTRUCTIONS FOR REPLIT
+1) Create /admin route group with an AdminLayout.
+2) Add DB models + migrations.
+3) Build API routes with admin guard.
+4) Build pages + tables + create modals.
+5) Implement provisioning status computation.
+6) Add audit logging helper and call it on every mutation.
+
+Please implement this now in the repo, respecting existing patterns/components.
