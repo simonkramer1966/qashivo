@@ -4187,6 +4187,13 @@ export const partners = pgTable("partners", {
   
   // Status
   isActive: boolean("is_active").default(true),
+  status: varchar("status").default("PILOT"), // PILOT | ACTIVE | PAUSED
+  
+  // Operations settings (for admin console)
+  defaultExecutionTime: varchar("default_execution_time").default("09:00"),
+  channelsEnabled: jsonb("channels_enabled").default({ email: true, sms: false, voice: false }),
+  whitelabelEnabled: boolean("whitelabel_enabled").default(false),
+  notes: text("notes"),
   
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -4204,10 +4211,19 @@ export const smeClients = pgTable("sme_clients", {
   partnerId: varchar("partner_id").notNull().references(() => partners.id),
   
   // Client details
-  name: varchar("name").notNull(),
+  name: varchar("name").notNull(), // Legal name
+  tradingName: varchar("trading_name"), // Trading name if different
+  industry: varchar("industry"),
+  timezone: varchar("timezone").default("Europe/London"),
+  currency: varchar("currency").default("GBP"),
   
-  // Status: DRAFT | INVITED | ACCEPTED | CONNECTED | ACTIVE | PAUSED
-  status: varchar("status").notNull().default("DRAFT"),
+  // Status: CREATED | INVITED | ACCEPTED | CONNECTED | ACTIVE | PAUSED
+  status: varchar("status").notNull().default("CREATED"),
+  
+  // Operations settings (for admin console)
+  approvalMode: varchar("approval_mode").default("REQUIRED"), // REQUIRED | AUTO
+  voiceEnabled: boolean("voice_enabled").default(false),
+  sendKillSwitch: boolean("send_kill_switch").default(true), // Safety: true until ready
   
   // Assignment (credit controller)
   primaryCreditControllerId: varchar("primary_credit_controller_id").references(() => users.id),
@@ -4221,6 +4237,32 @@ export const smeClients = pgTable("sme_clients", {
   index("idx_sme_clients_partner").on(table.partnerId),
   index("idx_sme_clients_status").on(table.status),
   index("idx_sme_clients_controller").on(table.primaryCreditControllerId),
+]);
+
+// Import Jobs - Track data import operations for admin console
+export const importJobs = pgTable("import_jobs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  smeClientId: varchar("sme_client_id").notNull().references(() => smeClients.id, { onDelete: "cascade" }),
+  
+  // Import type: INVOICES | CONTACTS | PAYMENTS
+  type: varchar("type").notNull(),
+  
+  // Status: QUEUED | RUNNING | SUCCESS | ERROR
+  status: varchar("status").notNull().default("QUEUED"),
+  
+  // Timing
+  startedAt: timestamp("started_at"),
+  finishedAt: timestamp("finished_at"),
+  
+  // Results
+  counts: jsonb("counts").default({ inserted: 0, updated: 0, failed: 0 }),
+  errorSummary: text("error_summary"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_import_jobs_sme").on(table.smeClientId),
+  index("idx_import_jobs_status").on(table.status),
 ]);
 
 // SME Contacts - Contact persons within SME clients
@@ -4573,6 +4615,11 @@ export const insertSmeContactSchema = createInsertSchema(smeContacts).omit({
   updatedAt: true,
 });
 
+export const insertImportJobSchema = createInsertSchema(importJobs).omit({
+  id: true,
+  createdAt: true,
+});
+
 export const insertPartnerContractSchema = createInsertSchema(partnerContracts).omit({
   id: true,
   createdAt: true,
@@ -4600,6 +4647,9 @@ export type InsertSmeClient = z.infer<typeof insertSmeClientSchema>;
 
 export type SmeContact = typeof smeContacts.$inferSelect;
 export type InsertSmeContact = z.infer<typeof insertSmeContactSchema>;
+
+export type ImportJob = typeof importJobs.$inferSelect;
+export type InsertImportJob = z.infer<typeof insertImportJobSchema>;
 
 export type PartnerContract = typeof partnerContracts.$inferSelect;
 export type InsertPartnerContract = z.infer<typeof insertPartnerContractSchema>;

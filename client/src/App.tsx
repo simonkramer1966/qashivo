@@ -35,6 +35,12 @@ const DebtorPortal = lazy(() => import("@/pages/debtor-portal"));
 const BetaPartner = lazy(() => import("@/pages/beta-partner"));
 const AdminAnalytics = lazy(() => import("@/pages/admin-analytics"));
 const AdminOutcomes = lazy(() => import("@/pages/admin-outcomes"));
+const AdminPartners = lazy(() => import("@/pages/admin-partners"));
+const AdminSmes = lazy(() => import("@/pages/admin-smes"));
+const AdminUsers = lazy(() => import("@/pages/admin-users"));
+const AdminProvisioning = lazy(() => import("@/pages/admin-provisioning"));
+const AdminImports = lazy(() => import("@/pages/admin-imports"));
+const AdminAudit = lazy(() => import("@/pages/admin-audit"));
 const Dashboard = lazy(() => import("@/pages/dashboard"));
 const DashboardExperimental = lazy(() => import("@/pages/dashboard-experimental"));
 const CashboardExperimental = lazy(() => import("@/pages/cashboard-experimental"));
@@ -144,6 +150,15 @@ function Router() {
           <Route path="/qashivo-admin" component={QashivoAdminDashboard} />
           <Route path="/admin/analytics" component={AdminAnalytics} />
           <Route path="/admin/outcomes" component={AdminOutcomes} />
+          <Route path="/admin/partners/:partnerId" component={AdminPartners} />
+          <Route path="/admin/partners" component={AdminPartners} />
+          <Route path="/admin/smes/:smeId" component={AdminSmes} />
+          <Route path="/admin/smes" component={AdminSmes} />
+          <Route path="/admin/users" component={AdminUsers} />
+          <Route path="/admin/provisioning" component={AdminProvisioning} />
+          <Route path="/admin/imports" component={AdminImports} />
+          <Route path="/admin/audit" component={AdminAudit} />
+          <Route path="/admin" component={AdminPartners} />
           <Route path="/partner" component={PartnerDashboard} />
           <Route path="/dashboard" component={Dashboard} />
           <Route path="/dashboard-experimental" component={DashboardExperimental} />

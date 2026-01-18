@@ -273,6 +273,7 @@ import { Retell } from "retell-sdk";
 import Stripe from "stripe";
 import { registerSyncRoutes } from "./routes/syncRoutes";
 import documentationRoutes from "./routes/documentationRoutes";
+import adminRoutes from "./routes/adminRoutes";
 import { webhookHandler } from "./services/webhookHandler";
 import { ForecastEngine, type ForecastConfig, type ForecastScenario } from "../shared/forecast";
 import { subscriptionService } from "./services/subscriptionService";
@@ -18780,6 +18781,10 @@ ${tenant.name}
   // ==================== DOCUMENTATION ROUTES ====================
   app.use('/api/documentation', isAuthenticated, documentationRoutes);
   // ==================== END DOCUMENTATION ROUTES ====================
+
+  // ==================== ADMIN ROUTES ====================
+  app.use('/api/admin', isAuthenticated, adminRoutes);
+  // ==================== END ADMIN ROUTES ====================
 
   // ==================== WEBHOOK ROUTES ====================
   // Critical: These routes MUST use raw body middleware for proper HMAC verification
