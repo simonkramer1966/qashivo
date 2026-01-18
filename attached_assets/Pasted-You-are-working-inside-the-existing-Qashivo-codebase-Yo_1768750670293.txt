@@ -1,0 +1,115 @@
+You are working inside the existing Qashivo codebase. Your task is to refactor the Partner (Practice) pages so they match the design system used on the recently updated Action Centre and Cashboard/Dashboard pages.
+
+GOAL
+- Make Partner pages feel “accountant calm”, Apple-like, and consistent with Action Centre + Cashboard.
+- Apply Tufte/Few principles: minimal chrome, high data-ink ratio, hairline dividers, whitespace, strong typography, no unnecessary card borders.
+- Reduce “work” feeling: de-emphasise operational UI patterns and make actions contextual.
+
+SCOPE (Partner area)
+- Pages likely include (use what exists in repo):
+  - /p/demo-practice (or /p/:practiceId)
+  - /p/demo-practice/clients (Clients list)
+  - /p/demo-practice/clients/:clientId (Client detail if present)
+  - Any “Partner dashboard” / “Practice overview” page
+- Update empty states, lists, headers, table layouts, and drawers/panels where applicable.
+- Keep current routing, data fetching, and business logic. This is a UI/UX refactor.
+
+DESIGN SYSTEM (match Action Centre + Cashboard)
+1) Page header + subtitle
+- Use same header spacing, font sizes, and muted subtitle style.
+- Header area must be sticky (position: sticky; top: 0) with subtle background and hairline bottom divider.
+- Include page title left; optional compact primary action(s) right (only if genuinely required).
+
+2) Layout: remove “heavy cards”
+- Replace large rounded cards and prominent borders with:
+  - White background sections
+  - Hairline dividers (#E5E7EB-ish) between logical areas
+  - Subtle section labels in 11px uppercase muted text
+- If you keep containers, ensure they are borderless (or 1px hairline) and never “dashboard card” heavy.
+- Avoid glassmorphism; prefer clean flat surfaces like Action Centre.
+
+3) Tables & lists (core)
+- Use the same table styling as Action Centre:
+  - Column headers in small uppercase muted
+  - Rows with generous but not wasteful padding (Apple-like)
+  - Row hover: very subtle background tint
+  - Numbers right-aligned
+  - Amounts use stronger weight; counts muted in parentheses
+  - Sticky table header when scrolling
+- If there are checkboxes, they should be visually quiet:
+  - light border, darken on row hover only
+  - prefer placing selection controls on the right or only on hover to reduce “work” vibe
+
+4) Search placement
+- Search should sit in the same place/style as Customers/Action Centre:
+  - within the header row above the table (not floating centre-stage)
+  - compact, muted placeholder, no heavy border
+  - if space allows: left of table tools; otherwise aligned to the right, but always visually quiet
+
+5) Primary actions
+- Avoid encouraging manual operations. Remove or demote actions that imply work (e.g., “Add Client” if not essential in V1).
+- If “Add Client” must remain, make it smaller and secondary; do not show two big CTAs (“Add Client” and “Add Your First Client”) at once.
+- Empty state: one clear CTA only, secondary helper text. Keep it calm.
+
+6) Drawers / detail panels (if present)
+- Match the dense drawer style from Action Centre:
+  - tighter spacing between sections
+  - reason/context first, then metrics, then history lists
+  - collapsible sections with subtle disclosure rows
+  - no status field if redundant
+
+7) Navigation consistency
+- Ensure Partner pages use the same left nav styling rules adopted elsewhere:
+  - simple list, no pills, subtle active indicator (2px left line)
+  - minimal section labels
+  - quiet profile/demo elements
+
+SPECIFIC PAGE REQUIREMENTS
+
+A) Clients list (/p/*/clients)
+- Replace the current empty state card with a cleaner layout:
+  - Page background stays neutral.
+  - Empty state sits as a centered block without heavy border/shadow.
+  - Copy:
+    - Title: “No clients yet”
+    - Subtitle: “Add your first client to get started”
+    - Single CTA button: “Add Client” (only once).
+- When clients exist:
+  - Show a single table with columns such as:
+    - Client (name + optional contact name in muted)
+    - Active accounts (muted count)
+    - Outstanding (right aligned)
+    - Overdue (right aligned, muted red only if truly overdue)
+    - Status (muted text, avoid badges unless necessary)
+  - Sticky table header.
+  - Row click opens client detail (page or drawer) but do not add extra “manage” buttons per row.
+
+B) Partner/Practice overview page (if present)
+- Present 3–6 calm KPIs max (not cards; inline metrics with hairline dividers like the updated Cashboard)
+- Remove any “priority actions” blocks that suggest manual work unless they route to Attention-like exceptions.
+
+C) Client detail (if present)
+- Use the same “summary first, detail on demand” structure:
+  - Top: key totals and a short “system status” sentence
+  - Then: tables for accounts / invoices / activity with collapsible sections
+
+IMPLEMENTATION INSTRUCTIONS
+- Reuse existing components from Action Centre/Cashboard where possible (table components, typography classes, header wrappers, sticky header patterns).
+- Create shared UI primitives if missing:
+  - <PageHeader sticky />
+  - <SectionLabel />
+  - <DataTable stickyHeader />
+- Ensure responsive behaviour:
+  - On smaller widths, reduce columns gracefully and keep numbers readable.
+- Do not break existing functionality.
+- Update only styling/layout/copy.
+
+ACCEPTANCE CHECKLIST
+- Partner pages visually match Action Centre + Cashboard (same typography, spacing rhythm, dividers).
+- No heavy borders/cards; no glassmorphism.
+- Sticky page header + sticky table header.
+- Search repositioned and visually quiet.
+- Empty states are clean with one CTA.
+- Overall reduces “work” feeling; feels calm and premium.
+
+After implementing, show me before/after screenshots (or describe exactly what changed per page) and confirm which files/components were modified.
