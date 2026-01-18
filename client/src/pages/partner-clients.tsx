@@ -1,5 +1,5 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { useParams, Link } from "wouter";
+import { useParams, Link, useLocation } from "wouter";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -52,6 +52,7 @@ function getStatusText(status: string): string {
 
 export default function PartnerClientsList() {
   const { partnerSlug } = useParams();
+  const [, navigate] = useLocation();
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -227,50 +228,52 @@ export default function PartnerClientsList() {
                 </thead>
                 <tbody>
                   {filteredClients.map((client) => (
-                    <Link key={client.id} href={`/p/${partnerSlug}/clients/${client.id}`}>
-                      <tr className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors cursor-pointer">
-                        <td className="py-3">
-                          <div className="text-[14px] font-medium text-slate-900">
-                            {client.name}
-                          </div>
-                          <div className="text-[12px] text-slate-400">
-                            Added {new Date(client.createdAt).toLocaleDateString("en-GB", { 
-                              day: "numeric", 
-                              month: "short", 
-                              year: "numeric" 
-                            })}
-                          </div>
-                        </td>
-                        <td className="py-3 text-right">
-                          <span className="text-[13px] text-slate-400 tabular-nums">
-                            {client.activeAccounts ?? '—'}
-                          </span>
-                        </td>
-                        <td className="py-3 text-right">
-                          <span className="text-[14px] font-medium text-slate-900 tabular-nums">
-                            {client.totalOutstanding !== undefined 
-                              ? formatCurrency(client.totalOutstanding)
-                              : '—'}
-                          </span>
-                        </td>
-                        <td className="py-3 text-right">
-                          <span className={`text-[14px] tabular-nums ${
-                            (client.totalOverdue ?? 0) > 0 
-                              ? 'text-red-600' 
-                              : 'text-slate-400'
-                          }`}>
-                            {client.totalOverdue !== undefined 
-                              ? formatCurrency(client.totalOverdue)
-                              : '—'}
-                          </span>
-                        </td>
-                        <td className="py-3 text-right">
-                          <span className="text-[13px] text-slate-400">
-                            {getStatusText(client.status)}
-                          </span>
-                        </td>
-                      </tr>
-                    </Link>
+                    <tr 
+                      key={client.id}
+                      onClick={() => navigate(`/p/${partnerSlug}/clients/${client.id}`)}
+                      className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors cursor-pointer"
+                    >
+                      <td className="py-3">
+                        <div className="text-[14px] font-medium text-slate-900">
+                          {client.name}
+                        </div>
+                        <div className="text-[12px] text-slate-400">
+                          Added {new Date(client.createdAt).toLocaleDateString("en-GB", { 
+                            day: "numeric", 
+                            month: "short", 
+                            year: "numeric" 
+                          })}
+                        </div>
+                      </td>
+                      <td className="py-3 text-right">
+                        <span className="text-[13px] text-slate-400 tabular-nums">
+                          {client.activeAccounts ?? '—'}
+                        </span>
+                      </td>
+                      <td className="py-3 text-right">
+                        <span className="text-[14px] font-medium text-slate-900 tabular-nums">
+                          {client.totalOutstanding !== undefined 
+                            ? formatCurrency(client.totalOutstanding)
+                            : '—'}
+                        </span>
+                      </td>
+                      <td className="py-3 text-right">
+                        <span className={`text-[14px] tabular-nums ${
+                          (client.totalOverdue ?? 0) > 0 
+                            ? 'text-red-600' 
+                            : 'text-slate-400'
+                        }`}>
+                          {client.totalOverdue !== undefined 
+                            ? formatCurrency(client.totalOverdue)
+                            : '—'}
+                        </span>
+                      </td>
+                      <td className="py-3 text-right">
+                        <span className="text-[13px] text-slate-400">
+                          {getStatusText(client.status)}
+                        </span>
+                      </td>
+                    </tr>
                   ))}
                 </tbody>
               </table>

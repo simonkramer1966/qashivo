@@ -111,6 +111,9 @@ export default function PartnerClientDetail() {
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteContactName, setInviteContactName] = useState("");
   const [contactsOpen, setContactsOpen] = useState(true);
+  const [accountsOpen, setAccountsOpen] = useState(false);
+  const [invoicesOpen, setInvoicesOpen] = useState(false);
+  const [activityOpen, setActivityOpen] = useState(false);
   const [contractOpen, setContractOpen] = useState(false);
 
   const { data: client, isLoading, error } = useQuery<SmeClientDetail>({
@@ -371,6 +374,57 @@ export default function PartnerClientDetail() {
                     )}
                   </div>
                 )}
+              </CollapsibleContent>
+            </Collapsible>
+
+            {/* Accounts section */}
+            <Collapsible open={accountsOpen} onOpenChange={setAccountsOpen}>
+              <CollapsibleTrigger className="w-full flex items-center justify-between py-3 border-b border-slate-100 hover:bg-slate-50/50 -mx-2 px-2 rounded transition-colors">
+                <span className="text-[11px] font-medium text-slate-400 uppercase tracking-wider">
+                  Accounts
+                </span>
+                <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${accountsOpen ? 'rotate-180' : ''}`} />
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <p className="text-[13px] text-slate-400 py-4">
+                  {client.status === "ACTIVE" || client.status === "CONNECTED"
+                    ? "Customer accounts and balances will appear here once synced."
+                    : "Connect the client's accounting system to view customer accounts."}
+                </p>
+              </CollapsibleContent>
+            </Collapsible>
+
+            {/* Invoices section */}
+            <Collapsible open={invoicesOpen} onOpenChange={setInvoicesOpen}>
+              <CollapsibleTrigger className="w-full flex items-center justify-between py-3 border-b border-slate-100 hover:bg-slate-50/50 -mx-2 px-2 rounded transition-colors">
+                <span className="text-[11px] font-medium text-slate-400 uppercase tracking-wider">
+                  Invoices
+                </span>
+                <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${invoicesOpen ? 'rotate-180' : ''}`} />
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <p className="text-[13px] text-slate-400 py-4">
+                  {client.status === "ACTIVE" || client.status === "CONNECTED"
+                    ? "Invoice data will appear here once synced from the accounting system."
+                    : "Connect the client's accounting system to view their invoices."}
+                </p>
+              </CollapsibleContent>
+            </Collapsible>
+
+            {/* Activity section */}
+            <Collapsible open={activityOpen} onOpenChange={setActivityOpen}>
+              <CollapsibleTrigger className="w-full flex items-center justify-between py-3 border-b border-slate-100 hover:bg-slate-50/50 -mx-2 px-2 rounded transition-colors">
+                <span className="text-[11px] font-medium text-slate-400 uppercase tracking-wider">
+                  Recent Activity
+                </span>
+                <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${activityOpen ? 'rotate-180' : ''}`} />
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <p className="text-[13px] text-slate-400 py-4">
+                  {client.status === "ACTIVE"
+                    ? "Collection activity will appear here as actions are executed."
+                    : "No activity yet. Activity will be recorded once collections begin."}
+                </p>
               </CollapsibleContent>
             </Collapsible>
           </div>
