@@ -41,6 +41,7 @@ const AdminUsers = lazy(() => import("@/pages/admin-users"));
 const AdminProvisioning = lazy(() => import("@/pages/admin-provisioning"));
 const AdminImports = lazy(() => import("@/pages/admin-imports"));
 const AdminAudit = lazy(() => import("@/pages/admin-audit"));
+const AdminLogin = lazy(() => import("@/pages/admin-login"));
 const Dashboard = lazy(() => import("@/pages/dashboard"));
 const DashboardExperimental = lazy(() => import("@/pages/dashboard-experimental"));
 const CashboardExperimental = lazy(() => import("@/pages/cashboard-experimental"));
@@ -124,6 +125,7 @@ function Router() {
           <Route path="/forgot-password" component={ForgotPassword} />
           <Route path="/reset-password" component={ResetPassword} />
           <Route path="/signin" component={SignIn} />
+          <Route path="/admin/login" component={AdminLogin} />
           <Route path="/accept-invite" component={AcceptInvite} />
           <Route path="/sme-onboarding" component={SmeOnboarding} />
           <Route path="/" component={Home} />
@@ -159,6 +161,7 @@ function Router() {
           <Route path="/admin/imports" component={AdminImports} />
           <Route path="/admin/audit" component={AdminAudit} />
           <Route path="/admin" component={AdminPartners} />
+          <Route path="/admin/login" component={AdminLogin} />
           <Route path="/partner" component={PartnerDashboard} />
           <Route path="/dashboard" component={Dashboard} />
           <Route path="/dashboard-experimental" component={DashboardExperimental} />

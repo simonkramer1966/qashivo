@@ -84,7 +84,7 @@ interface AuthRequest extends Request {
 }
 
 // Platform admin guard middleware
-const requirePlatformAdmin = (req: any, res: any, next: any) => {
+const requireAdminAuth = (req: any, res: any, next: any) => {
   if (!req.user?.platformAdmin) {
     return res.status(403).json({ error: "Platform admin access required" });
   }
@@ -116,10 +116,113 @@ async function logAuditEvent(
   });
 }
 
+// ==================== ADMIN AUTHENTICATION ====================
+
+// POST /api/admin/auth/login - Login for admin users
+router.post("/auth/login", async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({ error: "Email and password are required" });
+    }
+
+    // Find user by email
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.email, email.toLowerCase()));
+
+    if (!user) {
+      return res.status(401).json({ error: "Invalid email or password" });
+    }
+
+    // Check password
+    const isValidPassword = await bcrypt.compare(password, user.password || "");
+    if (!isValidPassword) {
+      return res.status(401).json({ error: "Invalid email or password" });
+    }
+
+    // Check if user is platform admin
+    if (!user.platformAdmin) {
+      return res.status(403).json({ error: "Access denied. Platform admin privileges required." });
+    }
+
+    // Set admin session
+    (req.session as any).adminUser = {
+      id: user.id,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      platformAdmin: user.platformAdmin,
+    };
+
+    await logAuditEvent(
+      user.id,
+      "ADMIN_LOGIN",
+      "USER",
+      user.id,
+      { email: user.email }
+    );
+
+    res.json({ 
+      success: true, 
+      user: { 
+        id: user.id, 
+        email: user.email, 
+        firstName: user.firstName, 
+        lastName: user.lastName 
+      } 
+    });
+  } catch (error: any) {
+    console.error("Admin login failed:", error);
+    res.status(500).json({ error: "Login failed" });
+  }
+});
+
+// POST /api/admin/auth/logout - Logout admin user
+router.post("/auth/logout", (req, res) => {
+  const adminUser = (req.session as any).adminUser;
+  if (adminUser) {
+    logAuditEvent(
+      adminUser.id,
+      "ADMIN_LOGOUT",
+      "USER",
+      adminUser.id,
+      { email: adminUser.email }
+    );
+  }
+  (req.session as any).adminUser = null;
+  res.json({ success: true });
+});
+
+// GET /api/admin/auth/status - Check admin auth status
+router.get("/auth/status", (req, res) => {
+  const adminUser = (req.session as any).adminUser;
+  if (adminUser?.platformAdmin) {
+    res.json({ 
+      authenticated: true, 
+      user: adminUser 
+    });
+  } else {
+    res.json({ authenticated: false });
+  }
+});
+
+// Updated middleware - check admin session
+const requireAdminAuth = (req: any, res: any, next: any) => {
+  const adminUser = (req.session as any).adminUser;
+  if (!adminUser?.platformAdmin) {
+    return res.status(401).json({ error: "Admin authentication required" });
+  }
+  req.user = adminUser;
+  next();
+};
+
 // ==================== PARTNERS ====================
 
 // GET /api/admin/partners - List all partners with counts
-router.get("/partners", requirePlatformAdmin, async (req, res) => {
+router.get("/partners", requireAdminAuth, async (req, res) => {
   try {
     const result = await db
       .select({
@@ -168,7 +271,7 @@ router.get("/partners", requirePlatformAdmin, async (req, res) => {
 });
 
 // POST /api/admin/partners - Create a new partner
-router.post("/partners", requirePlatformAdmin, async (req, res) => {
+router.post("/partners", requireAdminAuth, async (req, res) => {
   try {
     const parsed = createPartnerSchema.safeParse(req.body);
     if (!parsed.success) {
@@ -209,7 +312,7 @@ router.post("/partners", requirePlatformAdmin, async (req, res) => {
 });
 
 // GET /api/admin/partners/:id - Get partner details
-router.get("/partners/:id", requirePlatformAdmin, async (req, res) => {
+router.get("/partners/:id", requireAdminAuth, async (req, res) => {
   try {
     const [partner] = await db
       .select()
@@ -228,7 +331,7 @@ router.get("/partners/:id", requirePlatformAdmin, async (req, res) => {
 });
 
 // PATCH /api/admin/partners/:id - Update partner
-router.patch("/partners/:id", requirePlatformAdmin, async (req, res) => {
+router.patch("/partners/:id", requireAdminAuth, async (req, res) => {
   try {
     const parsed = updatePartnerSchema.safeParse(req.body);
     if (!parsed.success) {
@@ -275,7 +378,7 @@ router.patch("/partners/:id", requirePlatformAdmin, async (req, res) => {
 // ==================== SMES ====================
 
 // GET /api/admin/smes - List all SMEs with partner info
-router.get("/smes", requirePlatformAdmin, async (req, res) => {
+router.get("/smes", requireAdminAuth, async (req, res) => {
   try {
     const result = await db
       .select({
@@ -326,7 +429,7 @@ router.get("/smes", requirePlatformAdmin, async (req, res) => {
 });
 
 // POST /api/admin/smes - Create a new SME
-router.post("/smes", requirePlatformAdmin, async (req, res) => {
+router.post("/smes", requireAdminAuth, async (req, res) => {
   try {
     const parsed = createSmeSchema.safeParse(req.body);
     if (!parsed.success) {
@@ -368,7 +471,7 @@ router.post("/smes", requirePlatformAdmin, async (req, res) => {
 });
 
 // GET /api/admin/smes/:id - Get SME details
-router.get("/smes/:id", requirePlatformAdmin, async (req, res) => {
+router.get("/smes/:id", requireAdminAuth, async (req, res) => {
   try {
     const [sme] = await db
       .select()
@@ -387,7 +490,7 @@ router.get("/smes/:id", requirePlatformAdmin, async (req, res) => {
 });
 
 // PATCH /api/admin/smes/:id - Update SME
-router.patch("/smes/:id", requirePlatformAdmin, async (req, res) => {
+router.patch("/smes/:id", requireAdminAuth, async (req, res) => {
   try {
     const parsed = updateSmeSchema.safeParse(req.body);
     if (!parsed.success) {
@@ -434,7 +537,7 @@ router.patch("/smes/:id", requirePlatformAdmin, async (req, res) => {
 });
 
 // POST /api/admin/smes/:id/toggle-kill-switch
-router.post("/smes/:id/toggle-kill-switch", requirePlatformAdmin, async (req, res) => {
+router.post("/smes/:id/toggle-kill-switch", requireAdminAuth, async (req, res) => {
   try {
     const [sme] = await db.select().from(smeClients).where(eq(smeClients.id, req.params.id));
     if (!sme) {
@@ -465,7 +568,7 @@ router.post("/smes/:id/toggle-kill-switch", requirePlatformAdmin, async (req, re
 });
 
 // POST /api/admin/smes/:id/invite-owner - Stub for invite
-router.post("/smes/:id/invite-owner", requirePlatformAdmin, async (req, res) => {
+router.post("/smes/:id/invite-owner", requireAdminAuth, async (req, res) => {
   try {
     const [sme] = await db.select().from(smeClients).where(eq(smeClients.id, req.params.id));
     if (!sme) {
@@ -498,7 +601,7 @@ router.post("/smes/:id/invite-owner", requirePlatformAdmin, async (req, res) => 
 });
 
 // POST /api/admin/smes/:id/run-import - Stub for import
-router.post("/smes/:id/run-import", requirePlatformAdmin, async (req, res) => {
+router.post("/smes/:id/run-import", requireAdminAuth, async (req, res) => {
   try {
     const [sme] = await db.select().from(smeClients).where(eq(smeClients.id, req.params.id));
     if (!sme) {
@@ -535,7 +638,7 @@ router.post("/smes/:id/run-import", requirePlatformAdmin, async (req, res) => {
 // ==================== USERS ====================
 
 // GET /api/admin/users - List all users
-router.get("/users", requirePlatformAdmin, async (req, res) => {
+router.get("/users", requireAdminAuth, async (req, res) => {
   try {
     const result = await db
       .select({
@@ -580,7 +683,7 @@ router.get("/users", requirePlatformAdmin, async (req, res) => {
 });
 
 // POST /api/admin/users/invite - Invite a new user
-router.post("/users/invite", requirePlatformAdmin, async (req, res) => {
+router.post("/users/invite", requireAdminAuth, async (req, res) => {
   try {
     const parsed = inviteUserSchema.safeParse(req.body);
     if (!parsed.success) {
@@ -634,7 +737,7 @@ router.post("/users/invite", requirePlatformAdmin, async (req, res) => {
 // ==================== PROVISIONING ====================
 
 // GET /api/admin/provisioning - Get provisioning queue
-router.get("/provisioning", requirePlatformAdmin, async (req, res) => {
+router.get("/provisioning", requireAdminAuth, async (req, res) => {
   try {
     const result = await db
       .select({
@@ -715,7 +818,7 @@ router.get("/provisioning", requirePlatformAdmin, async (req, res) => {
 // ==================== IMPORTS ====================
 
 // GET /api/admin/imports - List import jobs
-router.get("/imports", requirePlatformAdmin, async (req, res) => {
+router.get("/imports", requireAdminAuth, async (req, res) => {
   try {
     const result = await db
       .select({
@@ -745,7 +848,7 @@ router.get("/imports", requirePlatformAdmin, async (req, res) => {
 });
 
 // POST /api/admin/imports/:id/rerun - Rerun an import job
-router.post("/imports/:id/rerun", requirePlatformAdmin, async (req, res) => {
+router.post("/imports/:id/rerun", requireAdminAuth, async (req, res) => {
   try {
     const [job] = await db.select().from(importJobs).where(eq(importJobs.id, req.params.id));
     if (!job) {
@@ -780,7 +883,7 @@ router.post("/imports/:id/rerun", requirePlatformAdmin, async (req, res) => {
 // ==================== AUDIT ====================
 
 // GET /api/admin/audit - Get audit log
-router.get("/audit", requirePlatformAdmin, async (req, res) => {
+router.get("/audit", requireAdminAuth, async (req, res) => {
   try {
     const { q, limit = 100 } = req.query;
 
