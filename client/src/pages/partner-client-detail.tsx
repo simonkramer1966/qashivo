@@ -1,10 +1,7 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useParams, Link } from "wouter";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
   DialogContent,
@@ -12,11 +9,15 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Building2, ArrowLeft, Mail, Phone, User, Calendar, Send, AlertCircle, Check } from "lucide-react";
+import { ArrowLeft, Mail, Phone, User, Calendar, Send, AlertCircle, ChevronDown } from "lucide-react";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
@@ -51,19 +52,19 @@ interface SmeClientDetail {
   tenant: { name: string } | null;
 }
 
-function getStatusBadge(status: string) {
-  const styles: Record<string, string> = {
-    DRAFT: "bg-slate-100 text-slate-600 border-slate-200",
-    INVITED: "bg-blue-50 text-blue-600 border-blue-200",
-    ACCEPTED: "bg-indigo-50 text-indigo-600 border-indigo-200",
-    CONNECTED: "bg-emerald-50 text-emerald-600 border-emerald-200",
-    ACTIVE: "bg-green-50 text-green-700 border-green-200",
-    PAUSED: "bg-amber-50 text-amber-600 border-amber-200",
+function getStatusText(status: string): string {
+  const labels: Record<string, string> = {
+    DRAFT: "Draft",
+    INVITED: "Invited",
+    ACCEPTED: "Accepted",
+    CONNECTED: "Connected",
+    ACTIVE: "Active",
+    PAUSED: "Paused",
   };
-  return styles[status] || "bg-slate-100 text-slate-600 border-slate-200";
+  return labels[status] || status;
 }
 
-function getNextAction(status: string, hasContacts: boolean): { text: string; subtext: string } {
+function getNextAction(status: string): { text: string; subtext: string } {
   switch (status) {
     case "DRAFT":
       return {
@@ -109,6 +110,8 @@ export default function PartnerClientDetail() {
   const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteContactName, setInviteContactName] = useState("");
+  const [contactsOpen, setContactsOpen] = useState(true);
+  const [contractOpen, setContractOpen] = useState(false);
 
   const { data: client, isLoading, error } = useQuery<SmeClientDetail>({
     queryKey: [`/api/p/${partnerSlug}/clients/${smeClientId}`],
@@ -144,193 +147,155 @@ export default function PartnerClientDetail() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-teal-50 p-6">
-        <div className="max-w-4xl mx-auto space-y-6">
-          <Skeleton className="h-8 w-64" />
-          <Skeleton className="h-32" />
-          <Skeleton className="h-64" />
-        </div>
+      <div className="flex h-screen bg-white">
+        <main className="flex-1 overflow-y-auto">
+          <div className="sticky top-0 z-40 bg-white border-b border-slate-100">
+            <div className="px-6 lg:px-8 py-5">
+              <Skeleton className="h-5 w-48" />
+              <Skeleton className="h-4 w-32 mt-1" />
+            </div>
+          </div>
+          <div className="p-6 lg:p-8 space-y-6">
+            <Skeleton className="h-20" />
+            <Skeleton className="h-48" />
+          </div>
+        </main>
       </div>
     );
   }
 
   if (error || !client) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-teal-50 p-6">
-        <div className="max-w-4xl mx-auto">
-          <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
-            <CardContent className="p-6 text-center">
-              <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-              <h2 className="text-lg font-semibold text-slate-900 mb-2">Client not found</h2>
-              <p className="text-slate-600 mb-4">The client you're looking for doesn't exist or you don't have access.</p>
+      <div className="flex h-screen bg-white">
+        <main className="flex-1 overflow-y-auto">
+          <div className="sticky top-0 z-40 bg-white border-b border-slate-100">
+            <div className="px-6 lg:px-8 py-5">
+              <h2 className="text-[17px] font-semibold text-slate-900 tracking-tight">Client Details</h2>
+            </div>
+          </div>
+          <div className="p-6 lg:p-8">
+            <div className="py-16 text-center">
+              <AlertCircle className="w-10 h-10 text-slate-300 mx-auto mb-4" />
+              <p className="text-[15px] font-medium text-slate-900 mb-1">Client not found</p>
+              <p className="text-[13px] text-slate-400 mb-6">The client you're looking for doesn't exist or you don't have access.</p>
               <Link href={`/p/${partnerSlug}/clients`}>
-                <Button variant="outline">Back to Clients</Button>
+                <button className="h-9 px-4 text-[13px] font-medium text-slate-600 hover:text-slate-900 border border-slate-200 hover:border-slate-300 rounded transition-colors">
+                  Back to Clients
+                </button>
               </Link>
-            </CardContent>
-          </Card>
-        </div>
+            </div>
+          </div>
+        </main>
       </div>
     );
   }
 
-  const nextAction = getNextAction(client.status, client.contacts.length > 0);
+  const nextAction = getNextAction(client.status);
+  const primaryContact = client.contacts.find((c) => c.isPrimaryCreditContact);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-teal-50">
-      <div className="max-w-4xl mx-auto p-6 space-y-6">
-        <div className="flex items-center gap-4">
-          <Link href={`/p/${partnerSlug}/clients`}>
-            <Button variant="ghost" size="icon" className="shrink-0">
-              <ArrowLeft className="w-5 h-5" />
-            </Button>
-          </Link>
-          <div className="flex-1">
-            <h1 className="text-2xl font-bold text-slate-900">{client.name}</h1>
-            <p className="text-sm text-slate-500">
-              Added {new Date(client.createdAt).toLocaleDateString("en-GB", {
-                day: "numeric",
-                month: "long",
-                year: "numeric",
-              })}
-            </p>
-          </div>
-          <Badge variant="outline" className={`${getStatusBadge(client.status)} text-sm px-3 py-1`}>
-            {client.status}
-          </Badge>
-        </div>
-
-        <Card className="bg-gradient-to-r from-[#17B6C3]/5 to-[#1396A1]/5 border-[#17B6C3]/20">
-          <CardContent className="p-6">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h3 className="font-semibold text-slate-900 mb-1">What happens next</h3>
-                <p className="text-lg text-[#17B6C3] font-medium mb-1">{nextAction.text}</p>
-                <p className="text-sm text-slate-600">{nextAction.subtext}</p>
+    <div className="flex h-screen bg-white">
+      <main className="flex-1 overflow-y-auto">
+        {/* Sticky header */}
+        <div className="sticky top-0 z-40 bg-white border-b border-slate-100">
+          <div className="px-6 lg:px-8 py-5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Link href={`/p/${partnerSlug}/clients`}>
+                  <button className="p-1.5 -ml-1.5 hover:bg-slate-100 rounded transition-colors">
+                    <ArrowLeft className="w-4 h-4 text-slate-400" />
+                  </button>
+                </Link>
+                <div>
+                  <h2 className="text-[17px] font-semibold text-slate-900 tracking-tight">{client.name}</h2>
+                  <p className="text-[13px] text-slate-400 mt-0.5">
+                    {getStatusText(client.status)} · Added {new Date(client.createdAt).toLocaleDateString("en-GB", {
+                      day: "numeric",
+                      month: "short",
+                      year: "numeric",
+                    })}
+                  </p>
+                </div>
               </div>
               {client.status === "DRAFT" && (
-                <Dialog open={isInviteDialogOpen} onOpenChange={setIsInviteDialogOpen}>
-                  <DialogTrigger asChild>
-                    <Button className="bg-[#17B6C3] hover:bg-[#1396A1] text-white gap-2">
-                      <Send className="w-4 h-4" />
-                      Send Invite
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Invite {client.name}</DialogTitle>
-                      <DialogDescription>
-                        Enter the email address of the person who will connect their accounting system.
-                      </DialogDescription>
-                    </DialogHeader>
-                    <div className="space-y-4 py-4">
-                      <div>
-                        <Label htmlFor="inviteEmail">Email address</Label>
-                        <Input
-                          id="inviteEmail"
-                          type="email"
-                          value={inviteEmail}
-                          onChange={(e) => setInviteEmail(e.target.value)}
-                          placeholder="name@company.com"
-                          className="mt-2"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="inviteContactName">Contact name (optional)</Label>
-                        <Input
-                          id="inviteContactName"
-                          value={inviteContactName}
-                          onChange={(e) => setInviteContactName(e.target.value)}
-                          placeholder="John Smith"
-                          className="mt-2"
-                        />
-                      </div>
-                    </div>
-                    <DialogFooter>
-                      <Button variant="outline" onClick={() => setIsInviteDialogOpen(false)}>
-                        Cancel
-                      </Button>
-                      <Button
-                        onClick={() => inviteMutation.mutate({ email: inviteEmail, contactName: inviteContactName })}
-                        disabled={!inviteEmail.trim() || inviteMutation.isPending}
-                        className="bg-[#17B6C3] hover:bg-[#1396A1] text-white"
-                      >
-                        {inviteMutation.isPending ? "Sending..." : "Send Invite"}
-                      </Button>
-                    </DialogFooter>
-                  </DialogContent>
-                </Dialog>
+                <button
+                  onClick={() => setIsInviteDialogOpen(true)}
+                  className="h-8 px-4 text-[13px] font-medium bg-slate-900 hover:bg-slate-800 text-white rounded transition-colors"
+                >
+                  <Send className="w-3.5 h-3.5 inline mr-1.5" />
+                  Send Invite
+                </button>
               )}
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
-        <Tabs defaultValue="overview" className="w-full">
-          <TabsList className="bg-white/70 border border-white/50">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="contacts">Contacts</TabsTrigger>
-            <TabsTrigger value="contract">Contract</TabsTrigger>
-          </TabsList>
+        {/* Content */}
+        <div className="p-6 lg:p-8 space-y-6 max-w-3xl">
+          {/* Summary section - key totals at top */}
+          <div className="pb-6 border-b border-slate-100">
+            <div className="flex flex-wrap gap-x-8 gap-y-4">
+              <div>
+                <p className="text-[11px] font-medium text-slate-400 uppercase tracking-wider mb-1">Status</p>
+                <p className="text-[15px] font-medium text-slate-900">{getStatusText(client.status)}</p>
+              </div>
+              <div className="w-px bg-slate-100 self-stretch hidden sm:block" />
+              <div>
+                <p className="text-[11px] font-medium text-slate-400 uppercase tracking-wider mb-1">Connected Tenant</p>
+                <p className="text-[15px] font-medium text-slate-900">
+                  {client.tenant?.name || <span className="text-slate-400">Not connected</span>}
+                </p>
+              </div>
+              <div className="w-px bg-slate-100 self-stretch hidden sm:block" />
+              <div>
+                <p className="text-[11px] font-medium text-slate-400 uppercase tracking-wider mb-1">Primary Contact</p>
+                <p className="text-[15px] font-medium text-slate-900">
+                  {primaryContact?.name || <span className="text-slate-400">Not assigned</span>}
+                </p>
+              </div>
+              <div className="w-px bg-slate-100 self-stretch hidden sm:block" />
+              <div>
+                <p className="text-[11px] font-medium text-slate-400 uppercase tracking-wider mb-1">Contacts</p>
+                <p className="text-[15px] font-medium text-slate-900 tabular-nums">{client.contacts.length}</p>
+              </div>
+            </div>
+          </div>
 
-          <TabsContent value="overview" className="mt-6">
-            <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
-              <CardHeader>
-                <CardTitle className="text-xl font-bold text-slate-900">Client Overview</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm text-slate-500 mb-1">Status</p>
-                    <Badge variant="outline" className={getStatusBadge(client.status)}>
-                      {client.status}
-                    </Badge>
-                  </div>
-                  <div>
-                    <p className="text-sm text-slate-500 mb-1">Connected Tenant</p>
-                    <p className="text-slate-900 font-medium">
-                      {client.tenant?.name || <span className="text-slate-400">Not connected</span>}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-slate-500 mb-1">Primary Contact</p>
-                    <p className="text-slate-900 font-medium">
-                      {client.contacts.find((c) => c.isPrimaryCreditContact)?.name || (
-                        <span className="text-slate-400">Not assigned</span>
-                      )}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-slate-500 mb-1">Total Contacts</p>
-                    <p className="text-slate-900 font-medium">{client.contacts.length}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
+          {/* System status sentence */}
+          <div className="py-4 px-4 bg-slate-50 rounded-lg">
+            <p className="text-[14px] font-medium text-slate-700">{nextAction.text}</p>
+            <p className="text-[13px] text-slate-500 mt-0.5">{nextAction.subtext}</p>
+          </div>
 
-          <TabsContent value="contacts" className="mt-6">
-            <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
-              <CardHeader>
-                <CardTitle className="text-xl font-bold text-slate-900">Contacts</CardTitle>
-              </CardHeader>
-              <CardContent>
+          {/* Collapsible sections */}
+          <div className="space-y-4">
+            {/* Contacts section */}
+            <Collapsible open={contactsOpen} onOpenChange={setContactsOpen}>
+              <CollapsibleTrigger className="w-full flex items-center justify-between py-3 border-b border-slate-100 hover:bg-slate-50/50 -mx-2 px-2 rounded transition-colors">
+                <span className="text-[11px] font-medium text-slate-400 uppercase tracking-wider">
+                  Contacts ({client.contacts.length})
+                </span>
+                <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${contactsOpen ? 'rotate-180' : ''}`} />
+              </CollapsibleTrigger>
+              <CollapsibleContent>
                 {client.contacts.length === 0 ? (
-                  <p className="text-slate-500 text-center py-8">
+                  <p className="text-[13px] text-slate-400 py-4">
                     No contacts yet. Contacts will be imported when the client connects their accounting system.
                   </p>
                 ) : (
-                  <div className="space-y-3">
+                  <div className="space-y-0 pt-2">
                     {client.contacts.map((contact) => (
                       <div
                         key={contact.id}
-                        className="flex items-center justify-between py-3 border-b border-slate-100 last:border-0"
+                        className="flex items-center justify-between py-3 border-b border-slate-50 last:border-0"
                       >
                         <div className="flex items-center gap-3">
-                          <div className="p-2 bg-slate-100 rounded-full">
-                            <User className="w-4 h-4 text-slate-600" />
+                          <div className="w-8 h-8 bg-slate-100 rounded-full flex items-center justify-center">
+                            <User className="w-4 h-4 text-slate-400" />
                           </div>
                           <div>
-                            <p className="font-medium text-slate-900">{contact.name}</p>
-                            <div className="flex items-center gap-3 text-sm text-slate-500">
+                            <p className="text-[14px] font-medium text-slate-900">{contact.name}</p>
+                            <div className="flex items-center gap-3 text-[12px] text-slate-400">
                               {contact.email && (
                                 <span className="flex items-center gap-1">
                                   <Mail className="w-3 h-3" />
@@ -346,43 +311,41 @@ export default function PartnerClientDetail() {
                             </div>
                           </div>
                         </div>
-                        <div className="flex gap-2">
+                        <div className="flex gap-2 text-[11px]">
                           {contact.isPrimaryCreditContact && (
-                            <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200">
-                              Primary
-                            </Badge>
+                            <span className="text-emerald-600">Primary</span>
                           )}
                           {contact.isEscalationContact && (
-                            <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
-                              Escalation
-                            </Badge>
+                            <span className="text-amber-600">Escalation</span>
                           )}
                         </div>
                       </div>
                     ))}
                   </div>
                 )}
-              </CardContent>
-            </Card>
-          </TabsContent>
+              </CollapsibleContent>
+            </Collapsible>
 
-          <TabsContent value="contract" className="mt-6">
-            <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
-              <CardHeader>
-                <CardTitle className="text-xl font-bold text-slate-900">Contract Details</CardTitle>
-              </CardHeader>
-              <CardContent>
+            {/* Contract section */}
+            <Collapsible open={contractOpen} onOpenChange={setContractOpen}>
+              <CollapsibleTrigger className="w-full flex items-center justify-between py-3 border-b border-slate-100 hover:bg-slate-50/50 -mx-2 px-2 rounded transition-colors">
+                <span className="text-[11px] font-medium text-slate-400 uppercase tracking-wider">
+                  Contract Details
+                </span>
+                <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${contractOpen ? 'rotate-180' : ''}`} />
+              </CollapsibleTrigger>
+              <CollapsibleContent>
                 {!client.contract ? (
-                  <p className="text-slate-500 text-center py-8">No contract details recorded yet.</p>
+                  <p className="text-[13px] text-slate-400 py-4">No contract details recorded yet.</p>
                 ) : (
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-2 gap-4 pt-4">
                     <div>
-                      <p className="text-sm text-slate-500 mb-1">Pricing Tier</p>
-                      <p className="text-slate-900 font-medium">{client.contract.pricingTier}</p>
+                      <p className="text-[11px] font-medium text-slate-400 uppercase tracking-wider mb-1">Pricing Tier</p>
+                      <p className="text-[14px] text-slate-900">{client.contract.pricingTier}</p>
                     </div>
                     <div>
-                      <p className="text-sm text-slate-500 mb-1">Billing Mode</p>
-                      <p className="text-slate-900 font-medium">
+                      <p className="text-[11px] font-medium text-slate-400 uppercase tracking-wider mb-1">Billing Mode</p>
+                      <p className="text-[14px] text-slate-900">
                         {client.contract.billingMode === "BILLED_TO_PARTNER"
                           ? "Billed to Partner"
                           : "Billed to Client"}
@@ -390,29 +353,80 @@ export default function PartnerClientDetail() {
                     </div>
                     {client.contract.contractStartDate && (
                       <div>
-                        <p className="text-sm text-slate-500 mb-1">Start Date</p>
-                        <p className="text-slate-900 font-medium flex items-center gap-2">
-                          <Calendar className="w-4 h-4 text-slate-400" />
+                        <p className="text-[11px] font-medium text-slate-400 uppercase tracking-wider mb-1">Start Date</p>
+                        <p className="text-[14px] text-slate-900 flex items-center gap-2">
+                          <Calendar className="w-4 h-4 text-slate-300" />
                           {new Date(client.contract.contractStartDate).toLocaleDateString("en-GB")}
                         </p>
                       </div>
                     )}
                     {client.contract.contractEndDate && (
                       <div>
-                        <p className="text-sm text-slate-500 mb-1">End Date</p>
-                        <p className="text-slate-900 font-medium flex items-center gap-2">
-                          <Calendar className="w-4 h-4 text-slate-400" />
+                        <p className="text-[11px] font-medium text-slate-400 uppercase tracking-wider mb-1">End Date</p>
+                        <p className="text-[14px] text-slate-900 flex items-center gap-2">
+                          <Calendar className="w-4 h-4 text-slate-300" />
                           {new Date(client.contract.contractEndDate).toLocaleDateString("en-GB")}
                         </p>
                       </div>
                     )}
                   </div>
                 )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
-      </div>
+              </CollapsibleContent>
+            </Collapsible>
+          </div>
+        </div>
+      </main>
+
+      {/* Invite dialog */}
+      <Dialog open={isInviteDialogOpen} onOpenChange={setIsInviteDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-[17px] font-semibold">Invite {client.name}</DialogTitle>
+            <DialogDescription className="text-[13px] text-slate-400">
+              Enter the email address of the person who will connect their accounting system.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div>
+              <Label htmlFor="inviteEmail" className="text-[13px] font-medium text-slate-700">Email address</Label>
+              <Input
+                id="inviteEmail"
+                type="email"
+                value={inviteEmail}
+                onChange={(e) => setInviteEmail(e.target.value)}
+                placeholder="name@company.com"
+                className="mt-2 text-[14px]"
+              />
+            </div>
+            <div>
+              <Label htmlFor="inviteContactName" className="text-[13px] font-medium text-slate-700">Contact name (optional)</Label>
+              <Input
+                id="inviteContactName"
+                value={inviteContactName}
+                onChange={(e) => setInviteContactName(e.target.value)}
+                placeholder="John Smith"
+                className="mt-2 text-[14px]"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setIsInviteDialogOpen(false)}
+              className="text-[13px]"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => inviteMutation.mutate({ email: inviteEmail, contactName: inviteContactName })}
+              disabled={!inviteEmail.trim() || inviteMutation.isPending}
+              className="bg-slate-900 hover:bg-slate-800 text-white text-[13px]"
+            >
+              {inviteMutation.isPending ? "Sending..." : "Send Invite"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

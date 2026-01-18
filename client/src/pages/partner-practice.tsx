@@ -1,11 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
-import { useParams } from "wouter";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useParams, Link } from "wouter";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Building2, Users, AlertCircle, TrendingUp, Eye } from "lucide-react";
-import { Link } from "wouter";
+import { Building2, AlertCircle, TrendingUp, Users } from "lucide-react";
 
 interface PracticeDashboardData {
   kpis: {
@@ -36,6 +32,15 @@ function formatCurrency(amount: number): string {
   }).format(amount);
 }
 
+function formatCurrencyCompact(amount: number): string {
+  if (amount >= 1000000) {
+    return `£${(amount / 1000000).toFixed(1)}m`;
+  } else if (amount >= 1000) {
+    return `£${(amount / 1000).toFixed(0)}k`;
+  }
+  return `£${amount}`;
+}
+
 export default function PartnerPracticeDashboard() {
   const { partnerSlug } = useParams();
 
@@ -46,32 +51,44 @@ export default function PartnerPracticeDashboard() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-teal-50 p-6">
-        <div className="max-w-7xl mx-auto space-y-6">
-          <Skeleton className="h-8 w-64" />
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {[1, 2, 3, 4].map((i) => (
-              <Skeleton key={i} className="h-32" />
-            ))}
+      <div className="flex h-screen bg-white">
+        <main className="flex-1 overflow-y-auto">
+          <div className="sticky top-0 z-40 bg-white border-b border-slate-100">
+            <div className="px-6 lg:px-8 py-5">
+              <Skeleton className="h-5 w-48" />
+              <Skeleton className="h-4 w-32 mt-1" />
+            </div>
           </div>
-          <Skeleton className="h-64" />
-        </div>
+          <div className="p-6 lg:p-8">
+            <div className="flex gap-8 mb-8">
+              {[1, 2, 3, 4].map((i) => (
+                <Skeleton key={i} className="h-16 w-32" />
+              ))}
+            </div>
+            <Skeleton className="h-48" />
+          </div>
+        </main>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-teal-50 p-6">
-        <div className="max-w-7xl mx-auto">
-          <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
-            <CardContent className="p-6 text-center">
-              <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-              <h2 className="text-lg font-semibold text-slate-900 mb-2">Unable to load dashboard</h2>
-              <p className="text-slate-600">Please check your access permissions or try again later.</p>
-            </CardContent>
-          </Card>
-        </div>
+      <div className="flex h-screen bg-white">
+        <main className="flex-1 overflow-y-auto">
+          <div className="sticky top-0 z-40 bg-white border-b border-slate-100">
+            <div className="px-6 lg:px-8 py-5">
+              <h2 className="text-[17px] font-semibold text-slate-900 tracking-tight">Practice Dashboard</h2>
+            </div>
+          </div>
+          <div className="p-6 lg:p-8">
+            <div className="py-16 text-center">
+              <AlertCircle className="w-10 h-10 text-slate-300 mx-auto mb-4" />
+              <p className="text-[15px] font-medium text-slate-900 mb-1">Unable to load dashboard</p>
+              <p className="text-[13px] text-slate-400">Please check your access permissions or try again later.</p>
+            </div>
+          </div>
+        </main>
       </div>
     );
   }
@@ -83,141 +100,111 @@ export default function PartnerPracticeDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-teal-50">
-      <div className="max-w-7xl mx-auto p-6 space-y-6">
-        <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-slate-900">Practice Dashboard</h1>
-          <Link href={`/p/${partnerSlug}/clients`}>
-            <Button variant="outline" className="gap-2">
-              <Eye className="w-4 h-4" />
-              View All Clients
-            </Button>
-          </Link>
+    <div className="flex h-screen bg-white">
+      <main className="flex-1 overflow-y-auto">
+        {/* Sticky header */}
+        <div className="sticky top-0 z-40 bg-white border-b border-slate-100">
+          <div className="px-6 lg:px-8 py-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-[17px] font-semibold text-slate-900 tracking-tight">Practice Dashboard</h2>
+                <p className="text-[13px] text-slate-400 mt-0.5">
+                  Portfolio overview
+                </p>
+              </div>
+              <Link href={`/p/${partnerSlug}/clients`}>
+                <button className="h-8 px-4 text-[13px] font-medium bg-slate-900 hover:bg-slate-800 text-white rounded transition-colors">
+                  View All Clients
+                </button>
+              </Link>
+            </div>
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card className="bg-white/70 backdrop-blur-md border-0 shadow-xl">
-            <CardContent className="p-6">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-sm text-slate-600 mb-1">Active Clients</p>
-                  <p className="text-3xl font-bold text-slate-900">{kpis.activeClients}</p>
-                </div>
-                <div className="p-2 bg-[#17B6C3]/10 rounded-lg">
-                  <Building2 className="w-5 h-5 text-[#17B6C3]" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+        {/* Content */}
+        <div className="p-6 lg:p-8 space-y-8">
+          {/* KPI metrics - inline with hairline dividers */}
+          <div className="flex flex-wrap gap-x-8 gap-y-4 pb-6 border-b border-slate-100">
+            <div>
+              <p className="text-[11px] font-medium text-slate-400 uppercase tracking-wider mb-1">Active Clients</p>
+              <p className="text-[28px] font-semibold text-slate-900 tabular-nums leading-none">{kpis.activeClients}</p>
+            </div>
+            <div className="w-px bg-slate-100 self-stretch hidden sm:block" />
+            <div>
+              <p className="text-[11px] font-medium text-slate-400 uppercase tracking-wider mb-1">Total Outstanding</p>
+              <p className="text-[28px] font-semibold text-slate-900 tabular-nums leading-none">{formatCurrencyCompact(kpis.totalOutstanding)}</p>
+            </div>
+            <div className="w-px bg-slate-100 self-stretch hidden sm:block" />
+            <div>
+              <p className="text-[11px] font-medium text-slate-400 uppercase tracking-wider mb-1">Expected (30d)</p>
+              <p className="text-[28px] font-semibold text-emerald-600 tabular-nums leading-none">{formatCurrencyCompact(kpis.expectedCash30d)}</p>
+            </div>
+            <div className="w-px bg-slate-100 self-stretch hidden sm:block" />
+            <div>
+              <p className="text-[11px] font-medium text-slate-400 uppercase tracking-wider mb-1">Exceptions</p>
+              <p className={`text-[28px] font-semibold tabular-nums leading-none ${kpis.exceptionsCount > 0 ? 'text-amber-600' : 'text-slate-900'}`}>
+                {kpis.exceptionsCount}
+              </p>
+            </div>
+          </div>
 
-          <Card className="bg-white/70 backdrop-blur-md border-0 shadow-xl">
-            <CardContent className="p-6">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-sm text-slate-600 mb-1">Total Outstanding</p>
-                  <p className="text-3xl font-bold text-slate-900">{formatCurrency(kpis.totalOutstanding)}</p>
-                </div>
-                <div className="p-2 bg-amber-100 rounded-lg">
-                  <TrendingUp className="w-5 h-5 text-amber-600" />
-                </div>
+          {/* Two-column layout for lists */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* Workload by Controller */}
+            <div>
+              <div className="flex items-center gap-2 mb-4">
+                <span className="text-[11px] font-medium text-slate-400 uppercase tracking-wider">Workload by Controller</span>
               </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-white/70 backdrop-blur-md border-0 shadow-xl">
-            <CardContent className="p-6">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-sm text-slate-600 mb-1">Expected (30 days)</p>
-                  <p className="text-3xl font-bold text-slate-900">{formatCurrency(kpis.expectedCash30d)}</p>
-                </div>
-                <div className="p-2 bg-emerald-100 rounded-lg">
-                  <TrendingUp className="w-5 h-5 text-emerald-600" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-white/70 backdrop-blur-md border-0 shadow-xl">
-            <CardContent className="p-6">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-sm text-slate-600 mb-1">Exceptions</p>
-                  <p className="text-3xl font-bold text-slate-900">{kpis.exceptionsCount}</p>
-                </div>
-                <div className="p-2 bg-red-100 rounded-lg">
-                  <AlertCircle className="w-5 h-5 text-red-600" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-xl font-bold text-slate-900 flex items-center gap-2">
-                <Users className="w-5 h-5 text-[#17B6C3]" />
-                Workload by Controller
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
               {workload.length === 0 ? (
-                <p className="text-slate-500 text-center py-8">No active client assignments</p>
+                <p className="text-[13px] text-slate-400 py-4">No active client assignments</p>
               ) : (
-                <div className="space-y-3">
+                <div className="space-y-0">
                   {workload.map((w, i) => (
-                    <div key={i} className="flex items-center justify-between py-2 border-b border-slate-100 last:border-0">
-                      <span className="text-slate-700">{w.controllerName}</span>
-                      <Badge variant="secondary" className="bg-slate-100 text-slate-700">
+                    <div 
+                      key={i} 
+                      className="flex items-center justify-between py-3 border-b border-slate-50 last:border-0"
+                    >
+                      <span className="text-[14px] text-slate-700">{w.controllerName}</span>
+                      <span className="text-[13px] text-slate-400 tabular-nums">
                         {w.clientCount} client{w.clientCount !== 1 ? "s" : ""}
-                      </Badge>
+                      </span>
                     </div>
                   ))}
                 </div>
               )}
-            </CardContent>
-          </Card>
+            </div>
 
-          <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-xl font-bold text-slate-900 flex items-center gap-2">
-                <AlertCircle className="w-5 h-5 text-amber-500" />
-                Clients Needing Attention
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
+            {/* Clients Needing Attention */}
+            <div>
+              <div className="flex items-center gap-2 mb-4">
+                <span className="text-[11px] font-medium text-slate-400 uppercase tracking-wider">Needs Attention</span>
+                {needsAttention.length > 0 && (
+                  <span className="text-[11px] text-slate-300">({needsAttention.length})</span>
+                )}
+              </div>
               {needsAttention.length === 0 ? (
-                <p className="text-slate-500 text-center py-8">All clients are on track</p>
+                <p className="text-[13px] text-slate-400 py-4">All clients are on track</p>
               ) : (
-                <div className="space-y-3">
+                <div className="space-y-0">
                   {needsAttention.map((client) => (
                     <Link key={client.id} href={`/p/${partnerSlug}/clients/${client.id}`}>
-                      <div className="flex items-center justify-between py-2 border-b border-slate-100 last:border-0 hover:bg-slate-50 -mx-2 px-2 rounded cursor-pointer transition-colors">
+                      <div 
+                        className="flex items-center justify-between py-3 border-b border-slate-50 last:border-0 hover:bg-slate-50/50 -mx-2 px-2 rounded cursor-pointer transition-colors"
+                      >
                         <div>
-                          <span className="text-slate-900 font-medium">{client.name}</span>
-                          <p className="text-sm text-slate-500">{client.reason}</p>
+                          <span className="text-[14px] font-medium text-slate-900">{client.name}</span>
+                          <p className="text-[12px] text-slate-400">{client.reason}</p>
                         </div>
-                        <Badge 
-                          variant="outline" 
-                          className={
-                            client.status === "DRAFT" ? "border-slate-300 text-slate-600" :
-                            client.status === "INVITED" ? "border-blue-300 text-blue-600" :
-                            client.status === "PAUSED" ? "border-amber-300 text-amber-600" :
-                            "border-slate-300 text-slate-600"
-                          }
-                        >
-                          {client.status}
-                        </Badge>
+                        <span className="text-[12px] text-slate-400">{client.status}</span>
                       </div>
                     </Link>
                   ))}
                 </div>
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </div>
-      </div>
+      </main>
     </div>
   );
 }

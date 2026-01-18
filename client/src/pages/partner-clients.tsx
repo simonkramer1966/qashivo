@@ -1,8 +1,6 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useParams, Link } from "wouter";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -12,10 +10,9 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Building2, Plus, Search, AlertCircle, ArrowLeft, ChevronRight } from "lucide-react";
+import { Building2, Plus, Search, AlertCircle, ArrowLeft } from "lucide-react";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
@@ -27,18 +24,30 @@ interface SmeClient {
   primaryCreditControllerId: string | null;
   tenantId: string | null;
   createdAt: string;
+  totalOutstanding?: number;
+  totalOverdue?: number;
+  activeAccounts?: number;
 }
 
-function getStatusBadge(status: string) {
-  const styles: Record<string, string> = {
-    DRAFT: "bg-slate-100 text-slate-600 border-slate-200",
-    INVITED: "bg-blue-50 text-blue-600 border-blue-200",
-    ACCEPTED: "bg-indigo-50 text-indigo-600 border-indigo-200",
-    CONNECTED: "bg-emerald-50 text-emerald-600 border-emerald-200",
-    ACTIVE: "bg-green-50 text-green-700 border-green-200",
-    PAUSED: "bg-amber-50 text-amber-600 border-amber-200",
+function formatCurrency(amount: number): string {
+  return new Intl.NumberFormat("en-GB", {
+    style: "currency",
+    currency: "GBP",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(amount);
+}
+
+function getStatusText(status: string): string {
+  const labels: Record<string, string> = {
+    DRAFT: "Draft",
+    INVITED: "Invited",
+    ACCEPTED: "Accepted",
+    CONNECTED: "Connected",
+    ACTIVE: "Active",
+    PAUSED: "Paused",
   };
-  return styles[status] || "bg-slate-100 text-slate-600 border-slate-200";
+  return labels[status] || status;
 }
 
 export default function PartnerClientsList() {
@@ -85,158 +94,230 @@ export default function PartnerClientsList() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-teal-50 p-6">
-        <div className="max-w-5xl mx-auto space-y-6">
-          <Skeleton className="h-8 w-48" />
-          <Skeleton className="h-10 w-full max-w-sm" />
-          <div className="space-y-3">
-            {[1, 2, 3, 4, 5].map((i) => (
-              <Skeleton key={i} className="h-20" />
-            ))}
+      <div className="flex h-screen bg-white">
+        <main className="flex-1 overflow-y-auto">
+          <div className="sticky top-0 z-40 bg-white border-b border-slate-100">
+            <div className="px-6 lg:px-8 py-5">
+              <Skeleton className="h-5 w-32" />
+              <Skeleton className="h-4 w-48 mt-1" />
+            </div>
           </div>
-        </div>
+          <div className="p-6 lg:p-8">
+            <div className="space-y-1">
+              {[1, 2, 3, 4, 5].map((i) => (
+                <Skeleton key={i} className="h-14" />
+              ))}
+            </div>
+          </div>
+        </main>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-teal-50 p-6">
-        <div className="max-w-5xl mx-auto">
-          <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
-            <CardContent className="p-6 text-center">
-              <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-              <h2 className="text-lg font-semibold text-slate-900 mb-2">Unable to load clients</h2>
-              <p className="text-slate-600">Please check your access permissions or try again later.</p>
-            </CardContent>
-          </Card>
-        </div>
+      <div className="flex h-screen bg-white">
+        <main className="flex-1 overflow-y-auto">
+          <div className="sticky top-0 z-40 bg-white border-b border-slate-100">
+            <div className="px-6 lg:px-8 py-5">
+              <h2 className="text-[17px] font-semibold text-slate-900 tracking-tight">Clients</h2>
+            </div>
+          </div>
+          <div className="p-6 lg:p-8">
+            <div className="py-16 text-center">
+              <AlertCircle className="w-10 h-10 text-slate-300 mx-auto mb-4" />
+              <p className="text-[15px] font-medium text-slate-900 mb-1">Unable to load clients</p>
+              <p className="text-[13px] text-slate-400">Please check your access permissions or try again later.</p>
+            </div>
+          </div>
+        </main>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-teal-50">
-      <div className="max-w-5xl mx-auto p-6 space-y-6">
-        <div className="flex items-center gap-4">
-          <Link href={`/p/${partnerSlug}/practice`}>
-            <Button variant="ghost" size="icon" className="shrink-0">
-              <ArrowLeft className="w-5 h-5" />
-            </Button>
-          </Link>
-          <h1 className="text-2xl font-bold text-slate-900">Clients</h1>
+    <div className="flex h-screen bg-white">
+      <main className="flex-1 overflow-y-auto">
+        {/* Sticky header */}
+        <div className="sticky top-0 z-40 bg-white border-b border-slate-100">
+          <div className="px-6 lg:px-8 py-5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Link href={`/p/${partnerSlug}/practice`}>
+                  <button className="p-1.5 -ml-1.5 hover:bg-slate-100 rounded transition-colors">
+                    <ArrowLeft className="w-4 h-4 text-slate-400" />
+                  </button>
+                </Link>
+                <div>
+                  <h2 className="text-[17px] font-semibold text-slate-900 tracking-tight">Clients</h2>
+                  <p className="text-[13px] text-slate-400 mt-0.5">
+                    {clients?.length || 0} client{clients?.length !== 1 ? 's' : ''}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsCreateDialogOpen(true)}
+                className="h-8 px-3 text-[13px] font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded transition-colors"
+              >
+                <Plus className="w-4 h-4 inline mr-1.5" />
+                Add Client
+              </button>
+            </div>
+          </div>
         </div>
 
-        <div className="flex items-center justify-between gap-4 flex-wrap">
-          <div className="relative flex-1 max-w-sm">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-            <Input
-              placeholder="Search clients..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 bg-white/70 border-gray-200/30"
-            />
-          </div>
-
-          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-            <DialogTrigger asChild>
-              <Button className="bg-[#17B6C3] hover:bg-[#1396A1] text-white gap-2">
-                <Plus className="w-4 h-4" />
-                Add Client
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Add New Client</DialogTitle>
-                <DialogDescription>
-                  Create a new client record. You can invite them to connect their accounting system afterwards.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="py-4">
-                <Label htmlFor="clientName" className="text-sm font-medium text-slate-700">
-                  Business Name
-                </Label>
+        {/* Content */}
+        <div className="p-6 lg:p-8">
+          {/* Search - compact and quiet */}
+          {(clients?.length || 0) > 0 && (
+            <div className="mb-6">
+              <div className="relative max-w-xs">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
                 <Input
-                  id="clientName"
-                  value={newClientName}
-                  onChange={(e) => setNewClientName(e.target.value)}
-                  placeholder="Enter business name"
-                  className="mt-2"
+                  placeholder="Search clients..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-9 h-9 text-[13px] bg-white border-slate-200 focus:border-slate-300 focus:ring-0"
                 />
               </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
-                  Cancel
-                </Button>
-                <Button
-                  onClick={() => createMutation.mutate(newClientName)}
-                  disabled={!newClientName.trim() || createMutation.isPending}
-                  className="bg-[#17B6C3] hover:bg-[#1396A1] text-white"
-                >
-                  {createMutation.isPending ? "Creating..." : "Create Client"}
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-        </div>
+            </div>
+          )}
 
-        {filteredClients.length === 0 ? (
-          <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
-            <CardContent className="p-12 text-center">
-              <Building2 className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-              <h2 className="text-lg font-semibold text-slate-900 mb-2">
+          {filteredClients.length === 0 ? (
+            <div className="py-20 text-center">
+              <Building2 className="w-10 h-10 text-slate-200 mx-auto mb-4" />
+              <p className="text-[15px] font-medium text-slate-900 mb-1">
                 {searchTerm ? "No matching clients" : "No clients yet"}
-              </h2>
-              <p className="text-slate-600 mb-6">
+              </p>
+              <p className="text-[13px] text-slate-400 mb-6">
                 {searchTerm
                   ? "Try adjusting your search term"
                   : "Add your first client to get started"}
               </p>
               {!searchTerm && (
-                <Button
+                <button
                   onClick={() => setIsCreateDialogOpen(true)}
-                  className="bg-[#17B6C3] hover:bg-[#1396A1] text-white gap-2"
+                  className="h-9 px-4 text-[13px] font-medium bg-slate-900 hover:bg-slate-800 text-white rounded transition-colors"
                 >
-                  <Plus className="w-4 h-4" />
-                  Add Your First Client
-                </Button>
+                  Add Client
+                </button>
               )}
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="space-y-3">
-            {filteredClients.map((client) => (
-              <Link key={client.id} href={`/p/${partnerSlug}/clients/${client.id}`}>
-                <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg hover:shadow-xl transition-shadow cursor-pointer">
-                  <CardContent className="p-4 flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <div className="p-2 bg-[#17B6C3]/10 rounded-lg">
-                        <Building2 className="w-5 h-5 text-[#17B6C3]" />
-                      </div>
-                      <div>
-                        <h3 className="font-semibold text-slate-900">{client.name}</h3>
-                        <p className="text-sm text-slate-500">
-                          Added {new Date(client.createdAt).toLocaleDateString("en-GB", { 
-                            day: "numeric", 
-                            month: "short", 
-                            year: "numeric" 
-                          })}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <Badge variant="outline" className={getStatusBadge(client.status)}>
-                        {client.status}
-                      </Badge>
-                      <ChevronRight className="w-5 h-5 text-slate-400" />
-                    </div>
-                  </CardContent>
-                </Card>
-              </Link>
-            ))}
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full" style={{ minWidth: '600px' }}>
+                <thead>
+                  <tr className="border-b border-slate-100">
+                    <th className="py-2 text-left text-[11px] font-medium text-slate-400 uppercase tracking-wider">
+                      Client
+                    </th>
+                    <th className="py-2 text-right text-[11px] font-medium text-slate-400 uppercase tracking-wider">
+                      Accounts
+                    </th>
+                    <th className="py-2 text-right text-[11px] font-medium text-slate-400 uppercase tracking-wider">
+                      Outstanding
+                    </th>
+                    <th className="py-2 text-right text-[11px] font-medium text-slate-400 uppercase tracking-wider">
+                      Overdue
+                    </th>
+                    <th className="py-2 text-right text-[11px] font-medium text-slate-400 uppercase tracking-wider">
+                      Status
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredClients.map((client) => (
+                    <Link key={client.id} href={`/p/${partnerSlug}/clients/${client.id}`}>
+                      <tr className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors cursor-pointer">
+                        <td className="py-3">
+                          <div className="text-[14px] font-medium text-slate-900">
+                            {client.name}
+                          </div>
+                          <div className="text-[12px] text-slate-400">
+                            Added {new Date(client.createdAt).toLocaleDateString("en-GB", { 
+                              day: "numeric", 
+                              month: "short", 
+                              year: "numeric" 
+                            })}
+                          </div>
+                        </td>
+                        <td className="py-3 text-right">
+                          <span className="text-[13px] text-slate-400 tabular-nums">
+                            {client.activeAccounts ?? '—'}
+                          </span>
+                        </td>
+                        <td className="py-3 text-right">
+                          <span className="text-[14px] font-medium text-slate-900 tabular-nums">
+                            {client.totalOutstanding !== undefined 
+                              ? formatCurrency(client.totalOutstanding)
+                              : '—'}
+                          </span>
+                        </td>
+                        <td className="py-3 text-right">
+                          <span className={`text-[14px] tabular-nums ${
+                            (client.totalOverdue ?? 0) > 0 
+                              ? 'text-red-600' 
+                              : 'text-slate-400'
+                          }`}>
+                            {client.totalOverdue !== undefined 
+                              ? formatCurrency(client.totalOverdue)
+                              : '—'}
+                          </span>
+                        </td>
+                        <td className="py-3 text-right">
+                          <span className="text-[13px] text-slate-400">
+                            {getStatusText(client.status)}
+                          </span>
+                        </td>
+                      </tr>
+                    </Link>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </main>
+
+      {/* Create client dialog */}
+      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-[17px] font-semibold">Add New Client</DialogTitle>
+            <DialogDescription className="text-[13px] text-slate-400">
+              Create a new client record. You can invite them to connect their accounting system afterwards.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Label htmlFor="clientName" className="text-[13px] font-medium text-slate-700">
+              Business Name
+            </Label>
+            <Input
+              id="clientName"
+              value={newClientName}
+              onChange={(e) => setNewClientName(e.target.value)}
+              placeholder="Enter business name"
+              className="mt-2 text-[14px]"
+            />
           </div>
-        )}
-      </div>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setIsCreateDialogOpen(false)}
+              className="text-[13px]"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => createMutation.mutate(newClientName)}
+              disabled={!newClientName.trim() || createMutation.isPending}
+              className="bg-slate-900 hover:bg-slate-800 text-white text-[13px]"
+            >
+              {createMutation.isPending ? "Creating..." : "Create Client"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
