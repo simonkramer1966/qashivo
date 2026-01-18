@@ -1,4 +1,5 @@
 import { Link, useLocation } from "wouter";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { 
   Building2, 
   Users, 
@@ -6,9 +7,14 @@ import {
   ListChecks, 
   FileDown, 
   ScrollText,
-  ChevronRight
+  ChevronRight,
+  LogOut,
+  Loader2
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useEffect } from "react";
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -24,7 +30,40 @@ const navItems = [
 ];
 
 export default function AdminLayout({ children }: AdminLayoutProps) {
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
+
+  const { data: authStatus, isLoading } = useQuery<{ authenticated: boolean; user?: any }>({
+    queryKey: ["/api/admin/auth/status"],
+    retry: false,
+  });
+
+  const logoutMutation = useMutation({
+    mutationFn: async () => {
+      await apiRequest("POST", "/api/admin/auth/logout");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/auth/status"] });
+      setLocation("/admin/login");
+    },
+  });
+
+  useEffect(() => {
+    if (!isLoading && !authStatus?.authenticated) {
+      setLocation("/admin/login");
+    }
+  }, [authStatus, isLoading, setLocation]);
+
+  if (isLoading) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-white">
+        <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
+      </div>
+    );
+  }
+
+  if (!authStatus?.authenticated) {
+    return null;
+  }
 
   return (
     <div className="flex h-screen bg-white">
@@ -60,7 +99,22 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           })}
         </nav>
         
-        <div className="p-4 border-t border-slate-100">
+        <div className="p-4 border-t border-slate-100 space-y-3">
+          {authStatus?.user && (
+            <p className="text-[11px] text-slate-500 truncate">
+              {authStatus.user.email}
+            </p>
+          )}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => logoutMutation.mutate()}
+            disabled={logoutMutation.isPending}
+            className="w-full justify-start text-[12px] text-slate-500 hover:text-slate-700 h-8"
+          >
+            <LogOut className="w-3.5 h-3.5 mr-2" />
+            Sign out
+          </Button>
           <p className="text-[11px] text-slate-400">Qashivo Internal</p>
         </div>
       </aside>

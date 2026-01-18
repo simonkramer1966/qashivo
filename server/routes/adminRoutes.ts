@@ -73,24 +73,6 @@ const inviteUserSchema = z.object({
   smeId: z.string().nullable().optional(),
 });
 
-// Extended request with user
-interface AuthRequest extends Request {
-  user?: {
-    id: string;
-    email: string;
-    platformAdmin?: boolean;
-    partnerId?: string;
-  };
-}
-
-// Platform admin guard middleware
-const requireAdminAuth = (req: any, res: any, next: any) => {
-  if (!req.user?.platformAdmin) {
-    return res.status(403).json({ error: "Platform admin access required" });
-  }
-  next();
-};
-
 // Helper to get user ID safely
 const getUserId = (req: any): string => {
   return req.user?.id || "system";
