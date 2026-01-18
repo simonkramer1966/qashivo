@@ -40,7 +40,7 @@ export default function PartnerPracticeDashboard() {
   const { partnerSlug } = useParams();
 
   const { data, isLoading, error } = useQuery<PracticeDashboardData>({
-    queryKey: ["/api/p", partnerSlug, "practice"],
+    queryKey: [`/api/p/${partnerSlug}/practice`],
     enabled: !!partnerSlug,
   });
 

@@ -111,7 +111,7 @@ export default function PartnerClientDetail() {
   const [inviteContactName, setInviteContactName] = useState("");
 
   const { data: client, isLoading, error } = useQuery<SmeClientDetail>({
-    queryKey: ["/api/p", partnerSlug, "clients", smeClientId],
+    queryKey: [`/api/p/${partnerSlug}/clients/${smeClientId}`],
     enabled: !!partnerSlug && !!smeClientId,
   });
 
@@ -124,7 +124,7 @@ export default function PartnerClientDetail() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/p", partnerSlug, "clients", smeClientId] });
+      queryClient.invalidateQueries({ queryKey: [`/api/p/${partnerSlug}/clients/${smeClientId}`] });
       setIsInviteDialogOpen(false);
       setInviteEmail("");
       setInviteContactName("");

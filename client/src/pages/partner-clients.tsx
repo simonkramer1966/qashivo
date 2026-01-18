@@ -48,10 +48,12 @@ export default function PartnerClientsList() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [newClientName, setNewClientName] = useState("");
 
-  const { data: clients, isLoading, error } = useQuery<SmeClient[]>({
-    queryKey: ["/api/p", partnerSlug, "clients"],
+  const { data, isLoading, error } = useQuery<{ clients: SmeClient[] }>({
+    queryKey: [`/api/p/${partnerSlug}/clients`],
     enabled: !!partnerSlug,
   });
+  
+  const clients = data?.clients;
 
   const createMutation = useMutation({
     mutationFn: async (name: string) => {
@@ -59,8 +61,8 @@ export default function PartnerClientsList() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/p", partnerSlug, "clients"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/p", partnerSlug, "practice"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/p/${partnerSlug}/clients`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/p/${partnerSlug}/practice`] });
       setIsCreateDialogOpen(false);
       setNewClientName("");
       toast({
