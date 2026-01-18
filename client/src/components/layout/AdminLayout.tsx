@@ -8,13 +8,11 @@ import {
   FileDown, 
   ScrollText,
   ChevronRight,
-  LogOut,
-  Loader2
+  LogOut
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { apiRequest, queryClient } from "@/lib/queryClient";
-import { useEffect } from "react";
+import { queryClient } from "@/lib/queryClient";
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -32,38 +30,23 @@ const navItems = [
 export default function AdminLayout({ children }: AdminLayoutProps) {
   const [location, setLocation] = useLocation();
 
-  const { data: authStatus, isLoading } = useQuery<{ authenticated: boolean; user?: any }>({
+  const { data: authStatus } = useQuery<{ authenticated: boolean; user?: any }>({
     queryKey: ["/api/admin/auth/status"],
-    retry: false,
+    staleTime: 30000,
   });
 
   const logoutMutation = useMutation({
     mutationFn: async () => {
-      await apiRequest("POST", "/api/admin/auth/logout");
+      await fetch("/api/admin/auth/logout", {
+        method: "POST",
+        credentials: "include",
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/auth/status"] });
       setLocation("/admin/login");
     },
   });
-
-  useEffect(() => {
-    if (!isLoading && !authStatus?.authenticated) {
-      setLocation("/admin/login");
-    }
-  }, [authStatus, isLoading, setLocation]);
-
-  if (isLoading) {
-    return (
-      <div className="flex h-screen items-center justify-center bg-white">
-        <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
-      </div>
-    );
-  }
-
-  if (!authStatus?.authenticated) {
-    return null;
-  }
 
   return (
     <div className="flex h-screen bg-white">
