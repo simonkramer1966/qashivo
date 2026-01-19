@@ -14,10 +14,10 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Eye, EyeOff } from "lucide-react";
+import backgroundImage from "@assets/Screenshot_2026-01-11_at_19.21.58_1768819697208.png";
 
 const loginSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -29,7 +29,6 @@ type LoginForm = z.infer<typeof loginSchema>;
 export default function Login() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const [showPasswordReset, setShowPasswordReset] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
   const form = useForm<LoginForm>({
@@ -49,9 +48,7 @@ export default function Login() {
         title: "Login successful",
         description: "Welcome back!",
       });
-      // Invalidate user query to update authentication state
       await queryClient.invalidateQueries({ queryKey: ['/api/user'] });
-      // Redirect platform admins to admin console
       if (response.user?.platformAdmin) {
         setLocation("/admin");
       } else {
@@ -72,33 +69,51 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-teal-50 flex items-center justify-center p-4">
-      <Card className="w-full max-w-md bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
-        <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold text-center">Welcome to Qashivo</CardTitle>
-          <CardDescription className="text-center">
-            Sign in to your account to continue
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+    <div 
+      className="min-h-screen flex items-center justify-center p-4 relative"
+      style={{
+        backgroundImage: `url(${backgroundImage})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+      }}
+    >
+      <div className="absolute inset-0 bg-gradient-to-br from-slate-900/80 via-slate-800/70 to-slate-900/80 backdrop-blur-[2px]" />
+      
+      <div className="relative z-10 w-full max-w-md">
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-[#17B6C3]/20 backdrop-blur-sm mb-4">
+            <svg viewBox="0 0 24 24" className="w-10 h-10 text-[#17B6C3]" fill="currentColor">
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14.5v-9l6 4.5-6 4.5z"/>
+            </svg>
+          </div>
+          <h1 className="text-3xl font-bold text-white mb-2">Qashivo</h1>
+          <p className="text-slate-400 text-sm">Cashflow Simplified</p>
+        </div>
+
+        <div className="bg-slate-800/50 backdrop-blur-xl border border-slate-700/50 rounded-2xl p-8 shadow-2xl">
+          <div className="text-center mb-6">
+            <h2 className="text-xl font-semibold text-white mb-1">Welcome back</h2>
+            <p className="text-slate-400 text-sm">Sign in to your account to continue</p>
+          </div>
+
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
               <FormField
                 control={form.control}
                 name="email"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Email</FormLabel>
+                    <FormLabel className="text-slate-300 text-sm font-medium">Email</FormLabel>
                     <FormControl>
                       <Input
                         {...field}
                         type="email"
                         placeholder="your@email.com"
-                        className="bg-white/70 border-gray-200/30"
+                        className="bg-slate-700/50 border-slate-600/50 text-white placeholder:text-slate-500 focus:border-[#17B6C3] focus:ring-[#17B6C3]/20 h-11"
                         data-testid="input-email"
                       />
                     </FormControl>
-                    <FormMessage />
+                    <FormMessage className="text-red-400" />
                   </FormItem>
                 )}
               />
@@ -107,39 +122,39 @@ export default function Login() {
                 name="password"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Password</FormLabel>
+                    <FormLabel className="text-slate-300 text-sm font-medium">Password</FormLabel>
                     <FormControl>
                       <div className="relative">
                         <Input
                           {...field}
                           type={showPassword ? "text" : "password"}
                           placeholder="••••••••"
-                          className="bg-white/70 border-gray-200/30 pr-10"
+                          className="bg-slate-700/50 border-slate-600/50 text-white placeholder:text-slate-500 focus:border-[#17B6C3] focus:ring-[#17B6C3]/20 h-11 pr-10"
                           data-testid="input-password"
                         />
                         <Button
                           type="button"
                           variant="ghost"
                           size="sm"
-                          className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                          className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent text-slate-400 hover:text-slate-300"
                           onClick={() => setShowPassword(!showPassword)}
                           data-testid="button-toggle-password"
                         >
                           {showPassword ? (
-                            <EyeOff className="h-4 w-4 text-gray-500" />
+                            <EyeOff className="h-4 w-4" />
                           ) : (
-                            <Eye className="h-4 w-4 text-gray-500" />
+                            <Eye className="h-4 w-4" />
                           )}
                         </Button>
                       </div>
                     </FormControl>
-                    <FormMessage />
+                    <FormMessage className="text-red-400" />
                   </FormItem>
                 )}
               />
               <Button
                 type="submit"
-                className="w-full bg-[#17B6C3] hover:bg-[#1396A1] text-white"
+                className="w-full bg-[#17B6C3] hover:bg-[#1396A1] text-white font-medium h-11 rounded-lg transition-all duration-200"
                 disabled={loginMutation.isPending}
                 data-testid="button-login"
               >
@@ -148,20 +163,20 @@ export default function Login() {
             </form>
           </Form>
 
-          <div className="mt-4 text-center space-y-2">
+          <div className="mt-6 text-center space-y-3">
             <Button
               variant="link"
-              className="text-sm text-[#17B6C3]"
-              onClick={() => setShowPasswordReset(true)}
+              className="text-sm text-[#17B6C3] hover:text-[#1396A1] p-0"
+              onClick={() => setLocation("/forgot-password")}
               data-testid="button-forgot-password"
             >
               Forgot your password?
             </Button>
-            <div className="text-sm text-muted-foreground">
+            <div className="text-sm text-slate-400">
               Don't have an account?{" "}
               <Button
                 variant="link"
-                className="text-[#17B6C3] p-0"
+                className="text-[#17B6C3] hover:text-[#1396A1] p-0"
                 onClick={() => setLocation("/signup")}
                 data-testid="link-signup"
               >
@@ -169,8 +184,12 @@ export default function Login() {
               </Button>
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+
+        <p className="text-center text-slate-500 text-xs mt-6">
+          Credit control and cashflow forecasting for accountants and their clients
+        </p>
+      </div>
     </div>
   );
 }
