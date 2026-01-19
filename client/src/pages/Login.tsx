@@ -44,7 +44,7 @@ export default function Login() {
       const res = await apiRequest("POST", "/api/login", data);
       return await res.json();
     },
-    onSuccess: async (response: { user: { id: string; email: string; platformAdmin?: boolean } }) => {
+    onSuccess: async (response: { user: { id: string; email: string; platformAdmin?: boolean; partnerId?: string } }) => {
       toast({
         title: "Login successful",
         description: "Welcome back!",
@@ -52,6 +52,8 @@ export default function Login() {
       await queryClient.invalidateQueries({ queryKey: ['/api/user'] });
       if (response.user?.platformAdmin) {
         setLocation("/admin");
+      } else if (response.user?.partnerId) {
+        setLocation("/partner");
       } else {
         setLocation("/");
       }
