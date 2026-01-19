@@ -44,14 +44,19 @@ export default function Login() {
     mutationFn: async (data: LoginForm) => {
       return await apiRequest("POST", "/api/login", data);
     },
-    onSuccess: async () => {
+    onSuccess: async (response: any) => {
       toast({
         title: "Login successful",
         description: "Welcome back!",
       });
       // Invalidate user query to update authentication state
       await queryClient.invalidateQueries({ queryKey: ['/api/user'] });
-      setLocation("/");
+      // Redirect platform admins to admin console
+      if (response.user?.platformAdmin) {
+        setLocation("/admin");
+      } else {
+        setLocation("/");
+      }
     },
     onError: (error: any) => {
       toast({

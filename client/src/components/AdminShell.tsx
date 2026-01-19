@@ -31,7 +31,7 @@ export default function AdminShell() {
 
   useEffect(() => {
     if (!isLoading && !authStatus?.authenticated) {
-      setLocation("/admin/login");
+      setLocation("/login");
     }
   }, [authStatus, isLoading, setLocation]);
 

@@ -178,26 +178,31 @@ router.post("/auth/logout", (req, res) => {
   res.json({ success: true });
 });
 
-// GET /api/admin/auth/status - Check admin auth status
-router.get("/auth/status", (req, res) => {
-  const adminUser = (req.session as any).adminUser;
-  if (adminUser?.platformAdmin) {
+// GET /api/admin/auth/status - Check admin auth status (uses regular user session)
+router.get("/auth/status", (req: any, res) => {
+  const user = req.user;
+  if (user?.platformAdmin) {
     res.json({ 
       authenticated: true, 
-      user: adminUser 
+      user: {
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        platformAdmin: user.platformAdmin,
+      }
     });
   } else {
     res.json({ authenticated: false });
   }
 });
 
-// Updated middleware - check admin session
+// Middleware - check regular user session for platformAdmin flag
 const requireAdminAuth = (req: any, res: any, next: any) => {
-  const adminUser = (req.session as any).adminUser;
-  if (!adminUser?.platformAdmin) {
+  const user = req.user;
+  if (!user?.platformAdmin) {
     return res.status(401).json({ error: "Admin authentication required" });
   }
-  req.user = adminUser;
   next();
 };
 
