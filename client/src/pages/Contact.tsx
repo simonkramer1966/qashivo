@@ -397,7 +397,7 @@ export default function Contact() {
           </div>
           <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400">
             <p>&copy; 2025 Qashivo. All rights reserved.</p>
-            <a href="/admin/login" className="text-gray-600 hover:text-gray-400 text-xs mt-2 inline-block transition-colors">Admin</a>
+            <a href="/login" className="text-gray-600 hover:text-gray-400 text-xs mt-2 inline-block transition-colors">Admin</a>
           </div>
         </div>
       </footer>

@@ -34,7 +34,6 @@ const InvestorCRM = lazy(() => import("@/pages/investor-crm"));
 const DocsDownload = lazy(() => import("@/pages/docs-download"));
 const DebtorPortal = lazy(() => import("@/pages/debtor-portal"));
 const BetaPartner = lazy(() => import("@/pages/beta-partner"));
-const AdminLogin = lazy(() => import("@/pages/admin-login"));
 const Dashboard = lazy(() => import("@/pages/dashboard"));
 const DashboardExperimental = lazy(() => import("@/pages/dashboard-experimental"));
 const CashboardExperimental = lazy(() => import("@/pages/cashboard-experimental"));
@@ -118,7 +117,6 @@ function Router() {
           <Route path="/forgot-password" component={ForgotPassword} />
           <Route path="/reset-password" component={ResetPassword} />
           <Route path="/signin" component={SignIn} />
-          <Route path="/admin/login" component={AdminLogin} />
           <Route path="/admin/:rest*" component={AdminShell} />
           <Route path="/accept-invite" component={AcceptInvite} />
           <Route path="/sme-onboarding" component={SmeOnboarding} />
@@ -144,7 +142,6 @@ function Router() {
           <Route path="/investor-crm" component={InvestorCRM} />
           <Route path="/docs-download" component={DocsDownload} />
           <Route path="/qashivo-admin" component={QashivoAdminDashboard} />
-          <Route path="/admin/login" component={AdminLogin} />
           <Route path="/admin/:rest*" component={AdminShell} />
           <Route path="/partner" component={PartnerDashboard} />
           <Route path="/dashboard" component={Dashboard} />

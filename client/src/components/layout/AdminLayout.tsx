@@ -37,14 +37,15 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
   const logoutMutation = useMutation({
     mutationFn: async () => {
-      await fetch("/api/admin/auth/logout", {
+      await fetch("/api/logout", {
         method: "POST",
         credentials: "include",
       });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/auth/status"] });
-      setLocation("/admin/login");
+      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+      setLocation("/login");
     },
   });
 
