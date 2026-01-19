@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { useLocation } from "wouter";
+import { useLocation, useRoute } from "wouter";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { Plus, Building2, AlertCircle } from "lucide-react";
+import { Plus, Building2, AlertCircle, ChevronLeft } from "lucide-react";
 import type { Partner } from "@shared/schema";
 
 interface PartnerListItem extends Partner {
@@ -33,6 +33,8 @@ interface PartnerListItem extends Partner {
 
 export default function AdminPartners() {
   const [, setLocation] = useLocation();
+  const [, params] = useRoute("/admin/partners/:partnerId");
+  const partnerId = params?.partnerId;
   const { toast } = useToast();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [formData, setFormData] = useState({
@@ -48,6 +50,12 @@ export default function AdminPartners() {
 
   const { data: partners, isLoading, error } = useQuery<PartnerListItem[]>({
     queryKey: ["/api/admin/partners"],
+    enabled: !partnerId,
+  });
+
+  const { data: partnerDetail, isLoading: isLoadingDetail } = useQuery<PartnerListItem>({
+    queryKey: ["/api/admin/partners", partnerId],
+    enabled: !!partnerId,
   });
 
   const createMutation = useMutation({
@@ -99,6 +107,101 @@ export default function AdminPartners() {
       year: "numeric",
     });
   };
+
+  if (partnerId) {
+    return (
+      <AdminLayout>
+        <div className="sticky top-0 z-40 bg-white border-b border-slate-100">
+          <div className="px-6 lg:px-8 py-5">
+            <Button
+              variant="ghost"
+              onClick={() => setLocation("/admin/partners")}
+              className="h-8 px-2 text-[13px] font-medium text-slate-500 hover:text-slate-900 -ml-2 mb-2"
+            >
+              <ChevronLeft className="w-4 h-4 mr-1" />
+              Back to Partners
+            </Button>
+            {isLoadingDetail ? (
+              <Skeleton className="h-6 w-48" />
+            ) : (
+              <div>
+                <h2 className="text-[17px] font-semibold text-slate-900 tracking-tight">
+                  {partnerDetail?.name || "Partner"}
+                </h2>
+                {partnerDetail?.brandName && (
+                  <p className="text-[13px] text-slate-400 mt-0.5">{partnerDetail.brandName}</p>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+        <div className="p-6 lg:p-8">
+          {isLoadingDetail ? (
+            <div className="space-y-4">
+              <Skeleton className="h-24 w-full" />
+              <Skeleton className="h-48 w-full" />
+            </div>
+          ) : !partnerDetail ? (
+            <div className="py-16 text-center">
+              <AlertCircle className="w-10 h-10 text-slate-300 mx-auto mb-4" />
+              <p className="text-[15px] font-medium text-slate-900 mb-1">Partner not found</p>
+              <p className="text-[13px] text-slate-400 mb-6">This partner may have been deleted</p>
+              <Button
+                onClick={() => setLocation("/admin/partners")}
+                className="h-8 px-4 text-[13px] font-medium bg-slate-900 hover:bg-slate-800 text-white"
+              >
+                Back to Partners
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="bg-slate-50 rounded-lg p-4">
+                  <p className="text-[11px] font-medium text-slate-400 uppercase tracking-wider mb-1">Status</p>
+                  {getStatusBadge(partnerDetail.status)}
+                </div>
+                <div className="bg-slate-50 rounded-lg p-4">
+                  <p className="text-[11px] font-medium text-slate-400 uppercase tracking-wider mb-1">SMEs</p>
+                  <p className="text-[20px] font-semibold text-slate-900 tabular-nums">{partnerDetail.smeCount || 0}</p>
+                </div>
+                <div className="bg-slate-50 rounded-lg p-4">
+                  <p className="text-[11px] font-medium text-slate-400 uppercase tracking-wider mb-1">Users</p>
+                  <p className="text-[20px] font-semibold text-slate-900 tabular-nums">{partnerDetail.userCount || 0}</p>
+                </div>
+              </div>
+              <div className="bg-white rounded-lg border border-slate-100 p-6">
+                <h3 className="text-[15px] font-semibold text-slate-900 mb-4">Partner Details</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-[14px]">
+                  <div>
+                    <p className="text-slate-400 mb-1">Email</p>
+                    <p className="text-slate-900">{partnerDetail.email || "—"}</p>
+                  </div>
+                  <div>
+                    <p className="text-slate-400 mb-1">Created</p>
+                    <p className="text-slate-900">{formatDate(partnerDetail.createdAt)}</p>
+                  </div>
+                  <div>
+                    <p className="text-slate-400 mb-1">Default Execution Time</p>
+                    <p className="text-slate-900">{partnerDetail.defaultExecutionTime || "09:00"}</p>
+                  </div>
+                  <div>
+                    <p className="text-slate-400 mb-1">Whitelabel</p>
+                    <p className="text-slate-900">{partnerDetail.whitelabelEnabled ? "Enabled" : "Disabled"}</p>
+                  </div>
+                </div>
+                {partnerDetail.notes && (
+                  <div className="mt-4 pt-4 border-t border-slate-100">
+                    <p className="text-slate-400 mb-1">Notes</p>
+                    <p className="text-slate-900">{partnerDetail.notes}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      </AdminLayout>
+    );
+  }
 
   return (
     <AdminLayout>
