@@ -41,9 +41,10 @@ export default function Login() {
 
   const loginMutation = useMutation({
     mutationFn: async (data: LoginForm) => {
-      return await apiRequest("POST", "/api/login", data);
+      const res = await apiRequest("POST", "/api/login", data);
+      return await res.json();
     },
-    onSuccess: async (response: any) => {
+    onSuccess: async (response: { user: { id: string; email: string; platformAdmin?: boolean } }) => {
       toast({
         title: "Login successful",
         description: "Welcome back!",
