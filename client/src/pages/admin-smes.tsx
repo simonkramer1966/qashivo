@@ -1,9 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
-import { useLocation } from "wouter";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { Factory, AlertCircle, CheckCircle2, XCircle, Radio } from "lucide-react";
+import { Factory, AlertCircle, CheckCircle2, XCircle } from "lucide-react";
 
 interface ClientListItem {
   id: string;
@@ -17,8 +16,6 @@ interface ClientListItem {
 }
 
 export default function AdminSmes() {
-  const [, setLocation] = useLocation();
-
   const { data: clients, isLoading, error } = useQuery<ClientListItem[]>({
     queryKey: ["/api/admin/smes"],
   });
@@ -112,8 +109,7 @@ export default function AdminSmes() {
                 {clients.map((client) => (
                   <tr
                     key={client.id}
-                    onClick={() => setLocation(`/admin/smes/${client.id}`)}
-                    className="border-b border-slate-50 hover:bg-slate-50/50 cursor-pointer transition-colors"
+                    className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors"
                   >
                     <td className="py-3 pr-4">
                       <span className="text-[14px] font-medium text-slate-900">{client.name}</span>
