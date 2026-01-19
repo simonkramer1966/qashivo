@@ -117,6 +117,7 @@ function Router() {
           <Route path="/forgot-password" component={ForgotPassword} />
           <Route path="/reset-password" component={ResetPassword} />
           <Route path="/signin" component={SignIn} />
+          <Route path="/admin" component={AdminShell} />
           <Route path="/admin/:rest*" component={AdminShell} />
           <Route path="/accept-invite" component={AcceptInvite} />
           <Route path="/sme-onboarding" component={SmeOnboarding} />
@@ -142,6 +143,7 @@ function Router() {
           <Route path="/investor-crm" component={InvestorCRM} />
           <Route path="/docs-download" component={DocsDownload} />
           <Route path="/qashivo-admin" component={QashivoAdminDashboard} />
+          <Route path="/admin" component={AdminShell} />
           <Route path="/admin/:rest*" component={AdminShell} />
           <Route path="/partner" component={PartnerDashboard} />
           <Route path="/dashboard" component={Dashboard} />
