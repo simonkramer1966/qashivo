@@ -80,16 +80,6 @@ export default function Login() {
       <div className="absolute inset-0 bg-gradient-to-br from-slate-900/80 via-slate-800/70 to-slate-900/80 backdrop-blur-[2px]" />
       
       <div className="relative z-10 w-full max-w-md">
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-[#17B6C3]/20 backdrop-blur-sm mb-4">
-            <svg viewBox="0 0 24 24" className="w-10 h-10 text-[#17B6C3]" fill="currentColor">
-              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14.5v-9l6 4.5-6 4.5z"/>
-            </svg>
-          </div>
-          <h1 className="text-3xl font-bold text-white mb-2">Qashivo</h1>
-          <p className="text-slate-400 text-sm">Cashflow Simplified</p>
-        </div>
-
         <div className="bg-slate-800/50 backdrop-blur-xl border border-slate-700/50 rounded-2xl p-8 shadow-2xl">
           <div className="text-center mb-6">
             <h2 className="text-xl font-semibold text-white mb-1">Welcome back</h2>
@@ -186,10 +176,7 @@ export default function Login() {
           </div>
         </div>
 
-        <p className="text-center text-slate-500 text-xs mt-6">
-          Credit control and cashflow forecasting for accountants and their clients
-        </p>
-      </div>
+              </div>
     </div>
   );
 }
