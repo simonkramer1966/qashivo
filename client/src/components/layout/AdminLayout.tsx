@@ -20,7 +20,7 @@ interface AdminLayoutProps {
 
 const navItems = [
   { path: "/admin/partners", label: "Partners", icon: Building2 },
-  { path: "/admin/smes", label: "SMEs", icon: Factory },
+  { path: "/admin/smes", label: "Clients", icon: Factory },
   { path: "/admin/users", label: "Users", icon: Users },
   { path: "/admin/provisioning", label: "Provisioning", icon: ListChecks },
   { path: "/admin/imports", label: "Imports & Sync", icon: FileDown },

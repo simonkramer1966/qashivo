@@ -1,6 +1,6 @@
 import { Router, Request, Response, NextFunction } from "express";
 import { db } from "../db";
-import { partners, smeClients, users, importJobs, partnerAuditLog } from "@shared/schema";
+import { partners, smeClients, users, importJobs, partnerAuditLog, tenants } from "@shared/schema";
 import { eq, desc, sql, and, or, ilike } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
@@ -357,55 +357,28 @@ router.patch("/partners/:id", requireAdminAuth, async (req, res) => {
   }
 });
 
-// ==================== SMES ====================
+// ==================== CLIENTS (TENANTS) ====================
 
-// GET /api/admin/smes - List all SMEs with partner info
+// GET /api/admin/smes - List all tenants (clients)
 router.get("/smes", requireAdminAuth, async (req, res) => {
   try {
     const result = await db
       .select({
-        id: smeClients.id,
-        partnerId: smeClients.partnerId,
-        name: smeClients.name,
-        tradingName: smeClients.tradingName,
-        industry: smeClients.industry,
-        timezone: smeClients.timezone,
-        currency: smeClients.currency,
-        status: smeClients.status,
-        approvalMode: smeClients.approvalMode,
-        voiceEnabled: smeClients.voiceEnabled,
-        sendKillSwitch: smeClients.sendKillSwitch,
-        tenantId: smeClients.tenantId,
-        createdAt: smeClients.createdAt,
-        partnerName: partners.name,
+        id: tenants.id,
+        name: tenants.name,
+        xeroOrganisationName: tenants.xeroOrganisationName,
+        xeroTenantId: tenants.xeroTenantId,
+        xeroLastSyncAt: tenants.xeroLastSyncAt,
+        communicationMode: tenants.communicationMode,
+        collectionsAutomationEnabled: tenants.collectionsAutomationEnabled,
+        createdAt: tenants.createdAt,
       })
-      .from(smeClients)
-      .leftJoin(partners, eq(smeClients.partnerId, partners.id))
-      .orderBy(desc(smeClients.createdAt));
+      .from(tenants)
+      .orderBy(desc(tenants.createdAt));
 
-    // Get last import date for each SME
-    const smesWithImports = await Promise.all(
-      result.map(async (sme) => {
-        const [lastImport] = await db
-          .select({ finishedAt: importJobs.finishedAt })
-          .from(importJobs)
-          .where(and(
-            eq(importJobs.smeClientId, sme.id),
-            eq(importJobs.status, "SUCCESS")
-          ))
-          .orderBy(desc(importJobs.finishedAt))
-          .limit(1);
-
-        return {
-          ...sme,
-          lastImportAt: lastImport?.finishedAt || null,
-        };
-      })
-    );
-
-    res.json(smesWithImports);
+    res.json(result);
   } catch (error: any) {
-    console.error("Failed to fetch SMEs:", error);
+    console.error("Failed to fetch clients:", error);
     res.status(500).json({ error: error.message });
   }
 });
