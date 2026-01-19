@@ -18783,7 +18783,9 @@ ${tenant.name}
   // ==================== END DOCUMENTATION ROUTES ====================
 
   // ==================== ADMIN ROUTES ====================
-  app.use('/api/admin', isAuthenticated, adminRoutes);
+  // Note: Admin routes have their own requireAdminAuth middleware for protected endpoints
+  // The login/logout/status endpoints are public
+  app.use('/api/admin', adminRoutes);
   // ==================== END ADMIN ROUTES ====================
 
   // ==================== WEBHOOK ROUTES ====================
