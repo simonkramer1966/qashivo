@@ -12,7 +12,7 @@ import {
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { queryClient } from "@/lib/queryClient";
-import nexusLogo from "@assets/Main Nexus Logo copy_1756923544828.png";
+import nexusLogo from "@assets/Main_Nexus_Logo_copy_1768893717341.png";
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -54,9 +54,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       <aside className="w-56 border-r border-slate-100 flex flex-col">
         <div className="p-4 border-b border-slate-100">
           <div className="flex items-center gap-2 mb-2">
-            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#17B6C3] to-[#0d8a94] flex items-center justify-center shadow-sm">
-              <img src={nexusLogo} alt="Qashivo" className="w-full h-full object-contain" />
-            </div>
+            <img src={nexusLogo} alt="Qashivo" className="w-7 h-7 object-contain" />
             <span className="text-[17px] font-semibold text-slate-900 tracking-tight">Qashivo</span>
           </div>
           <h1 className="text-[13px] font-medium text-slate-500">Admin Console</h1>
