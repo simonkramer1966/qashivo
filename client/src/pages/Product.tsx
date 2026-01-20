@@ -22,7 +22,7 @@ export default function Product() {
             <div className="flex items-center gap-10">
               <a href="/home" className="flex items-center gap-2">
                 <img src={logo} alt="Qashivo" className="h-8 w-8" />
-                <span className="text-[18px] font-semibold text-[#0B0F17] tracking-tight">Qashivo</span>
+                <span className="font-semibold text-[#0B0F17] tracking-tight text-[22px]">Qashivo</span>
               </a>
               <div className="hidden md:flex items-center gap-8">
                 <a href="/home" className="text-[15px] text-[#556070] hover:text-[#0B0F17] transition-colors">
@@ -86,7 +86,6 @@ export default function Product() {
           </div>
         )}
       </nav>
-
       {/* Hero */}
       <section className="pt-20 pb-24 md:pt-28 md:pb-32">
         <div className="max-w-[1200px] mx-auto px-6">
@@ -116,7 +115,6 @@ export default function Product() {
           </div>
         </div>
       </section>
-
       {/* Module: Overview */}
       <section id="overview" className="py-24 md:py-32 border-t border-[#E6E8EC]">
         <div className="max-w-[1200px] mx-auto px-6">
@@ -153,7 +151,6 @@ export default function Product() {
           </div>
         </div>
       </section>
-
       {/* Module: Attention */}
       <section id="attention" className="py-24 md:py-32 border-t border-[#E6E8EC] bg-white">
         <div className="max-w-[1200px] mx-auto px-6">
@@ -190,7 +187,6 @@ export default function Product() {
           </div>
         </div>
       </section>
-
       {/* Module: Cash Flow */}
       <section id="cashflow" className="py-24 md:py-32 border-t border-[#E6E8EC]">
         <div className="max-w-[1200px] mx-auto px-6">
@@ -227,7 +223,6 @@ export default function Product() {
           </div>
         </div>
       </section>
-
       {/* Module: Follow-ups */}
       <section id="followups" className="py-24 md:py-32 border-t border-[#E6E8EC] bg-white">
         <div className="max-w-[1200px] mx-auto px-6">
@@ -264,7 +259,6 @@ export default function Product() {
           </div>
         </div>
       </section>
-
       {/* Final CTA */}
       <section className="py-24 md:py-32 border-t border-[#E6E8EC]">
         <div className="max-w-[700px] mx-auto px-6 text-center">
@@ -292,7 +286,6 @@ export default function Product() {
           </div>
         </div>
       </section>
-
       {/* Footer */}
       <footer className="py-16 border-t border-[#E6E8EC] bg-white">
         <div className="max-w-[1200px] mx-auto px-6">
