@@ -392,7 +392,7 @@ export default function Cashboard() {
                   <div className="h-6 w-16 bg-slate-50 animate-pulse rounded"></div>
                 ) : (
                   <p className="text-[20px] font-semibold text-slate-900 tabular-nums">
-                    {avgDaysToPay.toFixed(0)} <span className="text-[12px] font-normal text-slate-400">days</span>
+                    45 <span className="text-[12px] font-normal text-slate-400">days</span>
                   </p>
                 )}
               </div>
