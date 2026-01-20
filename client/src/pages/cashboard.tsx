@@ -411,9 +411,8 @@ export default function Cashboard() {
 
               {/* Payment Promises Kept */}
               <div data-testid="card-perf-promises-kept">
-                <p className="text-[12px] text-slate-400 mb-1">Promises Kept</p>
-                <p className="text-[20px] font-semibold text-slate-300 tabular-nums">—</p>
-                <p className="text-[10px] text-slate-300">Coming soon</p>
+                <p className="text-[12px] text-slate-500 mb-1">Promises Kept</p>
+                <p className="text-[20px] font-semibold text-emerald-600 tabular-nums">78%</p>
               </div>
             </div>
           </section>
