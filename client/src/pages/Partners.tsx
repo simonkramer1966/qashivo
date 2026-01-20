@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
-import { ArrowRight, Check, ChevronDown } from "lucide-react";
+import { ArrowRight, Check, ChevronDown, Menu, X } from "lucide-react";
 import { useState } from "react";
 import logo from "@assets/Main_Nexus_Logo_copy_1768893717341.png";
 
@@ -26,6 +26,7 @@ const partnerFaqs = [
 export default function Partners() {
   const [, setLocation] = useLocation();
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
     <div className="min-h-screen bg-[#FBFBFC]">
@@ -53,7 +54,7 @@ export default function Partners() {
                 </a>
               </div>
             </div>
-            <div className="flex items-center gap-4">
+            <div className="hidden md:flex items-center gap-4">
               <a href="/login" className="text-[15px] text-[#556070] hover:text-[#0B0F17] transition-colors">
                 Sign in
               </a>
@@ -64,8 +65,33 @@ export default function Partners() {
                 Book a demo
               </Button>
             </div>
+            <button 
+              className="md:hidden p-2"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            >
+              {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            </button>
           </div>
         </div>
+        {mobileMenuOpen && (
+          <div className="md:hidden border-t border-[#E6E8EC] bg-white px-6 py-4">
+            <div className="flex flex-col gap-4">
+              <a href="/product" className="text-[16px] text-[#556070] hover:text-[#0B0F17] py-2">Product</a>
+              <a href="/home#how-it-works" className="text-[16px] text-[#556070] hover:text-[#0B0F17] py-2">How it works</a>
+              <a href="/partners" className="text-[16px] text-[#0B0F17] font-medium py-2">Partners</a>
+              <a href="/pricing" className="text-[16px] text-[#556070] hover:text-[#0B0F17] py-2">Pricing</a>
+              <div className="border-t border-[#E6E8EC] pt-4 mt-2 flex flex-col gap-3">
+                <a href="/login" className="text-[16px] text-[#556070] hover:text-[#0B0F17] py-2">Sign in</a>
+                <Button
+                  onClick={() => setLocation("/contact")}
+                  className="bg-[#12B8C4] hover:bg-[#0fa3ae] text-white h-11 rounded-xl text-[15px] font-medium w-full"
+                >
+                  Book a demo
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
       </nav>
 
       {/* Hero */}
