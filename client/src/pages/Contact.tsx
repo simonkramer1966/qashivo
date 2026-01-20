@@ -1,6 +1,15 @@
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useLocation } from "wouter";
-import { Check, Loader2, Mail, Phone, MapPin } from "lucide-react";
+import { Menu, X, Check, Loader2, Mail, Phone, MapPin } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -15,18 +24,8 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import heroImage from "@assets/generated_images/Advanced_AI_technology_center_4b230f51.png";
-import logo from "@assets/Main Nexus Logo copy_1763392904110.png";
+import logo from "@assets/Main_Nexus_Logo_copy_1768893717341.png";
 
 const contactSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -41,9 +40,10 @@ type ContactForm = z.infer<typeof contactSchema>;
 
 export default function Contact() {
   const [, setLocation] = useLocation();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [formSubmitted, setFormSubmitted] = useState(false);
   const { toast } = useToast();
-  
+
   const form = useForm<ContactForm>({
     resolver: zodResolver(contactSchema),
     defaultValues: {
@@ -55,7 +55,7 @@ export default function Contact() {
       enquiryType: "general"
     }
   });
-  
+
   const submitMutation = useMutation({
     mutationFn: async (data: ContactForm) => {
       const response = await apiRequest('POST', '/api/public/sales-enquiry', data);
@@ -73,163 +73,163 @@ export default function Contact() {
       });
     }
   });
-  
+
   const onSubmit = (data: ContactForm) => {
     submitMutation.mutate(data);
   };
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-[#FBFBFC]">
       {/* Navigation */}
-      <nav className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <nav className="sticky top-0 z-50 bg-white border-b border-[#E6E8EC]">
+        <div className="max-w-[1200px] mx-auto px-6">
           <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-8">
-              <a href="/home" className="flex items-center space-x-2">
-                <img src={logo} alt="Qashivo Logo" className="h-8 w-8" />
-                <h1 className="text-2xl font-bold text-[#17B6C3]">Qashivo</h1>
+            <div className="flex items-center gap-10">
+              <a href="/home" className="flex items-center gap-2">
+                <img src={logo} alt="Qashivo" className="h-8 w-8" />
+                <span className="text-[18px] font-semibold text-[#0B0F17] tracking-tight">Qashivo</span>
               </a>
-              <div className="hidden md:flex space-x-6">
-                <a href="/home" className="text-gray-700 hover:text-[#17B6C3] transition-colors" data-testid="link-nav-home">
-                  Home
+              <div className="hidden md:flex items-center gap-8">
+                <a href="/product" className="text-[15px] text-[#556070] hover:text-[#0B0F17] transition-colors">
+                  Product
                 </a>
-                <a href="/features" className="text-gray-700 hover:text-[#17B6C3] transition-colors" data-testid="link-nav-features">
-                  Features
+                <a href="/home#how-it-works" className="text-[15px] text-[#556070] hover:text-[#0B0F17] transition-colors">
+                  How it works
                 </a>
-                <a href="/integrations" className="text-gray-700 hover:text-[#17B6C3] transition-colors" data-testid="link-nav-integrations">
-                  Integrations
-                </a>
-                <a href="/pricing" className="text-gray-700 hover:text-[#17B6C3] transition-colors" data-testid="link-nav-pricing">
-                  Pricing
-                </a>
-                <a href="/partners" className="text-gray-700 hover:text-[#17B6C3] transition-colors" data-testid="link-nav-partners">
+                <a href="/partners" className="text-[15px] text-[#556070] hover:text-[#0B0F17] transition-colors">
                   Partners
                 </a>
-                <a href="/demo" className="text-gray-700 hover:text-[#17B6C3] transition-colors" data-testid="link-nav-demo">
-                  Demo
+                <a href="/pricing" className="text-[15px] text-[#556070] hover:text-[#0B0F17] transition-colors">
+                  Pricing
                 </a>
-                <a href="/contact" className="text-[#17B6C3] font-medium" data-testid="link-nav-contact">
+                <a href="/contact" className="text-[15px] text-[#0B0F17] font-medium">
                   Contact
                 </a>
               </div>
             </div>
-            <Button
-              onClick={() => setLocation("/login")}
-              variant="outline"
-              className="border-[#17B6C3] text-[#17B6C3] hover:bg-[#17B6C3] hover:text-white"
-              data-testid="button-login"
+            <div className="hidden md:flex items-center gap-4">
+              <a href="/login" className="text-[15px] text-[#556070] hover:text-[#0B0F17] transition-colors">
+                Sign in
+              </a>
+              <Button
+                onClick={() => setLocation("/contact")}
+                className="bg-[#12B8C4] hover:bg-[#0fa3ae] text-white h-11 px-5 rounded-xl text-[15px] font-medium"
+              >
+                Book a demo
+              </Button>
+            </div>
+            <button 
+              className="md:hidden p-2"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             >
-              Login
-            </Button>
+              {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            </button>
           </div>
         </div>
+        {mobileMenuOpen && (
+          <div className="md:hidden border-t border-[#E6E8EC] bg-white px-6 py-4">
+            <div className="flex flex-col gap-4">
+              <a href="/product" className="text-[16px] text-[#556070] hover:text-[#0B0F17] py-2">Product</a>
+              <a href="/home#how-it-works" className="text-[16px] text-[#556070] hover:text-[#0B0F17] py-2">How it works</a>
+              <a href="/partners" className="text-[16px] text-[#556070] hover:text-[#0B0F17] py-2">Partners</a>
+              <a href="/pricing" className="text-[16px] text-[#556070] hover:text-[#0B0F17] py-2">Pricing</a>
+              <a href="/contact" className="text-[16px] text-[#0B0F17] font-medium py-2">Contact</a>
+              <div className="border-t border-[#E6E8EC] pt-4 mt-2 flex flex-col gap-3">
+                <a href="/login" className="text-[16px] text-[#556070] hover:text-[#0B0F17] py-2">Sign in</a>
+                <Button
+                  onClick={() => setLocation("/contact")}
+                  className="bg-[#12B8C4] hover:bg-[#0fa3ae] text-white h-11 rounded-xl text-[15px] font-medium w-full"
+                >
+                  Book a demo
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
       </nav>
 
-      {/* Hero Section */}
-      <section 
-        className="relative overflow-hidden min-h-[400px] flex items-center"
-        style={{
-          backgroundImage: `url(${heroImage})`,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          backgroundRepeat: 'no-repeat'
-        }}
-      >
-        {/* Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-r from-slate-900/90 via-slate-900/80 to-slate-900/70"></div>
-        
-        {/* Content */}
-        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24 text-center w-full">
-          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white leading-tight mb-6">
-            Let's Start a Conversation
+      {/* Hero */}
+      <section className="py-20 md:py-28">
+        <div className="max-w-[600px] mx-auto px-6 text-center">
+          <h1 className="text-[40px] md:text-[52px] font-semibold text-[#0B0F17] leading-[1.1] tracking-tight mb-6">
+            Get in touch
           </h1>
-          <p className="text-xl text-gray-200 max-w-2xl mx-auto">
-            Whether you're ready to transform your cashflow management or just curious about what AI can do for your business, we'd love to hear from you.
+          <p className="text-[18px] md:text-[20px] text-[#556070] leading-relaxed">
+            Questions about Qashivo? We're here to help. Send us a message and we'll respond within 24 hours.
           </p>
         </div>
       </section>
 
-      {/* Contact Form Section */}
-      <section className="py-16 md:py-24 bg-gradient-to-br from-slate-50 via-blue-50 to-teal-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid lg:grid-cols-2 gap-12 lg:gap-16">
+      {/* Contact Section */}
+      <section className="pb-24">
+        <div className="max-w-[1000px] mx-auto px-6">
+          <div className="grid md:grid-cols-5 gap-12 md:gap-16">
             {/* Contact Info */}
-            <div>
-              <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-6">
-                Get in Touch
-              </h2>
-              <p className="text-lg text-gray-600 mb-8">
-                Have questions about Qashivo? We're here to help. Fill out the form and our team will get back to you within 24 hours.
-              </p>
-              
-              <div className="space-y-6">
-                <div className="flex items-start space-x-4">
-                  <div className="w-12 h-12 bg-[#17B6C3]/10 rounded-xl flex items-center justify-center flex-shrink-0">
-                    <Mail className="h-6 w-6 text-[#17B6C3]" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-gray-900 mb-1">Email Us</h3>
-                    <p className="text-gray-600" data-testid="text-contact-email">hello@qashivo.com</p>
-                  </div>
+            <div className="md:col-span-2 space-y-8">
+              <div className="flex items-start gap-4">
+                <div className="w-10 h-10 bg-[#12B8C4]/10 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <Mail className="h-5 w-5 text-[#12B8C4]" />
                 </div>
-                
-                <div className="flex items-start space-x-4">
-                  <div className="w-12 h-12 bg-[#17B6C3]/10 rounded-xl flex items-center justify-center flex-shrink-0">
-                    <Phone className="h-6 w-6 text-[#17B6C3]" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-gray-900 mb-1">Call Us</h3>
-                    <p className="text-gray-600" data-testid="text-contact-phone">+44 (0) 20 4538 3931</p>
-                  </div>
+                <div>
+                  <h3 className="text-[16px] font-medium text-[#0B0F17] mb-1">Email</h3>
+                  <p className="text-[15px] text-[#556070]">hello@qashivo.com</p>
                 </div>
-                
-                <div className="flex items-start space-x-4">
-                  <div className="w-12 h-12 bg-[#17B6C3]/10 rounded-xl flex items-center justify-center flex-shrink-0">
-                    <MapPin className="h-6 w-6 text-[#17B6C3]" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-gray-900 mb-1">Visit Us</h3>
-                    <p className="text-gray-600" data-testid="text-contact-location">London, United Kingdom</p>
-                  </div>
+              </div>
+
+              <div className="flex items-start gap-4">
+                <div className="w-10 h-10 bg-[#12B8C4]/10 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <Phone className="h-5 w-5 text-[#12B8C4]" />
+                </div>
+                <div>
+                  <h3 className="text-[16px] font-medium text-[#0B0F17] mb-1">Phone</h3>
+                  <p className="text-[15px] text-[#556070]">+44 (0) 20 4538 3931</p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-4">
+                <div className="w-10 h-10 bg-[#12B8C4]/10 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <MapPin className="h-5 w-5 text-[#12B8C4]" />
+                </div>
+                <div>
+                  <h3 className="text-[16px] font-medium text-[#0B0F17] mb-1">Location</h3>
+                  <p className="text-[15px] text-[#556070]">London, United Kingdom</p>
                 </div>
               </div>
             </div>
-            
+
             {/* Form */}
-            <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 shadow-xl border border-white/50">
+            <div className="md:col-span-3">
               {formSubmitted ? (
-                <div className="py-12 text-center">
-                  <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Check className="h-8 w-8 text-green-600" />
+                <div className="py-16 text-center">
+                  <div className="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-5">
+                    <Check className="h-7 w-7 text-green-600" />
                   </div>
-                  <h3 className="text-2xl font-bold text-gray-900 mb-2">Thank You!</h3>
-                  <p className="text-gray-600 mb-6">
+                  <h3 className="text-[24px] font-semibold text-[#0B0F17] mb-2">Thank you</h3>
+                  <p className="text-[16px] text-[#556070] mb-6">
                     We've received your message and will be in touch shortly.
                   </p>
                   <Button
                     onClick={() => setFormSubmitted(false)}
-                    className="bg-[#17B6C3] hover:bg-[#1396A1] text-white"
-                    data-testid="button-send-another"
+                    className="bg-[#12B8C4] hover:bg-[#0fa3ae] text-white h-11 px-6 rounded-xl text-[15px] font-medium"
                   >
-                    Send Another Message
+                    Send another message
                   </Button>
                 </div>
               ) : (
                 <Form {...form}>
-                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
-                    <div className="grid sm:grid-cols-2 gap-4">
+                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <FormField
                         control={form.control}
                         name="name"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Name *</FormLabel>
+                            <FormLabel className="text-[14px] font-medium text-[#0B0F17]">Your name</FormLabel>
                             <FormControl>
-                              <Input 
-                                placeholder="Your name" 
-                                className="bg-white/70 border-gray-200/30"
-                                {...field} 
-                                data-testid="input-contact-name"
+                              <Input
+                                placeholder="Jane Smith"
+                                className="h-12 bg-white border-[#E6E8EC] rounded-xl text-[15px] placeholder:text-[#9CA3AF]"
+                                {...field}
                               />
                             </FormControl>
                             <FormMessage />
@@ -238,17 +238,15 @@ export default function Contact() {
                       />
                       <FormField
                         control={form.control}
-                        name="email"
+                        name="company"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Email *</FormLabel>
+                            <FormLabel className="text-[14px] font-medium text-[#0B0F17]">Company</FormLabel>
                             <FormControl>
-                              <Input 
-                                type="email" 
-                                placeholder="you@company.com"
-                                className="bg-white/70 border-gray-200/30"
-                                {...field} 
-                                data-testid="input-contact-email"
+                              <Input
+                                placeholder="Your company"
+                                className="h-12 bg-white border-[#E6E8EC] rounded-xl text-[15px] placeholder:text-[#9CA3AF]"
+                                {...field}
                               />
                             </FormControl>
                             <FormMessage />
@@ -256,20 +254,20 @@ export default function Contact() {
                         )}
                       />
                     </div>
-                    
-                    <div className="grid sm:grid-cols-2 gap-4">
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <FormField
                         control={form.control}
-                        name="company"
+                        name="email"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Company</FormLabel>
+                            <FormLabel className="text-[14px] font-medium text-[#0B0F17]">Email</FormLabel>
                             <FormControl>
-                              <Input 
-                                placeholder="Company name"
-                                className="bg-white/70 border-gray-200/30"
-                                {...field} 
-                                data-testid="input-contact-company"
+                              <Input
+                                type="email"
+                                placeholder="jane@company.com"
+                                className="h-12 bg-white border-[#E6E8EC] rounded-xl text-[15px] placeholder:text-[#9CA3AF]"
+                                {...field}
                               />
                             </FormControl>
                             <FormMessage />
@@ -281,13 +279,13 @@ export default function Contact() {
                         name="phone"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Phone</FormLabel>
+                            <FormLabel className="text-[14px] font-medium text-[#0B0F17]">Phone</FormLabel>
                             <FormControl>
-                              <Input 
-                                placeholder="+44 ..."
-                                className="bg-white/70 border-gray-200/30"
-                                {...field} 
-                                data-testid="input-contact-phone"
+                              <Input
+                                type="tel"
+                                placeholder="+44 7700 900000"
+                                className="h-12 bg-white border-[#E6E8EC] rounded-xl text-[15px] placeholder:text-[#9CA3AF]"
+                                {...field}
                               />
                             </FormControl>
                             <FormMessage />
@@ -295,64 +293,63 @@ export default function Contact() {
                         )}
                       />
                     </div>
-                    
+
                     <FormField
                       control={form.control}
                       name="enquiryType"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>What are you interested in?</FormLabel>
+                          <FormLabel className="text-[14px] font-medium text-[#0B0F17]">What are you interested in?</FormLabel>
                           <Select onValueChange={field.onChange} value={field.value}>
                             <FormControl>
-                              <SelectTrigger className="bg-white/70 border-gray-200/30" data-testid="select-contact-type">
+                              <SelectTrigger className="h-12 bg-white border-[#E6E8EC] rounded-xl text-[15px]">
                                 <SelectValue placeholder="Select an option" />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              <SelectItem value="demo">Product Demo</SelectItem>
-                              <SelectItem value="pricing">Pricing Information</SelectItem>
-                              <SelectItem value="partnership">Partnership Opportunities</SelectItem>
+                              <SelectItem value="demo">Product demo</SelectItem>
+                              <SelectItem value="pricing">Pricing information</SelectItem>
+                              <SelectItem value="partnership">Partnership opportunities</SelectItem>
                               <SelectItem value="investment">Investment</SelectItem>
-                              <SelectItem value="general">General Enquiry</SelectItem>
+                              <SelectItem value="general">General enquiry</SelectItem>
                             </SelectContent>
                           </Select>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
-                    
+
                     <FormField
                       control={form.control}
                       name="message"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Message *</FormLabel>
+                          <FormLabel className="text-[14px] font-medium text-[#0B0F17]">How can we help?</FormLabel>
                           <FormControl>
-                            <Textarea 
-                              placeholder="Tell us about your business and how we can help..."
-                              className="min-h-[120px] bg-white/70 border-gray-200/30"
-                              {...field} 
-                              data-testid="textarea-contact-message"
+                            <Textarea
+                              placeholder="Tell us about your business and what you're looking for..."
+                              rows={5}
+                              className="bg-white border-[#E6E8EC] rounded-xl text-[15px] placeholder:text-[#9CA3AF] resize-none"
+                              {...field}
                             />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
-                    
+
                     <Button
                       type="submit"
                       disabled={submitMutation.isPending}
-                      className="w-full bg-[#17B6C3] hover:bg-[#1396A1] text-white py-6 text-lg"
-                      data-testid="button-submit-contact"
+                      className="w-full bg-[#12B8C4] hover:bg-[#0fa3ae] text-white h-12 rounded-xl text-[15px] font-medium"
                     >
                       {submitMutation.isPending ? (
                         <>
-                          <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                           Sending...
                         </>
                       ) : (
-                        "Send Message"
+                        "Send message"
                       )}
                     </Button>
                   </form>
@@ -364,39 +361,18 @@ export default function Contact() {
       </section>
 
       {/* Footer */}
-      <footer className="bg-gray-900 text-white py-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid md:grid-cols-4 gap-8">
-            <div>
-              <h3 className="text-2xl font-bold text-[#17B6C3] mb-4">Qashivo</h3>
-              <p className="text-gray-400">AI that gets you paid</p>
+      <footer className="border-t border-[#E6E8EC] py-12">
+        <div className="max-w-[1200px] mx-auto px-6">
+          <div className="flex flex-col md:flex-row justify-between items-center gap-6">
+            <div className="flex items-center gap-2">
+              <img src={logo} alt="Qashivo" className="h-6 w-6" />
+              <span className="text-[15px] font-medium text-[#0B0F17]">Qashivo</span>
             </div>
-            <div>
-              <h4 className="font-semibold mb-4">Product</h4>
-              <ul className="space-y-2 text-gray-400">
-                <li><a href="/home#features" className="hover:text-[#17B6C3] transition-colors">Features</a></li>
-                <li><a href="/home#integrations" className="hover:text-[#17B6C3] transition-colors">Integrations</a></li>
-                <li><a href="/home#pricing" className="hover:text-[#17B6C3] transition-colors">Pricing</a></li>
-              </ul>
+            <div className="flex items-center gap-8 text-[14px] text-[#556070]">
+              <a href="/privacy" className="hover:text-[#0B0F17] transition-colors">Privacy</a>
+              <a href="/terms" className="hover:text-[#0B0F17] transition-colors">Terms</a>
+              <span>© 2026 Qashivo Ltd</span>
             </div>
-            <div>
-              <h4 className="font-semibold mb-4">Company</h4>
-              <ul className="space-y-2 text-gray-400">
-                <li><a href="/home#partners" className="hover:text-[#17B6C3] transition-colors">Partners</a></li>
-                <li><a href="#" className="hover:text-[#17B6C3] transition-colors">About</a></li>
-                <li><a href="/contact" className="hover:text-[#17B6C3] transition-colors">Contact</a></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-semibold mb-4">Legal</h4>
-              <ul className="space-y-2 text-gray-400">
-                <li><a href="#" className="hover:text-[#17B6C3] transition-colors">Privacy</a></li>
-                <li><a href="#" className="hover:text-[#17B6C3] transition-colors">Terms</a></li>
-              </ul>
-            </div>
-          </div>
-          <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400">
-            <p>&copy; 2025 Qashivo. All rights reserved.</p>
           </div>
         </div>
       </footer>
