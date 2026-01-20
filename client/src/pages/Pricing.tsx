@@ -18,10 +18,6 @@ const faqs = [
     answer: "Qashivo currently connects to Xero, Quickbooks and Sage Cloud accounting systems and other accounting system integrations are on our development roadmap."
   },
   {
-    question: 'Can we customize follow-ups and tone?',
-    answer: 'Yes. You can define templates, timing, and escalation paths to match your brand and customer relationships. Many teams start with a simple cadence and refine it based on results.'
-  },
-  {
     question: 'How does forecasting work?',
     answer: 'Forecasts are driven by invoice-level receivables data and observed payment behavior. Qashivo updates projections automatically as invoices change, payments land, and promises are made or missed.'
   },
