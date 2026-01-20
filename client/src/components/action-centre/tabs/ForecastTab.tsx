@@ -23,7 +23,7 @@ const CONFIDENCE_DOT: Record<string, string> = {
 
 export function ForecastTab({ debtors, onSelectDebtor, isLoading }: ForecastTabProps) {
   const { weekBuckets, forecastMap, weekTotals, debtorsWithForecast } = useMemo(() => {
-    const weekBuckets = getWeekBuckets(5);
+    const weekBuckets = getWeekBuckets(6);
     const forecastMap = buildWeeklyForecast(debtors, weekBuckets);
     
     const weekTotals: Record<string, number> = {};
@@ -71,7 +71,7 @@ export function ForecastTab({ debtors, onSelectDebtor, isLoading }: ForecastTabP
       <div className="space-y-6">
         {/* Stats line */}
         <div className="flex items-center justify-between text-[13px] text-slate-500">
-          <span>5-week forecast based on promises to pay</span>
+          <span>6-week forecast based on promises to pay</span>
           <span>
             Total expected: <span className="font-medium text-slate-900 tabular-nums">{formatCurrencyCompact(grandTotal)}</span>
           </span>

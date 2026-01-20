@@ -21555,6 +21555,32 @@ ${tenant.name}
     }
   });
 
+  // Seed forecast demo data (100 invoices with payment promises across 6 weeks)
+  app.post("/api/demo-mode/seed-forecast", isAuthenticated, async (req: any, res) => {
+    try {
+      const tenantId = req.user?.tenantId;
+      const userId = req.user?.id;
+      if (!tenantId) {
+        return res.status(400).json({ message: "No tenant associated with user" });
+      }
+      if (!userId) {
+        return res.status(400).json({ message: "No user ID available" });
+      }
+
+      const { demoDataService } = await import('./services/demoDataService.js');
+      const result = await demoDataService.seedForecastData(tenantId, userId);
+      
+      if (result.success) {
+        res.json(result);
+      } else {
+        res.status(400).json(result);
+      }
+    } catch (error) {
+      console.error("Error seeding forecast demo data:", error);
+      res.status(500).json({ message: "Failed to seed forecast demo data" });
+    }
+  });
+
   // Clear demo data
   app.post("/api/demo-mode/clear", isAuthenticated, async (req: any, res) => {
     try {

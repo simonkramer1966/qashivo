@@ -5,7 +5,7 @@
  */
 
 import { db } from "../db";
-import { contacts, invoices, actions } from "@shared/schema";
+import { contacts, invoices, actions, paymentPromises } from "@shared/schema";
 import { eq, and, like, inArray } from "drizzle-orm";
 
 const DEMO_PREFIX = "DEMO-";
@@ -457,6 +457,140 @@ export const demoDataService = {
       .limit(1);
 
     return demoContacts.length > 0;
+  },
+
+  /**
+   * Seed forecast demo data - adds 100 invoices with payment promises spread across 6 weeks
+   */
+  async seedForecastData(tenantId: string, userId: string): Promise<{ success: boolean; message: string; stats: any }> {
+    try {
+      console.log("[Demo Data] Starting to seed forecast demo data...");
+
+      // Get existing contacts - look for demo contacts first, otherwise use any contacts
+      let existingContacts = await db
+        .select()
+        .from(contacts)
+        .where(and(eq(contacts.tenantId, tenantId), like(contacts.companyName, `${DEMO_PREFIX}%`)));
+
+      // If no DEMO-prefixed contacts, fall back to any contacts with names
+      if (existingContacts.length === 0) {
+        const { isNotNull, ne } = await import('drizzle-orm');
+        existingContacts = await db
+          .select()
+          .from(contacts)
+          .where(and(
+            eq(contacts.tenantId, tenantId),
+            isNotNull(contacts.name),
+            ne(contacts.name, '')
+          ))
+          .limit(20);
+      }
+
+      if (existingContacts.length === 0) {
+        return {
+          success: false,
+          message: "No contacts found. Please add contacts first.",
+          stats: {},
+        };
+      }
+
+      // Use up to 20 contacts for forecast data
+      const targetContacts = existingContacts.slice(0, 20);
+      const invoicesPerContact = Math.ceil(100 / targetContacts.length); // ~5 invoices per contact
+      
+      const result = await db.transaction(async (tx) => {
+        const createdInvoices: any[] = [];
+        const createdPromises: any[] = [];
+        let invoiceSequence = 9000; // Start high to avoid conflicts
+
+        const now = new Date();
+        
+        for (const contact of targetContacts) {
+          // Create invoices and payment promises spread across 6 weeks
+          for (let i = 0; i < invoicesPerContact; i++) {
+            // Spread invoices across 6 weeks (42 days)
+            const daysFromNow = getRandomInt(1, 42);
+            const promisedDate = new Date(now);
+            promisedDate.setDate(promisedDate.getDate() + daysFromNow);
+            promisedDate.setHours(9, 0, 0, 0);
+            
+            // Due date is a few days before promised date (already overdue)
+            const dueDate = new Date(promisedDate);
+            dueDate.setDate(dueDate.getDate() - getRandomInt(7, 30));
+            
+            const issueDate = new Date(dueDate);
+            issueDate.setDate(issueDate.getDate() - (contact.paymentTerms || 30));
+            
+            // Generate amount between £500 and £15000
+            const amount = getRandomFloat(500, 15000);
+            const invoiceNumber = `${DEMO_PREFIX}FCST-${String(invoiceSequence++).padStart(4, '0')}`;
+            
+            // Create overdue invoice
+            const [invoice] = await tx
+              .insert(invoices)
+              .values({
+                tenantId,
+                contactId: contact.id,
+                invoiceNumber,
+                amount: amount.toFixed(2),
+                amountPaid: "0",
+                status: "overdue",
+                issueDate,
+                dueDate,
+                paidDate: null,
+                currency: "GBP",
+                description: printingServices[getRandomInt(0, printingServices.length - 1)].name,
+                workflowState: "late",
+                reminderCount: getRandomInt(1, 3),
+              })
+              .returning();
+
+            createdInvoices.push(invoice);
+            
+            // Create payment promise for this invoice
+            const [promise] = await tx
+              .insert(paymentPromises)
+              .values({
+                tenantId,
+                invoiceId: invoice.id,
+                contactId: contact.id,
+                promiseType: "payment_date",
+                promisedAmount: amount.toFixed(2),
+                promisedDate,
+                sourceType: "manual",
+                channel: ["email", "sms", "voice"][getRandomInt(0, 2)],
+                status: "pending",
+                createdByUserId: userId,
+              })
+              .returning();
+
+            createdPromises.push(promise);
+          }
+        }
+
+        console.log(`[Demo Data] Created ${createdInvoices.length} forecast invoices`);
+        console.log(`[Demo Data] Created ${createdPromises.length} payment promises`);
+
+        return {
+          invoices: createdInvoices.length,
+          promises: createdPromises.length,
+          contacts: targetContacts.length,
+        };
+      });
+
+      return {
+        success: true,
+        message: "Forecast demo data created successfully",
+        stats: result,
+      };
+    } catch (error) {
+      console.error("[Demo Data] Error seeding forecast data:", error);
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : "Failed to seed forecast data",
+        stats: {},
+      };
+    }
   },
 };
 
