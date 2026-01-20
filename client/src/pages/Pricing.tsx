@@ -15,7 +15,7 @@ const faqs = [
   },
   {
     question: 'What systems do you connect to?',
-    answer: "Qashivo connects to common accounting systems and can link to email and CRM tools. If you don't see your system listed, tell us what you use and we'll confirm options."
+    answer: "Qashivo currently connects to Xero, Quickbooks and Sage Cloud accounting systems and other accounting system integrations are on our development roadmap."
   },
   {
     question: 'Can we customize follow-ups and tone?',
