@@ -145,6 +145,14 @@ app.use((req, res, next) => {
   // Register partner operating layer routes
   registerPartnerRoutes(app);
 
+  // Ensure master admin user exists on startup
+  try {
+    const { ensureMasterAdminExists } = await import("./services/ensureMasterAdmin");
+    await ensureMasterAdminExists();
+  } catch (error) {
+    console.error("❌ Failed to ensure master admin:", error);
+  }
+
   // Initialize API Middleware for provider integrations
   if (process.env.NODE_ENV !== 'test') {
     try {
