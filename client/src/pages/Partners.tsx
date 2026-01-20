@@ -106,14 +106,14 @@ export default function Partners() {
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <Button
-                onClick={() => setLocation("/contact")}
+                onClick={() => setLocation("/partner-contact")}
                 className="bg-[#12B8C4] hover:bg-[#0fa3ae] text-white h-12 px-7 rounded-xl text-[16px] font-medium"
               >
                 Become a partner
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
               <Button
-                onClick={() => setLocation("/contact")}
+                onClick={() => setLocation("/partner-contact")}
                 variant="ghost"
                 className="text-[#556070] hover:text-[#0B0F17] h-12 px-7 text-[16px] font-medium"
               >
@@ -330,14 +330,14 @@ export default function Partners() {
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Button
-              onClick={() => setLocation("/contact")}
+              onClick={() => setLocation("/partner-contact")}
               className="bg-[#12B8C4] hover:bg-[#0fa3ae] text-white h-12 px-7 rounded-xl text-[16px] font-medium"
             >
               Become a partner
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
             <Button
-              onClick={() => setLocation("/contact")}
+              onClick={() => setLocation("/partner-contact")}
               variant="ghost"
               className="text-[#556070] hover:text-[#0B0F17] h-12 px-7 text-[16px] font-medium"
             >
@@ -376,7 +376,7 @@ export default function Partners() {
               <ul className="space-y-3">
                 <li><a href="/partners" className="text-[14px] text-[#556070] hover:text-[#0B0F17]">Partner program</a></li>
                 <li><a href="/partners#refer" className="text-[14px] text-[#556070] hover:text-[#0B0F17]">Refer a client</a></li>
-                <li><a href="/partners" className="text-[14px] text-[#556070] hover:text-[#0B0F17]">Become a partner</a></li>
+                <li><a href="/partner-contact" className="text-[14px] text-[#556070] hover:text-[#0B0F17]">Become a partner</a></li>
               </ul>
             </div>
             
