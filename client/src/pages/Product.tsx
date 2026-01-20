@@ -5,6 +5,7 @@ import { useState } from "react";
 import logo from "@assets/Main_Nexus_Logo_copy_1768893717341.png";
 import overviewScreenshot from "@assets/Screenshot_2026-01-15_at_16.33.25_1768920824618.png";
 import cashFlowScreenshot from "@assets/Screenshot_2026-01-15_at_16.57.28_1768920824623.png";
+import cashboardScreenshot from "@assets/Screenshot_2026-01-20_at_21.57.35_1768946629428.png";
 
 export default function Product() {
   const [, setLocation] = useLocation();
@@ -142,7 +143,7 @@ export default function Product() {
             </div>
             <div className="bg-[#F0F2F5] rounded-2xl p-3">
               <img 
-                src={overviewScreenshot} 
+                src={cashboardScreenshot} 
                 alt="Overview Dashboard" 
                 className="w-full rounded-xl border border-[#E6E8EC]"
               />
