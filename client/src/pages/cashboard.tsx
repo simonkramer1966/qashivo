@@ -317,7 +317,7 @@ export default function Cashboard() {
                               </div>
                               <div className="flex justify-between gap-4">
                                 <span className="text-slate-500">Confidence-Weighted</span>
-                                <span className="font-medium tabular-nums text-[#17B6C3]">{formatCurrency(data.confidenceWeightedAmount)}</span>
+                                <span className="font-medium tabular-nums text-slate-700">{formatCurrency(data.confidenceWeightedAmount)}</span>
                               </div>
                               <div className="border-t border-slate-100 my-2 pt-2">
                                 <p className="text-[10px] text-slate-400 uppercase tracking-wider mb-1">By Confidence</p>
@@ -353,7 +353,7 @@ export default function Cashboard() {
                     <Line 
                       type="monotone"
                       dataKey="confidenceWeightedAmount" 
-                      stroke="#17B6C3"
+                      stroke="#4B5563"
                       strokeWidth={2}
                       dot={false}
                       animationDuration={600}
