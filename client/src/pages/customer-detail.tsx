@@ -407,7 +407,7 @@ export default function CustomerDetailPage() {
                           </div>
                           <div className="text-right">
                             <p className={`text-sm tabular-nums ${isOverdue ? 'text-[#C75C5C]' : 'text-slate-700'}`}>
-                              {formatCurrency(invoice.amountDue)}
+                              {formatCurrency(Number(invoice.amount) - Number(invoice.amountPaid))}
                             </p>
                             {invoice.amountPaid > 0 && (
                               <p className="text-xs text-slate-400 tabular-nums">
