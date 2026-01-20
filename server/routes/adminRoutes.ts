@@ -1,7 +1,7 @@
 import { Router, Request, Response, NextFunction } from "express";
 import { db } from "../db";
 import { partners, smeClients, users, importJobs, partnerAuditLog, tenants } from "@shared/schema";
-import { eq, desc, sql, and, or, ilike } from "drizzle-orm";
+import { eq, desc, sql, and, or, ilike, ne } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import { z } from "zod";
@@ -522,6 +522,9 @@ router.post("/smes/:id/run-import", requireAdminAuth, async (req, res) => {
 // GET /api/admin/users - List all users
 router.get("/users", requireAdminAuth, async (req, res) => {
   try {
+    // Master admin email is hidden from the user list for security
+    const MASTER_ADMIN_EMAIL = "control@qashivo.com";
+    
     const result = await db
       .select({
         id: users.id,
@@ -536,6 +539,7 @@ router.get("/users", requireAdminAuth, async (req, res) => {
         createdAt: users.createdAt,
       })
       .from(users)
+      .where(ne(users.email, MASTER_ADMIN_EMAIL))
       .orderBy(desc(users.createdAt));
 
     // Enrich with partner/tenant names
