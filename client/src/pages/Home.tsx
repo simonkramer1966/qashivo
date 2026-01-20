@@ -7,6 +7,8 @@ import overviewScreenshot from "@assets/Screenshot_2026-01-20_at_16.41.29_176892
 import customersScreenshot from "@assets/Screenshot_2026-01-20_at_15.50.46_1768941354398.png";
 import cashFlowScreenshot from "@assets/Screenshot_2026-01-15_at_16.57.28_1768920824623.png";
 
+import Screenshot_2026_01_20_at_17_48_14 from "@assets/Screenshot 2026-01-20 at 17.48.14.png";
+
 export default function Home() {
   const [, setLocation] = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -84,7 +86,6 @@ export default function Home() {
           </div>
         )}
       </nav>
-
       {/* Hero Section */}
       <section className="pt-20 pb-24 md:pt-28 md:pb-32">
         <div className="max-w-[1200px] mx-auto px-6">
@@ -131,7 +132,6 @@ export default function Home() {
           </div>
         </div>
       </section>
-
       {/* Social Proof */}
       <section className="py-16 border-y border-[#E6E8EC] bg-white">
         <div className="max-w-[1200px] mx-auto px-6">
@@ -150,7 +150,6 @@ export default function Home() {
           </p>
         </div>
       </section>
-
       {/* Value Props */}
       <section className="py-24 md:py-32">
         <div className="max-w-[1200px] mx-auto px-6">
@@ -188,7 +187,6 @@ export default function Home() {
           </div>
         </div>
       </section>
-
       {/* Cash Forecast Section */}
       <section className="py-24 md:py-32 border-t border-[#E6E8EC]">
         <div className="max-w-[1200px] mx-auto px-6">
@@ -228,14 +226,13 @@ export default function Home() {
           </div>
         </div>
       </section>
-
       {/* Collections Performance Section */}
       <section className="py-24 md:py-32 border-t border-[#E6E8EC]">
         <div className="max-w-[1200px] mx-auto px-6">
           <div className="grid lg:grid-cols-2 gap-16 items-center">
             <div className="order-2 lg:order-1 bg-[#F0F2F5] rounded-2xl p-3">
               <img 
-                src={customersScreenshot} 
+                src={Screenshot_2026_01_20_at_17_48_14} 
                 alt="Collections Performance" 
                 className="w-full rounded-xl border border-[#E6E8EC]"
               />
@@ -265,7 +262,6 @@ export default function Home() {
           </div>
         </div>
       </section>
-
       {/* How It Works */}
       <section id="how-it-works" className="py-24 md:py-32 border-t border-[#E6E8EC] bg-white">
         <div className="max-w-[1200px] mx-auto px-6">
@@ -312,7 +308,6 @@ export default function Home() {
           </div>
         </div>
       </section>
-
       {/* Final CTA */}
       <section className="py-24 md:py-32 border-t border-[#E6E8EC]">
         <div className="max-w-[700px] mx-auto px-6 text-center">
@@ -340,7 +335,6 @@ export default function Home() {
           </div>
         </div>
       </section>
-
       {/* Footer */}
       <footer className="py-16 border-t border-[#E6E8EC] bg-white">
         <div className="max-w-[1200px] mx-auto px-6">
