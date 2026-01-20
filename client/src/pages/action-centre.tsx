@@ -130,6 +130,7 @@ export default function ActionCentreV2() {
       lastActionChannel: item.lastActionChannel,
       status: getDebtorStatus(item),
       ptpDate: item.ptpDate,
+      paymentPromises: item.paymentPromises,
       disputeFlag: item.disputeFlag,
       queryFlag: item.queryFlag,
     }));

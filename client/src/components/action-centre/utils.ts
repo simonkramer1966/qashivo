@@ -103,12 +103,23 @@ export function buildWeeklyForecast(
       // Group promises by week bucket
       const weekAmounts = new Map<string, { amount: number; count: number; earliestDate: string }>();
       
+      // Helper to get date-only string in YYYY-MM-DD format for comparison
+      const getDateOnly = (d: Date): string => {
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      };
+      
       for (const promise of debtor.paymentPromises) {
+        // Parse the date and normalize to local date for comparison
         const promiseDate = new Date(promise.date);
+        const promiseDateStr = getDateOnly(promiseDate);
         
         for (const bucket of weekBuckets) {
-          if (promiseDate >= bucket.startDate && promiseDate <= bucket.endDate) {
-            const weekKey = bucket.startDate.toISOString().split('T')[0];
+          const startStr = getDateOnly(bucket.startDate);
+          const endStr = getDateOnly(bucket.endDate);
+          
+          // Compare as strings to avoid timezone issues
+          if (promiseDateStr >= startStr && promiseDateStr <= endStr) {
+            const weekKey = startStr;
             const existing = weekAmounts.get(weekKey);
             if (existing) {
               existing.amount += promise.amount;

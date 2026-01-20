@@ -31,9 +31,14 @@ export function ForecastTab({ debtors, onSelectDebtor, isLoading }: ForecastTabP
       weekTotals[bucket.weekCommencing] = 0;
     }
     
+    // Helper to get date-only string matching buildWeeklyForecast
+    const getDateOnly = (d: Date): string => {
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    };
+    
     Array.from(forecastMap.values()).forEach(cells => {
       for (const cell of cells) {
-        const bucket = weekBuckets.find(b => b.startDate.toISOString().split('T')[0] === cell.weekStartISO);
+        const bucket = weekBuckets.find(b => getDateOnly(b.startDate) === cell.weekStartISO);
         if (bucket) {
           weekTotals[bucket.weekCommencing] += cell.expectedAmount;
         }
@@ -136,7 +141,8 @@ export function ForecastTab({ debtors, onSelectDebtor, isLoading }: ForecastTabP
                         </button>
                       </td>
                       {weekBuckets.map(bucket => {
-                        const cell = cells.find(c => c.weekStartISO === bucket.startDate.toISOString().split('T')[0]);
+                        const bucketDateStr = `${bucket.startDate.getFullYear()}-${String(bucket.startDate.getMonth() + 1).padStart(2, '0')}-${String(bucket.startDate.getDate()).padStart(2, '0')}`;
+                        const cell = cells.find(c => c.weekStartISO === bucketDateStr);
                         
                         if (!cell) {
                           return (
