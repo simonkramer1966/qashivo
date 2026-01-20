@@ -1,0 +1,146 @@
+You are working inside the existing Qashivo codebase. Add a “Partner Opportunity Scorecard” feature that partners can access from the Partner area navigation and from the Partner detail page.
+
+GOAL
+Create a scorecard system that:
+- Shows 20 questions in 5 categories (4 questions each)
+- Uses a 1–5 rating per question (with clear anchors)
+- Calculates category totals and an overall score out of 100
+- Stores results historically (multiple submissions over time per partner)
+- Generates a simple opportunity interpretation (bands)
+- Is calm, accountant-grade UI, aligned with Qashivo’s design system (clean, white space, minimal anxiety)
+
+WHERE IT LIVES (ROUTING + NAV)
+- Add a Partner nav item: “Scorecard”
+- Route: /partners/:partnerId/scorecard
+- Also add a CTA button on the Partner overview page: “Run opportunity scorecard”
+
+DATA MODEL (DB)
+Add new tables/models (use existing ORM patterns):
+1) PartnerScorecardSubmission
+- id (uuid)
+- partnerId (fk)
+- createdAt
+- createdByUserId (fk)
+- totalScore (int 0-100)
+- band (string enum: "Perfect Fit", "Strong Fit", "Conditional Fit", "Not Now")
+- notes (text nullable)
+- version (string, e.g. "v1")
+
+2) PartnerScorecardAnswer
+- id (uuid)
+- submissionId (fk)
+- questionKey (string)  // stable ID like "C1_Q1"
+- score (int 1-5)
+- optionalComment (text nullable)
+
+Also create a static “question bank” in code (not DB for MVP) so questions can be updated via a single file and versioned:
+- /lib/scorecard/partnerScorecard.v1.ts exporting categories + questions:
+Categories:
+1. Client Fit & Pain
+2. Delivery Leverage (Non-Linear Headcount)
+3. Trust, Controls & Risk (Supervised Autonomy)
+4. Cashflow Forecast Value (Intent-Aware Visibility)
+5. Commercial Readiness (Add-On Revenue Without Headcount)
+
+Include the exact 20 questions:
+
+Category 1 — Client Fit & Pain
+C1_Q1 Do a meaningful portion of your SME clients experience late payment that materially impacts cashflow?
+C1_Q2 Do clients frequently ask you for forward-looking cash visibility (not just aged debt reports)?
+C1_Q3 Are you currently exposed to “credit control drift” (no one owns it; it’s ad hoc, spreadsheet/inbox driven)?
+C1_Q4 Do you have clients where a small number of overdue invoices represents a large share of working capital risk?
+
+Category 2 — Delivery Leverage (Non-Linear Headcount)
+C2_Q1 Could one person in your firm realistically supervise (not manually run) receivables activity across multiple SME clients if the system handled the routine work?
+C2_Q2 Is your current approach linear (more clients = more chasing time) and therefore hard to monetise?
+C2_Q3 Would it be valuable if most routine follow-ups were executed consistently, while only exceptions (disputes, payment plans, edge cases) surfaced for judgement?
+C2_Q4 Do you already have (or could you nominate) a light “credit control owner” who can run a daily/weekly cadence?
+
+Category 3 — Trust, Controls & Risk (Supervised Autonomy)
+C3_Q1 Would your firm be more comfortable if nothing is sent without human approval (bulk approve included)?
+C3_Q2 Do you need an auditable trail of who approved what, when, and why (for internal QA and client reassurance)?
+C3_Q3 Do you avoid offering credit control today because it feels “too operational / too risky / too messy”?
+C3_Q4 Would you only roll this out if the system stops automation immediately on disputes and flags payment-plan requests for review?
+
+Category 4 — Cashflow Forecast Value (Intent-Aware Visibility)
+C4_Q1 Would your clients pay for a cash view based on real debtor intent (promised / delayed / disputed / silent), not just invoice aging?
+C4_Q2 Do you currently make forecasts using averages/assumptions because you don’t reliably capture outcomes from debtor conversations?
+C4_Q3 Would it improve your advisory value if the forecast updated automatically as customers reply with dates or issues?
+C4_Q4 Would you like to offer “cashflow confidence” as a recurring service (monthly) rather than a one-off exercise?
+
+Category 5 — Commercial Readiness (Add-On Revenue Without Headcount)
+C5_Q1 Do you have a packaging motion today (e.g., tiers / bundles) that you could extend with a receivables + cashflow add-on?
+C5_Q2 Would a per-SME subscription that you can resell/roll out across your portfolio fit your commercial model?
+C5_Q3 Could you confidently describe receivables + cashflow visibility as a monthly managed service deliverable (clear outputs + clear boundaries), rather than “ad hoc chasing”?
+C5_Q4 Do you believe your best path to growth is recurring revenue that expands across your client base rather than hiring more delivery staff?
+
+SCORING + BANDS (SERVER LOGIC)
+- Each question score is 1..5
+- Each category has 4 questions, category score range 4..20
+- Total score = sum of all question scores (20..100)
+- Band rules:
+  - 80–100: "Perfect Fit"
+  - 60–79: "Strong Fit"
+  - 40–59: "Conditional Fit"
+  - <40: "Not Now"
+
+API ENDPOINTS
+Implement using existing API style:
+- GET /api/partners/:partnerId/scorecard/latest
+  returns latest submission + answers + computed breakdown
+- GET /api/partners/:partnerId/scorecard/submissions
+  returns list of past submissions (id, date, totalScore, band, createdBy)
+- POST /api/partners/:partnerId/scorecard/submissions
+  body: { answers: [{questionKey, score, optionalComment}], notes? }
+  validates all 20 keys exist, score 1..5, then stores and returns submission
+
+UI/UX REQUIREMENTS (Partner Scorecard Page)
+Page layout:
+1) Header
+- Title: “Opportunity Scorecard”
+- Subtext: “A quick way to size up receivables + cashflow advisory potential.”
+- Right side: “View history” button + “New submission” button
+
+2) Scorecard form (New submission)
+- Display categories as collapsible cards (default expanded)
+- Each question row:
+  - question text
+  - 1–5 segmented control (labels: 1 Not true, 3 Mixed, 5 True & repeatable)
+  - optional “Add note” mini text area (collapsed until clicked)
+- Sticky footer bar:
+  - “Save scorecard”
+  - shows live total score and band badge
+
+3) Results view (after save + on latest)
+- Big total score /100 and band
+- Category breakdown bars (no bright colors; use neutral tones already in system)
+- “What this suggests” panel with short copy per band:
+  - Perfect Fit: “Strong opportunity for a repeatable, high-margin add-on service.”
+  - Strong Fit: “Good opportunity—likely best with a defined service package and owner.”
+  - Conditional Fit: “Potential is there, but needs clearer packaging/ownership to be repeatable.”
+  - Not Now: “Lower near-term fit—revisit when client demand or cash pressure increases.”
+- “Next best actions” list (static, 3 bullets) tailored by band, e.g.:
+  - Define monthly deliverable, pick initial target segment, standardise comms policy
+
+4) History drawer / modal
+- List previous submissions with date, score, band, createdBy
+- Clicking one loads a read-only view of that submission
+
+ACCESS CONTROL
+- Only Partner users and Qashivo Admin can view/create submissions for that partner
+- Ensure partnerId in route matches user’s partner scope
+- Log to existing audit log (if present): event type “PARTNER_SCORECARD_SUBMITTED” with submission id, actor id
+
+SEED DATA + EMPTY STATES
+- If no submissions: show empty state card with “Run first scorecard”
+- Create one example submission in dev seed for QA if your project uses seed scripts
+
+QUALITY BAR
+- Follow existing component patterns and typography
+- Ensure it feels calm and operationally trustworthy (no gamified visuals)
+- Add basic form validation + inline error states
+- Add unit test or lightweight API validation test if test framework exists; otherwise ensure robust schema validation server-side.
+
+DELIVERABLE
+- Fully working feature: nav entry + page + API + DB + history + access control
+- No external integrations required for MVP

@@ -47,6 +47,7 @@ const PricingPage = lazy(() => import("@/pages/Pricing"));
 const Partners = lazy(() => import("@/pages/Partners"));
 const Product = lazy(() => import("@/pages/Product"));
 const PartnerContact = lazy(() => import("@/pages/PartnerContact"));
+const PartnerScorecard = lazy(() => import("@/pages/PartnerScorecard"));
 const Login = lazy(() => import("@/pages/Login"));
 const Signup = lazy(() => import("@/pages/Signup"));
 const ForgotPassword = lazy(() => import("@/pages/ForgotPassword"));
@@ -106,6 +107,7 @@ function Router() {
           <Route path="/pricing" component={PricingPage} />
           <Route path="/partners" component={Partners} />
           <Route path="/partner-contact" component={PartnerContact} />
+          <Route path="/partner-scorecard" component={PartnerScorecard} />
           <Route path="/product" component={Product} />
           <Route path="/homepage" component={Homepage} />
           <Route path="/investor-demo" component={InvestorDemo} />
@@ -139,6 +141,7 @@ function Router() {
           <Route path="/pricing" component={PricingPage} />
           <Route path="/partners" component={Partners} />
           <Route path="/partner-contact" component={PartnerContact} />
+          <Route path="/partner-scorecard" component={PartnerScorecard} />
           <Route path="/product" component={Product} />
           <Route path="/homepage" component={Homepage} />
           <Route path="/investor-demo" component={InvestorDemo} />

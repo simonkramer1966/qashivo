@@ -4377,6 +4377,93 @@ export const partnerAuditLog = pgTable("partner_audit_log", {
   index("idx_partner_audit_log_created").on(table.createdAt),
 ]);
 
+// Partner Prospects - Leads from the scorecard landing page
+export const partnerProspects = pgTable("partner_prospects", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Contact details
+  firstName: varchar("first_name").notNull(),
+  lastName: varchar("last_name").notNull(),
+  email: varchar("email").notNull(),
+  phone: varchar("phone"),
+  companyName: varchar("company_name").notNull(),
+  jobTitle: varchar("job_title"),
+  
+  // Source tracking
+  source: varchar("source").default("scorecard_landing"), // scorecard_landing, referral, etc.
+  utmSource: varchar("utm_source"),
+  utmMedium: varchar("utm_medium"),
+  utmCampaign: varchar("utm_campaign"),
+  
+  // Status: NEW | CONTACTED | QUALIFIED | CONVERTED | DECLINED
+  status: varchar("status").notNull().default("NEW"),
+  
+  // Converted to partner (if applicable)
+  convertedToPartnerId: varchar("converted_to_partner_id").references(() => partners.id),
+  
+  // Notes
+  notes: text("notes"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_partner_prospects_email").on(table.email),
+  index("idx_partner_prospects_status").on(table.status),
+  index("idx_partner_prospects_created").on(table.createdAt),
+]);
+
+// Partner Scorecard Submissions - Each time a prospect completes the scorecard
+export const partnerScorecardSubmissions = pgTable("partner_scorecard_submissions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Link to prospect
+  prospectId: varchar("prospect_id").notNull().references(() => partnerProspects.id, { onDelete: "cascade" }),
+  
+  // Scores
+  totalScore: integer("total_score").notNull(), // 20-100
+  band: varchar("band").notNull(), // PERFECT_FIT, STRONG_FIT, CONDITIONAL_FIT, NOT_NOW
+  
+  // Category scores (stored as JSON for flexibility)
+  categoryScores: jsonb("category_scores").notNull(), // { C1: 15, C2: 18, ... }
+  
+  // Version tracking (for question bank updates)
+  version: varchar("version").notNull().default("v1"),
+  
+  // Optional notes from prospect
+  notes: text("notes"),
+  
+  // Email confirmation
+  confirmationEmailSent: boolean("confirmation_email_sent").default(false),
+  confirmationEmailSentAt: timestamp("confirmation_email_sent_at"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_scorecard_submissions_prospect").on(table.prospectId),
+  index("idx_scorecard_submissions_band").on(table.band),
+  index("idx_scorecard_submissions_created").on(table.createdAt),
+]);
+
+// Partner Scorecard Answers - Individual question responses
+export const partnerScorecardAnswers = pgTable("partner_scorecard_answers", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  submissionId: varchar("submission_id").notNull().references(() => partnerScorecardSubmissions.id, { onDelete: "cascade" }),
+  
+  // Question identifier (e.g., "C1_Q1")
+  questionKey: varchar("question_key").notNull(),
+  
+  // Score 1-5
+  score: integer("score").notNull(),
+  
+  // Optional comment
+  comment: text("comment"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_scorecard_answers_submission").on(table.submissionId),
+  unique("unique_submission_question").on(table.submissionId, table.questionKey),
+]);
+
 // User contact assignments - For assigning specific contacts to team members (collectors)
 export const userContactAssignments = pgTable("user_contact_assignments", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -4472,6 +4559,29 @@ export const partnerAuditLogRelations = relations(partnerAuditLog, ({ one }) => 
   actor: one(users, {
     fields: [partnerAuditLog.actorUserId],
     references: [users.id],
+  }),
+}));
+
+export const partnerProspectsRelations = relations(partnerProspects, ({ one, many }) => ({
+  convertedToPartner: one(partners, {
+    fields: [partnerProspects.convertedToPartnerId],
+    references: [partners.id],
+  }),
+  scorecardSubmissions: many(partnerScorecardSubmissions),
+}));
+
+export const partnerScorecardSubmissionsRelations = relations(partnerScorecardSubmissions, ({ one, many }) => ({
+  prospect: one(partnerProspects, {
+    fields: [partnerScorecardSubmissions.prospectId],
+    references: [partnerProspects.id],
+  }),
+  answers: many(partnerScorecardAnswers),
+}));
+
+export const partnerScorecardAnswersRelations = relations(partnerScorecardAnswers, ({ one }) => ({
+  submission: one(partnerScorecardSubmissions, {
+    fields: [partnerScorecardAnswers.submissionId],
+    references: [partnerScorecardSubmissions.id],
   }),
 }));
 
@@ -4601,6 +4711,33 @@ export type InsertTenantInvitation = z.infer<typeof insertTenantInvitationSchema
 
 export type TenantMetadata = typeof tenantMetadata.$inferSelect;
 export type InsertTenantMetadata = z.infer<typeof insertTenantMetadataSchema>;
+
+// Insert schemas for Partner Prospects & Scorecard
+export const insertPartnerProspectSchema = createInsertSchema(partnerProspects).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertPartnerScorecardSubmissionSchema = createInsertSchema(partnerScorecardSubmissions).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertPartnerScorecardAnswerSchema = createInsertSchema(partnerScorecardAnswers).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Type exports for Partner Prospects & Scorecard
+export type PartnerProspect = typeof partnerProspects.$inferSelect;
+export type InsertPartnerProspect = z.infer<typeof insertPartnerProspectSchema>;
+
+export type PartnerScorecardSubmission = typeof partnerScorecardSubmissions.$inferSelect;
+export type InsertPartnerScorecardSubmission = z.infer<typeof insertPartnerScorecardSubmissionSchema>;
+
+export type PartnerScorecardAnswer = typeof partnerScorecardAnswers.$inferSelect;
+export type InsertPartnerScorecardAnswer = z.infer<typeof insertPartnerScorecardAnswerSchema>;
 
 // Insert schemas for SME/Partner Operating Layer
 export const insertSmeClientSchema = createInsertSchema(smeClients).omit({
