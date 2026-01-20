@@ -195,7 +195,7 @@ export default function Cashboard() {
                   <div className="h-6 w-24 bg-slate-50 animate-pulse rounded"></div>
                 ) : (
                   <p className="text-[20px] font-semibold text-emerald-600 tabular-nums">
-                    £766,343
+                    {formatCurrency(metrics?.collectedThisMonth || 0)}
                   </p>
                 )}
               </div>
@@ -207,7 +207,7 @@ export default function Cashboard() {
                   <div className="h-6 w-24 bg-slate-50 animate-pulse rounded"></div>
                 ) : (
                   <p className="text-[20px] font-semibold text-emerald-600 tabular-nums">
-                    £165,877
+                    {formatCurrency(metrics?.collectedThisWeek || 0)}
                   </p>
                 )}
               </div>
@@ -228,11 +228,11 @@ export default function Cashboard() {
               </div>
               <div data-testid="card-collected-month">
                 <p className="text-[11px] text-slate-500">Collected (Month)</p>
-                <p className="text-[16px] font-semibold text-emerald-600 tabular-nums">£766,343</p>
+                <p className="text-[16px] font-semibold text-emerald-600 tabular-nums">{formatCurrency(metrics?.collectedThisMonth || 0)}</p>
               </div>
               <div data-testid="card-collected-week">
                 <p className="text-[11px] text-slate-500">Collected (Week)</p>
-                <p className="text-[16px] font-semibold text-emerald-600 tabular-nums">£165,877</p>
+                <p className="text-[16px] font-semibold text-emerald-600 tabular-nums">{formatCurrency(metrics?.collectedThisWeek || 0)}</p>
               </div>
             </div>
           </section>
