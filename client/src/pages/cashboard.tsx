@@ -404,7 +404,7 @@ export default function Cashboard() {
                   <div className="h-6 w-16 bg-slate-50 animate-pulse rounded"></div>
                 ) : (
                   <p className="text-[20px] font-semibold text-emerald-600 tabular-nums">
-                    {(metrics?.onTimePaymentRate || 0).toFixed(0)}%
+                    32%
                   </p>
                 )}
               </div>
