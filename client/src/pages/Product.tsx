@@ -7,6 +7,7 @@ import overviewScreenshot from "@assets/Screenshot_2026-01-15_at_16.33.25_176892
 import cashFlowScreenshot from "@assets/Screenshot_2026-01-15_at_16.57.28_1768920824623.png";
 import cashboardScreenshot from "@assets/Screenshot_2026-01-20_at_21.57.35_1768946629428.png";
 import followupsScreenshot from "@assets/Screenshot_2026-01-20_at_17.44.39_1768946904148.png";
+import attentionScreenshot from "@assets/Screenshot_2026-01-20_at_22.11.45_1768947421645.png";
 
 export default function Product() {
   const [, setLocation] = useLocation();
@@ -159,7 +160,7 @@ export default function Product() {
           <div className="grid lg:grid-cols-2 gap-16 items-center">
             <div className="order-2 lg:order-1 bg-[#F0F2F5] rounded-2xl p-3">
               <img 
-                src={overviewScreenshot} 
+                src={attentionScreenshot} 
                 alt="Attention Workflow" 
                 className="w-full rounded-xl border border-[#E6E8EC]"
               />
