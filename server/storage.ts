@@ -1329,6 +1329,9 @@ export class DatabaseStorage implements IStorage {
     avgDaysOverdue: number;
     collectionsWithinTerms: number;
     dso: number;
+    collectedThisMonth: number;
+    collectedThisWeek: number;
+    onTimePaymentRate: number;
   }> {
     // Use direct SQL to avoid Drizzle ORM column reference issues
     const result = await db.execute(sql`

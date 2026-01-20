@@ -2215,10 +2215,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
 
+      console.log(`📊 Dashboard metrics - tenantId: ${user.tenantId}`);
+      
       const [metrics, debtRecoveryMetrics] = await Promise.all([
         storage.getInvoiceMetrics(user.tenantId),
         storage.getDebtRecoveryMetrics(user.tenantId)
       ]);
+      
+      console.log(`📊 Dashboard metrics result - collectedThisMonth: ${metrics.collectedThisMonth}, collectedThisWeek: ${metrics.collectedThisWeek}`);
       
       res.json({
         ...metrics,
