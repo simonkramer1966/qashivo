@@ -22,7 +22,7 @@ export default function Home() {
             <div className="flex items-center gap-10">
               <a href="/home" className="flex items-center gap-2">
                 <img src={logo} alt="Qashivo" className="h-8 w-8" />
-                <span className="text-[18px] font-semibold text-[#0B0F17] tracking-tight">Qashivo</span>
+                <span className="font-semibold text-[#0B0F17] tracking-tight text-[22px]">Qashivo</span>
               </a>
               <div className="hidden md:flex items-center gap-8">
                 <a href="/home" className="text-[15px] text-[#556070] hover:text-[#0B0F17] transition-colors">
