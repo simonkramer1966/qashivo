@@ -23,7 +23,7 @@ const faqs = [
   },
   {
     question: 'Is there an implementation fee?',
-    answer: "Some plans include guided onboarding. If your setup needs custom workflows or integrations, we'll scope that up front—no surprises."
+    answer: "Some plans include guided onboarding. If your setup needs custom workflows or integrations, we'll scope that up front, so there are no surprises."
   }
 ];
 
