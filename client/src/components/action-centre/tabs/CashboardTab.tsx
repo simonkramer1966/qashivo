@@ -43,15 +43,15 @@ export function CashboardTab({ debtors, onSelectDebtor, isLoading }: CashboardTa
               <col key={status} style={{ width: `${82 / STATUS_ORDER.length}%` }} />
             ))}
           </colgroup>
-          <thead>
+          <thead className="sticky top-0 z-20 bg-white">
             <tr className="border-b border-slate-100">
-              <th className="py-2 text-left text-[11px] font-medium text-slate-400 uppercase tracking-wider sticky left-0 bg-white z-10">
+              <th className="py-2 text-left text-[11px] font-medium text-slate-400 uppercase tracking-wider sticky left-0 bg-white z-30">
                 Customer
               </th>
               {STATUS_ORDER.map(status => (
                 <th 
                   key={status} 
-                  className="py-2 text-right text-[11px] font-medium text-slate-400 uppercase tracking-wider"
+                  className="py-2 text-right text-[11px] font-medium text-slate-400 uppercase tracking-wider bg-white"
                 >
                   {getStatusLabel(status)}
                 </th>
