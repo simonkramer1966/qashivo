@@ -1,0 +1,125 @@
+You are a senior product designer + front-end designer. Build Qashivo’s marketing site UI in a very Apple-like, GetForeca-like style (https://www.getforeca.com/) while staying consistent with Qashivo’s in-app UI screenshots (clean white canvas, teal/aqua accents, thin dividers, subtle cards, large charts, calm CFO typography).
+
+GOAL
+- Create a premium, minimalist SaaS marketing site that feels “quiet, confident, financial.”
+- Visual language: Apple-level restraint + GetForeca minimalism + Qashivo app palette and chart aesthetics.
+- The design must look like the website belongs to the product UI (attached screenshots), not a different brand.
+
+PAGES (initial)
+1) Home
+2) Product
+3) Pricing
+4) Partners
+(No Integrations / Resources / Security pages initially.)
+
+NAV
+- Left: Qashivo logo
+- Links: Product, How it works, Partners, Pricing
+- Right: Sign in (text link) + primary CTA button “Book a demo”
+- Sticky header, subtle bottom border.
+
+LAYOUT + GRID
+- Max content width: 1120–1200px
+- Generous whitespace, large section padding (72–120px desktop, 48–72px mobile)
+- Use an 8pt spacing system.
+- Avoid clutter: fewer sections, stronger hierarchy.
+
+TYPOGRAPHY (Apple-like)
+- Font: Inter (or SF-like system stack if unavailable)
+- Weights: 400/500/600 only (avoid 700+)
+- H1: 52–60px, 600, tight tracking (-0.02em), line-height ~1.05
+- H2: 32–40px, 600, line-height ~1.15
+- Body: 16–18px, 400, line-height ~1.55
+- Small/meta: 13–14px, 400/500
+- Tone: calm, factual, CFO-grade. No hype styling.
+
+COLOR SYSTEM (tight, aligned to app screenshots)
+- Background: near-white (#FBFBFC or #F8FAFC)
+- Surface: white (#FFFFFF)
+- Text primary: near-black (#0B0F17)
+- Text secondary: slate/gray (#556070)
+- Hairline borders/dividers: very light gray (#E6E8EC)
+- Brand accent (from app): Teal/Aqua (use as PRIMARY only)
+  - Primary Teal: #12B8C4 (approx; adjust to match screenshots)
+  - Light Teal fill for chart bands: rgba(18,184,196,0.15)
+- Semantic:
+  - Success: muted green (used sparingly for “Collected”)
+  - Error: muted red (sparingly for “Overdue”)
+- Avoid: loud gradients, multiple accent colors, dark sections, neon.
+
+COMPONENT STYLE (GetForeca-like restraint)
+- Buttons:
+  - Primary: solid teal background, white text, 44–48px height, 10–12px radius
+  - Secondary: subtle outline or ghost, same height
+  - Hover: minimal (slight darken or subtle shadow)
+- Cards:
+  - White surface, 1px border (#E6E8EC), 12–16px radius
+  - Shadow: either none or very subtle: 0 8px 24px rgba(15,23,42,0.06)
+- Dividers: 1px hairline, lots of whitespace
+- Icons: simple line icons (1.5px stroke), consistent style
+- No heavy drop shadows, no glassmorphism.
+
+VISUALS (must align to app screenshots)
+- Hero should feature a large product screenshot or a “screenshot frame” that looks like the app:
+  - Rounded corners (16–20px)
+  - Thin border
+  - Subtle background behind (very light gray)
+- Use app-like “metrics row” pattern:
+  - small label in uppercase or muted text + large number
+- Charts should match Qashivo UI:
+  - Bar chart: teal bars, simple axes, faint gridlines
+  - Line chart: teal line + pale teal confidence band
+  - Labels are small, muted, uncluttered
+
+MOTION (Apple-like subtlety)
+- Use minimal animations:
+  - Fade + slight translate (8–12px) on section enter
+  - Button hover: 150–200ms easing
+  - No bouncing, no aggressive parallax
+- Prefer “quiet” micro-interactions.
+
+ACCESSIBILITY
+- Maintain AA contrast for text
+- Keyboard focus states visible but subtle (teal focus ring)
+- Use semantic headings and clear tap targets.
+
+PAGE STRUCTURE GUIDANCE
+
+HOME
+- Hero: 1 sentence value prop + subhead + CTAs + large product screenshot
+- Social proof strip (optional logos)
+- 3 value props.  Calm on white background (Continuous monitoring / Automated follow-up / Attention workflow)
+- Feature sections (2): Cash Forecast + Collections Performance, each with screenshot and bullets
+- How it works (3 steps)
+- Final CTA
+
+PRODUCT
+- Hero + modules mirroring app: Overview, Attention, Cash Flow, Follow-ups/Promises
+- Each module: heading, 1–2 lines, 3 bullets, and a relevant screenshot crop
+
+PRICING
+- Hero + 3 plans (no cards just in plain background)  (Essentials/Growth/Scale) with calm bullets
+- FAQ accordion (minimal style, thin dividers)
+
+PARTNERS
+- Hero + who it’s for (tiles) + partner benefits + how it works steps + CTA
+
+IMPLEMENTATION NOTES (if building in React/Next/Tailwind)
+- Use TailwindCSS for consistent spacing & typography
+- Define design tokens in a single theme file:
+  - colors, radii, shadow, maxWidth, spacing scale
+- Create reusable components:
+  - Container, Section, Button, Card, Metric, ScreenshotFrame, FAQAccordion
+- Keep everything consistent across pages.
+
+OUTPUT REQUEST
+Generate:
+1) A design system token list (colors, type scale, radii, shadows, spacing)
+2) Page-by-page layout wireframes (text description)
+3) Component specs (Button, Card, MetricRow, ScreenshotFrame, ChartStyle, FAQ)
+4) Implementation-ready UI in code (React + Tailwind preferred), using placeholders for screenshots.
+
+CRITICAL STYLE CONSTRAINTS
+- Minimal. White space. One accent color (teal).
+- Site must feel like it was designed by the same team that designed the Qashivo app screenshots.
+- No loud marketing tropes: no big gradients, no noisy backgrounds, no excessive icons.

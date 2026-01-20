@@ -1,0 +1,343 @@
+QASHIVO WEBSITE COPY (v1-aligned).
+
+Core product truth:
+“Qashivo is continuously managing receivables. No action is required unless something is flagged in Attention.”
+
+================================================================================
+1) HOMEPAGE COPY
+================================================================================
+
+HEADER / NAV (updated)
+- Product
+- How it works
+- Partners
+- Pricing
+- Sign in
+Primary CTA button: Book a demo
+
+--------------------------------------------------------------------------------
+HERO
+H1: Receivables, managed continuously.
+Subhead: Qashivo monitors invoices, nudges customers, tracks promises, and updates your cash outlook automatically. Step in only when something needs Attention.
+Primary CTA: Book a demo
+Secondary CTA: See how it works
+Trust line: Connect in minutes. Start operating by exceptions in days.
+--------------------------------------------------------------------------------
+SOCIAL PROOF STRIP
+Headline: Trusted by teams who care about cash.
+Logos: [Logo] [Logo] [Logo] [Logo] [Logo]
+Optional quote (1-liner): “We spend less time chasing and more time making decisions.”
+
+--------------------------------------------------------------------------------
+VALUE PROP TILES (3)
+Section heading: Everything you need, without the noise.
+Tile 1 title: Continuous monitoring
+Tile 1 body: Qashivo watches receivables and payment behavior so risk shows up early, not at month-end.
+
+Tile 2 title: Automated follow-up
+Tile 2 body: Send the right nudge at the right time, using your tone, templates, and escalation rules.
+
+Tile 3 title: Attention-based workflow
+Tile 3 body: Review exceptions in one place - disputes, broken promises, unusual delays, and high-value risk.
+
+--------------------------------------------------------------------------------
+SECTION: CASH FORECAST (use Cash Flow screenshot)
+Heading: Cash forecasts that update themselves.
+Subhead: See expected inflows, projected cash position, and confidence ranges, driven by invoice-level data and customer payment patterns.
+
+Bullets:
+- Rolling views: 4W / 13W / 6M / 12M
+- Confidence ranges so uncertainty is visible, not hidden
+- Drill down from trend → customer → invoice
+
+Optional supporting line: Forecasts refresh automatically as invoices change, payments land, and promises are made or missed.
+
+--------------------------------------------------------------------------------
+SECTION: COLLECTIONS PERFORMANCE (use Overview metrics row)
+Heading: Know what’s improving—and what isn’t.
+Subhead: Track collection performance over time so you can see whether follow-ups translate into outcomes.
+
+Bullets:
+- Days late and time-to-pay trends
+- On-time rate and overdue visibility
+- Promises tracked (and kept)
+
+Optional mini-metrics labels (if you show them visually):
+- Avg days late
+- Avg days to pay
+- On-time rate
+- Promises kept
+
+--------------------------------------------------------------------------------
+SECTION: HOW IT WORKS (3 steps)
+Heading: Set it up once. Then operate by exceptions.
+
+Step 1 title: Connect
+Step 1 body: Sync your accounting data and customer contacts to keep invoices and statuses current.
+
+Step 2 title: Automate
+Step 2 body: Configure follow-up timing, tone, and escalation, so outreach is consistent and auditable.
+
+Step 3 title: Review Attention
+Step 3 body: Qashivo flags what needs a human decision. Everything else runs in the background.
+
+Inline CTA: See how it works
+
+--------------------------------------------------------------------------------
+FINAL CTA (Option A)
+Heading: See Qashivo on your receivables.
+Subhead: We’ll walk through your workflow, show how Attention works, and review a live forecast based on your data.
+Primary CTA: Book a demo
+Secondary CTA: Talk to us
+
+FINAL CTA (Option B)
+Heading: Get to cash clarity … fast.
+Subhead: Connect your data and see automated follow-ups plus an always-current cash outlook in one session.
+Primary CTA: Book a demo
+Secondary CTA: Contact sales
+
+--------------------------------------------------------------------------------
+FOOTER (updated groups; no Resources/Blog; no Security page link)
+Product
+- Overview
+- Attention
+- Cash Flow
+- Automations
+
+Partners
+- Partner program
+- Refer a client
+- Become a partner
+
+Company
+- About
+- Contact
+
+Legal
+- Privacy
+- Terms
+
+================================================================================
+2) PRODUCT PAGE COPY (module-based, mirrors app navigation)
+================================================================================
+
+PAGE HERO
+H1: Receivables automation, with full visibility.
+Subhead: Qashivo manages follow-ups and turns receivables into an always-current cash outlook. Your team focuses on exceptions, not admin.
+Primary CTA: Book a demo
+Secondary CTA: See how it works
+
+--------------------------------------------------------------------------------
+MODULE: OVERVIEW
+Heading: A single view of cash reality.
+Body: Total outstanding, overdue, and collection performance in one place, updated continuously as invoices and payments change.
+
+Bullets:
+- Track total outstanding and overdue at a glance
+- See cash collected this week and this month
+- Monitor collection performance metrics over time
+
+--------------------------------------------------------------------------------
+MODULE: ATTENTION
+Heading: Your worklist - only what needs a decision.
+Body: Qashivo flags invoices and accounts that require judgement: disputes, broken promises, unusual delays, or high-value risk.
+
+Bullets:
+- Exception-first workflow (review, resolve, move on)
+- Clear reasons for every flag (so it’s easy to act)
+- Escalation paths for higher-risk accounts
+
+--------------------------------------------------------------------------------
+MODULE: CASH FLOW
+Heading: Forecast cash with confidence ranges.
+Body: Projected cash position and expected inflows, plus confidence bands that reflect uncertainty, not wishful thinking.
+
+Bullets:
+- Rolling horizons (4W / 13W / 6M / 12M)
+- Confidence ranges to communicate risk clearly
+- Drill-down to customers and invoices driving change
+
+--------------------------------------------------------------------------------
+MODULE: FOLLOW-UPS & PROMISES
+Heading: Follow-up that’s consistent, and on-brand.
+Body: Automate reminders, track promises, and escalate when needed so your process isn’t trapped in inbox threads.
+
+Bullets:
+- Configurable timing, templates, and tone
+- Promise-to-pay tracking and reminders
+- Escalations for overdue, disputed, or stalled invoices
+
+================================================================================
+3) PRICING PAGE COPY
+================================================================================
+
+PRICING HERO
+H1: Pricing that scales with your receivables.
+Subhead: Choose the plan that fits your invoice volume and workflow needs. We’ll help you set up automation and forecasting correctly from day one.
+Primary CTA: Book a demo
+Secondary CTA: Contact sales
+
+PLANS (names + bullets; no numbers)
+Plan 1 name: Essentials
+Bullets:
+- Continuous receivables monitoring
+- Automated follow-ups with templates
+- Cash inflow forecast (standard horizon)
+
+Plan 2 name: Growth
+Bullets:
+- Advanced follow-up rules and escalations
+- Promise tracking and Attention workflow
+- Expanded forecast horizons and drill-down
+
+Plan 3 name: Scale
+Bullets:
+- Multi-entity / multi-team workflows (if applicable)
+- Custom rules, permissions, and reporting
+- Dedicated onboarding and support options
+
+Add note under plans (optional):
+Not sure which plan fits? We’ll recommend the right setup based on your receivables workflow and volume.
+
+--------------------------------------------------------------------------------
+FAQ (6)
+
+1) What does “Attention” mean?
+Attention is the list of receivables that need a human decision, like disputes, broken promises, unusual delays, or high-value risk. Everything else is handled automatically based on your rules.
+
+2) How long does it take to see value?
+Most teams see a usable forecast and working follow-ups within the first week. Setup time depends on your integrations and how much customization you want for templates and escalation rules.
+
+3) What systems do you connect to?
+Qashivo connects to common accounting systems and can link to email and CRM tools. If you don’t see your system listed, tell us what you use and we’ll confirm options.
+
+4) Can we customize follow-ups and tone?
+Yes. You can define templates, timing, and escalation paths to match your brand and customer relationships. Many teams start with a simple cadence and refine it based on results.
+
+5) How does forecasting work?
+Forecasts are driven by invoice-level receivables data and observed payment behavior. Qashivo updates projections automatically as invoices change, payments land, and promises are made or missed.
+
+6) Is there an implementation fee?
+Some plans include guided onboarding. If your setup needs custom workflows or integrations, we’ll scope that up front—no surprises.
+
+================================================================================
+4) PARTNERS PAGE COPY (NEW)
+================================================================================
+
+PARTNERS PAGE HERO
+H1: Partner with Qashivo.
+Subhead: Help your clients improve cash visibility and reduce receivables busywork. Qashivo runs in the background—your team stays focused on exceptions.
+Primary CTA: Become a partner
+Secondary CTA: Refer a client
+
+--------------------------------------------------------------------------------
+SECTION: WHO IT’S FOR
+Heading: Built for partners who manage finance outcomes.
+Tiles (choose 3–4):
+1) Accounting & advisory firms
+Body: Deliver better cash visibility without adding operational overhead to your team.
+
+2) Fractional CFOs and finance consultants
+Body: Give clients a forecast you can trust and a workflow that keeps receivables moving.
+
+3) Implementation partners
+Body: Add Qashivo to your stack as a lightweight, high-impact receivables layer.
+
+--------------------------------------------------------------------------------
+SECTION: WHAT YOU CAN OFFER CLIENTS
+Heading: A calmer receivables workflow for your clients.
+Bullets:
+- Continuous monitoring of receivables and payment behaviour
+- Automated follow-ups with configurable tone and escalation
+- Attention list for exceptions (disputes, broken promises, unusual delays)
+- Cash outlook and inflow forecasting that updates automatically
+
+--------------------------------------------------------------------------------
+SECTION: PARTNER BENEFITS
+Heading: Why partners choose Qashivo.
+Bullets:
+- Faster time to value for clients (simple setup and clear workflow)
+- Repeatable process you can standardize across accounts
+- Visibility you can review in client meetings (forecast + Attention)
+- Partner support for onboarding and best practices
+- Co-marketing opportunities
+- Referral incentives or revenue share
+
+--------------------------------------------------------------------------------
+SECTION: HOW THE PROGRAM WORKS
+Heading: Simple, practical partnership.
+Steps:
+1) Intro
+Body: Tell us who you serve and what “success” looks like for your clients.
+
+2) Enablement
+Body: We’ll share positioning, setup guidance, and recommended workflows.
+
+3) Refer or implement
+Body: Bring clients to Qashivo or implement with them, depending on your model.
+
+4) Support
+Body: We’ll help with onboarding, adoption, and ongoing improvements.
+
+--------------------------------------------------------------------------------
+SECTION: PARTNER CTA BLOCK
+Heading: Let’s help your clients get to cash clarity.
+Subhead: Share a few details and we’ll follow up with the best partner path for your firm.
+Primary CTA: Become a partner
+Secondary CTA: Refer a client
+
+--------------------------------------------------------------------------------
+PARTNERS FAQ (optional, if you want it)
+1) Do you offer referral or revenue share?
+Answer: Yes, we have a generous revenue share scheme for our partners.
+
+2) Can we white-label Qashivo?
+Answer: Absolutely!  In fact, we love it when our partner white-label Qashivo
+
+3) What’s the typical client fit?
+Answer: Teams with recurring invoicing and a need for more predictable collections and cash visibility.
+
+4) Can we get a demo for our team first?
+Answer: Yes. book a partner demo and we’ll walk through the workflow and forecasting.
+
+================================================================================
+5) MICROCOPY SWAPS (10 “Before → After” examples)
+================================================================================
+
+1) Before: “Stop buying software that just points at problems.”
+   After:  “Operate by exceptions, not busywork.”
+
+2) Before: “Revolutionary AI platform for finance.”
+   After:  “Automated receivables follow-up and cash forecasting.”
+
+3) Before: “We guarantee you’ll collect faster.”
+   After:  “Standardize follow-ups and surface risk earlier.”
+
+4) Before: “All-in-one solution that does everything.”
+   After:  “Continuous monitoring, automated follow-up, and an Attention workflow.”
+
+5) Before: “Instant insights with cutting-edge AI.”
+   After:  “Always-current forecast based on real receivables and payment behavior.”
+
+6) Before: “Never chase invoices again.”
+   After:  “Reduce manual chasing by automating routine follow-ups.”
+
+7) Before: “The only platform you’ll ever need.”
+   After:  “A single place to review exceptions and cash outlook.”
+
+8) Before: “Set it and forget it.”
+   After:  “Set it up once. Step in when Attention flags an exception.”
+
+9) Before: “Supercharge your collections overnight.”
+   After:  “Improve consistency and visibility in your collections process.”
+
+10) Before: “Get started for free.”
+    After:  “Book a demo” / “See how it works” (choose based on sales motion)
+
+================================================================================
+PLACEHOLDERS TO FILL
+================================================================================
+- [Logo] list
+- [Integration A/B/C/D] references removed as standalone page; only mention systems generally.
+- Any verified security/compliance facts (SOC2/ISO, etc.) — do not add unless confirmed
+- Partner program specifics (referral incentive, revenue share, enablement assets)

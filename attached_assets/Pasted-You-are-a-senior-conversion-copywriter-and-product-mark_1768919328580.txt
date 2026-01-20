@@ -1,0 +1,55 @@
+You are a senior conversion copywriter and product marketer. Your job is to rewrite the copy for Qashivo’s marketing website so it aligns to “v1” product truth and tone.
+
+Context (v1 truth from the app):
+- “Qashivo is continuously managing receivables. No action is required unless something is flagged in Attention.”
+- The product centers on: continuous monitoring, automated follow-up, promise tracking, attention/exceptions workflow, and cash inflow / cash position forecasting with confidence ranges.
+- Visual design is already nailed: calm, minimal, whitespace-first. Copy must match that restraint.
+
+Tone & style:
+- Calm, CFO-grade, specific, non-hype.
+- Avoid competitor-bashing, superlatives (“revolutionary”, “only platform”), and vague “AI magic” claims.
+- Prefer concrete verbs/outcomes: “monitors”, “nudges”, “tracks promises”, “flags risk”, “updates forecast”.
+- Headlines: 6–10 words. Subheads: 1–2 short sentences. Use plain language.
+- Use one primary CTA: “Book a demo” (or “Get a demo”). Secondary CTA: “See how it works” / “View the product”.
+
+Deliverables:
+1) Homepage copy rewrite with section-by-section output:
+   - Header nav labels (5–7 items max)
+   - Hero (H1, subhead, CTAs, 1 trust line)
+   - Social proof strip (headline + placeholder for logos)
+   - 3-value-prop tiles (title + 1 sentence each)
+   - Cash Forecast section (heading, subhead, 3 bullets)
+   - Collections Performance section (heading, subhead, 3 bullets)
+   - “How it works” 3-step section (step title + 1 sentence each)
+   - Integrations section (heading + subhead)
+   - Security/compliance section (heading + 2 bullets, no fake claims)
+   - Final CTA section (heading, subhead, CTAs)
+   - Footer headings (group labels only)
+
+2) Product page copy (module-based) that mirrors the app navigation:
+   - Overview, Attention, Cash Flow, Follow-ups/Promises
+   For each module: heading, 1–2 sentence body, 3 bullets.
+
+3) Pricing page copy:
+   - Page hero (H1 + subhead)
+   - 3 plan names (neutral, CFO tone) with 3 bullets each (avoid pricing numbers)
+   - 6 FAQs (question + 2–3 sentence answer) including:
+     “What does Attention mean?”, “How long to see value?”, “What integrations do you support?”, “Can we customize follow-ups?”, “How does forecasting work?”, “Is there an implementation fee?”
+
+4) Microcopy swaps:
+   Provide 10 “Before → After” examples that replace hype with v1 clarity.
+
+Inputs you should request (only if missing):
+- Current site copy (paste or screenshots)
+- Target audience (SMB, mid-market, agencies, etc.)
+- Primary integrations (e.g., Xero, QuickBooks, Netsuite)
+- Compliance/security facts (SOC2, ISO, etc.)—do not invent
+
+If inputs are not provided, proceed with reasonable placeholders and clearly mark them like: [Integration A], [Logo], [Security detail].
+
+Output format:
+- Use clear section headers.
+- Provide 2 alternative hero options (A/B) and 2 alternative final CTA options.
+- Keep everything ready to paste into a CMS.
+
+Now produce the rewritten copy.

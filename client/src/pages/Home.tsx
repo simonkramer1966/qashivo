@@ -1,694 +1,368 @@
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
-import { 
-  ArrowRight, 
-  Brain, 
-  Zap, 
-  TrendingUp, 
-  Shield, 
-  Check, 
-  X, 
-  AlertTriangle,
-  Clock,
-  DollarSign,
-  PoundSterling,
-  BarChart3,
-  Bot,
-  Eye
-} from "lucide-react";
+import { ArrowRight, Check, ChevronDown } from "lucide-react";
 import { useState } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
-import heroImage from "@assets/generated_images/Advanced_AI_technology_center_4b230f51.png";
-import logo from "@assets/Main Nexus Logo copy_1763392904110.png";
-import xeroLogo from "@assets/Xero_software_logo.svg_1763402921236.png";
-import dashboardScreenshot from "@assets/Screenshot_2025-12-10_at_11.20.44_1765365915412.png";
-import step1PlannedImage from "@assets/Screenshot_2025-12-10_at_11.28.38_1765366388284.png";
-import step2CompletedImage from "@assets/Screenshot_2025-12-10_at_11.42.18_1765367144185.png";
-import step3AIAnalysisImage from "@assets/Screenshot_2025-12-10_at_11.30.52_1765366416868.png";
+import logo from "@assets/Main_Nexus_Logo_copy_1768893717341.png";
+import overviewScreenshot from "@assets/Screenshot_2026-01-15_at_16.33.25_1768920824618.png";
+import cashFlowScreenshot from "@assets/Screenshot_2026-01-15_at_16.57.28_1768920824623.png";
 
 export default function Home() {
   const [, setLocation] = useLocation();
-  const [showTrialComingSoon, setShowTrialComingSoon] = useState(false);
-  const [lightboxImage, setLightboxImage] = useState<{ src: string; alt: string } | null>(null);
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-[#FBFBFC]">
       {/* Navigation */}
-      <nav className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <nav className="sticky top-0 z-50 bg-white border-b border-[#E6E8EC]">
+        <div className="max-w-[1200px] mx-auto px-6">
           <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-8">
-              <a href="/home" className="flex items-center space-x-2">
-                <img src={logo} alt="Qashivo Logo" className="h-8 w-8" />
-                <h1 className="text-2xl font-bold text-[#17B6C3]">Qashivo</h1>
+            <div className="flex items-center gap-10">
+              <a href="/home" className="flex items-center gap-2">
+                <img src={logo} alt="Qashivo" className="h-8 w-8" />
+                <span className="text-[18px] font-semibold text-[#0B0F17] tracking-tight">Qashivo</span>
               </a>
-              <div className="hidden md:flex space-x-6">
-                <a href="/home" className="text-[#17B6C3] font-medium" data-testid="link-nav-home">
-                  Home
+              <div className="hidden md:flex items-center gap-8">
+                <a href="/product" className="text-[15px] text-[#556070] hover:text-[#0B0F17] transition-colors">
+                  Product
                 </a>
-                <a href="/features" className="text-gray-700 hover:text-[#17B6C3] transition-colors" data-testid="link-nav-features">
-                  Features
+                <a href="#how-it-works" className="text-[15px] text-[#556070] hover:text-[#0B0F17] transition-colors">
+                  How it works
                 </a>
-                <a href="/integrations" className="text-gray-700 hover:text-[#17B6C3] transition-colors" data-testid="link-nav-integrations">
-                  Integrations
-                </a>
-                <a href="/pricing" className="text-gray-700 hover:text-[#17B6C3] transition-colors" data-testid="link-nav-pricing">
-                  Pricing
-                </a>
-                <a href="/partners" className="text-gray-700 hover:text-[#17B6C3] transition-colors" data-testid="link-nav-partners">
+                <a href="/partners" className="text-[15px] text-[#556070] hover:text-[#0B0F17] transition-colors">
                   Partners
                 </a>
-                <a href="/demo" className="text-gray-700 hover:text-[#17B6C3] transition-colors" data-testid="link-nav-demo">
-                  Demo
-                </a>
-                <a href="/contact" className="text-gray-700 hover:text-[#17B6C3] transition-colors" data-testid="link-nav-contact">
-                  Contact
+                <a href="/pricing" className="text-[15px] text-[#556070] hover:text-[#0B0F17] transition-colors">
+                  Pricing
                 </a>
               </div>
             </div>
-            <Button
-              onClick={() => setLocation("/login")}
-              variant="outline"
-              className="border-[#17B6C3] text-[#17B6C3] hover:bg-[#17B6C3] hover:text-white"
-              data-testid="button-login"
-            >
-              Login
-            </Button>
+            <div className="flex items-center gap-4">
+              <a href="/login" className="text-[15px] text-[#556070] hover:text-[#0B0F17] transition-colors">
+                Sign in
+              </a>
+              <Button
+                onClick={() => setLocation("/contact")}
+                className="bg-[#12B8C4] hover:bg-[#0fa3ae] text-white h-11 px-5 rounded-xl text-[15px] font-medium"
+              >
+                Book a demo
+              </Button>
+            </div>
           </div>
         </div>
       </nav>
 
       {/* Hero Section */}
-      <section 
-        className="relative overflow-hidden min-h-[600px] md:min-h-[700px] flex items-center"
-        style={{
-          backgroundImage: `url(${heroImage})`,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          backgroundRepeat: 'no-repeat'
-        }}
-      >
-        <div className="absolute inset-0 bg-gradient-to-r from-slate-900/95 via-slate-900/90 to-slate-900/80"></div>
-        
-        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24">
-          <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
-            {/* Left side - Text content */}
-            <div className="max-w-xl">
-              <p className="text-xl md:text-2xl text-gray-300 mb-4">
-                Stop Buying Software That Just Points at Problems
+      <section className="pt-20 pb-24 md:pt-28 md:pb-32">
+        <div className="max-w-[1200px] mx-auto px-6">
+          <div className="max-w-[800px] mx-auto text-center mb-16">
+            <h1 className="text-[52px] md:text-[60px] font-semibold text-[#0B0F17] leading-[1.05] tracking-[-0.02em] mb-6">
+              Receivables, managed continuously.
+            </h1>
+            <p className="text-[18px] md:text-[20px] text-[#556070] leading-[1.55] mb-8 max-w-[640px] mx-auto">
+              Qashivo monitors invoices, nudges customers, tracks promises, and updates your cash outlook automatically. Step in only when something needs Attention.
+            </p>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-6">
+              <Button
+                onClick={() => setLocation("/contact")}
+                className="bg-[#12B8C4] hover:bg-[#0fa3ae] text-white h-12 px-7 rounded-xl text-[16px] font-medium"
+              >
+                Book a demo
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+              <Button
+                onClick={() => {
+                  const el = document.getElementById('how-it-works');
+                  el?.scrollIntoView({ behavior: 'smooth' });
+                }}
+                variant="ghost"
+                className="text-[#556070] hover:text-[#0B0F17] h-12 px-7 text-[16px] font-medium"
+              >
+                See how it works
+              </Button>
+            </div>
+            <p className="text-[14px] text-[#556070]">
+              Connect in minutes. Start operating by exceptions in days.
+            </p>
+          </div>
+
+          {/* Hero Screenshot */}
+          <div className="relative max-w-[1000px] mx-auto">
+            <div className="bg-[#F0F2F5] rounded-2xl p-3">
+              <img 
+                src={overviewScreenshot} 
+                alt="Qashivo Overview Dashboard" 
+                className="w-full rounded-xl border border-[#E6E8EC]"
+              />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Social Proof */}
+      <section className="py-16 border-y border-[#E6E8EC] bg-white">
+        <div className="max-w-[1200px] mx-auto px-6">
+          <p className="text-center text-[14px] text-[#556070] mb-8">
+            Trusted by teams who care about cash
+          </p>
+          <div className="flex flex-wrap items-center justify-center gap-12 opacity-50">
+            <div className="h-8 w-24 bg-[#E6E8EC] rounded"></div>
+            <div className="h-8 w-28 bg-[#E6E8EC] rounded"></div>
+            <div className="h-8 w-20 bg-[#E6E8EC] rounded"></div>
+            <div className="h-8 w-24 bg-[#E6E8EC] rounded"></div>
+            <div className="h-8 w-28 bg-[#E6E8EC] rounded"></div>
+          </div>
+          <p className="text-center text-[15px] text-[#556070] mt-10 italic max-w-[500px] mx-auto">
+            "We spend less time chasing and more time making decisions."
+          </p>
+        </div>
+      </section>
+
+      {/* Value Props */}
+      <section className="py-24 md:py-32">
+        <div className="max-w-[1200px] mx-auto px-6">
+          <h2 className="text-[32px] md:text-[40px] font-semibold text-[#0B0F17] text-center leading-[1.15] mb-16">
+            Everything you need, without the noise.
+          </h2>
+          
+          <div className="grid md:grid-cols-3 gap-12 md:gap-16">
+            <div className="text-center md:text-left">
+              <h3 className="text-[20px] font-semibold text-[#0B0F17] mb-3">
+                Continuous monitoring
+              </h3>
+              <p className="text-[16px] text-[#556070] leading-[1.55]">
+                Qashivo watches receivables and payment behavior so risk shows up early, not at month-end.
               </p>
-              <h1 className="text-4xl md:text-5xl lg:text-5xl font-bold text-white leading-tight mb-6">
-                Qashivo <span className="text-[#17B6C3]">Fixes Them</span> For You
-              </h1>
-              <p className="text-lg md:text-xl text-gray-200 mb-8">
-                The only platform where AI collects cash, forecasts risk, and releases working capital, while you supervise for ten minutes a day.
-              </p>
-              <div className="flex flex-col sm:flex-row gap-4">
-                <Button
-                  size="lg"
-                  className="bg-[#17B6C3] hover:bg-[#1396A1] text-white text-lg px-8"
-                  onClick={() => setLocation("/demo")}
-                  data-testid="button-hero-demo"
-                >
-                  See It In Action
-                  <ArrowRight className="ml-2 h-5 w-5" />
-                </Button>
-                <Button
-                  size="lg"
-                  className="bg-white text-gray-600 hover:text-[#17B6C3] hover:bg-white text-lg px-8"
-                  onClick={() => setLocation("/contact")}
-                  data-testid="button-hero-contact"
-                >
-                  Talk to Sales
-                </Button>
-              </div>
             </div>
             
-            {/* Right side - Dashboard screenshot */}
-            <div className="hidden lg:block">
-              <div className="relative">
-                <div className="absolute -inset-4 bg-gradient-to-r from-[#17B6C3]/20 to-teal-500/20 rounded-2xl blur-xl"></div>
-                <img 
-                  src={dashboardScreenshot} 
-                  alt="Qashivo Dashboard - Real-time cashflow and receivables overview" 
-                  className="relative rounded-xl shadow-2xl border border-white/10"
-                  data-testid="img-hero-dashboard"
-                />
-              </div>
+            <div className="text-center md:text-left">
+              <h3 className="text-[20px] font-semibold text-[#0B0F17] mb-3">
+                Automated follow-up
+              </h3>
+              <p className="text-[16px] text-[#556070] leading-[1.55]">
+                Send the right nudge at the right time, using your tone, templates, and escalation rules.
+              </p>
+            </div>
+            
+            <div className="text-center md:text-left">
+              <h3 className="text-[20px] font-semibold text-[#0B0F17] mb-3">
+                Attention-based workflow
+              </h3>
+              <p className="text-[16px] text-[#556070] leading-[1.55]">
+                Review exceptions in one place - disputes, broken promises, unusual delays, and high-value risk.
+              </p>
             </div>
           </div>
         </div>
       </section>
 
-      {/* The Broken Playbook */}
-      <section className="py-24 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              Your Finance Software Shows You Problems.<br />
-              <span className="text-gray-500">Then Leaves You to Fix Them.</span>
-            </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              You've invested in tools that promised to transform your cashflow. 
-              Instead, they've given you dashboards full of red flags—and no one to action them.
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-8">
-            {/* Credit Control Software */}
-            <div className="bg-gray-50 rounded-2xl p-8 border-2 border-gray-200 flex flex-col h-full">
-              <div className="w-14 h-14 bg-red-100 rounded-xl flex items-center justify-center mb-6">
-                <X className="h-7 w-7 text-red-500" />
-              </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-3">Credit Control Software</h3>
-              <p className="text-gray-600 mb-4">
-                "Here are 47 overdue invoices you need to chase."
+      {/* Cash Forecast Section */}
+      <section className="py-24 md:py-32 border-t border-[#E6E8EC]">
+        <div className="max-w-[1200px] mx-auto px-6">
+          <div className="grid lg:grid-cols-2 gap-16 items-center">
+            <div>
+              <h2 className="text-[32px] md:text-[40px] font-semibold text-[#0B0F17] leading-[1.15] mb-6">
+                Cash forecasts that update themselves.
+              </h2>
+              <p className="text-[18px] text-[#556070] leading-[1.55] mb-8">
+                See expected inflows, projected cash position, and confidence ranges, driven by invoice-level data and customer payment patterns.
               </p>
-              <ul className="space-y-3 text-sm text-gray-600 flex-grow">
-                <li className="flex items-start">
-                  <span className="text-red-400 mr-2">•</span>
-                  Shows you who owes what
+              <ul className="space-y-4">
+                <li className="flex items-start gap-3">
+                  <Check className="w-5 h-5 text-[#12B8C4] mt-0.5 flex-shrink-0" />
+                  <span className="text-[16px] text-[#556070]">Rolling views: 4W / 13W / 6M / 12M</span>
                 </li>
-                <li className="flex items-start">
-                  <span className="text-red-400 mr-2">•</span>
-                  Suggests email templates
+                <li className="flex items-start gap-3">
+                  <Check className="w-5 h-5 text-[#12B8C4] mt-0.5 flex-shrink-0" />
+                  <span className="text-[16px] text-[#556070]">Confidence ranges so uncertainty is visible, not hidden</span>
                 </li>
-                <li className="flex items-start">
-                  <span className="text-red-400 mr-2">•</span>
-                  <span className="font-semibold text-gray-900">Send emails on static 7, 14, 21 day periods when every client is different</span>
-                </li>
-                <li className="flex items-start">
-                  <span className="text-red-400 mr-2">•</span>
-                  <span className="font-semibold text-gray-900">You make every phone call yourself</span>
+                <li className="flex items-start gap-3">
+                  <Check className="w-5 h-5 text-[#12B8C4] mt-0.5 flex-shrink-0" />
+                  <span className="text-[16px] text-[#556070]">Drill down from trend → customer → invoice</span>
                 </li>
               </ul>
-              <div className="mt-6 pt-6 border-t border-gray-200">
-                <p className="text-sm text-gray-500">
-                  <Clock className="h-4 w-4 inline mr-1" />
-                  Still takes 2-3 hours daily
-                </p>
-              </div>
-            </div>
-
-            {/* Cashflow Forecasting */}
-            <div className="bg-gray-50 rounded-2xl p-8 border-2 border-gray-200 flex flex-col h-full">
-              <div className="w-14 h-14 bg-red-100 rounded-xl flex items-center justify-center mb-6">
-                <X className="h-7 w-7 text-red-500" />
-              </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-3">Cashflow Forecasting</h3>
-              <p className="text-gray-600 mb-4">
-                "You'll be £30K short in 45 days."
+              <p className="text-[14px] text-[#556070] mt-8">
+                Forecasts refresh automatically as invoices change, payments land, and promises are made or missed.
               </p>
-              <ul className="space-y-3 text-sm text-gray-600 flex-grow">
-                <li className="flex items-start">
-                  <span className="text-red-400 mr-2">•</span>
-                  Projects future shortfalls
+            </div>
+            <div className="bg-[#F0F2F5] rounded-2xl p-3">
+              <img 
+                src={cashFlowScreenshot} 
+                alt="Cash Flow Forecast" 
+                className="w-full rounded-xl border border-[#E6E8EC]"
+              />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Collections Performance Section */}
+      <section className="py-24 md:py-32 border-t border-[#E6E8EC]">
+        <div className="max-w-[1200px] mx-auto px-6">
+          <div className="grid lg:grid-cols-2 gap-16 items-center">
+            <div className="order-2 lg:order-1 bg-[#F0F2F5] rounded-2xl p-3">
+              <img 
+                src={overviewScreenshot} 
+                alt="Collections Performance" 
+                className="w-full rounded-xl border border-[#E6E8EC]"
+              />
+            </div>
+            <div className="order-1 lg:order-2">
+              <h2 className="text-[32px] md:text-[40px] font-semibold text-[#0B0F17] leading-[1.15] mb-6">
+                Know what's improving—and what isn't.
+              </h2>
+              <p className="text-[18px] text-[#556070] leading-[1.55] mb-8">
+                Track collection performance over time so you can see whether follow-ups translate into outcomes.
+              </p>
+              <ul className="space-y-4">
+                <li className="flex items-start gap-3">
+                  <Check className="w-5 h-5 text-[#12B8C4] mt-0.5 flex-shrink-0" />
+                  <span className="text-[16px] text-[#556070]">Days late and time-to-pay trends</span>
                 </li>
-                <li className="flex items-start">
-                  <span className="text-red-400 mr-2">•</span>
-                  Creates nice charts
+                <li className="flex items-start gap-3">
+                  <Check className="w-5 h-5 text-[#12B8C4] mt-0.5 flex-shrink-0" />
+                  <span className="text-[16px] text-[#556070]">On-time rate and overdue visibility</span>
                 </li>
-                <li className="flex items-start">
-                  <span className="text-red-400 mr-2">•</span>
-                  <span className="font-semibold text-gray-900">Doesn't accelerate collections</span>
-                </li>
-                <li className="flex items-start">
-                  <span className="text-red-400 mr-2">•</span>
-                  <span className="font-semibold text-gray-900">Doesn't prevent the shortfall</span>
+                <li className="flex items-start gap-3">
+                  <Check className="w-5 h-5 text-[#12B8C4] mt-0.5 flex-shrink-0" />
+                  <span className="text-[16px] text-[#556070]">Promises tracked (and kept)</span>
                 </li>
               </ul>
-              <div className="mt-6 pt-6 border-t border-gray-200">
-                <p className="text-sm text-gray-500">
-                  <AlertTriangle className="h-4 w-4 inline mr-1" />
-                  Visibility without action
-                </p>
-              </div>
             </div>
+          </div>
+        </div>
+      </section>
 
-            {/* Invoice Financing */}
-            <div className="bg-gray-50 rounded-2xl p-8 border-2 border-gray-200 flex flex-col h-full">
-              <div className="w-14 h-14 bg-red-100 rounded-xl flex items-center justify-center mb-6">
-                <X className="h-7 w-7 text-red-500" />
+      {/* How It Works */}
+      <section id="how-it-works" className="py-24 md:py-32 border-t border-[#E6E8EC] bg-white">
+        <div className="max-w-[1200px] mx-auto px-6">
+          <h2 className="text-[32px] md:text-[40px] font-semibold text-[#0B0F17] text-center leading-[1.15] mb-16">
+            Set it up once. Then operate by exceptions.
+          </h2>
+          
+          <div className="grid md:grid-cols-3 gap-12 md:gap-16">
+            <div className="text-center">
+              <div className="w-12 h-12 rounded-full bg-[#12B8C4]/10 flex items-center justify-center mx-auto mb-6">
+                <span className="text-[20px] font-semibold text-[#12B8C4]">1</span>
               </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-3">Invoice Financing</h3>
-              <p className="text-gray-600 mb-4">
-                "Upload your invoices and wait 5 days."
+              <h3 className="text-[20px] font-semibold text-[#0B0F17] mb-3">
+                Connect
+              </h3>
+              <p className="text-[16px] text-[#556070] leading-[1.55]">
+                Sync your accounting data and customer contacts to keep invoices and statuses current.
               </p>
-              <ul className="space-y-3 text-sm text-gray-600 flex-grow">
-                <li className="flex items-start">
-                  <span className="text-red-400 mr-2">•</span>
-                  Lengthy application process
-                </li>
-                <li className="flex items-start">
-                  <span className="text-red-400 mr-2">•</span>
-                  Hidden fees and complexity
-                </li>
-                <li className="flex items-start">
-                  <span className="text-red-400 mr-2">•</span>
-                  <span className="font-semibold text-gray-900">Disconnected from your collections</span>
-                </li>
-                <li className="flex items-start">
-                  <span className="text-red-400 mr-2">•</span>
-                  <span className="font-semibold text-gray-900">No integration with forecasting</span>
-                </li>
-              </ul>
-              <div className="mt-6 pt-6 border-t border-gray-200">
-                <p className="text-sm text-gray-500">
-                  <PoundSterling className="h-4 w-4 inline mr-1" />
-                  Cash when it's too late
-                </p>
-              </div>
             </div>
-          </div>
-
-          <div className="mt-16 text-center">
-            <p className="text-3xl md:text-4xl font-bold text-gray-900">
-              You bought three tools. You're still doing three jobs.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* Meet the Credit Controller That Never Clocks Off */}
-      <section className="py-24 bg-gradient-to-br from-slate-50 via-blue-50 to-teal-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              Meet the Credit Controller<br />
-              <span className="text-[#17B6C3]">That Never Clocks Off</span>
-            </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Qashivo doesn't show you problems and walk away. It plans overnight, 
-              you approve each morning, and AI executes all day.
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-8 mb-16">
-            {/* Step 1 */}
-            <div className="relative">
-              <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 shadow-xl border border-white/50 h-full flex flex-col">
-                <div className="absolute -top-4 left-8 w-8 h-8 bg-[#17B6C3] rounded-full flex items-center justify-center text-white font-bold">
-                  1
-                </div>
-                <div className="pt-4 flex-grow">
-                  <div className="text-sm text-[#17B6C3] font-semibold mb-2">Overnight</div>
-                  <h3 className="text-xl font-bold text-gray-900 mb-3">AI Plans Your Day</h3>
-                  <p className="text-gray-600 mb-4">
-                    While you sleep, Qashivo analyses every invoice, scores every debtor, 
-                    and builds tomorrow's action plan based on real payment behaviour.
-                  </p>
-                </div>
-                <div className="mt-auto">
-                  <img 
-                    src={step1PlannedImage} 
-                    alt="AI-generated daily action plan" 
-                    className="w-full h-40 object-cover object-top rounded-lg shadow-md border border-gray-200 cursor-pointer hover:shadow-lg transition-shadow"
-                    onClick={() => setLightboxImage({ src: step1PlannedImage, alt: "AI-generated daily action plan" })}
-                    data-testid="img-step1-planned"
-                  />
-                </div>
+            
+            <div className="text-center">
+              <div className="w-12 h-12 rounded-full bg-[#12B8C4]/10 flex items-center justify-center mx-auto mb-6">
+                <span className="text-[20px] font-semibold text-[#12B8C4]">2</span>
               </div>
+              <h3 className="text-[20px] font-semibold text-[#0B0F17] mb-3">
+                Automate
+              </h3>
+              <p className="text-[16px] text-[#556070] leading-[1.55]">
+                Configure follow-up timing, tone, and escalation, so outreach is consistent and auditable.
+              </p>
             </div>
-
-            {/* Step 2 */}
-            <div className="relative">
-              <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 shadow-xl border border-white/50 h-full flex flex-col">
-                <div className="absolute -top-4 left-8 w-8 h-8 bg-[#17B6C3] rounded-full flex items-center justify-center text-white font-bold">
-                  2
-                </div>
-                <div className="pt-4 flex-grow">
-                  <div className="text-sm text-[#17B6C3] font-semibold mb-2">Morning</div>
-                  <h3 className="text-xl font-bold text-gray-900 mb-3">You Approve in Minutes</h3>
-                  <p className="text-gray-600 mb-4">
-                    Review the daily plan over coffee. One click to approve. 
-                    Flag any VIP customers for special handling. Done in under 10 minutes.
-                  </p>
-                </div>
-                <div className="mt-auto">
-                  <img 
-                    src={step2CompletedImage} 
-                    alt="Completed actions and outcomes dashboard" 
-                    className="w-full h-40 object-cover object-top rounded-lg shadow-md border border-gray-200 cursor-pointer hover:shadow-lg transition-shadow"
-                    onClick={() => setLightboxImage({ src: step2CompletedImage, alt: "Completed actions and outcomes dashboard" })}
-                    data-testid="img-step2-completed"
-                  />
-                </div>
+            
+            <div className="text-center">
+              <div className="w-12 h-12 rounded-full bg-[#12B8C4]/10 flex items-center justify-center mx-auto mb-6">
+                <span className="text-[20px] font-semibold text-[#12B8C4]">3</span>
               </div>
-            </div>
-
-            {/* Step 3 */}
-            <div className="relative">
-              <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 shadow-xl border border-white/50 h-full flex flex-col">
-                <div className="absolute -top-4 left-8 w-8 h-8 bg-[#17B6C3] rounded-full flex items-center justify-center text-white font-bold">
-                  3
-                </div>
-                <div className="pt-4 flex-grow">
-                  <div className="text-sm text-[#17B6C3] font-semibold mb-2">All Day</div>
-                  <h3 className="text-xl font-bold text-gray-900 mb-3">AI Executes Non-Stop</h3>
-                  <p className="text-gray-600 mb-4">
-                    Emails sent. SMS delivered. AI voice calls made. Disputes handled. 
-                    Promises tracked. You get updates. Cash lands in your account.
-                  </p>
-                </div>
-                <div className="mt-auto">
-                  <img 
-                    src={step3AIAnalysisImage} 
-                    alt="AI real-time call analysis" 
-                    className="w-full h-40 object-cover object-top rounded-lg shadow-md border border-gray-200 cursor-pointer hover:shadow-lg transition-shadow"
-                    onClick={() => setLightboxImage({ src: step3AIAnalysisImage, alt: "AI real-time call analysis" })}
-                    data-testid="img-step3-analysis"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Comparison */}
-          <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 md:p-12 shadow-xl border border-white/50">
-            <div className="grid md:grid-cols-2 gap-12 items-center">
-              <div>
-                <h3 className="text-2xl font-bold text-gray-900 mb-6">Your Day: Then vs Now</h3>
-                <div className="space-y-4">
-                  <div className="flex items-center">
-                    <div className="w-32 text-right pr-4 text-gray-500 text-sm">Before Qashivo</div>
-                    <div className="flex-1 bg-red-100 rounded-lg h-8 flex items-center px-4">
-                      <span className="text-red-700 font-medium text-sm">2-3 hours chasing invoices</span>
-                    </div>
-                  </div>
-                  <div className="flex items-center">
-                    <div className="w-32 text-right pr-4 text-gray-500 text-sm">With Qashivo</div>
-                    <div className="w-20 bg-[#17B6C3]/20 rounded-lg h-8 flex items-center px-4">
-                      <span className="text-[#17B6C3] font-medium text-sm">10 min</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div className="text-center md:text-left">
-                <div className="text-5xl font-bold text-[#17B6C3] mb-2">95%</div>
-                <p className="text-gray-600 text-lg">Less time on collections</p>
-                <p className="text-gray-500 mt-2">
-                  Get your mornings back. Let Qashivo do the work you hired it for.
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Three Pillars - Now With Outcomes */}
-      <section className="py-24 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              One Platform. Three Problems Solved.
-            </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Credit control, cashflow forecasting, and invoice finance. One connected system that automates the chasing workflow, improves cash visibility, and helps you unlock cash from eligible invoices.
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-8">
-            {/* Pillar 1: Credit Control */}
-            <div className="bg-white rounded-2xl p-8 border-2 border-[#17B6C3]/20 hover:border-[#17B6C3] transition-colors flex flex-col h-full shadow-lg">
-              <div className="w-14 h-14 bg-[#17B6C3]/10 rounded-xl flex items-center justify-center mb-6">
-                <Brain className="h-7 w-7 text-[#17B6C3]" />
-              </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-2">Automated Credit Control</h3>
-              <p className="text-[#17B6C3] font-semibold text-sm mb-4">Qashivo IS the credit controller</p>
-              
-              <div className="mb-6 flex-grow">
-                <p className="text-gray-600 text-sm mb-3">
-                  <span className="font-semibold text-gray-900">The pain:</span> Spending hours sending reminder emails, making awkward phone calls, tracking who promised what.
-                </p>
-                <p className="text-gray-600 text-sm">
-                  <span className="font-semibold text-gray-900">Qashivo:</span> AI sends personalised emails, makes voice calls, tracks promises, and escalates automatically.
-                </p>
-              </div>
-
-              <div className="bg-white rounded-xl p-4 border border-gray-100 mt-auto">
-                <div className="text-2xl font-bold text-[#17B6C3]">30%</div>
-                <p className="text-sm text-gray-600">Average DSO reduction</p>
-              </div>
-            </div>
-
-            {/* Pillar 2: Cashflow Forecasting */}
-            <div className="bg-white rounded-2xl p-8 border-2 border-blue-500/20 hover:border-blue-500 transition-colors flex flex-col h-full shadow-lg">
-              <div className="w-14 h-14 bg-blue-500/10 rounded-xl flex items-center justify-center mb-6">
-                <BarChart3 className="h-7 w-7 text-blue-600" />
-              </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-2">Intelligent Cashflow</h3>
-              <p className="text-blue-600 font-semibold text-sm mb-4">Forecasts that drive action</p>
-              
-              <div className="mb-6 flex-grow">
-                <p className="text-gray-600 text-sm mb-3">
-                  <span className="font-semibold text-gray-900">The pain:</span> Pretty charts that show you'll be short next month, but no way to prevent it.
-                </p>
-                <p className="text-gray-600 text-sm">
-                  <span className="font-semibold text-gray-900">Qashivo:</span> Forecasts connected to collection actions. See a gap? AI accelerates collections automatically.
-                </p>
-              </div>
-
-              <div className="bg-white rounded-xl p-4 border border-gray-100 mt-auto">
-                <div className="text-2xl font-bold text-blue-600">90-day</div>
-                <p className="text-sm text-gray-600">Rolling scenario-based forecasts</p>
-              </div>
-            </div>
-
-            {/* Pillar 3: Invoice Financing */}
-            <div className="bg-white rounded-2xl p-8 border-2 border-amber-500/20 hover:border-amber-500 transition-colors flex flex-col h-full shadow-lg">
-              <div className="w-14 h-14 bg-amber-500/10 rounded-xl flex items-center justify-center mb-6">
-                <DollarSign className="h-7 w-7 text-amber-600" />
-              </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-2">On-Demand Invoice Liquidity</h3>
-              <p className="text-amber-600 font-semibold text-sm mb-4">Cash when you need it</p>
-              
-              <div className="mb-6 flex-grow">
-                <p className="text-gray-600 text-sm mb-3">
-                  <span className="font-semibold text-gray-900">The pain:</span> Lengthy applications, disconnected from your actual invoices and collections.
-                </p>
-                <p className="text-gray-600 text-sm">
-                  <span className="font-semibold text-gray-900">Qashivo:</span> One-click funding on invoices AI is already collecting. Instant liquidity, transparent rates.
-                </p>
-              </div>
-
-              <div className="bg-white rounded-xl p-4 border border-gray-100 mt-auto">
-                <div className="text-2xl font-bold text-amber-600">85%</div>
-                <p className="text-sm text-gray-600">Advance on invoice value</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* 90-Day DSO Guarantee */}
-      <section className="py-24 bg-gradient-to-br from-slate-50 via-blue-50 to-teal-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-3xl p-12 md:p-16 text-white">
-            <div className="grid md:grid-cols-2 gap-12 items-center">
-              <div>
-                <div className="inline-flex items-center bg-[#17B6C3]/20 rounded-full px-4 py-2 mb-6">
-                  <Shield className="h-5 w-5 text-[#17B6C3] mr-2" />
-                  <span className="text-sm font-semibold text-[#17B6C3]">Our Guarantee</span>
-                </div>
-                <h2 className="text-3xl md:text-4xl font-bold mb-6">
-                  90-Day DSO Improvement<br />
-                  Or Your Money Back
-                </h2>
-                <p className="text-xl text-gray-300 mb-8">
-                  We're so confident Qashivo will transform your collections that we guarantee results. 
-                  If your DSO doesn't improve within 90 days, we refund your subscription. No questions asked.
-                </p>
-                <div className="space-y-4">
-                  <div className="flex items-start">
-                    <div className="bg-[#17B6C3]/20 rounded-lg p-2 mr-4">
-                      <Check className="h-6 w-6 text-[#17B6C3]" />
-                    </div>
-                    <div>
-                      <h4 className="font-semibold text-lg mb-1">Measurable Improvement</h4>
-                      <p className="text-gray-400">Track your DSO before and after—we're transparent about results</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start">
-                    <div className="bg-[#17B6C3]/20 rounded-lg p-2 mr-4">
-                      <Check className="h-6 w-6 text-[#17B6C3]" />
-                    </div>
-                    <div>
-                      <h4 className="font-semibold text-lg mb-1">No Risk Trial</h4>
-                      <p className="text-gray-400">Start free, cancel anytime, guaranteed results</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-8 border border-white/20">
-                <div className="text-center">
-                  <div className="text-6xl font-bold text-[#17B6C3] mb-4">£11B</div>
-                  <p className="text-gray-300 mb-8">Lost to late payments each year in the UK</p>
-                  <div className="text-4xl font-bold text-white mb-4">Don't be part of that statistic.</div>
-                  <Button
-                    size="lg"
-                    className="bg-[#17B6C3] hover:bg-[#1396A1] text-white text-lg px-8 mt-4"
-                    onClick={() => setLocation("/demo")}
-                    data-testid="button-guarantee-demo"
-                  >
-                    See How It Works
-                    <ArrowRight className="ml-2 h-5 w-5" />
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* 60-Second Connection */}
-      <section className="py-24 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              Connect to Xero in 60 Seconds. AI Working Immediately.
-            </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Connect to Xero and watch Qashivo's AI spring into action. 
-              Instant sync. Instant analysis. Instant transformation.
-            </p>
-          </div>
-          <div className="flex justify-center items-center">
-            <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 shadow-lg border border-gray-200 hover:border-[#17B6C3] hover:shadow-xl transition-all w-48 h-32 flex items-center justify-center">
-              <img src={xeroLogo} alt="Xero" className="max-h-16 max-w-full object-contain" />
+              <h3 className="text-[20px] font-semibold text-[#0B0F17] mb-3">
+                Review Attention
+              </h3>
+              <p className="text-[16px] text-[#556070] leading-[1.55]">
+                Qashivo flags what needs a human decision. Everything else runs in the background.
+              </p>
             </div>
           </div>
         </div>
       </section>
 
       {/* Final CTA */}
-      <section className="py-24 bg-gradient-to-br from-[#17B6C3] to-teal-600">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">
-            Ready to Let Qashivo Handle the Heavy Lifting?
+      <section className="py-24 md:py-32 border-t border-[#E6E8EC]">
+        <div className="max-w-[700px] mx-auto px-6 text-center">
+          <h2 className="text-[32px] md:text-[40px] font-semibold text-[#0B0F17] leading-[1.15] mb-6">
+            See Qashivo on your receivables.
           </h2>
-          <p className="text-xl text-white/90 mb-8">
-            Join SMEs who've stopped chasing invoices and started supervising AI that gets them paid.
+          <p className="text-[18px] text-[#556070] leading-[1.55] mb-8">
+            We'll walk through your workflow, show how Attention works, and review a live forecast based on your data.
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Button
-              size="lg"
-              className="bg-white text-[#17B6C3] hover:bg-gray-100 text-lg px-8"
-              onClick={() => setLocation("/demo")}
-              data-testid="button-cta-demo"
+              onClick={() => setLocation("/contact")}
+              className="bg-[#12B8C4] hover:bg-[#0fa3ae] text-white h-12 px-7 rounded-xl text-[16px] font-medium"
             >
-              See It In Action
-              <ArrowRight className="ml-2 h-5 w-5" />
+              Book a demo
+              <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
             <Button
-              size="lg"
-              className="bg-white/20 text-white hover:bg-white/30 text-lg px-8"
               onClick={() => setLocation("/contact")}
-              data-testid="button-cta-contact"
+              variant="ghost"
+              className="text-[#556070] hover:text-[#0B0F17] h-12 px-7 text-[16px] font-medium"
             >
-              Talk to Sales
+              Talk to us
             </Button>
           </div>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="bg-gray-900 text-white py-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid md:grid-cols-4 gap-8">
-            <div>
-              <h3 className="text-2xl font-bold text-[#17B6C3] mb-4">Qashivo</h3>
-              <p className="text-gray-400">AI that gets you paid</p>
+      <footer className="py-16 border-t border-[#E6E8EC] bg-white">
+        <div className="max-w-[1200px] mx-auto px-6">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-8">
+            <div className="col-span-2 md:col-span-1">
+              <a href="/home" className="flex items-center gap-2 mb-4">
+                <img src={logo} alt="Qashivo" className="h-7 w-7" />
+                <span className="text-[16px] font-semibold text-[#0B0F17]">Qashivo</span>
+              </a>
+              <p className="text-[13px] text-[#556070]">
+                Receivables, managed continuously.
+              </p>
             </div>
+            
             <div>
-              <h4 className="font-semibold mb-4">Product</h4>
-              <ul className="space-y-2 text-gray-400">
-                <li><a href="/features" className="hover:text-[#17B6C3] transition-colors">Features</a></li>
-                <li><a href="/integrations" className="hover:text-[#17B6C3] transition-colors">Integrations</a></li>
-                <li><a href="/pricing" className="hover:text-[#17B6C3] transition-colors">Pricing</a></li>
+              <h4 className="text-[13px] font-medium text-[#0B0F17] uppercase tracking-wide mb-4">Product</h4>
+              <ul className="space-y-3">
+                <li><a href="/product" className="text-[14px] text-[#556070] hover:text-[#0B0F17]">Overview</a></li>
+                <li><a href="/product#attention" className="text-[14px] text-[#556070] hover:text-[#0B0F17]">Attention</a></li>
+                <li><a href="/product#cashflow" className="text-[14px] text-[#556070] hover:text-[#0B0F17]">Cash Flow</a></li>
+                <li><a href="/product#followups" className="text-[14px] text-[#556070] hover:text-[#0B0F17]">Follow-ups</a></li>
               </ul>
             </div>
+            
             <div>
-              <h4 className="font-semibold mb-4">Company</h4>
-              <ul className="space-y-2 text-gray-400">
-                <li><a href="/partners" className="hover:text-[#17B6C3] transition-colors">Partners</a></li>
-                <li><a href="#" className="hover:text-[#17B6C3] transition-colors">About</a></li>
-                <li><a href="/contact" className="hover:text-[#17B6C3] transition-colors">Contact</a></li>
+              <h4 className="text-[13px] font-medium text-[#0B0F17] uppercase tracking-wide mb-4">Partners</h4>
+              <ul className="space-y-3">
+                <li><a href="/partners" className="text-[14px] text-[#556070] hover:text-[#0B0F17]">Partner program</a></li>
+                <li><a href="/partners#refer" className="text-[14px] text-[#556070] hover:text-[#0B0F17]">Refer a client</a></li>
+                <li><a href="/partners" className="text-[14px] text-[#556070] hover:text-[#0B0F17]">Become a partner</a></li>
               </ul>
             </div>
+            
             <div>
-              <h4 className="font-semibold mb-4">Legal</h4>
-              <ul className="space-y-2 text-gray-400">
-                <li><a href="#" className="hover:text-[#17B6C3] transition-colors">Privacy</a></li>
-                <li><a href="#" className="hover:text-[#17B6C3] transition-colors">Terms</a></li>
+              <h4 className="text-[13px] font-medium text-[#0B0F17] uppercase tracking-wide mb-4">Company</h4>
+              <ul className="space-y-3">
+                <li><a href="/about" className="text-[14px] text-[#556070] hover:text-[#0B0F17]">About</a></li>
+                <li><a href="/contact" className="text-[14px] text-[#556070] hover:text-[#0B0F17]">Contact</a></li>
+              </ul>
+            </div>
+            
+            <div>
+              <h4 className="text-[13px] font-medium text-[#0B0F17] uppercase tracking-wide mb-4">Legal</h4>
+              <ul className="space-y-3">
+                <li><a href="/privacy" className="text-[14px] text-[#556070] hover:text-[#0B0F17]">Privacy</a></li>
+                <li><a href="/terms" className="text-[14px] text-[#556070] hover:text-[#0B0F17]">Terms</a></li>
               </ul>
             </div>
           </div>
-          <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400">
-            <p>&copy; 2025 Qashivo. All rights reserved.</p>
+          
+          <div className="mt-12 pt-8 border-t border-[#E6E8EC]">
+            <p className="text-[13px] text-[#556070] text-center">
+              © 2026 Qashivo. All rights reserved.
+            </p>
           </div>
         </div>
       </footer>
-
-      {/* Trial Coming Soon Dialog */}
-      <Dialog open={showTrialComingSoon} onOpenChange={setShowTrialComingSoon}>
-        <DialogContent className="sm:max-w-[400px]">
-          <DialogHeader>
-            <DialogTitle className="text-2xl font-bold text-gray-900">
-              Trial Coming Soon
-            </DialogTitle>
-            <DialogDescription>
-              We're putting the finishing touches on our free trial experience. In the meantime, book a demo to see Qashivo in action.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex gap-3 pt-4">
-            <Button
-              variant="outline"
-              onClick={() => setShowTrialComingSoon(false)}
-              className="flex-1"
-              data-testid="button-trial-close"
-            >
-              Close
-            </Button>
-            <Button
-              onClick={() => {
-                setShowTrialComingSoon(false);
-                setLocation("/contact");
-              }}
-              className="flex-1 bg-[#17B6C3] hover:bg-[#1396A1] text-white"
-              data-testid="button-trial-demo"
-            >
-              Book a Demo
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Image Lightbox Dialog */}
-      <Dialog open={!!lightboxImage} onOpenChange={(open) => !open && setLightboxImage(null)}>
-        <DialogContent className="max-w-4xl w-[90vw] p-2 bg-black/90 border-none">
-          <button
-            onClick={() => setLightboxImage(null)}
-            className="absolute top-4 right-4 z-50 p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors"
-            data-testid="button-lightbox-close"
-          >
-            <X className="h-6 w-6 text-white" />
-          </button>
-          {lightboxImage && (
-            <img
-              src={lightboxImage.src}
-              alt={lightboxImage.alt}
-              className="w-full h-auto max-h-[85vh] object-contain rounded-lg"
-              data-testid="img-lightbox"
-            />
-          )}
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

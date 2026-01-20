@@ -1,39 +1,12 @@
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
-import { ArrowRight, Check, ChevronDown } from "lucide-react";
-import { useState } from "react";
+import { ArrowRight, Check } from "lucide-react";
 import logo from "@assets/Main_Nexus_Logo_copy_1768893717341.png";
+import overviewScreenshot from "@assets/Screenshot_2026-01-15_at_16.33.25_1768920824618.png";
+import cashFlowScreenshot from "@assets/Screenshot_2026-01-15_at_16.57.28_1768920824623.png";
 
-const faqs = [
-  {
-    question: 'What does "Attention" mean?',
-    answer: 'Attention is the list of receivables that need a human decision, like disputes, broken promises, unusual delays, or high-value risk. Everything else is handled automatically based on your rules.'
-  },
-  {
-    question: 'How long does it take to see value?',
-    answer: 'Most teams see a usable forecast and working follow-ups within the first week. Setup time depends on your integrations and how much customization you want for templates and escalation rules.'
-  },
-  {
-    question: 'What systems do you connect to?',
-    answer: "Qashivo connects to common accounting systems and can link to email and CRM tools. If you don't see your system listed, tell us what you use and we'll confirm options."
-  },
-  {
-    question: 'Can we customize follow-ups and tone?',
-    answer: 'Yes. You can define templates, timing, and escalation paths to match your brand and customer relationships. Many teams start with a simple cadence and refine it based on results.'
-  },
-  {
-    question: 'How does forecasting work?',
-    answer: 'Forecasts are driven by invoice-level receivables data and observed payment behavior. Qashivo updates projections automatically as invoices change, payments land, and promises are made or missed.'
-  },
-  {
-    question: 'Is there an implementation fee?',
-    answer: "Some plans include guided onboarding. If your setup needs custom workflows or integrations, we'll scope that up front—no surprises."
-  }
-];
-
-export default function Pricing() {
+export default function Product() {
   const [, setLocation] = useLocation();
-  const [openFaq, setOpenFaq] = useState<number | null>(null);
 
   return (
     <div className="min-h-screen bg-[#FBFBFC]">
@@ -47,7 +20,7 @@ export default function Pricing() {
                 <span className="text-[18px] font-semibold text-[#0B0F17] tracking-tight">Qashivo</span>
               </a>
               <div className="hidden md:flex items-center gap-8">
-                <a href="/product" className="text-[15px] text-[#556070] hover:text-[#0B0F17] transition-colors">
+                <a href="/product" className="text-[15px] text-[#0B0F17] font-medium">
                   Product
                 </a>
                 <a href="/home#how-it-works" className="text-[15px] text-[#556070] hover:text-[#0B0F17] transition-colors">
@@ -56,7 +29,7 @@ export default function Pricing() {
                 <a href="/partners" className="text-[15px] text-[#556070] hover:text-[#0B0F17] transition-colors">
                   Partners
                 </a>
-                <a href="/pricing" className="text-[15px] text-[#0B0F17] font-medium">
+                <a href="/pricing" className="text-[15px] text-[#556070] hover:text-[#0B0F17] transition-colors">
                   Pricing
                 </a>
               </div>
@@ -77,137 +50,191 @@ export default function Pricing() {
       </nav>
 
       {/* Hero */}
-      <section className="pt-20 pb-16 md:pt-28 md:pb-20">
+      <section className="pt-20 pb-24 md:pt-28 md:pb-32">
         <div className="max-w-[1200px] mx-auto px-6">
-          <div className="max-w-[700px] mx-auto text-center">
+          <div className="max-w-[800px] mx-auto text-center">
             <h1 className="text-[52px] md:text-[60px] font-semibold text-[#0B0F17] leading-[1.05] tracking-[-0.02em] mb-6">
-              Pricing that scales with your receivables.
+              Receivables automation, with full visibility.
             </h1>
-            <p className="text-[18px] md:text-[20px] text-[#556070] leading-[1.55]">
-              Choose the plan that fits your invoice volume and workflow needs. We'll help you set up automation and forecasting correctly from day one.
+            <p className="text-[18px] md:text-[20px] text-[#556070] leading-[1.55] mb-8 max-w-[640px] mx-auto">
+              Qashivo manages follow-ups and turns receivables into an always-current cash outlook. Your team focuses on exceptions, not admin.
             </p>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+              <Button
+                onClick={() => setLocation("/contact")}
+                className="bg-[#12B8C4] hover:bg-[#0fa3ae] text-white h-12 px-7 rounded-xl text-[16px] font-medium"
+              >
+                Book a demo
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+              <Button
+                onClick={() => setLocation("/home#how-it-works")}
+                variant="ghost"
+                className="text-[#556070] hover:text-[#0B0F17] h-12 px-7 text-[16px] font-medium"
+              >
+                See how it works
+              </Button>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* Plans */}
-      <section className="py-16 md:py-20">
+      {/* Module: Overview */}
+      <section id="overview" className="py-24 md:py-32 border-t border-[#E6E8EC]">
         <div className="max-w-[1200px] mx-auto px-6">
-          <div className="grid md:grid-cols-3 gap-12 md:gap-16">
-            {/* Essentials */}
+          <div className="grid lg:grid-cols-2 gap-16 items-center">
             <div>
-              <h3 className="text-[24px] font-semibold text-[#0B0F17] mb-4">Essentials</h3>
+              <h2 className="text-[32px] md:text-[40px] font-semibold text-[#0B0F17] leading-[1.15] mb-6">
+                A single view of cash reality.
+              </h2>
+              <p className="text-[18px] text-[#556070] leading-[1.55] mb-8">
+                Total outstanding, overdue, and collection performance in one place, updated continuously as invoices and payments change.
+              </p>
               <ul className="space-y-4">
                 <li className="flex items-start gap-3">
                   <Check className="w-5 h-5 text-[#12B8C4] mt-0.5 flex-shrink-0" />
-                  <span className="text-[16px] text-[#556070]">Continuous receivables monitoring</span>
+                  <span className="text-[16px] text-[#556070]">Track total outstanding and overdue at a glance</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <Check className="w-5 h-5 text-[#12B8C4] mt-0.5 flex-shrink-0" />
-                  <span className="text-[16px] text-[#556070]">Automated follow-ups with templates</span>
+                  <span className="text-[16px] text-[#556070]">See cash collected this week and this month</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <Check className="w-5 h-5 text-[#12B8C4] mt-0.5 flex-shrink-0" />
-                  <span className="text-[16px] text-[#556070]">Cash inflow forecast (standard horizon)</span>
+                  <span className="text-[16px] text-[#556070]">Monitor collection performance metrics over time</span>
                 </li>
               </ul>
             </div>
-
-            {/* Growth */}
-            <div>
-              <h3 className="text-[24px] font-semibold text-[#0B0F17] mb-4">Growth</h3>
-              <ul className="space-y-4">
-                <li className="flex items-start gap-3">
-                  <Check className="w-5 h-5 text-[#12B8C4] mt-0.5 flex-shrink-0" />
-                  <span className="text-[16px] text-[#556070]">Advanced follow-up rules and escalations</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <Check className="w-5 h-5 text-[#12B8C4] mt-0.5 flex-shrink-0" />
-                  <span className="text-[16px] text-[#556070]">Promise tracking and Attention workflow</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <Check className="w-5 h-5 text-[#12B8C4] mt-0.5 flex-shrink-0" />
-                  <span className="text-[16px] text-[#556070]">Expanded forecast horizons and drill-down</span>
-                </li>
-              </ul>
+            <div className="bg-[#F0F2F5] rounded-2xl p-3">
+              <img 
+                src={overviewScreenshot} 
+                alt="Overview Dashboard" 
+                className="w-full rounded-xl border border-[#E6E8EC]"
+              />
             </div>
-
-            {/* Scale */}
-            <div>
-              <h3 className="text-[24px] font-semibold text-[#0B0F17] mb-4">Scale</h3>
-              <ul className="space-y-4">
-                <li className="flex items-start gap-3">
-                  <Check className="w-5 h-5 text-[#12B8C4] mt-0.5 flex-shrink-0" />
-                  <span className="text-[16px] text-[#556070]">Multi-entity / multi-team workflows</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <Check className="w-5 h-5 text-[#12B8C4] mt-0.5 flex-shrink-0" />
-                  <span className="text-[16px] text-[#556070]">Custom rules, permissions, and reporting</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <Check className="w-5 h-5 text-[#12B8C4] mt-0.5 flex-shrink-0" />
-                  <span className="text-[16px] text-[#556070]">Dedicated onboarding and support options</span>
-                </li>
-              </ul>
-            </div>
-          </div>
-
-          <p className="text-center text-[15px] text-[#556070] mt-16 max-w-[500px] mx-auto">
-            Not sure which plan fits? We'll recommend the right setup based on your receivables workflow and volume.
-          </p>
-
-          <div className="flex justify-center mt-8">
-            <Button
-              onClick={() => setLocation("/contact")}
-              className="bg-[#12B8C4] hover:bg-[#0fa3ae] text-white h-12 px-7 rounded-xl text-[16px] font-medium"
-            >
-              Book a demo
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
           </div>
         </div>
       </section>
 
-      {/* FAQ */}
-      <section className="py-24 md:py-32 border-t border-[#E6E8EC]">
-        <div className="max-w-[700px] mx-auto px-6">
-          <h2 className="text-[32px] md:text-[40px] font-semibold text-[#0B0F17] text-center leading-[1.15] mb-12">
-            Frequently asked questions
-          </h2>
-          
-          <div className="divide-y divide-[#E6E8EC]">
-            {faqs.map((faq, index) => (
-              <div key={index} className="py-5">
-                <button
-                  onClick={() => setOpenFaq(openFaq === index ? null : index)}
-                  className="flex items-center justify-between w-full text-left"
-                >
-                  <span className="text-[17px] font-medium text-[#0B0F17] pr-4">
-                    {faq.question}
-                  </span>
-                  <ChevronDown 
-                    className={`w-5 h-5 text-[#556070] flex-shrink-0 transition-transform ${openFaq === index ? 'rotate-180' : ''}`} 
-                  />
-                </button>
-                {openFaq === index && (
-                  <p className="text-[16px] text-[#556070] leading-[1.55] mt-3 pr-8">
-                    {faq.answer}
-                  </p>
-                )}
-              </div>
-            ))}
+      {/* Module: Attention */}
+      <section id="attention" className="py-24 md:py-32 border-t border-[#E6E8EC] bg-white">
+        <div className="max-w-[1200px] mx-auto px-6">
+          <div className="grid lg:grid-cols-2 gap-16 items-center">
+            <div className="order-2 lg:order-1 bg-[#F0F2F5] rounded-2xl p-3">
+              <img 
+                src={overviewScreenshot} 
+                alt="Attention Workflow" 
+                className="w-full rounded-xl border border-[#E6E8EC]"
+              />
+            </div>
+            <div className="order-1 lg:order-2">
+              <h2 className="text-[32px] md:text-[40px] font-semibold text-[#0B0F17] leading-[1.15] mb-6">
+                Your worklist - only what needs a decision.
+              </h2>
+              <p className="text-[18px] text-[#556070] leading-[1.55] mb-8">
+                Qashivo flags invoices and accounts that require judgement: disputes, broken promises, unusual delays, or high-value risk.
+              </p>
+              <ul className="space-y-4">
+                <li className="flex items-start gap-3">
+                  <Check className="w-5 h-5 text-[#12B8C4] mt-0.5 flex-shrink-0" />
+                  <span className="text-[16px] text-[#556070]">Exception-first workflow (review, resolve, move on)</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <Check className="w-5 h-5 text-[#12B8C4] mt-0.5 flex-shrink-0" />
+                  <span className="text-[16px] text-[#556070]">Clear reasons for every flag (so it's easy to act)</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <Check className="w-5 h-5 text-[#12B8C4] mt-0.5 flex-shrink-0" />
+                  <span className="text-[16px] text-[#556070]">Escalation paths for higher-risk accounts</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Module: Cash Flow */}
+      <section id="cashflow" className="py-24 md:py-32 border-t border-[#E6E8EC]">
+        <div className="max-w-[1200px] mx-auto px-6">
+          <div className="grid lg:grid-cols-2 gap-16 items-center">
+            <div>
+              <h2 className="text-[32px] md:text-[40px] font-semibold text-[#0B0F17] leading-[1.15] mb-6">
+                Forecast cash with confidence ranges.
+              </h2>
+              <p className="text-[18px] text-[#556070] leading-[1.55] mb-8">
+                Projected cash position and expected inflows, plus confidence bands that reflect uncertainty, not wishful thinking.
+              </p>
+              <ul className="space-y-4">
+                <li className="flex items-start gap-3">
+                  <Check className="w-5 h-5 text-[#12B8C4] mt-0.5 flex-shrink-0" />
+                  <span className="text-[16px] text-[#556070]">Rolling horizons (4W / 13W / 6M / 12M)</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <Check className="w-5 h-5 text-[#12B8C4] mt-0.5 flex-shrink-0" />
+                  <span className="text-[16px] text-[#556070]">Confidence ranges to communicate risk clearly</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <Check className="w-5 h-5 text-[#12B8C4] mt-0.5 flex-shrink-0" />
+                  <span className="text-[16px] text-[#556070]">Drill-down to customers and invoices driving change</span>
+                </li>
+              </ul>
+            </div>
+            <div className="bg-[#F0F2F5] rounded-2xl p-3">
+              <img 
+                src={cashFlowScreenshot} 
+                alt="Cash Flow Forecast" 
+                className="w-full rounded-xl border border-[#E6E8EC]"
+              />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Module: Follow-ups */}
+      <section id="followups" className="py-24 md:py-32 border-t border-[#E6E8EC] bg-white">
+        <div className="max-w-[1200px] mx-auto px-6">
+          <div className="grid lg:grid-cols-2 gap-16 items-center">
+            <div className="order-2 lg:order-1 bg-[#F0F2F5] rounded-2xl p-3">
+              <img 
+                src={overviewScreenshot} 
+                alt="Follow-ups & Promises" 
+                className="w-full rounded-xl border border-[#E6E8EC]"
+              />
+            </div>
+            <div className="order-1 lg:order-2">
+              <h2 className="text-[32px] md:text-[40px] font-semibold text-[#0B0F17] leading-[1.15] mb-6">
+                Follow-up that's consistent, and on-brand.
+              </h2>
+              <p className="text-[18px] text-[#556070] leading-[1.55] mb-8">
+                Automate reminders, track promises, and escalate when needed so your process isn't trapped in inbox threads.
+              </p>
+              <ul className="space-y-4">
+                <li className="flex items-start gap-3">
+                  <Check className="w-5 h-5 text-[#12B8C4] mt-0.5 flex-shrink-0" />
+                  <span className="text-[16px] text-[#556070]">Configurable timing, templates, and tone</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <Check className="w-5 h-5 text-[#12B8C4] mt-0.5 flex-shrink-0" />
+                  <span className="text-[16px] text-[#556070]">Promise-to-pay tracking and reminders</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <Check className="w-5 h-5 text-[#12B8C4] mt-0.5 flex-shrink-0" />
+                  <span className="text-[16px] text-[#556070]">Escalations for overdue, disputed, or stalled invoices</span>
+                </li>
+              </ul>
+            </div>
           </div>
         </div>
       </section>
 
       {/* Final CTA */}
-      <section className="py-24 md:py-32 border-t border-[#E6E8EC] bg-white">
+      <section className="py-24 md:py-32 border-t border-[#E6E8EC]">
         <div className="max-w-[700px] mx-auto px-6 text-center">
           <h2 className="text-[32px] md:text-[40px] font-semibold text-[#0B0F17] leading-[1.15] mb-6">
-            Get to cash clarity … fast.
+            See Qashivo on your receivables.
           </h2>
           <p className="text-[18px] text-[#556070] leading-[1.55] mb-8">
-            Connect your data and see automated follow-ups plus an always-current cash outlook in one session.
+            We'll walk through your workflow, show how Attention works, and review a live forecast based on your data.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Button
@@ -222,7 +249,7 @@ export default function Pricing() {
               variant="ghost"
               className="text-[#556070] hover:text-[#0B0F17] h-12 px-7 text-[16px] font-medium"
             >
-              Contact sales
+              Talk to us
             </Button>
           </div>
         </div>
