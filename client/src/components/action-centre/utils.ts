@@ -98,7 +98,50 @@ export function buildWeeklyForecast(
   for (const debtor of debtors) {
     const cells: ForecastCell[] = [];
     
-    if (debtor.ptpDate) {
+    // Use paymentPromises array if available, otherwise fall back to single ptpDate
+    if (debtor.paymentPromises && debtor.paymentPromises.length > 0) {
+      // Group promises by week bucket
+      const weekAmounts = new Map<string, { amount: number; count: number; earliestDate: string }>();
+      
+      for (const promise of debtor.paymentPromises) {
+        const promiseDate = new Date(promise.date);
+        
+        for (const bucket of weekBuckets) {
+          if (promiseDate >= bucket.startDate && promiseDate <= bucket.endDate) {
+            const weekKey = bucket.startDate.toISOString().split('T')[0];
+            const existing = weekAmounts.get(weekKey);
+            if (existing) {
+              existing.amount += promise.amount;
+              existing.count += 1;
+              if (promise.date < existing.earliestDate) {
+                existing.earliestDate = promise.date;
+              }
+            } else {
+              weekAmounts.set(weekKey, { 
+                amount: promise.amount, 
+                count: 1, 
+                earliestDate: promise.date 
+              });
+            }
+            break;
+          }
+        }
+      }
+      
+      // Create forecast cells for each week with promises
+      Array.from(weekAmounts.entries()).forEach(([weekStartISO, data]) => {
+        cells.push({
+          debtorId: debtor.id,
+          weekStartISO,
+          expectedAmount: data.amount,
+          confidence: 'high',
+          source: 'ptp',
+          ptpDate: data.earliestDate,
+          invoiceCount: data.count,
+        });
+      });
+    } else if (debtor.ptpDate) {
+      // Fall back to legacy single ptpDate
       const ptpDate = new Date(debtor.ptpDate);
       
       for (const bucket of weekBuckets) {

@@ -23,6 +23,12 @@ export type ForecastConfidence = 'high' | 'medium' | 'low';
 
 export type ForecastSource = 'ptp' | 'confirmed_paid' | 'historical' | 'inferred';
 
+export interface PaymentPromise {
+  date: string;
+  amount: number;
+  invoiceId?: string;
+}
+
 export interface Debtor {
   id: string;
   name: string;
@@ -37,6 +43,7 @@ export interface Debtor {
   lastActionChannel?: ActionChannel;
   status: DebtorStatus;
   ptpDate?: string;
+  paymentPromises?: PaymentPromise[];
   disputeFlag?: boolean;
   queryFlag?: boolean;
 }

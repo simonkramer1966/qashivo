@@ -5664,7 +5664,21 @@ Guidelines:
         )
         .orderBy(paymentPromises.promisedDate);
       
-      // Build a map of contactId -> earliest pending promise date
+      // Build a map of contactId -> array of pending promises with dates and amounts
+      const contactPromisesMap = new Map<string, Array<{ date: Date; amount: number; invoiceId: string }>>();
+      for (const promise of pendingPromises) {
+        if (promise.contactId && promise.promisedDate) {
+          if (!contactPromisesMap.has(promise.contactId)) {
+            contactPromisesMap.set(promise.contactId, []);
+          }
+          contactPromisesMap.get(promise.contactId)!.push({
+            date: new Date(promise.promisedDate),
+            amount: parseFloat(String(promise.promisedAmount || 0)),
+            invoiceId: promise.invoiceId || ''
+          });
+        }
+      }
+      // Also keep the old single-date map for backward compatibility
       const contactPtpMap = new Map<string, Date>();
       for (const promise of pendingPromises) {
         if (promise.contactId && !contactPtpMap.has(promise.contactId)) {
@@ -6299,6 +6313,8 @@ Guidelines:
             
             // Get ptpDate from payment promises map
             const ptpDate = contactPtpMap.get(contactId);
+            // Get all payment promises for this contact
+            const promises = contactPromisesMap.get(contactId) || [];
             
             debtorMap.set(contactId, {
               contactId,
@@ -6310,6 +6326,11 @@ Guidelines:
               invoices: [],
               oldestDueDate: inv.dueDate,
               ptpDate: ptpDate ? ptpDate.toISOString() : null,
+              paymentPromises: promises.map(p => ({
+                date: p.date.toISOString(),
+                amount: p.amount,
+                invoiceId: p.invoiceId
+              })),
             });
           }
           
