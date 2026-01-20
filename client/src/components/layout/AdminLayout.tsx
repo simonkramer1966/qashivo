@@ -7,12 +7,12 @@ import {
   ListChecks, 
   FileDown, 
   ScrollText,
-  ChevronRight,
   LogOut
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { queryClient } from "@/lib/queryClient";
+import nexusLogo from "@assets/Main Nexus Logo copy_1756923544828.png";
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -53,13 +53,13 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     <div className="flex h-screen bg-white">
       <aside className="w-56 border-r border-slate-100 flex flex-col">
         <div className="p-4 border-b border-slate-100">
-          <Link href="/dashboard">
-            <span className="text-[11px] font-medium text-slate-400 uppercase tracking-wider flex items-center gap-1 hover:text-slate-600 transition-colors cursor-pointer">
-              <ChevronRight className="w-3 h-3 rotate-180" />
-              Back to App
-            </span>
-          </Link>
-          <h1 className="text-[15px] font-semibold text-slate-900 mt-2">Admin Console</h1>
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#17B6C3] to-[#0d8a94] flex items-center justify-center shadow-sm">
+              <img src={nexusLogo} alt="Qashivo" className="w-full h-full object-contain" />
+            </div>
+            <span className="text-[17px] font-semibold text-slate-900 tracking-tight">Qashivo</span>
+          </div>
+          <h1 className="text-[13px] font-medium text-slate-500">Admin Console</h1>
         </div>
         
         <nav className="flex-1 p-2">
