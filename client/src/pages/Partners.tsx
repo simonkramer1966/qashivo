@@ -40,6 +40,9 @@ export default function Partners() {
                 <span className="text-[18px] font-semibold text-[#0B0F17] tracking-tight">Qashivo</span>
               </a>
               <div className="hidden md:flex items-center gap-8">
+                <a href="/home" className="text-[15px] text-[#556070] hover:text-[#0B0F17] transition-colors">
+                  Home
+                </a>
                 <a href="/product" className="text-[15px] text-[#556070] hover:text-[#0B0F17] transition-colors">
                   Product
                 </a>
@@ -79,6 +82,7 @@ export default function Partners() {
         {mobileMenuOpen && (
           <div className="md:hidden border-t border-[#E6E8EC] bg-white px-6 py-4">
             <div className="flex flex-col gap-4">
+              <a href="/home" className="text-[16px] text-[#556070] hover:text-[#0B0F17] py-2">Home</a>
               <a href="/product" className="text-[16px] text-[#556070] hover:text-[#0B0F17] py-2">Product</a>
               <a href="/home#how-it-works" className="text-[16px] text-[#556070] hover:text-[#0B0F17] py-2">How it works</a>
               <a href="/partners" className="text-[16px] text-[#0B0F17] font-medium py-2">Partners</a>
