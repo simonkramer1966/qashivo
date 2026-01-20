@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import { ArrowRight, Check, ChevronDown, Menu, X } from "lucide-react";
 import { useState } from "react";
 import logo from "@assets/Main_Nexus_Logo_copy_1768893717341.png";
-import overviewScreenshot from "@assets/Screenshot_2026-01-15_at_16.33.25_1768920824618.png";
+import overviewScreenshot from "@assets/Screenshot_2026-01-20_at_16.41.29_1768927352717.png";
 import cashFlowScreenshot from "@assets/Screenshot_2026-01-15_at_16.57.28_1768920824623.png";
 
 export default function Home() {
