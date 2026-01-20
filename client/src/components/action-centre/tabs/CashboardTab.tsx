@@ -35,7 +35,7 @@ export function CashboardTab({ debtors, onSelectDebtor, isLoading }: CashboardTa
 
   return (
     <TooltipProvider delayDuration={200}>
-      <div className="overflow-x-auto">
+      <div className="overflow-auto max-h-[calc(100vh-280px)]">
         <table className="w-full" style={{ minWidth: '900px', tableLayout: 'fixed' }}>
           <colgroup>
             <col style={{ width: '18%' }} />
