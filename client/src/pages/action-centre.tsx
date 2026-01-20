@@ -103,37 +103,68 @@ export default function ActionCentreV2() {
   const debtors: Debtor[] = useMemo(() => {
     if (!tabData) return [];
     
+    // First, track which contactIds are in disputes and queries tabs
+    const disputeContactIds = new Set<string>(
+      (tabData.disputes?.items || []).map((item: any) => item.contactId).filter(Boolean)
+    );
+    const queryContactIds = new Set<string>(
+      (tabData.queries?.items || []).map((item: any) => item.contactId).filter(Boolean)
+    );
+    const brokenContactIds = new Set<string>(
+      (tabData.broken?.items || []).map((item: any) => item.contactId).filter(Boolean)
+    );
+    const promiseContactIds = new Set<string>(
+      (tabData.promises?.items || []).map((item: any) => item.contactId).filter(Boolean)
+    );
+    
     const allItems: any[] = [];
     const seen = new Set<string>();
     
-    for (const tab of ['overdue', 'due', 'promises', 'broken', 'disputes', 'queries', 'vip'] as const) {
+    // Iterate in precedence order: disputes > queries > broken > promises > vip > overdue > due
+    for (const tab of ['disputes', 'queries', 'broken', 'promises', 'vip', 'overdue', 'due'] as const) {
       const items = tabData[tab]?.items || [];
       for (const item of items) {
         if (item.contactId && !seen.has(item.contactId)) {
           seen.add(item.contactId);
-          allItems.push(item);
+          allItems.push({
+            ...item,
+            // Set flags based on category membership, not just which tab they came from
+            disputeFlag: disputeContactIds.has(item.contactId),
+            queryFlag: queryContactIds.has(item.contactId),
+            brokenFlag: brokenContactIds.has(item.contactId),
+            promiseFlag: promiseContactIds.has(item.contactId),
+          });
         }
       }
     }
     
-    return allItems.map(item => ({
-      id: item.contactId,
-      name: item.companyName || item.contactName || 'Unknown',
-      primaryContactName: item.contactName,
-      email: item.email,
-      phone: item.phone,
-      totalOutstanding: item.totalOutstanding || 0,
-      totalOverdue: item.totalOverdue || item.totalOutstanding || 0,
-      oldestDaysOverdue: item.oldestDaysOverdue || 0,
-      invoiceCount: item.invoiceCount || 1,
-      lastActionAt: item.lastActionAt,
-      lastActionChannel: item.lastActionChannel,
-      status: getDebtorStatus(item),
-      ptpDate: item.ptpDate,
-      paymentPromises: item.paymentPromises,
-      disputeFlag: item.disputeFlag,
-      queryFlag: item.queryFlag,
-    }));
+    return allItems.map(item => {
+      const debtorWithFlags = {
+        ...item,
+        disputeFlag: item.disputeFlag,
+        queryFlag: item.queryFlag,
+        brokenFlag: item.brokenFlag,
+        promiseFlag: item.promiseFlag,
+      };
+      return {
+        id: item.contactId,
+        name: item.companyName || item.contactName || 'Unknown',
+        primaryContactName: item.contactName,
+        email: item.email,
+        phone: item.phone,
+        totalOutstanding: item.totalOutstanding || 0,
+        totalOverdue: item.totalOverdue || item.totalOutstanding || 0,
+        oldestDaysOverdue: item.oldestDaysOverdue || 0,
+        invoiceCount: item.invoiceCount || 1,
+        lastActionAt: item.lastActionAt,
+        lastActionChannel: item.lastActionChannel,
+        status: getDebtorStatus(debtorWithFlags),
+        ptpDate: item.ptpDate,
+        paymentPromises: item.paymentPromises,
+        disputeFlag: item.disputeFlag,
+        queryFlag: item.queryFlag,
+      };
+    });
   }, [tabData]);
 
   const generatePlanMutation = useMutation({

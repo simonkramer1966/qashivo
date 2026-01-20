@@ -8,13 +8,22 @@ import {
   AttentionItem
 } from './types';
 
-export function getDebtorStatus(debtor: Partial<Debtor>): DebtorStatus {
+export function getDebtorStatus(debtor: Partial<Debtor> & { brokenFlag?: boolean; promiseFlag?: boolean }): DebtorStatus {
   if (debtor.totalOutstanding === 0) return 'paid';
+  
+  // Precedence: disputes > queries > broken > promised > no_contact > overdue > due
   if (debtor.disputeFlag) return 'dispute';
   if (debtor.queryFlag) return 'query';
   
-  if (debtor.ptpDate) {
-    const ptpDate = new Date(debtor.ptpDate);
+  // Use brokenFlag from backend if available, otherwise check ptpDate
+  if (debtor.brokenFlag) return 'broken';
+  
+  // Use promiseFlag from backend or check ptpDate for pending promises
+  if (debtor.promiseFlag || debtor.ptpDate) {
+    // If promiseFlag is set, it's a pending promise (backend validated)
+    if (debtor.promiseFlag) return 'promised';
+    // Fallback: check ptpDate manually if no promiseFlag
+    const ptpDate = new Date(debtor.ptpDate!);
     const now = new Date();
     if (ptpDate < now) return 'broken';
     return 'promised';
