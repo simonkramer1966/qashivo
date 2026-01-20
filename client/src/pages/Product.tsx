@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { useLocation } from "wouter";
 import { ArrowRight, Check, Menu, X } from "lucide-react";
 import { useState } from "react";
@@ -12,6 +13,7 @@ import attentionScreenshot from "@assets/Screenshot_2026-01-20_at_22.11.45_17689
 export default function Product() {
   const [, setLocation] = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [enlargedImage, setEnlargedImage] = useState<{ src: string; alt: string } | null>(null);
 
   return (
     <div className="min-h-screen bg-[#FBFBFC]">
@@ -145,7 +147,8 @@ export default function Product() {
               <img 
                 src={cashboardScreenshot} 
                 alt="Overview Dashboard" 
-                className="w-full rounded-xl border border-[#E6E8EC]"
+                className="w-full rounded-xl border border-[#E6E8EC] cursor-pointer hover:opacity-90 transition-opacity"
+                onClick={() => setEnlargedImage({ src: cashboardScreenshot, alt: "Overview Dashboard" })}
               />
             </div>
           </div>
@@ -159,7 +162,8 @@ export default function Product() {
               <img 
                 src={attentionScreenshot} 
                 alt="Attention Workflow" 
-                className="w-full rounded-xl border border-[#E6E8EC]"
+                className="w-full rounded-xl border border-[#E6E8EC] cursor-pointer hover:opacity-90 transition-opacity"
+                onClick={() => setEnlargedImage({ src: attentionScreenshot, alt: "Attention Workflow" })}
               />
             </div>
             <div className="order-1 lg:order-2">
@@ -217,7 +221,8 @@ export default function Product() {
               <img 
                 src={cashFlowScreenshot} 
                 alt="Cash Flow Forecast" 
-                className="w-full rounded-xl border border-[#E6E8EC]"
+                className="w-full rounded-xl border border-[#E6E8EC] cursor-pointer hover:opacity-90 transition-opacity"
+                onClick={() => setEnlargedImage({ src: cashFlowScreenshot, alt: "Cash Flow Forecast" })}
               />
             </div>
           </div>
@@ -231,7 +236,8 @@ export default function Product() {
               <img 
                 src={followupsScreenshot} 
                 alt="Follow-ups & Promises" 
-                className="w-full rounded-xl border border-[#E6E8EC]"
+                className="w-full rounded-xl border border-[#E6E8EC] cursor-pointer hover:opacity-90 transition-opacity"
+                onClick={() => setEnlargedImage({ src: followupsScreenshot, alt: "Follow-ups & Promises" })}
               />
             </div>
             <div className="order-1 lg:order-2">
@@ -343,6 +349,18 @@ export default function Product() {
           </div>
         </div>
       </footer>
+
+      <Dialog open={!!enlargedImage} onOpenChange={() => setEnlargedImage(null)}>
+        <DialogContent className="max-w-[90vw] max-h-[90vh] p-0 border-0 bg-transparent shadow-none">
+          {enlargedImage && (
+            <img 
+              src={enlargedImage.src} 
+              alt={enlargedImage.alt}
+              className="w-full h-auto max-h-[90vh] object-contain rounded-lg"
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

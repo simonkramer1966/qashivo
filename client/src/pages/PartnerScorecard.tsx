@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useState } from "react";
@@ -133,6 +134,7 @@ export default function PartnerScorecard() {
     companyName: "",
     jobTitle: "",
   });
+  const [enlargedImage, setEnlargedImage] = useState<{ src: string; alt: string } | null>(null);
 
   const signupMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
@@ -232,7 +234,8 @@ export default function PartnerScorecard() {
                     <img 
                       src={overviewScreenshot} 
                       alt="Qashivo Dashboard" 
-                      className="w-full rounded-xl border border-[#E6E8EC]"
+                      className="w-full rounded-xl border border-[#E6E8EC] cursor-pointer hover:opacity-90 transition-opacity"
+                      onClick={() => setEnlargedImage({ src: overviewScreenshot, alt: "Qashivo Dashboard" })}
                     />
                   </div>
                 </div>
@@ -579,6 +582,18 @@ export default function PartnerScorecard() {
           </div>
         </div>
       </footer>
+
+      <Dialog open={!!enlargedImage} onOpenChange={() => setEnlargedImage(null)}>
+        <DialogContent className="max-w-[90vw] max-h-[90vh] p-0 border-0 bg-transparent shadow-none">
+          {enlargedImage && (
+            <img 
+              src={enlargedImage.src} 
+              alt={enlargedImage.alt}
+              className="w-full h-auto max-h-[90vh] object-contain rounded-lg"
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
