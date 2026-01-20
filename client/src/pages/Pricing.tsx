@@ -129,13 +129,13 @@ export default function Pricing() {
         <div className="max-w-[1200px] mx-auto px-6">
           <div className="grid md:grid-cols-3 gap-8 md:gap-10">
             {/* Essentials */}
-            <div className="bg-white rounded-2xl border border-[#E6E8EC] p-8">
+            <div className="bg-white rounded-2xl border border-[#E6E8EC] p-8 flex flex-col">
               <h3 className="text-[24px] font-semibold text-[#0B0F17] mb-2">Essentials</h3>
               <div className="mb-6">
                 <span className="text-[40px] font-semibold text-[#0B0F17]">£49</span>
                 <span className="text-[16px] text-[#556070]">/month</span>
               </div>
-              <ul className="space-y-4 mb-8">
+              <ul className="space-y-4 mb-8 flex-1">
                 <li className="flex items-start gap-3">
                   <Check className="w-5 h-5 text-[#12B8C4] mt-0.5 flex-shrink-0" />
                   <span className="text-[16px] text-[#556070]">Continuous receivables monitoring</span>
@@ -152,14 +152,14 @@ export default function Pricing() {
               <Button
                 onClick={() => setLocation("/contact")}
                 variant="outline"
-                className="w-full h-12 rounded-xl text-[15px] font-medium border-[#E6E8EC] text-[#0B0F17] hover:bg-[#F5F5F7]"
+                className="w-full h-12 rounded-xl text-[15px] font-medium border-[#E6E8EC] text-[#0B0F17] hover:bg-[#F5F5F7] mt-auto"
               >
                 Get started
               </Button>
             </div>
 
             {/* Growth - Most Popular */}
-            <div className="bg-white rounded-2xl border-2 border-[#12B8C4] p-8 relative">
+            <div className="bg-white rounded-2xl border-2 border-[#12B8C4] p-8 relative flex flex-col">
               <div className="absolute -top-3 left-1/2 -translate-x-1/2">
                 <span className="bg-[#12B8C4] text-white text-[12px] font-medium px-3 py-1 rounded-full">
                   Most popular
@@ -170,7 +170,7 @@ export default function Pricing() {
                 <span className="text-[40px] font-semibold text-[#0B0F17]">£149</span>
                 <span className="text-[16px] text-[#556070]">/month</span>
               </div>
-              <ul className="space-y-4 mb-8">
+              <ul className="space-y-4 mb-8 flex-1">
                 <li className="flex items-start gap-3">
                   <Check className="w-5 h-5 text-[#12B8C4] mt-0.5 flex-shrink-0" />
                   <span className="text-[16px] text-[#556070]">Everything in Essentials</span>
@@ -190,20 +190,20 @@ export default function Pricing() {
               </ul>
               <Button
                 onClick={() => setLocation("/contact")}
-                className="w-full h-12 rounded-xl text-[15px] font-medium bg-[#12B8C4] hover:bg-[#0fa3ae] text-white"
+                className="w-full h-12 rounded-xl text-[15px] font-medium bg-[#12B8C4] hover:bg-[#0fa3ae] text-white mt-auto"
               >
                 Get started
               </Button>
             </div>
 
             {/* Scale */}
-            <div className="bg-white rounded-2xl border border-[#E6E8EC] p-8">
+            <div className="bg-white rounded-2xl border border-[#E6E8EC] p-8 flex flex-col">
               <h3 className="text-[24px] font-semibold text-[#0B0F17] mb-2">Scale</h3>
               <div className="mb-6">
                 <span className="text-[40px] font-semibold text-[#0B0F17]">£499</span>
                 <span className="text-[16px] text-[#556070]">/month</span>
               </div>
-              <ul className="space-y-4 mb-8">
+              <ul className="space-y-4 mb-8 flex-1">
                 <li className="flex items-start gap-3">
                   <Check className="w-5 h-5 text-[#12B8C4] mt-0.5 flex-shrink-0" />
                   <span className="text-[16px] text-[#556070]">Everything in Growth</span>
@@ -224,7 +224,7 @@ export default function Pricing() {
               <Button
                 onClick={() => setLocation("/contact")}
                 variant="outline"
-                className="w-full h-12 rounded-xl text-[15px] font-medium border-[#E6E8EC] text-[#0B0F17] hover:bg-[#F5F5F7]"
+                className="w-full h-12 rounded-xl text-[15px] font-medium border-[#E6E8EC] text-[#0B0F17] hover:bg-[#F5F5F7] mt-auto"
               >
                 Contact sales
               </Button>
