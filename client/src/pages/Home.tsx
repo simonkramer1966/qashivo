@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { useLocation } from "wouter";
 import { ArrowRight, Check, ChevronDown, Menu, X } from "lucide-react";
 import { useState } from "react";
@@ -12,6 +13,7 @@ import Screenshot_2026_01_20_at_17_48_14 from "@assets/Screenshot 2026-01-20 at 
 export default function Home() {
   const [, setLocation] = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [enlargedImage, setEnlargedImage] = useState<{ src: string; alt: string } | null>(null);
 
   return (
     <div className="min-h-screen bg-[#FBFBFC]">
@@ -126,7 +128,8 @@ export default function Home() {
               <img 
                 src={overviewScreenshot} 
                 alt="Qashivo Overview Dashboard" 
-                className="w-full rounded-xl border border-[#E6E8EC]"
+                className="w-full rounded-xl border border-[#E6E8EC] cursor-pointer hover:opacity-90 transition-opacity"
+                onClick={() => setEnlargedImage({ src: overviewScreenshot, alt: "Qashivo Overview Dashboard" })}
               />
             </div>
           </div>
@@ -220,7 +223,8 @@ export default function Home() {
               <img 
                 src={cashFlowScreenshot} 
                 alt="Cash Flow Forecast" 
-                className="w-full rounded-xl border border-[#E6E8EC]"
+                className="w-full rounded-xl border border-[#E6E8EC] cursor-pointer hover:opacity-90 transition-opacity"
+                onClick={() => setEnlargedImage({ src: cashFlowScreenshot, alt: "Cash Flow Forecast" })}
               />
             </div>
           </div>
@@ -234,7 +238,8 @@ export default function Home() {
               <img 
                 src={Screenshot_2026_01_20_at_17_48_14} 
                 alt="Collections Performance" 
-                className="w-full rounded-xl border border-[#E6E8EC]"
+                className="w-full rounded-xl border border-[#E6E8EC] cursor-pointer hover:opacity-90 transition-opacity"
+                onClick={() => setEnlargedImage({ src: Screenshot_2026_01_20_at_17_48_14, alt: "Collections Performance" })}
               />
             </div>
             <div className="order-1 lg:order-2">
@@ -392,6 +397,18 @@ export default function Home() {
           </div>
         </div>
       </footer>
+
+      <Dialog open={!!enlargedImage} onOpenChange={() => setEnlargedImage(null)}>
+        <DialogContent className="max-w-[90vw] max-h-[90vh] p-0 border-0 bg-transparent shadow-none">
+          {enlargedImage && (
+            <img 
+              src={enlargedImage.src} 
+              alt={enlargedImage.alt}
+              className="w-full h-auto max-h-[90vh] object-contain rounded-lg"
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
