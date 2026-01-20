@@ -87,7 +87,7 @@ export default function Contact() {
             <div className="flex items-center gap-10">
               <a href="/home" className="flex items-center gap-2">
                 <img src={logo} alt="Qashivo" className="h-8 w-8" />
-                <span className="text-[18px] font-semibold text-[#0B0F17] tracking-tight">Qashivo</span>
+                <span className="font-semibold text-[#0B0F17] tracking-tight text-[22px]">Qashivo</span>
               </a>
               <div className="hidden md:flex items-center gap-8">
                 <a href="/home" className="text-[15px] text-[#556070] hover:text-[#0B0F17] transition-colors">
@@ -151,7 +151,6 @@ export default function Contact() {
           </div>
         )}
       </nav>
-
       {/* Hero */}
       <section className="py-20 md:py-28">
         <div className="max-w-[600px] mx-auto px-6 text-center">
@@ -163,7 +162,6 @@ export default function Contact() {
           </p>
         </div>
       </section>
-
       {/* Contact Section */}
       <section className="pb-24">
         <div className="max-w-[1000px] mx-auto px-6">
@@ -363,7 +361,6 @@ export default function Contact() {
           </div>
         </div>
       </section>
-
       {/* Footer */}
       <footer className="border-t border-[#E6E8EC] py-12">
         <div className="max-w-[1200px] mx-auto px-6">
