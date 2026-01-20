@@ -344,7 +344,7 @@ export default function Cashboard() {
                     />
                     <Bar 
                       dataKey="expectedAmount" 
-                      fill="#E2E8F0"
+                      fill="#12B8C4"
                       radius={[2, 2, 0, 0]}
                       animationDuration={600}
                       animationEasing="ease-out"
