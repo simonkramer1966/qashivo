@@ -434,7 +434,7 @@ export default function NewSidebar() {
             <img src={nexusLogo} alt="Qashivo" className="w-full h-full object-contain" />
           </div>
           {!isCollapsed && (
-            <span className="text-[17px] font-semibold text-slate-900 tracking-tight">Qashivo</span>
+            <span className="text-[22px] font-semibold text-slate-900 tracking-tight">Qashivo</span>
           )}
         </button>
         <Button
