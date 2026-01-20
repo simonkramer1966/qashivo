@@ -53,11 +53,10 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     <div className="flex h-screen bg-white">
       <aside className="w-56 border-r border-slate-100 flex flex-col">
         <div className="p-4 border-b border-slate-100">
-          <div className="flex items-center gap-2 mb-2">
+          <div className="flex items-center gap-2">
             <img src={nexusLogo} alt="Qashivo" className="w-7 h-7 object-contain" />
-            <span className="text-[17px] font-semibold text-slate-900 tracking-tight">Qashivo</span>
+            <span className="text-[17px] font-semibold text-slate-900 tracking-tight">Qashivo Admin</span>
           </div>
-          <h1 className="text-[13px] font-medium text-slate-500">Admin Console</h1>
         </div>
         
         <nav className="flex-1 p-2">
