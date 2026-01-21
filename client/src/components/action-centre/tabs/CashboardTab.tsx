@@ -14,6 +14,19 @@ const STATUS_ORDER: DebtorStatus[] = ['due', 'overdue', 'no_contact', 'promised'
 
 export function CashboardTab({ debtors, onSelectDebtor, isLoading }: CashboardTabProps) {
   const matrix = useMemo(() => buildCashboardMatrix(debtors), [debtors]);
+  
+  // Calculate column totals for each status
+  const columnTotals = useMemo(() => {
+    const totals: Record<DebtorStatus, number> = {
+      due: 0, overdue: 0, no_contact: 0, promised: 0, broken: 0, dispute: 0, query: 0, paid: 0
+    };
+    for (const row of matrix) {
+      for (const status of STATUS_ORDER) {
+        totals[status] += row.statusAmounts[status] || 0;
+      }
+    }
+    return totals;
+  }, [matrix]);
 
   // Pagination
   const PAGE_SIZE_OPTIONS = [10, 15, 25, 50];
@@ -76,9 +89,12 @@ export function CashboardTab({ debtors, onSelectDebtor, isLoading }: CashboardTa
                 {STATUS_ORDER.map(status => (
                   <th 
                     key={status} 
-                    className="px-2 text-right text-[11px] font-medium text-slate-600 uppercase tracking-wider bg-slate-50 align-middle"
+                    className="px-2 text-center bg-slate-50 align-middle"
                   >
-                    {getStatusLabel(status)}
+                    <div className="text-[11px] font-medium text-slate-600 uppercase tracking-wider">{getStatusLabel(status)}</div>
+                    <div className="font-semibold text-slate-800 text-[13px] mt-1 tabular-nums">
+                      {formatCurrencyCompact(columnTotals[status])}
+                    </div>
                   </th>
                 ))}
               </tr>
