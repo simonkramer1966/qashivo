@@ -73,9 +73,9 @@ export function ForecastTab({ debtors, onSelectDebtor, isLoading }: ForecastTabP
 
   return (
     <TooltipProvider delayDuration={200}>
-      <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-6 h-full">
         {/* Stats line */}
-        <div className="flex items-center justify-between text-[13px] text-slate-500">
+        <div className="flex items-center justify-between text-[13px] text-slate-500 flex-shrink-0">
           <span>6-week forecast based on promises to pay</span>
           <span>
             Total expected: <span className="font-medium text-slate-900 tabular-nums">{formatCurrencyCompact(grandTotal)}</span>
@@ -83,7 +83,7 @@ export function ForecastTab({ debtors, onSelectDebtor, isLoading }: ForecastTabP
         </div>
         
         {/* Table without border container */}
-        <div className="overflow-auto -mx-1 max-h-[500px]">
+        <div className="overflow-auto -mx-1 flex-1 min-h-0">
           <table className="w-full" style={{ minWidth: '700px' }}>
             <colgroup>
               <col style={{ width: '200px' }} />
