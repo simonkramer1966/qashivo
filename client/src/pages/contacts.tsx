@@ -102,6 +102,19 @@ export default function Customers() {
         <Header 
           title="Customers" 
           subtitle="Qashivo manages collections automatically. Review is only needed when something is flagged."
+          action={
+            <div className="relative w-[280px]">
+              <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 text-slate-300" />
+              <input
+                type="text"
+                placeholder="Find a customer…"
+                value={search}
+                onChange={(e) => handleSearchChange(e.target.value)}
+                className="w-full pl-8 pr-3 h-8 text-[12px] text-slate-600 placeholder:text-slate-300 bg-transparent border border-slate-200/60 rounded focus:outline-none focus:border-slate-300 transition-colors"
+                data-testid="input-search-customers"
+              />
+            </div>
+          }
         />
         
         <div className="flex-1 flex flex-col min-h-0 overflow-y-auto">
@@ -145,21 +158,6 @@ export default function Customers() {
 
             {/* Divider */}
             <div className="border-t border-slate-100/80 mb-4 flex-shrink-0" />
-
-            {/* Table Header Row - Search only */}
-            <div className="bg-white pt-2 pb-3 -mt-2 flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3 flex-shrink-0">
-              <div className="relative w-full sm:w-[280px]">
-                <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 text-slate-300" />
-                <input
-                  type="text"
-                  placeholder="Find a customer…"
-                  value={search}
-                  onChange={(e) => handleSearchChange(e.target.value)}
-                  className="w-full pl-8 pr-3 h-7 text-[12px] text-slate-600 placeholder:text-slate-300 bg-transparent border border-slate-200/60 rounded focus:outline-none focus:border-slate-300 transition-colors"
-                  data-testid="input-search-customers"
-                />
-              </div>
-            </div>
 
             {/* Mobile View - Clean List */}
             <div className="space-y-0 sm:hidden flex-1">
