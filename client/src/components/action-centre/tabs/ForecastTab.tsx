@@ -111,10 +111,10 @@ export function ForecastTab({ debtors, onSelectDebtor, isLoading }: ForecastTabP
                 <th className="px-3 text-left text-[11px] font-medium text-slate-600 uppercase tracking-wider sticky left-0 bg-slate-50 z-30 align-middle">
                   Customer
                 </th>
-                {weekBuckets.map(bucket => (
+                {weekBuckets.map((bucket, idx) => (
                   <th 
                     key={bucket.weekCommencing} 
-                    className="text-center px-2 bg-slate-50 align-middle"
+                    className={`text-right px-2 bg-slate-50 align-middle ${idx > 0 ? 'border-l border-slate-100' : ''}`}
                   >
                     <div className="text-[11px] font-medium text-slate-600 uppercase tracking-wider">{bucket.weekCommencing}</div>
                     <div className="font-semibold text-slate-800 text-[13px] mt-1 tabular-nums">
@@ -154,13 +154,14 @@ export function ForecastTab({ debtors, onSelectDebtor, isLoading }: ForecastTabP
                           </div>
                         </button>
                       </td>
-                      {weekBuckets.map(bucket => {
+                      {weekBuckets.map((bucket, idx) => {
                         const bucketDateStr = `${bucket.startDate.getFullYear()}-${String(bucket.startDate.getMonth() + 1).padStart(2, '0')}-${String(bucket.startDate.getDate()).padStart(2, '0')}`;
                         const cell = cells.find(c => c.weekStartISO === bucketDateStr);
+                        const borderClass = idx > 0 ? 'border-l border-slate-100' : '';
                         
                         if (!cell) {
                           return (
-                            <td key={bucket.weekCommencing} className="text-center py-[5px] px-2">
+                            <td key={bucket.weekCommencing} className={`text-right py-[5px] px-2 ${borderClass}`}>
                               <span className="text-slate-200">—</span>
                             </td>
                           );
@@ -169,12 +170,12 @@ export function ForecastTab({ debtors, onSelectDebtor, isLoading }: ForecastTabP
                         return (
                           <td 
                             key={bucket.weekCommencing}
-                            className="text-center py-[5px] px-2 cursor-pointer transition-colors hover:bg-slate-50"
+                            className={`text-right py-[5px] px-2 cursor-pointer transition-colors hover:bg-slate-50 ${borderClass}`}
                             onClick={() => onSelectDebtor(debtor.id)}
                           >
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <div className="flex items-center justify-center gap-1.5">
+                                <div className="flex items-center justify-end gap-1.5">
                                   <span className={`w-1.5 h-1.5 rounded-full ${CONFIDENCE_DOT[cell.confidence]}`} />
                                   <span className="tabular-nums text-slate-900 font-medium text-[13px]">
                                     {formatCurrencyCompact(cell.expectedAmount)}
