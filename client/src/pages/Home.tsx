@@ -11,10 +11,6 @@ import Screenshot_2026_01_20_at_17_48_14 from "@assets/Screenshot 2026-01-20 at 
 
 import xeroLogo from "@assets/Xero_software_logo.svg_1768974407536.png";
 import quickbooksLogo from "@assets/quickbnooks_1768974664185.png";
-import openaiLogo from "@assets/OpenAI-black-monoblossom_1768975230640.png";
-import stripeLogo from "@assets/Stripe_Logo,_revised_2016.svg_1768974482890.png";
-import twilioLogo from "@assets/Twilio_logo_1768974370388.png";
-import sendgridLogo from "@assets/sendgrid-vector-logo-2022_1768974249334.png";
 
 export default function Home() {
   const [, setLocation] = useLocation();
@@ -150,10 +146,6 @@ export default function Home() {
           <div className="flex flex-wrap items-center justify-center gap-10 md:gap-14">
             <img src={xeroLogo} alt="Xero" className="h-16 grayscale opacity-60 hover:opacity-100 hover:grayscale-0 transition-all" />
             <img src={quickbooksLogo} alt="QuickBooks" className="h-16 grayscale opacity-60 hover:opacity-100 hover:grayscale-0 transition-all" />
-            <img src={openaiLogo} alt="OpenAI" className="h-[72px] grayscale opacity-50 hover:opacity-100 hover:grayscale-0 transition-all" />
-            <img src={stripeLogo} alt="Stripe" className="h-14 grayscale opacity-60 hover:opacity-100 hover:grayscale-0 transition-all" />
-            <img src={twilioLogo} alt="Twilio" className="h-16 grayscale opacity-60 hover:opacity-100 hover:grayscale-0 transition-all" />
-            <img src={sendgridLogo} alt="SendGrid" className="h-[120px] grayscale opacity-60 hover:opacity-100 hover:grayscale-0 transition-all" />
           </div>
           <p className="text-center text-[15px] text-[#556070] mt-10 italic max-w-[500px] mx-auto">
             So you spend less time chasing and more time making decisions.
