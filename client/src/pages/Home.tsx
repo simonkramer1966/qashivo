@@ -93,39 +93,40 @@ export default function Home() {
       {/* Hero Section */}
       <section className="pt-20 pb-24 md:pt-28 md:pb-32">
         <div className="max-w-[1200px] mx-auto px-6">
-          <div className="max-w-[800px] mx-auto text-center mb-16">
-            <h1 className="text-[52px] md:text-[60px] font-semibold text-[#0B0F17] leading-[1.05] tracking-[-0.02em] mb-6">
-              Receivables, managed continuously.
-            </h1>
-            <p className="text-[18px] md:text-[20px] text-[#556070] leading-[1.55] mb-8 max-w-[640px] mx-auto">
-              Qashivo monitors invoices, nudges customers, tracks promises, and updates your cash outlook automatically. Step in only when something needs Attention.
-            </p>
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-6">
-              <Button
-                onClick={() => setLocation("/contact")}
-                className="bg-[#12B8C4] hover:bg-[#0fa3ae] text-white h-12 px-7 rounded-xl text-[16px] font-medium"
-              >
-                Book a demo
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-              <Button
-                onClick={() => {
-                  const el = document.getElementById('how-it-works');
-                  el?.scrollIntoView({ behavior: 'smooth' });
-                }}
-                variant="ghost"
-                className="text-[#556070] hover:text-[#0B0F17] h-12 px-7 text-[16px] font-medium"
-              >
-                See how it works
-              </Button>
+          <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+            {/* Left - Text Content */}
+            <div>
+              <h1 className="text-[40px] md:text-[52px] font-semibold text-[#0B0F17] leading-[1.05] tracking-[-0.02em] mb-6">
+                Receivables, managed continuously.
+              </h1>
+              <p className="text-[18px] md:text-[20px] text-[#556070] leading-[1.55] mb-8">
+                Qashivo monitors invoices, nudges customers, tracks promises, and updates your cash outlook automatically. Step in only when something needs Attention.
+              </p>
+              <div className="flex flex-col sm:flex-row items-start gap-4 mb-6">
+                <Button
+                  onClick={() => setLocation("/contact")}
+                  className="bg-[#12B8C4] hover:bg-[#0fa3ae] text-white h-12 px-7 rounded-xl text-[16px] font-medium"
+                >
+                  Book a demo
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+                <Button
+                  onClick={() => {
+                    const el = document.getElementById('how-it-works');
+                    el?.scrollIntoView({ behavior: 'smooth' });
+                  }}
+                  variant="ghost"
+                  className="text-[#556070] hover:text-[#0B0F17] h-12 px-7 text-[16px] font-medium"
+                >
+                  See how it works
+                </Button>
+              </div>
+              <p className="text-[14px] text-[#556070]">
+                Connect in minutes. Start operating by exceptions in days.
+              </p>
             </div>
-            <p className="text-[14px] text-[#556070]">
-              Connect in minutes. Start operating by exceptions in days.
-            </p>
-          </div>
 
-          {/* Hero Screenshot */}
-          <div className="relative max-w-[1000px] mx-auto">
+            {/* Right - Screenshot */}
             <div className="bg-[#F0F2F5] rounded-2xl p-3">
               <img 
                 src={overviewScreenshot} 
