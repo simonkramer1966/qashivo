@@ -155,16 +155,14 @@ export function ExecutedTab({ actions, onSelectDebtor, isLoading }: ExecutedTabP
           <div className="overflow-auto flex-1">
             <table className="w-full" style={{ minWidth: '700px', tableLayout: 'fixed' }}>
               <colgroup>
+                <col style={{ width: '28%' }} />
                 <col style={{ width: '12%' }} />
+                <col style={{ width: '20%' }} />
                 <col style={{ width: '22%' }} />
-                <col style={{ width: '10%' }} />
                 <col style={{ width: '18%' }} />
-                <col style={{ width: '22%' }} />
-                <col style={{ width: '16%' }} />
               </colgroup>
               <thead className="sticky top-0 z-20">
                 <tr className="border-b border-slate-200 bg-slate-50 h-16">
-                  <th className="px-3 text-left text-[11px] font-medium text-slate-600 uppercase tracking-wider bg-slate-50 align-middle">When</th>
                   <th className="px-3 text-left text-[11px] font-medium text-slate-600 uppercase tracking-wider bg-slate-50 align-middle">Customer</th>
                   <th className="px-3 text-left text-[11px] font-medium text-slate-600 uppercase tracking-wider bg-slate-50 align-middle">Channel</th>
                   <th className="px-3 text-left text-[11px] font-medium text-slate-600 uppercase tracking-wider bg-slate-50 align-middle">Action</th>
@@ -179,11 +177,9 @@ export function ExecutedTab({ actions, onSelectDebtor, isLoading }: ExecutedTabP
                     onClick={() => onSelectDebtor(action.debtorId, action.id)}
                     className="border-b border-slate-200 hover:bg-slate-50/50 cursor-pointer transition-colors"
                   >
-                    <td className="py-[5px] px-3 text-[12px] text-slate-400 tabular-nums">
-                      {formatRelativeTime(action.executedAt)}
-                    </td>
-                    <td className="py-[5px] px-3">
-                      <span className="text-[13px] font-medium text-slate-900 truncate block">{action.debtorName}</span>
+                      <td className="py-[5px] px-3">
+                      <div className="text-[13px] font-medium text-slate-900 truncate">{action.debtorName}</div>
+                      <div className="text-[12px] text-slate-400 tabular-nums">{formatRelativeTime(action.executedAt)}</div>
                     </td>
                     <td className="py-[5px] px-3 text-[13px] text-slate-500">
                       {getChannelLabel(action.channel)}
