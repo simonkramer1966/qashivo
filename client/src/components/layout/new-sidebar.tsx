@@ -74,7 +74,7 @@ const navigationSections = [
   {
     label: "SYSTEM",
     items: [
-      { name: "Workflows", href: "/workflows", icon: null },
+      { name: "Workflows", href: "/workflow-settings", icon: null },
     ]
   }
 ];
