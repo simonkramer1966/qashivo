@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { ExecutedAction } from '../types';
 import { formatCurrencyCompact, getChannelLabel, formatRelativeTime } from '../utils';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
@@ -54,11 +54,19 @@ export function ExecutedTab({ actions, onSelectDebtor, isLoading }: ExecutedTabP
   const PAGE_SIZE_OPTIONS = [10, 15, 25, 50];
   const [itemsPerPage, setItemsPerPage] = useState(15);
   const [currentPage, setCurrentPage] = useState(1);
-  const totalPages = Math.ceil(filteredActions.length / itemsPerPage);
+  const totalPages = Math.max(1, Math.ceil(filteredActions.length / itemsPerPage));
+  
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(Math.max(1, totalPages));
+    }
+  }, [filteredActions.length, itemsPerPage, currentPage, totalPages]);
+  
   const paginatedActions = useMemo(() => {
-    const start = (currentPage - 1) * itemsPerPage;
+    const clampedPage = Math.min(currentPage, totalPages);
+    const start = (clampedPage - 1) * itemsPerPage;
     return filteredActions.slice(start, start + itemsPerPage);
-  }, [filteredActions, currentPage, itemsPerPage]);
+  }, [filteredActions, currentPage, itemsPerPage, totalPages]);
   
   const handlePageSizeChange = (newSize: number) => {
     setItemsPerPage(newSize);

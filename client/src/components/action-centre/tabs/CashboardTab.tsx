@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { Debtor, DebtorStatus } from '../types';
 import { buildCashboardMatrix, formatCurrencyCompact, getStatusLabel, getChannelLabel, formatRelativeTime } from '../utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -19,11 +19,19 @@ export function CashboardTab({ debtors, onSelectDebtor, isLoading }: CashboardTa
   const PAGE_SIZE_OPTIONS = [10, 15, 25, 50];
   const [itemsPerPage, setItemsPerPage] = useState(15);
   const [currentPage, setCurrentPage] = useState(1);
-  const totalPages = Math.ceil(matrix.length / itemsPerPage);
+  const totalPages = Math.max(1, Math.ceil(matrix.length / itemsPerPage));
+  
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(Math.max(1, totalPages));
+    }
+  }, [matrix.length, itemsPerPage, currentPage, totalPages]);
+  
   const paginatedMatrix = useMemo(() => {
-    const start = (currentPage - 1) * itemsPerPage;
+    const clampedPage = Math.min(currentPage, totalPages);
+    const start = (clampedPage - 1) * itemsPerPage;
     return matrix.slice(start, start + itemsPerPage);
-  }, [matrix, currentPage, itemsPerPage]);
+  }, [matrix, currentPage, itemsPerPage, totalPages]);
   
   const handlePageSizeChange = (newSize: number) => {
     setItemsPerPage(newSize);

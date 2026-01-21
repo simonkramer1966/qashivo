@@ -48,7 +48,7 @@ import {
 } from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
-import { SkipForward, AlertTriangle, X } from "lucide-react";
+import { SkipForward, AlertTriangle, X, ChevronLeft, ChevronRight } from "lucide-react";
 
 type TabId = 'planned' | 'executed' | 'attention' | 'cashboard' | 'forecast';
 
@@ -512,6 +512,11 @@ function PlannedTabContent({
   const [bulkSkipDays, setBulkSkipDays] = useState('7');
   const [isBulkSkipOpen, setIsBulkSkipOpen] = useState(false);
   const [channelFilter, setChannelFilter] = useState<ChannelFilter>('all');
+  
+  // Pagination
+  const PAGE_SIZE_OPTIONS = [10, 15, 25, 50];
+  const [itemsPerPage, setItemsPerPage] = useState(15);
+  const [currentPage, setCurrentPage] = useState(1);
 
   const handleSelect = (actionId: number, selected: boolean) => {
     setSelectedIds(prev => {
@@ -526,8 +531,8 @@ function PlannedTabContent({
   };
 
   const handleSelectAll = (checked: boolean) => {
-    if (checked && filteredActions) {
-      setSelectedIds(new Set(filteredActions.map((a: any) => a.id)));
+    if (checked && paginatedActions) {
+      setSelectedIds(new Set(paginatedActions.map((a: any) => a.id)));
     } else {
       setSelectedIds(new Set());
     }
@@ -563,7 +568,27 @@ function PlannedTabContent({
     return dailyPlan.actions;
   }, [dailyPlan?.actions, channelFilter]);
 
-  const allSelected = filteredActions.length > 0 && filteredActions.every((a: any) => selectedIds.has(a.id));
+  const totalPages = Math.max(1, Math.ceil(filteredActions.length / itemsPerPage));
+  
+  // Clamp currentPage when list shrinks (e.g., after filter change or bulk action)
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(Math.max(1, totalPages));
+    }
+  }, [filteredActions.length, itemsPerPage, currentPage, totalPages]);
+  
+  const paginatedActions = useMemo(() => {
+    const clampedPage = Math.min(currentPage, totalPages);
+    const start = (clampedPage - 1) * itemsPerPage;
+    return filteredActions.slice(start, start + itemsPerPage);
+  }, [filteredActions, currentPage, itemsPerPage, totalPages]);
+  
+  const handlePageSizeChange = (newSize: number) => {
+    setItemsPerPage(newSize);
+    setCurrentPage(1);
+  };
+
+  const allSelected = paginatedActions.length > 0 && paginatedActions.every((a: any) => selectedIds.has(a.id));
 
   const getChannelLabel = (channel: string) => {
     switch (channel) {
@@ -581,9 +606,10 @@ function PlannedTabContent({
 
   if (isLoading) {
     return (
-      <div className="space-y-2">
-        {[...Array(5)].map((_, i) => (
-          <div key={i} className="h-14 bg-slate-100 animate-pulse rounded" />
+      <div className="space-y-1">
+        <div className="h-10 bg-slate-50 animate-pulse" />
+        {[...Array(6)].map((_, i) => (
+          <div key={i} className="h-12 bg-slate-50/50 animate-pulse" />
         ))}
       </div>
     );
@@ -616,8 +642,8 @@ function PlannedTabContent({
   ].filter(Boolean).join(' · ');
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
+    <div className="flex flex-col h-[calc(100vh-220px)]">
+      <div className="flex items-center justify-between pb-2 flex-shrink-0">
         <p className="text-[13px] text-slate-400">
           {statsLine}
         </p>
@@ -687,71 +713,119 @@ function PlannedTabContent({
       )}
 
       {filteredActions.length === 0 ? (
-        <div className="py-16 text-center">
+        <div className="py-16 text-center flex-1">
           <p className="text-slate-400 text-[13px]">No actions match filters</p>
         </div>
       ) : (
-        <table className="w-full">
-          <thead className="lg:sticky lg:top-[120px] z-20 bg-white">
-            <tr className="border-b border-slate-100">
-              <th className="w-10 py-2 text-left bg-white">
-                <Checkbox
-                  checked={allSelected}
-                  onCheckedChange={(checked) => handleSelectAll(checked as boolean)}
-                />
-              </th>
-              <th className="py-2 text-left text-[11px] font-medium text-slate-400 uppercase tracking-wider bg-white">Customer</th>
-              <th className="py-2 text-left text-[11px] font-medium text-slate-400 uppercase tracking-wider w-16 bg-white">Channel</th>
-              <th className="py-2 text-right text-[11px] font-medium text-slate-400 uppercase tracking-wider w-20 bg-white">Overdue</th>
-              <th className="py-2 text-right text-[11px] font-medium text-slate-400 uppercase tracking-wider w-20 bg-white">Invoices</th>
-              <th className="py-2 text-right text-[11px] font-medium text-slate-400 uppercase tracking-wider w-28 bg-white">Amount</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredActions.map((item: any) => (
-              <tr 
-                key={item.id}
-                onClick={() => onPreviewAction(item)}
-                className={`group border-b border-slate-50 cursor-pointer transition-colors ${
-                  selectedIds.has(item.id) ? 'bg-slate-50' : 'hover:bg-slate-50/50'
-                }`}
-              >
-                <td className="py-3" onClick={(e) => e.stopPropagation()}>
-                  <Checkbox
-                    checked={selectedIds.has(item.id)}
-                    onCheckedChange={(checked) => handleSelect(item.id, checked as boolean)}
-                  />
-                </td>
-                <td className="py-3">
-                  <span className="text-[14px] font-medium text-slate-900">
-                    {item.companyName || item.contactName || 'Unknown'}
-                  </span>
-                  {item.companyName && item.contactName && (
-                    <span className="text-[13px] text-slate-400 ml-2">
-                      {item.contactName}
+        <>
+          <div className="overflow-auto flex-1">
+            <table className="w-full">
+              <thead className="sticky top-0 z-20">
+                <tr className="border-b border-slate-200 bg-slate-50">
+                  <th className="w-10 py-2 px-3 text-left bg-slate-50">
+                    <Checkbox
+                      checked={allSelected}
+                      onCheckedChange={(checked) => handleSelectAll(checked as boolean)}
+                    />
+                  </th>
+                  <th className="py-2 px-3 text-left text-[11px] font-medium text-slate-600 uppercase tracking-wider bg-slate-50">Customer</th>
+                  <th className="py-2 px-3 text-left text-[11px] font-medium text-slate-600 uppercase tracking-wider w-16 bg-slate-50">Channel</th>
+                  <th className="py-2 px-3 text-right text-[11px] font-medium text-slate-600 uppercase tracking-wider w-20 bg-slate-50">Overdue</th>
+                  <th className="py-2 px-3 text-right text-[11px] font-medium text-slate-600 uppercase tracking-wider w-20 bg-slate-50">Invoices</th>
+                  <th className="py-2 px-3 text-right text-[11px] font-medium text-slate-600 uppercase tracking-wider w-28 bg-slate-50">Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                {paginatedActions.map((item: any) => (
+                  <tr 
+                    key={item.id}
+                    onClick={() => onPreviewAction(item)}
+                    className={`group border-b border-slate-200 cursor-pointer transition-colors ${
+                      selectedIds.has(item.id) ? 'bg-slate-50' : 'hover:bg-slate-50/50'
+                    }`}
+                  >
+                    <td className="py-[5px] px-3" onClick={(e) => e.stopPropagation()}>
+                      <Checkbox
+                        checked={selectedIds.has(item.id)}
+                        onCheckedChange={(checked) => handleSelect(item.id, checked as boolean)}
+                      />
+                    </td>
+                    <td className="py-[5px] px-3">
+                      <span className="text-[13px] font-medium text-slate-900">
+                        {item.companyName || item.contactName || 'Unknown'}
+                      </span>
+                      {item.companyName && item.contactName && (
+                        <span className="text-[12px] text-slate-400 ml-2">
+                          {item.contactName}
+                        </span>
+                      )}
+                    </td>
+                    <td className="py-[5px] px-3">
+                      <span className="text-[13px] text-slate-400">
+                        {getChannelLabel(item.actionType)}
+                      </span>
+                    </td>
+                    <td className="py-[5px] px-3 text-right">
+                      <span className="text-[13px] tabular-nums text-slate-500">{item.daysOverdue}d</span>
+                    </td>
+                    <td className="py-[5px] px-3 text-right">
+                      <span className="text-[13px] tabular-nums text-slate-500">{item.invoiceCount || 1}</span>
+                    </td>
+                    <td className="py-[5px] px-3 text-right">
+                      <span className="text-[13px] font-medium tabular-nums text-slate-900">
+                        {formatCurrency(parseFloat(item.amount))}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          
+          {/* Footer with pagination */}
+          <div className="flex items-center justify-end pt-2 flex-shrink-0">
+            {filteredActions.length > 0 && (
+              <div className="flex items-center gap-4 text-[12px] text-slate-500">
+                {/* Rows per page selector */}
+                <div className="flex items-center gap-2">
+                  <span className="text-slate-400">Rows:</span>
+                  <select
+                    value={itemsPerPage}
+                    onChange={(e) => handlePageSizeChange(Number(e.target.value))}
+                    className="bg-white border border-slate-200 rounded px-2 py-1 text-[12px] text-slate-600 cursor-pointer hover:border-slate-300 focus:outline-none focus:ring-1 focus:ring-slate-300"
+                  >
+                    {PAGE_SIZE_OPTIONS.map(size => (
+                      <option key={size} value={size}>{size}</option>
+                    ))}
+                  </select>
+                </div>
+                
+                {/* Page navigation */}
+                {totalPages > 1 && (
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                      disabled={currentPage === 1}
+                      className="p-1 rounded hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                    </button>
+                    <span className="tabular-nums min-w-[80px] text-center">
+                      {currentPage} of {totalPages}
                     </span>
-                  )}
-                </td>
-                <td className="py-3">
-                  <span className="text-[13px] text-slate-400">
-                    {getChannelLabel(item.actionType)}
-                  </span>
-                </td>
-                <td className="py-3 text-right">
-                  <span className="text-[13px] tabular-nums text-slate-500">{item.daysOverdue}d</span>
-                </td>
-                <td className="py-3 text-right">
-                  <span className="text-[13px] tabular-nums text-slate-500">{item.invoiceCount || 1}</span>
-                </td>
-                <td className="py-3 text-right">
-                  <span className="text-[14px] font-semibold tabular-nums text-slate-900">
-                    {formatCurrency(parseFloat(item.amount))}
-                  </span>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                    <button
+                      onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                      disabled={currentPage === totalPages}
+                      className="p-1 rounded hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </>
       )}
     </div>
   );

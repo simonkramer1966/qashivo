@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Debtor, ForecastCell, WeekBucket } from '../types';
 import { getWeekBuckets, buildWeeklyForecast, formatCurrencyCompact, formatRelativeTime } from '../utils';
@@ -55,15 +55,23 @@ export function ForecastTab({ debtors, onSelectDebtor, isLoading }: ForecastTabP
   const PAGE_SIZE_OPTIONS = [10, 15, 25, 50];
   const [itemsPerPage, setItemsPerPage] = useState(15);
   const [currentPage, setCurrentPage] = useState(1);
-  const totalPages = Math.ceil(debtorsWithForecast.length / itemsPerPage);
+  const totalPages = Math.max(1, Math.ceil(debtorsWithForecast.length / itemsPerPage));
+  
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(Math.max(1, totalPages));
+    }
+  }, [debtorsWithForecast.length, itemsPerPage, currentPage, totalPages]);
+  
   const paginatedDebtors = useMemo(() => {
-    const start = (currentPage - 1) * itemsPerPage;
+    const clampedPage = Math.min(currentPage, totalPages);
+    const start = (clampedPage - 1) * itemsPerPage;
     return debtorsWithForecast.slice(start, start + itemsPerPage);
-  }, [debtorsWithForecast, currentPage, itemsPerPage]);
+  }, [debtorsWithForecast, currentPage, itemsPerPage, totalPages]);
   
   const handlePageSizeChange = (newSize: number) => {
     setItemsPerPage(newSize);
-    setCurrentPage(1); // Reset to first page when changing page size
+    setCurrentPage(1);
   };
 
   if (isLoading) {
