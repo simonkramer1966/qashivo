@@ -117,15 +117,15 @@ export function ForecastTab({ debtors, onSelectDebtor, isLoading }: ForecastTabP
             </colgroup>
             <thead className="sticky top-0 z-20">
               <tr className="border-b border-slate-200 bg-slate-50">
-                <th className="text-left py-3 px-3 text-slate-500 tracking-wide sticky left-0 bg-slate-50 z-30 text-[12px] font-normal align-top">
-                  Customer
+                <th className="text-left py-3 px-3 text-slate-500 tracking-wide sticky left-0 bg-slate-50 z-30 text-[12px] align-top font-medium">
+                  CUSTOMER
                 </th>
                 {weekBuckets.map(bucket => (
                   <th 
                     key={bucket.weekCommencing} 
                     className="text-center py-3 px-2 text-[11px] font-semibold text-slate-600 uppercase tracking-wide bg-slate-50"
                   >
-                    <div className="font-normal text-slate-500 text-[12px]">{bucket.weekCommencing}</div>
+                    <div className="text-slate-500 text-[12px] font-medium">{bucket.weekCommencing}</div>
                     <div className="font-semibold text-slate-800 text-[13px] mt-1 tabular-nums">
                       {formatCurrencyCompact(weekTotals[bucket.weekCommencing])}
                     </div>
