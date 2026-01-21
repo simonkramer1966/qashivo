@@ -70,10 +70,23 @@ export default function Customers() {
     setPage(1);
   };
 
-  // Behaviour-based display (no scores, no traffic lights)
-  const getBehaviourText = (riskBand?: string | null, riskScore?: number | null) => {
+  const getBehaviourDot = (riskBand?: string | null, riskScore?: number | null) => {
     const { label } = getBehaviourLabel(riskBand, riskScore);
-    return <span className="text-[12px] text-slate-600">{label}</span>;
+    let dotColor = 'bg-slate-300';
+    
+    if (label === 'Pays on time') {
+      dotColor = 'bg-emerald-500';
+    } else if (label === 'Pays late but reliable') {
+      dotColor = 'bg-amber-500';
+    } else if (label === 'Inconsistent') {
+      dotColor = 'bg-rose-500';
+    }
+    
+    return (
+      <div className="flex items-center justify-end">
+        <span className={`inline-block w-2.5 h-2.5 rounded-full ${dotColor}`} title={label} />
+      </div>
+    );
   };
 
   return (
@@ -99,19 +112,31 @@ export default function Customers() {
               <p className="text-[10px] text-slate-400 uppercase tracking-wider mb-4">Debtor Behaviour Profiles</p>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 sm:gap-8">
                 <div>
-                  <p className="text-[12px] text-slate-500 mb-1">Usually pay on time</p>
+                  <p className="text-[12px] text-slate-500 mb-1 flex items-center gap-2">
+                    <span className="inline-block w-2.5 h-2.5 rounded-full bg-emerald-500" />
+                    Usually pay on time
+                  </p>
                   <p className="text-[20px] font-semibold text-slate-900 tabular-nums">38%</p>
                 </div>
                 <div>
-                  <p className="text-[12px] text-slate-500 mb-1">Pay late but reliably</p>
+                  <p className="text-[12px] text-slate-500 mb-1 flex items-center gap-2">
+                    <span className="inline-block w-2.5 h-2.5 rounded-full bg-amber-500" />
+                    Pay late but reliably
+                  </p>
                   <p className="text-[20px] font-semibold text-slate-900 tabular-nums">44%</p>
                 </div>
                 <div>
-                  <p className="text-[12px] text-slate-500 mb-1">Inconsistent</p>
+                  <p className="text-[12px] text-slate-500 mb-1 flex items-center gap-2">
+                    <span className="inline-block w-2.5 h-2.5 rounded-full bg-rose-500" />
+                    Inconsistent
+                  </p>
                   <p className="text-[20px] font-semibold text-slate-900 tabular-nums">12%</p>
                 </div>
                 <div>
-                  <p className="text-[12px] text-slate-500 mb-1">Unknown</p>
+                  <p className="text-[12px] text-slate-500 mb-1 flex items-center gap-2">
+                    <span className="inline-block w-2.5 h-2.5 rounded-full bg-slate-300" />
+                    Unknown
+                  </p>
                   <p className="text-[20px] font-semibold text-slate-500 tabular-nums">6%</p>
                 </div>
               </div>
@@ -272,6 +297,12 @@ export default function Customers() {
                             <p className="text-[13px] font-medium text-slate-900 truncate">
                               {contact.companyName || contact.name}
                             </p>
+                            <p className="text-[11px] text-slate-400 truncate">
+                              {contact.name}
+                              {contact.phone && (
+                                <span className="ml-2 text-slate-500">{contact.phone}</span>
+                              )}
+                            </p>
                           </td>
 
                           {/* Outstanding */}
@@ -316,7 +347,7 @@ export default function Customers() {
 
                           {/* Behaviour */}
                           <td className="py-3 pl-4 text-right">
-                            {getBehaviourText(contact.riskBand, contact.riskScore)}
+                            {getBehaviourDot(contact.riskBand, contact.riskScore)}
                           </td>
                         </tr>
                       ))}
