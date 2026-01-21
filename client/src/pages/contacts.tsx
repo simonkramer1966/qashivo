@@ -38,7 +38,7 @@ export default function Customers() {
   const { formatCurrency } = useCurrency();
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
-  const limit = 20;
+  const [limit, setLimit] = useState(20);
   const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
   const [showPreviewDrawer, setShowPreviewDrawer] = useState(false);
 
@@ -316,6 +316,23 @@ export default function Customers() {
                 </span>
               </div>
               
+              <div className="flex items-center gap-2">
+                <select
+                  value={limit}
+                  onChange={(e) => {
+                    setLimit(Number(e.target.value));
+                    setPage(1);
+                  }}
+                  className="text-[12px] text-slate-600 bg-white border border-slate-200 rounded px-2 py-1 focus:outline-none focus:border-slate-300"
+                  data-testid="select-page-size"
+                >
+                  <option value={10}>10</option>
+                  <option value={20}>20</option>
+                  <option value={50}>50</option>
+                  <option value={100}>100</option>
+                </select>
+              </div>
+
               <div className="flex items-center gap-2">
                 <span className="text-[12px] text-slate-500">
                   {page} of {pagination.totalPages}
