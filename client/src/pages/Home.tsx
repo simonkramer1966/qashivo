@@ -148,12 +148,12 @@ export default function Home() {
             Integrated with
           </p>
           <div className="flex flex-wrap items-center justify-center gap-10 md:gap-14">
-            <img src={xeroLogo} alt="Xero" className="h-8 grayscale opacity-60 hover:opacity-100 hover:grayscale-0 transition-all" />
-            <img src={quickbooksLogo} alt="QuickBooks" className="h-8 grayscale opacity-60 hover:opacity-100 hover:grayscale-0 transition-all" />
-            <img src={openaiLogo} alt="OpenAI" className="h-9 grayscale opacity-50 hover:opacity-100 hover:grayscale-0 transition-all" />
-            <img src={stripeLogo} alt="Stripe" className="h-7 grayscale opacity-60 hover:opacity-100 hover:grayscale-0 transition-all" />
-            <img src={twilioLogo} alt="Twilio" className="h-8 grayscale opacity-60 hover:opacity-100 hover:grayscale-0 transition-all" />
-            <img src={sendgridLogo} alt="SendGrid" className="h-[60px] grayscale opacity-60 hover:opacity-100 hover:grayscale-0 transition-all" />
+            <img src={xeroLogo} alt="Xero" className="h-16 grayscale opacity-60 hover:opacity-100 hover:grayscale-0 transition-all" />
+            <img src={quickbooksLogo} alt="QuickBooks" className="h-16 grayscale opacity-60 hover:opacity-100 hover:grayscale-0 transition-all" />
+            <img src={openaiLogo} alt="OpenAI" className="h-[72px] grayscale opacity-50 hover:opacity-100 hover:grayscale-0 transition-all" />
+            <img src={stripeLogo} alt="Stripe" className="h-14 grayscale opacity-60 hover:opacity-100 hover:grayscale-0 transition-all" />
+            <img src={twilioLogo} alt="Twilio" className="h-16 grayscale opacity-60 hover:opacity-100 hover:grayscale-0 transition-all" />
+            <img src={sendgridLogo} alt="SendGrid" className="h-[120px] grayscale opacity-60 hover:opacity-100 hover:grayscale-0 transition-all" />
           </div>
           <p className="text-center text-[15px] text-[#556070] mt-10 italic max-w-[500px] mx-auto">
             So you spend less time chasing and more time making decisions.
