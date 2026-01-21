@@ -89,21 +89,21 @@ export function AttentionTab({ items, onSelectDebtor, isLoading }: AttentionTabP
                   className={`flex items-center gap-4 py-3 px-4 bg-white border border-slate-200/60 rounded-lg hover:bg-slate-50/60 cursor-pointer transition-colors border-l-2 ${group.color}`}
                 >
                   <div className="flex-1 min-w-0">
-                    <div className="font-medium text-slate-900 truncate">{item.debtorName}</div>
-                    <div className="text-xs text-slate-500 mt-0.5">{item.reason}</div>
+                    <div className="text-[13px] font-medium text-slate-900 truncate">{item.debtorName}</div>
+                    <div className="text-[12px] text-slate-500 mt-0.5">{item.reason}</div>
                   </div>
                   
                   <div className="text-right shrink-0">
-                    <div className="font-medium tabular-nums text-slate-900">
+                    <div className="text-[13px] font-medium tabular-nums text-slate-900">
                       {formatCurrencyCompact(item.amountImpacted)}
                     </div>
-                    <div className="text-xs text-slate-400">
+                    <div className="text-[12px] text-slate-400">
                       {item.oldestDaysOverdue}d overdue
                     </div>
                   </div>
                   
                   {item.lastActionAt && (
-                    <div className="text-xs text-slate-400 shrink-0 w-20 text-right">
+                    <div className="text-[12px] text-slate-400 shrink-0 w-20 text-right">
                       {item.lastActionChannel && getChannelLabel(item.lastActionChannel)}
                       <br />
                       {formatRelativeTime(item.lastActionAt)}
