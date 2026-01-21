@@ -1,8 +1,9 @@
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { AttentionItem } from '../types';
 import { formatCurrencyCompact, getChannelLabel, formatRelativeTime } from '../utils';
 import { AlertTriangle, HelpCircle, Phone, MessageCircle, TrendingUp } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface AttentionTabProps {
   items: AttentionItem[];
@@ -12,48 +13,65 @@ interface AttentionTabProps {
 
 type ExceptionType = 'dispute' | 'query' | 'contact_issue' | 'no_response' | 'high_value_ageing';
 
-interface GroupedExceptions {
-  type: ExceptionType;
-  label: string;
-  icon: any;
-  items: AttentionItem[];
-  color: string;
-}
+const EXCEPTION_CONFIG: Record<ExceptionType, { label: string; icon: any; color: string }> = {
+  dispute: { label: 'Dispute', icon: AlertTriangle, color: 'text-rose-500' },
+  query: { label: 'Query', icon: HelpCircle, color: 'text-purple-500' },
+  contact_issue: { label: 'Contact', icon: Phone, color: 'text-orange-500' },
+  no_response: { label: 'No Response', icon: MessageCircle, color: 'text-amber-500' },
+  high_value_ageing: { label: 'High Value', icon: TrendingUp, color: 'text-red-500' },
+};
 
 export function AttentionTab({ items, onSelectDebtor, isLoading }: AttentionTabProps) {
-  const groupedItems = useMemo(() => {
-    const groups: GroupedExceptions[] = [
-      { type: 'dispute', label: 'Disputes', icon: AlertTriangle, items: [], color: 'border-l-rose-400' },
-      { type: 'query', label: 'Queries', icon: HelpCircle, items: [], color: 'border-l-purple-400' },
-      { type: 'contact_issue', label: 'Contact Issues', icon: Phone, items: [], color: 'border-l-orange-400' },
-      { type: 'no_response', label: 'Repeated No Response', icon: MessageCircle, items: [], color: 'border-l-amber-400' },
-      { type: 'high_value_ageing', label: 'High Value & Ageing', icon: TrendingUp, items: [], color: 'border-l-red-400' },
-    ];
-    
+  // Pagination
+  const PAGE_SIZE_OPTIONS = [10, 15, 25, 50];
+  const [itemsPerPage, setItemsPerPage] = useState(15);
+  const [currentPage, setCurrentPage] = useState(1);
+  const totalPages = Math.max(1, Math.ceil(items.length / itemsPerPage));
+  
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(Math.max(1, totalPages));
+    }
+  }, [items.length, itemsPerPage, currentPage, totalPages]);
+  
+  const paginatedItems = useMemo(() => {
+    const clampedPage = Math.min(currentPage, totalPages);
+    const start = (clampedPage - 1) * itemsPerPage;
+    return items.slice(start, start + itemsPerPage);
+  }, [items, currentPage, itemsPerPage, totalPages]);
+  
+  const handlePageSizeChange = (newSize: number) => {
+    setItemsPerPage(newSize);
+    setCurrentPage(1);
+  };
+
+  // Calculate totals by type for header
+  const typeTotals = useMemo(() => {
+    const totals: Record<ExceptionType, number> = {
+      dispute: 0, query: 0, contact_issue: 0, no_response: 0, high_value_ageing: 0
+    };
     for (const item of items) {
-      const group = groups.find(g => g.type === item.exceptionType);
-      if (group) {
-        group.items.push(item);
+      if (item.exceptionType in totals) {
+        totals[item.exceptionType as ExceptionType] += item.amountImpacted;
       }
     }
-    
-    return groups.filter(g => g.items.length > 0);
+    return totals;
   }, [items]);
+
+  const totalAmount = useMemo(() => items.reduce((sum, item) => sum + item.amountImpacted, 0), [items]);
 
   if (isLoading) {
     return (
-      <div className="space-y-6">
-        {[...Array(3)].map((_, i) => (
-          <div key={i} className="space-y-2">
-            <div className="h-5 w-32 bg-slate-100 animate-pulse rounded" />
-            <div className="h-16 bg-slate-100 animate-pulse rounded" />
-          </div>
+      <div className="space-y-1">
+        <div className="h-10 bg-slate-50 animate-pulse" />
+        {[...Array(6)].map((_, i) => (
+          <div key={i} className="h-12 bg-slate-50/50 animate-pulse" />
         ))}
       </div>
     );
   }
 
-  if (groupedItems.length === 0) {
+  if (items.length === 0) {
     return (
       <div className="py-16 text-center">
         <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-emerald-50 mb-4">
@@ -68,65 +86,147 @@ export function AttentionTab({ items, onSelectDebtor, isLoading }: AttentionTabP
   }
 
   return (
-    <div className="space-y-8">
-      {groupedItems.map(group => {
-        const Icon = group.icon;
-        return (
-          <div key={group.type}>
-            <div className="flex items-center gap-2 mb-3">
-              <Icon className="h-4 w-4 text-slate-500" />
-              <h3 className="text-sm font-semibold text-slate-700">{group.label}</h3>
-              <span className="text-xs text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">
-                {group.items.length}
-              </span>
-            </div>
-            
-            <div className="space-y-2">
-              {group.items.map(item => (
-                <div 
-                  key={item.id}
-                  onClick={() => onSelectDebtor(item.debtorId)}
-                  className={`flex items-center gap-4 py-3 px-4 bg-white border border-slate-200/60 rounded-lg hover:bg-slate-50/60 cursor-pointer transition-colors border-l-2 ${group.color}`}
-                >
-                  <div className="flex-1 min-w-0">
-                    <div className="text-[13px] font-medium text-slate-900 truncate">{item.debtorName}</div>
-                    <div className="text-[12px] text-slate-500 mt-0.5">{item.reason}</div>
+    <TooltipProvider delayDuration={200}>
+      <div className="flex flex-col h-[calc(100vh-220px)]">
+        <div className="overflow-auto flex-1">
+          <table className="w-full" style={{ minWidth: '900px', tableLayout: 'fixed' }}>
+            <colgroup>
+              <col style={{ width: '18%' }} />
+              <col style={{ width: '10%' }} />
+              <col style={{ width: '32%' }} />
+              <col style={{ width: '12%' }} />
+              <col style={{ width: '10%' }} />
+              <col style={{ width: '18%' }} />
+            </colgroup>
+            <thead className="sticky top-0 z-20">
+              <tr className="border-b border-slate-200 bg-slate-50 h-16">
+                <th className="px-3 text-left text-[11px] font-medium text-slate-600 uppercase tracking-wider sticky left-0 bg-slate-50 z-30 align-middle">
+                  Customer
+                </th>
+                <th className="px-2 text-center bg-slate-50 align-middle">
+                  <div className="text-[11px] font-medium text-slate-600 uppercase tracking-wider">Type</div>
+                  <div className="font-semibold text-slate-800 text-[13px] mt-1 tabular-nums">
+                    {items.length}
                   </div>
-                  
-                  <div className="text-right shrink-0">
-                    <div className="text-[13px] font-medium tabular-nums text-slate-900">
-                      {formatCurrencyCompact(item.amountImpacted)}
-                    </div>
-                    <div className="text-[12px] text-slate-400">
-                      {item.oldestDaysOverdue}d overdue
-                    </div>
+                </th>
+                <th className="px-2 text-left text-[11px] font-medium text-slate-600 uppercase tracking-wider bg-slate-50 align-middle">
+                  Reason
+                </th>
+                <th className="px-2 text-center bg-slate-50 align-middle">
+                  <div className="text-[11px] font-medium text-slate-600 uppercase tracking-wider">Amount</div>
+                  <div className="font-semibold text-slate-800 text-[13px] mt-1 tabular-nums">
+                    {formatCurrencyCompact(totalAmount)}
                   </div>
-                  
-                  {item.lastActionAt && (
-                    <div className="text-[12px] text-slate-400 shrink-0 w-20 text-right">
-                      {item.lastActionChannel && getChannelLabel(item.lastActionChannel)}
-                      <br />
-                      {formatRelativeTime(item.lastActionAt)}
-                    </div>
-                  )}
-                  
-                  <Button 
-                    size="sm" 
-                    variant="outline"
-                    className="shrink-0 text-xs"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onSelectDebtor(item.debtorId);
-                    }}
+                </th>
+                <th className="px-2 text-center text-[11px] font-medium text-slate-600 uppercase tracking-wider bg-slate-50 align-middle">
+                  Days
+                </th>
+                <th className="px-2 text-center text-[11px] font-medium text-slate-600 uppercase tracking-wider bg-slate-50 align-middle">
+                  Last Activity
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {paginatedItems.map((item, index) => {
+                const config = EXCEPTION_CONFIG[item.exceptionType as ExceptionType] || EXCEPTION_CONFIG.query;
+                const Icon = config.icon;
+                const isLast = index === paginatedItems.length - 1;
+                
+                return (
+                  <tr 
+                    key={item.id} 
+                    className={`hover:bg-slate-50/50 transition-colors cursor-pointer ${!isLast ? 'border-b border-slate-200' : ''}`}
+                    onClick={() => onSelectDebtor(item.debtorId)}
                   >
-                    Review
-                  </Button>
-                </div>
+                    <td className="py-[5px] px-3 sticky left-0 bg-white z-10">
+                      <div className="text-[13px] font-medium text-slate-900 truncate max-w-[170px]">
+                        {item.debtorName}
+                      </div>
+                      <div className="text-[12px] text-slate-400 truncate tabular-nums">
+                        {item.invoiceCount || 1} inv
+                      </div>
+                    </td>
+                    <td className="py-[5px] px-2 text-center">
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="inline-flex items-center justify-center">
+                            <Icon className={`h-4 w-4 ${config.color}`} />
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>{config.label}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </td>
+                    <td className="py-[5px] px-2">
+                      <div className="text-[13px] text-slate-600 truncate">
+                        {item.reason}
+                      </div>
+                    </td>
+                    <td className="py-[5px] px-2 text-center">
+                      <div className="text-[13px] font-medium text-slate-900 tabular-nums">
+                        {formatCurrencyCompact(item.amountImpacted)}
+                      </div>
+                    </td>
+                    <td className="py-[5px] px-2 text-center">
+                      <div className="text-[13px] text-slate-600 tabular-nums">
+                        {item.oldestDaysOverdue}d
+                      </div>
+                    </td>
+                    <td className="py-[5px] px-2 text-center">
+                      {item.lastActionAt ? (
+                        <div className="text-[12px] text-slate-400">
+                          {item.lastActionChannel && getChannelLabel(item.lastActionChannel)}
+                          {' · '}
+                          {formatRelativeTime(item.lastActionAt)}
+                        </div>
+                      ) : (
+                        <div className="text-[12px] text-slate-300">—</div>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+        
+        {/* Pagination */}
+        <div className="flex items-center justify-end gap-4 py-3 px-4 border-t border-slate-200 bg-white shrink-0">
+          <div className="flex items-center gap-2">
+            <span className="text-[12px] text-slate-500">Rows:</span>
+            <select
+              value={itemsPerPage}
+              onChange={(e) => handlePageSizeChange(Number(e.target.value))}
+              className="text-[12px] border-0 bg-transparent text-slate-700 cursor-pointer focus:ring-0"
+            >
+              {PAGE_SIZE_OPTIONS.map(size => (
+                <option key={size} value={size}>{size}</option>
               ))}
-            </div>
+            </select>
           </div>
-        );
-      })}
-    </div>
+          
+          <div className="flex items-center gap-2">
+            <span className="text-[12px] text-slate-500">
+              {Math.min(currentPage, totalPages)} of {totalPages}
+            </span>
+            <button
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              disabled={currentPage <= 1}
+              className="p-1 rounded hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed"
+            >
+              <ChevronLeft className="h-4 w-4 text-slate-600" />
+            </button>
+            <button
+              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+              disabled={currentPage >= totalPages}
+              className="p-1 rounded hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed"
+            >
+              <ChevronRight className="h-4 w-4 text-slate-600" />
+            </button>
+          </div>
+        </div>
+      </div>
+    </TooltipProvider>
   );
 }
