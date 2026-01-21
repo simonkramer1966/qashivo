@@ -95,25 +95,22 @@ export function ActivityTab({ items, onSelectCustomer, isLoading }: ActivityTabP
                 <th className="px-3 text-left text-[11px] font-medium text-slate-600 uppercase tracking-wider bg-slate-50 align-middle">
                   Date
                 </th>
-                <th className="px-2 text-left text-[11px] font-medium text-slate-600 uppercase tracking-wider bg-slate-50 align-middle border-l border-slate-100">
+                <th className="px-2 text-left text-[11px] font-medium text-slate-600 uppercase tracking-wider bg-slate-50 align-middle">
                   Time
                 </th>
-                <th className="px-2 text-center bg-slate-50 align-middle border-l border-slate-100">
-                  <div className="text-[11px] font-medium text-slate-600 uppercase tracking-wider">In/Out</div>
+                <th className="px-2 text-center text-[11px] font-medium text-slate-600 uppercase tracking-wider bg-slate-50 align-middle">
+                  In/Out
                 </th>
-                <th className="px-2 text-center bg-slate-50 align-middle border-l border-slate-100">
-                  <div className="text-[11px] font-medium text-slate-600 uppercase tracking-wider">Channel</div>
-                  <div className="font-semibold text-slate-800 text-[13px] mt-1 tabular-nums">
-                    {items.length}
-                  </div>
+                <th className="px-2 text-center text-[11px] font-medium text-slate-600 uppercase tracking-wider bg-slate-50 align-middle">
+                  Channel
                 </th>
-                <th className="px-2 text-left text-[11px] font-medium text-slate-600 uppercase tracking-wider bg-slate-50 align-middle border-l border-slate-100">
+                <th className="px-2 text-left text-[11px] font-medium text-slate-600 uppercase tracking-wider bg-slate-50 align-middle">
                   Customer
                 </th>
-                <th className="px-2 text-left text-[11px] font-medium text-slate-600 uppercase tracking-wider bg-slate-50 align-middle border-l border-slate-100">
+                <th className="px-2 text-left text-[11px] font-medium text-slate-600 uppercase tracking-wider bg-slate-50 align-middle">
                   Contact
                 </th>
-                <th className="px-2 text-left text-[11px] font-medium text-slate-600 uppercase tracking-wider bg-slate-50 align-middle border-l border-slate-100">
+                <th className="px-2 text-left text-[11px] font-medium text-slate-600 uppercase tracking-wider bg-slate-50 align-middle">
                   Purpose
                 </th>
               </tr>
