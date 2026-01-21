@@ -1,4 +1,5 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Debtor, ForecastCell, WeekBucket } from '../types';
 import { getWeekBuckets, buildWeeklyForecast, formatCurrencyCompact, formatRelativeTime } from '../utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -49,6 +50,15 @@ export function ForecastTab({ debtors, onSelectDebtor, isLoading }: ForecastTabP
     
     return { weekBuckets, forecastMap, weekTotals, debtorsWithForecast };
   }, [debtors]);
+
+  // Pagination
+  const ITEMS_PER_PAGE = 15;
+  const [currentPage, setCurrentPage] = useState(1);
+  const totalPages = Math.ceil(debtorsWithForecast.length / ITEMS_PER_PAGE);
+  const paginatedDebtors = useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    return debtorsWithForecast.slice(start, start + ITEMS_PER_PAGE);
+  }, [debtorsWithForecast, currentPage]);
 
   if (isLoading) {
     return (
@@ -118,9 +128,9 @@ export function ForecastTab({ debtors, onSelectDebtor, isLoading }: ForecastTabP
                   </td>
                 </tr>
               ) : (
-                debtorsWithForecast.map((debtor, index) => {
+                paginatedDebtors.map((debtor, index) => {
                   const cells = forecastMap.get(debtor.id) || [];
-                  const isLast = index === debtorsWithForecast.length - 1;
+                  const isLast = index === paginatedDebtors.length - 1;
                   
                   return (
                     <tr 
@@ -198,20 +208,46 @@ export function ForecastTab({ debtors, onSelectDebtor, isLoading }: ForecastTabP
           </table>
         </div>
         
-        {/* Minimal legend */}
-        <div className="flex items-center gap-5 text-[11px] text-slate-400 pt-2 flex-shrink-0">
-          <div className="flex items-center gap-1.5">
-            <span className={`w-1.5 h-1.5 rounded-full ${CONFIDENCE_DOT.high}`} />
-            <span>High (PTP)</span>
+        {/* Footer with legend and pagination */}
+        <div className="flex items-center justify-between pt-2 flex-shrink-0">
+          {/* Legend */}
+          <div className="flex items-center gap-5 text-[11px] text-slate-400">
+            <div className="flex items-center gap-1.5">
+              <span className={`w-1.5 h-1.5 rounded-full ${CONFIDENCE_DOT.high}`} />
+              <span>High (PTP)</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className={`w-1.5 h-1.5 rounded-full ${CONFIDENCE_DOT.medium}`} />
+              <span>Medium</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className={`w-1.5 h-1.5 rounded-full ${CONFIDENCE_DOT.low}`} />
+              <span>Low</span>
+            </div>
           </div>
-          <div className="flex items-center gap-1.5">
-            <span className={`w-1.5 h-1.5 rounded-full ${CONFIDENCE_DOT.medium}`} />
-            <span>Medium</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className={`w-1.5 h-1.5 rounded-full ${CONFIDENCE_DOT.low}`} />
-            <span>Low</span>
-          </div>
+          
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center gap-2 text-[12px] text-slate-500">
+              <button
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="p-1 rounded hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <span className="tabular-nums min-w-[80px] text-center">
+                {currentPage} of {totalPages}
+              </span>
+              <button
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                className="p-1 rounded hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </TooltipProvider>
