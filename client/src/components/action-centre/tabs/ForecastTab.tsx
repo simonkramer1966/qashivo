@@ -83,7 +83,7 @@ export function ForecastTab({ debtors, onSelectDebtor, isLoading }: ForecastTabP
         </div>
         
         {/* Table without border container */}
-        <div className="overflow-auto -mx-1 flex-1 min-h-0">
+        <div className="overflow-auto -mx-1 flex-1 min-h-0 relative">
           <table className="w-full" style={{ minWidth: '700px' }}>
             <colgroup>
               <col style={{ width: '200px' }} />

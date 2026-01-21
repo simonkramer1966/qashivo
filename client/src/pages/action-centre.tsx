@@ -389,11 +389,13 @@ export default function ActionCentreV2() {
           )}
 
           {activeTab === 'forecast' && (
-            <ForecastTab
-              debtors={debtors}
-              onSelectDebtor={handleSelectDebtor}
-              isLoading={!tabData}
-            />
+            <div className="h-[calc(100vh-220px)]">
+              <ForecastTab
+                debtors={debtors}
+                onSelectDebtor={handleSelectDebtor}
+                isLoading={!tabData}
+              />
+            </div>
           )}
         </div>
       </main>
