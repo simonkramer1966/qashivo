@@ -307,7 +307,7 @@ export default function Customers() {
             </div>
 
             {/* Footer Pagination - Action Centre style */}
-            <div className="sticky bottom-0 flex items-center justify-end gap-4 h-16 px-4 border-t border-slate-200 bg-slate-50 shrink-0">
+            <div className="sticky bottom-0 flex items-center justify-end gap-4 h-16 px-4 border-t border-slate-200 bg-white shrink-0">
               <div className="flex items-center gap-2">
                 <span className="text-[12px] text-slate-500">
                   {pagination.total} customer{pagination.total !== 1 ? 's' : ''}
