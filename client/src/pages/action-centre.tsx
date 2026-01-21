@@ -721,18 +721,18 @@ function PlannedTabContent({
           <div className="overflow-auto flex-1">
             <table className="w-full">
               <thead className="sticky top-0 z-20">
-                <tr className="border-b border-slate-200 bg-slate-50">
-                  <th className="w-10 py-2 px-3 text-left bg-slate-50">
+                <tr className="border-b border-slate-200 bg-slate-50 h-16">
+                  <th className="w-10 px-3 text-left bg-slate-50 align-middle">
                     <Checkbox
                       checked={allSelected}
                       onCheckedChange={(checked) => handleSelectAll(checked as boolean)}
                     />
                   </th>
-                  <th className="py-2 px-3 text-left text-[11px] font-medium text-slate-600 uppercase tracking-wider bg-slate-50">Customer</th>
-                  <th className="py-2 px-3 text-left text-[11px] font-medium text-slate-600 uppercase tracking-wider w-16 bg-slate-50">Channel</th>
-                  <th className="py-2 px-3 text-right text-[11px] font-medium text-slate-600 uppercase tracking-wider w-20 bg-slate-50">Overdue</th>
-                  <th className="py-2 px-3 text-right text-[11px] font-medium text-slate-600 uppercase tracking-wider w-20 bg-slate-50">Invoices</th>
-                  <th className="py-2 px-3 text-right text-[11px] font-medium text-slate-600 uppercase tracking-wider w-28 bg-slate-50">Amount</th>
+                  <th className="px-3 text-left text-[11px] font-medium text-slate-600 uppercase tracking-wider bg-slate-50 align-middle">Customer</th>
+                  <th className="px-3 text-left text-[11px] font-medium text-slate-600 uppercase tracking-wider w-16 bg-slate-50 align-middle">Channel</th>
+                  <th className="px-3 text-right text-[11px] font-medium text-slate-600 uppercase tracking-wider w-20 bg-slate-50 align-middle">Overdue</th>
+                  <th className="px-3 text-right text-[11px] font-medium text-slate-600 uppercase tracking-wider w-20 bg-slate-50 align-middle">Invoices</th>
+                  <th className="px-3 text-right text-[11px] font-medium text-slate-600 uppercase tracking-wider w-28 bg-slate-50 align-middle">Amount</th>
                 </tr>
               </thead>
               <tbody>

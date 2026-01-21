@@ -69,14 +69,14 @@ export function CashboardTab({ debtors, onSelectDebtor, isLoading }: CashboardTa
               ))}
             </colgroup>
             <thead className="sticky top-0 z-20">
-              <tr className="border-b border-slate-200 bg-slate-50">
-                <th className="py-2 px-3 text-left text-[11px] font-medium text-slate-600 uppercase tracking-wider sticky left-0 bg-slate-50 z-30">
+              <tr className="border-b border-slate-200 bg-slate-50 h-16">
+                <th className="px-3 text-left text-[11px] font-medium text-slate-600 uppercase tracking-wider sticky left-0 bg-slate-50 z-30 align-middle">
                   Customer
                 </th>
                 {STATUS_ORDER.map(status => (
                   <th 
                     key={status} 
-                    className="py-2 px-2 text-right text-[11px] font-medium text-slate-600 uppercase tracking-wider bg-slate-50"
+                    className="px-2 text-right text-[11px] font-medium text-slate-600 uppercase tracking-wider bg-slate-50 align-middle"
                   >
                     {getStatusLabel(status)}
                   </th>

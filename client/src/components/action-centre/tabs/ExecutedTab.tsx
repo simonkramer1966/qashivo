@@ -163,13 +163,13 @@ export function ExecutedTab({ actions, onSelectDebtor, isLoading }: ExecutedTabP
                 <col style={{ width: '16%' }} />
               </colgroup>
               <thead className="sticky top-0 z-20">
-                <tr className="border-b border-slate-200 bg-slate-50">
-                  <th className="py-2 px-3 text-left text-[11px] font-medium text-slate-600 uppercase tracking-wider bg-slate-50">When</th>
-                  <th className="py-2 px-3 text-left text-[11px] font-medium text-slate-600 uppercase tracking-wider bg-slate-50">Customer</th>
-                  <th className="py-2 px-3 text-left text-[11px] font-medium text-slate-600 uppercase tracking-wider bg-slate-50">Channel</th>
-                  <th className="py-2 px-3 text-left text-[11px] font-medium text-slate-600 uppercase tracking-wider bg-slate-50">Action</th>
-                  <th className="py-2 px-3 text-right text-[11px] font-medium text-slate-600 uppercase tracking-wider bg-slate-50">Amount</th>
-                  <th className="py-2 px-3 text-left text-[11px] font-medium text-slate-600 uppercase tracking-wider bg-slate-50">Outcome</th>
+                <tr className="border-b border-slate-200 bg-slate-50 h-16">
+                  <th className="px-3 text-left text-[11px] font-medium text-slate-600 uppercase tracking-wider bg-slate-50 align-middle">When</th>
+                  <th className="px-3 text-left text-[11px] font-medium text-slate-600 uppercase tracking-wider bg-slate-50 align-middle">Customer</th>
+                  <th className="px-3 text-left text-[11px] font-medium text-slate-600 uppercase tracking-wider bg-slate-50 align-middle">Channel</th>
+                  <th className="px-3 text-left text-[11px] font-medium text-slate-600 uppercase tracking-wider bg-slate-50 align-middle">Action</th>
+                  <th className="px-3 text-right text-[11px] font-medium text-slate-600 uppercase tracking-wider bg-slate-50 align-middle">Amount</th>
+                  <th className="px-3 text-left text-[11px] font-medium text-slate-600 uppercase tracking-wider bg-slate-50 align-middle">Outcome</th>
                 </tr>
               </thead>
               <tbody>
