@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
-import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -617,7 +616,7 @@ export default function InvestorDemo() {
   return (
     <div className="min-h-screen bg-white">
       {/* Sticky Header */}
-      <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm border-b border-gray-200">
+      <header className="sticky top-0 z-50 bg-white border-b border-gray-100">
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center justify-start">
             <div className="flex items-center gap-3">
@@ -633,16 +632,16 @@ export default function InvestorDemo() {
       </header>
 
       {/* Hero Section */}
-      <section className="relative pt-12 md:pt-20 pb-20 px-6 bg-gradient-to-br from-[#0E131F]/5 via-white to-[#17B6C3]/10">
+      <section className="relative pt-12 md:pt-20 pb-20 px-6 bg-white border-b border-gray-100">
         <div className="max-w-7xl mx-auto">
           {/* Centered Hero Content */}
           <div className="text-center mb-12">
-            <div className="inline-block px-4 py-2 bg-[#17B6C3]/10 rounded-full mb-6">
-              <span className="text-[#17B6C3] font-semibold">SEIS-Eligible Investment Opportunity (HMRC Advance Assurance WMBC/I&R/1183827082/VCRT)</span>
+            <div className="inline-block px-4 py-2 bg-gray-100 rounded-full mb-6">
+              <span className="text-gray-700 font-semibold">SEIS-Eligible Investment Opportunity (HMRC Advance Assurance WMBC/I&R/1183827082/VCRT)</span>
             </div>
             <h1 className="text-5xl lg:text-6xl font-bold text-gray-900 mb-6 leading-tight">
               Automation That Turns Late Payments Into<br />
-              <span className="text-[#17B6C3]">Automated Cashflow</span>
+              <span className="text-[#A98743]">Automated Cashflow</span>
             </h1>
             <p className="text-xl text-gray-600 mb-4 leading-relaxed max-w-4xl mx-auto">
               The UK's first automated credit control platform built on statutory rights. 
@@ -695,7 +694,7 @@ export default function InvestorDemo() {
 
             {/* Form */}
             <div id="dataroom-form" className="relative space-y-2">
-              <h3 className="text-2xl font-bold text-[#17B6C3] text-center">
+              <h3 className="text-2xl font-bold text-gray-900 text-center">
                 Access Investment Dataroom
               </h3>
               <div className="rounded-2xl shadow-2xl overflow-hidden bg-white" style={{ height: '570px' }}>
@@ -723,7 +722,7 @@ export default function InvestorDemo() {
       </section>
 
       {/* Trust Signals */}
-      <section className="py-6 md:py-12 px-6 border-y border-gray-200 bg-gray-50">
+      <section className="py-6 md:py-12 px-6 border-b border-gray-100 bg-white">
         <div className="max-w-7xl mx-auto">
           <p className="text-center text-sm text-gray-500 mb-6">BUILT WITH ENTERPRISE-GRADE INTEGRATIONS</p>
           <div className="flex items-center justify-center gap-12 flex-wrap">
@@ -748,7 +747,7 @@ export default function InvestorDemo() {
       </section>
 
       {/* The Problem */}
-      <section className="py-12 md:py-24 px-6">
+      <section className="py-12 md:py-24 px-6 border-b border-gray-100">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-4xl font-bold text-gray-900 mb-4">The £11 Billion Problem</h2>
@@ -757,42 +756,42 @@ export default function InvestorDemo() {
             </p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-8">
-            <Card className="p-8 border-2 border-[#8B2635]/30 bg-[#8B2635]/5 text-center" data-testid="card-problem-cost">
-              <div className="w-12 h-12 bg-[#8B2635] rounded-lg flex items-center justify-center mb-4 mx-auto">
-                <DollarSign className="w-6 h-6 text-white" />
+          <div className="grid md:grid-cols-3 gap-12">
+            <div className="text-center" data-testid="card-problem-cost">
+              <div className="w-14 h-14 bg-[#8B2635]/10 rounded-xl flex items-center justify-center mb-6 mx-auto">
+                <DollarSign className="w-7 h-7 text-[#8B2635]" />
               </div>
               <h3 className="text-2xl font-bold text-gray-900 mb-2" data-testid="text-problem-amount">£11B Lost</h3>
               <p className="text-gray-600 mb-4">Annual cost to UK SMEs from late payments</p>
               <div className="text-4xl font-bold text-[#8B2635]" data-testid="text-failures-count">14,000</div>
               <p className="text-sm text-gray-500">Businesses fail each year due to late payments</p>
-            </Card>
+            </div>
 
-            <Card className="p-8 border-2 border-[#8B2635]/30 bg-[#8B2635]/5 text-center" data-testid="card-problem-dso">
-              <div className="w-12 h-12 bg-[#8B2635] rounded-lg flex items-center justify-center mb-4 mx-auto">
-                <Clock className="w-6 h-6 text-white" />
+            <div className="text-center" data-testid="card-problem-dso">
+              <div className="w-14 h-14 bg-[#8B2635]/10 rounded-xl flex items-center justify-center mb-6 mx-auto">
+                <Clock className="w-7 h-7 text-[#8B2635]" />
               </div>
               <h3 className="text-2xl font-bold text-gray-900 mb-2" data-testid="text-dso-days">64 Days</h3>
               <p className="text-gray-600 mb-4">Average DSO for UK SMEs</p>
               <div className="text-4xl font-bold text-[#8B2635]" data-testid="text-payment-multiplier">2x</div>
               <p className="text-sm text-gray-500">Payment terms exceeded</p>
-            </Card>
+            </div>
 
-            <Card className="p-8 border-2 border-[#A98743]/30 bg-[#A98743]/5 text-center" data-testid="card-problem-compliance">
-              <div className="w-12 h-12 bg-[#A98743] rounded-lg flex items-center justify-center mb-4 mx-auto">
-                <Shield className="w-6 h-6 text-white" />
+            <div className="text-center" data-testid="card-problem-compliance">
+              <div className="w-14 h-14 bg-[#A98743]/10 rounded-xl flex items-center justify-center mb-6 mx-auto">
+                <Shield className="w-7 h-7 text-[#A98743]" />
               </div>
               <h3 className="text-2xl font-bold text-gray-900 mb-2" data-testid="text-compliance-rate">100% Must Comply</h3>
               <p className="text-gray-600 mb-4">Late Payment Act becomes mandatory</p>
               <div className="text-4xl font-bold text-[#A98743]" data-testid="text-solutions-count">0</div>
               <p className="text-sm text-gray-500">Current compliant solutions</p>
-            </Card>
+            </div>
           </div>
         </div>
       </section>
 
       {/* The Solution */}
-      <section className="py-12 md:py-24 px-6 bg-gradient-to-br from-gray-50 to-[#0E131F]/5">
+      <section className="py-12 md:py-24 px-6 bg-white border-b border-gray-100">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-4xl font-bold text-gray-900 mb-4">The Qashivo Solution</h2>
@@ -805,8 +804,8 @@ export default function InvestorDemo() {
             <div>
               <div className="space-y-6">
                 <div className="flex gap-4">
-                  <div className="flex-shrink-0 w-12 h-12 bg-[#17B6C3] rounded-lg flex items-center justify-center">
-                    <Brain className="w-6 h-6 text-white" />
+                  <div className="flex-shrink-0 w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center">
+                    <Brain className="w-6 h-6 text-gray-700" />
                   </div>
                   <div>
                     <h3 className="text-xl font-bold text-gray-900 mb-2">AI Intent Detection</h3>
@@ -818,8 +817,8 @@ export default function InvestorDemo() {
                 </div>
 
                 <div className="flex gap-4">
-                  <div className="flex-shrink-0 w-12 h-12 bg-[#17B6C3] rounded-lg flex items-center justify-center">
-                    <BarChart3 className="w-6 h-6 text-white" />
+                  <div className="flex-shrink-0 w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center">
+                    <BarChart3 className="w-6 h-6 text-gray-700" />
                   </div>
                   <div>
                     <h3 className="text-xl font-bold text-gray-900 mb-2">Intelligent Forecasting</h3>
@@ -831,8 +830,8 @@ export default function InvestorDemo() {
                 </div>
 
                 <div className="flex gap-4">
-                  <div className="flex-shrink-0 w-12 h-12 bg-[#17B6C3] rounded-lg flex items-center justify-center">
-                    <Shield className="w-6 h-6 text-white" />
+                  <div className="flex-shrink-0 w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center">
+                    <Shield className="w-6 h-6 text-gray-700" />
                   </div>
                   <div>
                     <h3 className="text-xl font-bold text-gray-900 mb-2">Statutory Compliance</h3>
@@ -844,8 +843,8 @@ export default function InvestorDemo() {
               </div>
             </div>
 
-            <div className="bg-white rounded-2xl shadow-2xl p-8 border border-gray-200">
-              <div className="rounded-lg overflow-hidden mb-4">
+            <div className="bg-gray-50 rounded-xl p-8">
+              <div className="rounded-lg overflow-hidden mb-6 shadow-lg">
                 <img 
                   src={dashboardScreenshot} 
                   alt="Qashivo Dashboard - Intelligent Forecast View" 
@@ -853,15 +852,15 @@ export default function InvestorDemo() {
                 />
               </div>
               <div className="grid grid-cols-3 gap-4">
-                <div className="text-center p-3 bg-[#A98743]/5 rounded-lg" data-testid="card-solution-accuracy">
+                <div className="text-center py-3" data-testid="card-solution-accuracy">
                   <p className="text-2xl font-bold text-[#A98743]" data-testid="text-accuracy-rate">3</p>
                   <p className="text-xs text-gray-600">Scenario Options</p>
                 </div>
-                <div className="text-center p-3 bg-blue-50 rounded-lg" data-testid="card-solution-dso">
+                <div className="text-center py-3 border-x border-gray-200" data-testid="card-solution-dso">
                   <p className="text-2xl font-bold text-[#0E131F]" data-testid="text-dso-reduction">-40%</p>
                   <p className="text-xs text-gray-600">DSO Reduction</p>
                 </div>
-                <div className="text-center p-3 bg-[#8B2635]/5 rounded-lg" data-testid="card-solution-time">
+                <div className="text-center py-3" data-testid="card-solution-time">
                   <p className="text-2xl font-bold text-[#8B2635]" data-testid="text-time-saved">85%</p>
                   <p className="text-xs text-gray-600">Time Saved</p>
                 </div>
@@ -874,12 +873,12 @@ export default function InvestorDemo() {
       {/* Live AI Demos */}
       <section id="demos" className="py-12 md:py-24 px-6 bg-white">
         <div className="max-w-7xl mx-auto">
-          <div className="grid lg:grid-cols-2 gap-8 mb-12">
+          <div className="grid lg:grid-cols-2 gap-12 mb-12">
               {/* Voice Demo */}
-              <Card className="p-8 border-2 border-[#8B2635]/30 bg-gradient-to-br from-[#8B2635]/5 to-blue-50">
+              <div className="p-8 border border-gray-100 rounded-xl bg-gray-50">
                 <div className="flex items-center gap-3 mb-6">
-                  <div className="p-3 bg-[#8B2635] rounded-xl">
-                    <Phone className="w-6 h-6 text-white" />
+                  <div className="p-3 bg-[#8B2635]/10 rounded-xl">
+                    <Phone className="w-6 h-6 text-[#8B2635]" />
                   </div>
                   <div>
                     <h3 className="text-2xl font-bold text-gray-900">AI Voice Call</h3>
@@ -930,7 +929,7 @@ export default function InvestorDemo() {
                   <Button
                     onClick={handleVoiceDemo}
                     disabled={!voicePhone}
-                    className="w-full bg-[#8B2635] hover:bg-purple-700 text-white text-lg py-6"
+                    className="w-full bg-[#8B2635] hover:bg-[#7a222f] text-white text-lg py-6 rounded-full"
                     data-testid="button-start-voice-demo"
                   >
                     <Phone className="w-5 h-5 mr-2" />
@@ -940,13 +939,13 @@ export default function InvestorDemo() {
                     You'll receive a call from +1 (586) 244-8999
                   </p>
                 </div>
-              </Card>
+              </div>
 
               {/* SMS Demo */}
-              <Card className="p-8 border-2 border-[#A98743]/30 bg-gradient-to-br from-[#A98743]/5 to-teal-50">
+              <div className="p-8 border border-gray-100 rounded-xl bg-gray-50">
                 <div className="flex items-center gap-3 mb-6">
-                  <div className="p-3 bg-[#A98743] rounded-xl">
-                    <MessageSquare className="w-6 h-6 text-white" />
+                  <div className="p-3 bg-[#A98743]/10 rounded-xl">
+                    <MessageSquare className="w-6 h-6 text-[#A98743]" />
                   </div>
                   <div>
                     <h3 className="text-2xl font-bold text-gray-900">AI SMS Analysis</h3>
@@ -997,7 +996,7 @@ export default function InvestorDemo() {
                   <Button
                     onClick={handleSMSDemo}
                     disabled={!smsPhone}
-                    className="w-full bg-[#A98743] hover:bg-green-700 text-white text-lg py-6"
+                    className="w-full bg-[#A98743] hover:bg-[#8B7035] text-white text-lg py-6 rounded-full"
                     data-testid="button-start-sms-demo"
                   >
                     <MessageSquare className="w-5 h-5 mr-2" />
@@ -1007,14 +1006,14 @@ export default function InvestorDemo() {
                     You'll receive an SMS from +44 7418 317011
                   </p>
                 </div>
-              </Card>
+              </div>
             </div>
 
         </div>
       </section>
 
       {/* Market Opportunity */}
-      <section className="py-12 md:py-24 px-6 bg-gradient-to-br from-blue-50 to-purple-50">
+      <section className="py-12 md:py-24 px-6 bg-white border-b border-gray-100">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-4xl font-bold text-gray-900 mb-4">A £4.8B Market Made Mandatory by Law</h2>
@@ -1023,69 +1022,69 @@ export default function InvestorDemo() {
             </p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-8 mb-12">
-            <Card className="p-8 text-center border-2 border-blue-200 bg-white" data-testid="card-market-tam">
-              <Target className="w-12 h-12 text-[#0E131F] mx-auto mb-4" />
+          <div className="grid md:grid-cols-3 gap-12 mb-16">
+            <div className="text-center" data-testid="card-market-tam">
+              <div className="w-14 h-14 bg-[#0E131F]/10 rounded-xl flex items-center justify-center mb-6 mx-auto">
+                <Target className="w-7 h-7 text-[#0E131F]" />
+              </div>
               <div className="text-5xl font-bold text-[#0E131F] mb-2" data-testid="text-tam-count">2.7M</div>
               <p className="text-xl font-semibold text-gray-900 mb-2">UK SMEs (TAM)</p>
               <p className="text-gray-600" data-testid="text-tam-value">£4.8B Total Market</p>
-              <div className="mt-4 pt-4 border-t border-gray-200">
-                <p className="text-sm text-gray-500">Every business needs credit control</p>
-              </div>
-            </Card>
+              <p className="text-sm text-gray-500 mt-4">Every business needs credit control</p>
+            </div>
 
-            <Card className="p-8 text-center border-2 border-purple-200 bg-white" data-testid="card-market-sam">
-              <Users className="w-12 h-12 text-[#8B2635] mx-auto mb-4" />
+            <div className="text-center" data-testid="card-market-sam">
+              <div className="w-14 h-14 bg-[#8B2635]/10 rounded-xl flex items-center justify-center mb-6 mx-auto">
+                <Users className="w-7 h-7 text-[#8B2635]" />
+              </div>
               <div className="text-5xl font-bold text-[#8B2635] mb-2" data-testid="text-sam-count">800K</div>
               <p className="text-xl font-semibold text-gray-900 mb-2">Cloud Accounting (SAM)</p>
               <p className="text-gray-600" data-testid="text-sam-value">£1.4B Addressable</p>
-              <div className="mt-4 pt-4 border-t border-gray-200">
-                <p className="text-sm text-gray-500">Xero + QuickBooks integration ready</p>
-              </div>
-            </Card>
+              <p className="text-sm text-gray-500 mt-4">Xero + QuickBooks integration ready</p>
+            </div>
 
-            <Card className="p-8 text-center border-2 border-[#17B6C3] bg-white" data-testid="card-market-som">
-              <Rocket className="w-12 h-12 text-[#17B6C3] mx-auto mb-4" />
-              <div className="text-5xl font-bold text-[#17B6C3] mb-2" data-testid="text-som-count">4-8K</div>
+            <div className="text-center" data-testid="card-market-som">
+              <div className="w-14 h-14 bg-[#A98743]/10 rounded-xl flex items-center justify-center mb-6 mx-auto">
+                <Rocket className="w-7 h-7 text-[#A98743]" />
+              </div>
+              <div className="text-5xl font-bold text-[#A98743] mb-2" data-testid="text-som-count">4-8K</div>
               <p className="text-xl font-semibold text-gray-900 mb-2">3-Year Target (SOM)</p>
               <p className="text-gray-600" data-testid="text-som-value">£7-14M Revenue</p>
-              <div className="mt-4 pt-4 border-t border-gray-200">
-                <p className="text-sm text-gray-500">200+ pre-launch inquiries</p>
-              </div>
-            </Card>
+              <p className="text-sm text-gray-500 mt-4">200+ pre-launch inquiries</p>
+            </div>
           </div>
 
-          <Card className="p-8 bg-white border-2 border-gray-200">
-            <h3 className="text-2xl font-bold text-gray-900 mb-6 text-center">Why We'll Win</h3>
-            <div className="grid md:grid-cols-3 gap-6">
+          <div className="border-t border-gray-100 pt-12">
+            <h3 className="text-2xl font-bold text-gray-900 mb-8 text-center">Why We'll Win</h3>
+            <div className="grid md:grid-cols-3 gap-12">
               <div className="text-center">
-                <div className="w-16 h-16 bg-[#A98743]/10 rounded-full flex items-center justify-center mx-auto mb-3">
-                  <Shield className="w-8 h-8 text-[#A98743]" />
+                <div className="w-14 h-14 bg-[#A98743]/10 rounded-xl flex items-center justify-center mx-auto mb-4">
+                  <Shield className="w-7 h-7 text-[#A98743]" />
                 </div>
                 <p className="font-semibold text-gray-900 mb-2">Legal Moat</p>
                 <p className="text-sm text-gray-600">Built on the Late Payment Act - competitors can't replicate statutory compliance</p>
               </div>
               <div className="text-center">
-                <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                  <Brain className="w-8 h-8 text-[#8B2635]" />
+                <div className="w-14 h-14 bg-[#8B2635]/10 rounded-xl flex items-center justify-center mx-auto mb-4">
+                  <Brain className="w-7 h-7 text-[#8B2635]" />
                 </div>
                 <p className="font-semibold text-gray-900 mb-2">AI Advantage</p>
                 <p className="text-sm text-gray-600">AI models developed using £70M+ pilot dataset</p>
               </div>
               <div className="text-center">
-                <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                  <Zap className="w-8 h-8 text-[#0E131F]" />
+                <div className="w-14 h-14 bg-[#0E131F]/10 rounded-xl flex items-center justify-center mx-auto mb-4">
+                  <Zap className="w-7 h-7 text-[#0E131F]" />
                 </div>
                 <p className="font-semibold text-gray-900 mb-2">First Mover</p>
                 <p className="text-sm text-gray-600">No compliant AI solution exists - we own the category</p>
               </div>
             </div>
-          </Card>
+          </div>
         </div>
       </section>
 
       {/* Traction */}
-      <section className="py-12 md:py-24 px-6 bg-white">
+      <section className="py-12 md:py-24 px-6 bg-white border-b border-gray-100">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
             <div className="inline-block px-4 py-2 bg-[#A98743]/10 rounded-full mb-4">
@@ -1097,46 +1096,54 @@ export default function InvestorDemo() {
             </p>
           </div>
 
-          <div className="grid md:grid-cols-4 gap-6">
-            <Card className="p-6 text-center bg-gradient-to-br from-[#A98743]/5 to-[#A98743]/10 border-[#A98743]/30" data-testid="card-traction-waitlist">
-              <TrendingUp className="w-10 h-10 text-[#A98743] mx-auto mb-3" />
+          <div className="grid md:grid-cols-4 gap-8">
+            <div className="text-center" data-testid="card-traction-waitlist">
+              <div className="w-12 h-12 bg-[#A98743]/10 rounded-xl flex items-center justify-center mb-4 mx-auto">
+                <TrendingUp className="w-6 h-6 text-[#A98743]" />
+              </div>
               <div className="text-4xl font-bold text-[#A98743] mb-1" data-testid="text-waitlist-count">200+</div>
               <p className="text-gray-700 font-medium">Product Inquiries</p>
-            </Card>
+            </div>
 
-            <Card className="p-6 text-center bg-gradient-to-br from-[#0E131F]/5 to-[#17B6C3]/10 border-[#0E131F]/30" data-testid="card-traction-customers">
-              <Users className="w-10 h-10 text-[#0E131F] mx-auto mb-3" />
+            <div className="text-center" data-testid="card-traction-customers">
+              <div className="w-12 h-12 bg-[#0E131F]/10 rounded-xl flex items-center justify-center mb-4 mx-auto">
+                <Users className="w-6 h-6 text-[#0E131F]" />
+              </div>
               <div className="text-4xl font-bold text-[#0E131F] mb-1" data-testid="text-beta-customers">12</div>
               <p className="text-gray-700 font-medium">Development Testers</p>
-            </Card>
+            </div>
 
-            <Card className="p-6 text-center bg-gradient-to-br from-[#8B2635]/5 to-[#8B2635]/10 border-[#8B2635]/30" data-testid="card-traction-invoices">
-              <DollarSign className="w-10 h-10 text-[#8B2635] mx-auto mb-3" />
+            <div className="text-center" data-testid="card-traction-invoices">
+              <div className="w-12 h-12 bg-[#8B2635]/10 rounded-xl flex items-center justify-center mb-4 mx-auto">
+                <DollarSign className="w-6 h-6 text-[#8B2635]" />
+              </div>
               <div className="text-4xl font-bold text-[#8B2635] mb-1" data-testid="text-invoices-managed">£70M+</div>
               <p className="text-gray-700 font-medium">Pilot Data Processed</p>
-            </Card>
+            </div>
 
-            <Card className="p-6 text-center bg-gradient-to-br from-orange-50 to-red-50 border-[#8B2635]/30" data-testid="card-traction-dso">
-              <BarChart3 className="w-10 h-10 text-[#8B2635] mx-auto mb-3" />
+            <div className="text-center" data-testid="card-traction-dso">
+              <div className="w-12 h-12 bg-[#8B2635]/10 rounded-xl flex items-center justify-center mb-4 mx-auto">
+                <BarChart3 className="w-6 h-6 text-[#8B2635]" />
+              </div>
               <div className="text-4xl font-bold text-[#8B2635] mb-1" data-testid="text-avg-dso-reduction">40%</div>
               <p className="text-gray-700 font-medium">Trial DSO Improvement</p>
-            </Card>
+            </div>
           </div>
         </div>
       </section>
 
       {/* Final CTA */}
-      <section className="py-12 md:py-24 px-6 bg-gradient-to-br from-[#17B6C3] to-teal-700">
+      <section className="py-16 md:py-28 px-6 bg-white">
         <div className="max-w-5xl mx-auto text-center">
-          <h2 className="text-5xl font-bold text-white mb-6">
+          <h2 className="text-[40px] md:text-5xl font-bold text-gray-900 mb-6">
             Join the £4.8B Opportunity
           </h2>
-          <p className="text-2xl text-blue-100 mb-8">
+          <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
             SEIS-eligible (HMRC Advance Assurance WMBC/I&R/1183827082/VCRT) | 200+ market inquiries | Xero integration ready
           </p>
           <div className="flex justify-center">
             <Button
-              className="bg-[#A98743] hover:bg-[#8B7035] text-white text-xl px-12 py-7 shadow-xl"
+              className="bg-[#A98743] hover:bg-[#8B7035] text-white text-xl px-12 py-7 rounded-full"
               onClick={() => {
                 const element = document.getElementById('dataroom-form');
                 if (element) {
@@ -1155,9 +1162,9 @@ export default function InvestorDemo() {
       </section>
 
       {/* Footer */}
-      <footer className="py-8 px-6 bg-gray-900 text-center">
-        <p className="text-gray-400">
-          © 2025 Qashivo. Built in London. Backed by innovation.
+      <footer className="py-12 px-6 bg-white border-t border-gray-100 text-center">
+        <p className="text-gray-500">
+          © 2026 Qashivo. Built in London. Backed by innovation.
         </p>
       </footer>
 
@@ -1333,7 +1340,7 @@ export default function InvestorDemo() {
 
             <Button 
               type="submit" 
-              className="w-full bg-[#17B6C3] hover:bg-[#1396A1] text-white text-lg py-6"
+              className="w-full bg-[#12B8C4] hover:bg-[#0fa3ae] text-white text-lg py-6 rounded-full"
               disabled={isSubmitting || !investorFirstName || !investorLastName || !investorPhone || !investorEmail || !isHighNetWorth || !acknowledgesRisk}
               data-testid="button-submit-investment-call"
             >
