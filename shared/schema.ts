@@ -5422,3 +5422,204 @@ export const CharlieRecommendationSchema = z.object({
   riskDrivers: z.array(z.string()).optional(),
 });
 export type CharlieRecommendation = z.infer<typeof CharlieRecommendationSchema>;
+
+// ===============================================
+// WORKFLOW PROFILE (Tenant-Owned Collections Config)
+// ===============================================
+
+// Status enum for workflow profiles
+export const workflowProfileStatusEnum = ['DRAFT', 'ACTIVE', 'ARCHIVED'] as const;
+export type WorkflowProfileStatus = typeof workflowProfileStatusEnum[number];
+
+// Channel enum for message variants
+export const workflowChannelEnum = ['EMAIL', 'SMS', 'VOICE'] as const;
+export type WorkflowChannel = typeof workflowChannelEnum[number];
+
+// Message variant keys
+export const messageVariantKeyEnum = [
+  'PRE_DUE_REMINDER',
+  'DUE_TODAY',
+  'OVERDUE_7',
+  'OVERDUE_14',
+  'OVERDUE_30',
+  'FINAL_NOTICE',
+] as const;
+export type MessageVariantKey = typeof messageVariantKeyEnum[number];
+
+// Workflow Profile - Tenant-owned collection policy configuration
+export const workflowProfiles = pgTable("workflow_profiles", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  name: varchar("name").notNull().default("Default workflow"),
+  
+  // Policy settings
+  policyJson: jsonb("policy_json").default({
+    typicalPaymentTerms: 30,
+    chasingStart: 'on_due', // 'before_due', 'on_due', 'after_due'
+    chasingStartDays: 0, // days before/after due date to start
+    maxTouchesPerWeek: 3,
+    escalationCadence: 'standard', // 'light', 'standard', 'firm'
+    messagesAppearFrom: 'tenant', // 'tenant', 'partner_on_behalf'
+  }),
+  
+  // Channel configuration
+  channelsJson: jsonb("channels_json").default({
+    emailEnabled: true,
+    smsEnabled: false,
+    voiceEnabled: false,
+    channelOrder: ['EMAIL', 'SMS', 'VOICE'],
+  }),
+  
+  // Outcome rules
+  outcomeRulesJson: jsonb("outcome_rules_json").default({
+    promiseToPay: {
+      action: 'pause_until_date',
+      followUpNextDay: true,
+    },
+    moreTime: {
+      action: 'flag_for_approval',
+      suggestNextStep: true,
+    },
+    dispute: {
+      action: 'stop_chasing',
+      createException: true,
+      requireManualReview: true,
+    },
+  }),
+  
+  // Required footer for all messages (remittance details, contact info)
+  requiredFooterJson: jsonb("required_footer_json").default({
+    paymentLink: '',
+    bankDetails: '',
+    contactEmail: '',
+    contactPhone: '',
+    disputeGuidance: 'If you have any queries about this invoice, please reply to this email.',
+  }),
+  
+  // Tone setting (1-5 scale or enum)
+  tone: integer("tone").default(3), // 1=gentle, 3=professional, 5=firm
+  
+  // Version control
+  version: integer("version").default(1),
+  status: varchar("status").notNull().default("DRAFT"), // DRAFT, ACTIVE, ARCHIVED
+  
+  // Approval tracking
+  approvedAt: timestamp("approved_at"),
+  approvedByUserId: varchar("approved_by_user_id").references(() => users.id),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_workflow_profiles_tenant_id").on(table.tenantId),
+  index("idx_workflow_profiles_status").on(table.status),
+]);
+
+// Insert schema for workflow profiles
+export const insertWorkflowProfileSchema = createInsertSchema(workflowProfiles).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertWorkflowProfile = z.infer<typeof insertWorkflowProfileSchema>;
+export type WorkflowProfile = typeof workflowProfiles.$inferSelect;
+
+// Workflow Message Variants - AI-generated message templates per workflow profile
+export const workflowMessageVariants = pgTable("workflow_message_variants", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workflowProfileId: varchar("workflow_profile_id").notNull().references(() => workflowProfiles.id, { onDelete: "cascade" }),
+  
+  // Message identification
+  key: varchar("key").notNull(), // PRE_DUE_REMINDER, DUE_TODAY, OVERDUE_7, OVERDUE_14, FINAL_NOTICE
+  channel: varchar("channel").notNull(), // EMAIL, SMS
+  
+  // Message content
+  subject: varchar("subject"), // For emails only
+  body: text("body").notNull(),
+  
+  // Version tracking (matches parent workflow version)
+  version: integer("version").default(1),
+  
+  // Generation metadata
+  isEdited: boolean("is_edited").default(false), // True if user modified AI-generated content
+  generatedAt: timestamp("generated_at"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_workflow_message_variants_profile_id").on(table.workflowProfileId),
+  index("idx_workflow_message_variants_key_channel").on(table.key, table.channel),
+]);
+
+// Insert schema for message variants
+export const insertWorkflowMessageVariantSchema = createInsertSchema(workflowMessageVariants).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertWorkflowMessageVariant = z.infer<typeof insertWorkflowMessageVariantSchema>;
+export type WorkflowMessageVariant = typeof workflowMessageVariants.$inferSelect;
+
+// Relations for workflow profiles
+export const workflowProfilesRelations = relations(workflowProfiles, ({ one, many }) => ({
+  tenant: one(tenants, {
+    fields: [workflowProfiles.tenantId],
+    references: [tenants.id],
+  }),
+  approvedByUser: one(users, {
+    fields: [workflowProfiles.approvedByUserId],
+    references: [users.id],
+  }),
+  messageVariants: many(workflowMessageVariants),
+}));
+
+export const workflowMessageVariantsRelations = relations(workflowMessageVariants, ({ one }) => ({
+  workflowProfile: one(workflowProfiles, {
+    fields: [workflowMessageVariants.workflowProfileId],
+    references: [workflowProfiles.id],
+  }),
+}));
+
+// Zod schemas for policy/channels/outcomes JSON validation
+export const WorkflowPolicySchema = z.object({
+  typicalPaymentTerms: z.number().min(1).max(365).default(30),
+  chasingStart: z.enum(['before_due', 'on_due', 'after_due']).default('on_due'),
+  chasingStartDays: z.number().min(0).max(30).default(0),
+  maxTouchesPerWeek: z.number().min(1).max(10).default(3),
+  escalationCadence: z.enum(['light', 'standard', 'firm']).default('standard'),
+  messagesAppearFrom: z.enum(['tenant', 'partner_on_behalf']).default('tenant'),
+});
+export type WorkflowPolicy = z.infer<typeof WorkflowPolicySchema>;
+
+export const WorkflowChannelsSchema = z.object({
+  emailEnabled: z.boolean().default(true),
+  smsEnabled: z.boolean().default(false),
+  voiceEnabled: z.boolean().default(false),
+  channelOrder: z.array(z.enum(['EMAIL', 'SMS', 'VOICE'])).default(['EMAIL', 'SMS', 'VOICE']),
+});
+export type WorkflowChannels = z.infer<typeof WorkflowChannelsSchema>;
+
+export const WorkflowOutcomeRulesSchema = z.object({
+  promiseToPay: z.object({
+    action: z.enum(['pause_until_date', 'flag_for_approval']).default('pause_until_date'),
+    followUpNextDay: z.boolean().default(true),
+  }),
+  moreTime: z.object({
+    action: z.enum(['flag_for_approval', 'auto_extend']).default('flag_for_approval'),
+    suggestNextStep: z.boolean().default(true),
+  }),
+  dispute: z.object({
+    action: z.enum(['stop_chasing', 'flag_for_approval']).default('stop_chasing'),
+    createException: z.boolean().default(true),
+    requireManualReview: z.boolean().default(true),
+  }),
+});
+export type WorkflowOutcomeRules = z.infer<typeof WorkflowOutcomeRulesSchema>;
+
+export const WorkflowRequiredFooterSchema = z.object({
+  paymentLink: z.string().optional(),
+  bankDetails: z.string().optional(),
+  contactEmail: z.string().email().optional().or(z.literal('')),
+  contactPhone: z.string().optional(),
+  disputeGuidance: z.string().default('If you have any queries about this invoice, please reply to this email.'),
+});
+export type WorkflowRequiredFooter = z.infer<typeof WorkflowRequiredFooterSchema>;

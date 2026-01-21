@@ -168,6 +168,12 @@ import {
   disputes,
   type Dispute,
   type InsertDispute,
+  workflowProfiles,
+  workflowMessageVariants,
+  type WorkflowProfile,
+  type InsertWorkflowProfile,
+  type WorkflowMessageVariant,
+  type InsertWorkflowMessageVariant,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, sql, count, sum, ne, isNotNull, isNull, gte, lte, lt, or, ilike, inArray } from "drizzle-orm";
@@ -635,6 +641,17 @@ export interface IStorage {
   getInvoicePromisesToPay(invoiceId: string, tenantId: string): Promise<PromiseToPay[]>;
   createPromiseToPay(promise: InsertPromiseToPay): Promise<PromiseToPay>;
   createDebtorPayment(payment: InsertDebtorPayment): Promise<DebtorPayment>;
+  
+  // Workflow Profile operations
+  getActiveWorkflowProfile(tenantId: string): Promise<WorkflowProfile | undefined>;
+  getDraftWorkflowProfile(tenantId: string): Promise<WorkflowProfile | undefined>;
+  getWorkflowProfileVersions(tenantId: string): Promise<WorkflowProfile[]>;
+  createWorkflowProfile(profile: InsertWorkflowProfile): Promise<WorkflowProfile>;
+  updateWorkflowProfile(id: string, updates: Partial<InsertWorkflowProfile>): Promise<WorkflowProfile | undefined>;
+  getWorkflowMessageVariants(workflowProfileId: string): Promise<WorkflowMessageVariant[]>;
+  getWorkflowMessageVariantByKeyChannel(workflowProfileId: string, key: string, channel: string): Promise<WorkflowMessageVariant | undefined>;
+  createWorkflowMessageVariant(variant: InsertWorkflowMessageVariant): Promise<WorkflowMessageVariant>;
+  updateWorkflowMessageVariant(id: string, updates: Partial<InsertWorkflowMessageVariant>): Promise<WorkflowMessageVariant | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -5424,6 +5441,91 @@ export class DatabaseStorage implements IStorage {
   async createDebtorPayment(paymentData: InsertDebtorPayment): Promise<DebtorPayment> {
     const [payment] = await db.insert(debtorPayments).values(paymentData).returning();
     return payment;
+  }
+
+  // Workflow Profile operations
+  async getActiveWorkflowProfile(tenantId: string): Promise<WorkflowProfile | undefined> {
+    const [profile] = await db
+      .select()
+      .from(workflowProfiles)
+      .where(and(
+        eq(workflowProfiles.tenantId, tenantId),
+        eq(workflowProfiles.status, "ACTIVE")
+      ));
+    return profile;
+  }
+
+  async getDraftWorkflowProfile(tenantId: string): Promise<WorkflowProfile | undefined> {
+    const [profile] = await db
+      .select()
+      .from(workflowProfiles)
+      .where(and(
+        eq(workflowProfiles.tenantId, tenantId),
+        eq(workflowProfiles.status, "DRAFT")
+      ));
+    return profile;
+  }
+
+  async getWorkflowProfileVersions(tenantId: string): Promise<WorkflowProfile[]> {
+    return db
+      .select()
+      .from(workflowProfiles)
+      .where(eq(workflowProfiles.tenantId, tenantId))
+      .orderBy(desc(workflowProfiles.version));
+  }
+
+  async createWorkflowProfile(profile: InsertWorkflowProfile): Promise<WorkflowProfile> {
+    const [created] = await db.insert(workflowProfiles).values(profile).returning();
+    return created;
+  }
+
+  async updateWorkflowProfile(id: string, updates: Partial<InsertWorkflowProfile>): Promise<WorkflowProfile | undefined> {
+    const [updated] = await db
+      .update(workflowProfiles)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(workflowProfiles.id, id))
+      .returning();
+    return updated;
+  }
+
+  async getWorkflowMessageVariants(workflowProfileId: string): Promise<WorkflowMessageVariant[]> {
+    return db
+      .select()
+      .from(workflowMessageVariants)
+      .where(eq(workflowMessageVariants.workflowProfileId, workflowProfileId));
+  }
+
+  async getWorkflowMessageVariantByKeyChannel(
+    workflowProfileId: string, 
+    key: string, 
+    channel: string
+  ): Promise<WorkflowMessageVariant | undefined> {
+    const [variant] = await db
+      .select()
+      .from(workflowMessageVariants)
+      .where(and(
+        eq(workflowMessageVariants.workflowProfileId, workflowProfileId),
+        eq(workflowMessageVariants.key, key),
+        eq(workflowMessageVariants.channel, channel)
+      ));
+    return variant;
+  }
+
+  async createWorkflowMessageVariant(variant: InsertWorkflowMessageVariant): Promise<WorkflowMessageVariant> {
+    const [created] = await db.insert(workflowMessageVariants).values(variant).returning();
+    return created;
+  }
+
+  async updateWorkflowMessageVariant(
+    id: string, 
+    updates: Partial<InsertWorkflowMessageVariant>
+  ): Promise<WorkflowMessageVariant | undefined> {
+    const [updated] = await db
+      .update(workflowMessageVariants)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(workflowMessageVariants.id, id))
+      .returning();
+    return updated;
   }
 }
 

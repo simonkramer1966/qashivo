@@ -275,6 +275,7 @@ import { registerSyncRoutes } from "./routes/syncRoutes";
 import documentationRoutes from "./routes/documentationRoutes";
 import adminRoutes from "./routes/adminRoutes";
 import prospectScorecardRoutes from "./routes/prospectScorecardRoutes";
+import workflowProfileRoutes from "./routes/workflowProfileRoutes";
 import { webhookHandler } from "./services/webhookHandler";
 import { ForecastEngine, type ForecastConfig, type ForecastScenario } from "../shared/forecast";
 import { subscriptionService } from "./services/subscriptionService";
@@ -18818,6 +18819,11 @@ ${tenant.name}
   // Public routes for partner prospects to sign up and complete scorecard
   app.use(prospectScorecardRoutes);
   // ==================== END PROSPECT SCORECARD ROUTES ====================
+
+  // ==================== WORKFLOW PROFILE ROUTES ====================
+  // Tenant-owned workflow configuration (policy, channels, messages)
+  app.use('/api', workflowProfileRoutes);
+  // ==================== END WORKFLOW PROFILE ROUTES ====================
 
   // ==================== WEBHOOK ROUTES ====================
   // Critical: These routes MUST use raw body middleware for proper HMAC verification
