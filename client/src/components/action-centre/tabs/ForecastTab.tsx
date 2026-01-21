@@ -24,7 +24,7 @@ const CONFIDENCE_DOT: Record<string, string> = {
 
 export function ForecastTab({ debtors, onSelectDebtor, isLoading }: ForecastTabProps) {
   const { weekBuckets, forecastMap, weekTotals, debtorsWithForecast } = useMemo(() => {
-    const weekBuckets = getWeekBuckets(6);
+    const weekBuckets = getWeekBuckets(8);
     const forecastMap = buildWeeklyForecast(debtors, weekBuckets);
     
     const weekTotals: Record<string, number> = {};
