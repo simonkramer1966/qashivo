@@ -111,3 +111,21 @@ export interface WeekBucket {
   startDate: Date;
   endDate: Date;
 }
+
+export type ActivityChannel = 'email' | 'sms' | 'voice' | 'whatsapp' | 'portal' | 'note';
+
+export type ActivityDirection = 'in' | 'out';
+
+export interface ActivityItem {
+  id: string;
+  date: string;
+  time: string;
+  direction: ActivityDirection;
+  channel: ActivityChannel;
+  customerId: string;
+  customerName: string;
+  contactName: string;
+  purpose: string;
+  summary?: string;
+  meta?: Record<string, any>;
+}

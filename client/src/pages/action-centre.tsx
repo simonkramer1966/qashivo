@@ -27,14 +27,14 @@ import {
 import NewSidebar from "@/components/layout/new-sidebar";
 import BottomNav from "@/components/layout/bottom-nav";
 import { formatCurrency } from "@/lib/utils";
-import { ExecutedTab, AttentionTab, CashboardTab, ForecastTab } from "@/components/action-centre/tabs";
+import { ExecutedTab, AttentionTab, CashboardTab, ForecastTab, ActivityTab } from "@/components/action-centre/tabs";
 import { ActionDrawer } from "@/components/action-centre/ActionDrawer";
 import { 
   transformActionsToExecuted, 
   transformActionsToAttention,
   getDebtorStatus,
 } from "@/components/action-centre/utils";
-import { Debtor } from "@/components/action-centre/types";
+import { Debtor, ActivityItem } from "@/components/action-centre/types";
 import {
   Sheet,
   SheetContent,
@@ -50,7 +50,7 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { SkipForward, AlertTriangle, X, ChevronLeft, ChevronRight } from "lucide-react";
 
-type TabId = 'planned' | 'executed' | 'attention' | 'cashboard' | 'forecast';
+type TabId = 'planned' | 'executed' | 'attention' | 'cashboard' | 'forecast' | 'activity';
 
 const TABS: { id: TabId; label: string }[] = [
   { id: 'planned', label: 'Planned' },
@@ -58,6 +58,7 @@ const TABS: { id: TabId; label: string }[] = [
   { id: 'attention', label: 'Attention' },
   { id: 'cashboard', label: 'Cashboard' },
   { id: 'forecast', label: 'Forecast' },
+  { id: 'activity', label: 'Activity' },
 ];
 
 export default function ActionCentreV2() {
@@ -99,6 +100,57 @@ export default function ActionCentreV2() {
 
   const executedActions = useMemo(() => transformActionsToExecuted(allActions), [allActions]);
   const attentionItems = useMemo(() => transformActionsToAttention(allActions), [allActions]);
+
+  const activityItems: ActivityItem[] = useMemo(() => {
+    const rawItems: { item: ActivityItem; timestamp: number }[] = [];
+    
+    for (const action of allActions) {
+      const rawTimestamp = action.completedAt || action.createdAt;
+      const actionDate = new Date(rawTimestamp);
+      const timestamp = actionDate.getTime();
+      
+      if (isNaN(timestamp)) continue;
+      
+      const dateStr = actionDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+      const timeStr = actionDate.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+      
+      const channelMap: Record<string, 'email' | 'sms' | 'voice' | 'whatsapp' | 'portal' | 'note'> = {
+        email: 'email',
+        sms: 'sms',
+        voice: 'voice',
+        call: 'voice',
+        manual_call: 'voice',
+        whatsapp: 'whatsapp',
+        portal: 'portal',
+        note: 'note',
+      };
+      
+      const channel = channelMap[(action.type || '').toLowerCase()] || 'email';
+      const direction = action.metadata?.inbound ? 'in' : 'out';
+      const customerId = action.contactId || action.metadata?.contactId || '';
+      
+      rawItems.push({
+        timestamp,
+        item: {
+          id: String(action.id),
+          date: dateStr,
+          time: timeStr,
+          direction: direction as 'in' | 'out',
+          channel,
+          customerId,
+          customerName: action.companyName || action.contactName || 'Unknown',
+          contactName: action.contactName || 'Unknown',
+          purpose: action.subject || action.metadata?.actionType || 'Follow-up',
+          summary: action.content?.substring(0, 200),
+          meta: { ...action.metadata, timestamp: rawTimestamp },
+        },
+      });
+    }
+    
+    return rawItems
+      .sort((a, b) => b.timestamp - a.timestamp)
+      .map(r => r.item);
+  }, [allActions]);
 
   const debtors: Debtor[] = useMemo(() => {
     if (!tabData) return [];
@@ -308,6 +360,7 @@ export default function ActionCentreV2() {
                     : activeTab === 'attention' ? "Items needing review"
                     : activeTab === 'cashboard' ? "Customer overview"
                     : activeTab === 'forecast' ? "Cash flow projections"
+                    : activeTab === 'activity' ? "Communication audit trail"
                     : "Manage your collection actions"}
                 </p>
               </div>
@@ -399,6 +452,14 @@ export default function ActionCentreV2() {
                 isLoading={!tabData}
               />
             </div>
+          )}
+
+          {activeTab === 'activity' && (
+            <ActivityTab
+              items={activityItems}
+              onSelectCustomer={handleSelectDebtor}
+              isLoading={isLoadingActions}
+            />
           )}
         </div>
       </main>
