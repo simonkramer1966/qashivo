@@ -311,15 +311,18 @@ export default function ActionCentreV2() {
                     : "Manage your collection actions"}
                 </p>
               </div>
-              {activeTab === 'planned' && (dailyPlan?.actions?.length ?? 0) > 0 && (
-                <button
-                  onClick={() => approvePlanMutation.mutate()}
-                  disabled={approvePlanMutation.isPending || (dailyPlan?.actions?.filter((a: any) => a.status === 'pending_approval').length || 0) === 0}
-                  className="h-8 px-4 text-[13px] font-medium bg-slate-900 hover:bg-slate-800 text-white rounded disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                >
-                  {approvePlanMutation.isPending ? 'Approving...' : `Approve All`}
-                </button>
-              )}
+              <div className="flex items-center gap-4">
+                <span className="text-[11px] text-slate-400">All figures are in £ GBP</span>
+                {activeTab === 'planned' && (dailyPlan?.actions?.length ?? 0) > 0 && (
+                  <button
+                    onClick={() => approvePlanMutation.mutate()}
+                    disabled={approvePlanMutation.isPending || (dailyPlan?.actions?.filter((a: any) => a.status === 'pending_approval').length || 0) === 0}
+                    className="h-8 px-4 text-[13px] font-medium bg-slate-900 hover:bg-slate-800 text-white rounded disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    {approvePlanMutation.isPending ? 'Approving...' : `Approve All`}
+                  </button>
+                )}
+              </div>
             </div>
             {/* Mobile title */}
             <div className="lg:hidden text-center">

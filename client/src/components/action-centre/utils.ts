@@ -289,8 +289,7 @@ export function transformActionsToAttention(actions: any[]): AttentionItem[] {
 
 export function formatCurrencyCompact(amount: number): string {
   return new Intl.NumberFormat('en-GB', {
-    style: 'currency',
-    currency: 'GBP',
+    style: 'decimal',
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(amount);
