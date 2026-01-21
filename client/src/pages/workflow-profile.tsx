@@ -87,10 +87,10 @@ export default function WorkflowProfilePage() {
   const [draftMessages, setDraftMessages] = useState<MessageVariant[]>([]);
   const [hasChanges, setHasChanges] = useState(false);
 
-  const { data: tenantData } = useQuery<{ tenantId: string }>({
-    queryKey: ['/api/auth/me'],
+  const { data: tenantResponse } = useQuery<{ id: string; name: string }>({
+    queryKey: ['/api/tenant'],
   });
-  const tenantId = tenantData?.tenantId;
+  const tenantId = tenantResponse?.id;
 
   const { data: activeData, isLoading: isLoadingActive } = useQuery<{
     profile: WorkflowProfile | null;
