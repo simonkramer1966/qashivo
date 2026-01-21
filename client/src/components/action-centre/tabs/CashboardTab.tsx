@@ -86,10 +86,10 @@ export function CashboardTab({ debtors, onSelectDebtor, isLoading }: CashboardTa
                 <th className="px-3 text-left text-[11px] font-medium text-slate-600 uppercase tracking-wider sticky left-0 bg-slate-50 z-30 align-middle">
                   Customer
                 </th>
-                {STATUS_ORDER.map(status => (
+                {STATUS_ORDER.map((status, idx) => (
                   <th 
                     key={status} 
-                    className="px-2 text-center bg-slate-50 align-middle"
+                    className={`px-2 text-right bg-slate-50 align-middle ${idx > 0 ? 'border-l border-slate-100' : ''}`}
                   >
                     <div className="text-[11px] font-medium text-slate-600 uppercase tracking-wider">{getStatusLabel(status)}</div>
                     <div className="font-semibold text-slate-800 text-[13px] mt-1 tabular-nums">
@@ -114,18 +114,19 @@ export function CashboardTab({ debtors, onSelectDebtor, isLoading }: CashboardTa
                       {row.debtor.invoiceCount} inv · {row.debtor.oldestDaysOverdue}d
                     </div>
                   </td>
-                  {STATUS_ORDER.map(status => {
+                  {STATUS_ORDER.map((status, idx) => {
                     const cell = row.cells[status];
+                    const borderClass = idx > 0 ? 'border-l border-slate-100' : '';
                     if (!cell) {
                       return (
-                        <td key={status} className="py-[5px] px-2 text-right">
+                        <td key={status} className={`py-[5px] px-2 text-right ${borderClass}`}>
                           <span className="text-slate-200 text-[13px]">—</span>
                         </td>
                       );
                     }
                     
                     return (
-                      <td key={status} className="py-[5px] px-2 text-right">
+                      <td key={status} className={`py-[5px] px-2 text-right ${borderClass}`}>
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <span className="text-[13px] font-medium tabular-nums text-slate-900 cursor-pointer">
