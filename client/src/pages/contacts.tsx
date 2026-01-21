@@ -222,14 +222,14 @@ export default function Customers() {
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full">
-                    <thead className="bg-white">
-                      <tr className="border-b border-slate-200">
-                        <th className="text-left py-2 pr-4 text-[11px] font-medium text-slate-500 uppercase tracking-wider bg-white">Customer</th>
-                        <th className="text-right py-2 px-4 text-[11px] font-medium text-slate-500 uppercase tracking-wider bg-white">Outstanding</th>
-                        <th className="text-right py-2 px-4 text-[11px] font-medium text-slate-500 uppercase tracking-wider bg-white">Overdue</th>
-                        <th className="text-right py-2 px-4 text-[11px] font-medium text-slate-500 uppercase tracking-wider bg-white">ADPD</th>
-                        <th className="text-right py-2 px-4 text-[11px] font-medium text-slate-500 uppercase tracking-wider bg-white">Last Payment</th>
-                        <th className="text-right py-2 pl-4 text-[11px] font-medium text-slate-500 uppercase tracking-wider bg-white">Behaviour</th>
+                    <thead className="bg-slate-50 sticky top-0 z-10">
+                      <tr className="border-b border-slate-200 h-16">
+                        <th className="text-left px-4 text-[11px] font-medium text-slate-500 uppercase tracking-wider">Customer</th>
+                        <th className="text-right px-4 text-[11px] font-medium text-slate-500 uppercase tracking-wider">Outstanding</th>
+                        <th className="text-right px-4 text-[11px] font-medium text-slate-500 uppercase tracking-wider">Overdue</th>
+                        <th className="text-right px-4 text-[11px] font-medium text-slate-500 uppercase tracking-wider">ADPD</th>
+                        <th className="text-right px-4 text-[11px] font-medium text-slate-500 uppercase tracking-wider">Last Payment</th>
+                        <th className="text-right px-4 text-[11px] font-medium text-slate-500 uppercase tracking-wider">Behaviour</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -244,7 +244,7 @@ export default function Customers() {
                           data-testid={`customer-item-${contact.id}`}
                         >
                           {/* Customer */}
-                          <td className="py-3 pr-4">
+                          <td className="py-3 px-4">
                             <p className="text-[13px] font-medium text-slate-900 truncate">
                               {contact.companyName || contact.name}
                             </p>
@@ -297,7 +297,7 @@ export default function Customers() {
                           </td>
 
                           {/* Behaviour */}
-                          <td className="py-3 pl-4 text-right">
+                          <td className="py-3 px-4 text-right">
                             {getBehaviourDot(contact.riskBand, contact.riskScore)}
                           </td>
                         </tr>
@@ -309,7 +309,7 @@ export default function Customers() {
             </div>
 
             {/* Footer Pagination - Action Centre style */}
-            <div className="sticky bottom-0 flex items-center justify-end gap-4 py-3 px-4 border-t border-slate-200 bg-white shrink-0 mt-4">
+            <div className="sticky bottom-0 flex items-center justify-end gap-4 h-16 px-4 border-t border-slate-200 bg-slate-50 shrink-0">
               <div className="flex items-center gap-2">
                 <span className="text-[12px] text-slate-500">
                   {pagination.total} customer{pagination.total !== 1 ? 's' : ''}
