@@ -125,8 +125,7 @@ export function ForecastTab({ debtors, onSelectDebtor, isLoading }: ForecastTabP
                     key={bucket.weekCommencing} 
                     className="text-center py-3 px-2 text-[11px] font-semibold text-slate-600 uppercase tracking-wide bg-slate-50"
                   >
-                    <div>{bucket.label}</div>
-                    <div className="font-normal text-slate-500 text-[10px] mt-0.5">{bucket.weekCommencing}</div>
+                    <div className="font-normal text-slate-500 text-[10px]">{bucket.weekCommencing}</div>
                     <div className="font-semibold text-slate-800 text-[13px] mt-1 tabular-nums">
                       {formatCurrencyCompact(weekTotals[bucket.weekCommencing])}
                     </div>
