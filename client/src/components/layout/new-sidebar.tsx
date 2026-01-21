@@ -214,7 +214,7 @@ function NavItem({
 export default function NewSidebar() {
   const { user } = useAuth();
   const [location, setLocation] = useLocation();
-  const [isCollapsed, setIsCollapsed] = useState(true);
+  const [isCollapsed, setIsCollapsed] = useState(false);
   const [orgSearchQuery, setOrgSearchQuery] = useState("");
   const [recentOrgIds, setRecentOrgIds] = useState<string[]>([]);
   const [isProfileDialogOpen, setIsProfileDialogOpen] = useState(false);
