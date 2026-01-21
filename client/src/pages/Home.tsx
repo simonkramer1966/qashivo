@@ -156,7 +156,7 @@ export default function Home() {
             <img src={sendgridLogo} alt="SendGrid" className="h-[54px] grayscale opacity-60 hover:opacity-100 hover:grayscale-0 transition-all" />
           </div>
           <p className="text-center text-[15px] text-[#556070] mt-10 italic max-w-[500px] mx-auto">
-            "We spend less time chasing and more time making decisions."
+            So you spend less time chasing and more time making decisions.
           </p>
         </div>
       </section>
