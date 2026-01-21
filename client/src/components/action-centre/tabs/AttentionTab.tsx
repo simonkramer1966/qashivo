@@ -103,11 +103,8 @@ export function AttentionTab({ items, onSelectDebtor, isLoading }: AttentionTabP
                 <th className="px-3 text-left text-[11px] font-medium text-slate-600 uppercase tracking-wider sticky left-0 bg-slate-50 z-30 align-middle">
                   Customer
                 </th>
-                <th className="px-2 text-center bg-slate-50 align-middle">
-                  <div className="text-[11px] font-medium text-slate-600 uppercase tracking-wider">Type</div>
-                  <div className="font-semibold text-slate-800 text-[13px] mt-1 tabular-nums">
-                    {items.length}
-                  </div>
+                <th className="px-2 text-center text-[11px] font-medium text-slate-600 uppercase tracking-wider bg-slate-50 align-middle">
+                  Type
                 </th>
                 <th className="px-2 text-left text-[11px] font-medium text-slate-600 uppercase tracking-wider bg-slate-50 align-middle">
                   Reason
