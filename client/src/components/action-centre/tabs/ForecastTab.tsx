@@ -155,7 +155,7 @@ export function ForecastTab({ debtors, onSelectDebtor, isLoading }: ForecastTabP
                         return (
                           <td 
                             key={bucket.weekCommencing}
-                            className={`text-center py-3 px-2 ${CONFIDENCE_COLORS[cell.confidence]} cursor-pointer transition-colors hover:bg-slate-100/50`}
+                            className="text-center py-3 px-2 cursor-pointer transition-colors hover:bg-slate-50"
                             onClick={() => onSelectDebtor(debtor.id)}
                           >
                             <Tooltip>
