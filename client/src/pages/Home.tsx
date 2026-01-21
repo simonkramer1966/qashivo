@@ -7,8 +7,14 @@ import logo from "@assets/Main_Nexus_Logo_copy_1768893717341.png";
 import overviewScreenshot from "@assets/Screenshot_2026-01-20_at_16.41.29_1768927459381.png";
 import customersScreenshot from "@assets/Screenshot_2026-01-20_at_15.50.46_1768941354398.png";
 import cashFlowScreenshot from "@assets/Screenshot_2026-01-15_at_16.57.28_1768920824623.png";
-
 import Screenshot_2026_01_20_at_17_48_14 from "@assets/Screenshot 2026-01-20 at 17.48.14.png";
+
+import xeroLogo from "@assets/Xero_software_logo.svg_1768974407536.png";
+import quickbooksLogo from "@assets/quickbnooks_1768974664185.png";
+import openaiLogo from "@assets/openAI_logo_1768974240021.jpg";
+import stripeLogo from "@assets/Stripe_Logo,_revised_2016.svg_1768974482890.png";
+import twilioLogo from "@assets/Twilio_logo_1768974370388.png";
+import sendgridLogo from "@assets/sendgrid-vector-logo-2022_1768974249334.png";
 
 export default function Home() {
   const [, setLocation] = useLocation();
@@ -139,14 +145,15 @@ export default function Home() {
       <section className="py-16 border-y border-[#E6E8EC] bg-white">
         <div className="max-w-[1200px] mx-auto px-6">
           <p className="text-center text-[14px] text-[#556070] mb-8">
-            Trusted by teams who care about cash
+            Integrated with
           </p>
-          <div className="flex flex-wrap items-center justify-center gap-12 opacity-50">
-            <div className="h-8 w-24 bg-[#E6E8EC] rounded"></div>
-            <div className="h-8 w-28 bg-[#E6E8EC] rounded"></div>
-            <div className="h-8 w-20 bg-[#E6E8EC] rounded"></div>
-            <div className="h-8 w-24 bg-[#E6E8EC] rounded"></div>
-            <div className="h-8 w-28 bg-[#E6E8EC] rounded"></div>
+          <div className="flex flex-wrap items-center justify-center gap-10 md:gap-14">
+            <img src={xeroLogo} alt="Xero" className="h-8 grayscale opacity-60 hover:opacity-100 hover:grayscale-0 transition-all" />
+            <img src={quickbooksLogo} alt="QuickBooks" className="h-8 grayscale opacity-60 hover:opacity-100 hover:grayscale-0 transition-all" />
+            <img src={openaiLogo} alt="OpenAI" className="h-6 grayscale opacity-60 hover:opacity-100 hover:grayscale-0 transition-all" />
+            <img src={stripeLogo} alt="Stripe" className="h-7 grayscale opacity-60 hover:opacity-100 hover:grayscale-0 transition-all" />
+            <img src={twilioLogo} alt="Twilio" className="h-6 grayscale opacity-60 hover:opacity-100 hover:grayscale-0 transition-all" />
+            <img src={sendgridLogo} alt="SendGrid" className="h-6 grayscale opacity-60 hover:opacity-100 hover:grayscale-0 transition-all" />
           </div>
           <p className="text-center text-[15px] text-[#556070] mt-10 italic max-w-[500px] mx-auto">
             "We spend less time chasing and more time making decisions."
