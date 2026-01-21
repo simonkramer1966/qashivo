@@ -125,7 +125,7 @@ export function ForecastTab({ debtors, onSelectDebtor, isLoading }: ForecastTabP
                   return (
                     <tr 
                       key={debtor.id} 
-                      className={`hover:bg-slate-50/50 transition-colors ${!isLast ? 'border-b border-slate-50' : ''}`}
+                      className={`hover:bg-slate-50/50 transition-colors ${!isLast ? 'border-b border-slate-200' : ''}`}
                     >
                       <td className="py-3 px-3 sticky left-0 bg-white z-10">
                         <button
