@@ -214,7 +214,7 @@ export function ForecastTab({ debtors, onSelectDebtor, isLoading }: ForecastTabP
         </div>
         
         {/* Footer with legend and pagination */}
-        <div className="flex items-center justify-between pt-2 flex-shrink-0">
+        <div className="flex items-center justify-end py-3 flex-shrink-0">
           {/* Legend */}
           <div className="flex items-center gap-5 text-[11px] text-slate-400">
             <div className="flex items-center gap-1.5">

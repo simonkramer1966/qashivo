@@ -192,7 +192,7 @@ export function AttentionTab({ items, onSelectDebtor, isLoading }: AttentionTabP
         </div>
         
         {/* Pagination */}
-        <div className="flex items-center justify-center gap-4 py-3 px-4 border-t border-slate-200 bg-white shrink-0">
+        <div className="flex items-center justify-end gap-4 py-3 px-4 border-t border-slate-200 bg-white shrink-0">
           <div className="flex items-center gap-2">
             <span className="text-[12px] text-slate-500">Rows:</span>
             <select

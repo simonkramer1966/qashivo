@@ -158,7 +158,7 @@ export function CashboardTab({ debtors, onSelectDebtor, isLoading }: CashboardTa
         </div>
         
         {/* Footer with pagination */}
-        <div className="flex items-center justify-center pt-2 flex-shrink-0">
+        <div className="flex items-center justify-end py-3 flex-shrink-0">
           {matrix.length > 0 && (
             <div className="flex items-center gap-4 text-[12px] text-slate-500">
               {/* Rows per page selector */}
