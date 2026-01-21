@@ -1,0 +1,130 @@
+CHANGE WORKFLOW OWNERSHIP FROM PARTNER TO TENANT (SME)
+Workflow must be created and stored in the USER TENANT (SME) context, not Partner.
+Update routing, data model, permissions, and UI accordingly.
+
+ROUTES + NAV
+- Keep the existing nav label “Workflow” wherever it appears for SME/tenant users.
+- Primary route must be tenant-based:
+  /tenants/:tenantId/workflow
+(or use your existing SME route naming convention: /smes/:smeId/workflow)
+Choose the route that matches the codebase (TENANT is preferred if that’s your core entity).
+
+If there is a Partner view that navigates into a specific tenant, “Workflow” should deep-link to that tenant’s workflow page:
+- From Partner -> SME detail, “Workflow” opens /tenants/:tenantId/workflow
+
+PAGE LAYOUT (SINGLE PAGE, SECTIONED)
+On /tenants/:tenantId/workflow, render a single calm page with 5 sections:
+1) Policy
+2) Channels
+3) Outcomes
+4) Messages (generated)
+5) Approval & versions
+
+SECTION 1 — POLICY (tenant-owned)
+Store in WorkflowProfile.policyJson:
+- Typical payment terms
+- When to start chasing (before/on/after due)
+- Max touches per week
+- Escalation cadence (Light/Standard/Firm)
+- “Messages appear from” (Tenant / Partner-on-behalf) BUT default should be Tenant
+Note: payment/remittance details are tenant-specific and must live here or in requiredFooterJson.
+
+SECTION 2 — CHANNELS
+- Enable Email (default ON)
+- Enable SMS (default OFF unless consent recorded)
+- Enable Call (default OFF unless voice actions already exist)
+- Channel order
+Respect tenant/customer opt-outs + consent.
+
+SECTION 3 — OUTCOMES
+- Promise-to-pay: pause until date; follow up next day if unpaid
+- More time/payment plan: flag for approval; suggested next step
+- Dispute: stop chasing; create Exception; manual review required
+
+SECTION 4 — MESSAGES (GENERATED)
+- Button: “Generate messages”
+- Shows variants for Email + SMS grouped by channel
+- Keys: PRE_DUE_REMINDER, DUE_TODAY, OVERDUE_7, OVERDUE_14, FINAL_NOTICE
+- Each variant editable + “Reset to suggested”
+Rules:
+- Accountant-calm, no threats, no legal claims, no mention of AI
+- Always include tenant’s required footer lines (remittance/payment link/contact/dispute guidance)
+
+SECTION 5 — APPROVAL & VERSIONS
+- Status badge DRAFT/ACTIVE
+- Save draft
+- Approve & activate (archives previous ACTIVE)
+- Create new version (clone ACTIVE into DRAFT)
+- Simple version history table
+
+DATA MODEL (DB) — TENANT OWNED
+Replace partnerId with tenantId as the owner.
+1) WorkflowProfile
+- id (uuid)
+- tenantId (fk)  // REQUIRED
+- name (string default “Default workflow”)
+- policyJson (json)
+- outcomeRulesJson (json)
+- requiredFooterJson (json)
+- tone (int 1–5 or enum)
+- version (int)
+- status (enum: DRAFT, ACTIVE, ARCHIVED)
+- approvedAt (datetime nullable)
+- approvedByUserId (fk nullable)
+- createdAt, updatedAt
+
+2) WorkflowMessageVariant
+- id (uuid)
+- workflowProfileId (fk)
+- key (string)
+- channel (enum: EMAIL, SMS)
+- subject (string nullable)
+- body (text)
+- version (int)
+
+API ENDPOINTS — TENANT
+- GET /api/tenants/:tenantId/workflow/active
+- GET /api/tenants/:tenantId/workflow/versions
+- POST /api/tenants/:tenantId/workflow/generate
+- POST /api/tenants/:tenantId/workflow/save-draft
+- POST /api/tenants/:tenantId/workflow/approve
+
+GENERATION ENDPOINT
+POST /api/tenants/:tenantId/workflow/generate
+Body: { policyJson, tone, requiredFooterJson, outcomeRulesJson }
+Returns: { variants: [{key, channel, subject?, body}] }
+
+PERMISSIONS
+- Tenant users can view/edit their tenant workflow
+- Partner users can view/edit ONLY if they have access/assignment to that tenant (existing partner->tenant relationship)
+- Qashivo admins can view/edit all
+Enforce tenant scoping strictly (no cross-tenant access).
+
+AUDIT LOG
+On approve, write audit event:
+WORKFLOW_PROFILE_APPROVED with tenantId, workflowProfileId, version, actorId.
+Also log WORKFLOW_PROFILE_VERSION_CREATED when “Create new version” is used.
+
+INTEGRATION INTO DAILY PLAN + ACTIONS
+- When generating daily plan/actions for a tenant, pull ACTIVE WorkflowProfile by tenantId
+- Prefill suggested message content from WorkflowMessageVariant
+- Still require action approval before send (existing supervised autonomy)
+
+OPTIONAL (PARTNER DEFAULTS) — DO NOT BLOCK MVP
+Partners may define a “Recommended Workflow” that can be copied into a tenant:
+- Partner page button: “Copy recommended workflow to tenant”
+But the stored/active workflow remains tenant-owned.
+If this is too much, skip and implement tenant-only.
+
+CLEANUP
+- Remove any “Templates” wording; keep “Messages (generated)” only.
+- Ensure the section headers are exactly:
+  Policy
+  Channels
+  Outcomes
+  Messages (generated)
+  Approval & versions
+
+DELIVERABLE
+- Workflow is tenant-owned and routed under /tenants/:tenantId/workflow (or your SME equivalent)
+- Full sectioned page, generation, draft, approval, versioning, permissions, and daily plan integration
