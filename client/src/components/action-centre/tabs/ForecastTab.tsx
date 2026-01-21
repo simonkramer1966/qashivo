@@ -83,7 +83,7 @@ export function ForecastTab({ debtors, onSelectDebtor, isLoading }: ForecastTabP
         </div>
         
         {/* Table without border container */}
-        <div className="overflow-x-auto -mx-1">
+        <div className="overflow-auto -mx-1 max-h-[500px]">
           <table className="w-full" style={{ minWidth: '700px' }}>
             <colgroup>
               <col style={{ width: '200px' }} />
@@ -91,15 +91,15 @@ export function ForecastTab({ debtors, onSelectDebtor, isLoading }: ForecastTabP
                 <col key={bucket.weekCommencing} style={{ width: `${100 / weekBuckets.length}%` }} />
               ))}
             </colgroup>
-            <thead>
+            <thead className="sticky top-0 z-20">
               <tr className="border-b border-slate-200 bg-slate-50">
-                <th className="text-left py-3 px-3 text-[11px] font-semibold text-slate-600 uppercase tracking-wide sticky left-0 bg-slate-50 z-10">
+                <th className="text-left py-3 px-3 text-[11px] font-semibold text-slate-600 uppercase tracking-wide sticky left-0 bg-slate-50 z-30">
                   Customer
                 </th>
                 {weekBuckets.map(bucket => (
                   <th 
                     key={bucket.weekCommencing} 
-                    className="text-center py-3 px-2 text-[11px] font-semibold text-slate-600 uppercase tracking-wide"
+                    className="text-center py-3 px-2 text-[11px] font-semibold text-slate-600 uppercase tracking-wide bg-slate-50"
                   >
                     <div>{bucket.label}</div>
                     <div className="font-normal text-slate-500 text-[10px] mt-0.5">{bucket.weekCommencing}</div>
