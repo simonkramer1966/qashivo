@@ -11,7 +11,7 @@ import Screenshot_2026_01_20_at_17_48_14 from "@assets/Screenshot 2026-01-20 at 
 
 import xeroLogo from "@assets/Xero_software_logo.svg_1768974407536.png";
 import quickbooksLogo from "@assets/quickbnooks_1768974664185.png";
-import openaiLogo from "@assets/openAI_logo_1768974240021.jpg";
+import openaiLogo from "@assets/OpenAI-black-monoblossom_1768975230640.png";
 import stripeLogo from "@assets/Stripe_Logo,_revised_2016.svg_1768974482890.png";
 import twilioLogo from "@assets/Twilio_logo_1768974370388.png";
 import sendgridLogo from "@assets/sendgrid-vector-logo-2022_1768974249334.png";
