@@ -137,12 +137,12 @@ export function ActivityTab({ items, onSelectCustomer, isLoading }: ActivityTabP
                         {item.date}
                       </div>
                     </td>
-                    <td className="py-[5px] px-2 border-l border-slate-100">
+                    <td className="py-[5px] px-2">
                       <div className="text-[13px] text-slate-600 tabular-nums">
                         {item.time}
                       </div>
                     </td>
-                    <td className="py-[5px] px-2 text-center border-l border-slate-100">
+                    <td className="py-[5px] px-2 text-center">
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <div className="inline-flex items-center justify-center">
@@ -158,7 +158,7 @@ export function ActivityTab({ items, onSelectCustomer, isLoading }: ActivityTabP
                         </TooltipContent>
                       </Tooltip>
                     </td>
-                    <td className="py-[5px] px-2 text-center border-l border-slate-100">
+                    <td className="py-[5px] px-2 text-center">
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <div className="inline-flex items-center justify-center">
@@ -170,17 +170,17 @@ export function ActivityTab({ items, onSelectCustomer, isLoading }: ActivityTabP
                         </TooltipContent>
                       </Tooltip>
                     </td>
-                    <td className="py-[5px] px-2 border-l border-slate-100">
+                    <td className="py-[5px] px-2">
                       <div className="text-[13px] font-medium text-slate-900 truncate max-w-[150px]">
                         {item.customerName}
                       </div>
                     </td>
-                    <td className="py-[5px] px-2 border-l border-slate-100">
+                    <td className="py-[5px] px-2">
                       <div className="text-[13px] text-slate-600 truncate max-w-[150px]">
                         {item.contactName}
                       </div>
                     </td>
-                    <td className="py-[5px] px-2 border-l border-slate-100">
+                    <td className="py-[5px] px-2">
                       <div className="text-[13px] text-slate-600 truncate">
                         {item.purpose}
                       </div>
