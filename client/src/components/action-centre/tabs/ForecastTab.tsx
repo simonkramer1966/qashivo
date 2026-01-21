@@ -162,7 +162,7 @@ export function ForecastTab({ debtors, onSelectDebtor, isLoading }: ForecastTabP
                               <TooltipTrigger asChild>
                                 <div className="flex items-center justify-center gap-1.5">
                                   <span className={`w-1.5 h-1.5 rounded-full ${CONFIDENCE_DOT[cell.confidence]}`} />
-                                  <span className="tabular-nums text-slate-900 font-light text-[13px]">
+                                  <span className="text-[14px] tabular-nums text-slate-900 font-medium">
                                     {formatCurrencyCompact(cell.expectedAmount)}
                                   </span>
                                 </div>
