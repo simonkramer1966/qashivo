@@ -73,7 +73,7 @@ export function ForecastTab({ debtors, onSelectDebtor, isLoading }: ForecastTabP
 
   return (
     <TooltipProvider delayDuration={200}>
-      <div className="space-y-6">
+      <div className="flex flex-col gap-6">
         {/* Stats line */}
         <div className="flex items-center justify-between text-[13px] text-slate-500">
           <span>6-week forecast based on promises to pay</span>
@@ -199,7 +199,7 @@ export function ForecastTab({ debtors, onSelectDebtor, isLoading }: ForecastTabP
         </div>
         
         {/* Minimal legend */}
-        <div className="flex items-center gap-5 text-[11px] text-slate-400 pt-2">
+        <div className="flex items-center gap-5 text-[11px] text-slate-400 pt-2 flex-shrink-0">
           <div className="flex items-center gap-1.5">
             <span className={`w-1.5 h-1.5 rounded-full ${CONFIDENCE_DOT.high}`} />
             <span>High (PTP)</span>
