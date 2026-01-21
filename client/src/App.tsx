@@ -58,6 +58,7 @@ const CashFlow = lazy(() => import("@/pages/cash-flow"));
 const Financing = lazy(() => import("@/pages/financing"));
 const Automation = lazy(() => import("@/pages/automation"));
 const Workflows = lazy(() => import("@/pages/workflows"));
+const WorkflowProfile = lazy(() => import("@/pages/workflow-profile"));
 const CustomerDetail = lazy(() => import("@/pages/customer-detail"));
 const PartnerPractice = lazy(() => import("@/pages/partner-practice"));
 const PartnerClients = lazy(() => import("@/pages/partner-clients"));
@@ -174,6 +175,7 @@ function Router() {
           <Route path="/financing" component={Financing} />
           <Route path="/automation" component={Automation} />
           <Route path="/workflows" component={Workflows} />
+          <Route path="/workflow-settings" component={WorkflowProfile} />
           <Route path="/cashboard-experimental" component={CashboardExperimental} />
           <Route path="/p/:partnerSlug/practice" component={PartnerPractice} />
           <Route path="/p/:partnerSlug/clients/:smeClientId" component={PartnerClientDetail} />

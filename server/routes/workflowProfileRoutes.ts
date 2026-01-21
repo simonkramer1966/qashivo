@@ -132,42 +132,78 @@ router.post("/tenants/:tenantId/workflow/save-draft", isAuthenticated, async (re
     
     const { profile, messageVariants } = req.body;
     
-    // Validate inputs
-    if (profile.policyJson) {
-      WorkflowPolicySchema.parse(profile.policyJson);
+    // SECURITY: Whitelist only allowed fields - prevent status/tenantId/version manipulation
+    const allowedProfileFields: Record<string, any> = {};
+    
+    if (profile?.name && typeof profile.name === 'string') {
+      allowedProfileFields.name = profile.name.slice(0, 100); // Limit name length
     }
-    if (profile.channelsJson) {
-      WorkflowChannelsSchema.parse(profile.channelsJson);
+    if (profile?.policyJson) {
+      allowedProfileFields.policyJson = WorkflowPolicySchema.parse(profile.policyJson);
     }
-    if (profile.outcomeRulesJson) {
-      WorkflowOutcomeRulesSchema.parse(profile.outcomeRulesJson);
+    if (profile?.channelsJson) {
+      allowedProfileFields.channelsJson = WorkflowChannelsSchema.parse(profile.channelsJson);
     }
-    if (profile.requiredFooterJson) {
-      WorkflowRequiredFooterSchema.parse(profile.requiredFooterJson);
+    if (profile?.outcomeRulesJson) {
+      allowedProfileFields.outcomeRulesJson = WorkflowOutcomeRulesSchema.parse(profile.outcomeRulesJson);
+    }
+    if (profile?.requiredFooterJson) {
+      allowedProfileFields.requiredFooterJson = WorkflowRequiredFooterSchema.parse(profile.requiredFooterJson);
+    }
+    if (profile?.tone !== undefined && typeof profile.tone === 'number') {
+      allowedProfileFields.tone = Math.min(5, Math.max(1, Math.floor(profile.tone)));
     }
     
-    // Get or create draft
+    // Get or create draft - server controls tenantId, status, and version
     let draft = await storage.getDraftWorkflowProfile(tenantId);
     
     if (!draft) {
+      // Determine next version based on active profile
+      const active = await storage.getActiveWorkflowProfile(tenantId);
+      const nextVersion = (active?.version || 0) + 1;
+      
       draft = await storage.createWorkflowProfile({
-        tenantId,
-        name: profile.name || "Default workflow",
-        status: "DRAFT",
-        version: 1,
-        ...profile,
+        tenantId, // Server-controlled
+        name: allowedProfileFields.name || "Default workflow",
+        status: "DRAFT", // Server-controlled
+        version: nextVersion, // Server-controlled
+        policyJson: allowedProfileFields.policyJson,
+        channelsJson: allowedProfileFields.channelsJson,
+        outcomeRulesJson: allowedProfileFields.outcomeRulesJson,
+        requiredFooterJson: allowedProfileFields.requiredFooterJson,
+        tone: allowedProfileFields.tone,
       });
     } else {
-      // Update existing draft
+      // Update existing draft - only allowed fields
       draft = await storage.updateWorkflowProfile(draft.id, {
-        ...profile,
+        ...allowedProfileFields,
         updatedAt: new Date(),
       });
     }
     
-    // Update message variants if provided
+    // SECURITY: Validate and sanitize message variants
     if (messageVariants && Array.isArray(messageVariants)) {
+      const validKeys = ['PRE_DUE_REMINDER', 'DUE_TODAY', 'OVERDUE_7', 'OVERDUE_14', 'OVERDUE_30', 'FINAL_NOTICE'];
+      const validChannels = ['EMAIL', 'SMS', 'VOICE'];
+      
       for (const variant of messageVariants) {
+        // Validate key and channel
+        if (!validKeys.includes(variant.key) || !validChannels.includes(variant.channel)) {
+          continue; // Skip invalid variants
+        }
+        
+        // Sanitize content
+        const sanitizedSubject = variant.channel === 'EMAIL' && typeof variant.subject === 'string'
+          ? variant.subject.slice(0, 200)
+          : undefined;
+        const sanitizedBody = typeof variant.body === 'string'
+          ? variant.body.slice(0, variant.channel === 'SMS' ? 160 : 10000)
+          : '';
+        
+        if (!sanitizedBody) {
+          continue; // Skip variants without body
+        }
+        
         const existing = await storage.getWorkflowMessageVariantByKeyChannel(
           draft!.id, 
           variant.key, 
@@ -176,19 +212,19 @@ router.post("/tenants/:tenantId/workflow/save-draft", isAuthenticated, async (re
         
         if (existing) {
           await storage.updateWorkflowMessageVariant(existing.id, {
-            subject: variant.subject,
-            body: variant.body,
+            subject: sanitizedSubject,
+            body: sanitizedBody,
             isEdited: true,
             updatedAt: new Date(),
           });
         } else {
           await storage.createWorkflowMessageVariant({
-            workflowProfileId: draft!.id,
+            workflowProfileId: draft!.id, // Server-controlled
             key: variant.key,
             channel: variant.channel,
-            subject: variant.subject,
-            body: variant.body,
-            version: draft!.version,
+            subject: sanitizedSubject,
+            body: sanitizedBody,
+            version: draft!.version, // Server-controlled
             isEdited: true,
           });
         }
