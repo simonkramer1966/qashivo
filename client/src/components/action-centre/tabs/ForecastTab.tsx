@@ -97,9 +97,8 @@ export function ForecastTab({ debtors, onSelectDebtor, isLoading }: ForecastTabP
 
   return (
     <TooltipProvider delayDuration={200}>
-      <div className="flex flex-col h-full">
-        {/* Table without border container */}
-        <div className="overflow-auto -mx-1 flex-1 min-h-0 relative">
+      <div className="flex flex-col h-[calc(100vh-220px)]">
+        <div className="overflow-auto flex-1">
           <table className="w-full" style={{ minWidth: '900px', tableLayout: 'fixed' }}>
             <colgroup>
               <col style={{ width: '18%' }} />
