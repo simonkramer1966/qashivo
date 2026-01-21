@@ -38,6 +38,7 @@ import {
   paymentPlanInvoices,
   globalTemplates,
   tenantTemplates,
+  partnerAuditLog,
   type User,
   type UpsertUser,
   type Tenant,
@@ -5526,6 +5527,27 @@ export class DatabaseStorage implements IStorage {
       .where(eq(workflowMessageVariants.id, id))
       .returning();
     return updated;
+  }
+
+  async createAuditLog(params: {
+    tenantId: string;
+    userId: string;
+    action: string;
+    resourceType: string;
+    resourceId: string;
+    metadata?: Record<string, any>;
+  }): Promise<void> {
+    await db.insert(partnerAuditLog).values({
+      actorUserId: params.userId,
+      eventType: params.action,
+      targetId: params.resourceId,
+      targetType: params.resourceType,
+      metadata: {
+        tenantId: params.tenantId,
+        ...params.metadata,
+      },
+    });
+    console.log(`📝 Audit: ${params.action} by user ${params.userId} on ${params.resourceType}/${params.resourceId}`);
   }
 }
 

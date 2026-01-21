@@ -5,6 +5,7 @@ import { generateInvoiceTableHtml } from "./collectionsAutomation";
 import { setupDefaultWorkflow } from "./defaultWorkflowSetup";
 import { charlieDecisionEngine, type CharlieDecision, type DailyPlan } from "./charlieDecisionEngine";
 import { charliePlaybook, prepareMessageFromDecision } from "./charliePlaybook";
+import { prepareMessageFromWorkflowProfile } from "./workflowProfileMessageService";
 
 export interface InvoiceSummary {
   id: string;
@@ -425,7 +426,26 @@ async function generateDailyPlanWithCharlie(
       allInvoiceIds: contactDecisions.map(d => d.invoiceId),
     };
     
-    const preparedMessage = prepareMessageFromDecision(consolidatedDecision as any, tenantConfig);
+    // Try workflow profile messages first, then fall back to default charliePlaybook
+    let preparedMessage = await prepareMessageFromWorkflowProfile(
+      tenantId,
+      consolidatedDecision as any,
+      tenantConfig
+    );
+    
+    // Fall back to default Charlie playbook templates if no workflow profile message
+    if (!preparedMessage) {
+      const charlieMessage = prepareMessageFromDecision(consolidatedDecision as any, tenantConfig);
+      if (charlieMessage) {
+        preparedMessage = {
+          channel: charlieMessage.channel,
+          subject: charlieMessage.subject,
+          body: charlieMessage.body,
+          fromWorkflowProfile: false,
+          templateKey: charlieMessage.templateId || 'default',
+        };
+      }
+    }
     
     // Generate subject line (different for single vs multiple invoices)
     const subject = invoiceCount > 1
@@ -455,6 +475,8 @@ async function generateDailyPlanWithCharlie(
         totalOutstanding: contactTotalOutstanding.toString(),
         priority,
         generatedBy: 'charlie_decision_engine',
+        messageSource: preparedMessage?.fromWorkflowProfile ? 'workflow_profile' : 'charlie_playbook',
+        templateKey: preparedMessage?.templateKey,
         charlieState: primaryDecision.charlieState,
         customerSegment: primaryDecision.customerSegment,
         priorityScore: primaryDecision.priorityScore,
