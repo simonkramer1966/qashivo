@@ -141,7 +141,7 @@ export default function Home() {
       <section className="py-16 border-y border-[#E6E8EC] bg-white">
         <div className="max-w-[1200px] mx-auto px-6">
           <p className="text-center text-[14px] text-[#556070] mb-8">
-            Integrated with
+            Integrated with your favourite accounting software ...
           </p>
           <div className="flex flex-wrap items-center justify-center gap-10 md:gap-14">
             <img src={xeroLogo} alt="Xero" className="h-24 grayscale opacity-60 hover:opacity-100 hover:grayscale-0 transition-all" />
