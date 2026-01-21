@@ -99,8 +99,7 @@ export function ForecastTab({ debtors, onSelectDebtor, isLoading }: ForecastTabP
     <TooltipProvider delayDuration={200}>
       <div className="flex flex-col gap-6 h-full">
         {/* Stats line */}
-        <div className="flex items-center justify-between text-[13px] text-slate-500 flex-shrink-0">
-          <span>6-week forecast based on promises to pay</span>
+        <div className="flex items-center justify-end text-[13px] text-slate-500 flex-shrink-0">
           <span>
             Total expected: <span className="font-medium text-slate-900 tabular-nums">{formatCurrencyCompact(grandTotal)}</span>
           </span>
