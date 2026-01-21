@@ -52,13 +52,19 @@ export function ForecastTab({ debtors, onSelectDebtor, isLoading }: ForecastTabP
   }, [debtors]);
 
   // Pagination
-  const ITEMS_PER_PAGE = 15;
+  const PAGE_SIZE_OPTIONS = [10, 15, 25, 50];
+  const [itemsPerPage, setItemsPerPage] = useState(15);
   const [currentPage, setCurrentPage] = useState(1);
-  const totalPages = Math.ceil(debtorsWithForecast.length / ITEMS_PER_PAGE);
+  const totalPages = Math.ceil(debtorsWithForecast.length / itemsPerPage);
   const paginatedDebtors = useMemo(() => {
-    const start = (currentPage - 1) * ITEMS_PER_PAGE;
-    return debtorsWithForecast.slice(start, start + ITEMS_PER_PAGE);
-  }, [debtorsWithForecast, currentPage]);
+    const start = (currentPage - 1) * itemsPerPage;
+    return debtorsWithForecast.slice(start, start + itemsPerPage);
+  }, [debtorsWithForecast, currentPage, itemsPerPage]);
+  
+  const handlePageSizeChange = (newSize: number) => {
+    setItemsPerPage(newSize);
+    setCurrentPage(1); // Reset to first page when changing page size
+  };
 
   if (isLoading) {
     return (
@@ -227,25 +233,44 @@ export function ForecastTab({ debtors, onSelectDebtor, isLoading }: ForecastTabP
           </div>
           
           {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="flex items-center gap-2 text-[12px] text-slate-500">
-              <button
-                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-                className="p-1 rounded hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-              <span className="tabular-nums min-w-[80px] text-center">
-                {currentPage} of {totalPages}
-              </span>
-              <button
-                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                disabled={currentPage === totalPages}
-                className="p-1 rounded hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </button>
+          {debtorsWithForecast.length > 0 && (
+            <div className="flex items-center gap-4 text-[12px] text-slate-500">
+              {/* Rows per page selector */}
+              <div className="flex items-center gap-2">
+                <span className="text-slate-400">Rows:</span>
+                <select
+                  value={itemsPerPage}
+                  onChange={(e) => handlePageSizeChange(Number(e.target.value))}
+                  className="bg-white border border-slate-200 rounded px-2 py-1 text-[12px] text-slate-600 cursor-pointer hover:border-slate-300 focus:outline-none focus:ring-1 focus:ring-slate-300"
+                >
+                  {PAGE_SIZE_OPTIONS.map(size => (
+                    <option key={size} value={size}>{size}</option>
+                  ))}
+                </select>
+              </div>
+              
+              {/* Page navigation */}
+              {totalPages > 1 && (
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                    className="p-1 rounded hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                  <span className="tabular-nums min-w-[80px] text-center">
+                    {currentPage} of {totalPages}
+                  </span>
+                  <button
+                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                    disabled={currentPage === totalPages}
+                    className="p-1 rounded hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>
