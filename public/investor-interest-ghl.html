@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Qashivo - AI that helps you get paid | Investor Interest</title>
+  <meta name="description" content="SEIS/EIS eligible investment opportunity. Supervised AI for credit control, cashflow visibility, and predictable SME payments.">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; color: #1e293b; line-height: 1.6; background: #fff; }
+    
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
+    .container-sm { max-width: 800px; margin: 0 auto; padding: 0 24px; }
+    .container-xs { max-width: 480px; margin: 0 auto; padding: 0 24px; }
+    
+    .text-center { text-align: center; }
+    .mb-2 { margin-bottom: 8px; }
+    .mb-4 { margin-bottom: 16px; }
+    .mb-6 { margin-bottom: 24px; }
+    .mb-8 { margin-bottom: 32px; }
+    .mb-12 { margin-bottom: 48px; }
+    .mt-4 { margin-top: 16px; }
+    .mt-12 { margin-top: 48px; }
+    
+    .section { padding: 80px 24px; border-bottom: 1px solid #f1f5f9; }
+    .section-gray { background: #f8fafc; }
+    
+    .hero-title { font-size: 48px; font-weight: 300; letter-spacing: -0.02em; margin-bottom: 16px; color: #0f172a; }
+    .hero-subtitle { font-size: 20px; font-weight: 300; color: #64748b; max-width: 600px; margin: 0 auto 32px; }
+    
+    .badge { display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; background: #ecfdf5; color: #047857; border-radius: 50px; font-size: 14px; }
+    .badge svg { width: 16px; height: 16px; }
+    
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 48px; }
+    .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 32px; }
+    .grid-6 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+    
+    @media (max-width: 768px) {
+      .grid-3, .grid-4, .grid-6 { grid-template-columns: 1fr; }
+      .hero-title { font-size: 32px; }
+    }
+    
+    .icon-box { width: 40px; height: 40px; background: #f8fafc; border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-bottom: 16px; }
+    .icon-box svg { width: 20px; height: 20px; color: #475569; }
+    
+    .card-title { font-size: 18px; font-weight: 500; margin-bottom: 8px; }
+    .card-text { font-size: 14px; color: #64748b; line-height: 1.7; }
+    
+    .screenshot-card { background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: 1px solid #f1f5f9; }
+    .screenshot-card img { width: 100%; height: 192px; object-fit: cover; object-position: top; }
+    .screenshot-card-body { padding: 16px; }
+    .screenshot-card-title { font-size: 14px; font-weight: 500; color: #0f172a; }
+    .screenshot-card-text { font-size: 12px; color: #64748b; margin-top: 4px; }
+    
+    .metric { text-align: center; }
+    .metric-value { font-size: 36px; font-weight: 300; color: #0f172a; margin-bottom: 4px; }
+    .metric-label { font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; }
+    
+    .outcomes-box { margin-top: 48px; padding: 24px; background: #f8fafc; border-radius: 8px; }
+    .outcomes-box h3 { font-size: 14px; font-weight: 500; margin-bottom: 16px; }
+    .outcomes-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+    @media (max-width: 768px) { .outcomes-grid { grid-template-columns: 1fr; } }
+    .outcome-label { font-size: 14px; color: #64748b; margin-bottom: 4px; }
+    .outcome-value { font-size: 14px; color: #0f172a; }
+    .outcomes-disclaimer { font-size: 11px; color: #94a3b8; margin-top: 16px; }
+    
+    .form-section { padding: 80px 24px; background: #f8fafc; }
+    .form-title { font-size: 28px; font-weight: 300; margin-bottom: 8px; }
+    .form-subtitle { color: #64748b; margin-bottom: 32px; }
+    
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+    @media (max-width: 480px) { .form-row { grid-template-columns: 1fr; } }
+    
+    .form-group { margin-bottom: 16px; }
+    .form-label { display: block; font-size: 14px; color: #475569; margin-bottom: 4px; }
+    .form-input { width: 100%; padding: 10px 12px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px; transition: border-color 0.2s, box-shadow 0.2s; }
+    .form-input:focus { outline: none; border-color: #17B6C3; box-shadow: 0 0 0 3px rgba(23, 182, 195, 0.1); }
+    
+    .checkbox-group { display: flex; align-items: flex-start; gap: 12px; padding-top: 8px; margin-bottom: 16px; }
+    .checkbox-group input { margin-top: 4px; width: 16px; height: 16px; accent-color: #17B6C3; }
+    .checkbox-label { font-size: 12px; color: #64748b; line-height: 1.6; }
+    .checkbox-label strong { color: #0f172a; }
+    
+    .btn-primary { width: 100%; padding: 12px 24px; background: #17B6C3; color: #fff; border: none; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: background 0.2s; }
+    .btn-primary:hover { background: #1396A1; }
+    
+    .disclaimer { padding: 32px 24px; border-top: 1px solid #f1f5f9; }
+    .disclaimer p { font-size: 12px; color: #94a3b8; text-align: center; max-width: 800px; margin: 0 auto; line-height: 1.7; }
+    
+    .footer { padding: 24px; border-top: 1px solid #f1f5f9; }
+    .footer-content { max-width: 800px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: #94a3b8; }
+    .footer-links { display: flex; gap: 16px; }
+    .footer-links a { color: #94a3b8; text-decoration: none; }
+    .footer-links a:hover { color: #475569; }
+    
+    .success-message { text-align: center; padding: 48px 0; }
+    .success-icon { width: 64px; height: 64px; background: #ecfdf5; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; }
+    .success-icon svg { width: 32px; height: 32px; color: #059669; }
+    .success-title { font-size: 20px; font-weight: 500; margin-bottom: 8px; }
+    .success-text { color: #64748b; }
+    
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+  <!-- Hero Section -->
+  <section class="section">
+    <div class="container-sm text-center">
+      <div class="mb-6">
+        <svg viewBox="0 0 40 40" width="48" height="48" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M20 5C11.716 5 5 11.716 5 20C5 28.284 11.716 35 20 35C28.284 35 35 28.284 35 20C35 11.716 28.284 5 20 5Z" stroke="#17B6C3" stroke-width="2.5" fill="none"/>
+          <path d="M15 20L18 23L25 16" stroke="#17B6C3" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <h1 class="hero-title">AI that helps you get paid</h1>
+      <p class="hero-subtitle">Supervised AI for credit control, cashflow visibility, and predictable SME payments</p>
+      <div class="badge">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+        </svg>
+        SEIS/EIS eligible · HMRC advance assurance granted
+      </div>
+    </div>
+  </section>
+
+  <!-- Value Props -->
+  <section class="section">
+    <div class="container">
+      <div class="grid-3">
+        <div>
+          <div class="icon-box">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/>
+              <polyline points="17 6 23 6 23 12"/>
+            </svg>
+          </div>
+          <h3 class="card-title">The Market</h3>
+          <p class="card-text">Late payments cost UK businesses £11 billion each year, causing 14,000 business closures annually. SMEs need better cashflow visibility.</p>
+        </div>
+        <div>
+          <div class="icon-box">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2a10 10 0 1 0 10 10H12V2Z"/>
+              <path d="M12 2a10 10 0 0 1 10 10"/>
+              <circle cx="12" cy="12" r="6"/>
+              <circle cx="12" cy="12" r="2"/>
+            </svg>
+          </div>
+          <h3 class="card-title">The Technology</h3>
+          <p class="card-text">Supervised AI that plans credit control work, captures customer intent from conversations, and executes with human oversight. Context that learns from every interaction.</p>
+        </div>
+        <div>
+          <div class="icon-box">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+              <circle cx="9" cy="7" r="4"/>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+              <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+            </svg>
+          </div>
+          <h3 class="card-title">The Opportunity</h3>
+          <p class="card-text">£4.8B market with partner-led distribution through accountants. SEIS/EIS eligible with up to 50% tax relief and CGT exemption after 3 years.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Product Screenshots -->
+  <section class="section section-gray">
+    <div class="container">
+      <h2 class="hero-title text-center" style="font-size: 28px;">The Platform</h2>
+      <p class="hero-subtitle text-center" style="font-size: 16px; margin-bottom: 48px;">Qashivo transforms credit control from manual chasing into supervised, intelligent workflows with clearer cashflow visibility.</p>
+      
+      <!-- 
+        IMAGE UPLOAD INSTRUCTIONS FOR GOHIGHLEVEL:
+        Upload the 6 product screenshots to GoHighLevel Media Library and replace the placeholder URLs below:
+        1. dashboard-overview.png = Screenshot_2026-01-20_at_16.41.29 (Overview dashboard with cash inflow chart)
+        2. action-centre.png = Screenshot_2026-01-20_at_22.11.45 (Action Centre with planned actions)
+        3. cash-forecast.png = Screenshot_2026-01-20_at_21.58.10 (Forecast tab with weekly projections)
+        4. cashboard.png = Screenshot_2026-01-20_at_21.57.35 (Cashboard tab with customer statuses)
+        5. customer-behaviour.png = Screenshot_2026-01-20_at_17.48.14 (Customers list with behaviour profiles)
+        6. customer-profile.png = Screenshot_2026-01-20_at_17.44.39 (Customer detail with communication prefs)
+      -->
+      <div class="grid-6">
+        <div class="screenshot-card">
+          <img src="{{media.dashboard-overview}}" alt="Dashboard Overview">
+          <div class="screenshot-card-body">
+            <div class="screenshot-card-title">Dashboard Overview</div>
+            <div class="screenshot-card-text">Real-time cashflow visibility and forecasting</div>
+          </div>
+        </div>
+        <div class="screenshot-card">
+          <img src="{{media.action-centre}}" alt="Action Centre">
+          <div class="screenshot-card-body">
+            <div class="screenshot-card-title">Action Centre</div>
+            <div class="screenshot-card-text">AI plans daily work for human approval</div>
+          </div>
+        </div>
+        <div class="screenshot-card">
+          <img src="{{media.cash-forecast}}" alt="Cash Forecast">
+          <div class="screenshot-card-body">
+            <div class="screenshot-card-title">Cash Forecast</div>
+            <div class="screenshot-card-text">Predictive weekly cash inflow projections</div>
+          </div>
+        </div>
+        <div class="screenshot-card">
+          <img src="{{media.cashboard}}" alt="Cashboard">
+          <div class="screenshot-card-body">
+            <div class="screenshot-card-title">Cashboard</div>
+            <div class="screenshot-card-text">Invoice status at a glance by customer</div>
+          </div>
+        </div>
+        <div class="screenshot-card">
+          <img src="{{media.customer-behaviour}}" alt="Customer Behaviour">
+          <div class="screenshot-card-body">
+            <div class="screenshot-card-title">Customer Behaviour</div>
+            <div class="screenshot-card-text">Payment patterns and reliability scoring</div>
+          </div>
+        </div>
+        <div class="screenshot-card">
+          <img src="{{media.customer-profile}}" alt="Customer Profile">
+          <div class="screenshot-card-body">
+            <div class="screenshot-card-title">Customer Profile</div>
+            <div class="screenshot-card-text">Communication preferences and history</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Metrics Section -->
+  <section class="section">
+    <div class="container-sm">
+      <h2 class="hero-title text-center" style="font-size: 28px;">Financial Trajectory</h2>
+      <p class="hero-subtitle text-center" style="font-size: 16px; margin-bottom: 48px;">Built to reach profitability early with partner-led, capital-efficient growth</p>
+      
+      <div class="grid-4">
+        <div class="metric">
+          <div class="metric-value">£4.2M</div>
+          <div class="metric-label">ARR by Year 3</div>
+        </div>
+        <div class="metric">
+          <div class="metric-value">3,000</div>
+          <div class="metric-label">SME Subscribers</div>
+        </div>
+        <div class="metric">
+          <div class="metric-value">23%</div>
+          <div class="metric-label">EBITDA Margin</div>
+        </div>
+        <div class="metric">
+          <div class="metric-value">32×</div>
+          <div class="metric-label">LTV:CAC Ratio</div>
+        </div>
+      </div>
+
+      <div class="outcomes-box">
+        <h3>Illustrative Investor Outcomes (Year 3)</h3>
+        <div class="outcomes-grid">
+          <div>
+            <div class="outcome-label">Conservative</div>
+            <div class="outcome-value">£2-3M ARR · 2-3× exit · 0-50% ROI</div>
+          </div>
+          <div>
+            <div class="outcome-label">Base Case</div>
+            <div class="outcome-value">£4-5M ARR · 4× exit · 150-200% ROI</div>
+          </div>
+          <div>
+            <div class="outcome-label">Upside</div>
+            <div class="outcome-value">£7-8M ARR · 5-6× exit · 500-600% ROI</div>
+          </div>
+        </div>
+        <p class="outcomes-disclaimer">These are illustrative examples, not forecasts. SEIS/EIS investors also receive up to 50% tax relief and CGT exemption.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Registration Form -->
+  <section class="form-section">
+    <div class="container-xs">
+      <h2 class="form-title text-center">Register Interest</h2>
+      <p class="form-subtitle text-center">Receive the investment deck and updates on this SEIS/EIS opportunity</p>
+
+      <div id="success-message" class="success-message hidden">
+        <div class="success-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
+        </div>
+        <h3 class="success-title">Thank you for your interest</h3>
+        <p class="success-text">We'll send the investment deck to your email shortly.</p>
+      </div>
+
+      <form id="interest-form">
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="firstName">First Name *</label>
+            <input type="text" id="firstName" name="firstName" class="form-input" placeholder="First name" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="lastName">Last Name *</label>
+            <input type="text" id="lastName" name="lastName" class="form-input" placeholder="Last name" required>
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label" for="email">Email *</label>
+          <input type="email" id="email" name="email" class="form-input" placeholder="email@example.com" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="phone">Phone *</label>
+          <input type="tel" id="phone" name="phone" class="form-input" placeholder="+44 7xxx xxxxxx" required>
+        </div>
+
+        <div class="checkbox-group">
+          <input type="checkbox" id="investorConfirmation" name="investorConfirmation" required>
+          <label class="checkbox-label" for="investorConfirmation">
+            I confirm that I am a <strong>High Net Worth</strong> or <strong>Self-Certified Sophisticated Investor</strong> and consent to receiving communications from Qashivo regarding this investment opportunity.
+          </label>
+        </div>
+
+        <button type="submit" class="btn-primary">
+          Register Interest
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="9 18 15 12 9 6"/>
+          </svg>
+        </button>
+      </form>
+    </div>
+  </section>
+
+  <!-- Risk Disclaimer -->
+  <section class="disclaimer">
+    <p><strong>Important Risk Disclaimer:</strong> Investing in early-stage companies carries risk including total loss of capital. Past performance is not indicative of future results. SEIS/EIS tax reliefs depend on investor circumstances and HMRC approval. The content of this document has not been approved by an authorised person within the meaning of the Financial Services and Markets Act 2000.</p>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-content">
+      <div>© 2026 Qashivo Ltd. All rights reserved.</div>
+      <div class="footer-links">
+        <a href="mailto:hello@qashivo.com">hello@qashivo.com</a>
+        <span>·</span>
+        <a href="https://www.qashivo.com">www.qashivo.com</a>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    document.getElementById('interest-form').addEventListener('submit', function(e) {
+      e.preventDefault();
+      
+      // Hide form and show success message
+      this.style.display = 'none';
+      document.getElementById('success-message').classList.remove('hidden');
+      
+      // In GoHighLevel, the form submission will be handled by GHL's form processing
+      // You can add custom form action URL here if needed
+    });
+  </script>
+</body>
+</html>
