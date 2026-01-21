@@ -33,7 +33,7 @@ export default function Pricing() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-[#FBFBFC]">
+    <div className="min-h-screen bg-white">
       {/* Navigation */}
       <nav className="sticky top-0 z-50 bg-white border-b border-[#E6E8EC]">
         <div className="max-w-[1200px] mx-auto px-6">
@@ -70,7 +70,7 @@ export default function Pricing() {
               </a>
               <Button
                 onClick={() => setLocation("/contact")}
-                className="bg-[#12B8C4] hover:bg-[#0fa3ae] text-white h-11 px-5 rounded-xl text-[15px] font-medium"
+                className="bg-[#12B8C4] hover:bg-[#0fa3ae] text-white h-11 px-5 rounded-full text-[15px] font-medium"
               >
                 Book a demo
               </Button>
@@ -186,7 +186,7 @@ export default function Pricing() {
               </ul>
               <Button
                 onClick={() => setLocation("/contact")}
-                className="w-full h-12 rounded-xl text-[15px] font-medium bg-[#12B8C4] hover:bg-[#0fa3ae] text-white mt-auto"
+                className="w-full h-12 rounded-full text-[15px] font-medium bg-[#12B8C4] hover:bg-[#0fa3ae] text-white mt-auto"
               >
                 Get started
               </Button>
@@ -234,7 +234,7 @@ export default function Pricing() {
           <div className="flex justify-center mt-8">
             <Button
               onClick={() => setLocation("/contact")}
-              className="bg-[#12B8C4] hover:bg-[#0fa3ae] text-white h-12 px-7 rounded-xl text-[16px] font-medium"
+              className="bg-[#12B8C4] hover:bg-[#0fa3ae] text-white h-12 px-7 rounded-full text-[16px] font-medium"
             >
               Book a demo
               <ArrowRight className="ml-2 h-4 w-4" />
@@ -287,7 +287,7 @@ export default function Pricing() {
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Button
               onClick={() => setLocation("/contact")}
-              className="bg-[#12B8C4] hover:bg-[#0fa3ae] text-white h-12 px-7 rounded-xl text-[16px] font-medium"
+              className="bg-[#12B8C4] hover:bg-[#0fa3ae] text-white h-12 px-7 rounded-full text-[16px] font-medium"
             >
               Book a demo
               <ArrowRight className="ml-2 h-4 w-4" />
