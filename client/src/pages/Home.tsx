@@ -150,7 +150,7 @@ export default function Home() {
           <div className="flex flex-wrap items-center justify-center gap-10 md:gap-14">
             <img src={xeroLogo} alt="Xero" className="h-8 grayscale opacity-60 hover:opacity-100 hover:grayscale-0 transition-all" />
             <img src={quickbooksLogo} alt="QuickBooks" className="h-8 grayscale opacity-60 hover:opacity-100 hover:grayscale-0 transition-all" />
-            <img src={openaiLogo} alt="OpenAI" className="h-11 grayscale opacity-60 hover:opacity-100 hover:grayscale-0 transition-all" />
+            <img src={openaiLogo} alt="OpenAI" className="h-10 grayscale opacity-50 hover:opacity-100 hover:grayscale-0 transition-all" />
             <img src={stripeLogo} alt="Stripe" className="h-7 grayscale opacity-60 hover:opacity-100 hover:grayscale-0 transition-all" />
             <img src={twilioLogo} alt="Twilio" className="h-6 grayscale opacity-60 hover:opacity-100 hover:grayscale-0 transition-all" />
             <img src={sendgridLogo} alt="SendGrid" className="h-9 grayscale opacity-60 hover:opacity-100 hover:grayscale-0 transition-all" />
