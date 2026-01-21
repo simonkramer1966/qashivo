@@ -148,7 +148,7 @@ export function ForecastTab({ debtors, onSelectDebtor, isLoading }: ForecastTabP
                           onClick={() => onSelectDebtor(debtor.id)}
                           className="text-left w-full group"
                         >
-                          <div className="text-[14px] font-medium text-slate-900 truncate max-w-[180px] group-hover:text-slate-700">
+                          <div className="text-[13px] font-medium text-slate-900 truncate max-w-[180px] group-hover:text-slate-700">
                             {debtor.name}
                           </div>
                           <div className="text-[12px] text-slate-400 tabular-nums">
