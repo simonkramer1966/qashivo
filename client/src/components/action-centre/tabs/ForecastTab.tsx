@@ -100,11 +100,11 @@ export function ForecastTab({ debtors, onSelectDebtor, isLoading }: ForecastTabP
       <div className="flex flex-col h-full">
         {/* Table without border container */}
         <div className="overflow-auto -mx-1 flex-1 min-h-0 relative">
-          <table className="w-full" style={{ minWidth: '700px' }}>
+          <table className="w-full" style={{ minWidth: '900px', tableLayout: 'fixed' }}>
             <colgroup>
-              <col style={{ width: '200px' }} />
+              <col style={{ width: '18%' }} />
               {weekBuckets.map(bucket => (
-                <col key={bucket.weekCommencing} style={{ width: `${100 / weekBuckets.length}%` }} />
+                <col key={bucket.weekCommencing} style={{ width: `${82 / weekBuckets.length}%` }} />
               ))}
             </colgroup>
             <thead className="sticky top-0 z-20">
