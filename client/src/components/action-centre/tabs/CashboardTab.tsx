@@ -22,7 +22,7 @@ export function CashboardTab({ debtors, onSelectDebtor, isLoading }: CashboardTa
     };
     for (const row of matrix) {
       for (const status of STATUS_ORDER) {
-        totals[status] += row.statusAmounts[status] || 0;
+        totals[status] += row.cells[status]?.amount || 0;
       }
     }
     return totals;
