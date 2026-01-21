@@ -4,6 +4,7 @@ import { useLocation } from "wouter";
 import { 
   Search, 
   ChevronRight,
+  ChevronLeft,
   User
 } from "lucide-react";
 import NewSidebar from "@/components/layout/new-sidebar";
@@ -145,35 +146,8 @@ export default function Customers() {
             {/* Divider */}
             <div className="border-t border-slate-100/80 mb-4 flex-shrink-0" />
 
-            {/* Table Header Row - Count left, Search right (Sticky on desktop) */}
-            <div className="sm:sticky sm:top-0 z-20 bg-white pt-2 pb-3 -mt-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 flex-shrink-0">
-              <div className="flex items-center gap-3">
-                <p className="text-[12px] text-slate-400 whitespace-nowrap">
-                  {pagination.total} customer{pagination.total !== 1 ? 's' : ''}
-                </p>
-                {pagination.totalPages > 1 && (
-                  <div className="hidden sm:flex items-center gap-1 text-[11px] text-slate-400">
-                    <button
-                      onClick={() => setPage(Math.max(1, page - 1))}
-                      disabled={page === 1}
-                      className="hover:text-slate-600 disabled:text-slate-300 disabled:cursor-not-allowed"
-                      data-testid="button-previous-page"
-                    >
-                      ←
-                    </button>
-                    <span>{page}/{pagination.totalPages}</span>
-                    <button
-                      onClick={() => setPage(Math.min(pagination.totalPages, page + 1))}
-                      disabled={page === pagination.totalPages}
-                      className="hover:text-slate-600 disabled:text-slate-300 disabled:cursor-not-allowed"
-                      data-testid="button-next-page"
-                    >
-                      →
-                    </button>
-                  </div>
-                )}
-              </div>
-              
+            {/* Table Header Row - Search only */}
+            <div className="bg-white pt-2 pb-3 -mt-2 flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3 flex-shrink-0">
               <div className="relative w-full sm:w-[280px]">
                 <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 text-slate-300" />
                 <input
@@ -186,29 +160,6 @@ export default function Customers() {
                 />
               </div>
             </div>
-
-            {/* Mobile Pagination */}
-            {pagination.totalPages > 1 && (
-              <div className="sm:hidden flex justify-center items-center gap-2 mb-3 text-[11px] text-slate-400">
-                <button
-                  onClick={() => setPage(Math.max(1, page - 1))}
-                  disabled={page === 1}
-                  className="hover:text-slate-600 disabled:text-slate-300"
-                  data-testid="button-previous-page-mobile"
-                >
-                  ← Prev
-                </button>
-                <span>{page} of {pagination.totalPages}</span>
-                <button
-                  onClick={() => setPage(Math.min(pagination.totalPages, page + 1))}
-                  disabled={page === pagination.totalPages}
-                  className="hover:text-slate-600 disabled:text-slate-300"
-                  data-testid="button-next-page-mobile"
-                >
-                  Next →
-                </button>
-              </div>
-            )}
 
             {/* Mobile View - Clean List */}
             <div className="space-y-0 sm:hidden flex-1">
@@ -355,6 +306,37 @@ export default function Customers() {
                   </table>
                 </div>
               )}
+            </div>
+
+            {/* Footer Pagination - Action Centre style */}
+            <div className="flex items-center justify-end gap-4 py-3 px-4 border-t border-slate-200 bg-white shrink-0 mt-4">
+              <div className="flex items-center gap-2">
+                <span className="text-[12px] text-slate-500">
+                  {pagination.total} customer{pagination.total !== 1 ? 's' : ''}
+                </span>
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <span className="text-[12px] text-slate-500">
+                  {page} of {pagination.totalPages}
+                </span>
+                <button
+                  onClick={() => setPage(Math.max(1, page - 1))}
+                  disabled={page === 1}
+                  className="p-1 rounded hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed"
+                  data-testid="button-previous-page"
+                >
+                  <ChevronLeft className="h-4 w-4 text-slate-600" />
+                </button>
+                <button
+                  onClick={() => setPage(Math.min(pagination.totalPages, page + 1))}
+                  disabled={page === pagination.totalPages}
+                  className="p-1 rounded hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed"
+                  data-testid="button-next-page"
+                >
+                  <ChevronRight className="h-4 w-4 text-slate-600" />
+                </button>
+              </div>
             </div>
 
           </div>
