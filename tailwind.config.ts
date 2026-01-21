@@ -64,7 +64,8 @@ export default {
       },
       fontFamily: {
         sans: ["DM Sans", "-apple-system", "BlinkMacSystemFont", "San Francisco", "Segoe UI", "system-ui", "sans-serif"],
-        display: ["DM Sans", "sans-serif"],
+        heading: ["Archivo", "sans-serif"],
+        display: ["Archivo", "sans-serif"],
         mono: ["SF Mono", "Menlo", "Monaco", "Courier New", "monospace"],
       },
       keyframes: {

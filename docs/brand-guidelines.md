@@ -46,7 +46,16 @@ Qashivo uses a clean, minimal design aesthetic. The visual language is professio
 
 ### Font Import
 ```css
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;700&family=DM+Sans:wght@400;500;600;700&display=swap");
+```
+
+### Tailwind Config
+```js
+fontFamily: {
+  sans: ["DM Sans", "sans-serif"],
+  heading: ["Archivo", "sans-serif"],
+  display: ["Archivo", "sans-serif"],
+}
 ```
 
 ### Type Scale
