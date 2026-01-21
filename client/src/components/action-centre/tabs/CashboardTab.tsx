@@ -111,7 +111,7 @@ export function CashboardTab({ debtors, onSelectDebtor, isLoading }: CashboardTa
                       {row.debtor.name}
                     </div>
                     <div className="text-[12px] text-slate-400 truncate tabular-nums">
-                      {row.debtor.invoiceCount} inv · {row.debtor.oldestDaysOverdue}d
+                      {formatCurrencyCompact(row.debtor.totalOutstanding)} outstanding
                     </div>
                   </td>
                   {STATUS_ORDER.map((status, idx) => {
