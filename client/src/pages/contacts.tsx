@@ -271,7 +271,7 @@ export default function Customers() {
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full">
-                    <thead className="sm:sticky sm:top-[40px] bg-white z-10">
+                    <thead className="bg-white">
                       <tr className="border-b border-slate-200">
                         <th className="text-left py-2 pr-4 text-[11px] font-medium text-slate-500 uppercase tracking-wider bg-white">Customer</th>
                         <th className="text-right py-2 px-4 text-[11px] font-medium text-slate-500 uppercase tracking-wider bg-white">Outstanding</th>
