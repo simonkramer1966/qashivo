@@ -587,7 +587,7 @@ Your Company`;
               </h4>
               <div className="divide-y divide-[#E6E8EC]">
                 {messages.map((msg) => (
-                  <div key={msg.id} className="py-4 first:pt-0 last:pb-0">
+                  <div key={msg.id} className={`py-4 first:pt-0 last:pb-0 ${msg.direction === "inbound" ? "bg-[#12B8C4]/5 -mx-4 px-4 rounded-lg" : ""}`}>
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-2">
                         <span className={`text-xs font-medium px-2 py-0.5 rounded ${msg.direction === "outbound" ? "bg-[#F8FAFC] text-[#556070]" : "bg-[#12B8C4]/10 text-[#12B8C4]"}`}>
