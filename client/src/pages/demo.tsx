@@ -654,13 +654,12 @@ export default function InvestorDemo() {
 
                 <div className="flex gap-4">
                   <div className="flex-shrink-0 w-12 h-12 bg-[#12B8C4]/10 rounded-xl flex items-center justify-center">
-                    <BarChart3 className="w-6 h-6 text-[#12B8C4]" />
+                    <MessageSquare className="w-6 h-6 text-[#12B8C4]" />
                   </div>
                   <div>
-                    <h3 className="text-[20px] font-semibold text-[#0B0F17] mb-2">Intelligent Forecasting</h3>
+                    <h3 className="text-[20px] font-semibold text-[#0B0F17] mb-2">Multi Channel Communication</h3>
                     <p className="text-[16px] text-[#556070] leading-[1.6]">
-                      ARD-based sales conversion with irregular buffer smoothing. Know exactly when 
-                      you'll get paid with 95% accuracy.
+                      Qashivo contacts debtors on their preferred channel across email, SMS, WhatsApp and voice, then captures responses into clear outcomes like promises to pay, payment plans, disputes and queries. It keeps every message consistent, polite and on-brand — protecting your most important asset: client relationships.
                     </p>
                   </div>
                 </div>
