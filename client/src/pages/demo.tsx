@@ -390,6 +390,9 @@ export default function InvestorDemo() {
       if (!response.ok) throw new Error("Failed to initiate call");
       
       // Open results dialog immediately with "analyzing" state
+      // Reset lastShownAtRef to 0 so any real results will always be considered newer
+      lastShownAtRef.current = 0;
+      lastShownResultsRef.current = "";
       setCurrentResults({
         intent: "analyzing",
         sentiment: "listening",
@@ -477,6 +480,9 @@ export default function InvestorDemo() {
       if (!response.ok) throw new Error("Failed to send SMS");
       
       // Open results dialog immediately with "waiting" state
+      // Reset lastShownAtRef to 0 so any real results will always be considered newer
+      lastShownAtRef.current = 0;
+      lastShownResultsRef.current = "";
       setCurrentResults({
         intent: "waiting",
         sentiment: "pending",
