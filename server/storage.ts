@@ -3,6 +3,7 @@ import {
   tenants,
   contacts,
   contactNotes,
+  customerContactPersons,
   invoices,
   actions,
   workflows,
@@ -47,6 +48,8 @@ import {
   type InsertContact,
   type ContactNote,
   type InsertContactNote,
+  type CustomerContactPerson,
+  type InsertCustomerContactPerson,
   type Invoice,
   type InsertInvoice,
   type Action,
@@ -226,6 +229,13 @@ export interface IStorage {
   // Contact Notes operations
   listNotesByContact(tenantId: string, contactId: string): Promise<ContactNote[]>;
   createNote(note: InsertContactNote & { tenantId: string }): Promise<ContactNote>;
+  
+  // Customer Contact Persons operations
+  getCustomerContactPersons(tenantId: string, contactId: string): Promise<CustomerContactPerson[]>;
+  getCustomerContactPerson(id: string, tenantId: string): Promise<CustomerContactPerson | undefined>;
+  createCustomerContactPerson(person: InsertCustomerContactPerson): Promise<CustomerContactPerson>;
+  updateCustomerContactPerson(id: string, tenantId: string, updates: Partial<InsertCustomerContactPerson>): Promise<CustomerContactPerson>;
+  deleteCustomerContactPerson(id: string, tenantId: string): Promise<void>;
   
   // Invoice operations
   getInvoices(tenantId: string, limit?: number): Promise<(Invoice & { contact: Contact })[]>;
@@ -881,6 +891,63 @@ export class DatabaseStorage implements IStorage {
   async createNote(note: InsertContactNote & { tenantId: string }): Promise<ContactNote> {
     const [createdNote] = await db.insert(contactNotes).values(note).returning();
     return createdNote;
+  }
+
+  // Customer Contact Persons operations
+  async getCustomerContactPersons(tenantId: string, contactId: string): Promise<CustomerContactPerson[]> {
+    return await db
+      .select()
+      .from(customerContactPersons)
+      .where(
+        and(
+          eq(customerContactPersons.tenantId, tenantId),
+          eq(customerContactPersons.contactId, contactId)
+        )
+      )
+      .orderBy(desc(customerContactPersons.isPrimaryCreditControl), asc(customerContactPersons.name));
+  }
+
+  async getCustomerContactPerson(id: string, tenantId: string): Promise<CustomerContactPerson | undefined> {
+    const [person] = await db
+      .select()
+      .from(customerContactPersons)
+      .where(
+        and(
+          eq(customerContactPersons.id, id),
+          eq(customerContactPersons.tenantId, tenantId)
+        )
+      );
+    return person;
+  }
+
+  async createCustomerContactPerson(person: InsertCustomerContactPerson): Promise<CustomerContactPerson> {
+    const [created] = await db.insert(customerContactPersons).values(person).returning();
+    return created;
+  }
+
+  async updateCustomerContactPerson(id: string, tenantId: string, updates: Partial<InsertCustomerContactPerson>): Promise<CustomerContactPerson> {
+    const [updated] = await db
+      .update(customerContactPersons)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(
+        and(
+          eq(customerContactPersons.id, id),
+          eq(customerContactPersons.tenantId, tenantId)
+        )
+      )
+      .returning();
+    return updated;
+  }
+
+  async deleteCustomerContactPerson(id: string, tenantId: string): Promise<void> {
+    await db
+      .delete(customerContactPersons)
+      .where(
+        and(
+          eq(customerContactPersons.id, id),
+          eq(customerContactPersons.tenantId, tenantId)
+        )
+      );
   }
 
   // Bulk delete methods for cleanup

@@ -199,6 +199,36 @@ export const contactNotes = pgTable("contact_notes", {
   index("idx_contact_notes_created_at").on(table.createdAt),
 ]);
 
+// Customer Contact Persons table (multiple contacts per customer with role designations)
+export const customerContactPersons = pgTable("customer_contact_persons", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  contactId: varchar("contact_id").notNull().references(() => contacts.id), // Parent customer
+  name: varchar("name").notNull(),
+  email: varchar("email"),
+  phone: varchar("phone"),
+  jobTitle: varchar("job_title"),
+  isPrimaryCreditControl: boolean("is_primary_credit_control").default(false), // Primary contact for collections
+  isEscalation: boolean("is_escalation").default(false), // Escalation contact
+  isFromXero: boolean("is_from_xero").default(false), // Synced from Xero ContactPersons
+  xeroContactPersonId: varchar("xero_contact_person_id"), // Xero ContactPerson ID if synced
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_customer_contact_persons_contact_id").on(table.contactId),
+  index("idx_customer_contact_persons_tenant_id").on(table.tenantId),
+]);
+
+export const insertCustomerContactPersonSchema = createInsertSchema(customerContactPersons).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertCustomerContactPerson = z.infer<typeof insertCustomerContactPersonSchema>;
+export type CustomerContactPerson = typeof customerContactPersons.$inferSelect;
+
 // Invoices table
 export const invoices = pgTable("invoices", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
