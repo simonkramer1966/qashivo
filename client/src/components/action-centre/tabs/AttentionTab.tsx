@@ -9,6 +9,7 @@ interface AttentionTabProps {
   items: AttentionItem[];
   onSelectDebtor: (debtorId: string) => void;
   isLoading?: boolean;
+  search?: string;
 }
 
 type ExceptionType = 'dispute' | 'query' | 'contact_issue' | 'no_response' | 'high_value_ageing';
@@ -21,44 +22,54 @@ const EXCEPTION_CONFIG: Record<ExceptionType, { label: string; icon: any; color:
   high_value_ageing: { label: 'High Value', icon: TrendingUp, color: 'text-red-500' },
 };
 
-export function AttentionTab({ items, onSelectDebtor, isLoading }: AttentionTabProps) {
+export function AttentionTab({ items, onSelectDebtor, isLoading, search = '' }: AttentionTabProps) {
+  // Filter items by search
+  const filteredItems = useMemo(() => {
+    if (!search.trim()) return items;
+    const searchLower = search.toLowerCase();
+    return items.filter(item => 
+      item.debtorName?.toLowerCase().includes(searchLower) ||
+      item.reason?.toLowerCase().includes(searchLower)
+    );
+  }, [items, search]);
+
   // Pagination
   const PAGE_SIZE_OPTIONS = [10, 15, 25, 50];
   const [itemsPerPage, setItemsPerPage] = useState(15);
   const [currentPage, setCurrentPage] = useState(1);
-  const totalPages = Math.max(1, Math.ceil(items.length / itemsPerPage));
+  const totalPages = Math.max(1, Math.ceil(filteredItems.length / itemsPerPage));
   
   useEffect(() => {
     if (currentPage > totalPages) {
       setCurrentPage(Math.max(1, totalPages));
     }
-  }, [items.length, itemsPerPage, currentPage, totalPages]);
+  }, [filteredItems.length, itemsPerPage, currentPage, totalPages]);
   
   const paginatedItems = useMemo(() => {
     const clampedPage = Math.min(currentPage, totalPages);
     const start = (clampedPage - 1) * itemsPerPage;
-    return items.slice(start, start + itemsPerPage);
-  }, [items, currentPage, itemsPerPage, totalPages]);
+    return filteredItems.slice(start, start + itemsPerPage);
+  }, [filteredItems, currentPage, itemsPerPage, totalPages]);
   
   const handlePageSizeChange = (newSize: number) => {
     setItemsPerPage(newSize);
     setCurrentPage(1);
   };
 
-  // Calculate totals by type for header
+  // Calculate totals by type for header (based on filtered items)
   const typeTotals = useMemo(() => {
     const totals: Record<ExceptionType, number> = {
       dispute: 0, query: 0, contact_issue: 0, no_response: 0, high_value_ageing: 0
     };
-    for (const item of items) {
+    for (const item of filteredItems) {
       if (item.exceptionType in totals) {
         totals[item.exceptionType as ExceptionType] += item.amountImpacted;
       }
     }
     return totals;
-  }, [items]);
+  }, [filteredItems]);
 
-  const totalAmount = useMemo(() => items.reduce((sum, item) => sum + item.amountImpacted, 0), [items]);
+  const totalAmount = useMemo(() => filteredItems.reduce((sum, item) => sum + item.amountImpacted, 0), [filteredItems]);
 
   if (isLoading) {
     return (

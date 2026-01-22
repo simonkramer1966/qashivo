@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
+import { Search } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation, useSearch } from "wouter";
 import { queryClient, apiRequest } from "@/lib/queryClient";
@@ -74,6 +75,7 @@ export default function ActionCentreV2() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [selectedPlanAction, setSelectedPlanAction] = useState<any>(null);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [search, setSearch] = useState("");
 
   useEffect(() => {
     const params = new URLSearchParams(searchString);
@@ -365,6 +367,17 @@ export default function ActionCentreV2() {
                 </p>
               </div>
               <div className="flex items-center gap-4">
+                <div className="relative w-[240px]">
+                  <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 text-slate-300" />
+                  <input
+                    type="text"
+                    placeholder="Search..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="w-full pl-8 pr-3 h-8 text-[12px] text-slate-600 placeholder:text-slate-300 bg-transparent border border-slate-200/60 rounded focus:outline-none focus:border-slate-300 transition-colors"
+                    data-testid="input-search-action-centre"
+                  />
+                </div>
                 <span className="text-[11px] text-slate-400">All figures are in £ GBP</span>
                 {activeTab === 'planned' && (dailyPlan?.actions?.length ?? 0) > 0 && (
                   <button
@@ -433,6 +446,7 @@ export default function ActionCentreV2() {
               items={attentionItems}
               onSelectDebtor={handleSelectDebtor}
               isLoading={isLoadingActions}
+              search={search}
             />
           )}
 
@@ -459,6 +473,7 @@ export default function ActionCentreV2() {
               items={activityItems}
               onSelectCustomer={handleSelectDebtor}
               isLoading={isLoadingActions}
+              search={search}
             />
           )}
         </div>
