@@ -320,10 +320,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const data = salesEnquirySchema.parse(req.body);
       
       // Import sendEmail function
-      const { sendEmail, DEFAULT_FROM_EMAIL } = await import('./services/sendgrid');
+      const { sendEmail } = await import('./services/sendgrid');
       
-      // Send email to sales team
-      const salesEmail = process.env.SALES_EMAIL || 'sales@qashivo.com';
+      // Qashivo contact email
+      const qashivoEmail = 'hello@qashivo.com';
       
       const enquiryTypeLabel = {
         demo: 'Product Demo Request',
@@ -332,7 +332,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         general: 'General Enquiry'
       }[data.enquiryType];
       
-      const emailHtml = `
+      // Email to Qashivo team
+      const teamEmailHtml = `
         <h2>New Sales Enquiry - ${enquiryTypeLabel}</h2>
         <table style="border-collapse: collapse; width: 100%; max-width: 600px;">
           <tr>
@@ -366,18 +367,77 @@ export async function registerRoutes(app: Express): Promise<Server> {
         <p style="color: #666; font-size: 12px;">This enquiry was submitted via the Qashivo website contact form.</p>
       `;
       
-      const success = await sendEmail({
-        to: salesEmail,
-        from: DEFAULT_FROM_EMAIL,
+      // Confirmation email to the submitter
+      const confirmationEmailHtml = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
+        <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="text-align: center; margin-bottom: 30px;">
+            <h1 style="color: #12B8C4; margin: 0; font-size: 28px;">Qashivo</h1>
+            <p style="color: #666; margin: 5px 0 0 0; font-size: 14px;">AI-powered credit control</p>
+          </div>
+          
+          <h2 style="color: #0B0F17; margin-bottom: 20px;">Thank you for getting in touch, ${data.name.split(' ')[0]}!</h2>
+          
+          <p style="color: #556070; margin-bottom: 20px;">
+            We've received your ${enquiryTypeLabel.toLowerCase()} and a member of our team will be in touch shortly.
+          </p>
+          
+          <div style="background: #f8f9fa; border-radius: 8px; padding: 20px; margin: 25px 0;">
+            <h3 style="color: #0B0F17; margin: 0 0 15px 0; font-size: 16px;">Your message:</h3>
+            <p style="color: #556070; margin: 0; white-space: pre-wrap;">${data.message}</p>
+          </div>
+          
+          <p style="color: #556070; margin-bottom: 20px;">
+            In the meantime, why not explore what Qashivo can do for your business?
+          </p>
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="https://www.qashivo.com/demo" style="display: inline-block; background: #12B8C4; color: white; text-decoration: none; padding: 12px 30px; border-radius: 25px; font-weight: 500;">Try our interactive demo</a>
+          </div>
+          
+          <hr style="border: none; border-top: 1px solid #E6E8EC; margin: 30px 0;">
+          
+          <p style="color: #999; font-size: 12px; text-align: center;">
+            Nexus KPI Limited. Built in London. Backed by innovation.<br>
+            <a href="https://www.qashivo.com" style="color: #12B8C4;">www.qashivo.com</a>
+          </p>
+        </body>
+        </html>
+      `;
+      
+      // Send email to Qashivo team
+      const teamEmailResult = await sendEmail({
+        to: qashivoEmail,
+        from: qashivoEmail,
         subject: `[Qashivo] ${enquiryTypeLabel} from ${data.name}`,
-        html: emailHtml,
-        text: `New ${enquiryTypeLabel}\n\nName: ${data.name}\nEmail: ${data.email}\n${data.company ? `Company: ${data.company}\n` : ''}${data.phone ? `Phone: ${data.phone}\n` : ''}\nMessage:\n${data.message}`
+        html: teamEmailHtml,
+        text: `New ${enquiryTypeLabel}\n\nName: ${data.name}\nEmail: ${data.email}\n${data.company ? `Company: ${data.company}\n` : ''}${data.phone ? `Phone: ${data.phone}\n` : ''}\nMessage:\n${data.message}`,
+        replyTo: data.email
       });
       
-      if (success) {
+      // Send confirmation email to the submitter (don't block on failure)
+      const confirmationResult = await sendEmail({
+        to: data.email,
+        from: qashivoEmail,
+        subject: `Thanks for contacting Qashivo - We'll be in touch soon`,
+        html: confirmationEmailHtml,
+        text: `Thank you for getting in touch, ${data.name.split(' ')[0]}!\n\nWe've received your ${enquiryTypeLabel.toLowerCase()} and a member of our team will be in touch shortly.\n\nYour message:\n${data.message}\n\nIn the meantime, why not explore what Qashivo can do for your business at www.qashivo.com/demo\n\n---\nNexus KPI Limited. Built in London. Backed by innovation.\nwww.qashivo.com`
+      });
+      
+      if (!confirmationResult.success) {
+        console.warn('Failed to send confirmation email to submitter:', confirmationResult.error);
+      }
+      
+      if (teamEmailResult.success) {
         res.json({ success: true, message: 'Thank you for your enquiry. Our team will be in touch shortly.' });
       } else {
-        res.status(500).json({ success: false, message: 'Failed to send enquiry. Please try again or email us directly.' });
+        console.error('Failed to send team email:', teamEmailResult.error);
+        res.status(500).json({ success: false, message: 'Failed to send enquiry. Please try again or email us directly at hello@qashivo.com.' });
       }
     } catch (error) {
       if (error instanceof z.ZodError) {
