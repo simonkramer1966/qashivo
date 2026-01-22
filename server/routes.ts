@@ -21875,7 +21875,7 @@ ${tenant.name}
       }
       
       // Get call details from Retell API
-      const retellService = (await import('./retell-service.js')).default;
+      const { retellService } = await import('./retell-service.js');
       const callData = await retellService.getCall(callId);
       
       console.log(`📞 [CALL-STATUS] Retell call data:`, JSON.stringify({

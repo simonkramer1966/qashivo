@@ -90,6 +90,10 @@ export default function InvestorDemo() {
   const [smsProgress, setSmsProgress] = useState<string>("");
   const [isDemoProcessing, setIsDemoProcessing] = useState(false);
   
+  // Active call tracking for status polling
+  const [activeCallId, setActiveCallId] = useState<string | null>(null);
+  const callStatusPollRef = useRef<NodeJS.Timeout | null>(null);
+  
   // Investment call dialog state
   const [investmentDialogOpen, setInvestmentDialogOpen] = useState(false);
   const [investorFirstName, setInvestorFirstName] = useState("");
@@ -154,6 +158,51 @@ export default function InvestorDemo() {
       clearInterval(pollInterval);
     };
   }, [leadId]);
+
+  // Poll Retell API directly for call status (fallback when webhook doesn't arrive)
+  useEffect(() => {
+    if (!activeCallId || !leadId) return;
+    
+    console.log(`📞 Starting call status polling for call: ${activeCallId}`);
+    
+    const pollCallStatus = async () => {
+      try {
+        const response = await fetch(`/api/investor/call-status/${activeCallId}?leadId=${leadId}`);
+        if (!response.ok) {
+          console.error('Failed to fetch call status');
+          return;
+        }
+        
+        const data = await response.json();
+        console.log(`📞 Call status poll response:`, data);
+        
+        if (data.isEnded) {
+          console.log(`✅ Call ended${data.processed ? ' and processed via polling!' : ' (already processed by webhook)'}`);
+          // Clear the polling - call is done regardless of whether we processed it or webhook did
+          setActiveCallId(null);
+          if (callStatusPollRef.current) {
+            clearInterval(callStatusPollRef.current);
+            callStatusPollRef.current = null;
+          }
+        }
+      } catch (error) {
+        console.error('Error polling call status:', error);
+      }
+    };
+    
+    // Poll every 3 seconds
+    callStatusPollRef.current = setInterval(pollCallStatus, 3000);
+    
+    // Also poll immediately
+    pollCallStatus();
+    
+    return () => {
+      if (callStatusPollRef.current) {
+        clearInterval(callStatusPollRef.current);
+        callStatusPollRef.current = null;
+      }
+    };
+  }, [activeCallId, leadId]);
 
   // Helper function to open dialog with results (avoids code duplication)
   const openDialogWithResults = (results: any, type: "voice" | "sms", resultKey: string, analyzedAt: number) => {
@@ -388,6 +437,15 @@ export default function InvestorDemo() {
       });
       
       if (!response.ok) throw new Error("Failed to initiate call");
+      
+      // Get call ID from response for status polling
+      const callData = await response.json();
+      const callId = callData.callId;
+      
+      if (callId) {
+        console.log(`📞 Voice call initiated with ID: ${callId}`);
+        setActiveCallId(callId);
+      }
       
       // Open results dialog immediately with "analyzing" state
       // Reset lastShownAtRef to 0 so any real results will always be considered newer
