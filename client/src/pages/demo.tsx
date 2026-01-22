@@ -605,9 +605,8 @@ export default function InvestorDemo() {
             </p>
           </div>
 
-          {/* Two-column layout: Video left, Form right */}
-          <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-start">
-            {/* Video */}
+          {/* Video Section */}
+          <div className="max-w-[800px] mx-auto">
             <div className="space-y-8">
               <div className="bg-[#F0F2F5] rounded-2xl p-3">
                 <div className="aspect-video rounded-xl overflow-hidden border border-[#E6E8EC]">
@@ -646,31 +645,6 @@ export default function InvestorDemo() {
               </div>
             </div>
 
-            {/* Form */}
-            <div id="dataroom-form" className="space-y-4">
-              <h3 className="text-[24px] font-semibold text-[#0B0F17] text-center">
-                Access Investment Dataroom
-              </h3>
-              <div className="rounded-2xl border border-[#E6E8EC] overflow-hidden bg-white" style={{ height: '570px' }}>
-                <iframe
-                  src="https://api.leadconnectorhq.com/widget/form/NRFTMQnqftGVqumexWwm"
-                  style={{ width: '100%', height: '620px', border: 'none', borderRadius: '3px', marginTop: '-40px' }}
-                  id="inline-NRFTMQnqftGVqumexWwm" 
-                  data-layout="{'id':'INLINE'}"
-                  data-trigger-type="alwaysShow"
-                  data-trigger-value=""
-                  data-activation-type="alwaysActivated"
-                  data-activation-value=""
-                  data-deactivation-type="neverDeactivate"
-                  data-deactivation-value=""
-                  data-form-name="Qashivo.ai form page for dataroom"
-                  data-height="620"
-                  data-layout-iframe-id="inline-NRFTMQnqftGVqumexWwm"
-                  data-form-id="NRFTMQnqftGVqumexWwm"
-                  title="Qashivo.ai form page for dataroom"
-                />
-              </div>
-            </div>
           </div>
         </div>
       </section>
@@ -1023,18 +997,10 @@ export default function InvestorDemo() {
           </p>
           <Button
             className="bg-[#12B8C4] hover:bg-[#0fa3ae] text-white text-[18px] px-10 h-14 rounded-full font-medium"
-            onClick={() => {
-              const element = document.getElementById('dataroom-form');
-              if (element) {
-                const headerOffset = 100;
-                const elementPosition = element.getBoundingClientRect().top;
-                const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
-                window.scrollTo({ top: offsetPosition, behavior: 'smooth' });
-              }
-            }}
-            data-testid="button-access-dataroom-footer"
+            onClick={() => setLocation("/contact")}
+            data-testid="button-contact-footer"
           >
-            Access Investment Dataroom
+            Get in Touch
             <ArrowRight className="ml-2 h-5 w-5" />
           </Button>
         </div>
