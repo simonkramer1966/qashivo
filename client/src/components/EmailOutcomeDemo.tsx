@@ -396,7 +396,7 @@ Your Company`;
                 ...outcomeConfig,
                 confidence: 0.88,
                 needsReview: false,
-                recommendedNextStep: "Call scheduled for tomorrow at 13:00. Follow-up action created.",
+                recommendedNextStep: "Next step: AI Voice Call scheduled for tomorrow at 13:00. Follow-up action created.",
               };
               setCurrentOutcome(outcome);
               
