@@ -938,7 +938,7 @@ export default function InvestorDemo() {
       <section className="py-16 md:py-24 border-t border-[#E6E8EC]">
         <div className="max-w-[1200px] mx-auto px-6">
           <div className="max-w-[700px] mx-auto text-center mb-12">
-            <h2 className="text-[40px] md:text-[48px] font-semibold text-[#0B0F17] leading-[1.1] tracking-[-0.02em] mb-6">Email Demo: Two-way Outcomes</h2>
+            <h2 className="text-[40px] md:text-[48px] font-semibold text-[#0B0F17] leading-[1.1] tracking-[-0.02em] mb-6">See Two-way Outcomes with Email</h2>
             <p className="text-[18px] md:text-[20px] text-[#556070] leading-[1.55]">
               Experience supervised autonomy in action. Generate a reminder, approve it, and watch AI detect intent from customer replies — updating your plan and forecast automatically.
             </p>
