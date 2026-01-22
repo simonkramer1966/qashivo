@@ -188,7 +188,7 @@ function getOutcomeConfidenceBand(outcomeType: OutcomeType): ConfidenceBand {
   }
 }
 
-function getOutcomeTypeLabel(outcomeType: OutcomeType): string {
+function getOutcomeTypeLabel(outcomeType: OutcomeType, isCallScheduled?: boolean): string {
   switch (outcomeType) {
     case "PROMISE_TO_PAY":
       return "Promise to Pay";
@@ -197,7 +197,7 @@ function getOutcomeTypeLabel(outcomeType: OutcomeType): string {
     case "DISPUTE":
       return "Dispute";
     case "AMBIGUOUS":
-      return "Ambiguous";
+      return isCallScheduled ? "Call Scheduled" : "Ambiguous";
   }
 }
 
@@ -229,6 +229,7 @@ export function EmailOutcomeDemo() {
   const [initialForecast, setInitialForecast] = useState<{ high: number; medium: number; low: number } | null>(null);
   const [baseAuditLog, setBaseAuditLog] = useState<AuditEvent[]>([]);
   const [outboundMessage, setOutboundMessage] = useState<Message | null>(null);
+  const [ambiguousConversationStep, setAmbiguousConversationStep] = useState<number>(0);
 
   const selectedInvoice = DEMO_INVOICES.find((inv) => inv.invoiceNumber === selectedInvoiceNumber);
 
@@ -316,6 +317,7 @@ Your Company`;
     if (!selectedInvoice) return;
 
     setStep("interpreting");
+    setAmbiguousConversationStep(0);
     
     const logToUse = startingLog || baseAuditLog;
     const outboundToUse = outbound !== undefined ? outbound : outboundMessage;
@@ -334,40 +336,105 @@ Your Company`;
       to: "Your Company",
     };
 
-    if (outboundToUse) {
-      setMessages([outboundToUse, inboundMessage]);
+    const currentMessages: Message[] = outboundToUse ? [outboundToUse, inboundMessage] : [inboundMessage];
+    setMessages(currentMessages);
+
+    if (outcomeType === "AMBIGUOUS") {
+      setTimeout(() => {
+        newLog = addAuditEvent("Outcome extracted: Call request detected", "Qashivo AI", newLog);
+        newLog = addAuditEvent("Auto-reply sent: Asking for call time", "Qashivo AI", newLog);
+        setAuditLog(newLog);
+        setAmbiguousConversationStep(1);
+
+        const qashivoReply1: Message = {
+          id: `msg-${Date.now()}-q1`,
+          direction: "outbound",
+          subject: `Re: Payment reminder - ${selectedInvoice.invoiceNumber}`,
+          body: "Yes sure, what time works for you?",
+          timestamp: new Date(),
+          from: "Your Company",
+          to: selectedInvoice.customerEmail,
+        };
+        setMessages([...currentMessages, qashivoReply1]);
+
+        setTimeout(() => {
+          newLog = addAuditEvent("Reply received", selectedInvoice.customerName, newLog);
+          setAuditLog(newLog);
+          setAmbiguousConversationStep(2);
+
+          const customerReply2: Message = {
+            id: `msg-${Date.now()}-c2`,
+            direction: "inbound",
+            subject: `Re: Payment reminder - ${selectedInvoice.invoiceNumber}`,
+            body: "13:00 would be perfect.",
+            timestamp: new Date(),
+            from: selectedInvoice.customerEmail,
+            to: "Your Company",
+          };
+          setMessages([...currentMessages, qashivoReply1, customerReply2]);
+
+          setTimeout(() => {
+            newLog = addAuditEvent("Call time extracted: 13:00 tomorrow", "Qashivo AI", newLog);
+            newLog = addAuditEvent("Auto-reply sent: Confirming call", "Qashivo AI", newLog);
+            setAuditLog(newLog);
+            setAmbiguousConversationStep(3);
+
+            const qashivoConfirm: Message = {
+              id: `msg-${Date.now()}-q2`,
+              direction: "outbound",
+              subject: `Re: Payment reminder - ${selectedInvoice.invoiceNumber}`,
+              body: "Perfect, I'll call you tomorrow at 13:00. Speak then!",
+              timestamp: new Date(),
+              from: "Your Company",
+              to: selectedInvoice.customerEmail,
+            };
+            setMessages([...currentMessages, qashivoReply1, customerReply2, qashivoConfirm]);
+
+            setTimeout(() => {
+              const outcomeConfig = OUTCOME_CONFIGS[outcomeType];
+              const outcome: Outcome = {
+                ...outcomeConfig,
+                confidence: 0.88,
+                needsReview: false,
+                recommendedNextStep: "Call scheduled for tomorrow at 13:00. Follow-up action created.",
+              };
+              setCurrentOutcome(outcome);
+              
+              newLog = addAuditEvent("Outcome updated: Call scheduled", "Qashivo AI", newLog);
+              newLog = addAuditEvent("Plan updated: Call action created for 13:00 tomorrow", "Qashivo AI", newLog);
+              setAuditLog(newLog);
+              setStep("outcome");
+              setShowOtherOutcomes(true);
+              setDisplayedConfidenceBand(selectedInvoice.confidenceBand);
+            }, 800);
+          }, 1000);
+        }, 1200);
+      }, 800);
     } else {
-      setMessages([inboundMessage]);
-    }
+      setTimeout(() => {
+        const outcomeConfig = OUTCOME_CONFIGS[outcomeType];
+        const outcome: Outcome = {
+          ...outcomeConfig,
+          promisedDate: outcomeType === "PROMISE_TO_PAY" ? "31 Jan 2026" : undefined,
+          promisedAmount: outcomeType === "PROMISE_TO_PAY" ? selectedInvoice.amount : outcomeType === "REQUEST_TIME" ? 3300 : undefined,
+          reason: outcomeType === "DISPUTE" ? "December maintenance visit was missed" : undefined,
+        };
 
-    setTimeout(() => {
-      const outcomeConfig = OUTCOME_CONFIGS[outcomeType];
-      const outcome: Outcome = {
-        ...outcomeConfig,
-        promisedDate: outcomeType === "PROMISE_TO_PAY" ? "31 Jan 2026" : undefined,
-        promisedAmount: outcomeType === "PROMISE_TO_PAY" ? selectedInvoice.amount : outcomeType === "REQUEST_TIME" ? 3300 : undefined,
-        reason: outcomeType === "DISPUTE" ? "December maintenance visit was missed" : undefined,
-      };
-
-      setCurrentOutcome(outcome);
-      
-      let finalLog = addAuditEvent("Outcome extracted", "Qashivo AI", newLog);
-      finalLog = addAuditEvent(`Plan updated: ${getOutcomeTypeLabel(outcomeType)}`, "Qashivo AI", finalLog);
-
-      if (outcomeType !== "AMBIGUOUS") {
+        setCurrentOutcome(outcome);
+        
+        let finalLog = addAuditEvent("Outcome extracted", "Qashivo AI", newLog);
+        finalLog = addAuditEvent(`Plan updated: ${getOutcomeTypeLabel(outcomeType)}`, "Qashivo AI", finalLog);
         finalLog = addAuditEvent("Forecast updated", "Qashivo AI", finalLog);
         const newBand = getOutcomeConfidenceBand(outcomeType);
         setDisplayedConfidenceBand(newBand);
         setShowForecastUpdated(true);
         setTimeout(() => setShowForecastUpdated(false), 2000);
-      } else {
-        setDisplayedConfidenceBand(selectedInvoice.confidenceBand);
-      }
 
-      setAuditLog(finalLog);
-      setStep("outcome");
-      setShowOtherOutcomes(true);
-    }, 800);
+        setAuditLog(finalLog);
+        setStep("outcome");
+        setShowOtherOutcomes(true);
+      }, 800);
+    }
   }, [selectedInvoice, addAuditEvent, baseAuditLog, outboundMessage]);
 
   const handleOtherOutcome = useCallback((outcomeType: OutcomeType) => {
@@ -391,6 +458,7 @@ Your Company`;
     setShowOtherOutcomes(false);
     setInitialForecast(null);
     setOutboundMessage(null);
+    setAmbiguousConversationStep(0);
   }, []);
 
   const handleSelectInvoice = useCallback((value: string) => {
@@ -406,6 +474,7 @@ Your Company`;
     setDisplayedConfidenceBand(null);
     setInitialForecast(null);
     setOutboundMessage(null);
+    setAmbiguousConversationStep(0);
   }, []);
 
   const currentForecast = currentOutcome && selectedInvoice
@@ -570,7 +639,7 @@ Your Company`;
                   onClick={() => handleOtherOutcome("AMBIGUOUS")}
                   className="border-[#E6E8EC] text-sm"
                 >
-                  Ambiguous
+                  Call me tomorrow
                 </Button>
               </div>
               <p className="text-xs text-[#556070] mt-2">Demo: choose a different reply to see how the plan and forecast change.</p>
@@ -594,7 +663,7 @@ Your Company`;
               <div className="space-y-3">
                 <div className="flex items-center gap-3">
                   <span className="text-sm text-[#556070]">Type:</span>
-                  <span className="font-medium text-[#0B0F17]">{getOutcomeTypeLabel(currentOutcome.outcomeType)}</span>
+                  <span className="font-medium text-[#0B0F17]">{getOutcomeTypeLabel(currentOutcome.outcomeType, currentOutcome.outcomeType === "AMBIGUOUS" && ambiguousConversationStep >= 3)}</span>
                 </div>
                 <div className="flex items-center gap-3">
                   <span className="text-sm text-[#556070]">Confidence:</span>
