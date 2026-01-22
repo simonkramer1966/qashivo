@@ -367,6 +367,7 @@ export default function ActionCentreV2() {
                 </p>
               </div>
               <div className="flex items-center gap-4">
+                <span className="text-[11px] text-slate-400">All figures are in £ GBP</span>
                 <div className="relative w-[240px]">
                   <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 text-slate-300" />
                   <input
@@ -378,7 +379,6 @@ export default function ActionCentreV2() {
                     data-testid="input-search-action-centre"
                   />
                 </div>
-                <span className="text-[11px] text-slate-400">All figures are in £ GBP</span>
                 {activeTab === 'planned' && (dailyPlan?.actions?.length ?? 0) > 0 && (
                   <button
                     onClick={() => approvePlanMutation.mutate()}
