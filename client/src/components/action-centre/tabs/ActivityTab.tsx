@@ -36,6 +36,11 @@ export function ActivityTab({ items, onSelectCustomer, isLoading, search = '' }:
   const [currentPage, setCurrentPage] = useState(1);
   const totalPages = Math.max(1, Math.ceil(filteredItems.length / itemsPerPage));
   
+  // Reset to page 1 when search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search]);
+  
   useEffect(() => {
     if (currentPage > totalPages) {
       setCurrentPage(Math.max(1, totalPages));
