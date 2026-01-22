@@ -761,7 +761,7 @@ export default function InvestorDemo() {
             </p>
           </div>
 
-          <div className="grid lg:grid-cols-2 gap-8 items-start">
+          <div className="grid lg:grid-cols-2 gap-8 items-stretch">
             {/* Left: Input Card */}
             <div className="bg-white rounded-2xl border border-[#E6E8EC] p-8">
               <div className="flex items-center gap-3 mb-6">
@@ -838,17 +838,17 @@ export default function InvestorDemo() {
             </div>
 
             {/* Right: Results Panel */}
-            <div className="bg-[#F8FAFC] rounded-2xl border-l-4 border-[#12B8C4] border-y border-r border-y-[#E6E8EC] border-r-[#E6E8EC] p-6 min-h-[480px] relative">
+            <div className="bg-white rounded-2xl border border-[#E6E8EC] p-8">
               {/* Header */}
               <div className="flex items-center gap-3 mb-6">
                 <div className={`p-3 bg-[#12B8C4]/10 rounded-xl ${isDemoProcessing ? 'animate-pulse' : ''}`}>
                   <Sparkles className="w-6 h-6 text-[#12B8C4]" />
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold text-[#0B0F17]">
+                  <h3 className="text-[24px] font-semibold text-[#0B0F17]">
                     {isDemoProcessing ? "AI Analysis - In Progress" : currentResults ? "AI Analysis Complete" : "AI Analysis"}
                   </h3>
-                  <p className="text-sm text-[#556070]">Voice Call Intelligence Report</p>
+                  <p className="text-[14px] text-[#556070]">Voice Call Intelligence Report</p>
                 </div>
               </div>
 
