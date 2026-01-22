@@ -3723,6 +3723,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Customer Contact Persons CRUD routes
+  app.get("/api/contacts/:contactId/persons", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+      const { contactId } = req.params;
+      const persons = await storage.getCustomerContactPersons(user.tenantId, contactId);
+      res.json(persons);
+    } catch (error) {
+      console.error("Error fetching customer contact persons:", error);
+      res.status(500).json({ message: "Failed to fetch contact persons" });
+    }
+  });
+
+  app.post("/api/contacts/:contactId/persons", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+      const { contactId } = req.params;
+      const person = await storage.createCustomerContactPerson({
+        ...req.body,
+        tenantId: user.tenantId,
+        contactId,
+      });
+      res.json(person);
+    } catch (error) {
+      console.error("Error creating customer contact person:", error);
+      res.status(500).json({ message: "Failed to create contact person" });
+    }
+  });
+
+  app.patch("/api/contacts/:contactId/persons/:personId", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+      const { personId } = req.params;
+      const person = await storage.updateCustomerContactPerson(personId, user.tenantId, req.body);
+      res.json(person);
+    } catch (error) {
+      console.error("Error updating customer contact person:", error);
+      res.status(500).json({ message: "Failed to update contact person" });
+    }
+  });
+
+  app.delete("/api/contacts/:contactId/persons/:personId", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+      const { personId } = req.params;
+      await storage.deleteCustomerContactPerson(personId, user.tenantId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting customer contact person:", error);
+      res.status(500).json({ message: "Failed to delete contact person" });
+    }
+  });
+
   // Get inbox - detected outcomes needing review
   app.get("/api/inbox", isAuthenticated, async (req: any, res) => {
     try {
