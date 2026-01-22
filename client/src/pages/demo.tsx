@@ -615,7 +615,7 @@ export default function InvestorDemo() {
         </div>
       </section>
       {/* The Solution */}
-      <section className="py-16 md:py-24 border-y border-[#E6E8EC]">
+      <section className="py-16 md:py-24">
         <div className="max-w-[1200px] mx-auto px-6">
           <div className="max-w-[700px] mx-auto text-center mb-16">
             <h2 className="text-[40px] md:text-[48px] font-semibold text-[#0B0F17] leading-[1.1] tracking-[-0.02em] mb-6">The Qashivo Solution</h2>
@@ -923,7 +923,7 @@ export default function InvestorDemo() {
         </div>
       </section>
       {/* Email Demo: Two-way Outcomes */}
-      <section className="py-16 md:py-24 border-t border-[#E6E8EC]">
+      <section className="py-16 md:py-24">
         <div className="max-w-[1200px] mx-auto px-6">
           <div className="max-w-[700px] mx-auto text-center mb-12">
             <h2 className="text-[40px] md:text-[48px] font-semibold text-[#0B0F17] leading-[1.1] tracking-[-0.02em] mb-6">Two-way Outcomes with Email</h2>
@@ -935,7 +935,7 @@ export default function InvestorDemo() {
         </div>
       </section>
       {/* Final CTA */}
-      <section className="py-16 md:py-24 border-t border-[#E6E8EC]">
+      <section className="py-16 md:py-24">
         <div className="max-w-[800px] mx-auto px-6 text-center">
           <h2 className="text-[40px] md:text-[52px] font-semibold text-[#0B0F17] leading-[1.1] tracking-[-0.02em] mb-6">
             Join the £4.8B Opportunity
@@ -954,7 +954,7 @@ export default function InvestorDemo() {
         </div>
       </section>
       {/* Footer */}
-      <footer className="py-12 px-6 border-t border-[#E6E8EC] text-center">
+      <footer className="py-12 px-6 text-center">
         <p className="text-[14px] text-[#556070]">
           © 2026 Nexus KPI Limited. Built in London. Backed by innovation.
         </p>
