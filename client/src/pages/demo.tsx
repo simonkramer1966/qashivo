@@ -987,33 +987,6 @@ export default function InvestorDemo() {
               <p className="text-[14px] text-[#556070] mt-4">200+ pre-launch inquiries</p>
             </div>
           </div>
-
-          <div className="border-t border-[#E6E8EC] pt-12">
-            <h3 className="text-[24px] font-semibold text-[#0B0F17] mb-10 text-center">Why We'll Win</h3>
-            <div className="grid md:grid-cols-3 gap-10 md:gap-12">
-              <div className="text-center">
-                <div className="w-14 h-14 bg-[#12B8C4]/10 rounded-xl flex items-center justify-center mx-auto mb-4">
-                  <Shield className="w-7 h-7 text-[#12B8C4]" />
-                </div>
-                <p className="font-semibold text-[#0B0F17] mb-2">Legal Moat</p>
-                <p className="text-[14px] text-[#556070]">Built on the Late Payment Act - competitors can't replicate statutory compliance</p>
-              </div>
-              <div className="text-center">
-                <div className="w-14 h-14 bg-[#12B8C4]/10 rounded-xl flex items-center justify-center mx-auto mb-4">
-                  <Brain className="w-7 h-7 text-[#12B8C4]" />
-                </div>
-                <p className="font-semibold text-[#0B0F17] mb-2">AI Advantage</p>
-                <p className="text-[14px] text-[#556070]">AI models developed using £70M+ pilot dataset</p>
-              </div>
-              <div className="text-center">
-                <div className="w-14 h-14 bg-[#12B8C4]/10 rounded-xl flex items-center justify-center mx-auto mb-4">
-                  <Zap className="w-7 h-7 text-[#12B8C4]" />
-                </div>
-                <p className="font-semibold text-[#0B0F17] mb-2">First Mover</p>
-                <p className="text-[14px] text-[#556070]">No compliant AI solution exists - we own the category</p>
-              </div>
-            </div>
-          </div>
         </div>
       </section>
       {/* Final CTA */}
