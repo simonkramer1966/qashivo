@@ -519,7 +519,7 @@ export default function InvestorDemo() {
                 <a href="/home#how-it-works" className="text-[15px] text-[#556070] hover:text-[#0B0F17] transition-colors">
                   How it works
                 </a>
-                <a href="/demo" className="text-[15px] text-[#556070] hover:text-[#0B0F17] transition-colors">
+                <a href="/demo" className="text-[15px] text-[#0B0F17] font-medium">
                   Demo
                 </a>
                 <a href="/partners" className="text-[15px] text-[#556070] hover:text-[#0B0F17] transition-colors">
@@ -528,7 +528,7 @@ export default function InvestorDemo() {
                 <a href="/pricing" className="text-[15px] text-[#556070] hover:text-[#0B0F17] transition-colors">
                   Pricing
                 </a>
-                <a href="/contact" className="text-[15px] text-[#0B0F17] font-medium">
+                <a href="/contact" className="text-[15px] text-[#556070] hover:text-[#0B0F17] transition-colors">
                   Contact
                 </a>
               </div>
@@ -558,10 +558,10 @@ export default function InvestorDemo() {
               <a href="/home" className="text-[16px] text-[#556070] hover:text-[#0B0F17] py-2">Home</a>
               <a href="/product" className="text-[16px] text-[#556070] hover:text-[#0B0F17] py-2">Product</a>
               <a href="/home#how-it-works" className="text-[16px] text-[#556070] hover:text-[#0B0F17] py-2">How it works</a>
-              <a href="/demo" className="text-[16px] text-[#556070] hover:text-[#0B0F17] py-2">Demo</a>
+              <a href="/demo" className="text-[16px] text-[#0B0F17] font-medium py-2">Demo</a>
               <a href="/partners" className="text-[16px] text-[#556070] hover:text-[#0B0F17] py-2">Partners</a>
               <a href="/pricing" className="text-[16px] text-[#556070] hover:text-[#0B0F17] py-2">Pricing</a>
-              <a href="/contact" className="text-[16px] text-[#0B0F17] font-medium py-2">Contact</a>
+              <a href="/contact" className="text-[16px] text-[#556070] hover:text-[#0B0F17] py-2">Contact</a>
               <div className="border-t border-[#E6E8EC] pt-4 mt-2 flex flex-col gap-3">
                 <a href="/login" className="text-[16px] text-[#556070] hover:text-[#0B0F17] py-2">Sign in</a>
                 <Button
