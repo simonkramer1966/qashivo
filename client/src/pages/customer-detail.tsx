@@ -287,7 +287,7 @@ export default function CustomerDetailPage() {
                   <Skeleton className="h-8 w-full" />
                 </div>
               ) : (
-                <div className="flex flex-col md:flex-row gap-12">
+                <div className="flex flex-col md:flex-row md:justify-between gap-12">
                   {/* Column 1: Channel Toggles */}
                   <div className="space-y-3">
                     <p className="text-[11px] text-slate-400 mb-2">Allowed Channels</p>
@@ -398,7 +398,7 @@ export default function CustomerDetailPage() {
                   </div>
 
                   {/* Column 3: Workflow Preference */}
-                  <div className="space-y-3 md:ml-auto">
+                  <div className="space-y-3">
                     <p className="text-[11px] text-slate-400 mb-2">Workflow Preference</p>
                     <div className="flex items-center justify-between py-2 w-44">
                       <div className="flex items-center gap-3">
