@@ -946,49 +946,6 @@ export default function InvestorDemo() {
           <EmailOutcomeDemo />
         </div>
       </section>
-      {/* Market Opportunity */}
-      <section className="py-16 md:py-24 border-y border-[#E6E8EC]">
-        <div className="max-w-[1200px] mx-auto px-6">
-          <div className="max-w-[700px] mx-auto text-center mb-16">
-            <h2 className="text-[40px] md:text-[48px] font-semibold text-[#0B0F17] leading-[1.1] tracking-[-0.02em] mb-6">A £4.8B Market Made Mandatory by Law</h2>
-            <p className="text-[18px] md:text-[20px] text-[#556070] leading-[1.55]">
-              The Late Payment Act creates a massive, defensible opportunity with regulatory tailwinds
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-10 md:gap-12 mb-16">
-            <div className="text-center" data-testid="card-market-tam">
-              <div className="w-14 h-14 bg-[#0B0F17]/10 rounded-xl flex items-center justify-center mb-6 mx-auto">
-                <Target className="w-7 h-7 text-[#0B0F17]" />
-              </div>
-              <div className="text-[48px] font-semibold text-[#0B0F17] mb-2" data-testid="text-tam-count">2.7M</div>
-              <p className="text-[20px] font-semibold text-[#0B0F17] mb-2">UK SMEs (TAM)</p>
-              <p className="text-[16px] text-[#556070]" data-testid="text-tam-value">£4.8B Total Market</p>
-              <p className="text-[14px] text-[#556070] mt-4">Every business needs credit control</p>
-            </div>
-
-            <div className="text-center" data-testid="card-market-sam">
-              <div className="w-14 h-14 bg-[#12B8C4]/10 rounded-xl flex items-center justify-center mb-6 mx-auto">
-                <Users className="w-7 h-7 text-[#12B8C4]" />
-              </div>
-              <div className="text-[48px] font-semibold text-[#12B8C4] mb-2" data-testid="text-sam-count">800K</div>
-              <p className="text-[20px] font-semibold text-[#0B0F17] mb-2">Cloud Accounting (SAM)</p>
-              <p className="text-[16px] text-[#556070]" data-testid="text-sam-value">£1.4B Addressable</p>
-              <p className="text-[14px] text-[#556070] mt-4">Xero + QuickBooks integration ready</p>
-            </div>
-
-            <div className="text-center" data-testid="card-market-som">
-              <div className="w-14 h-14 bg-[#12B8C4]/10 rounded-xl flex items-center justify-center mb-6 mx-auto">
-                <Rocket className="w-7 h-7 text-[#12B8C4]" />
-              </div>
-              <div className="text-[48px] font-semibold text-[#12B8C4] mb-2" data-testid="text-som-count">4-8K</div>
-              <p className="text-[20px] font-semibold text-[#0B0F17] mb-2">3-Year Target (SOM)</p>
-              <p className="text-[16px] text-[#556070]" data-testid="text-som-value">£7-14M Revenue</p>
-              <p className="text-[14px] text-[#556070] mt-4">200+ pre-launch inquiries</p>
-            </div>
-          </div>
-        </div>
-      </section>
       {/* Final CTA */}
       <section className="py-16 md:py-24 border-t border-[#E6E8EC]">
         <div className="max-w-[800px] mx-auto px-6 text-center">
