@@ -647,8 +647,7 @@ export default function InvestorDemo() {
                   <div>
                     <h3 className="text-[20px] font-semibold text-[#0B0F17] mb-2">AI Intent Detection</h3>
                     <p className="text-[16px] text-[#556070] leading-[1.6]">
-                      Every call, email, and SMS is analyzed in real-time. Our AI detects payment intent, 
-                      sentiment, and automatically creates next actions.
+                      Every voice call, email, WhatsApp and SMS is analyzed in real-time. Our AI detects payment intent, sentiment, and automatically creates next actions.
                     </p>
                   </div>
                 </div>
