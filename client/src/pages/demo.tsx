@@ -569,7 +569,6 @@ export default function InvestorDemo() {
           </div>
         )}
       </nav>
-
       {/* Hero Section */}
       <section className="pt-20 pb-16 md:pt-28 md:pb-20">
         <div className="max-w-[1200px] mx-auto px-6">
@@ -613,7 +612,6 @@ export default function InvestorDemo() {
           </div>
         </div>
       </section>
-
       {/* Trust Signals */}
       <section className="py-16 border-y border-[#E6E8EC] bg-white">
         <div className="max-w-[1200px] mx-auto px-6">
@@ -626,7 +624,6 @@ export default function InvestorDemo() {
           </div>
         </div>
       </section>
-
       {/* The Solution */}
       <section className="py-16 md:py-24 border-y border-[#E6E8EC]">
         <div className="max-w-[1200px] mx-auto px-6">
@@ -669,7 +666,7 @@ export default function InvestorDemo() {
                     <Shield className="w-6 h-6 text-[#12B8C4]" />
                   </div>
                   <div>
-                    <h3 className="text-[20px] font-semibold text-[#0B0F17] mb-2">Statutory Compliance</h3>
+                    <h3 className="text-[20px] font-semibold text-[#0B0F17] mb-2">Real-Time Cashflow</h3>
                     <p className="text-[16px] text-[#556070] leading-[1.6]">
                       Built on the Late Payment Act and the most recent updates. Automated interest calculations, statutory notices, and escalation pathways.
                     </p>
@@ -704,7 +701,6 @@ export default function InvestorDemo() {
           </div>
         </div>
       </section>
-
       {/* Live AI Demo */}
       <section id="demos" className="py-16 md:py-24">
         <div className="max-w-[1200px] mx-auto px-6">
@@ -943,7 +939,6 @@ export default function InvestorDemo() {
           </div>
         </div>
       </section>
-
       {/* Market Opportunity */}
       <section className="py-16 md:py-24 border-y border-[#E6E8EC]">
         <div className="max-w-[1200px] mx-auto px-6">
@@ -1014,7 +1009,6 @@ export default function InvestorDemo() {
           </div>
         </div>
       </section>
-
       {/* Traction */}
       <section className="py-16 md:py-24">
         <div className="max-w-[1200px] mx-auto px-6">
@@ -1063,7 +1057,6 @@ export default function InvestorDemo() {
           </div>
         </div>
       </section>
-
       {/* Final CTA */}
       <section className="py-16 md:py-24 border-t border-[#E6E8EC]">
         <div className="max-w-[800px] mx-auto px-6 text-center">
@@ -1083,14 +1076,12 @@ export default function InvestorDemo() {
           </Button>
         </div>
       </section>
-
       {/* Footer */}
       <footer className="py-12 px-6 border-t border-[#E6E8EC] text-center">
         <p className="text-[14px] text-[#556070]">
           © 2026 Qashivo. Built in London. Backed by innovation.
         </p>
       </footer>
-
       {/* AI Results Dialog */}
       <AIResultsDialog
         key={resultsType} // Force remount when switching between voice/SMS
@@ -1107,7 +1098,6 @@ export default function InvestorDemo() {
         isDemoProcessing={isDemoProcessing}
         progressMessage={voiceProgress}
       />
-
       {/* Investment Call Dialog */}
       <Dialog open={investmentDialogOpen} onOpenChange={setInvestmentDialogOpen}>
         <DialogContent className="sm:max-w-[500px] bg-white border border-[#E6E8EC]">
