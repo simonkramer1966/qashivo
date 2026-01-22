@@ -1,0 +1,126 @@
+Rewrite the “Email Demo: Two-way Outcomes” module to use Option B interaction:
+
+Option B behaviour (required)
+After the user approves and sends the reminder, the demo should automatically inject a default inbound reply (Promise to pay) after a short delay, interpret it, and update the plan + forecast. The visitor does NOT need to press any reply buttons to see the full end-to-end loop.
+
+However, after the default reply plays, show the 4 reply buttons as optional exploration under a header like “See other outcomes”. Clicking any of these replaces (or appends) the inbound reply and re-runs interpretation + impact so the visitor can compare outcomes.
+
+Implement on demo page
+- Render a single self-contained component: <EmailOutcomeDemo /> directly under the AI Voice call demo.
+- No external integrations.
+
+Seed the exact same 5 demo invoices (as previously specified) with:
+customer name, email, amount (GBP), due date, invoice number, overdue label, and confidence band (High/Medium/Low).
+
+Flow UI (left-to-right)
+1) Select invoice (dropdown)
+   - Show customer + invoice number + amount + overdue label
+   - Inline label next to amount: “Confidence: High / Medium / Low”
+
+2) “Generate reminder” button
+   - Deterministically generates a polite subject/body referencing invoice number, amount, and due date.
+   - Subject/body are read-only until “Edit message” is clicked.
+
+3) Approval step
+   - Buttons: “Approve & send” (primary), “Edit message”, “Decline”
+   - Decline logs an audit event and ends the flow for that run.
+   - Approve & send shows “Sent ✓” with timestamp and locks the message.
+
+4) Auto-play default inbound reply (Promise to pay)
+   - Only after “Sent ✓”:
+     - After ~1.0–1.5s, automatically insert the inbound email reply (Promise to pay)
+     - Show “Interpreting reply…” briefly
+     - Render Outcome Card
+     - Apply outcome effects
+     - Update Impact strip + Audit log
+   - The visitor does not need to click anything for this to happen.
+
+5) Optional: “See other outcomes” buttons (appears after default outcome completes)
+   Show the 4 buttons:
+   - “Promise to pay”
+   - “Request more time”
+   - “Dispute”
+   - “Ambiguous”
+   Behaviour:
+   - Clicking a button swaps the inbound reply text (or appends as a new inbound message in the thread—choose one and keep consistent)
+   - Re-run interpretation and re-apply outcome effects deterministically
+   - Update Outcome Card, Impact strip and Audit log each time
+   - Add a subtle note: “Demo: choose a different reply to see how the plan and forecast change.”
+
+Conversation Thread Panel
+- Show outbound email then inbound reply (auto-injected by default).
+- Keep the UI light and calm (no heavy cards).
+
+Scripted simulated replies (use exactly these)
+Default auto-play reply (Promise to pay):
+Subject: Re: INV-1042
+Body: “Thanks — we’re lining this up now. We’ll pay INV-1042 in full on 31 Jan 2026.”
+
+Other selectable replies:
+Request more time / payment plan
+Subject: Re: INV-1103
+Body: “Hi — we can’t clear this in one go. Could we do £3,300 on 15 Feb and the balance on 29 Feb? Let me know if that works.”
+
+Dispute / issue
+Subject: Re: INV-1120
+Body: “We’re holding payment on INV-1120 — the December maintenance visit was missed, so the invoice needs checking before we can approve it.”
+
+Ambiguous
+Subject: Re: INV-1088
+Body: “Noted. Can you give me a call tomorrow and we’ll sort it.”
+
+Important:
+- The auto-play default reply should always be Promise to pay and should always run once after sending.
+- If the visitor chooses a different invoice before sending, the default reply should update to match the selected invoice (same Promise-to-pay intent but referencing that invoice number and a sensible promised date). Keep it deterministic.
+
+Intent Detection + Outcome Card
+After a reply is received (auto or clicked):
+- Show “Interpreting reply…” briefly
+- Render Outcome Card with:
+  - outcomeType: PROMISE_TO_PAY | REQUEST_TIME | DISPUTE | AMBIGUOUS
+  - extracted fields: promisedDate, promisedAmount, reason (when applicable)
+  - confidence score 0–1
+  - “Needs review” badge when confidence < 0.6 OR outcome is AMBIGUOUS
+  - recommendedNextStep (plain English)
+
+Outcome Effects (apply immediately)
+1) PROMISE_TO_PAY
+   - Plan: “Paused until {promisedDate}” and schedule follow-up next business day after
+   - Forecast: move amount into High confidence on promisedDate
+   - Animate confidence label → High
+   - Flash microcopy: “Forecast updated”
+
+2) REQUEST_TIME
+   - Plan: move to “Attention” with note “Payment plan requested”
+   - Forecast: set Medium confidence; push expected date +14 days (until reviewed)
+   - Animate confidence label → Medium
+   - Flash “Forecast updated”
+
+3) DISPUTE
+   - Plan: stop automation; move to “Attention” with note “Dispute raised”
+   - Forecast: set Low confidence OR remove from expected cash until resolved (pick one and keep consistent)
+   - Animate confidence label → Low
+   - Flash “Forecast updated”
+
+4) AMBIGUOUS
+   - Plan: “Needs review” with suggested follow-up question:
+     “Thanks — can you confirm the expected payment date for this invoice?”
+   - Forecast: leave unchanged, but mark as uncertain
+   - Always show “Needs review” badge
+   - Confidence label stays as-is
+
+Bottom Impact strip
+Once an outcome is applied, show:
+- Forecast before/after (simple numbers or tiny sparkline, no external libs)
+- Plan change one-liner
+- Audit log with timestamps:
+  generated → approved/declined → sent → reply received → outcome extracted → plan updated → forecast updated
+
+Safety note
+Add: “Demo mode: messages are simulated. In production, nothing sends without approval.”
+
+Implementation notes
+- Use local component state or in-memory demo routes.
+- No new dependencies.
+- Deterministic behaviour only.
+- Add TypeScript types: Invoice, Message, Outcome, AuditEvent.

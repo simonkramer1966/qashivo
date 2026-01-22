@@ -1,0 +1,206 @@
+Implement an interactive “Email Demo: Two-way Outcomes” module on the demo page directly under the AI Voice call demo.
+
+Goal
+Demonstrate Qashivo’s supervised autonomy loop in ~60–90 seconds:
+Plan → Approve → Send → Receive reply → Detect outcome → Update plan + cash-in confidence.
+This is a deterministic demo (no randomness) with seeded invoices and scripted replies. No external integrations.
+
+Component
+- Build a single self-contained component: <EmailOutcomeDemo />
+- Render it on the demo page directly beneath the AI Voice call demo.
+- Keep styling consistent with Qashivo: clean, calm, minimal, no heavy cards; use whitespace, subtle dividers, and clear typography.
+
+Demo Invoice Dataset (seed exactly these 5 invoices)
+Use these values verbatim so the story is consistent and “accountant calm”:
+
+1) Invoice
+   - invoiceNumber: INV-1042
+   - customerName: Acme Kitchens Ltd
+   - customerEmail: ap@acmekitchens.co.uk
+   - amount: 2450.00
+   - currency: GBP
+   - dueDate: 2025-12-20
+   - daysOverdueLabel: “14 days overdue”
+   - confidenceBand: “Medium”
+
+2) Invoice
+   - invoiceNumber: INV-1088
+   - customerName: Bright Dental Supplies
+   - customerEmail: accounts@brightdental.co.uk
+   - amount: 680.00
+   - currency: GBP
+   - dueDate: 2026-01-10
+   - daysOverdueLabel: “3 days overdue”
+   - confidenceBand: “High”
+
+3) Invoice
+   - invoiceNumber: INV-1103
+   - customerName: Northstar Interiors Group
+   - customerEmail: finance@northstarinteriors.co.uk
+   - amount: 9900.00
+   - currency: GBP
+   - dueDate: 2025-12-05
+   - daysOverdueLabel: “32 days overdue”
+   - confidenceBand: “Low”
+
+4) Invoice
+   - invoiceNumber: INV-1120
+   - customerName: Greenway Facilities Ltd
+   - customerEmail: payables@greenwayfacilities.co.uk
+   - amount: 1320.00
+   - currency: GBP
+   - dueDate: 2026-01-02
+   - daysOverdueLabel: “11 days overdue”
+   - confidenceBand: “Medium”
+
+5) Invoice
+   - invoiceNumber: INV-1134
+   - customerName: Harper & Cole Events
+   - customerEmail: billing@harpercoleevents.co.uk
+   - amount: 415.00
+   - currency: GBP
+   - dueDate: 2026-01-08
+   - daysOverdueLabel: “5 days overdue”
+   - confidenceBand: “High”
+
+Flow UI (left-to-right)
+Build a single-screen layout with a calm, guided flow:
+
+1) Select invoice (dropdown)
+   - Shows: Customer name + invoice number + amount + overdue label
+   - Also show a small inline label next to the amount:
+     “Confidence: High / Medium / Low” (based on seeded confidenceBand)
+
+2) Generate reminder button
+   - Button label: “Generate reminder”
+   - Clicking generates a deterministic subject/body (read-only) that references the chosen invoice number, amount, and due date.
+   - The message should be polite and relationship-preserving.
+
+3) Approval step (supervised autonomy)
+   - Buttons:
+     Primary: “Approve & send”
+     Secondary: “Edit message” (unlocks the subject/body fields)
+     Tertiary: “Decline”
+   - If Declined: log an audit event and stop the flow (but allow switching invoice to restart).
+   - On Approve & send: show “Sent ✓” with a timestamp and lock the message again.
+
+4) Simulate customer reply (appears only after send)
+   Show 4 buttons:
+   - “Promise to pay”
+   - “Request more time”
+   - “Dispute”
+   - “Ambiguous”
+
+Conversation Thread Panel
+- Show a thread view with:
+  - Outbound email (from “Your company” to debtor) with subject/body + timestamp
+  - Inbound reply (from debtor) inserted when simulated
+- Keep it visually lightweight: simple rows, channel icon (email), timestamps, subtle separators.
+
+Scripted Simulated Replies (use exactly these 4, in this tone)
+When each reply button is clicked, insert this inbound email text:
+
+A) Promise to pay
+Subject: Re: INV-1042
+Body:
+“Thanks — we’re lining this up now. We’ll pay INV-1042 in full on 31 Jan 2026.”
+
+B) Request more time / payment plan
+Subject: Re: INV-1103
+Body:
+“Hi — we can’t clear this in one go. Could we do £3,300 on 15 Feb and the balance on 29 Feb? Let me know if that works.”
+
+C) Dispute / issue
+Subject: Re: INV-1120
+Body:
+“We’re holding payment on INV-1120 — the December maintenance visit was missed, so the invoice needs checking before we can approve it.”
+
+D) Ambiguous
+Subject: Re: INV-1088
+Body:
+“Noted. Can you give me a call tomorrow and we’ll sort it.”
+
+Intent Detection + Outcome Card
+After a reply is simulated:
+- Show an interim state: “Interpreting reply…” (brief loading state)
+- Then render an Outcome Card showing:
+  - outcomeType: PROMISE_TO_PAY | REQUEST_TIME | DISPUTE | AMBIGUOUS
+  - extracted details (when applicable): promisedDate, promisedAmount, reason
+  - confidence score (0–1)
+  - a “Needs review” badge when:
+    - confidence < 0.6 OR
+    - outcomeType is AMBIGUOUS
+  - recommendedNextStep (plain English)
+- The outcome must be deterministic for each scripted reply.
+
+Outcome Effects (apply immediately after interpretation)
+Implement these exact behaviours:
+
+1) PROMISE_TO_PAY
+   - Plan: “Paused until {promisedDate}” and schedule follow-up next business day after promisedDate
+   - Forecast: move the invoice amount into “High confidence” on promisedDate
+   - Confidence label animates from previous to “High”
+   - Briefly flash microcopy: “Forecast updated”
+
+2) REQUEST_TIME
+   - Plan: move invoice to “Attention” with note “Payment plan requested”
+   - Forecast: set “Medium confidence” and push expected date +14 days (until reviewed)
+   - Confidence label animates to “Medium”
+   - Briefly flash: “Forecast updated”
+
+3) DISPUTE
+   - Plan: stop automation and move invoice to “Attention” with note “Dispute raised”
+   - Forecast: set to “Low confidence” OR remove from expected cash until resolved (choose one and implement consistently)
+   - Confidence label animates to “Low”
+   - Briefly flash: “Forecast updated”
+
+4) AMBIGUOUS
+   - Plan: “Needs review” with suggested follow-up question: “Thanks — can you confirm the expected payment date for this invoice?”
+   - Forecast: leave unchanged, but mark as uncertain in the UI
+   - Confidence label remains as-is
+   - Show “Needs review” badge regardless of confidence score
+
+Bottom “Impact” Strip (always visible once outcome applied)
+Show a compact impact panel with three sections:
+
+1) Forecast before/after
+   - Simple numbers are acceptable (e.g., “Expected in next 30 days: £X → £Y”)
+   - OR a tiny sparkline (no external libraries) if easy
+   - Also show a small breakdown by confidence band if feasible:
+     High / Medium / Low (simple values)
+
+2) Plan change summary
+   - One line, e.g.:
+     “Plan updated: Paused until 31 Jan 2026”
+     “Plan updated: Moved to Attention (Payment plan requested)”
+     “Plan updated: Automation stopped (Dispute)”
+     “Plan updated: Needs review (Ask for payment date)”
+
+3) Audit log (event timeline)
+   Record and display these events with timestamps:
+   - Reminder generated
+   - Approved / Declined (include who: “Demo user” is fine)
+   - Sent
+   - Reply received
+   - Outcome extracted
+   - Plan updated
+   - Forecast updated (if applicable)
+
+Safety Note
+Add a small safety note at the bottom of the module:
+“Demo mode: messages are simulated. In production, nothing sends without approval.”
+
+Implementation Notes
+- Use local component state OR lightweight in-memory demo API routes—whichever best matches the existing codebase.
+- Do not add external dependencies.
+- Ensure everything is deterministic and repeatable.
+- Provide clean TypeScript types:
+  - Invoice
+  - Message
+  - Outcome
+  - AuditEvent
+
+Optional “Wow” Enhancement (include it)
+- Next to invoice amount, show “Confidence: High / Medium / Low”
+- When an outcome is applied, animate the confidence label changing
+- Briefly show “Forecast updated” to reinforce that cashflow confidence improves when intent is captured
