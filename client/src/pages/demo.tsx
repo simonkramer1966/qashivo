@@ -1011,7 +1011,7 @@ export default function InvestorDemo() {
       {/* Footer */}
       <footer className="py-12 px-6 border-t border-[#E6E8EC] text-center">
         <p className="text-[14px] text-[#556070]">
-          © 2026 Qashivo. Built in London. Backed by innovation.
+          © 2026 Nexus KPI Limited. Built in London. Backed by innovation.
         </p>
       </footer>
       {/* AI Results Dialog */}
