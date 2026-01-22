@@ -583,7 +583,6 @@ Your Company`;
             <div>
               <h4 className="text-[14px] font-medium text-[#0B0F17] mb-3 flex items-center gap-2">
                 <Mail className="w-4 h-4 text-[#12B8C4]" />
-                <ArrowRight className="w-4 h-4 text-[#12B8C4]" />
                 Conversation Thread
               </h4>
               <div className="divide-y divide-[#E6E8EC]">
