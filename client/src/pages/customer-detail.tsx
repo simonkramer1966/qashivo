@@ -291,7 +291,7 @@ export default function CustomerDetailPage() {
                   {/* Column 1: Channel Toggles */}
                   <div className="space-y-3">
                     <p className="text-[11px] text-slate-400 mb-2">Allowed Channels</p>
-                    <div className="flex items-center justify-between py-2">
+                    <div className="flex items-center gap-4 py-2">
                       <div className="flex items-center gap-3">
                         <Mail className="h-4 w-4 text-slate-400" />
                         <span className="text-sm text-slate-700">Email</span>
@@ -302,7 +302,7 @@ export default function CustomerDetailPage() {
                         disabled={!canEdit || updatePreferencesMutation.isPending}
                       />
                     </div>
-                    <div className="flex items-center justify-between py-2">
+                    <div className="flex items-center gap-4 py-2">
                       <div className="flex items-center gap-3">
                         <MessageSquare className="h-4 w-4 text-slate-400" />
                         <span className="text-sm text-slate-700">SMS</span>
@@ -313,7 +313,7 @@ export default function CustomerDetailPage() {
                         disabled={!canEdit || updatePreferencesMutation.isPending}
                       />
                     </div>
-                    <div className="flex items-center justify-between py-2">
+                    <div className="flex items-center gap-4 py-2">
                       <div className="flex items-center gap-3">
                         <Mic className="h-4 w-4 text-slate-400" />
                         <span className="text-sm text-slate-700">Voice</span>
@@ -400,7 +400,7 @@ export default function CustomerDetailPage() {
                   {/* Column 3: Workflow Preference */}
                   <div className="space-y-3">
                     <p className="text-[11px] text-slate-400 mb-2">Workflow Preference</p>
-                    <div className="flex items-center justify-between py-2">
+                    <div className="flex items-center gap-4 py-2">
                       <div className="flex items-center gap-3">
                         <Zap className="h-4 w-4 text-slate-400" />
                         <span className="text-sm text-slate-700">Autonomous</span>
