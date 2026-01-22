@@ -234,6 +234,8 @@ export interface IStorage {
     search?: string;
     overdueCategory?: string;
     contactId?: string;
+    sortBy?: string;
+    sortDir?: string;
     page?: number;
     limit?: number;
   }): Promise<{ invoices: (Invoice & { contact: Contact })[]; total: number }>;
@@ -959,10 +961,12 @@ export class DatabaseStorage implements IStorage {
     search?: string;
     overdueCategory?: string;
     contactId?: string;
+    sortBy?: string;
+    sortDir?: string;
     page?: number;
     limit?: number;
   }): Promise<{ invoices: (Invoice & { contact: Contact })[]; total: number }> {
-    const { status, search, overdueCategory, contactId, page = 1, limit = 50 } = filters;
+    const { status, search, overdueCategory, contactId, sortBy = 'daysOverdue', sortDir = 'desc', page = 1, limit = 50 } = filters;
     const offset = (page - 1) * limit;
 
     console.log(`🔍 Server-side SQL filtering: status=${status}, search="${search}", overdueCategory=${overdueCategory}, page=${page}, limit=${limit}`);
@@ -1094,13 +1098,40 @@ export class DatabaseStorage implements IStorage {
     // Build the WHERE clause
     const whereClause = conditions.length > 1 ? and(...conditions) : conditions[0];
 
+    // Determine sort column and direction
+    const getSortColumn = () => {
+      switch (sortBy) {
+        case 'date':
+          return invoices.issueDate;
+        case 'invoiceNumber':
+          return invoices.invoiceNumber;
+        case 'customer':
+          return contacts.companyName;
+        case 'daysOverdue':
+          return invoices.dueDate; // Sort by dueDate, earlier = more overdue
+        case 'status':
+          return invoices.status;
+        case 'amount':
+          return invoices.amount;
+        default:
+          return invoices.dueDate;
+      }
+    };
+    
+    const sortColumn = getSortColumn();
+    // For daysOverdue, invert direction since earlier dueDate = more days overdue
+    const effectiveDir = sortBy === 'daysOverdue' 
+      ? (sortDir === 'desc' ? 'asc' : 'desc') // Invert for daysOverdue
+      : sortDir;
+    const orderByClause = effectiveDir === 'desc' ? desc(sortColumn) : asc(sortColumn);
+
     // Execute main query with pagination
     const results = await db
       .select()
       .from(invoices)
       .leftJoin(contacts, eq(invoices.contactId, contacts.id))
       .where(whereClause)
-      .orderBy(desc(invoices.createdAt))
+      .orderBy(orderByClause)
       .limit(limit)
       .offset(offset);
 

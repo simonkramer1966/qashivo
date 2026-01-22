@@ -113,6 +113,8 @@ const invoicesQuerySchema = z.object({
   search: z.string().optional(),
   overdue: z.enum(['paid', 'due', 'overdue', 'serious', 'escalation', 'all']).optional().default('all'),
   contactId: z.string().optional(),
+  sortBy: z.enum(['date', 'invoiceNumber', 'customer', 'daysOverdue', 'status', 'amount']).optional().default('daysOverdue'),
+  sortDir: z.enum(['asc', 'desc']).optional().default('desc'),
   page: z.string().optional().default('1').transform(Number),
   limit: z.string().optional().default('50').transform(Number)
 });
@@ -2575,9 +2577,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Validate and parse query parameters using Zod schema
       const validatedQuery = invoicesQuerySchema.parse(req.query);
-      const { status, search, overdue, contactId, page, limit } = validatedQuery;
+      const { status, search, overdue, contactId, sortBy, sortDir, page, limit } = validatedQuery;
 
-      console.log(`📊 Optimized Invoices API - Tenant: ${user.tenantId}, Filters: status=${status}, search="${search}", overdue=${overdue}, page=${page}, limit=${limit}`);
+      console.log(`📊 Optimized Invoices API - Tenant: ${user.tenantId}, Filters: status=${status}, search="${search}", overdue=${overdue}, sortBy=${sortBy}, sortDir=${sortDir}, page=${page}, limit=${limit}`);
       
       // Call optimized storage method with server-side filtering
       const result = await storage.getInvoicesFiltered(user.tenantId, {
@@ -2585,6 +2587,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         search,
         overdueCategory: overdue,
         contactId,
+        sortBy,
+        sortDir,
         page,
         limit
       });
@@ -2631,6 +2635,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       // Calculate aggregates across ALL filtered invoices
+      const agingBuckets = {
+        '0-30': { amount: 0, count: 0 },
+        '30-60': { amount: 0, count: 0 },
+        '60-90': { amount: 0, count: 0 },
+        '90+': { amount: 0, count: 0 },
+      };
+      
+      allFilteredResult.invoices.forEach((inv: any) => {
+        if (inv.status === 'paid' || inv.status === 'cancelled') return;
+        const dueDate = new Date(inv.dueDate);
+        const today = new Date();
+        const daysOverdue = Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
+        if (daysOverdue <= 0) return;
+        
+        const amount = Number(inv.amount) || 0;
+        const amountPaid = Number(inv.amountPaid) || 0;
+        const outstanding = amount - amountPaid;
+        
+        if (daysOverdue <= 30) {
+          agingBuckets['0-30'].amount += outstanding;
+          agingBuckets['0-30'].count++;
+        } else if (daysOverdue <= 60) {
+          agingBuckets['30-60'].amount += outstanding;
+          agingBuckets['30-60'].count++;
+        } else if (daysOverdue <= 90) {
+          agingBuckets['60-90'].amount += outstanding;
+          agingBuckets['60-90'].count++;
+        } else {
+          agingBuckets['90+'].amount += outstanding;
+          agingBuckets['90+'].count++;
+        }
+      });
+      
       const aggregates = {
         totalOutstanding: allFilteredResult.invoices.reduce((sum, inv) => {
           if (inv.status !== 'paid' && inv.status !== 'cancelled') {
@@ -2649,7 +2686,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const daysOverdue = Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
           return daysOverdue >= 30;
         }).length,
-        totalInvoices: allFilteredResult.total
+        totalInvoices: allFilteredResult.total,
+        agingBuckets
       };
       
       // Return paginated results with enhanced metadata

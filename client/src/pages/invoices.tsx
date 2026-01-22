@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { 
@@ -62,16 +62,39 @@ export default function Invoices() {
     return diff;
   };
 
+  interface AgingBucket {
+    amount: number;
+    count: number;
+  }
+  
   const { data: invoicesData, isLoading } = useQuery<{
     invoices: Invoice[];
-    aggregates: { totalOutstanding: number; overdueCount: number; pendingCount: number; criticalCount: number; totalInvoices: number };
+    aggregates: { 
+      totalOutstanding: number; 
+      overdueCount: number; 
+      pendingCount: number; 
+      criticalCount: number; 
+      totalInvoices: number;
+      agingBuckets: {
+        '0-30': AgingBucket;
+        '30-60': AgingBucket;
+        '60-90': AgingBucket;
+        '90+': AgingBucket;
+      };
+    };
     pagination: { total: number; page: number; limit: number; totalPages: number };
   }>({
-    queryKey: ['/api/invoices', { status: 'all', search, page, limit }],
+    queryKey: ['/api/invoices', { status: 'all', search, sortBy: sortField, sortDir: sortDirection, page, limit }],
   });
 
   const invoices = invoicesData?.invoices || [];
   const pagination = invoicesData?.pagination || { total: 0, page: 1, limit: 20, totalPages: 1 };
+  const agingBuckets = invoicesData?.aggregates?.agingBuckets || {
+    '0-30': { amount: 0, count: 0 },
+    '30-60': { amount: 0, count: 0 },
+    '60-90': { amount: 0, count: 0 },
+    '90+': { amount: 0, count: 0 },
+  };
 
   const handleSearchChange = (value: string) => {
     setSearch(value);
@@ -85,6 +108,7 @@ export default function Invoices() {
       setSortField(field);
       setSortDirection('desc');
     }
+    setPage(1); // Reset to first page when sorting changes
   };
 
   const getSortIcon = (field: SortField) => {
@@ -94,71 +118,7 @@ export default function Invoices() {
       : <ChevronDown className="h-3 w-3 inline ml-1" />;
   };
 
-  const agingBuckets = useMemo(() => {
-    const buckets = {
-      '0-30': { amount: 0, count: 0 },
-      '30-60': { amount: 0, count: 0 },
-      '60-90': { amount: 0, count: 0 },
-      '90+': { amount: 0, count: 0 },
-    };
 
-    invoices.forEach(invoice => {
-      if (invoice.status === 'paid') return;
-      const daysOverdue = getDaysOverdue(invoice.dueDate);
-      const outstanding = invoice.amount - invoice.amountPaid;
-      
-      if (daysOverdue <= 0) return;
-      
-      if (daysOverdue <= 30) {
-        buckets['0-30'].amount += outstanding;
-        buckets['0-30'].count++;
-      } else if (daysOverdue <= 60) {
-        buckets['30-60'].amount += outstanding;
-        buckets['30-60'].count++;
-      } else if (daysOverdue <= 90) {
-        buckets['60-90'].amount += outstanding;
-        buckets['60-90'].count++;
-      } else {
-        buckets['90+'].amount += outstanding;
-        buckets['90+'].count++;
-      }
-    });
-
-    return buckets;
-  }, [invoices]);
-
-  const sortedInvoices = useMemo(() => {
-    return [...invoices].sort((a, b) => {
-      let comparison = 0;
-      
-      switch (sortField) {
-        case 'date':
-          comparison = new Date(a.issueDate).getTime() - new Date(b.issueDate).getTime();
-          break;
-        case 'invoiceNumber':
-          comparison = a.invoiceNumber.localeCompare(b.invoiceNumber);
-          break;
-        case 'customer':
-          const nameA = a.contact?.companyName || a.contact?.name || '';
-          const nameB = b.contact?.companyName || b.contact?.name || '';
-          comparison = nameA.localeCompare(nameB);
-          break;
-        case 'daysOverdue':
-          comparison = getDaysOverdue(a.dueDate) - getDaysOverdue(b.dueDate);
-          break;
-        case 'status':
-          comparison = a.status.localeCompare(b.status);
-          break;
-        case 'amount':
-          const outstandingA = a.amount - a.amountPaid;
-          const outstandingB = b.amount - b.amountPaid;
-          comparison = outstandingA - outstandingB;
-          break;
-      }
-      
-      return sortDirection === 'asc' ? comparison : -comparison;
-    });
-  }, [invoices, sortField, sortDirection]);
 
   const getStatusDisplay = (invoice: Invoice) => {
     const daysOverdue = getDaysOverdue(invoice.dueDate);
@@ -278,20 +238,20 @@ export default function Invoices() {
                     <div className="h-12 bg-slate-100 animate-pulse rounded"></div>
                   </div>
                 ))
-              ) : sortedInvoices.length === 0 ? (
+              ) : invoices.length === 0 ? (
                 <div className="py-12 text-center">
                   <FileText className="h-10 w-10 mx-auto mb-3 text-slate-300" />
                   <p className="text-[13px] text-slate-500">No invoices found</p>
                 </div>
               ) : (
-                sortedInvoices.map((invoice, idx) => {
+                invoices.map((invoice, idx) => {
                   const outstanding = invoice.amount - invoice.amountPaid;
                   const daysOverdue = getDaysOverdue(invoice.dueDate);
                   
                   return (
                     <div 
                       key={invoice.id} 
-                      className={`py-3 cursor-pointer hover:bg-slate-50/50 transition-colors ${idx !== sortedInvoices.length - 1 ? 'border-b border-slate-100' : ''}`}
+                      className={`py-3 cursor-pointer hover:bg-slate-50/50 transition-colors ${idx !== invoices.length - 1 ? 'border-b border-slate-100' : ''}`}
                       onClick={() => setSelectedInvoice(invoice)}
                       data-testid={`invoice-item-${invoice.id}`}
                     >
@@ -330,7 +290,7 @@ export default function Invoices() {
                     </div>
                   ))}
                 </div>
-              ) : sortedInvoices.length === 0 ? (
+              ) : invoices.length === 0 ? (
                 <div className="py-16 text-center border-t border-slate-100">
                   <FileText className="h-10 w-10 mx-auto mb-3 text-slate-300" />
                   <p className="text-[13px] text-slate-500">No invoices found</p>
@@ -379,7 +339,7 @@ export default function Invoices() {
                       </tr>
                     </thead>
                     <tbody>
-                      {sortedInvoices.map((invoice) => {
+                      {invoices.map((invoice) => {
                         const outstanding = invoice.amount - invoice.amountPaid;
                         const daysOverdue = getDaysOverdue(invoice.dueDate);
                         
