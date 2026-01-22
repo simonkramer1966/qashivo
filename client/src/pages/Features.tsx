@@ -44,6 +44,9 @@ export default function Features() {
                 <a href="/features" className="text-[15px] text-gray-900 font-medium">
                   Features
                 </a>
+                <a href="/demo" className="text-[15px] text-gray-600 hover:text-gray-900 transition-colors">
+                  Demo
+                </a>
                 <a href="/partners" className="text-[15px] text-gray-600 hover:text-gray-900 transition-colors">
                   Partners
                 </a>
@@ -80,6 +83,7 @@ export default function Features() {
               <a href="/home" className="text-[16px] text-gray-600 hover:text-gray-900 py-2">Home</a>
               <a href="/product" className="text-[16px] text-gray-600 hover:text-gray-900 py-2">Product</a>
               <a href="/features" className="text-[16px] text-gray-900 font-medium py-2">Features</a>
+              <a href="/demo" className="text-[16px] text-gray-600 hover:text-gray-900 py-2">Demo</a>
               <a href="/partners" className="text-[16px] text-gray-600 hover:text-gray-900 py-2">Partners</a>
               <a href="/pricing" className="text-[16px] text-gray-600 hover:text-gray-900 py-2">Pricing</a>
               <a href="/contact" className="text-[16px] text-gray-600 hover:text-gray-900 py-2">Contact</a>

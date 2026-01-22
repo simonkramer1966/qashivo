@@ -38,6 +38,9 @@ export default function Home() {
                 <a href="#how-it-works" className="text-[15px] text-[#556070] hover:text-[#0B0F17] transition-colors">
                   How it works
                 </a>
+                <a href="/demo" className="text-[15px] text-[#556070] hover:text-[#0B0F17] transition-colors">
+                  Demo
+                </a>
                 <a href="/partners" className="text-[15px] text-[#556070] hover:text-[#0B0F17] transition-colors">
                   Partners
                 </a>
@@ -74,6 +77,7 @@ export default function Home() {
               <a href="/home" className="text-[16px] text-[#556070] hover:text-[#0B0F17] py-2">Home</a>
               <a href="/product" className="text-[16px] text-[#556070] hover:text-[#0B0F17] py-2">Product</a>
               <a href="#how-it-works" className="text-[16px] text-[#556070] hover:text-[#0B0F17] py-2" onClick={() => setMobileMenuOpen(false)}>How it works</a>
+              <a href="/demo" className="text-[16px] text-[#556070] hover:text-[#0B0F17] py-2">Demo</a>
               <a href="/partners" className="text-[16px] text-[#556070] hover:text-[#0B0F17] py-2">Partners</a>
               <a href="/pricing" className="text-[16px] text-[#556070] hover:text-[#0B0F17] py-2">Pricing</a>
               <a href="/contact" className="text-[16px] text-[#556070] hover:text-[#0B0F17] py-2">Contact</a>

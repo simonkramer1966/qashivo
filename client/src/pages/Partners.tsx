@@ -49,6 +49,9 @@ export default function Partners() {
                 <a href="/home#how-it-works" className="text-[15px] text-[#556070] hover:text-[#0B0F17] transition-colors">
                   How it works
                 </a>
+                <a href="/demo" className="text-[15px] text-[#556070] hover:text-[#0B0F17] transition-colors">
+                  Demo
+                </a>
                 <a href="/partners" className="text-[15px] text-[#0B0F17] font-medium">
                   Partners
                 </a>
@@ -85,6 +88,7 @@ export default function Partners() {
               <a href="/home" className="text-[16px] text-[#556070] hover:text-[#0B0F17] py-2">Home</a>
               <a href="/product" className="text-[16px] text-[#556070] hover:text-[#0B0F17] py-2">Product</a>
               <a href="/home#how-it-works" className="text-[16px] text-[#556070] hover:text-[#0B0F17] py-2">How it works</a>
+              <a href="/demo" className="text-[16px] text-[#556070] hover:text-[#0B0F17] py-2">Demo</a>
               <a href="/partners" className="text-[16px] text-[#0B0F17] font-medium py-2">Partners</a>
               <a href="/pricing" className="text-[16px] text-[#556070] hover:text-[#0B0F17] py-2">Pricing</a>
               <a href="/contact" className="text-[16px] text-[#556070] hover:text-[#0B0F17] py-2">Contact</a>
