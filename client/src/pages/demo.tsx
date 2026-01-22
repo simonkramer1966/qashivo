@@ -614,18 +614,6 @@ export default function InvestorDemo() {
           </div>
         </div>
       </section>
-      {/* Trust Signals */}
-      <section className="py-16 border-y border-[#E6E8EC] bg-white">
-        <div className="max-w-[1200px] mx-auto px-6">
-          <p className="text-center text-[18px] text-[#556070] mb-8">
-            Integrated with your favourite accounting software ...
-          </p>
-          <div className="flex flex-wrap items-center justify-center gap-10 md:gap-14">
-            <img src={xeroLogo} alt="Xero" className="h-24 grayscale opacity-60 hover:opacity-100 hover:grayscale-0 transition-all" />
-            <img src={quickbooksLogo} alt="QuickBooks" className="h-[108px] grayscale opacity-60 hover:opacity-100 hover:grayscale-0 transition-all" />
-          </div>
-        </div>
-      </section>
       {/* The Solution */}
       <section className="py-16 md:py-24 border-y border-[#E6E8EC]">
         <div className="max-w-[1200px] mx-auto px-6">
