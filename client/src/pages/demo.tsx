@@ -633,7 +633,7 @@ export default function InvestorDemo() {
           <div className="max-w-[700px] mx-auto text-center mb-16">
             <h2 className="text-[40px] md:text-[48px] font-semibold text-[#0B0F17] leading-[1.1] tracking-[-0.02em] mb-6">The Qashivo Solution</h2>
             <p className="text-[18px] md:text-[20px] text-[#556070] leading-[1.55]">
-              Automated credit control that combines real-time intent detection, statutory compliance, and multi-channel automation
+              Supervised autonomous credit control that combines AI intent detection, multi-channel automation and real-time cashflow forecasting based upon individual debtor behaviour.
             </p>
           </div>
 
