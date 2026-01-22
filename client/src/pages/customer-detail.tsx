@@ -142,7 +142,21 @@ export default function CustomerDetailPage() {
     });
   };
 
+  const handleAutonomousToggle = (autonomous: boolean) => {
+    if (autonomous) {
+      handleWorkflowChange(null);
+    } else {
+      // Find default workflow or use first available
+      const defaultWorkflow = workflows?.find(w => w.isDefault) || workflows?.[0];
+      if (defaultWorkflow) {
+        handleWorkflowChange(defaultWorkflow.id);
+      }
+    }
+  };
+
   const isAutonomous = !localPrefs.workflowId;
+  const hasWorkflows = workflows && workflows.length > 0;
+  const selectedWorkflowExists = !localPrefs.workflowId || workflows?.some(w => w.id === localPrefs.workflowId);
 
   const DAYS_OF_WEEK = [
     { key: "monday", label: "Mon" },
@@ -393,8 +407,8 @@ export default function CustomerDetailPage() {
                       </div>
                       <Switch 
                         checked={isAutonomous}
-                        onCheckedChange={(checked) => handleWorkflowChange(checked ? null : (workflows?.[0]?.id || null))}
-                        disabled={!canEdit || updatePreferencesMutation.isPending}
+                        onCheckedChange={handleAutonomousToggle}
+                        disabled={!canEdit || updatePreferencesMutation.isPending || (isAutonomous && !hasWorkflows)}
                       />
                     </div>
                     {isAutonomous ? (
@@ -403,6 +417,11 @@ export default function CustomerDetailPage() {
                       </p>
                     ) : (
                       <div className="py-2">
+                        {!selectedWorkflowExists && (
+                          <p className="text-xs text-amber-600 mb-2">
+                            Previously selected workflow no longer exists
+                          </p>
+                        )}
                         <Select
                           value={localPrefs.workflowId || ""}
                           onValueChange={(value) => handleWorkflowChange(value || null)}
