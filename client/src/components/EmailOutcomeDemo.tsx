@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -265,6 +265,12 @@ Your Company`;
     setAuditLog(newLog);
   }, [selectedInvoice, addAuditEvent]);
 
+  const [pendingSimulation, setPendingSimulation] = useState<{
+    outcomeType: OutcomeType;
+    log: AuditEvent[];
+    outbound: Message;
+  } | null>(null);
+
   const handleApproveAndSend = useCallback(() => {
     if (!selectedInvoice) return;
 
@@ -296,7 +302,11 @@ Your Company`;
     setDisplayedConfidenceBand(selectedInvoice.confidenceBand);
 
     setTimeout(() => {
-      simulateReply("PROMISE_TO_PAY", newLog, newOutboundMessage);
+      setPendingSimulation({
+        outcomeType: "PROMISE_TO_PAY",
+        log: newLog,
+        outbound: newOutboundMessage
+      });
     }, 1800);
   }, [selectedInvoice, emailSubject, emailBody, addAuditEvent, auditLog]);
 
@@ -313,7 +323,42 @@ Your Company`;
     setOutboundMessage(null);
   }, [addAuditEvent, auditLog]);
 
-  const simulateReply = useCallback((outcomeType: OutcomeType, startingLog?: AuditEvent[], outbound?: Message | null) => {
+  const fetchAIResponse = useCallback(async (
+    outcomeType: OutcomeType,
+    conversationHistory: Array<{ direction: 'inbound' | 'outbound'; body: string }> = []
+  ): Promise<{ subject: string; body: string }> => {
+    if (!selectedInvoice) {
+      return SCRIPTED_REPLIES[outcomeType];
+    }
+
+    try {
+      const response = await fetch('/api/demo/generate-debtor-response', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          emailSubject,
+          emailBody,
+          customerName: selectedInvoice.customerName,
+          invoiceNumber: selectedInvoice.invoiceNumber,
+          amount: selectedInvoice.amount,
+          daysOverdue: parseInt(selectedInvoice.daysOverdueLabel) || 14,
+          outcomeType,
+          conversationHistory
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to generate response');
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error fetching AI response:', error);
+      return SCRIPTED_REPLIES[outcomeType];
+    }
+  }, [selectedInvoice, emailSubject, emailBody]);
+
+  const simulateReply = useCallback(async (outcomeType: OutcomeType, startingLog?: AuditEvent[], outbound?: Message | null) => {
     if (!selectedInvoice) return;
 
     setStep("interpreting");
@@ -325,7 +370,7 @@ Your Company`;
     let newLog = addAuditEvent("Reply received", selectedInvoice.customerName, logToUse);
     setAuditLog(newLog);
 
-    const reply = SCRIPTED_REPLIES[outcomeType];
+    const reply = await fetchAIResponse(outcomeType);
     const inboundMessage: Message = {
       id: `msg-${Date.now()}`,
       direction: "inbound",
@@ -473,13 +518,21 @@ Your Company`;
         setShowOtherOutcomes(true);
       }, 1200);
     }
-  }, [selectedInvoice, addAuditEvent, baseAuditLog, outboundMessage]);
+  }, [selectedInvoice, addAuditEvent, baseAuditLog, outboundMessage, fetchAIResponse]);
 
-  const handleOtherOutcome = useCallback((outcomeType: OutcomeType) => {
+  const handleOtherOutcome = useCallback(async (outcomeType: OutcomeType) => {
     setCurrentOutcome(null);
     setShowForecastUpdated(false);
-    simulateReply(outcomeType);
+    await simulateReply(outcomeType);
   }, [simulateReply]);
+
+  useEffect(() => {
+    if (pendingSimulation) {
+      const { outcomeType, log, outbound } = pendingSimulation;
+      setPendingSimulation(null);
+      simulateReply(outcomeType, log, outbound);
+    }
+  }, [pendingSimulation, simulateReply]);
 
   const resetDemo = useCallback(() => {
     setSelectedInvoiceNumber("");
@@ -497,6 +550,7 @@ Your Company`;
     setInitialForecast(null);
     setOutboundMessage(null);
     setAmbiguousConversationStep(0);
+    setPendingSimulation(null);
   }, []);
 
   const handleSelectInvoice = useCallback((value: string) => {
@@ -513,6 +567,7 @@ Your Company`;
     setInitialForecast(null);
     setOutboundMessage(null);
     setAmbiguousConversationStep(0);
+    setPendingSimulation(null);
   }, []);
 
   const currentForecast = currentOutcome && selectedInvoice
