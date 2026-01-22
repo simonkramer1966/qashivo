@@ -15,6 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Sparkles, MessageSquare, PhoneOff } from "lucide-react";
 import logo from "@assets/Main_Nexus_Logo_copy_1768893717341.png";
 import dashboardScreenshot from "@assets/Screenshot_2026-01-20_at_16.41.29_1769100769786.png";
+import actionCentreScreenshot from "@assets/Screenshot_2026-01-20_at_22.11.45_1769101272168.png";
 import xeroLogo from "@assets/Xero_software_logo.svg_1768974407536.png";
 import quickbooksLogo from "@assets/quickbnooks_1768974664185.png";
 import investorDeckPdf from "@assets/Qashivo - Investor Deck_1760520688174.pdf";
@@ -675,27 +676,20 @@ export default function InvestorDemo() {
               </div>
             </div>
 
-            <div className="bg-[#F0F2F5] rounded-2xl p-6">
-              <div className="rounded-xl overflow-hidden mb-6 border border-[#E6E8EC]">
+            <div className="bg-[#F0F2F5] rounded-2xl p-6 space-y-4">
+              <div className="rounded-xl overflow-hidden border border-[#E6E8EC]">
                 <img 
                   src={dashboardScreenshot} 
                   alt="Qashivo Dashboard - Overview" 
                   className="w-full h-auto"
                 />
               </div>
-              <div className="grid grid-cols-3 gap-4">
-                <div className="text-center py-3" data-testid="card-solution-accuracy">
-                  <p className="text-[24px] font-semibold text-[#12B8C4]" data-testid="text-accuracy-rate">3</p>
-                  <p className="text-[13px] text-[#556070]">Scenario Options</p>
-                </div>
-                <div className="text-center py-3 border-x border-[#E6E8EC]" data-testid="card-solution-dso">
-                  <p className="text-[24px] font-semibold text-[#0B0F17]" data-testid="text-dso-reduction">-40%</p>
-                  <p className="text-[13px] text-[#556070]">DSO Reduction</p>
-                </div>
-                <div className="text-center py-3" data-testid="card-solution-time">
-                  <p className="text-[24px] font-semibold text-[#12B8C4]" data-testid="text-time-saved">85%</p>
-                  <p className="text-[13px] text-[#556070]">Time Saved</p>
-                </div>
+              <div className="rounded-xl overflow-hidden border border-[#E6E8EC]">
+                <img 
+                  src={actionCentreScreenshot} 
+                  alt="Qashivo Action Centre" 
+                  className="w-full h-auto"
+                />
               </div>
             </div>
           </div>
