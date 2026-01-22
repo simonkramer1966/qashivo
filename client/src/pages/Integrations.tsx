@@ -32,9 +32,6 @@ export default function Integrations() {
                 <a href="/home" className="text-gray-700 hover:text-[#17B6C3] transition-colors" data-testid="link-nav-home">
                   Home
                 </a>
-                <a href="/features" className="text-gray-700 hover:text-[#17B6C3] transition-colors" data-testid="link-nav-features">
-                  Features
-                </a>
                 <a href="/integrations" className="text-[#17B6C3] font-medium" data-testid="link-nav-integrations">
                   Integrations
                 </a>
@@ -282,7 +279,6 @@ export default function Integrations() {
             <div>
               <h4 className="font-semibold mb-4">Product</h4>
               <ul className="space-y-2 text-gray-400">
-                <li><a href="/features" className="hover:text-[#17B6C3] transition-colors">Features</a></li>
                 <li><a href="/integrations" className="hover:text-[#17B6C3] transition-colors">Integrations</a></li>
                 <li><a href="/pricing" className="hover:text-[#17B6C3] transition-colors">Pricing</a></li>
               </ul>

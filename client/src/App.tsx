@@ -40,7 +40,6 @@ const CashboardExperimental = lazy(() => import("@/pages/cashboard-experimental"
 const Homepage = lazy(() => import("@/pages/homepage"));
 const Home = lazy(() => import("@/pages/Home"));
 const Contact = lazy(() => import("@/pages/Contact"));
-const Features = lazy(() => import("@/pages/Features"));
 const Integrations = lazy(() => import("@/pages/Integrations"));
 const PricingPage = lazy(() => import("@/pages/Pricing"));
 const Partners = lazy(() => import("@/pages/Partners"));
@@ -102,7 +101,6 @@ function Router() {
         <Switch>
           <Route path="/home" component={Home} />
           <Route path="/contact" component={Contact} />
-          <Route path="/features" component={Features} />
           <Route path="/integrations" component={Integrations} />
           <Route path="/pricing" component={PricingPage} />
           <Route path="/partners" component={Partners} />
@@ -136,7 +134,6 @@ function Router() {
         <Switch>
           <Route path="/home" component={Home} />
           <Route path="/contact" component={Contact} />
-          <Route path="/features" component={Features} />
           <Route path="/integrations" component={Integrations} />
           <Route path="/pricing" component={PricingPage} />
           <Route path="/partners" component={Partners} />
