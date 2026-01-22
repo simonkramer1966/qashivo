@@ -287,7 +287,7 @@ export default function CustomerDetailPage() {
                   <Skeleton className="h-8 w-full" />
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div className="flex flex-col md:flex-row gap-12">
                   {/* Column 1: Channel Toggles */}
                   <div className="space-y-3">
                     <p className="text-[11px] text-slate-400 mb-2">Allowed Channels</p>
