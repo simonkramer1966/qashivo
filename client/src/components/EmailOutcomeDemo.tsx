@@ -576,41 +576,6 @@ Your Company`;
               <p className="text-xs text-[#556070] mt-2">Demo: choose a different reply to see how the plan and forecast change.</p>
             </div>
           )}
-        </div>
-
-        <div className="space-y-6">
-          {messages.length > 0 && (
-            <div>
-              <h4 className="text-[14px] font-medium text-[#0B0F17] mb-3 flex items-center gap-2">
-                <Mail className="w-4 h-4 text-[#12B8C4]" />
-                Conversation Thread
-              </h4>
-              <div className="divide-y divide-[#E6E8EC]">
-                {messages.map((msg) => (
-                  <div key={msg.id} className={`py-4 first:pt-0 last:pb-0 ${msg.direction === "inbound" ? "bg-[#12B8C4]/5 -mx-4 px-4 rounded-lg" : ""}`}>
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        <span className={`text-xs font-medium px-2 py-0.5 rounded ${msg.direction === "outbound" ? "bg-[#F8FAFC] text-[#556070]" : "bg-[#12B8C4]/10 text-[#12B8C4]"}`}>
-                          {msg.direction === "outbound" ? "Sent" : "Received"}
-                        </span>
-                        {msg.direction === "outbound" ? (
-                          <ArrowRight className="w-3 h-3 text-[#556070]" />
-                        ) : (
-                          <ArrowLeft className="w-3 h-3 text-[#12B8C4]" />
-                        )}
-                        <span className="text-sm text-[#0B0F17]">
-                          {msg.direction === "outbound" ? msg.to : msg.from}
-                        </span>
-                      </div>
-                      <span className="text-xs text-[#556070]">{formatTime(msg.timestamp)}</span>
-                    </div>
-                    <p className="text-sm font-medium text-[#0B0F17] mb-1">{msg.subject}</p>
-                    <p className="text-sm text-[#556070] whitespace-pre-line">{msg.body}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
 
           {currentOutcome && (
             <div className="pt-4 border-t border-[#E6E8EC]">
@@ -666,6 +631,41 @@ Your Company`;
                     <span className="font-medium text-[#0B0F17]">Next step:</span> {currentOutcome.recommendedNextStep}
                   </p>
                 </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="space-y-6">
+          {messages.length > 0 && (
+            <div>
+              <h4 className="text-[14px] font-medium text-[#0B0F17] mb-3 flex items-center gap-2">
+                <Mail className="w-4 h-4 text-[#12B8C4]" />
+                Conversation Thread
+              </h4>
+              <div className="divide-y divide-[#E6E8EC]">
+                {messages.map((msg) => (
+                  <div key={msg.id} className={`py-4 first:pt-0 last:pb-0 ${msg.direction === "inbound" ? "bg-[#12B8C4]/5 -mx-4 px-4 rounded-lg" : ""}`}>
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <span className={`text-xs font-medium px-2 py-0.5 rounded ${msg.direction === "outbound" ? "bg-[#F8FAFC] text-[#556070]" : "bg-[#12B8C4]/10 text-[#12B8C4]"}`}>
+                          {msg.direction === "outbound" ? "Sent" : "Received"}
+                        </span>
+                        {msg.direction === "outbound" ? (
+                          <ArrowRight className="w-3 h-3 text-[#556070]" />
+                        ) : (
+                          <ArrowLeft className="w-3 h-3 text-[#12B8C4]" />
+                        )}
+                        <span className="text-sm text-[#0B0F17]">
+                          {msg.direction === "outbound" ? msg.to : msg.from}
+                        </span>
+                      </div>
+                      <span className="text-xs text-[#556070]">{formatTime(msg.timestamp)}</span>
+                    </div>
+                    <p className="text-sm font-medium text-[#0B0F17] mb-1">{msg.subject}</p>
+                    <p className="text-sm text-[#556070] whitespace-pre-line">{msg.body}</p>
+                  </div>
+                ))}
               </div>
             </div>
           )}
