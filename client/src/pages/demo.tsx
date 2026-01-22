@@ -668,7 +668,7 @@ export default function InvestorDemo() {
                   <div>
                     <h3 className="text-[20px] font-semibold text-[#0B0F17] mb-2">Real-Time Cashflow</h3>
                     <p className="text-[16px] text-[#556070] leading-[1.6]">
-                      Built on the Late Payment Act and the most recent updates. Automated interest calculations, statutory notices, and escalation pathways.
+                      Qashivo updates your cash-in forecast in real time as each debtor engages — not just from invoice ageing. It learns individual debtor payment behaviour and confirmed intent (like promises to pay or disputes), so your forecast reflects what customers are actually likely to do. In other words, Qashivo really does "know your customers".
                     </p>
                   </div>
                 </div>
