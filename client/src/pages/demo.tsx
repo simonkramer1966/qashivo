@@ -598,8 +598,7 @@ export default function InvestorDemo() {
                 Automation That Turns Late Payments Into Predictable Cashflow
               </h1>
               <p className="text-[18px] md:text-[20px] text-[#556070] leading-[1.55] mb-4">
-                The UK's first automated credit control platform built on statutory rights. 
-                Transforming the £11B late payment crisis into predictable revenue.
+                The UK's first automated credit control platform built to transform the £11B late payment crisis into predictable revenue.
               </p>
               <p className="text-[18px] md:text-[20px] text-[#556070] leading-[1.55]">
                 <strong className="text-[#0B0F17]">We're not just automating credit control. We're building the execution engine for SME collections.</strong>
