@@ -627,50 +627,6 @@ export default function InvestorDemo() {
         </div>
       </section>
 
-      {/* The Problem */}
-      <section className="py-16 md:py-24">
-        <div className="max-w-[1200px] mx-auto px-6">
-          <div className="max-w-[700px] mx-auto text-center mb-16">
-            <h2 className="text-[40px] md:text-[48px] font-semibold text-[#0B0F17] leading-[1.1] tracking-[-0.02em] mb-6">The £11 Billion Problem</h2>
-            <p className="text-[18px] md:text-[20px] text-[#556070] leading-[1.55]">
-              Late payments are killing UK SMEs. Manual credit control is inefficient, non-compliant, and emotionally draining.
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-10 md:gap-12">
-            <div className="text-center" data-testid="card-problem-cost">
-              <div className="w-14 h-14 bg-[#8B2635]/10 rounded-xl flex items-center justify-center mb-6 mx-auto">
-                <DollarSign className="w-7 h-7 text-[#8B2635]" />
-              </div>
-              <h3 className="text-[24px] font-semibold text-[#0B0F17] mb-2" data-testid="text-problem-amount">£11B Lost</h3>
-              <p className="text-[16px] text-[#556070] mb-4">Annual cost to UK SMEs from late payments</p>
-              <div className="text-[40px] font-semibold text-[#8B2635]" data-testid="text-failures-count">14,000</div>
-              <p className="text-[14px] text-[#556070]">Businesses fail each year due to late payments</p>
-            </div>
-
-            <div className="text-center" data-testid="card-problem-dso">
-              <div className="w-14 h-14 bg-[#8B2635]/10 rounded-xl flex items-center justify-center mb-6 mx-auto">
-                <Clock className="w-7 h-7 text-[#8B2635]" />
-              </div>
-              <h3 className="text-[24px] font-semibold text-[#0B0F17] mb-2" data-testid="text-dso-days">64 Days</h3>
-              <p className="text-[16px] text-[#556070] mb-4">Average DSO for UK SMEs</p>
-              <div className="text-[40px] font-semibold text-[#8B2635]" data-testid="text-payment-multiplier">2x</div>
-              <p className="text-[14px] text-[#556070]">Payment terms exceeded</p>
-            </div>
-
-            <div className="text-center" data-testid="card-problem-compliance">
-              <div className="w-14 h-14 bg-[#12B8C4]/10 rounded-xl flex items-center justify-center mb-6 mx-auto">
-                <Shield className="w-7 h-7 text-[#12B8C4]" />
-              </div>
-              <h3 className="text-[24px] font-semibold text-[#0B0F17] mb-2" data-testid="text-compliance-rate">100% Must Comply</h3>
-              <p className="text-[16px] text-[#556070] mb-4">Late Payment Act becomes mandatory</p>
-              <div className="text-[40px] font-semibold text-[#12B8C4]" data-testid="text-solutions-count">0</div>
-              <p className="text-[14px] text-[#556070]">Current compliant solutions</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
       {/* The Solution */}
       <section className="py-16 md:py-24 border-y border-[#E6E8EC]">
         <div className="max-w-[1200px] mx-auto px-6">
