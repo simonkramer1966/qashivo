@@ -647,7 +647,7 @@ export default function InvestorDemo() {
                   <div>
                     <h3 className="text-[20px] font-semibold text-[#0B0F17] mb-2">AI Intent Detection</h3>
                     <p className="text-[16px] text-[#556070] leading-[1.6]">
-                      Every voice call, email, WhatsApp and SMS is analyzed in real-time. Our AI detects payment intent, sentiment, and automatically creates next actions.
+                      Every voice call, email, WhatsApp and SMS is analysed in real time. Qashivo detects payment intent, captures key details and creates the next actions, with anything uncertain routed for human review.
                     </p>
                   </div>
                 </div>
