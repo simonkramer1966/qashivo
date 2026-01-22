@@ -577,7 +577,7 @@ export default function PartnerScorecard() {
               <span className="text-[14px] font-medium text-[#0B0F17]">Qashivo</span>
             </div>
             <p className="text-[13px] text-[#556070]">
-              © 2026 Nexus KPI Limited. All rights reserved.
+              © 2026 Nexus KPI Limited. Built in London. Backed by innovation. All rights reserved.
             </p>
           </div>
         </div>

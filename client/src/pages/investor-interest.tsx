@@ -334,7 +334,7 @@ export default function InvestorInterest() {
       {/* Footer */}
       <footer className="py-6 px-6 border-t border-slate-100">
         <div className="max-w-3xl mx-auto flex items-center justify-between text-xs text-slate-400">
-          <div>© 2026 Qashivo Ltd. All rights reserved.</div>
+          <div>© 2026 Nexus KPI Limited. Built in London. Backed by innovation. All rights reserved.</div>
           <div className="flex items-center gap-4">
             <a href="mailto:hello@qashivo.com" className="hover:text-slate-600">hello@qashivo.com</a>
             <span>·</span>

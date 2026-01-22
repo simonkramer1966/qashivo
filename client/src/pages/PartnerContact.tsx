@@ -234,7 +234,7 @@ export default function PartnerContact() {
             <div className="flex items-center gap-8 text-[14px] text-[#556070]">
               <a href="/privacy" className="hover:text-[#0B0F17] transition-colors">Privacy</a>
               <a href="/terms" className="hover:text-[#0B0F17] transition-colors">Terms</a>
-              <span>© 2026 Qashivo Ltd</span>
+              <span>© 2026 Nexus KPI Limited. Built in London. Backed by innovation. All rights reserved.</span>
             </div>
           </div>
         </div>

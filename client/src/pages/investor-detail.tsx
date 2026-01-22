@@ -612,7 +612,7 @@ export default function InvestorDetail() {
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="flex items-center gap-3">
               <img src={qashivoLogo} alt="Qashivo" className="h-8" />
-              <p className="text-sm text-gray-600">© 2025 Qashivo Ltd. All rights reserved.</p>
+              <p className="text-sm text-gray-600">© 2026 Nexus KPI Limited. Built in London. Backed by innovation. All rights reserved.</p>
             </div>
             <div className="flex items-center gap-6">
               <a href="mailto:hello@qashivo.com" className="text-sm text-gray-600 hover:text-[#17B6C3]">

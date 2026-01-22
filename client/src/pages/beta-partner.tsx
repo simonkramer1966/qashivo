@@ -756,7 +756,7 @@ export default function BetaPartner() {
       <footer className="py-12 px-6 bg-white/60 backdrop-blur-sm border-t border-gray-200">
         <div className="max-w-7xl mx-auto text-center">
           <p className="text-gray-600">
-            © 2025 Qashivo. All rights reserved.
+            © 2026 Nexus KPI Limited. Built in London. Backed by innovation. All rights reserved.
           </p>
           <p className="text-sm text-gray-500 mt-2">
             This is a private invitation link. Please do not share publicly.

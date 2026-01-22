@@ -968,7 +968,7 @@ export default function InvestorDemo() {
       {/* Footer */}
       <footer className="py-8 px-6 bg-gray-900 text-center">
         <p className="text-gray-400">
-          © 2025 Qashivo. Built in London. Backed by innovation.
+          © 2026 Nexus KPI Limited. Built in London. Backed by innovation. All rights reserved.
         </p>
       </footer>
 

@@ -348,7 +348,7 @@ export default function Product() {
           
           <div className="mt-12 pt-8 border-t border-[#E6E8EC]">
             <p className="text-[13px] text-[#556070] text-center">
-              © 2026 Qashivo. All rights reserved.
+              © 2026 Nexus KPI Limited. Built in London. Backed by innovation. All rights reserved.
             </p>
           </div>
         </div>

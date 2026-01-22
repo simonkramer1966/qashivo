@@ -616,7 +616,7 @@ export default function Homepage() {
           />
         </div>
         <p className="text-gray-400">
-          © 2025 Nexus KPI - All rights reserved.
+          © 2026 Nexus KPI Limited. Built in London. Backed by innovation. All rights reserved.
         </p>
       </footer>
     </div>
