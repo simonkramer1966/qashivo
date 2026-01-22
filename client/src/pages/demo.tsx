@@ -1003,54 +1003,6 @@ export default function InvestorDemo() {
           </div>
         </div>
       </section>
-      {/* Traction */}
-      <section className="py-16 md:py-24">
-        <div className="max-w-[1200px] mx-auto px-6">
-          <div className="max-w-[700px] mx-auto text-center mb-16">
-            <div className="inline-block px-4 py-2 bg-[#12B8C4]/10 rounded-full mb-4">
-              <span className="text-[#12B8C4] font-medium text-[14px]">DEVELOPMENT PROGRESS</span>
-            </div>
-            <h2 className="text-[40px] md:text-[48px] font-semibold text-[#0B0F17] leading-[1.1] tracking-[-0.02em] mb-6">Market Validation</h2>
-            <p className="text-[18px] md:text-[20px] text-[#556070] leading-[1.55]">
-              Positive pilot feedback and strong market interest across target segments
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-4 gap-8">
-            <div className="text-center" data-testid="card-traction-waitlist">
-              <div className="w-12 h-12 bg-[#12B8C4]/10 rounded-xl flex items-center justify-center mb-4 mx-auto">
-                <TrendingUp className="w-6 h-6 text-[#12B8C4]" />
-              </div>
-              <div className="text-[36px] font-semibold text-[#12B8C4] mb-1" data-testid="text-waitlist-count">200+</div>
-              <p className="text-[#0B0F17] font-medium">Product Inquiries</p>
-            </div>
-
-            <div className="text-center" data-testid="card-traction-customers">
-              <div className="w-12 h-12 bg-[#0B0F17]/10 rounded-xl flex items-center justify-center mb-4 mx-auto">
-                <Users className="w-6 h-6 text-[#0B0F17]" />
-              </div>
-              <div className="text-[36px] font-semibold text-[#0B0F17] mb-1" data-testid="text-beta-customers">12</div>
-              <p className="text-[#0B0F17] font-medium">Development Testers</p>
-            </div>
-
-            <div className="text-center" data-testid="card-traction-invoices">
-              <div className="w-12 h-12 bg-[#12B8C4]/10 rounded-xl flex items-center justify-center mb-4 mx-auto">
-                <DollarSign className="w-6 h-6 text-[#12B8C4]" />
-              </div>
-              <div className="text-[36px] font-semibold text-[#12B8C4] mb-1" data-testid="text-invoices-managed">£70M+</div>
-              <p className="text-[#0B0F17] font-medium">Pilot Data Processed</p>
-            </div>
-
-            <div className="text-center" data-testid="card-traction-dso">
-              <div className="w-12 h-12 bg-[#12B8C4]/10 rounded-xl flex items-center justify-center mb-4 mx-auto">
-                <BarChart3 className="w-6 h-6 text-[#12B8C4]" />
-              </div>
-              <div className="text-[36px] font-semibold text-[#12B8C4] mb-1" data-testid="text-avg-dso-reduction">40%</div>
-              <p className="text-[#0B0F17] font-medium">Trial DSO Improvement</p>
-            </div>
-          </div>
-        </div>
-      </section>
       {/* Final CTA */}
       <section className="py-16 md:py-24 border-t border-[#E6E8EC]">
         <div className="max-w-[800px] mx-auto px-6 text-center">
