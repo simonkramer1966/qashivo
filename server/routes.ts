@@ -322,8 +322,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Import sendEmail function
       const { sendEmail } = await import('./services/sendgrid');
       
-      // Qashivo contact email
+      // Qashivo contact email and base URL
       const qashivoEmail = 'hello@qashivo.com';
+      const baseUrl = process.env.SITE_BASE_URL || 'https://www.qashivo.com';
       
       const enquiryTypeLabel = {
         demo: 'Product Demo Request',
@@ -397,14 +398,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           </p>
           
           <div style="text-align: center; margin: 30px 0;">
-            <a href="https://www.qashivo.com/demo" style="display: inline-block; background: #12B8C4; color: white; text-decoration: none; padding: 12px 30px; border-radius: 25px; font-weight: 500;">Try our interactive demo</a>
+            <a href="${baseUrl}/demo" style="display: inline-block; background: #12B8C4; color: white; text-decoration: none; padding: 12px 30px; border-radius: 25px; font-weight: 500;">Try our interactive demo</a>
           </div>
           
           <hr style="border: none; border-top: 1px solid #E6E8EC; margin: 30px 0;">
           
           <p style="color: #999; font-size: 12px; text-align: center;">
             Nexus KPI Limited. Built in London. Backed by innovation.<br>
-            <a href="https://www.qashivo.com" style="color: #12B8C4;">www.qashivo.com</a>
+            <a href="${baseUrl}" style="color: #12B8C4;">www.qashivo.com</a>
           </p>
         </body>
         </html>
@@ -426,7 +427,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         from: qashivoEmail,
         subject: `Thanks for contacting Qashivo - We'll be in touch soon`,
         html: confirmationEmailHtml,
-        text: `Thank you for getting in touch, ${data.name.split(' ')[0]}!\n\nWe've received your ${enquiryTypeLabel.toLowerCase()} and a member of our team will be in touch shortly.\n\nYour message:\n${data.message}\n\nIn the meantime, why not explore what Qashivo can do for your business at www.qashivo.com/demo\n\n---\nNexus KPI Limited. Built in London. Backed by innovation.\nwww.qashivo.com`
+        text: `Thank you for getting in touch, ${data.name.split(' ')[0]}!\n\nWe've received your ${enquiryTypeLabel.toLowerCase()} and a member of our team will be in touch shortly.\n\nYour message:\n${data.message}\n\nIn the meantime, why not explore what Qashivo can do for your business at ${baseUrl}/demo\n\n---\nNexus KPI Limited. Built in London. Backed by innovation.\n${baseUrl}`
       });
       
       if (!confirmationResult.success) {
