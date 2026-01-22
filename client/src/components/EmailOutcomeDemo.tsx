@@ -297,7 +297,7 @@ Your Company`;
 
     setTimeout(() => {
       simulateReply("PROMISE_TO_PAY", newLog, newOutboundMessage);
-    }, 1200);
+    }, 1800);
   }, [selectedInvoice, emailSubject, emailBody, addAuditEvent, auditLog]);
 
   const handleDecline = useCallback(() => {
@@ -406,10 +406,10 @@ Your Company`;
               setStep("outcome");
               setShowOtherOutcomes(true);
               setDisplayedConfidenceBand(selectedInvoice.confidenceBand);
-            }, 800);
-          }, 1000);
-        }, 1200);
-      }, 800);
+            }, 1200);
+          }, 1500);
+        }, 1800);
+      }, 1200);
     } else {
       setTimeout(() => {
         const outcomeConfig = OUTCOME_CONFIGS[outcomeType];
@@ -433,7 +433,7 @@ Your Company`;
         setAuditLog(finalLog);
         setStep("outcome");
         setShowOtherOutcomes(true);
-      }, 800);
+      }, 1200);
     }
   }, [selectedInvoice, addAuditEvent, baseAuditLog, outboundMessage]);
 
