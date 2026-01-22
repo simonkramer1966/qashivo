@@ -177,7 +177,7 @@ import {
   type InsertWorkflowMessageVariant,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, desc, sql, count, sum, ne, isNotNull, isNull, gte, lte, lt, or, ilike, inArray } from "drizzle-orm";
+import { eq, and, desc, asc, sql, count, sum, ne, isNotNull, isNull, gte, lte, lt, or, ilike, inArray } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { getOverdueCategoryFromDueDate, getOverdueCategorySummary, categorizeOverdueStatus, calculateDaysOverdue, getOverdueCategoryRange, type OverdueCategory, type OverdueCategoryInfo } from "../shared/utils/overdueUtils";
 import crypto from "crypto";
