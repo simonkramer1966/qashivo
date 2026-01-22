@@ -149,6 +149,9 @@ function Router() {
           <Route path="/investor-crm" component={InvestorCRM} />
           <Route path="/docs-download" component={DocsDownload} />
           <Route path="/qashivo-admin" component={QashivoAdminDashboard} />
+          <Route path="/login" component={Cashboard} />
+          <Route path="/signup" component={Cashboard} />
+          <Route path="/signin" component={Cashboard} />
           <Route path="/admin" component={AdminShell} />
           <Route path="/admin/:rest*" component={AdminShell} />
           <Route path="/partner" component={PartnerDashboard} />
