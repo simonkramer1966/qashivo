@@ -27,7 +27,7 @@ const DocumentationReview = lazy(() => import("@/pages/documentation-review"));
 const PartnerRegistration = lazy(() => import("@/pages/partner-registration"));
 const ClientRegistration = lazy(() => import("@/pages/client-registration"));
 const SignIn = lazy(() => import("@/pages/signin"));
-const InvestorDemo = lazy(() => import("@/pages/investor-demo"));
+const InvestorDemo = lazy(() => import("@/pages/demo"));
 const InvestorDemoQashivo = lazy(() => import("@/pages/investor-demo-qashivo"));
 const InvestorDetail = lazy(() => import("@/pages/investor-detail"));
 const InvestorCRM = lazy(() => import("@/pages/investor-crm"));
@@ -39,7 +39,6 @@ const DashboardExperimental = lazy(() => import("@/pages/dashboard-experimental"
 const CashboardExperimental = lazy(() => import("@/pages/cashboard-experimental"));
 const Homepage = lazy(() => import("@/pages/homepage"));
 const Home = lazy(() => import("@/pages/Home"));
-const Demo = lazy(() => import("@/pages/Demo"));
 const Contact = lazy(() => import("@/pages/Contact"));
 const Features = lazy(() => import("@/pages/Features"));
 const Integrations = lazy(() => import("@/pages/Integrations"));
@@ -102,7 +101,6 @@ function Router() {
         // Unauthenticated routes - only signup and signin pages
         <Switch>
           <Route path="/home" component={Home} />
-          <Route path="/demo" component={Demo} />
           <Route path="/contact" component={Contact} />
           <Route path="/features" component={Features} />
           <Route path="/integrations" component={Integrations} />
@@ -112,7 +110,7 @@ function Router() {
           <Route path="/partner-scorecard" component={PartnerScorecard} />
           <Route path="/product" component={Product} />
           <Route path="/homepage" component={Homepage} />
-          <Route path="/investor-demo" component={InvestorDemo} />
+          <Route path="/demo" component={InvestorDemo} />
           <Route path="/investor-demo-qashivo" component={InvestorDemoQashivo} />
           <Route path="/investor-detail" component={InvestorDetail} />
           <Route path="/beta-partner" component={BetaPartner} />
@@ -137,7 +135,6 @@ function Router() {
         // Authenticated routes - main application
         <Switch>
           <Route path="/home" component={Home} />
-          <Route path="/demo" component={Demo} />
           <Route path="/contact" component={Contact} />
           <Route path="/features" component={Features} />
           <Route path="/integrations" component={Integrations} />
@@ -147,7 +144,7 @@ function Router() {
           <Route path="/partner-scorecard" component={PartnerScorecard} />
           <Route path="/product" component={Product} />
           <Route path="/homepage" component={Homepage} />
-          <Route path="/investor-demo" component={InvestorDemo} />
+          <Route path="/demo" component={InvestorDemo} />
           <Route path="/investor-demo-qashivo" component={InvestorDemoQashivo} />
           <Route path="/investor-detail" component={InvestorDetail} />
           <Route path="/beta-partner" component={BetaPartner} />
