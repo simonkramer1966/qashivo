@@ -326,11 +326,15 @@ Your Company`;
     setAuditLog(newLog);
 
     const reply = SCRIPTED_REPLIES[outcomeType];
+    const firstPayment = Math.round(selectedInvoice.amount / 2);
+    const replyBody = outcomeType === "REQUEST_TIME" 
+      ? `Hi — we can't clear this in one go. Could we do ${formatCurrency(firstPayment, selectedInvoice.currency)} on 15 Feb and the balance on 29 Feb? Let me know if that works.`
+      : reply.body;
     const inboundMessage: Message = {
       id: `msg-${Date.now()}`,
       direction: "inbound",
       subject: `${reply.subject} - ${selectedInvoice.invoiceNumber}`,
-      body: reply.body,
+      body: replyBody,
       timestamp: new Date(),
       from: selectedInvoice.customerEmail,
       to: "Your Company",
@@ -429,9 +433,10 @@ Your Company`;
 
         setTimeout(() => {
           const outcomeConfig = OUTCOME_CONFIGS[outcomeType];
+          const firstPaymentAmount = Math.round(selectedInvoice.amount / 2);
           const outcome: Outcome = {
             ...outcomeConfig,
-            promisedAmount: 3300,
+            promisedAmount: firstPaymentAmount,
           };
 
           setCurrentOutcome(outcome);
