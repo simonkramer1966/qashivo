@@ -839,23 +839,17 @@ export default function InvestorDemo() {
             </div>
 
             {/* Right: Results Panel */}
-            <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 rounded-2xl border-2 border-[#12B8C4]/30 p-6 min-h-[480px] relative overflow-hidden">
-              {/* Animated background */}
-              <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_120%,rgba(18,184,196,0.1),transparent)]" />
-                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-[#12B8C4] to-transparent animate-pulse" />
-              </div>
-
+            <div className="bg-[#F8FAFC] rounded-2xl border-l-4 border-[#12B8C4] border-y border-r border-y-[#E6E8EC] border-r-[#E6E8EC] p-6 min-h-[480px] relative">
               {/* Header */}
-              <div className="relative flex items-center gap-3 mb-6">
-                <div className={`p-3 bg-[#12B8C4]/20 rounded-xl border border-[#12B8C4]/30 ${isDemoProcessing ? 'animate-pulse' : ''}`}>
+              <div className="flex items-center gap-3 mb-6">
+                <div className={`p-3 bg-[#12B8C4]/10 rounded-xl ${isDemoProcessing ? 'animate-pulse' : ''}`}>
                   <Sparkles className="w-6 h-6 text-[#12B8C4]" />
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold text-white">
+                  <h3 className="text-xl font-bold text-[#0B0F17]">
                     {isDemoProcessing ? "AI Analysis - In Progress" : currentResults ? "AI Analysis Complete" : "AI Analysis"}
                   </h3>
-                  <p className="text-sm text-slate-400">Voice Call Intelligence Report</p>
+                  <p className="text-sm text-[#556070]">Voice Call Intelligence Report</p>
                 </div>
               </div>
 
@@ -871,14 +865,14 @@ export default function InvestorDemo() {
               </div>
 
               {/* Content Area */}
-              <div className="relative space-y-4">
+              <div className="space-y-4">
                 {!currentResults && !isDemoProcessing && (
                   <div className="flex flex-col items-center justify-center py-12 text-center">
-                    <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mb-4">
-                      <Phone className="w-8 h-8 text-slate-500" />
+                    <div className="w-16 h-16 bg-[#E6E8EC]/50 rounded-full flex items-center justify-center mb-4">
+                      <Phone className="w-8 h-8 text-[#556070]" />
                     </div>
-                    <p className="text-slate-400 text-lg font-medium mb-2">Ready to Analyze</p>
-                    <p className="text-slate-500 text-sm max-w-[280px]">
+                    <p className="text-[#0B0F17] text-lg font-medium mb-2">Ready to Analyze</p>
+                    <p className="text-[#556070] text-sm max-w-[280px]">
                       Enter your details and start a call to see real-time AI analysis
                     </p>
                   </div>
@@ -886,11 +880,11 @@ export default function InvestorDemo() {
 
                 {isDemoProcessing && !currentResults && (
                   <div className="flex flex-col items-center justify-center py-8 text-center">
-                    <div className="w-16 h-16 bg-[#12B8C4]/20 rounded-full flex items-center justify-center mb-4 animate-pulse">
+                    <div className="w-16 h-16 bg-[#12B8C4]/15 rounded-full flex items-center justify-center mb-4 animate-pulse">
                       <Brain className="w-8 h-8 text-[#12B8C4]" />
                     </div>
-                    <p className="text-white text-lg font-medium mb-2">Listening & Analyzing</p>
-                    <p className="text-slate-400 text-sm">
+                    <p className="text-[#0B0F17] text-lg font-medium mb-2">Listening & Analyzing</p>
+                    <p className="text-[#556070] text-sm">
                       Our AI is processing your conversation in real-time...
                     </p>
                   </div>
@@ -900,12 +894,12 @@ export default function InvestorDemo() {
                   <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
                     {/* Call Terminated Warning */}
                     {currentResults.terminatedByCustomer && (
-                      <div className="p-3 bg-gradient-to-r from-orange-500/20 via-orange-500/10 to-transparent border-l-4 border-orange-500 rounded-r-xl">
+                      <div className="p-3 bg-orange-50 border-l-4 border-orange-500 rounded-r-lg">
                         <div className="flex items-start gap-2">
-                          <PhoneOff className="w-4 h-4 text-orange-400 flex-shrink-0 mt-0.5" />
+                          <PhoneOff className="w-4 h-4 text-orange-600 flex-shrink-0 mt-0.5" />
                           <div>
-                            <p className="text-sm font-semibold text-orange-400">Call Terminated by Customer</p>
-                            <p className="text-xs text-white/70">Follow-up call recommended</p>
+                            <p className="text-sm font-semibold text-orange-700">Call Terminated by Customer</p>
+                            <p className="text-xs text-orange-600/80">Follow-up call recommended</p>
                           </div>
                         </div>
                       </div>
@@ -913,26 +907,26 @@ export default function InvestorDemo() {
 
                     {/* Metrics Grid */}
                     <div className="grid grid-cols-3 gap-3">
-                      <div className="p-3 bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl">
-                        <p className="text-xs text-slate-400 uppercase tracking-wide mb-1">Intent</p>
-                        <p className="text-sm font-bold text-white capitalize">
+                      <div className="p-3 bg-white border border-[#E6E8EC] rounded-xl">
+                        <p className="text-xs text-[#556070] uppercase tracking-wide mb-1">Intent</p>
+                        <p className="text-sm font-bold text-[#0B0F17] capitalize">
                           {currentResults.intent?.replace(/_/g, " ")}
                         </p>
                       </div>
-                      <div className={`p-3 backdrop-blur-sm border rounded-xl ${
-                        currentResults.sentiment === 'positive' ? 'bg-green-500/10 border-green-500/30 text-green-400' :
-                        currentResults.sentiment === 'cooperative' ? 'bg-blue-500/10 border-blue-500/30 text-blue-400' :
-                        currentResults.sentiment === 'negative' ? 'bg-orange-500/10 border-orange-500/30 text-orange-400' :
-                        'bg-slate-500/10 border-slate-500/30 text-slate-400'
+                      <div className={`p-3 border rounded-xl ${
+                        currentResults.sentiment === 'positive' ? 'bg-green-50 border-green-200 text-green-700' :
+                        currentResults.sentiment === 'cooperative' ? 'bg-blue-50 border-blue-200 text-blue-700' :
+                        currentResults.sentiment === 'negative' ? 'bg-orange-50 border-orange-200 text-orange-700' :
+                        'bg-slate-50 border-slate-200 text-slate-600'
                       }`}>
                         <p className="text-xs uppercase tracking-wide mb-1 opacity-80">Sentiment</p>
                         <p className="text-sm font-bold capitalize">{currentResults.sentiment}</p>
                       </div>
-                      <div className="p-3 bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl">
-                        <p className="text-xs text-slate-400 uppercase tracking-wide mb-1">Confidence</p>
+                      <div className="p-3 bg-white border border-[#E6E8EC] rounded-xl">
+                        <p className="text-xs text-[#556070] uppercase tracking-wide mb-1">Confidence</p>
                         <p className={`text-sm font-bold ${
-                          (currentResults.confidence || 0) >= 80 ? 'text-green-400' :
-                          (currentResults.confidence || 0) >= 60 ? 'text-blue-400' : 'text-orange-400'
+                          (currentResults.confidence || 0) >= 80 ? 'text-green-600' :
+                          (currentResults.confidence || 0) >= 60 ? 'text-blue-600' : 'text-orange-600'
                         }`}>
                           {currentResults.confidence}%
                         </p>
@@ -941,26 +935,26 @@ export default function InvestorDemo() {
 
                     {/* Summary */}
                     {currentResults.summary && (
-                      <div className="p-3 bg-gradient-to-r from-[#12B8C4]/10 to-transparent border-l-4 border-[#12B8C4] rounded-r-xl">
+                      <div className="p-3 bg-[#12B8C4]/5 border-l-4 border-[#12B8C4] rounded-r-lg">
                         <p className="text-xs font-semibold text-[#12B8C4] mb-1 uppercase tracking-wide">Summary</p>
-                        <p className="text-sm text-white/90 leading-relaxed">{currentResults.summary}</p>
+                        <p className="text-sm text-[#0B0F17] leading-relaxed">{currentResults.summary}</p>
                       </div>
                     )}
 
                     {/* Key Insights */}
                     {currentResults.keyInsights && currentResults.keyInsights.length > 0 && (
                       <div className="space-y-2">
-                        <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide flex items-center gap-2">
+                        <p className="text-xs font-semibold text-[#556070] uppercase tracking-wide flex items-center gap-2">
                           <Brain className="w-3 h-3 text-[#12B8C4]" />
                           Key Insights
                         </p>
                         <div className="space-y-1.5">
                           {currentResults.keyInsights.slice(0, 3).map((insight: string, idx: number) => (
-                            <div key={idx} className="flex items-start gap-2 p-2 bg-white/5 border border-white/10 rounded-lg">
-                              <div className="w-5 h-5 rounded-full bg-[#12B8C4]/20 flex items-center justify-center flex-shrink-0">
+                            <div key={idx} className="flex items-start gap-2 p-2 bg-white border border-[#E6E8EC] rounded-lg">
+                              <div className="w-5 h-5 rounded-full bg-[#12B8C4]/15 flex items-center justify-center flex-shrink-0">
                                 <span className="text-[10px] font-bold text-[#12B8C4]">{idx + 1}</span>
                               </div>
-                              <p className="text-xs text-white/80 leading-relaxed">{insight}</p>
+                              <p className="text-xs text-[#556070] leading-relaxed">{insight}</p>
                             </div>
                           ))}
                         </div>
@@ -970,11 +964,11 @@ export default function InvestorDemo() {
                     {/* Transcript Preview */}
                     {currentResults.transcript && (
                       <div className="space-y-2">
-                        <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide flex items-center gap-2">
+                        <p className="text-xs font-semibold text-[#556070] uppercase tracking-wide flex items-center gap-2">
                           <MessageSquare className="w-3 h-3 text-[#12B8C4]" />
                           Transcript
                         </p>
-                        <div className="p-3 bg-black/30 border border-white/10 rounded-xl max-h-24 overflow-y-auto">
+                        <div className="p-3 bg-[#0B0F17] border border-[#E6E8EC] rounded-xl max-h-24 overflow-y-auto">
                           <p className="text-xs text-slate-300 font-mono leading-relaxed whitespace-pre-wrap">
                             {currentResults.transcript}
                           </p>
