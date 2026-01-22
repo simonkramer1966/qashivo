@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { SiXero, SiStripe, SiOpenai, SiQuickbooks } from "react-icons/si";
 import { AIResultsDialog } from "@/components/AIResultsDialog";
 import { Oscilloscope } from "@/components/Oscilloscope";
+import { EmailOutcomeDemo } from "@/components/EmailOutcomeDemo";
 import { Badge } from "@/components/ui/badge";
 import { Sparkles, MessageSquare, PhoneOff } from "lucide-react";
 import logo from "@assets/Main_Nexus_Logo_copy_1768893717341.png";
@@ -931,6 +932,18 @@ export default function InvestorDemo() {
               </div>
             </div>
           </div>
+        </div>
+      </section>
+      {/* Email Demo: Two-way Outcomes */}
+      <section className="py-16 md:py-24 border-t border-[#E6E8EC]">
+        <div className="max-w-[1200px] mx-auto px-6">
+          <div className="max-w-[700px] mx-auto text-center mb-12">
+            <h2 className="text-[40px] md:text-[48px] font-semibold text-[#0B0F17] leading-[1.1] tracking-[-0.02em] mb-6">Email Demo: Two-way Outcomes</h2>
+            <p className="text-[18px] md:text-[20px] text-[#556070] leading-[1.55]">
+              Experience supervised autonomy in action. Generate a reminder, approve it, and watch AI detect intent from customer replies — updating your plan and forecast automatically.
+            </p>
+          </div>
+          <EmailOutcomeDemo />
         </div>
       </section>
       {/* Market Opportunity */}
