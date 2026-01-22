@@ -10,6 +10,9 @@ import { Phone, TrendingUp, Shield, Zap, CheckCircle, Brain, ArrowRight, Clock, 
 import { useToast } from "@/hooks/use-toast";
 import { SiXero, SiStripe, SiOpenai, SiQuickbooks } from "react-icons/si";
 import { AIResultsDialog } from "@/components/AIResultsDialog";
+import { Oscilloscope } from "@/components/Oscilloscope";
+import { Badge } from "@/components/ui/badge";
+import { Sparkles, MessageSquare, PhoneOff } from "lucide-react";
 import logo from "@assets/Main_Nexus_Logo_copy_1768893717341.png";
 import dashboardScreenshot from "@assets/Screenshot 2025-10-13 at 13.19.17_1760519077630.png";
 import xeroLogo from "@assets/Xero_software_logo.svg_1768974407536.png";
@@ -205,19 +208,18 @@ export default function InvestorDemo() {
     };
   }, [activeCallId, leadId]);
 
-  // Helper function to open dialog with voice results
-  const openDialogWithResults = (results: any, resultKey: string, analyzedAt: number) => {
+  // Helper function to update voice results (inline panel, no dialog)
+  const updateVoiceResults = (results: any, resultKey: string, analyzedAt: number) => {
     setCurrentResults(results);
     setVoiceProgress("");
     setIsDemoProcessing(false);
     lastShownResultsRef.current = resultKey;
     lastShownAtRef.current = analyzedAt;
     isTransitioningRef.current = false;
-    setResultsDialogOpen(true);
     
     toast({
       title: "AI Analysis Complete",
-      description: "View the results of the voice call analysis",
+      description: "View the results in the panel",
     });
   };
 
@@ -228,7 +230,7 @@ export default function InvestorDemo() {
     // Don't process if we're currently transitioning
     if (isTransitioningRef.current) return;
 
-    // Update voice results if available
+    // Update voice results if available (inline panel, no dialog)
     if (demoResults.voiceDemoCompleted && demoResults.voiceDemoResults) {
       let analyzedAtMs = demoResults.voiceDemoResults.analyzedAt 
         ? new Date(demoResults.voiceDemoResults.analyzedAt).getTime()
@@ -239,15 +241,7 @@ export default function InvestorDemo() {
       const resultKey = `voice-${analyzedAtMs}`;
       
       if (analyzedAtMs > lastShownAtRef.current && lastShownResultsRef.current !== resultKey) {
-        if (resultsDialogOpen) {
-          setCurrentResults(demoResults.voiceDemoResults);
-          setVoiceProgress("");
-          setIsDemoProcessing(false);
-          lastShownResultsRef.current = resultKey;
-          lastShownAtRef.current = analyzedAtMs;
-        } else {
-          openDialogWithResults(demoResults.voiceDemoResults, resultKey, analyzedAtMs);
-        }
+        updateVoiceResults(demoResults.voiceDemoResults, resultKey, analyzedAtMs);
       }
     }
     
@@ -371,21 +365,12 @@ export default function InvestorDemo() {
         setActiveCallId(callId);
       }
       
-      // Open results dialog immediately with "analyzing" state
+      // Set analyzing state for inline panel (don't open dialog for voice)
       // Reset lastShownAtRef to 0 so any real results will always be considered newer
       lastShownAtRef.current = 0;
       lastShownResultsRef.current = "";
-      setCurrentResults({
-        intent: "analyzing",
-        sentiment: "listening",
-        confidence: 0,
-        keyInsights: ["AI is listening to the conversation..."],
-        actionItems: ["Analysis will appear in real-time"],
-        summary: "Live call in progress - AI analysis will populate as the conversation develops",
-        transcript: ""
-      });
+      setCurrentResults(null); // Clear results - inline panel will show "active call" state via isDemoProcessing
       setResultsType("voice");
-      setResultsDialogOpen(true);
       
       toast({
         title: "AI Voice Call Started",
@@ -776,7 +761,8 @@ export default function InvestorDemo() {
             </p>
           </div>
 
-          <div className="max-w-[480px] mx-auto">
+          <div className="grid lg:grid-cols-2 gap-8 items-start">
+            {/* Left: Input Card */}
             <div className="bg-white rounded-2xl border border-[#E6E8EC] p-8">
               <div className="flex items-center gap-3 mb-6">
                 <div className="p-3 bg-[#12B8C4]/10 rounded-xl">
@@ -830,16 +816,181 @@ export default function InvestorDemo() {
                 </div>
                 <Button
                   onClick={handleVoiceDemo}
-                  disabled={!voicePhone}
+                  disabled={!voicePhone || isDemoProcessing}
                   className="w-full bg-[#12B8C4] hover:bg-[#0fa3ae] text-white text-[16px] h-12 rounded-full font-medium"
                   data-testid="button-start-voice-demo"
                 >
-                  <Phone className="w-5 h-5 mr-2" />
-                  Call Me Now
+                  {isDemoProcessing ? (
+                    <>
+                      <div className="w-5 h-5 mr-2 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      Call in Progress...
+                    </>
+                  ) : (
+                    <>
+                      <Phone className="w-5 h-5 mr-2" />
+                      Call Me Now
+                    </>
+                  )}
                 </Button>
                 <p className="text-[14px] text-[#556070] text-center">
                   You'll receive a call from +1 (586) 244-8999
                 </p>
+              </div>
+            </div>
+
+            {/* Right: Results Panel */}
+            <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 rounded-2xl border-2 border-[#12B8C4]/30 p-6 min-h-[480px] relative overflow-hidden">
+              {/* Animated background */}
+              <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_120%,rgba(18,184,196,0.1),transparent)]" />
+                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-[#12B8C4] to-transparent animate-pulse" />
+              </div>
+
+              {/* Header */}
+              <div className="relative flex items-center gap-3 mb-6">
+                <div className={`p-3 bg-[#12B8C4]/20 rounded-xl border border-[#12B8C4]/30 ${isDemoProcessing ? 'animate-pulse' : ''}`}>
+                  <Sparkles className="w-6 h-6 text-[#12B8C4]" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-white">
+                    {isDemoProcessing ? "AI Analysis - In Progress" : currentResults ? "AI Analysis Complete" : "AI Analysis"}
+                  </h3>
+                  <p className="text-sm text-slate-400">Voice Call Intelligence Report</p>
+                </div>
+              </div>
+
+              {/* Oscilloscope */}
+              <div className="relative h-20 mb-6 rounded-xl bg-[#0B0F17] border border-white/10 overflow-hidden">
+                <Oscilloscope isActive={isDemoProcessing} />
+                {isDemoProcessing && voiceProgress && (
+                  <div className="absolute bottom-2 left-3 flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-[#12B8C4] animate-pulse" />
+                    <span className="text-xs text-[#12B8C4] font-medium">{voiceProgress}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Content Area */}
+              <div className="relative space-y-4">
+                {!currentResults && !isDemoProcessing && (
+                  <div className="flex flex-col items-center justify-center py-12 text-center">
+                    <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mb-4">
+                      <Phone className="w-8 h-8 text-slate-500" />
+                    </div>
+                    <p className="text-slate-400 text-lg font-medium mb-2">Ready to Analyze</p>
+                    <p className="text-slate-500 text-sm max-w-[280px]">
+                      Enter your details and start a call to see real-time AI analysis
+                    </p>
+                  </div>
+                )}
+
+                {isDemoProcessing && !currentResults && (
+                  <div className="flex flex-col items-center justify-center py-8 text-center">
+                    <div className="w-16 h-16 bg-[#12B8C4]/20 rounded-full flex items-center justify-center mb-4 animate-pulse">
+                      <Brain className="w-8 h-8 text-[#12B8C4]" />
+                    </div>
+                    <p className="text-white text-lg font-medium mb-2">Listening & Analyzing</p>
+                    <p className="text-slate-400 text-sm">
+                      Our AI is processing your conversation in real-time...
+                    </p>
+                  </div>
+                )}
+
+                {currentResults && (
+                  <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                    {/* Call Terminated Warning */}
+                    {currentResults.terminatedByCustomer && (
+                      <div className="p-3 bg-gradient-to-r from-orange-500/20 via-orange-500/10 to-transparent border-l-4 border-orange-500 rounded-r-xl">
+                        <div className="flex items-start gap-2">
+                          <PhoneOff className="w-4 h-4 text-orange-400 flex-shrink-0 mt-0.5" />
+                          <div>
+                            <p className="text-sm font-semibold text-orange-400">Call Terminated by Customer</p>
+                            <p className="text-xs text-white/70">Follow-up call recommended</p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Metrics Grid */}
+                    <div className="grid grid-cols-3 gap-3">
+                      <div className="p-3 bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl">
+                        <p className="text-xs text-slate-400 uppercase tracking-wide mb-1">Intent</p>
+                        <p className="text-sm font-bold text-white capitalize">
+                          {currentResults.intent?.replace(/_/g, " ")}
+                        </p>
+                      </div>
+                      <div className={`p-3 backdrop-blur-sm border rounded-xl ${
+                        currentResults.sentiment === 'positive' ? 'bg-green-500/10 border-green-500/30 text-green-400' :
+                        currentResults.sentiment === 'cooperative' ? 'bg-blue-500/10 border-blue-500/30 text-blue-400' :
+                        currentResults.sentiment === 'negative' ? 'bg-orange-500/10 border-orange-500/30 text-orange-400' :
+                        'bg-slate-500/10 border-slate-500/30 text-slate-400'
+                      }`}>
+                        <p className="text-xs uppercase tracking-wide mb-1 opacity-80">Sentiment</p>
+                        <p className="text-sm font-bold capitalize">{currentResults.sentiment}</p>
+                      </div>
+                      <div className="p-3 bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl">
+                        <p className="text-xs text-slate-400 uppercase tracking-wide mb-1">Confidence</p>
+                        <p className={`text-sm font-bold ${
+                          (currentResults.confidence || 0) >= 80 ? 'text-green-400' :
+                          (currentResults.confidence || 0) >= 60 ? 'text-blue-400' : 'text-orange-400'
+                        }`}>
+                          {currentResults.confidence}%
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Summary */}
+                    {currentResults.summary && (
+                      <div className="p-3 bg-gradient-to-r from-[#12B8C4]/10 to-transparent border-l-4 border-[#12B8C4] rounded-r-xl">
+                        <p className="text-xs font-semibold text-[#12B8C4] mb-1 uppercase tracking-wide">Summary</p>
+                        <p className="text-sm text-white/90 leading-relaxed">{currentResults.summary}</p>
+                      </div>
+                    )}
+
+                    {/* Key Insights */}
+                    {currentResults.keyInsights && currentResults.keyInsights.length > 0 && (
+                      <div className="space-y-2">
+                        <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide flex items-center gap-2">
+                          <Brain className="w-3 h-3 text-[#12B8C4]" />
+                          Key Insights
+                        </p>
+                        <div className="space-y-1.5">
+                          {currentResults.keyInsights.slice(0, 3).map((insight: string, idx: number) => (
+                            <div key={idx} className="flex items-start gap-2 p-2 bg-white/5 border border-white/10 rounded-lg">
+                              <div className="w-5 h-5 rounded-full bg-[#12B8C4]/20 flex items-center justify-center flex-shrink-0">
+                                <span className="text-[10px] font-bold text-[#12B8C4]">{idx + 1}</span>
+                              </div>
+                              <p className="text-xs text-white/80 leading-relaxed">{insight}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Transcript Preview */}
+                    {currentResults.transcript && (
+                      <div className="space-y-2">
+                        <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide flex items-center gap-2">
+                          <MessageSquare className="w-3 h-3 text-[#12B8C4]" />
+                          Transcript
+                        </p>
+                        <div className="p-3 bg-black/30 border border-white/10 rounded-xl max-h-24 overflow-y-auto">
+                          <p className="text-xs text-slate-300 font-mono leading-relaxed whitespace-pre-wrap">
+                            {currentResults.transcript}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Footer Badge */}
+                    <div className="flex items-center justify-center gap-2 pt-2">
+                      <Badge variant="outline" className="bg-[#12B8C4]/10 border-[#12B8C4]/30 text-[#12B8C4] text-xs">
+                        <Sparkles className="w-3 h-3 mr-1" />
+                        Powered by Qashivo AI
+                      </Badge>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
