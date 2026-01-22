@@ -928,7 +928,7 @@ export default function InvestorDemo() {
           <div className="max-w-[700px] mx-auto text-center mb-12">
             <h2 className="text-[40px] md:text-[48px] font-semibold text-[#0B0F17] leading-[1.1] tracking-[-0.02em] mb-6">Two-way Outcomes with Email</h2>
             <p className="text-[18px] md:text-[20px] text-[#556070] leading-[1.55]">
-              Experience supervised autonomy in action. Generate a reminder, approve it, and watch AI detect intent from customer replies — updating your plan and forecast automatically.
+              Experience supervised autonomy in action. Qashivo generates a reminder, you approve it, and watch AI detect intent from customer replies — updating your plan and forecast automatically.
             </p>
           </div>
           <EmailOutcomeDemo />
