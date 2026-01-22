@@ -21776,12 +21776,19 @@ ${tenant.name}
       // Trigger Retell AI call with investor demo script
       const { createUnifiedRetellCall, createStandardCollectionVariables } = await import('./utils/retellCallHelper.js');
       
+      // Calculate due date as 15 days ago
+      const dueDate = new Date();
+      dueDate.setDate(dueDate.getDate() - 15);
+      
       const callVariables = createStandardCollectionVariables({
         customerName: name || lead.name,
-        companyName: "Qashivo",
-        invoiceNumber: "INV-DEMO-001",
+        companyName: "Williams Logistics",
+        invoiceNumber: "INV-1001",
         invoiceAmount: "5000",
+        totalOutstanding: "5000",
+        invoiceCount: "1",
         daysOverdue: "15",
+        dueDate: dueDate,
         customMessage: "This is a demo call to showcase Qashivo's AI voice capabilities"
       });
       
