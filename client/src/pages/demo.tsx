@@ -14,7 +14,7 @@ import { Oscilloscope } from "@/components/Oscilloscope";
 import { Badge } from "@/components/ui/badge";
 import { Sparkles, MessageSquare, PhoneOff } from "lucide-react";
 import logo from "@assets/Main_Nexus_Logo_copy_1768893717341.png";
-import dashboardScreenshot from "@assets/Screenshot 2025-10-13 at 13.19.17_1760519077630.png";
+import dashboardScreenshot from "@assets/Screenshot_2026-01-20_at_16.41.29_1769100769786.png";
 import xeroLogo from "@assets/Xero_software_logo.svg_1768974407536.png";
 import quickbooksLogo from "@assets/quickbnooks_1768974664185.png";
 import investorDeckPdf from "@assets/Qashivo - Investor Deck_1760520688174.pdf";
@@ -679,7 +679,7 @@ export default function InvestorDemo() {
               <div className="rounded-xl overflow-hidden mb-6 border border-[#E6E8EC]">
                 <img 
                   src={dashboardScreenshot} 
-                  alt="Qashivo Dashboard - Intelligent Forecast View" 
+                  alt="Qashivo Dashboard - Overview" 
                   className="w-full h-auto"
                 />
               </div>
