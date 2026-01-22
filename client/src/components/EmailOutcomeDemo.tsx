@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { Mail, Check, AlertCircle, Clock, FileText, TrendingUp, ArrowRight } from "lucide-react";
+import { Mail, Check, AlertCircle, Clock, FileText, TrendingUp, ArrowRight, ArrowLeft } from "lucide-react";
 
 type ConfidenceBand = "High" | "Medium" | "Low";
 type OutcomeType = "PROMISE_TO_PAY" | "REQUEST_TIME" | "DISPUTE" | "AMBIGUOUS";
@@ -593,8 +593,10 @@ Your Company`;
                         <span className={`text-xs font-medium px-2 py-0.5 rounded ${msg.direction === "outbound" ? "bg-[#F8FAFC] text-[#556070]" : "bg-[#12B8C4]/10 text-[#12B8C4]"}`}>
                           {msg.direction === "outbound" ? "Sent" : "Received"}
                         </span>
-                        {msg.direction === "outbound" && (
+                        {msg.direction === "outbound" ? (
                           <ArrowRight className="w-3 h-3 text-[#556070]" />
+                        ) : (
+                          <ArrowLeft className="w-3 h-3 text-[#12B8C4]" />
                         )}
                         <span className="text-sm text-[#0B0F17]">
                           {msg.direction === "outbound" ? msg.to : msg.from}
