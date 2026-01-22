@@ -934,25 +934,6 @@ export default function InvestorDemo() {
           <EmailOutcomeDemo />
         </div>
       </section>
-      {/* Final CTA */}
-      <section className="py-16 md:py-24">
-        <div className="max-w-[800px] mx-auto px-6 text-center">
-          <h2 className="text-[40px] md:text-[52px] font-semibold text-[#0B0F17] leading-[1.1] tracking-[-0.02em] mb-6">
-            Join the £4.8B Opportunity
-          </h2>
-          <p className="text-[18px] md:text-[20px] text-[#556070] leading-[1.55] mb-10">
-            SEIS-eligible (HMRC Advance Assurance) | 200+ market inquiries | Xero integration ready
-          </p>
-          <Button
-            className="bg-[#12B8C4] hover:bg-[#0fa3ae] text-white text-[18px] px-10 h-14 rounded-full font-medium"
-            onClick={() => setLocation("/contact")}
-            data-testid="button-contact-footer"
-          >
-            Get in Touch
-            <ArrowRight className="ml-2 h-5 w-5" />
-          </Button>
-        </div>
-      </section>
       {/* Footer */}
       <footer className="py-12 px-6 text-center">
         <p className="text-[14px] text-[#556070]">
