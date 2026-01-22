@@ -601,23 +601,9 @@ export default function InvestorDemo() {
                 The UK's first automated credit control platform built on statutory rights. 
                 Transforming the £11B late payment crisis into predictable revenue.
               </p>
-              <p className="text-[18px] md:text-[20px] text-[#556070] leading-[1.55] mb-6">
+              <p className="text-[18px] md:text-[20px] text-[#556070] leading-[1.55]">
                 <strong className="text-[#0B0F17]">We're not just automating credit control. We're building the execution engine for SME collections.</strong>
               </p>
-              
-              {/* Compelling Copy */}
-              <div className="pt-6 border-t border-[#E6E8EC]">
-                <h3 className="text-[20px] font-semibold text-[#0B0F17] mb-3">
-                  The Future of B2B Credit Control
-                </h3>
-                <p className="text-[16px] text-[#556070] leading-[1.6] mb-3">
-                  This is more than automation; it's intelligent execution that follows your policies consistently.
-                </p>
-                <p className="text-[16px] text-[#556070] leading-[1.6]">
-                  The result? <strong className="text-[#0B0F17]">40% faster collections</strong>, 
-                  <strong className="text-[#0B0F17]"> scenario-based forecasting</strong>, and <strong className="text-[#0B0F17]">zero manual intervention</strong>.
-                </p>
-              </div>
             </div>
 
             {/* Right: Video */}
