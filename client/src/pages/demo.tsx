@@ -774,8 +774,7 @@ export default function InvestorDemo() {
                 </div>
               </div>
               <p className="text-[16px] text-[#556070] leading-[1.6] mb-6">
-                Receive an automated collection call. Our system analyzes your responses in real-time, 
-                detecting intent, sentiment, and commitment to pay.
+                Receive an automated collection call. Our system analyses your responses in real-time, detecting intent, sentiment, commitment to pay and provides an accurate transcript of the call for system notes.
               </p>
               <div className="space-y-4">
                 <div>
