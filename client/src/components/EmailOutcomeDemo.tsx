@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { Mail, Check, AlertCircle, Clock, FileText, TrendingUp, ArrowRight, ArrowLeft } from "lucide-react";
+import { Mail, Check, AlertCircle, FileText, ArrowRight, ArrowLeft } from "lucide-react";
 
 type ConfidenceBand = "High" | "Medium" | "Low";
 type OutcomeType = "PROMISE_TO_PAY" | "REQUEST_TIME" | "DISPUTE" | "AMBIGUOUS";
@@ -671,71 +671,6 @@ Your Company`;
           )}
         </div>
       </div>
-
-      {currentOutcome && initialForecast && currentForecast && (
-        <div className="border-t border-[#E6E8EC] pt-6">
-          <div className="grid md:grid-cols-3 gap-6">
-            <div>
-              <h4 className="text-[14px] font-medium text-[#0B0F17] mb-3 flex items-center gap-2">
-                <TrendingUp className="w-4 h-4 text-[#12B8C4]" />
-                Forecast Impact
-              </h4>
-              {currentOutcome.outcomeType === "AMBIGUOUS" ? (
-                <p className="text-sm text-[#556070] italic">Forecast unchanged (requires review)</p>
-              ) : (
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-[#556070]">High confidence:</span>
-                    <span className="font-medium">
-                      {formatCurrency(initialForecast.high, "GBP")}
-                      <ArrowRight className="w-3 h-3 inline mx-1 text-[#556070]" />
-                      <span className="text-emerald-600">{formatCurrency(currentForecast.high, "GBP")}</span>
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-[#556070]">Medium confidence:</span>
-                    <span className="font-medium">
-                      {formatCurrency(initialForecast.medium, "GBP")}
-                      <ArrowRight className="w-3 h-3 inline mx-1 text-[#556070]" />
-                      <span className="text-amber-600">{formatCurrency(currentForecast.medium, "GBP")}</span>
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-[#556070]">Low confidence:</span>
-                    <span className="font-medium">
-                      {formatCurrency(initialForecast.low, "GBP")}
-                      <ArrowRight className="w-3 h-3 inline mx-1 text-[#556070]" />
-                      <span className="text-red-600">{formatCurrency(currentForecast.low, "GBP")}</span>
-                    </span>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div>
-              <h4 className="text-[14px] font-medium text-[#0B0F17] mb-3 flex items-center gap-2">
-                <Clock className="w-4 h-4 text-[#12B8C4]" />
-                Plan Change
-              </h4>
-              <p className="text-sm text-[#0B0F17]">
-                {getPlanChangeSummary(currentOutcome.outcomeType)}
-              </p>
-            </div>
-
-            <div>
-              <h4 className="text-[14px] font-medium text-[#0B0F17] mb-3">Audit Log</h4>
-              <div className="max-h-32 overflow-y-auto space-y-1">
-                {auditLog.map((event) => (
-                  <div key={event.id} className="flex items-center justify-between text-xs">
-                    <span className="text-[#0B0F17]">{event.event}</span>
-                    <span className="text-[#556070]">{formatTime(event.timestamp)}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {step === "outcome" && (
         <div className="flex justify-center pt-4">
