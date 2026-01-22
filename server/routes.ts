@@ -16437,49 +16437,6 @@ Return only JSON with keys: intent, sentiment, confidence, keyInsights, actionIt
     }
   });
 
-  // Generate AI debtor response for email demo
-  app.post("/api/demo/generate-debtor-response", async (req, res) => {
-    try {
-      const { generateDebtorResponse } = await import("./services/openai");
-      
-      const {
-        emailSubject,
-        emailBody,
-        customerName,
-        invoiceNumber,
-        amount,
-        daysOverdue,
-        outcomeType,
-        conversationHistory
-      } = req.body;
-
-      if (!emailSubject || !emailBody || !customerName || !invoiceNumber || !amount || !outcomeType) {
-        return res.status(400).json({ message: "Missing required fields" });
-      }
-
-      const validOutcomes = ['PROMISE_TO_PAY', 'REQUEST_TIME', 'DISPUTE', 'AMBIGUOUS'];
-      if (!validOutcomes.includes(outcomeType)) {
-        return res.status(400).json({ message: "Invalid outcome type" });
-      }
-
-      const response = await generateDebtorResponse({
-        emailSubject,
-        emailBody,
-        customerName,
-        invoiceNumber,
-        amount: parseFloat(amount),
-        daysOverdue: parseInt(daysOverdue) || 0,
-        outcomeType,
-        conversationHistory
-      });
-
-      res.json(response);
-    } catch (error) {
-      console.error("Error generating debtor response:", error);
-      res.status(500).json({ message: "Failed to generate debtor response" });
-    }
-  });
-
   app.get("/api/leads", isAuthenticated, async (req: any, res) => {
     try {
       const leads = await storage.getLeads();
