@@ -410,13 +410,51 @@ Your Company`;
           }, 1500);
         }, 1800);
       }, 1200);
+    } else if (outcomeType === "REQUEST_TIME") {
+      setTimeout(() => {
+        newLog = addAuditEvent("Outcome extracted: Payment plan request", "Qashivo AI", newLog);
+        newLog = addAuditEvent("Auto-reply sent: Account review", "Qashivo AI", newLog);
+        setAuditLog(newLog);
+
+        const qashivoReply: Message = {
+          id: `msg-${Date.now()}-q1`,
+          direction: "outbound",
+          subject: `Re: Payment reminder - ${selectedInvoice.invoiceNumber}`,
+          body: "We'll review your account and let you know what options are available.",
+          timestamp: new Date(),
+          from: "Your Company",
+          to: selectedInvoice.customerEmail,
+        };
+        setMessages([...currentMessages, qashivoReply]);
+
+        setTimeout(() => {
+          const outcomeConfig = OUTCOME_CONFIGS[outcomeType];
+          const outcome: Outcome = {
+            ...outcomeConfig,
+            promisedAmount: 3300,
+          };
+
+          setCurrentOutcome(outcome);
+          
+          let finalLog = addAuditEvent("Plan updated: Payment plan under review", "Qashivo AI", newLog);
+          finalLog = addAuditEvent("Forecast updated", "Qashivo AI", finalLog);
+          const newBand = getOutcomeConfidenceBand(outcomeType);
+          setDisplayedConfidenceBand(newBand);
+          setShowForecastUpdated(true);
+          setTimeout(() => setShowForecastUpdated(false), 2000);
+
+          setAuditLog(finalLog);
+          setStep("outcome");
+          setShowOtherOutcomes(true);
+        }, 1200);
+      }, 1200);
     } else {
       setTimeout(() => {
         const outcomeConfig = OUTCOME_CONFIGS[outcomeType];
         const outcome: Outcome = {
           ...outcomeConfig,
           promisedDate: outcomeType === "PROMISE_TO_PAY" ? "31 Jan 2026" : undefined,
-          promisedAmount: outcomeType === "PROMISE_TO_PAY" ? selectedInvoice.amount : outcomeType === "REQUEST_TIME" ? 3300 : undefined,
+          promisedAmount: outcomeType === "PROMISE_TO_PAY" ? selectedInvoice.amount : undefined,
           reason: outcomeType === "DISPUTE" ? "December maintenance visit was missed" : undefined,
         };
 
