@@ -242,7 +242,7 @@ export default function Customers() {
                           data-testid={`customer-item-${contact.id}`}
                         >
                           {/* Customer */}
-                          <td className="py-3 px-4">
+                          <td className="py-[5px] px-3">
                             <p className="text-[13px] font-medium text-slate-900 truncate">
                               {contact.companyName || contact.name}
                             </p>
@@ -255,7 +255,7 @@ export default function Customers() {
                           </td>
 
                           {/* Outstanding */}
-                          <td className="py-3 px-4 text-right">
+                          <td className="py-[5px] px-3 text-right">
                             <span className="text-[13px] text-slate-700 tabular-nums">
                               {formatCurrency(contact.outstandingAmount)}
                             </span>
@@ -263,7 +263,7 @@ export default function Customers() {
                           </td>
 
                           {/* Overdue */}
-                          <td className="py-3 px-4 text-right">
+                          <td className="py-[5px] px-3 text-right">
                             {contact.overdueAmount > 0 ? (
                               <>
                                 <span className="text-[13px] text-[#C75C5C] tabular-nums">
@@ -277,7 +277,7 @@ export default function Customers() {
                           </td>
 
                           {/* ADPD */}
-                          <td className="py-3 px-4 text-right">
+                          <td className="py-[5px] px-3 text-right">
                             {contact.averageDaysPastDue > 0 ? (
                               <span className="text-[13px] text-slate-700 tabular-nums">
                                 {contact.averageDaysPastDue}
@@ -288,14 +288,14 @@ export default function Customers() {
                           </td>
 
                           {/* Last Payment */}
-                          <td className="py-3 px-4 text-right">
+                          <td className="py-[5px] px-3 text-right">
                             <span className="text-[13px] text-slate-500 tabular-nums">
                               {formatDateShort(contact.lastPaymentDate)}
                             </span>
                           </td>
 
                           {/* Behaviour */}
-                          <td className="py-3 px-4 text-right">
+                          <td className="py-[5px] px-3 text-right">
                             {getBehaviourDot(contact.riskBand, contact.riskScore)}
                           </td>
                         </tr>
