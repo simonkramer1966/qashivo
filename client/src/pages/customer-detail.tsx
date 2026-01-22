@@ -398,7 +398,7 @@ export default function CustomerDetailPage() {
                   </div>
 
                   {/* Column 3: Workflow Preference */}
-                  <div className="space-y-3">
+                  <div className="space-y-3 md:ml-auto">
                     <p className="text-[11px] text-slate-400 mb-2">Workflow Preference</p>
                     <div className="flex items-center justify-between py-2 w-44">
                       <div className="flex items-center gap-3">
