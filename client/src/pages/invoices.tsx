@@ -350,19 +350,19 @@ export default function Invoices() {
                             onClick={() => setSelectedInvoice(invoice)}
                             data-testid={`invoice-item-${invoice.id}`}
                           >
-                            <td className="py-3 px-4">
+                            <td className="py-[5px] px-3">
                               <span className="text-[13px] text-slate-700 tabular-nums">
                                 {formatDateShort(invoice.issueDate)}
                               </span>
                             </td>
 
-                            <td className="py-3 px-4">
+                            <td className="py-[5px] px-3">
                               <span className="text-[13px] font-medium text-slate-900">
                                 {invoice.invoiceNumber}
                               </span>
                             </td>
 
-                            <td className="py-3 px-4">
+                            <td className="py-[5px] px-3">
                               <p className="text-[13px] font-medium text-slate-900 truncate">
                                 {invoice.contact?.companyName || invoice.contact?.name || 'Unknown'}
                               </p>
@@ -374,7 +374,7 @@ export default function Invoices() {
                               </p>
                             </td>
 
-                            <td className="py-3 px-4 text-right">
+                            <td className="py-[5px] px-3 text-right">
                               {invoice.status === 'paid' ? (
                                 <span className="text-[13px] text-slate-400">-</span>
                               ) : daysOverdue > 0 ? (
@@ -386,14 +386,14 @@ export default function Invoices() {
                               )}
                             </td>
 
-                            <td className="py-3 px-4 text-center">
+                            <td className="py-[5px] px-3 text-center">
                               <div className="flex items-center justify-center gap-2">
                                 {getStatusDot(invoice)}
                                 {getStatusDisplay(invoice)}
                               </div>
                             </td>
 
-                            <td className="py-3 px-4 text-right">
+                            <td className="py-[5px] px-3 text-right">
                               <span className="text-[13px] text-slate-700 tabular-nums font-medium">
                                 {formatCurrency(invoice.status === 'paid' ? invoice.amount : outstanding)}
                               </span>
