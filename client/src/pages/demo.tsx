@@ -6,12 +6,14 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Phone, MessageSquare, TrendingUp, Shield, Zap, CheckCircle, Brain, Activity, ArrowRight, Clock, DollarSign, Users, BarChart3, Target, Rocket } from "lucide-react";
+import { Phone, TrendingUp, Shield, Zap, CheckCircle, Brain, ArrowRight, Clock, DollarSign, Users, BarChart3, Target, Rocket, Menu, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { SiXero, SiStripe, SiOpenai, SiQuickbooks } from "react-icons/si";
 import { AIResultsDialog } from "@/components/AIResultsDialog";
-import qashivoLogo from "@assets/WhatsApp Image 2025-10-28 at 12.49.53_1761652236575.jpeg";
+import logo from "@assets/Main_Nexus_Logo_copy_1768893717341.png";
 import dashboardScreenshot from "@assets/Screenshot 2025-10-13 at 13.19.17_1760519077630.png";
+import xeroLogo from "@assets/Xero_software_logo.svg_1768974407536.png";
+import quickbooksLogo from "@assets/quickbnooks_1768974664185.png";
 import investorDeckPdf from "@assets/Qashivo - Investor Deck_1760520688174.pdf";
 
 // Phone number sanitization function  
@@ -72,14 +74,11 @@ export default function InvestorDemo() {
   const [voiceName, setVoiceName] = useState("");
   const [voicePhone, setVoicePhone] = useState("");
   const [voiceCountryCode, setVoiceCountryCode] = useState("+44");
-  const [smsName, setSmsName] = useState("");
-  const [smsPhone, setSmsPhone] = useState("");
-  const [smsCountryCode, setSmsCountryCode] = useState("+44");
   const [demoResults, setDemoResults] = useState<any>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [resultsDialogOpen, setResultsDialogOpen] = useState(false);
   const [currentResults, setCurrentResults] = useState<any>(null);
-  const [resultsType, setResultsType] = useState<"voice" | "sms">("voice");
+  const [resultsType, setResultsType] = useState<"voice">("voice");
   const lastShownResultsRef = useRef<string>("");
   const lastShownAtRef = useRef<number>(0); // Track timestamp of currently displayed result
   const transitionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -87,7 +86,6 @@ export default function InvestorDemo() {
   
   // Demo processing states for progress and dialog locking
   const [voiceProgress, setVoiceProgress] = useState<string>("");
-  const [smsProgress, setSmsProgress] = useState<string>("");
   const [isDemoProcessing, setIsDemoProcessing] = useState(false);
   
   // Active call tracking for status polling
@@ -107,6 +105,9 @@ export default function InvestorDemo() {
   // Video ref
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isVideoPlaying, setIsVideoPlaying] = useState(false);
+  
+  // Mobile menu state
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     if (!leadId) return;
@@ -204,24 +205,19 @@ export default function InvestorDemo() {
     };
   }, [activeCallId, leadId]);
 
-  // Helper function to open dialog with results (avoids code duplication)
-  const openDialogWithResults = (results: any, type: "voice" | "sms", resultKey: string, analyzedAt: number) => {
+  // Helper function to open dialog with voice results
+  const openDialogWithResults = (results: any, resultKey: string, analyzedAt: number) => {
     setCurrentResults(results);
-    setResultsType(type);
-    if (type === "voice") {
-      setVoiceProgress("");
-    } else {
-      setSmsProgress("");
-    }
+    setVoiceProgress("");
     setIsDemoProcessing(false);
     lastShownResultsRef.current = resultKey;
-    lastShownAtRef.current = analyzedAt; // Track when this result was created
+    lastShownAtRef.current = analyzedAt;
     isTransitioningRef.current = false;
     setResultsDialogOpen(true);
     
     toast({
       title: "AI Analysis Complete",
-      description: `View the results of the ${type === "voice" ? "voice call" : "SMS"} analysis`,
+      description: "View the results of the voice call analysis",
     });
   };
 
@@ -234,103 +230,34 @@ export default function InvestorDemo() {
 
     // Update voice results if available
     if (demoResults.voiceDemoCompleted && demoResults.voiceDemoResults) {
-      // Convert ISO string to numeric timestamp for comparison
       let analyzedAtMs = demoResults.voiceDemoResults.analyzedAt 
         ? new Date(demoResults.voiceDemoResults.analyzedAt).getTime()
         : Date.now();
-      // Guard against invalid timestamps
       if (!Number.isFinite(analyzedAtMs)) {
         analyzedAtMs = Date.now();
       }
       const resultKey = `voice-${analyzedAtMs}`;
       
-      // CRITICAL: Only process if this result is newer than what's currently displayed
-      // This prevents showing old voice results after SMS has completed
       if (analyzedAtMs > lastShownAtRef.current && lastShownResultsRef.current !== resultKey) {
-        // If dialog is open with different type, transition to new type
-        if (resultsDialogOpen && resultsType === "sms") {
-          // Clear any pending transition
-          if (transitionTimeoutRef.current) {
-            clearTimeout(transitionTimeoutRef.current);
-          }
-          
-          // Mark as transitioning to prevent duplicate updates
-          isTransitioningRef.current = true;
-          setResultsDialogOpen(false);
-          
-          // Wait for dialog to close before showing new one
-          transitionTimeoutRef.current = setTimeout(() => {
-            openDialogWithResults(demoResults.voiceDemoResults, "voice", resultKey, analyzedAtMs);
-          }, 400);
-        } else if (resultsDialogOpen && resultsType === "voice") {
-          // Same type already open - update results without closing
+        if (resultsDialogOpen) {
           setCurrentResults(demoResults.voiceDemoResults);
           setVoiceProgress("");
           setIsDemoProcessing(false);
           lastShownResultsRef.current = resultKey;
           lastShownAtRef.current = analyzedAtMs;
-          // No toast for same-type updates to avoid spam
         } else {
-          // Dialog is closed, open immediately
-          openDialogWithResults(demoResults.voiceDemoResults, "voice", resultKey, analyzedAtMs);
+          openDialogWithResults(demoResults.voiceDemoResults, resultKey, analyzedAtMs);
         }
       }
     }
     
-    // Update SMS results if available
-    if (demoResults.smsDemoCompleted && demoResults.smsDemoResults) {
-      // Convert ISO string to numeric timestamp for comparison
-      let analyzedAtMs = demoResults.smsDemoResults.analyzedAt 
-        ? new Date(demoResults.smsDemoResults.analyzedAt).getTime()
-        : Date.now();
-      // Guard against invalid timestamps
-      if (!Number.isFinite(analyzedAtMs)) {
-        analyzedAtMs = Date.now();
-      }
-      const resultKey = `sms-${analyzedAtMs}`;
-      
-      // CRITICAL: Only process if this result is newer than what's currently displayed
-      // This prevents the dialog from flickering between old and new results
-      if (analyzedAtMs > lastShownAtRef.current && lastShownResultsRef.current !== resultKey) {
-        // If dialog is open with different type, transition to new type
-        if (resultsDialogOpen && resultsType === "voice") {
-          // Clear any pending transition
-          if (transitionTimeoutRef.current) {
-            clearTimeout(transitionTimeoutRef.current);
-          }
-          
-          // Mark as transitioning to prevent duplicate updates
-          isTransitioningRef.current = true;
-          setResultsDialogOpen(false);
-          
-          // Wait for dialog to close before showing new one
-          transitionTimeoutRef.current = setTimeout(() => {
-            openDialogWithResults(demoResults.smsDemoResults, "sms", resultKey, analyzedAtMs);
-          }, 400);
-        } else if (resultsDialogOpen && resultsType === "sms") {
-          // Same type already open - update results without closing
-          setCurrentResults(demoResults.smsDemoResults);
-          setSmsProgress("");
-          setIsDemoProcessing(false);
-          lastShownResultsRef.current = resultKey;
-          lastShownAtRef.current = analyzedAtMs;
-          // No toast for same-type updates to avoid spam
-        } else {
-          // Dialog is closed, open immediately
-          openDialogWithResults(demoResults.smsDemoResults, "sms", resultKey, analyzedAtMs);
-        }
-      }
-    }
-    
-    // Cleanup function - only clear timeouts if NOT transitioning
-    // (during transition, let the timeout complete)
     return () => {
       if (transitionTimeoutRef.current && !isTransitioningRef.current) {
         clearTimeout(transitionTimeoutRef.current);
         transitionTimeoutRef.current = null;
       }
     };
-  }, [demoResults, toast, resultsDialogOpen, resultsType]);
+  }, [demoResults, toast, resultsDialogOpen]);
 
   // Cleanup on unmount - ensure all timeouts are cleared
   useEffect(() => {
@@ -381,9 +308,6 @@ export default function InvestorDemo() {
 
   const handleVoiceDemo = async () => {
     if (!voicePhone) return;
-    
-    // Clear any SMS results to prevent interference
-    setDemoResults((prev: any) => prev ? {...prev, smsDemoResults: null, smsDemoCompleted: false} : null);
     
     // Immediate feedback - set progress and lock dialog
     setVoiceProgress("Initiating...");
@@ -473,96 +397,6 @@ export default function InvestorDemo() {
       toast({
         title: "Error",
         description: "Failed to initiate call. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleSMSDemo = async () => {
-    if (!smsPhone) return;
-    
-    // Clear any Voice results to prevent interference
-    setDemoResults((prev: any) => prev ? {...prev, voiceDemoResults: null, voiceDemoCompleted: false} : null);
-    
-    // Immediate feedback - set progress and lock dialog
-    setSmsProgress("Initiating...");
-    setIsDemoProcessing(true);
-    
-    try {
-      // Sanitize phone number
-      const sanitizedPhone = sanitizePhoneNumber(smsPhone, smsCountryCode);
-      
-      // Progress update
-      setTimeout(() => setSmsProgress("Connecting..."), 400);
-      
-      // Parallelize lead creation and demo setup
-      let currentLeadId = leadId;
-      
-      const operations = [];
-      
-      // If no lead exists, create one in parallel
-      if (!currentLeadId) {
-        const leadPromise = fetch("/api/investor/lead", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ 
-            name: smsName || "Anonymous Investor", 
-            email: `demo-${Date.now()}@investor.demo` 
-          }),
-        }).then(async (res) => {
-          if (!res.ok) throw new Error("Failed to create lead");
-          const lead = await res.json();
-          currentLeadId = lead.id;
-          setLeadId(lead.id);
-          return lead.id;
-        });
-        
-        operations.push(leadPromise);
-      } else {
-        operations.push(Promise.resolve(currentLeadId));
-      }
-      
-      // Wait for lead ID to be available
-      const [resolvedLeadId] = await Promise.all(operations);
-      
-      // Progress update
-      setTimeout(() => setSmsProgress("In progress..."), 800);
-      
-      // Initiate the SMS
-      const response = await fetch("/api/investor/sms-demo", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ leadId: resolvedLeadId, phone: sanitizedPhone, name: smsName }),
-      });
-      
-      if (!response.ok) throw new Error("Failed to send SMS");
-      
-      // Open results dialog immediately with "waiting" state
-      // Reset lastShownAtRef to 0 so any real results will always be considered newer
-      lastShownAtRef.current = 0;
-      lastShownResultsRef.current = "";
-      setCurrentResults({
-        intent: "waiting",
-        sentiment: "pending",
-        confidence: 0,
-        keyInsights: ["Waiting for your SMS reply..."],
-        actionItems: ["AI will analyze your response instantly"],
-        summary: "SMS sent - Reply to see real-time AI intent detection and sentiment analysis",
-        responseText: ""
-      });
-      setResultsType("sms");
-      setResultsDialogOpen(true);
-      
-      toast({
-        title: "SMS Sent!",
-        description: "Reply to experience AI intent detection",
-      });
-    } catch (error) {
-      setSmsProgress("");
-      setIsDemoProcessing(false);
-      toast({
-        title: "Error",
-        description: "Failed to send SMS. Please try again.",
         variant: "destructive",
       });
     }
@@ -679,89 +513,145 @@ export default function InvestorDemo() {
 
   return (
     <div className="min-h-screen bg-white">
-      {/* Sticky Header */}
-      <header className="sticky top-0 z-50 bg-white border-b border-gray-100">
-        <div className="max-w-7xl mx-auto px-6 py-4">
-          <div className="flex items-center justify-start">
-            <div className="flex items-center gap-3">
-              <img 
-                src={qashivoLogo} 
-                alt="Qashivo Logo" 
-                className="h-10 w-auto"
-                data-testid="img-qashivo-logo"
-              />
+      {/* Navigation */}
+      <nav className="sticky top-0 z-50 bg-white border-b border-[#E6E8EC]">
+        <div className="max-w-[1200px] mx-auto px-6">
+          <div className="flex justify-between items-center h-16">
+            <div className="flex items-center gap-10">
+              <a href="/home" className="flex items-center gap-2">
+                <img src={logo} alt="Qashivo" className="h-8 w-8" />
+                <span className="font-semibold text-[#0B0F17] tracking-tight text-[22px]">Qashivo</span>
+              </a>
+              <div className="hidden md:flex items-center gap-8">
+                <a href="/home" className="text-[15px] text-[#556070] hover:text-[#0B0F17] transition-colors">
+                  Home
+                </a>
+                <a href="/product" className="text-[15px] text-[#556070] hover:text-[#0B0F17] transition-colors">
+                  Product
+                </a>
+                <a href="/home#how-it-works" className="text-[15px] text-[#556070] hover:text-[#0B0F17] transition-colors">
+                  How it works
+                </a>
+                <a href="/partners" className="text-[15px] text-[#556070] hover:text-[#0B0F17] transition-colors">
+                  Partners
+                </a>
+                <a href="/pricing" className="text-[15px] text-[#556070] hover:text-[#0B0F17] transition-colors">
+                  Pricing
+                </a>
+                <a href="/demo" className="text-[15px] text-[#0B0F17] font-medium">
+                  Investor Demo
+                </a>
+              </div>
             </div>
+            <div className="hidden md:flex items-center gap-4">
+              <a href="/login" className="text-[15px] text-[#556070] hover:text-[#0B0F17] transition-colors">
+                Sign in
+              </a>
+              <Button
+                onClick={() => setLocation("/contact")}
+                className="bg-[#12B8C4] hover:bg-[#0fa3ae] text-white h-11 px-5 rounded-full text-[15px] font-medium"
+              >
+                Book a demo
+              </Button>
+            </div>
+            <button 
+              className="md:hidden p-2"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            >
+              {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            </button>
           </div>
         </div>
-      </header>
+        {mobileMenuOpen && (
+          <div className="md:hidden border-t border-[#E6E8EC] bg-white px-6 py-4">
+            <div className="flex flex-col gap-4">
+              <a href="/home" className="text-[16px] text-[#556070] hover:text-[#0B0F17] py-2">Home</a>
+              <a href="/product" className="text-[16px] text-[#556070] hover:text-[#0B0F17] py-2">Product</a>
+              <a href="/home#how-it-works" className="text-[16px] text-[#556070] hover:text-[#0B0F17] py-2">How it works</a>
+              <a href="/partners" className="text-[16px] text-[#556070] hover:text-[#0B0F17] py-2">Partners</a>
+              <a href="/pricing" className="text-[16px] text-[#556070] hover:text-[#0B0F17] py-2">Pricing</a>
+              <a href="/demo" className="text-[16px] text-[#0B0F17] font-medium py-2">Investor Demo</a>
+              <div className="border-t border-[#E6E8EC] pt-4 mt-2 flex flex-col gap-3">
+                <a href="/login" className="text-[16px] text-[#556070] hover:text-[#0B0F17] py-2">Sign in</a>
+                <Button
+                  onClick={() => setLocation("/contact")}
+                  className="bg-[#12B8C4] hover:bg-[#0fa3ae] text-white h-11 rounded-xl text-[15px] font-medium w-full"
+                >
+                  Book a demo
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+      </nav>
 
       {/* Hero Section */}
-      <section className="relative pt-12 md:pt-20 pb-20 px-6 bg-white border-b border-gray-100">
-        <div className="max-w-7xl mx-auto">
+      <section className="pt-20 pb-16 md:pt-28 md:pb-20">
+        <div className="max-w-[1200px] mx-auto px-6">
           {/* Centered Hero Content */}
-          <div className="text-center mb-12">
-            <div className="inline-block px-4 py-2 bg-gray-100 rounded-full mb-6">
-              <span className="text-gray-700 font-semibold">SEIS-Eligible Investment Opportunity (HMRC Advance Assurance WMBC/I&R/1183827082/VCRT)</span>
+          <div className="max-w-[900px] mx-auto text-center mb-16">
+            <div className="inline-block px-4 py-2 bg-[#12B8C4]/10 rounded-full mb-6">
+              <span className="text-[#0B0F17] font-medium text-[14px]">SEIS-Eligible Investment Opportunity (HMRC Advance Assurance)</span>
             </div>
-            <h1 className="text-5xl lg:text-6xl font-bold text-gray-900 mb-6 leading-tight">
-              Automation That Turns Late Payments Into<br />
-              <span className="text-[#A98743]">Automated Cashflow</span>
+            <h1 className="text-[40px] md:text-[52px] font-semibold text-[#0B0F17] leading-[1.05] tracking-[-0.02em] mb-6">
+              Automation That Turns Late Payments Into Predictable Cashflow
             </h1>
-            <p className="text-xl text-gray-600 mb-4 leading-relaxed max-w-4xl mx-auto">
+            <p className="text-[18px] md:text-[20px] text-[#556070] leading-[1.55] mb-4">
               The UK's first automated credit control platform built on statutory rights. 
               Transforming the £11B late payment crisis into predictable revenue.
             </p>
-            <p className="text-xl text-gray-600 mb-[80px] leading-relaxed max-w-4xl mx-auto">
-              <strong>We're not just automating credit control. We're building the execution engine for SME collections.</strong>
+            <p className="text-[18px] md:text-[20px] text-[#556070] leading-[1.55] mb-10">
+              <strong className="text-[#0B0F17]">We're not just automating credit control. We're building the execution engine for SME collections.</strong>
             </p>
           </div>
 
           {/* Two-column layout: Video left, Form right */}
-          <div className="grid lg:grid-cols-2 gap-8 items-start">
+          <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-start">
             {/* Video */}
-            <div className="relative space-y-6">
-              <div className="aspect-video rounded-2xl shadow-2xl overflow-hidden border border-gray-300">
-                <video 
-                  ref={videoRef}
-                  className="w-full h-full object-contain"
-                  controls
-                  playsInline
-                  onPlay={() => {
-                    setIsVideoPlaying(true);
-                    // Always unmute when video plays (handles both autoplay and manual play)
-                    if (videoRef.current) {
-                      videoRef.current.muted = false;
-                    }
-                  }}
-                >
-                  <source src="/media/QashivoIntrov2.mp4" type="video/mp4" />
-                  Your browser does not support the video tag.
-                </video>
+            <div className="space-y-8">
+              <div className="bg-[#F0F2F5] rounded-2xl p-3">
+                <div className="aspect-video rounded-xl overflow-hidden border border-[#E6E8EC]">
+                  <video 
+                    ref={videoRef}
+                    className="w-full h-full object-contain"
+                    controls
+                    playsInline
+                    onPlay={() => {
+                      setIsVideoPlaying(true);
+                      if (videoRef.current) {
+                        videoRef.current.muted = false;
+                      }
+                    }}
+                  >
+                    <source src="/media/QashivoIntrov2.mp4" type="video/mp4" />
+                    Your browser does not support the video tag.
+                  </video>
+                </div>
               </div>
 
               {/* Compelling Copy Section */}
-              <div className="text-center lg:text-left">
-                <h3 className="text-3xl font-bold text-gray-900 mb-4">
+              <div>
+                <h3 className="text-[24px] font-semibold text-[#0B0F17] mb-4">
                   The Future of B2B Credit Control
                 </h3>
-                <p className="text-gray-700 leading-relaxed mb-4">
+                <p className="text-[16px] text-[#556070] leading-[1.6] mb-4">
                   This is more than automation; it's intelligent execution that follows your policies consistently. 
                   Qashivo doesn't just send reminders; it detects intent, classifies responses in real-time, and creates 
                   statutory-compliant escalation paths automatically.
                 </p>
-                <p className="text-gray-700 leading-relaxed">
-                  The result? <strong>40% faster collections</strong>, 
-                  <strong>scenario-based forecasting</strong>, and <strong>zero manual intervention</strong>.
+                <p className="text-[16px] text-[#556070] leading-[1.6]">
+                  The result? <strong className="text-[#0B0F17]">40% faster collections</strong>, 
+                  <strong className="text-[#0B0F17]"> scenario-based forecasting</strong>, and <strong className="text-[#0B0F17]">zero manual intervention</strong>.
                 </p>
               </div>
             </div>
 
             {/* Form */}
-            <div id="dataroom-form" className="relative space-y-2">
-              <h3 className="text-2xl font-bold text-gray-900 text-center">
+            <div id="dataroom-form" className="space-y-4">
+              <h3 className="text-[24px] font-semibold text-[#0B0F17] text-center">
                 Access Investment Dataroom
               </h3>
-              <div className="rounded-2xl shadow-2xl overflow-hidden bg-white" style={{ height: '570px' }}>
+              <div className="rounded-2xl border border-[#E6E8EC] overflow-hidden bg-white" style={{ height: '570px' }}>
                 <iframe
                   src="https://api.leadconnectorhq.com/widget/form/NRFTMQnqftGVqumexWwm"
                   style={{ width: '100%', height: '620px', border: 'none', borderRadius: '3px', marginTop: '-40px' }}
@@ -786,94 +676,82 @@ export default function InvestorDemo() {
       </section>
 
       {/* Trust Signals */}
-      <section className="py-6 md:py-12 px-6 border-b border-gray-100 bg-white">
-        <div className="max-w-7xl mx-auto">
-          <p className="text-center text-sm text-gray-500 mb-6">BUILT WITH ENTERPRISE-GRADE INTEGRATIONS</p>
-          <div className="flex items-center justify-center gap-12 flex-wrap">
-            <div className="flex items-center gap-2 text-gray-600">
-              <SiXero className="w-8 h-8" />
-              <span className="font-semibold">Xero</span>
-            </div>
-            <div className="flex items-center gap-2 text-gray-600">
-              <SiQuickbooks className="w-8 h-8" />
-              <span className="font-semibold">QuickBooks</span>
-            </div>
-            <div className="flex items-center gap-2 text-gray-600">
-              <SiStripe className="w-8 h-8" />
-              <span className="font-semibold">Stripe</span>
-            </div>
-            <div className="flex items-center gap-2 text-gray-600">
-              <SiOpenai className="w-8 h-8" />
-              <span className="font-semibold">OpenAI</span>
-            </div>
+      <section className="py-16 border-y border-[#E6E8EC] bg-white">
+        <div className="max-w-[1200px] mx-auto px-6">
+          <p className="text-center text-[18px] text-[#556070] mb-8">
+            Integrated with your favourite accounting software ...
+          </p>
+          <div className="flex flex-wrap items-center justify-center gap-10 md:gap-14">
+            <img src={xeroLogo} alt="Xero" className="h-24 grayscale opacity-60 hover:opacity-100 hover:grayscale-0 transition-all" />
+            <img src={quickbooksLogo} alt="QuickBooks" className="h-[108px] grayscale opacity-60 hover:opacity-100 hover:grayscale-0 transition-all" />
           </div>
         </div>
       </section>
 
       {/* The Problem */}
-      <section className="py-12 md:py-24 px-6 border-b border-gray-100">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-gray-900 mb-4">The £11 Billion Problem</h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+      <section className="py-16 md:py-24">
+        <div className="max-w-[1200px] mx-auto px-6">
+          <div className="max-w-[700px] mx-auto text-center mb-16">
+            <h2 className="text-[40px] md:text-[48px] font-semibold text-[#0B0F17] leading-[1.1] tracking-[-0.02em] mb-6">The £11 Billion Problem</h2>
+            <p className="text-[18px] md:text-[20px] text-[#556070] leading-[1.55]">
               Late payments are killing UK SMEs. Manual credit control is inefficient, non-compliant, and emotionally draining.
             </p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-12">
+          <div className="grid md:grid-cols-3 gap-10 md:gap-12">
             <div className="text-center" data-testid="card-problem-cost">
               <div className="w-14 h-14 bg-[#8B2635]/10 rounded-xl flex items-center justify-center mb-6 mx-auto">
                 <DollarSign className="w-7 h-7 text-[#8B2635]" />
               </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-2" data-testid="text-problem-amount">£11B Lost</h3>
-              <p className="text-gray-600 mb-4">Annual cost to UK SMEs from late payments</p>
-              <div className="text-4xl font-bold text-[#8B2635]" data-testid="text-failures-count">14,000</div>
-              <p className="text-sm text-gray-500">Businesses fail each year due to late payments</p>
+              <h3 className="text-[24px] font-semibold text-[#0B0F17] mb-2" data-testid="text-problem-amount">£11B Lost</h3>
+              <p className="text-[16px] text-[#556070] mb-4">Annual cost to UK SMEs from late payments</p>
+              <div className="text-[40px] font-semibold text-[#8B2635]" data-testid="text-failures-count">14,000</div>
+              <p className="text-[14px] text-[#556070]">Businesses fail each year due to late payments</p>
             </div>
 
             <div className="text-center" data-testid="card-problem-dso">
               <div className="w-14 h-14 bg-[#8B2635]/10 rounded-xl flex items-center justify-center mb-6 mx-auto">
                 <Clock className="w-7 h-7 text-[#8B2635]" />
               </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-2" data-testid="text-dso-days">64 Days</h3>
-              <p className="text-gray-600 mb-4">Average DSO for UK SMEs</p>
-              <div className="text-4xl font-bold text-[#8B2635]" data-testid="text-payment-multiplier">2x</div>
-              <p className="text-sm text-gray-500">Payment terms exceeded</p>
+              <h3 className="text-[24px] font-semibold text-[#0B0F17] mb-2" data-testid="text-dso-days">64 Days</h3>
+              <p className="text-[16px] text-[#556070] mb-4">Average DSO for UK SMEs</p>
+              <div className="text-[40px] font-semibold text-[#8B2635]" data-testid="text-payment-multiplier">2x</div>
+              <p className="text-[14px] text-[#556070]">Payment terms exceeded</p>
             </div>
 
             <div className="text-center" data-testid="card-problem-compliance">
-              <div className="w-14 h-14 bg-[#A98743]/10 rounded-xl flex items-center justify-center mb-6 mx-auto">
-                <Shield className="w-7 h-7 text-[#A98743]" />
+              <div className="w-14 h-14 bg-[#12B8C4]/10 rounded-xl flex items-center justify-center mb-6 mx-auto">
+                <Shield className="w-7 h-7 text-[#12B8C4]" />
               </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-2" data-testid="text-compliance-rate">100% Must Comply</h3>
-              <p className="text-gray-600 mb-4">Late Payment Act becomes mandatory</p>
-              <div className="text-4xl font-bold text-[#A98743]" data-testid="text-solutions-count">0</div>
-              <p className="text-sm text-gray-500">Current compliant solutions</p>
+              <h3 className="text-[24px] font-semibold text-[#0B0F17] mb-2" data-testid="text-compliance-rate">100% Must Comply</h3>
+              <p className="text-[16px] text-[#556070] mb-4">Late Payment Act becomes mandatory</p>
+              <div className="text-[40px] font-semibold text-[#12B8C4]" data-testid="text-solutions-count">0</div>
+              <p className="text-[14px] text-[#556070]">Current compliant solutions</p>
             </div>
           </div>
         </div>
       </section>
 
       {/* The Solution */}
-      <section className="py-12 md:py-24 px-6 bg-white border-b border-gray-100">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-gray-900 mb-4">The Qashivo Solution</h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+      <section className="py-16 md:py-24 border-y border-[#E6E8EC]">
+        <div className="max-w-[1200px] mx-auto px-6">
+          <div className="max-w-[700px] mx-auto text-center mb-16">
+            <h2 className="text-[40px] md:text-[48px] font-semibold text-[#0B0F17] leading-[1.1] tracking-[-0.02em] mb-6">The Qashivo Solution</h2>
+            <p className="text-[18px] md:text-[20px] text-[#556070] leading-[1.55]">
               Automated credit control that combines real-time intent detection, statutory compliance, and multi-channel automation
             </p>
           </div>
 
-          <div className="grid lg:grid-cols-2 gap-12 items-center mb-12">
+          <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
             <div>
-              <div className="space-y-6">
+              <div className="space-y-8">
                 <div className="flex gap-4">
-                  <div className="flex-shrink-0 w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center">
-                    <Brain className="w-6 h-6 text-gray-700" />
+                  <div className="flex-shrink-0 w-12 h-12 bg-[#12B8C4]/10 rounded-xl flex items-center justify-center">
+                    <Brain className="w-6 h-6 text-[#12B8C4]" />
                   </div>
                   <div>
-                    <h3 className="text-xl font-bold text-gray-900 mb-2">AI Intent Detection</h3>
-                    <p className="text-gray-600">
+                    <h3 className="text-[20px] font-semibold text-[#0B0F17] mb-2">AI Intent Detection</h3>
+                    <p className="text-[16px] text-[#556070] leading-[1.6]">
                       Every call, email, and SMS is analyzed in real-time. Our AI detects payment intent, 
                       sentiment, and automatically creates next actions.
                     </p>
@@ -881,12 +759,12 @@ export default function InvestorDemo() {
                 </div>
 
                 <div className="flex gap-4">
-                  <div className="flex-shrink-0 w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center">
-                    <BarChart3 className="w-6 h-6 text-gray-700" />
+                  <div className="flex-shrink-0 w-12 h-12 bg-[#12B8C4]/10 rounded-xl flex items-center justify-center">
+                    <BarChart3 className="w-6 h-6 text-[#12B8C4]" />
                   </div>
                   <div>
-                    <h3 className="text-xl font-bold text-gray-900 mb-2">Intelligent Forecasting</h3>
-                    <p className="text-gray-600">
+                    <h3 className="text-[20px] font-semibold text-[#0B0F17] mb-2">Intelligent Forecasting</h3>
+                    <p className="text-[16px] text-[#556070] leading-[1.6]">
                       ARD-based sales conversion with irregular buffer smoothing. Know exactly when 
                       you'll get paid with 95% accuracy.
                     </p>
@@ -894,12 +772,12 @@ export default function InvestorDemo() {
                 </div>
 
                 <div className="flex gap-4">
-                  <div className="flex-shrink-0 w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center">
-                    <Shield className="w-6 h-6 text-gray-700" />
+                  <div className="flex-shrink-0 w-12 h-12 bg-[#12B8C4]/10 rounded-xl flex items-center justify-center">
+                    <Shield className="w-6 h-6 text-[#12B8C4]" />
                   </div>
                   <div>
-                    <h3 className="text-xl font-bold text-gray-900 mb-2">Statutory Compliance</h3>
-                    <p className="text-gray-600">
+                    <h3 className="text-[20px] font-semibold text-[#0B0F17] mb-2">Statutory Compliance</h3>
+                    <p className="text-[16px] text-[#556070] leading-[1.6]">
                       Built on the Late Payment Act and the most recent updates. Automated interest calculations, statutory notices, and escalation pathways.
                     </p>
                   </div>
@@ -907,8 +785,8 @@ export default function InvestorDemo() {
               </div>
             </div>
 
-            <div className="bg-gray-50 rounded-xl p-8">
-              <div className="rounded-lg overflow-hidden mb-6 shadow-lg">
+            <div className="bg-[#F0F2F5] rounded-2xl p-6">
+              <div className="rounded-xl overflow-hidden mb-6 border border-[#E6E8EC]">
                 <img 
                   src={dashboardScreenshot} 
                   alt="Qashivo Dashboard - Intelligent Forecast View" 
@@ -917,16 +795,16 @@ export default function InvestorDemo() {
               </div>
               <div className="grid grid-cols-3 gap-4">
                 <div className="text-center py-3" data-testid="card-solution-accuracy">
-                  <p className="text-2xl font-bold text-[#A98743]" data-testid="text-accuracy-rate">3</p>
-                  <p className="text-xs text-gray-600">Scenario Options</p>
+                  <p className="text-[24px] font-semibold text-[#12B8C4]" data-testid="text-accuracy-rate">3</p>
+                  <p className="text-[13px] text-[#556070]">Scenario Options</p>
                 </div>
-                <div className="text-center py-3 border-x border-gray-200" data-testid="card-solution-dso">
-                  <p className="text-2xl font-bold text-[#0E131F]" data-testid="text-dso-reduction">-40%</p>
-                  <p className="text-xs text-gray-600">DSO Reduction</p>
+                <div className="text-center py-3 border-x border-[#E6E8EC]" data-testid="card-solution-dso">
+                  <p className="text-[24px] font-semibold text-[#0B0F17]" data-testid="text-dso-reduction">-40%</p>
+                  <p className="text-[13px] text-[#556070]">DSO Reduction</p>
                 </div>
                 <div className="text-center py-3" data-testid="card-solution-time">
-                  <p className="text-2xl font-bold text-[#8B2635]" data-testid="text-time-saved">85%</p>
-                  <p className="text-xs text-gray-600">Time Saved</p>
+                  <p className="text-[24px] font-semibold text-[#12B8C4]" data-testid="text-time-saved">85%</p>
+                  <p className="text-[13px] text-[#556070]">Time Saved</p>
                 </div>
               </div>
             </div>
@@ -934,213 +812,151 @@ export default function InvestorDemo() {
         </div>
       </section>
 
-      {/* Live AI Demos */}
-      <section id="demos" className="py-12 md:py-24 px-6 bg-white">
-        <div className="max-w-7xl mx-auto">
-          <div className="grid lg:grid-cols-2 gap-12 mb-12">
-              {/* Voice Demo */}
-              <div className="p-8 border border-gray-100 rounded-xl bg-gray-50">
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="p-3 bg-[#8B2635]/10 rounded-xl">
-                    <Phone className="w-6 h-6 text-[#8B2635]" />
-                  </div>
-                  <div>
-                    <h3 className="text-2xl font-bold text-gray-900">AI Voice Call</h3>
-                    <p className="text-sm text-gray-600">Real-time intent detection</p>
-                  </div>
+      {/* Live AI Demo */}
+      <section id="demos" className="py-16 md:py-24">
+        <div className="max-w-[1200px] mx-auto px-6">
+          <div className="max-w-[700px] mx-auto text-center mb-12">
+            <h2 className="text-[40px] md:text-[48px] font-semibold text-[#0B0F17] leading-[1.1] tracking-[-0.02em] mb-6">Experience Our AI Voice Agent</h2>
+            <p className="text-[18px] md:text-[20px] text-[#556070] leading-[1.55]">
+              Try our real-time AI voice agent. Receive an automated collection call and watch our AI detect intent and sentiment in real-time.
+            </p>
+          </div>
+
+          <div className="max-w-[480px] mx-auto">
+            <div className="bg-white rounded-2xl border border-[#E6E8EC] p-8">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="p-3 bg-[#12B8C4]/10 rounded-xl">
+                  <Phone className="w-6 h-6 text-[#12B8C4]" />
                 </div>
-                <p className="text-gray-700 mb-6">
-                  Receive an automated collection call. Our system analyzes your responses in real-time, 
-                  detecting intent, sentiment, and commitment to pay.
-                </p>
-                <div className="space-y-4">
-                  <div>
-                    <Label className="text-gray-700 font-medium">Your Name</Label>
-                    <Input
-                      type="text"
-                      value={voiceName}
-                      onChange={(e) => setVoiceName(e.target.value)}
-                      placeholder="John Smith"
-                      className="mt-1 bg-white border-gray-300"
-                      data-testid="input-voice-name"
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-gray-700 font-medium">Your Phone Number</Label>
-                    <div className="flex gap-2 mt-1">
-                      <Select value={voiceCountryCode} onValueChange={setVoiceCountryCode}>
-                        <SelectTrigger className="w-[160px] bg-white border-gray-300" data-testid="select-voice-country">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {COUNTRY_CODES.map((country) => (
-                            <SelectItem key={country.value} value={country.value}>
-                              {country.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <Input
-                        type="tel"
-                        value={voicePhone}
-                        onChange={(e) => setVoicePhone(e.target.value)}
-                        placeholder="07715 254857"
-                        className="flex-1 bg-white border-gray-300"
-                        data-testid="input-voice-phone"
-                      />
-                    </div>
-                  </div>
-                  <Button
-                    onClick={handleVoiceDemo}
-                    disabled={!voicePhone}
-                    className="w-full bg-[#8B2635] hover:bg-[#7a222f] text-white text-lg py-6 rounded-full"
-                    data-testid="button-start-voice-demo"
-                  >
-                    <Phone className="w-5 h-5 mr-2" />
-                    Call Me Now
-                  </Button>
-                  <p className="text-sm text-gray-600 text-center">
-                    You'll receive a call from +1 (586) 244-8999
-                  </p>
+                <div>
+                  <h3 className="text-[24px] font-semibold text-[#0B0F17]">AI Voice Call Demo</h3>
+                  <p className="text-[14px] text-[#556070]">Real-time intent detection</p>
                 </div>
               </div>
-
-              {/* SMS Demo */}
-              <div className="p-8 border border-gray-100 rounded-xl bg-gray-50">
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="p-3 bg-[#A98743]/10 rounded-xl">
-                    <MessageSquare className="w-6 h-6 text-[#A98743]" />
-                  </div>
-                  <div>
-                    <h3 className="text-2xl font-bold text-gray-900">AI SMS Analysis</h3>
-                    <p className="text-sm text-gray-600">Intelligent text processing</p>
-                  </div>
+              <p className="text-[16px] text-[#556070] leading-[1.6] mb-6">
+                Receive an automated collection call. Our system analyzes your responses in real-time, 
+                detecting intent, sentiment, and commitment to pay.
+              </p>
+              <div className="space-y-4">
+                <div>
+                  <Label className="text-[#0B0F17] font-medium text-[14px]">Your Name</Label>
+                  <Input
+                    type="text"
+                    value={voiceName}
+                    onChange={(e) => setVoiceName(e.target.value)}
+                    placeholder="John Smith"
+                    className="mt-1 bg-white border-[#E6E8EC]"
+                    data-testid="input-voice-name"
+                  />
                 </div>
-                <p className="text-gray-700 mb-6">
-                  Reply to our SMS and watch our AI instantly extract payment intent, sentiment, 
-                  and recommended next actions from your message.
-                </p>
-                <div className="space-y-4">
-                  <div>
-                    <Label className="text-gray-700 font-medium">Your Name</Label>
+                <div>
+                  <Label className="text-[#0B0F17] font-medium text-[14px]">Your Phone Number</Label>
+                  <div className="flex gap-2 mt-1">
+                    <Select value={voiceCountryCode} onValueChange={setVoiceCountryCode}>
+                      <SelectTrigger className="w-[160px] bg-white border-[#E6E8EC]" data-testid="select-voice-country">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {COUNTRY_CODES.map((country) => (
+                          <SelectItem key={country.value} value={country.value}>
+                            {country.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <Input
-                      type="text"
-                      value={smsName}
-                      onChange={(e) => setSmsName(e.target.value)}
-                      placeholder="John Smith"
-                      className="mt-1 bg-white border-gray-300"
-                      data-testid="input-sms-name"
+                      type="tel"
+                      value={voicePhone}
+                      onChange={(e) => setVoicePhone(e.target.value)}
+                      placeholder="07715 254857"
+                      className="flex-1 bg-white border-[#E6E8EC]"
+                      data-testid="input-voice-phone"
                     />
                   </div>
-                  <div>
-                    <Label className="text-gray-700 font-medium">Your Phone Number</Label>
-                    <div className="flex gap-2 mt-1">
-                      <Select value={smsCountryCode} onValueChange={setSmsCountryCode}>
-                        <SelectTrigger className="w-[160px] bg-white border-gray-300" data-testid="select-sms-country">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {COUNTRY_CODES.map((country) => (
-                            <SelectItem key={country.value} value={country.value}>
-                              {country.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <Input
-                        type="tel"
-                        value={smsPhone}
-                        onChange={(e) => setSmsPhone(e.target.value)}
-                        placeholder="07715 254857"
-                        className="flex-1 bg-white border-gray-300"
-                        data-testid="input-sms-phone"
-                      />
-                    </div>
-                  </div>
-                  <Button
-                    onClick={handleSMSDemo}
-                    disabled={!smsPhone}
-                    className="w-full bg-[#A98743] hover:bg-[#8B7035] text-white text-lg py-6 rounded-full"
-                    data-testid="button-start-sms-demo"
-                  >
-                    <MessageSquare className="w-5 h-5 mr-2" />
-                    Send SMS Now
-                  </Button>
-                  <p className="text-sm text-gray-600 text-center">
-                    You'll receive an SMS from +44 7418 317011
-                  </p>
                 </div>
+                <Button
+                  onClick={handleVoiceDemo}
+                  disabled={!voicePhone}
+                  className="w-full bg-[#12B8C4] hover:bg-[#0fa3ae] text-white text-[16px] h-12 rounded-full font-medium"
+                  data-testid="button-start-voice-demo"
+                >
+                  <Phone className="w-5 h-5 mr-2" />
+                  Call Me Now
+                </Button>
+                <p className="text-[14px] text-[#556070] text-center">
+                  You'll receive a call from +1 (586) 244-8999
+                </p>
               </div>
             </div>
-
+          </div>
         </div>
       </section>
 
       {/* Market Opportunity */}
-      <section className="py-12 md:py-24 px-6 bg-white border-b border-gray-100">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-gray-900 mb-4">A £4.8B Market Made Mandatory by Law</h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+      <section className="py-16 md:py-24 border-y border-[#E6E8EC]">
+        <div className="max-w-[1200px] mx-auto px-6">
+          <div className="max-w-[700px] mx-auto text-center mb-16">
+            <h2 className="text-[40px] md:text-[48px] font-semibold text-[#0B0F17] leading-[1.1] tracking-[-0.02em] mb-6">A £4.8B Market Made Mandatory by Law</h2>
+            <p className="text-[18px] md:text-[20px] text-[#556070] leading-[1.55]">
               The Late Payment Act creates a massive, defensible opportunity with regulatory tailwinds
             </p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-12 mb-16">
+          <div className="grid md:grid-cols-3 gap-10 md:gap-12 mb-16">
             <div className="text-center" data-testid="card-market-tam">
-              <div className="w-14 h-14 bg-[#0E131F]/10 rounded-xl flex items-center justify-center mb-6 mx-auto">
-                <Target className="w-7 h-7 text-[#0E131F]" />
+              <div className="w-14 h-14 bg-[#0B0F17]/10 rounded-xl flex items-center justify-center mb-6 mx-auto">
+                <Target className="w-7 h-7 text-[#0B0F17]" />
               </div>
-              <div className="text-5xl font-bold text-[#0E131F] mb-2" data-testid="text-tam-count">2.7M</div>
-              <p className="text-xl font-semibold text-gray-900 mb-2">UK SMEs (TAM)</p>
-              <p className="text-gray-600" data-testid="text-tam-value">£4.8B Total Market</p>
-              <p className="text-sm text-gray-500 mt-4">Every business needs credit control</p>
+              <div className="text-[48px] font-semibold text-[#0B0F17] mb-2" data-testid="text-tam-count">2.7M</div>
+              <p className="text-[20px] font-semibold text-[#0B0F17] mb-2">UK SMEs (TAM)</p>
+              <p className="text-[16px] text-[#556070]" data-testid="text-tam-value">£4.8B Total Market</p>
+              <p className="text-[14px] text-[#556070] mt-4">Every business needs credit control</p>
             </div>
 
             <div className="text-center" data-testid="card-market-sam">
-              <div className="w-14 h-14 bg-[#8B2635]/10 rounded-xl flex items-center justify-center mb-6 mx-auto">
-                <Users className="w-7 h-7 text-[#8B2635]" />
+              <div className="w-14 h-14 bg-[#12B8C4]/10 rounded-xl flex items-center justify-center mb-6 mx-auto">
+                <Users className="w-7 h-7 text-[#12B8C4]" />
               </div>
-              <div className="text-5xl font-bold text-[#8B2635] mb-2" data-testid="text-sam-count">800K</div>
-              <p className="text-xl font-semibold text-gray-900 mb-2">Cloud Accounting (SAM)</p>
-              <p className="text-gray-600" data-testid="text-sam-value">£1.4B Addressable</p>
-              <p className="text-sm text-gray-500 mt-4">Xero + QuickBooks integration ready</p>
+              <div className="text-[48px] font-semibold text-[#12B8C4] mb-2" data-testid="text-sam-count">800K</div>
+              <p className="text-[20px] font-semibold text-[#0B0F17] mb-2">Cloud Accounting (SAM)</p>
+              <p className="text-[16px] text-[#556070]" data-testid="text-sam-value">£1.4B Addressable</p>
+              <p className="text-[14px] text-[#556070] mt-4">Xero + QuickBooks integration ready</p>
             </div>
 
             <div className="text-center" data-testid="card-market-som">
-              <div className="w-14 h-14 bg-[#A98743]/10 rounded-xl flex items-center justify-center mb-6 mx-auto">
-                <Rocket className="w-7 h-7 text-[#A98743]" />
+              <div className="w-14 h-14 bg-[#12B8C4]/10 rounded-xl flex items-center justify-center mb-6 mx-auto">
+                <Rocket className="w-7 h-7 text-[#12B8C4]" />
               </div>
-              <div className="text-5xl font-bold text-[#A98743] mb-2" data-testid="text-som-count">4-8K</div>
-              <p className="text-xl font-semibold text-gray-900 mb-2">3-Year Target (SOM)</p>
-              <p className="text-gray-600" data-testid="text-som-value">£7-14M Revenue</p>
-              <p className="text-sm text-gray-500 mt-4">200+ pre-launch inquiries</p>
+              <div className="text-[48px] font-semibold text-[#12B8C4] mb-2" data-testid="text-som-count">4-8K</div>
+              <p className="text-[20px] font-semibold text-[#0B0F17] mb-2">3-Year Target (SOM)</p>
+              <p className="text-[16px] text-[#556070]" data-testid="text-som-value">£7-14M Revenue</p>
+              <p className="text-[14px] text-[#556070] mt-4">200+ pre-launch inquiries</p>
             </div>
           </div>
 
-          <div className="border-t border-gray-100 pt-12">
-            <h3 className="text-2xl font-bold text-gray-900 mb-8 text-center">Why We'll Win</h3>
-            <div className="grid md:grid-cols-3 gap-12">
+          <div className="border-t border-[#E6E8EC] pt-12">
+            <h3 className="text-[24px] font-semibold text-[#0B0F17] mb-10 text-center">Why We'll Win</h3>
+            <div className="grid md:grid-cols-3 gap-10 md:gap-12">
               <div className="text-center">
-                <div className="w-14 h-14 bg-[#A98743]/10 rounded-xl flex items-center justify-center mx-auto mb-4">
-                  <Shield className="w-7 h-7 text-[#A98743]" />
+                <div className="w-14 h-14 bg-[#12B8C4]/10 rounded-xl flex items-center justify-center mx-auto mb-4">
+                  <Shield className="w-7 h-7 text-[#12B8C4]" />
                 </div>
-                <p className="font-semibold text-gray-900 mb-2">Legal Moat</p>
-                <p className="text-sm text-gray-600">Built on the Late Payment Act - competitors can't replicate statutory compliance</p>
+                <p className="font-semibold text-[#0B0F17] mb-2">Legal Moat</p>
+                <p className="text-[14px] text-[#556070]">Built on the Late Payment Act - competitors can't replicate statutory compliance</p>
               </div>
               <div className="text-center">
-                <div className="w-14 h-14 bg-[#8B2635]/10 rounded-xl flex items-center justify-center mx-auto mb-4">
-                  <Brain className="w-7 h-7 text-[#8B2635]" />
+                <div className="w-14 h-14 bg-[#12B8C4]/10 rounded-xl flex items-center justify-center mx-auto mb-4">
+                  <Brain className="w-7 h-7 text-[#12B8C4]" />
                 </div>
-                <p className="font-semibold text-gray-900 mb-2">AI Advantage</p>
-                <p className="text-sm text-gray-600">AI models developed using £70M+ pilot dataset</p>
+                <p className="font-semibold text-[#0B0F17] mb-2">AI Advantage</p>
+                <p className="text-[14px] text-[#556070]">AI models developed using £70M+ pilot dataset</p>
               </div>
               <div className="text-center">
-                <div className="w-14 h-14 bg-[#0E131F]/10 rounded-xl flex items-center justify-center mx-auto mb-4">
-                  <Zap className="w-7 h-7 text-[#0E131F]" />
+                <div className="w-14 h-14 bg-[#12B8C4]/10 rounded-xl flex items-center justify-center mx-auto mb-4">
+                  <Zap className="w-7 h-7 text-[#12B8C4]" />
                 </div>
-                <p className="font-semibold text-gray-900 mb-2">First Mover</p>
-                <p className="text-sm text-gray-600">No compliant AI solution exists - we own the category</p>
+                <p className="font-semibold text-[#0B0F17] mb-2">First Mover</p>
+                <p className="text-[14px] text-[#556070]">No compliant AI solution exists - we own the category</p>
               </div>
             </div>
           </div>
@@ -1148,86 +964,85 @@ export default function InvestorDemo() {
       </section>
 
       {/* Traction */}
-      <section className="py-12 md:py-24 px-6 bg-white border-b border-gray-100">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
-            <div className="inline-block px-4 py-2 bg-[#A98743]/10 rounded-full mb-4">
-              <span className="text-[#A98743] font-semibold">DEVELOPMENT PROGRESS</span>
+      <section className="py-16 md:py-24">
+        <div className="max-w-[1200px] mx-auto px-6">
+          <div className="max-w-[700px] mx-auto text-center mb-16">
+            <div className="inline-block px-4 py-2 bg-[#12B8C4]/10 rounded-full mb-4">
+              <span className="text-[#12B8C4] font-medium text-[14px]">DEVELOPMENT PROGRESS</span>
             </div>
-            <h2 className="text-4xl font-bold text-gray-900 mb-4">Market Validation</h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+            <h2 className="text-[40px] md:text-[48px] font-semibold text-[#0B0F17] leading-[1.1] tracking-[-0.02em] mb-6">Market Validation</h2>
+            <p className="text-[18px] md:text-[20px] text-[#556070] leading-[1.55]">
               Positive pilot feedback and strong market interest across target segments
             </p>
           </div>
 
           <div className="grid md:grid-cols-4 gap-8">
             <div className="text-center" data-testid="card-traction-waitlist">
-              <div className="w-12 h-12 bg-[#A98743]/10 rounded-xl flex items-center justify-center mb-4 mx-auto">
-                <TrendingUp className="w-6 h-6 text-[#A98743]" />
+              <div className="w-12 h-12 bg-[#12B8C4]/10 rounded-xl flex items-center justify-center mb-4 mx-auto">
+                <TrendingUp className="w-6 h-6 text-[#12B8C4]" />
               </div>
-              <div className="text-4xl font-bold text-[#A98743] mb-1" data-testid="text-waitlist-count">200+</div>
-              <p className="text-gray-700 font-medium">Product Inquiries</p>
+              <div className="text-[36px] font-semibold text-[#12B8C4] mb-1" data-testid="text-waitlist-count">200+</div>
+              <p className="text-[#0B0F17] font-medium">Product Inquiries</p>
             </div>
 
             <div className="text-center" data-testid="card-traction-customers">
-              <div className="w-12 h-12 bg-[#0E131F]/10 rounded-xl flex items-center justify-center mb-4 mx-auto">
-                <Users className="w-6 h-6 text-[#0E131F]" />
+              <div className="w-12 h-12 bg-[#0B0F17]/10 rounded-xl flex items-center justify-center mb-4 mx-auto">
+                <Users className="w-6 h-6 text-[#0B0F17]" />
               </div>
-              <div className="text-4xl font-bold text-[#0E131F] mb-1" data-testid="text-beta-customers">12</div>
-              <p className="text-gray-700 font-medium">Development Testers</p>
+              <div className="text-[36px] font-semibold text-[#0B0F17] mb-1" data-testid="text-beta-customers">12</div>
+              <p className="text-[#0B0F17] font-medium">Development Testers</p>
             </div>
 
             <div className="text-center" data-testid="card-traction-invoices">
-              <div className="w-12 h-12 bg-[#8B2635]/10 rounded-xl flex items-center justify-center mb-4 mx-auto">
-                <DollarSign className="w-6 h-6 text-[#8B2635]" />
+              <div className="w-12 h-12 bg-[#12B8C4]/10 rounded-xl flex items-center justify-center mb-4 mx-auto">
+                <DollarSign className="w-6 h-6 text-[#12B8C4]" />
               </div>
-              <div className="text-4xl font-bold text-[#8B2635] mb-1" data-testid="text-invoices-managed">£70M+</div>
-              <p className="text-gray-700 font-medium">Pilot Data Processed</p>
+              <div className="text-[36px] font-semibold text-[#12B8C4] mb-1" data-testid="text-invoices-managed">£70M+</div>
+              <p className="text-[#0B0F17] font-medium">Pilot Data Processed</p>
             </div>
 
             <div className="text-center" data-testid="card-traction-dso">
-              <div className="w-12 h-12 bg-[#8B2635]/10 rounded-xl flex items-center justify-center mb-4 mx-auto">
-                <BarChart3 className="w-6 h-6 text-[#8B2635]" />
+              <div className="w-12 h-12 bg-[#12B8C4]/10 rounded-xl flex items-center justify-center mb-4 mx-auto">
+                <BarChart3 className="w-6 h-6 text-[#12B8C4]" />
               </div>
-              <div className="text-4xl font-bold text-[#8B2635] mb-1" data-testid="text-avg-dso-reduction">40%</div>
-              <p className="text-gray-700 font-medium">Trial DSO Improvement</p>
+              <div className="text-[36px] font-semibold text-[#12B8C4] mb-1" data-testid="text-avg-dso-reduction">40%</div>
+              <p className="text-[#0B0F17] font-medium">Trial DSO Improvement</p>
             </div>
           </div>
         </div>
       </section>
 
       {/* Final CTA */}
-      <section className="py-16 md:py-28 px-6 bg-white">
-        <div className="max-w-5xl mx-auto text-center">
-          <h2 className="text-[40px] md:text-5xl font-bold text-gray-900 mb-6">
+      <section className="py-16 md:py-24 border-t border-[#E6E8EC]">
+        <div className="max-w-[800px] mx-auto px-6 text-center">
+          <h2 className="text-[40px] md:text-[52px] font-semibold text-[#0B0F17] leading-[1.1] tracking-[-0.02em] mb-6">
             Join the £4.8B Opportunity
           </h2>
-          <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
-            SEIS-eligible (HMRC Advance Assurance WMBC/I&R/1183827082/VCRT) | 200+ market inquiries | Xero integration ready
+          <p className="text-[18px] md:text-[20px] text-[#556070] leading-[1.55] mb-10">
+            SEIS-eligible (HMRC Advance Assurance) | 200+ market inquiries | Xero integration ready
           </p>
-          <div className="flex justify-center">
-            <Button
-              className="bg-[#A98743] hover:bg-[#8B7035] text-white text-xl px-12 py-7 rounded-full"
-              onClick={() => {
-                const element = document.getElementById('dataroom-form');
-                if (element) {
-                  const headerOffset = 100; // Account for sticky header + some padding
-                  const elementPosition = element.getBoundingClientRect().top;
-                  const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
-                  window.scrollTo({ top: offsetPosition, behavior: 'smooth' });
-                }
-              }}
-              data-testid="button-access-dataroom-footer"
-            >
-              Access Investment Dataroom
-            </Button>
-          </div>
+          <Button
+            className="bg-[#12B8C4] hover:bg-[#0fa3ae] text-white text-[18px] px-10 h-14 rounded-full font-medium"
+            onClick={() => {
+              const element = document.getElementById('dataroom-form');
+              if (element) {
+                const headerOffset = 100;
+                const elementPosition = element.getBoundingClientRect().top;
+                const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+                window.scrollTo({ top: offsetPosition, behavior: 'smooth' });
+              }
+            }}
+            data-testid="button-access-dataroom-footer"
+          >
+            Access Investment Dataroom
+            <ArrowRight className="ml-2 h-5 w-5" />
+          </Button>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="py-12 px-6 bg-white border-t border-gray-100 text-center">
-        <p className="text-gray-500">
+      <footer className="py-12 px-6 border-t border-[#E6E8EC] text-center">
+        <p className="text-[14px] text-[#556070]">
           © 2026 Qashivo. Built in London. Backed by innovation.
         </p>
       </footer>
@@ -1246,19 +1061,19 @@ export default function InvestorDemo() {
         results={currentResults}
         type={resultsType}
         isDemoProcessing={isDemoProcessing}
-        progressMessage={resultsType === "voice" ? voiceProgress : smsProgress}
+        progressMessage={voiceProgress}
       />
 
       {/* Investment Call Dialog */}
       <Dialog open={investmentDialogOpen} onOpenChange={setInvestmentDialogOpen}>
-        <DialogContent className="sm:max-w-[500px] bg-white">
+        <DialogContent className="sm:max-w-[500px] bg-white border border-[#E6E8EC]">
           <DialogHeader>
-            <DialogTitle className="text-2xl font-bold text-gray-900">Download Full Investment Deck</DialogTitle>
+            <DialogTitle className="text-[24px] font-semibold text-[#0B0F17]">Download Full Investment Deck</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleInvestmentCall} className="space-y-5 pt-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="investor-first-name" className="text-gray-700 font-medium">First Name</Label>
+                <Label htmlFor="investor-first-name" className="text-[#0B0F17] font-medium text-[14px]">First Name</Label>
                 <Input
                   id="investor-first-name"
                   type="text"
@@ -1270,7 +1085,7 @@ export default function InvestorDemo() {
                     }
                   }}
                   placeholder="John"
-                  className={`bg-white ${formErrors.firstName ? 'border-red-500' : 'border-gray-300'}`}
+                  className={`bg-white ${formErrors.firstName ? 'border-red-500' : 'border-[#E6E8EC]'}`}
                   data-testid="input-investor-first-name"
                   required
                 />
@@ -1280,7 +1095,7 @@ export default function InvestorDemo() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="investor-last-name" className="text-gray-700 font-medium">Last Name</Label>
+                <Label htmlFor="investor-last-name" className="text-[#0B0F17] font-medium text-[14px]">Last Name</Label>
                 <Input
                   id="investor-last-name"
                   type="text"
@@ -1292,7 +1107,7 @@ export default function InvestorDemo() {
                     }
                   }}
                   placeholder="Smith"
-                  className={`bg-white ${formErrors.lastName ? 'border-red-500' : 'border-gray-300'}`}
+                  className={`bg-white ${formErrors.lastName ? 'border-red-500' : 'border-[#E6E8EC]'}`}
                   data-testid="input-investor-last-name"
                   required
                 />
@@ -1303,7 +1118,7 @@ export default function InvestorDemo() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="investor-phone" className="text-gray-700 font-medium">Phone Number</Label>
+              <Label htmlFor="investor-phone" className="text-[#0B0F17] font-medium text-[14px]">Phone Number</Label>
               <Input
                 id="investor-phone"
                 type="tel"
@@ -1315,7 +1130,7 @@ export default function InvestorDemo() {
                   }
                 }}
                 placeholder="+44 7715 254857"
-                className={`bg-white ${formErrors.phone ? 'border-red-500' : 'border-gray-300'}`}
+                className={`bg-white ${formErrors.phone ? 'border-red-500' : 'border-[#E6E8EC]'}`}
                 data-testid="input-investor-phone"
                 required
               />
@@ -1325,7 +1140,7 @@ export default function InvestorDemo() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="investor-email" className="text-gray-700 font-medium">Email Address</Label>
+              <Label htmlFor="investor-email" className="text-[#0B0F17] font-medium text-[14px]">Email Address</Label>
               <Input
                 id="investor-email"
                 type="email"
@@ -1337,7 +1152,7 @@ export default function InvestorDemo() {
                   }
                 }}
                 placeholder="john@example.com"
-                className={`bg-white ${formErrors.email ? 'border-red-500' : 'border-gray-300'}`}
+                className={`bg-white ${formErrors.email ? 'border-red-500' : 'border-[#E6E8EC]'}`}
                 data-testid="input-investor-email"
                 required
               />
@@ -1346,8 +1161,8 @@ export default function InvestorDemo() {
               )}
             </div>
 
-            <div className="border-t border-gray-200 pt-4 space-y-4">
-              <p className="text-sm font-semibold text-gray-900">Investment Compliance (FCA Requirements)</p>
+            <div className="border-t border-[#E6E8EC] pt-4 space-y-4">
+              <p className="text-[14px] font-semibold text-[#0B0F17]">Investment Compliance (FCA Requirements)</p>
               
               <div>
                 <div className="flex items-start gap-3">
@@ -1360,12 +1175,12 @@ export default function InvestorDemo() {
                         setFormErrors({ ...formErrors, highNetWorth: "" });
                       }
                     }}
-                    className="mt-1 flex-shrink-0 border-2 border-gray-600"
+                    className="mt-1 flex-shrink-0 border-2 border-[#556070]"
                     data-testid="checkbox-high-net-worth"
                   />
                   <Label 
                     htmlFor="high-net-worth" 
-                    className="text-xs text-gray-700 leading-tight cursor-pointer"
+                    className="text-[12px] text-[#556070] leading-tight cursor-pointer"
                   >
                     <strong>High Net Worth Declaration (COBS 4.12.6R):</strong> I declare that I am a certified high net worth individual for the purposes of the Financial Services and Markets Act 2000 (Financial Promotion) Order 2005. I understand that this means: (a) I can receive financial promotions that may not have been approved by an authorised person; (b) I accept that the investment to which the promotion relates may expose me to a significant risk of losing all of the money or other property invested. I am aware that it is open to me to seek advice from an authorised person who specialises in advising on investments of this kind.
                   </Label>
@@ -1386,12 +1201,12 @@ export default function InvestorDemo() {
                         setFormErrors({ ...formErrors, risk: "" });
                       }
                     }}
-                    className="mt-1 flex-shrink-0 border-2 border-gray-600"
+                    className="mt-1 flex-shrink-0 border-2 border-[#556070]"
                     data-testid="checkbox-risk-acknowledgment"
                   />
                   <Label 
                     htmlFor="risk-acknowledgment" 
-                    className="text-xs text-gray-700 leading-tight cursor-pointer"
+                    className="text-[12px] text-[#556070] leading-tight cursor-pointer"
                   >
                     <strong>Risk Warning:</strong> I understand and acknowledge that: (1) Investing in early-stage companies carries substantial risk and I may lose <strong>ALL</strong> of my investment; (2) Such investments are highly illiquid and I may not be able to sell my shares; (3) My investment is not protected by the Financial Services Compensation Scheme; (4) I should not invest more than I can afford to lose; (5) I have received and understood this statutory risk warning.
                   </Label>
