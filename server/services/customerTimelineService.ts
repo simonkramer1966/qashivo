@@ -253,6 +253,15 @@ export class CustomerTimelineService {
       )
     });
 
+    // Also fetch workflowId from the contact record
+    const contact = await db.query.contacts.findFirst({
+      where: and(
+        eq(contacts.id, customerId),
+        eq(contacts.tenantId, tenantId)
+      ),
+      columns: { workflowId: true }
+    });
+
     // Default values: 09:00-17:30, Monday-Friday
     const defaultDays = ["monday", "tuesday", "wednesday", "thursday", "friday"];
     
@@ -262,7 +271,8 @@ export class CustomerTimelineService {
       voiceEnabled: prefs?.voiceEnabled ?? true,
       bestContactWindowStart: prefs?.bestContactWindowStart || "09:00",
       bestContactWindowEnd: prefs?.bestContactWindowEnd || "17:30",
-      bestContactDays: (prefs?.bestContactDays as string[] | undefined) || defaultDays
+      bestContactDays: (prefs?.bestContactDays as string[] | undefined) || defaultDays,
+      workflowId: contact?.workflowId || null
     };
   }
 
@@ -300,6 +310,17 @@ export class CustomerTimelineService {
     }
     if (updates.bestContactDays !== undefined) {
       updateData.bestContactDays = updates.bestContactDays || null;
+    }
+
+    // Handle workflowId update on the contacts table (not customerPreferences)
+    if (updates.workflowId !== undefined) {
+      await db
+        .update(contacts)
+        .set({ workflowId: updates.workflowId || null })
+        .where(and(
+          eq(contacts.id, customerId),
+          eq(contacts.tenantId, tenantId)
+        ));
     }
 
     if (existing) {

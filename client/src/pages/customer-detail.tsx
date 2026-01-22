@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useRoute, Link } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { ArrowLeft, Mail, Phone, MessageSquare, Mic, ExternalLink, Clock } from "lucide-react";
+import { ArrowLeft, Mail, Phone, MessageSquare, Mic, ExternalLink, Clock, Zap } from "lucide-react";
 import NewSidebar from "@/components/layout/new-sidebar";
 import BottomNav from "@/components/layout/bottom-nav";
 import Header from "@/components/layout/header";
@@ -60,6 +60,16 @@ export default function CustomerDetailPage() {
   const { data: profile, isLoading: loadingProfile } = useQuery<FullProfileResponse>({
     queryKey: [`/api/contacts/${customerId}/full-profile`],
     enabled: !!customerId,
+  });
+
+  // Fetch available workflows for the tenant
+  interface Workflow {
+    id: string;
+    name: string;
+    isDefault?: boolean;
+  }
+  const { data: workflows } = useQuery<Workflow[]>({
+    queryKey: ['/api/workflows'],
   });
 
   const contact = profile?.contact;
@@ -121,6 +131,18 @@ export default function CustomerDetailPage() {
       onError: () => setLocalPrefs(previousPrefs)
     });
   };
+
+  const handleWorkflowChange = (workflowId: string | null) => {
+    if (!canEdit) return;
+    const previousPrefs = { ...localPrefs };
+    const newPrefs = { ...localPrefs, workflowId };
+    setLocalPrefs(newPrefs);
+    updatePreferencesMutation.mutate({ workflowId }, {
+      onError: () => setLocalPrefs(previousPrefs)
+    });
+  };
+
+  const isAutonomous = !localPrefs.workflowId;
 
   const DAYS_OF_WEEK = [
     { key: "monday", label: "Mon" },
@@ -251,8 +273,8 @@ export default function CustomerDetailPage() {
                   <Skeleton className="h-8 w-full" />
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  {/* Left: Channel Toggles */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                  {/* Column 1: Channel Toggles */}
                   <div className="space-y-3">
                     <p className="text-[11px] text-slate-400 mb-2">Allowed Channels</p>
                     <div className="flex items-center justify-between py-2">
@@ -290,7 +312,7 @@ export default function CustomerDetailPage() {
                     </div>
                   </div>
 
-                  {/* Right: Best Contact Window */}
+                  {/* Column 2: Best Contact Window */}
                   <div className="space-y-3">
                     <p className="text-[11px] text-slate-400 mb-2">Best Contact Window</p>
                     <div className="space-y-4">
@@ -359,6 +381,49 @@ export default function CustomerDetailPage() {
                         </div>
                       </div>
                     </div>
+                  </div>
+
+                  {/* Column 3: Workflow Preference */}
+                  <div className="space-y-3">
+                    <p className="text-[11px] text-slate-400 mb-2">Workflow Preference</p>
+                    <div className="flex items-center justify-between py-2">
+                      <div className="flex items-center gap-3">
+                        <Zap className="h-4 w-4 text-slate-400" />
+                        <span className="text-sm text-slate-700">Autonomous</span>
+                      </div>
+                      <Switch 
+                        checked={isAutonomous}
+                        onCheckedChange={(checked) => handleWorkflowChange(checked ? null : (workflows?.[0]?.id || null))}
+                        disabled={!canEdit || updatePreferencesMutation.isPending}
+                      />
+                    </div>
+                    {isAutonomous ? (
+                      <p className="text-xs text-slate-400 py-2">
+                        Qashivo AI determines the best collection strategy
+                      </p>
+                    ) : (
+                      <div className="py-2">
+                        <Select
+                          value={localPrefs.workflowId || ""}
+                          onValueChange={(value) => handleWorkflowChange(value || null)}
+                          disabled={!canEdit || updatePreferencesMutation.isPending}
+                        >
+                          <SelectTrigger className="w-full h-9 text-sm bg-white/70 border-gray-200/50">
+                            <SelectValue placeholder="Select workflow..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {workflows?.map((workflow) => (
+                              <SelectItem key={workflow.id} value={workflow.id}>
+                                {workflow.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <p className="text-xs text-slate-400 mt-2">
+                          Use a specific workflow for this customer
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}

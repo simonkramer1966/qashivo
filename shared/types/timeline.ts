@@ -107,6 +107,7 @@ export interface CustomerPreferences {
   bestContactWindowStart?: string;
   bestContactWindowEnd?: string;
   bestContactDays?: string[];
+  workflowId?: string | null;
 }
 
 export function getConfidenceLabel(confidence: number, requiresReview?: boolean): string {
