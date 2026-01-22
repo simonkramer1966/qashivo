@@ -588,55 +588,30 @@ export default function InvestorDemo() {
       {/* Hero Section */}
       <section className="pt-20 pb-16 md:pt-28 md:pb-20">
         <div className="max-w-[1200px] mx-auto px-6">
-          {/* Centered Hero Content */}
-          <div className="max-w-[900px] mx-auto text-center mb-16">
-            <div className="inline-block px-4 py-2 bg-[#12B8C4]/10 rounded-full mb-6">
-              <span className="text-[#0B0F17] font-medium text-[14px]">SEIS-Eligible Investment Opportunity (HMRC Advance Assurance)</span>
-            </div>
-            <h1 className="text-[40px] md:text-[52px] font-semibold text-[#0B0F17] leading-[1.05] tracking-[-0.02em] mb-6">
-              Automation That Turns Late Payments Into Predictable Cashflow
-            </h1>
-            <p className="text-[18px] md:text-[20px] text-[#556070] leading-[1.55] mb-4">
-              The UK's first automated credit control platform built on statutory rights. 
-              Transforming the £11B late payment crisis into predictable revenue.
-            </p>
-            <p className="text-[18px] md:text-[20px] text-[#556070] leading-[1.55] mb-10">
-              <strong className="text-[#0B0F17]">We're not just automating credit control. We're building the execution engine for SME collections.</strong>
-            </p>
-          </div>
-
-          {/* Video Section */}
-          <div className="max-w-[800px] mx-auto">
-            <div className="space-y-8">
-              <div className="bg-[#F0F2F5] rounded-2xl p-3">
-                <div className="aspect-video rounded-xl overflow-hidden border border-[#E6E8EC]">
-                  <video 
-                    ref={videoRef}
-                    className="w-full h-full object-contain"
-                    controls
-                    playsInline
-                    onPlay={() => {
-                      setIsVideoPlaying(true);
-                      if (videoRef.current) {
-                        videoRef.current.muted = false;
-                      }
-                    }}
-                  >
-                    <source src="/media/QashivoIntrov2.mp4" type="video/mp4" />
-                    Your browser does not support the video tag.
-                  </video>
-                </div>
+          <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+            {/* Left: Headlines */}
+            <div>
+              <div className="inline-block px-4 py-2 bg-[#12B8C4]/10 rounded-full mb-6">
+                <span className="text-[#0B0F17] font-medium text-[14px]">SEIS-Eligible Investment Opportunity (HMRC Advance Assurance)</span>
               </div>
-
-              {/* Compelling Copy Section */}
-              <div>
-                <h3 className="text-[24px] font-semibold text-[#0B0F17] mb-4">
+              <h1 className="text-[40px] md:text-[52px] font-semibold text-[#0B0F17] leading-[1.05] tracking-[-0.02em] mb-6">
+                Automation That Turns Late Payments Into Predictable Cashflow
+              </h1>
+              <p className="text-[18px] md:text-[20px] text-[#556070] leading-[1.55] mb-4">
+                The UK's first automated credit control platform built on statutory rights. 
+                Transforming the £11B late payment crisis into predictable revenue.
+              </p>
+              <p className="text-[18px] md:text-[20px] text-[#556070] leading-[1.55] mb-6">
+                <strong className="text-[#0B0F17]">We're not just automating credit control. We're building the execution engine for SME collections.</strong>
+              </p>
+              
+              {/* Compelling Copy */}
+              <div className="pt-6 border-t border-[#E6E8EC]">
+                <h3 className="text-[20px] font-semibold text-[#0B0F17] mb-3">
                   The Future of B2B Credit Control
                 </h3>
-                <p className="text-[16px] text-[#556070] leading-[1.6] mb-4">
-                  This is more than automation; it's intelligent execution that follows your policies consistently. 
-                  Qashivo doesn't just send reminders; it detects intent, classifies responses in real-time, and creates 
-                  statutory-compliant escalation paths automatically.
+                <p className="text-[16px] text-[#556070] leading-[1.6] mb-3">
+                  This is more than automation; it's intelligent execution that follows your policies consistently.
                 </p>
                 <p className="text-[16px] text-[#556070] leading-[1.6]">
                   The result? <strong className="text-[#0B0F17]">40% faster collections</strong>, 
@@ -645,6 +620,26 @@ export default function InvestorDemo() {
               </div>
             </div>
 
+            {/* Right: Video */}
+            <div className="bg-[#F0F2F5] rounded-2xl p-3">
+              <div className="aspect-video rounded-xl overflow-hidden border border-[#E6E8EC]">
+                <video 
+                  ref={videoRef}
+                  className="w-full h-full object-contain"
+                  controls
+                  playsInline
+                  onPlay={() => {
+                    setIsVideoPlaying(true);
+                    if (videoRef.current) {
+                      videoRef.current.muted = false;
+                    }
+                  }}
+                >
+                  <source src="/media/QashivoIntrov2.mp4" type="video/mp4" />
+                  Your browser does not support the video tag.
+                </video>
+              </div>
+            </div>
           </div>
         </div>
       </section>
