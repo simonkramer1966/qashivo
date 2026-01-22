@@ -21862,6 +21862,124 @@ ${tenant.name}
     }
   });
 
+  // Poll call status from Retell API (fallback when webhook doesn't arrive)
+  app.get("/api/investor/call-status/:callId", async (req, res) => {
+    try {
+      const { callId } = req.params;
+      const { leadId } = req.query;
+      
+      console.log(`📞 [CALL-STATUS] Checking call status for: ${callId}, leadId: ${leadId}`);
+      
+      if (!callId) {
+        return res.status(400).json({ message: "Call ID is required" });
+      }
+      
+      // Get call details from Retell API
+      const retellService = (await import('./retell-service.js')).default;
+      const callData = await retellService.getCall(callId);
+      
+      console.log(`📞 [CALL-STATUS] Retell call data:`, JSON.stringify({
+        call_id: callData.call_id,
+        call_status: callData.call_status,
+        end_timestamp: callData.end_timestamp,
+        disconnection_reason: callData.disconnection_reason,
+        has_transcript: !!callData.transcript
+      }));
+      
+      // Check if call is ended
+      const isEnded = callData.call_status === 'ended' || callData.call_status === 'error';
+      
+      if (isEnded && leadId) {
+        // Check if we already processed this call
+        const lead = await storage.getInvestorLead(leadId as string);
+        
+        if (lead && !lead.voiceDemoCompleted) {
+          console.log(`📞 [CALL-STATUS] Processing completed call for lead: ${leadId}`);
+          
+          // Process the call - same logic as webhook
+          const OpenAI = (await import('openai')).default;
+          const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+          
+          const transcriptText = callData.transcript || 'No transcript available';
+          
+          const completion = await openai.chat.completions.create({
+            model: "gpt-4o-mini",
+            messages: [{
+              role: "system",
+              content: `Analyze this debt collection AI call transcript and extract detailed insights:
+1) Primary Intent: payment_plan, dispute, promise_to_pay, general_query, or unknown
+2) Sentiment: positive, neutral, negative, cooperative, or hostile
+3) Confidence Score: 0-100 (how confident are you in the intent detection)
+4) Key Insights: Array of 2-3 key findings from the conversation
+5) Action Items: Array of recommended next steps
+6) Summary: 1-2 sentence summary of the call outcome
+
+Return only JSON with keys: intent, sentiment, confidence, keyInsights, actionItems, summary`
+            }, {
+              role: "user",
+              content: transcriptText
+            }],
+            response_format: { type: "json_object" }
+          });
+          
+          const analysis = JSON.parse(completion.choices[0].message.content || '{}');
+          
+          // Check if call was terminated by customer
+          const terminatedByCustomer = callData.disconnection_reason === 'user_hangup' || 
+                                        callData.disconnection_reason === 'callee_hangup';
+          
+          // Update lead with voice demo results
+          const updatedLead = await storage.updateInvestorLead(leadId as string, {
+            voiceDemoCompleted: true,
+            voiceDemoResults: {
+              callId: callData.call_id,
+              transcript: transcriptText,
+              intent: terminatedByCustomer ? 'call_terminated' : (analysis.intent || 'unknown'),
+              sentiment: analysis.sentiment || 'neutral',
+              confidence: analysis.confidence || 50,
+              keyInsights: analysis.keyInsights || [],
+              actionItems: analysis.actionItems || [],
+              summary: analysis.summary || 'Call completed',
+              callDuration: callData.call_duration_ms ? Math.round(callData.call_duration_ms / 1000) : 0,
+              terminatedByCustomer,
+              disconnectionReason: callData.disconnection_reason,
+              analyzedAt: new Date().toISOString()
+            }
+          });
+          
+          console.log('✅ [CALL-STATUS] Voice analysis saved via polling:', analysis);
+          
+          // Broadcast results via WebSocket
+          if ((app as any).broadcastDemoResults) {
+            (app as any).broadcastDemoResults(leadId, {
+              voiceDemoCompleted: updatedLead.voiceDemoCompleted,
+              smsDemoCompleted: updatedLead.smsDemoCompleted,
+              voiceDemoResults: updatedLead.voiceDemoResults,
+              smsDemoResults: updatedLead.smsDemoResults
+            });
+            console.log('📡 [CALL-STATUS] Broadcasted results via WebSocket');
+          }
+          
+          return res.json({
+            callStatus: callData.call_status,
+            isEnded: true,
+            processed: true,
+            analysis
+          });
+        }
+      }
+      
+      res.json({
+        callStatus: callData.call_status,
+        isEnded,
+        processed: false
+      });
+    } catch (error: any) {
+      console.error("❌ [CALL-STATUS] Error checking call status:", error?.message);
+      res.status(500).json({ message: "Failed to check call status", error: error?.message });
+    }
+  });
+
   // Webhook for voice call completion (from Retell)
   app.post("/api/investor/webhook/voice", async (req, res) => {
     try {
