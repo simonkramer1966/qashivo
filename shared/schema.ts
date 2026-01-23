@@ -207,6 +207,7 @@ export const customerContactPersons = pgTable("customer_contact_persons", {
   name: varchar("name").notNull(),
   email: varchar("email"),
   phone: varchar("phone"),
+  smsNumber: varchar("sms_number"),
   jobTitle: varchar("job_title"),
   isPrimaryCreditControl: boolean("is_primary_credit_control").default(false), // Primary contact for collections
   isEscalation: boolean("is_escalation").default(false), // Escalation contact

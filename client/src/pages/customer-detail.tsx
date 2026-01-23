@@ -51,6 +51,7 @@ interface CustomerContactPerson {
   name: string;
   email?: string | null;
   phone?: string | null;
+  smsNumber?: string | null;
   jobTitle?: string | null;
   isPrimaryCreditControl: boolean;
   isEscalation: boolean;
@@ -104,17 +105,17 @@ export default function CustomerDetailPage() {
 
   // State for add contact dialog
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [newPerson, setNewPerson] = useState({ name: '', email: '', phone: '', jobTitle: '' });
+  const [newPerson, setNewPerson] = useState({ name: '', email: '', phone: '', smsNumber: '', jobTitle: '' });
 
   // Mutations for contact persons
   const createPersonMutation = useMutation({
-    mutationFn: async (data: { name: string; email?: string; phone?: string; jobTitle?: string }) => {
+    mutationFn: async (data: { name: string; email?: string; phone?: string; smsNumber?: string; jobTitle?: string }) => {
       if (!customerId) throw new Error("No customer selected");
       return apiRequest("POST", `/api/contacts/${customerId}/persons`, data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/contacts', customerId, 'persons'] });
-      setNewPerson({ name: '', email: '', phone: '', jobTitle: '' });
+      setNewPerson({ name: '', email: '', phone: '', smsNumber: '', jobTitle: '' });
       setIsAddDialogOpen(false);
     }
   });
@@ -333,6 +334,15 @@ export default function CustomerDetailPage() {
                                 className="mt-1"
                               />
                             </div>
+                            <div>
+                              <label className="text-sm text-slate-600">SMS Number</label>
+                              <Input 
+                                value={newPerson.smsNumber}
+                                onChange={(e) => setNewPerson(p => ({ ...p, smsNumber: e.target.value }))}
+                                placeholder="+44 7XXX XXXXXX"
+                                className="mt-1"
+                              />
+                            </div>
                           </div>
                           <div className="flex justify-end gap-2">
                             <DialogClose asChild>
@@ -386,6 +396,12 @@ export default function CustomerDetailPage() {
                                       <span className="flex items-center gap-1">
                                         <Phone className="h-3 w-3" />
                                         {person.phone}
+                                      </span>
+                                    )}
+                                    {person.smsNumber && (
+                                      <span className="flex items-center gap-1">
+                                        <MessageSquare className="h-3 w-3" />
+                                        {person.smsNumber}
                                       </span>
                                     )}
                                   </div>
