@@ -4445,7 +4445,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         channel: 'voice',
         summary: scheduleMode === 'now' ? 'AI call started' : (scheduleMode === 'asap' ? 'AI call initiated' : 'AI call scheduled'),
         preview: reason || `Goal: ${goal.replace(/_/g, ' ')}`,
-        body: JSON.stringify({ reason, goal, tone, toneLabel, maxDuration, recipientPhone: phoneToCall, scheduledFor: scheduledTime }),
+        body: reason || null,
         status: 'pending',
         createdByType: 'user',
         createdByName: userName,
