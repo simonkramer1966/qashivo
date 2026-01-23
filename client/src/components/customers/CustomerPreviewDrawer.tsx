@@ -886,7 +886,7 @@ export function CustomerPreviewDrawer({
                                     type="date"
                                     value={callScheduleDate}
                                     onChange={(e) => setCallScheduleDate(e.target.value)}
-                                    className="h-9 bg-white border-slate-200"
+                                    className="h-9 bg-white border-slate-200 text-xs"
                                     min={new Date().toISOString().split('T')[0]}
                                   />
                                 </div>
@@ -899,7 +899,7 @@ export function CustomerPreviewDrawer({
                                     type="time"
                                     value={callScheduleTime}
                                     onChange={(e) => setCallScheduleTime(e.target.value)}
-                                    className="h-9 bg-white border-slate-200"
+                                    className="h-9 bg-white border-slate-200 text-xs"
                                   />
                                 </div>
                               </div>
