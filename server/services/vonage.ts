@@ -88,6 +88,10 @@ export async function sendSMS(params: SMSParams & {
     return { success: false, error: 'No response from Vonage' };
   } catch (error: any) {
     console.error('❌ Vonage SMS error:', error.message);
+    console.error('❌ Vonage full error:', JSON.stringify(error, null, 2));
+    if (error.response) {
+      console.error('❌ Vonage error response:', JSON.stringify(error.response, null, 2));
+    }
     return { 
       success: false, 
       error: error.message || 'Failed to send SMS' 
