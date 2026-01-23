@@ -21,6 +21,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { Slider } from "@/components/ui/slider";
 import {
   Select,
   SelectContent,
@@ -64,6 +65,17 @@ interface CustomerPreviewDrawerProps {
 }
 
 type NoteType = "internal" | "reminder";
+type CallGoal = "payment_commitment" | "payment_plan" | "query_resolution" | "general_followup";
+type CallScheduleMode = "asap" | "scheduled";
+
+const callGoalLabels: Record<CallGoal, string> = {
+  payment_commitment: "Payment Commitment",
+  payment_plan: "Payment Plan",
+  query_resolution: "Query Resolution",
+  general_followup: "General Follow-up",
+};
+
+const toneLabels = ["Friendly", "Professional", "Firm"];
 
 interface TenantUser {
   id: string;
@@ -87,6 +99,16 @@ export function CustomerPreviewDrawer({
   const [reminderDate, setReminderDate] = useState("");
   const [reminderTime, setReminderTime] = useState("");
   const [assignedToUserId, setAssignedToUserId] = useState<string>("");
+  
+  const [isCallMode, setIsCallMode] = useState(false);
+  const [callReason, setCallReason] = useState("");
+  const [callTone, setCallTone] = useState(1);
+  const [callGoal, setCallGoal] = useState<CallGoal>("payment_commitment");
+  const [callMaxDuration, setCallMaxDuration] = useState(5);
+  const [callScheduleMode, setCallScheduleMode] = useState<CallScheduleMode>("asap");
+  const [callScheduleDate, setCallScheduleDate] = useState("");
+  const [callScheduleTime, setCallScheduleTime] = useState("");
+  
   const [isRecentActivityExpanded, setIsRecentActivityExpanded] = useState(true);
   const [expandedTimelineItems, setExpandedTimelineItems] = useState<Set<string>>(new Set());
   const [invoiceFilter, setInvoiceFilter] = useState<"all" | "overdue">("overdue");
@@ -153,7 +175,74 @@ export function CustomerPreviewDrawer({
 
   const handleNoteButtonClick = () => {
     setIsNoteMode(true);
+    setIsCallMode(false);
     setIsRecentActivityExpanded(false);
+  };
+
+  const scheduleCallMutation = useMutation({
+    mutationFn: async (callData: {
+      reason: string;
+      tone: number;
+      goal: CallGoal;
+      maxDuration: number;
+      scheduleMode: CallScheduleMode;
+      scheduledFor?: string | null;
+    }) => {
+      const res = await apiRequest("POST", `/api/contacts/${customerId}/schedule-call`, callData);
+      return await res.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Call scheduled",
+        description: callScheduleMode === "asap" ? "AI call will be initiated shortly" : "AI call has been scheduled",
+      });
+      resetCallForm();
+      queryClient.invalidateQueries({ queryKey: [`/api/contacts/${customerId}/preview`] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to schedule call",
+        description: error.message || "Please try again",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const resetCallForm = () => {
+    setIsCallMode(false);
+    setCallReason("");
+    setCallTone(1);
+    setCallGoal("payment_commitment");
+    setCallMaxDuration(5);
+    setCallScheduleMode("asap");
+    setCallScheduleDate("");
+    setCallScheduleTime("");
+    setIsRecentActivityExpanded(true);
+  };
+
+  const handleCallButtonClick = () => {
+    setIsCallMode(true);
+    setIsNoteMode(false);
+    setIsRecentActivityExpanded(false);
+  };
+
+  const handleScheduleCall = () => {
+    let scheduledFor: string | null = null;
+    if (callScheduleMode === "scheduled" && callScheduleDate) {
+      const dateTime = callScheduleTime 
+        ? `${callScheduleDate}T${callScheduleTime}:00.000Z`
+        : `${callScheduleDate}T09:00:00.000Z`;
+      scheduledFor = dateTime;
+    }
+
+    scheduleCallMutation.mutate({
+      reason: callReason,
+      tone: callTone,
+      goal: callGoal,
+      maxDuration: callMaxDuration,
+      scheduleMode: callScheduleMode,
+      scheduledFor,
+    });
   };
 
   const handleSaveNote = () => {
@@ -663,6 +752,173 @@ export function CustomerPreviewDrawer({
                         </section>
                       </>
                     )}
+
+                    {/* Call Scheduling Section */}
+                    {isCallMode && (
+                      <>
+                        <Separator className="bg-slate-100" />
+                        <section className="space-y-4">
+                          <div className="flex items-center justify-between">
+                            <p className="text-[10px] text-slate-400 uppercase tracking-wider">
+                              Schedule AI Call
+                            </p>
+                          </div>
+
+                          <div className="space-y-3">
+                            {/* Reason for Call */}
+                            <div>
+                              <Label htmlFor="callReason" className="text-xs text-slate-500 mb-1.5 block">
+                                Reason for Call
+                              </Label>
+                              <Textarea
+                                id="callReason"
+                                placeholder="e.g., Follow up on overdue invoice, discussed payment plan last week..."
+                                value={callReason}
+                                onChange={(e) => setCallReason(e.target.value)}
+                                className="min-h-[60px] bg-white border-slate-200 resize-none text-xs"
+                              />
+                            </div>
+
+                            {/* Goal and Max Duration Row */}
+                            <div className="grid grid-cols-2 gap-3">
+                              <div>
+                                <Label htmlFor="callGoal" className="text-xs text-slate-500 mb-1.5 block">
+                                  Primary Goal
+                                </Label>
+                                <Select value={callGoal} onValueChange={(v) => setCallGoal(v as CallGoal)}>
+                                  <SelectTrigger id="callGoal" className="h-9 bg-white border-slate-200">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {Object.entries(callGoalLabels).map(([value, label]) => (
+                                      <SelectItem key={value} value={value}>{label}</SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <div>
+                                <Label className="text-xs text-slate-500 mb-1.5 block">
+                                  Max Duration
+                                </Label>
+                                <div className="flex items-center gap-2">
+                                  <Slider
+                                    value={[callMaxDuration]}
+                                    onValueChange={(v) => setCallMaxDuration(v[0])}
+                                    min={2}
+                                    max={10}
+                                    step={1}
+                                    className="flex-1"
+                                  />
+                                  <span className="text-xs text-slate-600 w-12 text-right">{callMaxDuration} min</span>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Tone Slider */}
+                            <div>
+                              <Label className="text-xs text-slate-500 mb-1.5 block">
+                                Tone
+                              </Label>
+                              <div className="flex items-center gap-2">
+                                <Slider
+                                  value={[callTone]}
+                                  onValueChange={(v) => setCallTone(v[0])}
+                                  min={0}
+                                  max={2}
+                                  step={1}
+                                  className="flex-1"
+                                />
+                                <span className="text-xs text-slate-600 w-20 text-right">{toneLabels[callTone]}</span>
+                              </div>
+                            </div>
+
+                            {/* Schedule Mode */}
+                            <div>
+                              <Label className="text-xs text-slate-500 mb-1.5 block">
+                                When to Call
+                              </Label>
+                              <div className="flex gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => setCallScheduleMode("asap")}
+                                  className={`flex-1 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                                    callScheduleMode === "asap"
+                                      ? "bg-slate-900 text-white"
+                                      : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                                  }`}
+                                >
+                                  ASAP
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setCallScheduleMode("scheduled")}
+                                  className={`flex-1 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                                    callScheduleMode === "scheduled"
+                                      ? "bg-slate-900 text-white"
+                                      : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                                  }`}
+                                >
+                                  Scheduled
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* Date/Time Picker for Scheduled Mode */}
+                            {callScheduleMode === "scheduled" && (
+                              <div className="grid grid-cols-2 gap-2">
+                                <div>
+                                  <Label htmlFor="callDate" className="text-xs text-slate-500 mb-1.5 block">
+                                    Date
+                                  </Label>
+                                  <Input
+                                    id="callDate"
+                                    type="date"
+                                    value={callScheduleDate}
+                                    onChange={(e) => setCallScheduleDate(e.target.value)}
+                                    className="h-9 bg-white border-slate-200"
+                                    min={new Date().toISOString().split('T')[0]}
+                                  />
+                                </div>
+                                <div>
+                                  <Label htmlFor="callTime" className="text-xs text-slate-500 mb-1.5 block">
+                                    Time
+                                  </Label>
+                                  <Input
+                                    id="callTime"
+                                    type="time"
+                                    value={callScheduleTime}
+                                    onChange={(e) => setCallScheduleTime(e.target.value)}
+                                    className="h-9 bg-white border-slate-200"
+                                  />
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Action Buttons */}
+                            <div className="flex gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={resetCallForm}
+                                className="flex-1 border-slate-200 text-xs"
+                              >
+                                <X className="h-4 w-4 mr-1.5" />
+                                Cancel
+                              </Button>
+                              <Button
+                                size="sm"
+                                onClick={handleScheduleCall}
+                                disabled={scheduleCallMutation.isPending || (callScheduleMode === "scheduled" && !callScheduleDate)}
+                                className="flex-1 bg-[#17B6C3] hover:bg-[#1396A1] text-white text-xs"
+                              >
+                                <Phone className="h-4 w-4 mr-1.5" />
+                                {scheduleCallMutation.isPending ? "Scheduling..." : "Schedule Call"}
+                              </Button>
+                            </div>
+                          </div>
+                        </section>
+                      </>
+                    )}
                   </>
                 ) : (
                   <p className="text-sm text-slate-400">Customer not found</p>
@@ -671,7 +927,7 @@ export function CustomerPreviewDrawer({
             </ScrollArea>
 
             {/* Left Footer - Action Buttons */}
-            {preview && !isNoteMode && (
+            {preview && !isNoteMode && !isCallMode && (
               <div className="px-6 py-4 border-t border-slate-100 flex-shrink-0">
                 <div className="flex gap-2">
                   <Button 
@@ -687,6 +943,7 @@ export function CustomerPreviewDrawer({
                     variant="outline" 
                     size="sm"
                     className="flex-1 basis-0 border-[#E6E8EC] text-[#64748b] text-xs hover:bg-slate-100"
+                    onClick={handleCallButtonClick}
                   >
                     <Phone className="h-4 w-4 mr-1.5" />
                     Call

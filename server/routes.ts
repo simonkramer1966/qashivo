@@ -4342,6 +4342,120 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Schedule an AI call to a contact
+  app.post("/api/contacts/:contactId/schedule-call", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { contactId } = req.params;
+      
+      // Verify contact exists and user has access to it
+      const contact = await storage.getContact(contactId, user.tenantId);
+      if (!contact) {
+        return res.status(404).json({ message: "Contact not found" });
+      }
+
+      if (!contact.phone) {
+        return res.status(400).json({ message: "Contact has no phone number" });
+      }
+
+      const { reason, tone, goal, maxDuration, scheduleMode, scheduledFor } = req.body;
+
+      // Map tone number (0=Friendly, 1=Professional, 2=Firm) to voice tone profile
+      const toneProfiles = ['VOICE_TONE_WARM_FRIENDLY', 'VOICE_TONE_CALM_COLLABORATIVE', 'VOICE_TONE_FIRM_ASSERTIVE'];
+      const voiceTone = toneProfiles[tone] || toneProfiles[1];
+
+      // Calculate scheduledFor time
+      let scheduledTime: Date;
+      if (scheduleMode === 'asap') {
+        // ASAP: schedule for now (will be picked up by executor immediately)
+        scheduledTime = new Date();
+      } else if (scheduledFor) {
+        scheduledTime = new Date(scheduledFor);
+      } else {
+        scheduledTime = new Date();
+      }
+
+      // Get the first overdue invoice for this contact (for call context)
+      const overdueInvoices = await db.select()
+        .from(invoices)
+        .where(
+          and(
+            eq(invoices.contactId, contactId),
+            eq(invoices.tenantId, user.tenantId),
+            eq(invoices.status, 'overdue')
+          )
+        )
+        .limit(1);
+
+      const primaryInvoice = overdueInvoices[0] || null;
+
+      // Create an action for the AI voice call
+      const [newAction] = await db.insert(actions).values({
+        tenantId: user.tenantId,
+        contactId: contactId,
+        invoiceId: primaryInvoice?.id || null,
+        userId: user.id,
+        type: 'voice',
+        status: 'scheduled',
+        scheduledFor: scheduledTime,
+        approvedBy: user.id, // Auto-approved since user manually scheduled
+        approvedAt: new Date(),
+        subject: `AI Call: ${goal.replace(/_/g, ' ')}`,
+        content: reason || '',
+        source: 'manual',
+        aiGenerated: true,
+        metadata: {
+          goal,
+          maxDuration,
+          voiceTone,
+          reason,
+          scheduleMode,
+          invoiceNumber: primaryInvoice?.invoiceNumber,
+          daysOverdue: primaryInvoice?.dueDate 
+            ? Math.max(0, Math.floor((Date.now() - new Date(primaryInvoice.dueDate).getTime()) / (1000 * 60 * 60 * 24)))
+            : 0,
+          totalOutstanding: primaryInvoice?.balance || 0,
+        }
+      }).returning();
+
+      // Create timeline event
+      const userName = user.firstName || user.lastName 
+        ? `${user.firstName || ''} ${user.lastName || ''}`.trim() 
+        : user.email;
+
+      await db.insert(timelineEvents).values({
+        tenantId: user.tenantId,
+        customerId: contactId,
+        occurredAt: new Date(),
+        direction: 'outbound',
+        channel: 'voice',
+        summary: scheduleMode === 'asap' ? 'AI call initiated' : 'AI call scheduled',
+        preview: reason || `Goal: ${goal.replace(/_/g, ' ')}`,
+        body: JSON.stringify({ reason, goal, tone, maxDuration, scheduledFor: scheduledTime }),
+        status: 'pending',
+        createdByType: 'user',
+        createdByName: userName,
+        actionId: newAction.id
+      });
+
+      return res.status(201).json({
+        success: true,
+        action: newAction,
+        message: scheduleMode === 'asap' ? "AI call initiated" : "AI call scheduled"
+      });
+    } catch (error) {
+      console.error("Error scheduling AI call:", error);
+      return res.status(500).json({ 
+        success: false,
+        message: "Failed to schedule AI call" 
+      });
+    }
+  });
+
   // Complete a reminder note
   app.patch("/api/notes/:noteId/complete", isAuthenticated, async (req: any, res) => {
     try {
