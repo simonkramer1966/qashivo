@@ -60,7 +60,7 @@ interface CustomerPreviewDrawerProps {
   onOpenChange: (open: boolean) => void;
 }
 
-type NoteType = "general" | "follow-up" | "internal" | "important" | "reminder";
+type NoteType = "internal" | "reminder";
 
 interface TenantUser {
   id: string;
@@ -80,7 +80,7 @@ export function CustomerPreviewDrawer({
 
   const [isNoteMode, setIsNoteMode] = useState(false);
   const [noteContent, setNoteContent] = useState("");
-  const [noteType, setNoteType] = useState<NoteType>("general");
+  const [noteType, setNoteType] = useState<NoteType>("internal");
   const [reminderDate, setReminderDate] = useState("");
   const [reminderTime, setReminderTime] = useState("");
   const [assignedToUserId, setAssignedToUserId] = useState<string>("");
@@ -138,7 +138,7 @@ export function CustomerPreviewDrawer({
   const resetNoteForm = () => {
     setIsNoteMode(false);
     setNoteContent("");
-    setNoteType("general");
+    setNoteType("internal");
     setReminderDate("");
     setReminderTime("");
     setAssignedToUserId("");
@@ -226,10 +226,7 @@ export function CustomerPreviewDrawer({
   };
 
   const noteTypeLabels: Record<NoteType, string> = {
-    "general": "General",
-    "follow-up": "Follow-up",
     "internal": "Internal",
-    "important": "Important",
     "reminder": "Reminder",
   };
 
