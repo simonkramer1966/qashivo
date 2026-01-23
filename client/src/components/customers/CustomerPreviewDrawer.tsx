@@ -1030,32 +1030,9 @@ export function CustomerPreviewDrawer({
                       <>
                         <Separator className="bg-slate-100" />
                         <section className="space-y-4">
-                          <div className="flex items-center justify-between">
-                            <p className="text-[10px] text-slate-400 uppercase tracking-wider">
+                          <p className="text-[10px] text-slate-400 uppercase tracking-wider">
                               Compose Email
                             </p>
-                            {emailTemplate !== "manual" && (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={handleGenerateEmail}
-                                disabled={isGeneratingEmail}
-                                className="border-[#17B6C3] text-[#17B6C3] hover:bg-[#17B6C3]/10 text-xs h-7 px-2"
-                              >
-                                {isGeneratingEmail ? (
-                                  <>
-                                    <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
-                                    Generating...
-                                  </>
-                                ) : (
-                                  <>
-                                    <Sparkles className="h-3.5 w-3.5 mr-1" />
-                                    Generate
-                                  </>
-                                )}
-                              </Button>
-                            )}
-                          </div>
                           
                           <div className="space-y-3">
                             <div className="flex gap-2">
@@ -1110,41 +1087,59 @@ export function CustomerPreviewDrawer({
                               <Label htmlFor="emailRecipient" className="text-xs text-slate-500 mb-1.5 block">
                                 To
                               </Label>
-                              <Select 
-                                value={selectedRecipientEmail} 
-                                onValueChange={setSelectedRecipientEmail}
-                              >
-                                <SelectTrigger className="h-9 bg-white border-slate-200 text-xs">
-                                  <SelectValue placeholder="Select recipient..." />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {/* Show AR contacts if they exist */}
-                                  {preview?.allCreditControlContacts?.map((contact) => (
-                                    <SelectItem 
-                                      key={contact.id} 
-                                      value={contact.email || ''} 
-                                      className="text-xs"
-                                    >
-                                      {contact.name || contact.email}{contact.isPrimary ? ' (Primary AR)' : ''}
-                                    </SelectItem>
-                                  ))}
-                                  {/* Fallback 1: creditControlContact when no allCreditControlContacts */}
-                                  {(!preview?.allCreditControlContacts || preview.allCreditControlContacts.length === 0) && 
-                                    preview?.creditControlContact?.email && (
-                                    <SelectItem value={preview.creditControlContact.email} className="text-xs">
-                                      {preview.creditControlContact.name || preview.creditControlContact.email} (AR Contact)
-                                    </SelectItem>
-                                  )}
-                                  {/* Fallback 2: primary customer email when no AR contacts at all */}
-                                  {(!preview?.allCreditControlContacts || preview.allCreditControlContacts.length === 0) && 
-                                    !preview?.creditControlContact?.email &&
-                                    preview?.customer?.email && (
-                                    <SelectItem value={preview.customer.email} className="text-xs">
-                                      {preview.customer.name} ({preview.customer.email})
-                                    </SelectItem>
-                                  )}
-                                </SelectContent>
-                              </Select>
+                              <div className="flex gap-2 items-center">
+                                <Select 
+                                  value={selectedRecipientEmail} 
+                                  onValueChange={setSelectedRecipientEmail}
+                                >
+                                  <SelectTrigger className="h-9 bg-white border-slate-200 text-xs flex-1">
+                                    <SelectValue placeholder="Select recipient..." />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {/* Show AR contacts if they exist */}
+                                    {preview?.allCreditControlContacts?.map((contact) => (
+                                      <SelectItem 
+                                        key={contact.id} 
+                                        value={contact.email || ''} 
+                                        className="text-xs"
+                                      >
+                                        {contact.name || contact.email}{contact.isPrimary ? ' (Primary AR)' : ''}
+                                      </SelectItem>
+                                    ))}
+                                    {/* Fallback 1: creditControlContact when no allCreditControlContacts */}
+                                    {(!preview?.allCreditControlContacts || preview.allCreditControlContacts.length === 0) && 
+                                      preview?.creditControlContact?.email && (
+                                      <SelectItem value={preview.creditControlContact.email} className="text-xs">
+                                        {preview.creditControlContact.name || preview.creditControlContact.email} (AR Contact)
+                                      </SelectItem>
+                                    )}
+                                    {/* Fallback 2: primary customer email when no AR contacts at all */}
+                                    {(!preview?.allCreditControlContacts || preview.allCreditControlContacts.length === 0) && 
+                                      !preview?.creditControlContact?.email &&
+                                      preview?.customer?.email && (
+                                      <SelectItem value={preview.customer.email} className="text-xs">
+                                        {preview.customer.name} ({preview.customer.email})
+                                      </SelectItem>
+                                    )}
+                                  </SelectContent>
+                                </Select>
+                                {emailTemplate !== "manual" && (
+                                  <Button
+                                    variant="outline"
+                                    size="icon"
+                                    onClick={handleGenerateEmail}
+                                    disabled={isGeneratingEmail}
+                                    className="h-9 w-9 border-[#17B6C3] text-[#17B6C3] hover:bg-[#17B6C3]/10 shrink-0"
+                                    title="Generate with AI"
+                                  >
+                                    {isGeneratingEmail ? (
+                                      <Loader2 className="h-4 w-4 animate-spin" />
+                                    ) : (
+                                      <Sparkles className="h-4 w-4" />
+                                    )}
+                                  </Button>
+                                )}
+                              </div>
                             </div>
 
                             <div>
