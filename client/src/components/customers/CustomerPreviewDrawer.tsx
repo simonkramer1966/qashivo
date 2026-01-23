@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { Link } from "wouter";
+import { useLocation } from "wouter";
 import {
   Sheet,
   SheetContent,
@@ -16,10 +16,10 @@ import {
   Phone,
   MessageSquare,
   Mic,
-  ArrowRight,
   Clock,
   ArrowUpRight,
-  ArrowDownLeft
+  ArrowDownLeft,
+  StickyNote
 } from "lucide-react";
 import { useCurrency } from "@/hooks/useCurrency";
 import type { CustomerPreview, TimelineItem } from "@shared/types/timeline";
@@ -36,6 +36,7 @@ export function CustomerPreviewDrawer({
   onOpenChange 
 }: CustomerPreviewDrawerProps) {
   const { formatCurrency } = useCurrency();
+  const [, setLocation] = useLocation();
 
   const { data: preview, isLoading } = useQuery<CustomerPreview>({
     queryKey: [`/api/contacts/${customerId}/preview`],
@@ -71,17 +72,34 @@ export function CustomerPreviewDrawer({
     return date.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
   };
 
+  const handleDetailClick = () => {
+    onOpenChange(false);
+    setLocation(`/customers/${customerId}`);
+  };
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full sm:max-w-md p-0 flex flex-col">
+      <SheetContent className="w-full sm:max-w-md p-0 flex flex-col" hideCloseButton>
         <SheetHeader className="px-6 pt-6 pb-4 flex-shrink-0">
-          <SheetTitle className="text-lg font-semibold text-slate-900">
-            {isLoading ? (
-              <Skeleton className="h-6 w-40" />
-            ) : (
-              preview?.customer.companyName || preview?.customer.name || "Customer"
+          <div className="flex items-center justify-between">
+            <SheetTitle className="text-lg font-semibold text-slate-900">
+              {isLoading ? (
+                <Skeleton className="h-6 w-40" />
+              ) : (
+                preview?.customer.companyName || preview?.customer.name || "Customer"
+              )}
+            </SheetTitle>
+            {!isLoading && preview && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-[#17B6C3] hover:text-[#1396A1] hover:bg-[#17B6C3]/10 mr-2"
+                onClick={handleDetailClick}
+              >
+                Detail ...
+              </Button>
             )}
-          </SheetTitle>
+          </div>
           <SheetDescription className="sr-only">
             Quick view of customer details and recent activity
           </SheetDescription>
@@ -113,6 +131,40 @@ export function CustomerPreviewDrawer({
                       </p>
                     )}
                   </div>
+                </section>
+
+                <Separator className="bg-slate-100" />
+
+                {/* Recent Timeline */}
+                <section>
+                  <p className="text-[10px] text-slate-400 uppercase tracking-wider mb-3">
+                    Recent Activity
+                  </p>
+                  {preview.latestTimeline && preview.latestTimeline.length > 0 ? (
+                    <div className="space-y-3">
+                      {preview.latestTimeline.map((item) => (
+                        <div 
+                          key={item.id} 
+                          className="flex items-start gap-3 text-sm"
+                        >
+                          <div className="flex items-center gap-1 text-slate-400 flex-shrink-0 mt-0.5">
+                            {getChannelIcon(item.channel)}
+                            {getDirectionIcon(item.direction)}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-slate-700 line-clamp-2">
+                              {item.summary}
+                            </p>
+                            <p className="text-xs text-slate-400 mt-0.5">
+                              {formatTimeAgo(item.occurredAt)}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-slate-400">No recent activity</p>
+                  )}
                 </section>
 
                 <Separator className="bg-slate-100" />
@@ -156,74 +208,6 @@ export function CustomerPreviewDrawer({
                     </div>
                   </section>
                 )}
-
-                {/* Channel Opt-outs */}
-                {preview.messagingStatus && (
-                  <section>
-                    <p className="text-[10px] text-slate-400 uppercase tracking-wider mb-2">
-                      Channel Preferences
-                    </p>
-                    <div className="flex flex-wrap gap-3">
-                      {preview.messagingStatus.emailOptedOut && (
-                        <span className="text-xs text-slate-400 flex items-center gap-1">
-                          <Mail className="h-3 w-3" />
-                          <span className="line-through">Email</span>
-                        </span>
-                      )}
-                      {preview.messagingStatus.smsOptedOut && (
-                        <span className="text-xs text-slate-400 flex items-center gap-1">
-                          <MessageSquare className="h-3 w-3" />
-                          <span className="line-through">SMS</span>
-                        </span>
-                      )}
-                      {preview.messagingStatus.voiceOptedOut && (
-                        <span className="text-xs text-slate-400 flex items-center gap-1">
-                          <Mic className="h-3 w-3" />
-                          <span className="line-through">Voice</span>
-                        </span>
-                      )}
-                      {!preview.messagingStatus.emailOptedOut && 
-                       !preview.messagingStatus.smsOptedOut && 
-                       !preview.messagingStatus.voiceOptedOut && (
-                        <span className="text-xs text-slate-500">All channels enabled</span>
-                      )}
-                    </div>
-                  </section>
-                )}
-
-                <Separator className="bg-slate-100" />
-
-                {/* Recent Timeline */}
-                <section>
-                  <p className="text-[10px] text-slate-400 uppercase tracking-wider mb-3">
-                    Recent Activity
-                  </p>
-                  {preview.latestTimeline && preview.latestTimeline.length > 0 ? (
-                    <div className="space-y-3">
-                      {preview.latestTimeline.map((item) => (
-                        <div 
-                          key={item.id} 
-                          className="flex items-start gap-3 text-sm"
-                        >
-                          <div className="flex items-center gap-1 text-slate-400 flex-shrink-0 mt-0.5">
-                            {getChannelIcon(item.channel)}
-                            {getDirectionIcon(item.direction)}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-slate-700 line-clamp-2">
-                              {item.summary}
-                            </p>
-                            <p className="text-xs text-slate-400 mt-0.5">
-                              {formatTimeAgo(item.occurredAt)}
-                            </p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-sm text-slate-400">No recent activity</p>
-                  )}
-                </section>
               </>
             ) : (
               <p className="text-sm text-slate-400">Customer not found</p>
@@ -231,19 +215,43 @@ export function CustomerPreviewDrawer({
           </div>
         </ScrollArea>
 
-        {/* Footer - View Full Detail */}
+        {/* Footer - Action Buttons */}
         {preview && (
           <div className="px-6 py-4 border-t border-slate-100 flex-shrink-0">
-            <Link href={`/customers/${customerId}`}>
+            <div className="flex gap-2">
               <Button 
-                variant="ghost" 
-                className="w-full justify-between text-slate-600 hover:text-slate-900 hover:bg-slate-50"
-                onClick={() => onOpenChange(false)}
+                variant="outline" 
+                size="sm"
+                className="flex-1 border-[#E6E8EC] text-slate-700 hover:bg-slate-50"
               >
-                View full customer detail
-                <ArrowRight className="h-4 w-4" />
+                <StickyNote className="h-4 w-4 mr-1.5" />
+                Note
               </Button>
-            </Link>
+              <Button 
+                variant="outline" 
+                size="sm"
+                className="flex-1 border-[#E6E8EC] text-slate-700 hover:bg-slate-50"
+              >
+                <Phone className="h-4 w-4 mr-1.5" />
+                Call
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm"
+                className="flex-1 border-[#E6E8EC] text-slate-700 hover:bg-slate-50"
+              >
+                <Mail className="h-4 w-4 mr-1.5" />
+                Email
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm"
+                className="flex-1 border-[#E6E8EC] text-slate-700 hover:bg-slate-50"
+              >
+                <MessageSquare className="h-4 w-4 mr-1.5" />
+                SMS
+              </Button>
+            </div>
           </div>
         )}
       </SheetContent>
