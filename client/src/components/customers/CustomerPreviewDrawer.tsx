@@ -1035,7 +1035,7 @@ export function CustomerPreviewDrawer({
                                 <Label className="text-xs text-slate-500 mb-1.5 block">
                                   Tone
                                 </Label>
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-2 h-9">
                                   <Slider
                                     value={[emailTone]}
                                     onValueChange={(v) => setEmailTone(v[0])}
