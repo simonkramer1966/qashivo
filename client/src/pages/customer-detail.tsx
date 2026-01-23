@@ -280,20 +280,7 @@ export default function CustomerDetailPage() {
                   {/* Contacts List */}
                   <div>
                     <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-3">
-                        <p className="text-[11px] text-slate-400">Contact People</p>
-                        {contact.xeroContactId && (
-                          <a 
-                            href={`https://go.xero.com/Contacts/View/${contact.xeroContactId}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1.5 text-xs text-[#17B6C3] hover:text-[#1396A1]"
-                          >
-                            View in Xero
-                            <ExternalLink className="h-3 w-3" />
-                          </a>
-                        )}
-                      </div>
+                      <p className="text-[11px] text-slate-400">Contact People</p>
                       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
                         <DialogTrigger asChild>
                           <Button variant="ghost" size="sm" className="h-7 text-xs text-[#17B6C3] hover:text-[#1396A1]">
@@ -382,7 +369,7 @@ export default function CustomerDetailPage() {
                                       <span className="text-xs text-slate-400">• {person.jobTitle}</span>
                                     )}
                                     {person.isFromXero && (
-                                      <span className="text-[10px] px-1.5 py-0.5 bg-blue-50 text-blue-600 rounded">Xero</span>
+                                      <span className="w-2 h-2 rounded-full bg-blue-500" title="From accounting system" />
                                     )}
                                   </div>
                                   <div className="flex items-center gap-4 mt-1 text-xs text-slate-500">
