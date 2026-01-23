@@ -1,6 +1,6 @@
 import type { Express, Request, Response } from "express";
 import { db } from "../db";
-import { inboundMessages, contacts, emailMessages, detectedOutcomes, actions, invoices } from "@shared/schema";
+import { inboundMessages, contacts, emailMessages, detectedOutcomes, actions, invoices, timelineEvents } from "@shared/schema";
 import { intentAnalyst } from "../services/intentAnalyst";
 import { detectOutcomeFromText } from "../services/outcomeDetection";
 import { eq, or, and } from "drizzle-orm";
@@ -928,6 +928,84 @@ export function registerWebhookRoutes(app: Express) {
       }
 
       console.log(`✅ Charlie voice call processed: ${call_id} - outcome: ${callOutcome}`);
+
+      // Update the timeline event with call results
+      if (callMetadata.action_id) {
+        try {
+          // Map call outcome to timeline outcome type
+          const outcomeTypeMap: Record<string, string> = {
+            'ptp_captured': 'promise_to_pay',
+            'dispute_raised': 'dispute',
+            'refused': 'refused',
+            'wrong_contact': 'wrong_contact',
+            'completed': 'other',
+            'callback_requested': 'request_more_time',
+            'no_answer': 'no_response',
+          };
+          const timelineOutcomeType = outcomeTypeMap[callOutcome] || 'other';
+          
+          // Extract sentiment from call_analysis if available
+          const sentiment = call_analysis?.sentiment || call_analysis?.customer_sentiment || null;
+          const intent = call_analysis?.intent || call_analysis?.primary_intent || null;
+          const confidenceScore = call_analysis?.confidence || 0.8;
+          
+          // Build extracted data for the outcome
+          const extractedData: Record<string, any> = {};
+          if (capturedPtp) {
+            if (capturedPtp.amount) extractedData.amount = capturedPtp.amount;
+            if (capturedPtp.date) extractedData.promiseDate = capturedPtp.date;
+          }
+          if (capturedDispute) {
+            extractedData.disputeDetails = capturedDispute;
+          }
+          if (sentiment) {
+            extractedData.sentiment = sentiment;
+          }
+          if (intent) {
+            extractedData.intent = intent;
+          }
+          if (call_status) {
+            extractedData.callStatus = call_status;
+          }
+          if (call_analysis?.call_summary) {
+            extractedData.summary = call_analysis.call_summary;
+          }
+          if (call_analysis?.next_steps) {
+            extractedData.nextSteps = call_analysis.next_steps;
+          }
+          
+          // Update the timeline event linked to this action
+          // Safe transcript text with fallback
+          const safeTranscriptText = transcriptText || '';
+          
+          await db.update(timelineEvents)
+            .set({
+              status: 'transcribed',
+              body: safeTranscriptText || null,
+              summary: callOutcome === 'ptp_captured' ? 'AI call completed - Payment commitment received' :
+                       callOutcome === 'dispute_raised' ? 'AI call completed - Dispute raised' :
+                       callOutcome === 'refused' ? 'AI call completed - Payment refused' :
+                       callOutcome === 'wrong_contact' ? 'AI call completed - Wrong contact' :
+                       'AI call completed',
+              outcomeType: timelineOutcomeType,
+              outcomeConfidence: String(confidenceScore),
+              outcomeExtracted: Object.keys(extractedData).length > 0 ? extractedData : null,
+              outcomeRequiresReview: callOutcome === 'dispute_raised' || callOutcome === 'wrong_contact',
+              provider: 'retell',
+              providerMessageId: call_id,
+            })
+            .where(
+              and(
+                eq(timelineEvents.actionId, callMetadata.action_id),
+                eq(timelineEvents.tenantId, callMetadata.tenant_id)
+              )
+            );
+          
+          console.log(`📝 Timeline event updated for action ${callMetadata.action_id} with call results`);
+        } catch (timelineErr) {
+          console.error('Failed to update timeline event with call results:', timelineErr);
+        }
+      }
 
       res.status(200).json({ 
         message: 'Call ended processed',

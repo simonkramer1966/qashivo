@@ -833,10 +833,67 @@ export function CustomerPreviewDrawer({
                                     
                                     {isItemExpanded && (
                                       <div className="pl-[72px] pr-2 pb-3 space-y-2 overflow-hidden min-w-0">
+                                        {/* Voice call results - show sentiment, intent, and extracted data */}
+                                        {item.channel === 'voice' && item.outcome?.extracted && (
+                                          <div className="bg-slate-50 rounded-md p-2 space-y-1.5 border border-slate-100">
+                                            <div className="flex flex-wrap gap-2">
+                                              {item.outcome.extracted.sentiment && (
+                                                <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${
+                                                  item.outcome.extracted.sentiment === 'positive' ? 'bg-green-100 text-green-700' :
+                                                  item.outcome.extracted.sentiment === 'negative' ? 'bg-red-100 text-red-700' :
+                                                  'bg-slate-100 text-slate-600'
+                                                }`}>
+                                                  {item.outcome.extracted.sentiment}
+                                                </span>
+                                              )}
+                                              {item.outcome.extracted.intent && (
+                                                <span className="text-[10px] px-1.5 py-0.5 rounded font-medium bg-blue-100 text-blue-700">
+                                                  {item.outcome.extracted.intent}
+                                                </span>
+                                              )}
+                                              {item.outcome.confidence && (
+                                                <span className="text-[10px] px-1.5 py-0.5 rounded font-medium bg-slate-100 text-slate-600">
+                                                  {Math.round(item.outcome.confidence * 100)}% confidence
+                                                </span>
+                                              )}
+                                            </div>
+                                            {/* PTP or Dispute details */}
+                                            {(item.outcome.extracted.amount || item.outcome.extracted.promiseDate) && (
+                                              <div className="text-xs text-slate-600">
+                                                <span className="font-medium text-green-700">Promise to Pay: </span>
+                                                {item.outcome.extracted.amount && <span>£{item.outcome.extracted.amount}</span>}
+                                                {item.outcome.extracted.amount && item.outcome.extracted.promiseDate && ' by '}
+                                                {item.outcome.extracted.promiseDate && <span>{item.outcome.extracted.promiseDate}</span>}
+                                              </div>
+                                            )}
+                                            {item.outcome.extracted.disputeDetails && (
+                                              <div className="text-xs text-slate-600">
+                                                <span className="font-medium text-amber-700">Dispute: </span>
+                                                {item.outcome.extracted.disputeDetails}
+                                              </div>
+                                            )}
+                                            {item.outcome.extracted.summary && (
+                                              <div className="text-xs text-slate-600">
+                                                <span className="font-medium">Summary: </span>
+                                                {item.outcome.extracted.summary}
+                                              </div>
+                                            )}
+                                            {item.outcome.extracted.nextSteps && (
+                                              <div className="text-xs text-slate-600">
+                                                <span className="font-medium">Next Steps: </span>
+                                                {item.outcome.extracted.nextSteps}
+                                              </div>
+                                            )}
+                                          </div>
+                                        )}
+                                        {/* Transcript or message body */}
                                         {item.body && (
-                                          <p className="text-xs text-slate-600 whitespace-pre-wrap">
-                                            {item.body}
-                                          </p>
+                                          <div className={item.channel === 'voice' ? 'max-h-40 overflow-y-auto' : ''}>
+                                            <p className="text-xs text-slate-600 whitespace-pre-wrap">
+                                              {item.channel === 'voice' && <span className="font-medium text-slate-500 block mb-1">Transcript:</span>}
+                                              {item.body}
+                                            </p>
+                                          </div>
                                         )}
                                         {item.invoiceId && (() => {
                                           const linkedInvoice = preview.invoices?.find(inv => inv.id === item.invoiceId);
