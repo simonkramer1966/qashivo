@@ -1035,30 +1035,32 @@ export function CustomerPreviewDrawer({
                                   </SelectContent>
                                 </Select>
                               </div>
-                              <div>
+                              <div className="flex-1">
                                 <Label className="text-xs text-slate-500 mb-1.5 block">
                                   Tone ({toneLabels[emailTone]})
                                 </Label>
-                                <div className="flex items-center gap-2 h-9">
+                                <div className="flex items-center h-9">
                                   <Slider
                                     value={[emailTone]}
                                     onValueChange={(v) => setEmailTone(v[0])}
                                     min={0}
                                     max={2}
                                     step={1}
-                                    className="flex-1"
+                                    className="w-full"
                                   />
-                                  <div className="flex items-center gap-1.5">
-                                    <Checkbox
-                                      id="includeInterest"
-                                      checked={includeStatutoryInterest}
-                                      onCheckedChange={(checked) => setIncludeStatutoryInterest(checked === true)}
-                                      className="h-4 w-4"
-                                    />
-                                    <label htmlFor="includeInterest" className="text-[10px] text-slate-500 cursor-pointer whitespace-nowrap">
-                                      Interest
-                                    </label>
-                                  </div>
+                                </div>
+                              </div>
+                              <div>
+                                <Label className="text-xs text-slate-500 mb-1.5 block">
+                                  Interest
+                                </Label>
+                                <div className="flex items-center h-9">
+                                  <Checkbox
+                                    id="includeInterest"
+                                    checked={includeStatutoryInterest}
+                                    onCheckedChange={(checked) => setIncludeStatutoryInterest(checked === true)}
+                                    className="h-4 w-4"
+                                  />
                                 </div>
                               </div>
                             </div>
