@@ -546,7 +546,7 @@ export function CustomerPreviewDrawer({
                         {preview.invoices.map((invoice) => (
                           <div
                             key={invoice.id}
-                            className="flex items-center text-xs py-1.5 hover:bg-slate-50 cursor-pointer transition-colors"
+                            className="flex items-center text-xs py-1.5 hover:bg-slate-100 cursor-pointer transition-colors"
                           >
                             <span className="w-[60px] flex-shrink-0 text-slate-500 tabular-nums">
                               {formatShortDate(invoice.issueDate)}
