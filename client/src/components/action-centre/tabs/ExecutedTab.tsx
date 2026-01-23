@@ -175,7 +175,7 @@ export function ExecutedTab({ actions, onSelectDebtor, isLoading }: ExecutedTabP
                   <tr 
                     key={action.id}
                     onClick={() => onSelectDebtor(action.debtorId, action.id)}
-                    className="border-b border-slate-200 hover:bg-slate-50/50 cursor-pointer transition-colors"
+                    className="border-b border-slate-200 hover:bg-slate-100 cursor-pointer transition-colors"
                   >
                       <td className="py-[5px] px-3">
                       <div className="text-[13px] font-medium text-slate-900 truncate">{action.debtorName}</div>
