@@ -88,6 +88,14 @@ const emailTemplateLabels: Record<EmailTemplateType, string> = {
   manual: "Write Manually",
 };
 
+type SmsTemplateType = "payment_reminder" | "payment_received" | "payment_overdue" | "manual";
+
+const smsTemplateLabels: Record<SmsTemplateType, string> = {
+  payment_reminder: "Payment Reminder",
+  payment_received: "Payment Received",
+  payment_overdue: "Payment Overdue",
+  manual: "Write Manually",
+};
 
 const toneLabels = ["Friendly", "Professional", "Firm"];
 
@@ -131,6 +139,13 @@ export function CustomerPreviewDrawer({
   const [isGeneratingEmail, setIsGeneratingEmail] = useState(false);
   const [includeStatutoryInterest, setIncludeStatutoryInterest] = useState(true);
   const [selectedRecipientEmail, setSelectedRecipientEmail] = useState<string>("");
+  
+  const [isSmsMode, setIsSmsMode] = useState(false);
+  const [smsTemplate, setSmsTemplate] = useState<SmsTemplateType>("payment_reminder");
+  const [smsTone, setSmsTone] = useState(1);
+  const [smsBody, setSmsBody] = useState("");
+  const [isGeneratingSms, setIsGeneratingSms] = useState(false);
+  const [selectedRecipientPhone, setSelectedRecipientPhone] = useState<string>("");
   
   const [isRecentActivityExpanded, setIsRecentActivityExpanded] = useState(true);
   const [expandedTimelineItems, setExpandedTimelineItems] = useState<Set<string>>(new Set());
@@ -274,6 +289,52 @@ export function CustomerPreviewDrawer({
     setSelectedRecipientEmail("");
   };
 
+  const handleSmsButtonClick = () => {
+    setIsSmsMode(true);
+    setIsEmailMode(false);
+    setIsNoteMode(false);
+    setIsCallMode(false);
+    setIsRecentActivityExpanded(false);
+    // Pre-populate with primary AR contact phone, or fallback to customer phone
+    const primaryContact = preview?.allCreditControlContacts?.find(c => c.isPrimary);
+    const defaultPhone = primaryContact?.phone || preview?.creditControlContact?.phone || '';
+    setSelectedRecipientPhone(defaultPhone);
+  };
+
+  const resetSmsForm = () => {
+    setIsSmsMode(false);
+    setSmsTemplate("payment_reminder");
+    setSmsTone(1);
+    setSmsBody("");
+    setIsGeneratingSms(false);
+    setIsRecentActivityExpanded(true);
+    setSelectedRecipientPhone("");
+  };
+
+  const handleGenerateSms = async () => {
+    if (smsTemplate === "manual") {
+      return;
+    }
+    
+    setIsGeneratingSms(true);
+    try {
+      const res = await apiRequest("POST", `/api/contacts/${customerId}/generate-sms`, {
+        templateType: smsTemplate,
+        tone: toneLabels[smsTone].toLowerCase(),
+      });
+      const data = await res.json();
+      setSmsBody(data.message || "");
+    } catch (error) {
+      toast({
+        title: "Failed to generate SMS",
+        description: "Please try again or write manually",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGeneratingSms(false);
+    }
+  };
+
   const handleGenerateEmail = async () => {
     if (emailTemplate === "manual") {
       return;
@@ -330,6 +391,58 @@ export function CustomerPreviewDrawer({
       });
     },
   });
+
+  const sendSmsMutation = useMutation({
+    mutationFn: async (smsData: {
+      message: string;
+      templateType: string;
+      recipientPhone: string;
+    }) => {
+      const res = await apiRequest("POST", `/api/contacts/${customerId}/send-sms`, smsData);
+      return await res.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "SMS sent",
+        description: "Your SMS has been sent successfully",
+      });
+      resetSmsForm();
+      queryClient.invalidateQueries({ queryKey: [`/api/contacts/${customerId}/preview`] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to send SMS",
+        description: error.message || "Please try again",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleSendSms = () => {
+    if (!smsBody.trim()) {
+      toast({
+        title: "SMS content required",
+        description: "Please enter a message",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!selectedRecipientPhone) {
+      toast({
+        title: "Recipient required",
+        description: "Please select a recipient",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    sendSmsMutation.mutate({
+      message: smsBody,
+      templateType: smsTemplate,
+      recipientPhone: selectedRecipientPhone,
+    });
+  };
 
   const handleSendEmail = () => {
     if (!emailSubject.trim() || !emailBody.trim()) {
@@ -602,7 +715,7 @@ export function CustomerPreviewDrawer({
                     </section>
 
                     {/* Recent Timeline - Collapsible */}
-                    {!isNoteMode && !isCallMode && !isEmailMode && (
+                    {!isNoteMode && !isCallMode && !isEmailMode && !isSmsMode && (
                     <>
                     <Separator className="bg-slate-100" />
                     <section>
@@ -1171,6 +1284,121 @@ export function CustomerPreviewDrawer({
                         </section>
                       </>
                     )}
+
+                    {/* SMS Compose Section */}
+                    {isSmsMode && (
+                      <>
+                        <Separator className="bg-slate-100" />
+                        <section className="space-y-4">
+                          <p className="text-[10px] text-slate-400 uppercase tracking-wider">
+                            Compose SMS
+                          </p>
+                          
+                          <div className="space-y-3">
+                            <div className="flex gap-2">
+                              <div className="flex-1">
+                                <Label htmlFor="smsTemplate" className="text-xs text-slate-500 mb-1.5 block">
+                                  Template
+                                </Label>
+                                <Select value={smsTemplate} onValueChange={(v: SmsTemplateType) => setSmsTemplate(v)}>
+                                  <SelectTrigger className="h-9 bg-white border-slate-200 text-xs">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {(Object.keys(smsTemplateLabels) as SmsTemplateType[]).map((key) => (
+                                      <SelectItem key={key} value={key} className="text-xs">{smsTemplateLabels[key]}</SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <div className="w-28">
+                                <Label htmlFor="smsTone" className="text-xs text-slate-500 mb-1.5 block">
+                                  Tone ({toneLabels[smsTone]})
+                                </Label>
+                                <Slider
+                                  id="smsTone"
+                                  value={[smsTone]}
+                                  onValueChange={([v]) => setSmsTone(v)}
+                                  min={0}
+                                  max={2}
+                                  step={1}
+                                  className="mt-3"
+                                />
+                              </div>
+                            </div>
+
+                            <div>
+                              <Label htmlFor="smsRecipient" className="text-xs text-slate-500 mb-1.5 block">
+                                To
+                              </Label>
+                              <div className="flex gap-2 items-center">
+                                <Select 
+                                  value={selectedRecipientPhone} 
+                                  onValueChange={setSelectedRecipientPhone}
+                                >
+                                  <SelectTrigger className="h-9 bg-white border-slate-200 text-xs flex-1">
+                                    <SelectValue placeholder="Select recipient..." />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {/* Show contacts with phone numbers */}
+                                    {preview?.allCreditControlContacts?.filter(c => c.phone).map((contact) => (
+                                      <SelectItem 
+                                        key={contact.id} 
+                                        value={contact.phone || ''} 
+                                        className="text-xs"
+                                      >
+                                        {contact.name || contact.phone}{contact.isPrimary ? ' (Primary AR)' : ''}
+                                      </SelectItem>
+                                    ))}
+                                    {/* Fallback: creditControlContact phone */}
+                                    {(!preview?.allCreditControlContacts?.some(c => c.phone)) && 
+                                      preview?.creditControlContact?.phone && (
+                                      <SelectItem value={preview.creditControlContact.phone} className="text-xs">
+                                        {preview.creditControlContact.name || preview.creditControlContact.phone} (AR Contact)
+                                      </SelectItem>
+                                    )}
+                                  </SelectContent>
+                                </Select>
+                                {smsTemplate !== "manual" && (
+                                  <Button
+                                    variant="outline"
+                                    size="icon"
+                                    onClick={handleGenerateSms}
+                                    disabled={isGeneratingSms}
+                                    className="h-9 w-9 border-[#17B6C3] text-[#17B6C3] hover:bg-[#17B6C3]/10 shrink-0"
+                                    title="Generate with AI"
+                                  >
+                                    {isGeneratingSms ? (
+                                      <Loader2 className="h-4 w-4 animate-spin" />
+                                    ) : (
+                                      <Sparkles className="h-4 w-4" />
+                                    )}
+                                  </Button>
+                                )}
+                              </div>
+                            </div>
+
+                            <div>
+                              <div className="flex justify-between items-center mb-1.5">
+                                <Label htmlFor="smsBody" className="text-xs text-slate-500">
+                                  Message
+                                </Label>
+                                <span className={`text-xs ${smsBody.length > 160 ? 'text-amber-600' : 'text-slate-400'}`}>
+                                  {smsBody.length}/160 {smsBody.length > 160 && `(${Math.ceil(smsBody.length / 160)} segments)`}
+                                </span>
+                              </div>
+                              <Textarea
+                                id="smsBody"
+                                placeholder="Type your message..."
+                                value={smsBody}
+                                onChange={(e) => setSmsBody(e.target.value)}
+                                className="min-h-[100px] bg-white border-slate-200 resize-none text-[12px]"
+                              />
+                            </div>
+                          </div>
+                        </section>
+                      </>
+                    )}
                   </>
                 ) : (
                   <p className="text-sm text-slate-400">Customer not found</p>
@@ -1179,7 +1407,7 @@ export function CustomerPreviewDrawer({
             </ScrollArea>
 
             {/* Left Footer - Action Buttons */}
-            {preview && !isNoteMode && !isCallMode && !isEmailMode && (
+            {preview && !isNoteMode && !isCallMode && !isEmailMode && !isSmsMode && (
               <div className="px-6 py-4 border-t border-slate-100 flex-shrink-0">
                 <div className="flex gap-2">
                   <Button 
@@ -1213,6 +1441,7 @@ export function CustomerPreviewDrawer({
                     variant="outline" 
                     size="sm"
                     className="flex-1 basis-0 border-[#E6E8EC] text-[#64748b] text-xs hover:bg-slate-100"
+                    onClick={handleSmsButtonClick}
                   >
                     <MessageSquare className="h-4 w-4 mr-1.5" />
                     SMS
@@ -1294,6 +1523,32 @@ export function CustomerPreviewDrawer({
                   >
                     <Send className="h-4 w-4 mr-1.5" />
                     {sendEmailMutation.isPending ? "Sending..." : "Send Email"}
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* Left Footer - SMS Mode Actions */}
+            {preview && isSmsMode && (
+              <div className="px-6 py-4 border-t border-slate-100 flex-shrink-0">
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={resetSmsForm}
+                    className="flex-1 border-slate-200 text-xs"
+                  >
+                    <X className="h-4 w-4 mr-1.5" />
+                    Cancel
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={handleSendSms}
+                    disabled={sendSmsMutation.isPending || !smsBody.trim()}
+                    className="flex-1 bg-[#17B6C3] hover:bg-[#1396A1] text-white text-xs"
+                  >
+                    <Send className="h-4 w-4 mr-1.5" />
+                    {sendSmsMutation.isPending ? "Sending..." : "Send SMS"}
                   </Button>
                 </div>
               </div>
