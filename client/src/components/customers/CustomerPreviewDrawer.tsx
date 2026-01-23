@@ -259,9 +259,9 @@ export function CustomerPreviewDrawer({
           </SheetDescription>
         </SheetHeader>
 
-        <div className="flex-1 flex min-h-0">
+        <div className="flex-1 flex min-h-0 overflow-hidden">
           {/* Left Column - Balance & Activity */}
-          <div className="w-1/2 flex flex-col border-r border-slate-100">
+          <div className="w-1/2 flex flex-col border-r border-slate-100 min-w-0 overflow-hidden">
             <ScrollArea className="flex-1">
               <div className="px-6 py-6 space-y-6">
                 {isLoading ? (
