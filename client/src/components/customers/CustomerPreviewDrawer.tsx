@@ -71,7 +71,6 @@ type NoteType = "internal" | "reminder";
 type CallGoal = "payment_commitment" | "payment_plan" | "query_resolution" | "general_followup";
 type CallScheduleMode = "now" | "asap" | "scheduled";
 type EmailTemplateType = "full_payment_request" | "plan_confirmation" | "remittance_request" | "statement" | "manual";
-type EmailTone = "friendly" | "professional" | "firm";
 
 const callGoalLabels: Record<CallGoal, string> = {
   payment_commitment: "Payment Commitment",
@@ -88,11 +87,6 @@ const emailTemplateLabels: Record<EmailTemplateType, string> = {
   manual: "Write Manually",
 };
 
-const emailToneLabels: Record<EmailTone, string> = {
-  friendly: "Friendly",
-  professional: "Professional",
-  firm: "Firm",
-};
 
 const toneLabels = ["Friendly", "Professional", "Firm"];
 
@@ -130,7 +124,7 @@ export function CustomerPreviewDrawer({
   
   const [isEmailMode, setIsEmailMode] = useState(false);
   const [emailTemplate, setEmailTemplate] = useState<EmailTemplateType>("full_payment_request");
-  const [emailTone, setEmailTone] = useState<EmailTone>("professional");
+  const [emailTone, setEmailTone] = useState(1);
   const [emailSubject, setEmailSubject] = useState("");
   const [emailBody, setEmailBody] = useState("");
   const [isGeneratingEmail, setIsGeneratingEmail] = useState(false);
@@ -264,7 +258,7 @@ export function CustomerPreviewDrawer({
   const resetEmailForm = () => {
     setIsEmailMode(false);
     setEmailTemplate("full_payment_request");
-    setEmailTone("professional");
+    setEmailTone(1);
     setEmailSubject("");
     setEmailBody("");
     setIsGeneratingEmail(false);
@@ -280,7 +274,7 @@ export function CustomerPreviewDrawer({
     try {
       const res = await apiRequest("POST", `/api/contacts/${customerId}/generate-email`, {
         templateType: emailTemplate,
-        tone: emailTone,
+        tone: toneLabels[emailTone].toLowerCase(),
       });
       const data = await res.json();
       setEmailSubject(data.subject);
@@ -1038,21 +1032,20 @@ export function CustomerPreviewDrawer({
                                 </Select>
                               </div>
                               <div>
-                                <Label htmlFor="emailTone" className="text-xs text-slate-500 mb-1.5 block">
+                                <Label className="text-xs text-slate-500 mb-1.5 block">
                                   Tone
                                 </Label>
-                                <Select value={emailTone} onValueChange={(v: EmailTone) => setEmailTone(v)}>
-                                  <SelectTrigger className="h-9 bg-white border-slate-200 text-xs">
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {(Object.keys(emailToneLabels) as EmailTone[]).map((key) => (
-                                      <SelectItem key={key} value={key} className="text-xs">
-                                        {emailToneLabels[key]}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
+                                <div className="flex items-center gap-2">
+                                  <Slider
+                                    value={[emailTone]}
+                                    onValueChange={(v) => setEmailTone(v[0])}
+                                    min={0}
+                                    max={2}
+                                    step={1}
+                                    className="flex-1"
+                                  />
+                                  <span className="text-xs text-slate-600 w-20 text-right">{toneLabels[emailTone]}</span>
+                                </div>
                               </div>
                             </div>
 
