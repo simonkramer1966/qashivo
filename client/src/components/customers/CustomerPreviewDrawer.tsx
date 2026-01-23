@@ -584,9 +584,10 @@ export function CustomerPreviewDrawer({
                       </div>
                     </section>
 
-                    <Separator className="bg-slate-100" />
-
                     {/* Recent Timeline - Collapsible */}
+                    {!isNoteMode && !isCallMode && !isEmailMode && (
+                    <>
+                    <Separator className="bg-slate-100" />
                     <section>
                       <button
                         onClick={() => setIsRecentActivityExpanded(!isRecentActivityExpanded)}
@@ -741,6 +742,8 @@ export function CustomerPreviewDrawer({
                         </div>
                       )}
                     </section>
+                    </>
+                    )}
 
                     {/* Note Entry Section */}
                     {isNoteMode && (
