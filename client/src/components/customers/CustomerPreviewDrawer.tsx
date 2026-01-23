@@ -78,6 +78,7 @@ export function CustomerPreviewDrawer({
   const [reminderTime, setReminderTime] = useState("");
   const [assignedToUserId, setAssignedToUserId] = useState<string>("");
   const [isRecentActivityExpanded, setIsRecentActivityExpanded] = useState(true);
+  const [invoiceFilter, setInvoiceFilter] = useState<"all" | "overdue">("all");
 
   const { data: preview, isLoading } = useQuery<CustomerPreview>({
     queryKey: [`/api/contacts/${customerId}/preview`],
@@ -528,22 +529,47 @@ export function CustomerPreviewDrawer({
                   </div>
                 ) : preview ? (
                   <section>
-                    <p className="text-[10px] text-slate-400 uppercase tracking-wider mb-3">
-                      Outstanding Invoices ({preview.invoices?.length || 0})
-                    </p>
+                    {/* Filter Buttons */}
+                    <div className="flex items-center gap-2 mb-4">
+                      <button
+                        onClick={() => setInvoiceFilter("all")}
+                        className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
+                          invoiceFilter === "all"
+                            ? "bg-slate-900 text-white"
+                            : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                        }`}
+                      >
+                        All ({preview.invoices?.length || 0})
+                      </button>
+                      <button
+                        onClick={() => setInvoiceFilter("overdue")}
+                        className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
+                          invoiceFilter === "overdue"
+                            ? "bg-slate-900 text-white"
+                            : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                        }`}
+                      >
+                        Overdue ({preview.invoices?.filter(inv => inv.daysOverdue && inv.daysOverdue > 0).length || 0})
+                      </button>
+                    </div>
                     
-                    {preview.invoices && preview.invoices.length > 0 ? (
-                      <div className="space-y-1">
-                        {/* Header Row */}
-                        <div className="flex items-center text-[10px] text-slate-400 uppercase tracking-wider pb-1 border-b border-slate-100">
-                          <span className="w-[60px] flex-shrink-0">Inv Date</span>
-                          <span className="flex-1 min-w-0">Invoice #</span>
-                          <span className="w-[60px] flex-shrink-0 text-right">Due</span>
-                          <span className="w-[50px] flex-shrink-0 text-right">Days</span>
-                          <span className="w-[90px] flex-shrink-0 text-right pr-2">Amount</span>
-                        </div>
-                        {/* Invoice Rows */}
-                        {preview.invoices.map((invoice) => (
+                    {(() => {
+                      const filteredInvoices = invoiceFilter === "overdue"
+                        ? preview.invoices?.filter(inv => inv.daysOverdue && inv.daysOverdue > 0)
+                        : preview.invoices;
+                      
+                      return filteredInvoices && filteredInvoices.length > 0 ? (
+                        <div className="space-y-1">
+                          {/* Header Row */}
+                          <div className="flex items-center text-[10px] text-slate-400 uppercase tracking-wider pb-1 border-b border-slate-100">
+                            <span className="w-[60px] flex-shrink-0">Inv Date</span>
+                            <span className="flex-1 min-w-0">Invoice #</span>
+                            <span className="w-[60px] flex-shrink-0 text-right">Due</span>
+                            <span className="w-[50px] flex-shrink-0 text-right">Days</span>
+                            <span className="w-[90px] flex-shrink-0 text-right pr-2">Amount</span>
+                          </div>
+                          {/* Invoice Rows */}
+                          {filteredInvoices.map((invoice) => (
                           <div
                             key={invoice.id}
                             className="flex items-center text-xs py-1.5 hover:bg-slate-100 cursor-pointer transition-colors"
@@ -567,11 +593,12 @@ export function CustomerPreviewDrawer({
                         ))}
                       </div>
                     ) : (
-                      <div className="text-center py-8">
-                        <FileText className="h-8 w-8 text-slate-300 mx-auto mb-2" />
-                        <p className="text-sm text-slate-400">No outstanding invoices</p>
-                      </div>
-                    )}
+                        <div className="text-center py-8">
+                          <FileText className="h-8 w-8 text-slate-300 mx-auto mb-2" />
+                          <p className="text-sm text-slate-400">No outstanding invoices</p>
+                        </div>
+                      );
+                    })()}
                   </section>
                 ) : null}
               </div>
