@@ -503,7 +503,7 @@ export function CustomerPreviewDrawer({
                           </div>
 
                           <div className="space-y-3">
-                            <div>
+                            <div className="w-40">
                               <Label htmlFor="noteType" className="text-xs text-slate-500 mb-1.5 block">
                                 Note Type (optional)
                               </Label>
