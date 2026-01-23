@@ -540,7 +540,7 @@ export function CustomerPreviewDrawer({
                           <span className="flex-1 min-w-0">Invoice #</span>
                           <span className="w-[60px] flex-shrink-0 text-right">Due</span>
                           <span className="w-[50px] flex-shrink-0 text-right">Days</span>
-                          <span className="w-[90px] flex-shrink-0 text-right">Amount</span>
+                          <span className="w-[90px] flex-shrink-0 text-right pr-2">Amount</span>
                         </div>
                         {/* Invoice Rows */}
                         {preview.invoices.map((invoice) => (
@@ -560,7 +560,7 @@ export function CustomerPreviewDrawer({
                             <span className={`w-[50px] flex-shrink-0 text-right tabular-nums ${invoice.daysOverdue && invoice.daysOverdue > 0 ? getInvoiceStatusColor(invoice) : 'text-slate-500'}`}>
                               {invoice.daysOverdue && invoice.daysOverdue > 0 ? invoice.daysOverdue : '-'}
                             </span>
-                            <span className="w-[90px] flex-shrink-0 text-right font-semibold text-slate-900 tabular-nums">
+                            <span className="w-[90px] flex-shrink-0 text-right font-semibold text-slate-900 tabular-nums pr-2">
                               {formatCurrency(invoice.balance)}
                             </span>
                           </div>
