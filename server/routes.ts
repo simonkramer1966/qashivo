@@ -4465,7 +4465,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const { contactId } = req.params;
-      const { templateType, tone } = req.body;
+      const { templateType, tone, includeStatutoryInterest = true } = req.body;
 
       // Verify contact exists and user has access
       const contact = await storage.getContact(contactId, user.tenantId);
@@ -4498,15 +4498,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .orderBy(desc(timelineEvents.occurredAt))
         .limit(10);
 
-      // Calculate total outstanding and oldest overdue (balance = amount - amountPaid)
-      const totalOutstanding = overdueInvoicesList.reduce((sum, inv) => {
+      // Calculate total outstanding, interest, and oldest overdue (balance = amount - amountPaid)
+      const BOE_BASE_RATE = 4.5; // Bank of England base rate
+      const STATUTORY_MARKUP = 8.0; // UK Late Payment of Commercial Debts Act markup
+      const GRACE_PERIOD = 0; // No grace period for statutory interest
+      
+      let totalInterest = 0;
+      const invoicesWithInterest = overdueInvoicesList.map(inv => {
         const balance = Number(inv.amount || 0) - Number(inv.amountPaid || 0);
-        return sum + balance;
-      }, 0);
-      const oldestOverdueDays = overdueInvoicesList.length > 0
-        ? Math.max(...overdueInvoicesList.map(inv => 
-            inv.dueDate ? Math.max(0, Math.floor((Date.now() - new Date(inv.dueDate).getTime()) / (1000 * 60 * 60 * 24))) : 0
-          ))
+        const daysOverdue = inv.dueDate 
+          ? Math.max(0, Math.floor((Date.now() - new Date(inv.dueDate).getTime()) / (1000 * 60 * 60 * 24)))
+          : 0;
+        
+        // Calculate statutory interest if enabled
+        let interest = 0;
+        if (includeStatutoryInterest && daysOverdue > 0 && balance > 0) {
+          const interestResult = calculateLatePaymentInterest({
+            principalAmount: balance,
+            dueDate: new Date(inv.dueDate!),
+            boeBaseRate: BOE_BASE_RATE,
+            interestMarkup: STATUTORY_MARKUP,
+            gracePeriod: GRACE_PERIOD
+          });
+          interest = interestResult.interestAmount;
+          totalInterest += interest;
+        }
+        
+        return {
+          invoiceNumber: inv.invoiceNumber || 'N/A',
+          amount: balance,
+          interest,
+          dueDate: inv.dueDate ? new Date(inv.dueDate).toLocaleDateString('en-GB') : 'N/A',
+          daysOverdue
+        };
+      });
+      
+      const totalOutstanding = invoicesWithInterest.reduce((sum, inv) => sum + inv.amount, 0);
+      const oldestOverdueDays = invoicesWithInterest.length > 0
+        ? Math.max(...invoicesWithInterest.map(inv => inv.daysOverdue))
         : 0;
 
       // Get tenant info
@@ -4525,17 +4554,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         companyName: contact.name || 'Customer',
         totalOutstanding,
         oldestOverdueDays,
-        invoices: overdueInvoicesList.map(inv => {
-          const balance = Number(inv.amount || 0) - Number(inv.amountPaid || 0);
-          return {
-            invoiceNumber: inv.invoiceNumber || 'N/A',
-            amount: balance,
-            dueDate: inv.dueDate ? new Date(inv.dueDate).toLocaleDateString('en-GB') : 'N/A',
-            daysOverdue: inv.dueDate 
-              ? Math.max(0, Math.floor((Date.now() - new Date(inv.dueDate).getTime()) / (1000 * 60 * 60 * 24)))
-              : 0
-          };
-        }),
+        invoices: invoicesWithInterest,
         recentActivity: recentEvents.map(e => ({
           type: e.channel || 'event',
           date: new Date(e.occurredAt).toLocaleDateString('en-GB'),
@@ -4544,7 +4563,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         paymentPlan: null,
         tone: tone || 'professional',
         senderName: user.firstName || user.email.split('@')[0],
-        senderCompany: tenant?.name || 'Accounts Receivable'
+        senderCompany: tenant?.name || 'Accounts Receivable',
+        includeStatutoryInterest,
+        totalInterest,
+        statutoryInterestRate: BOE_BASE_RATE + STATUTORY_MARKUP
       });
 
       res.json({

@@ -22,6 +22,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -128,6 +129,7 @@ export function CustomerPreviewDrawer({
   const [emailSubject, setEmailSubject] = useState("");
   const [emailBody, setEmailBody] = useState("");
   const [isGeneratingEmail, setIsGeneratingEmail] = useState(false);
+  const [includeStatutoryInterest, setIncludeStatutoryInterest] = useState(true);
   
   const [isRecentActivityExpanded, setIsRecentActivityExpanded] = useState(true);
   const [expandedTimelineItems, setExpandedTimelineItems] = useState<Set<string>>(new Set());
@@ -262,6 +264,7 @@ export function CustomerPreviewDrawer({
     setEmailSubject("");
     setEmailBody("");
     setIsGeneratingEmail(false);
+    setIncludeStatutoryInterest(true);
     setIsRecentActivityExpanded(true);
   };
 
@@ -275,6 +278,7 @@ export function CustomerPreviewDrawer({
       const res = await apiRequest("POST", `/api/contacts/${customerId}/generate-email`, {
         templateType: emailTemplate,
         tone: toneLabels[emailTone].toLowerCase(),
+        includeStatutoryInterest,
       });
       const data = await res.json();
       setEmailSubject(data.subject);
@@ -1033,7 +1037,7 @@ export function CustomerPreviewDrawer({
                               </div>
                               <div>
                                 <Label className="text-xs text-slate-500 mb-1.5 block">
-                                  Tone
+                                  Tone ({toneLabels[emailTone]})
                                 </Label>
                                 <div className="flex items-center gap-2 h-9">
                                   <Slider
@@ -1044,7 +1048,17 @@ export function CustomerPreviewDrawer({
                                     step={1}
                                     className="flex-1"
                                   />
-                                  <span className="text-xs text-slate-600 w-20 text-right">{toneLabels[emailTone]}</span>
+                                  <div className="flex items-center gap-1.5">
+                                    <Checkbox
+                                      id="includeInterest"
+                                      checked={includeStatutoryInterest}
+                                      onCheckedChange={(checked) => setIncludeStatutoryInterest(checked === true)}
+                                      className="h-4 w-4"
+                                    />
+                                    <label htmlFor="includeInterest" className="text-[10px] text-slate-500 cursor-pointer whitespace-nowrap">
+                                      Interest
+                                    </label>
+                                  </div>
                                 </div>
                               </div>
                             </div>
