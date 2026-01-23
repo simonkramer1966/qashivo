@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useRoute, Link } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { ArrowLeft, Mail, Phone, MessageSquare, Mic, ExternalLink, Clock, Zap, Plus, User, Trash2, Star, AlertCircle } from "lucide-react";
+import { ArrowLeft, Mail, Phone, MessageSquare, Mic, ExternalLink, Clock, Zap, Plus, User, Trash2, Star, AlertCircle, Pencil } from "lucide-react";
 import NewSidebar from "@/components/layout/new-sidebar";
 import BottomNav from "@/components/layout/bottom-nav";
 import Header from "@/components/layout/header";
@@ -106,6 +106,10 @@ export default function CustomerDetailPage() {
   // State for add contact dialog
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [newPerson, setNewPerson] = useState({ name: '', email: '', phone: '', smsNumber: '', jobTitle: '' });
+  
+  // State for edit contact dialog
+  const [editingPerson, setEditingPerson] = useState<CustomerContactPerson | null>(null);
+  const [editPersonData, setEditPersonData] = useState({ name: '', email: '', phone: '', smsNumber: '', jobTitle: '' });
 
   // Mutations for contact persons
   const createPersonMutation = useMutation({
@@ -127,8 +131,34 @@ export default function CustomerDetailPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/contacts', customerId, 'persons'] });
+      setEditingPerson(null);
     }
   });
+  
+  const handleEditPerson = (person: CustomerContactPerson) => {
+    setEditingPerson(person);
+    setEditPersonData({
+      name: person.name || '',
+      email: person.email || '',
+      phone: person.phone || '',
+      smsNumber: person.smsNumber || '',
+      jobTitle: person.jobTitle || ''
+    });
+  };
+  
+  const handleSaveEdit = () => {
+    if (!editingPerson) return;
+    updatePersonMutation.mutate({
+      personId: editingPerson.id,
+      updates: {
+        name: editPersonData.name,
+        email: editPersonData.email || null,
+        phone: editPersonData.phone || null,
+        smsNumber: editPersonData.smsNumber || null,
+        jobTitle: editPersonData.jobTitle || null
+      }
+    });
+  };
 
   const deletePersonMutation = useMutation({
     mutationFn: async (personId: string) => {
@@ -358,6 +388,75 @@ export default function CustomerDetailPage() {
                           </div>
                         </DialogContent>
                       </Dialog>
+
+                      {/* Edit Contact Dialog */}
+                      <Dialog open={!!editingPerson} onOpenChange={(open) => !open && setEditingPerson(null)}>
+                        <DialogContent className="sm:max-w-md">
+                          <DialogHeader>
+                            <DialogTitle>Edit Contact Person</DialogTitle>
+                          </DialogHeader>
+                          <div className="space-y-4 py-4">
+                            <div>
+                              <label className="text-sm text-slate-600">Name *</label>
+                              <Input 
+                                value={editPersonData.name}
+                                onChange={(e) => setEditPersonData(p => ({ ...p, name: e.target.value }))}
+                                placeholder="Full name"
+                                className="mt-1"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-sm text-slate-600">Job Title</label>
+                              <Input 
+                                value={editPersonData.jobTitle}
+                                onChange={(e) => setEditPersonData(p => ({ ...p, jobTitle: e.target.value }))}
+                                placeholder="e.g. Finance Director"
+                                className="mt-1"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-sm text-slate-600">Email</label>
+                              <Input 
+                                type="email"
+                                value={editPersonData.email}
+                                onChange={(e) => setEditPersonData(p => ({ ...p, email: e.target.value }))}
+                                placeholder="email@example.com"
+                                className="mt-1"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-sm text-slate-600">Phone</label>
+                              <Input 
+                                value={editPersonData.phone}
+                                onChange={(e) => setEditPersonData(p => ({ ...p, phone: e.target.value }))}
+                                placeholder="+44 7XXX XXXXXX"
+                                className="mt-1"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-sm text-slate-600">SMS Number</label>
+                              <Input 
+                                value={editPersonData.smsNumber}
+                                onChange={(e) => setEditPersonData(p => ({ ...p, smsNumber: e.target.value }))}
+                                placeholder="+44 7XXX XXXXXX"
+                                className="mt-1"
+                              />
+                            </div>
+                          </div>
+                          <div className="flex justify-end gap-2">
+                            <Button variant="outline" size="sm" onClick={() => setEditingPerson(null)}>
+                              Cancel
+                            </Button>
+                            <Button 
+                              size="sm"
+                              onClick={handleSaveEdit}
+                              disabled={!editPersonData.name.trim() || updatePersonMutation.isPending}
+                            >
+                              {updatePersonMutation.isPending ? "Saving..." : "Save Changes"}
+                            </Button>
+                          </div>
+                        </DialogContent>
+                      </Dialog>
                     </div>
 
                     {loadingPersons ? (
@@ -439,17 +538,26 @@ export default function CustomerDetailPage() {
                                   <span className="hidden sm:inline">Escalation</span>
                                 </button>
                                 {!person.isFromXero && (
-                                  <button
-                                    onClick={() => {
-                                      if (confirm('Delete this contact?')) {
-                                        deletePersonMutation.mutate(person.id);
-                                      }
-                                    }}
-                                    className="text-slate-400 hover:text-red-500 p-1"
-                                    title="Delete"
-                                  >
-                                    <Trash2 className="h-3.5 w-3.5" />
-                                  </button>
+                                  <>
+                                    <button
+                                      onClick={() => handleEditPerson(person)}
+                                      className="text-slate-400 hover:text-[#17B6C3] p-1"
+                                      title="Edit"
+                                    >
+                                      <Pencil className="h-3.5 w-3.5" />
+                                    </button>
+                                    <button
+                                      onClick={() => {
+                                        if (confirm('Delete this contact?')) {
+                                          deletePersonMutation.mutate(person.id);
+                                        }
+                                      }}
+                                      className="text-slate-400 hover:text-red-500 p-1"
+                                      title="Delete"
+                                    >
+                                      <Trash2 className="h-3.5 w-3.5" />
+                                    </button>
+                                  </>
                                 )}
                               </div>
                             </div>
