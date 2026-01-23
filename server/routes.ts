@@ -66,7 +66,8 @@ import {
   tenants,
   paymentPromises,
   smeClients,
-  contactNotes
+  contactNotes,
+  timelineEvents
 } from "@shared/schema";
 import { getOverdueCategoryFromDueDate } from "@shared/utils/overdueUtils";
 import { calculateLatePaymentInterest } from "./utils/interestCalculator";
@@ -4281,6 +4282,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       const note = await storage.createNote(noteData);
+      
+      // Create a timeline event so the note shows in Recent Activity
+      const noteTypeLabel = noteData.noteType === 'reminder' ? 'Reminder' : 'Internal note';
+      const preview = noteData.content.length > 100 
+        ? noteData.content.substring(0, 100) + '...' 
+        : noteData.content;
+      
+      await db.insert(timelineEvents).values({
+        tenantId: user.tenantId,
+        customerId: contactId,
+        occurredAt: new Date(),
+        direction: 'internal',
+        channel: 'note',
+        summary: `${noteTypeLabel} added`,
+        preview: preview,
+        body: noteData.content,
+        status: 'completed'
+      });
       
       // Return a properly structured JSON response
       return res.status(201).json({
