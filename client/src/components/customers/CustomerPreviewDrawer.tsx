@@ -261,7 +261,7 @@ export function CustomerPreviewDrawer({
 
         <div className="flex-1 flex min-h-0">
           {/* Left Column - Balance & Activity */}
-          <div className="w-2/5 min-w-[280px] flex flex-col border-r border-slate-100">
+          <div className="w-1/2 flex flex-col border-r border-slate-100">
             <ScrollArea className="flex-1">
               <div className="px-6 py-6 space-y-6">
                 {isLoading ? (
@@ -513,9 +513,9 @@ export function CustomerPreviewDrawer({
           </div>
 
           {/* Right Column - Invoices */}
-          <div className="w-3/5 flex flex-col">
+          <div className="w-1/2 flex flex-col">
             <ScrollArea className="flex-1">
-              <div className="px-6 py-6">
+              <div className="px-4 py-6">
                 {isLoading ? (
                   <div className="space-y-3">
                     <Skeleton className="h-4 w-32" />
@@ -534,7 +534,7 @@ export function CustomerPreviewDrawer({
                         {preview.invoices.map((invoice) => (
                           <div
                             key={invoice.id}
-                            className="p-3 rounded-lg border border-slate-100 hover:border-slate-200 transition-colors cursor-pointer"
+                            className="p-2.5 rounded-lg border border-slate-100 hover:border-slate-200 transition-colors cursor-pointer"
                           >
                             <div className="flex items-start justify-between gap-2">
                               <div className="flex-1 min-w-0">
@@ -582,38 +582,38 @@ export function CustomerPreviewDrawer({
 
             {/* Right Footer - Action Buttons */}
             {preview && (
-              <div className="px-6 py-4 border-t border-slate-100 flex-shrink-0">
-                <div className="flex gap-2">
+              <div className="px-4 py-3 border-t border-slate-100 flex-shrink-0">
+                <div className="flex gap-1.5">
                   <Button 
                     variant="outline" 
                     size="sm"
-                    className="flex-1 border-[#E6E8EC] text-slate-700 hover:bg-slate-50"
+                    className="flex-1 border-[#E6E8EC] text-slate-700 hover:bg-slate-50 px-2"
                   >
-                    <Handshake className="h-4 w-4 mr-1.5" />
+                    <Handshake className="h-3.5 w-3.5 mr-1" />
                     PTP
                   </Button>
                   <Button 
                     variant="outline" 
                     size="sm"
-                    className="flex-1 border-[#E6E8EC] text-slate-700 hover:bg-slate-50"
+                    className="flex-1 border-[#E6E8EC] text-slate-700 hover:bg-slate-50 px-2"
                   >
-                    <Calendar className="h-4 w-4 mr-1.5" />
+                    <Calendar className="h-3.5 w-3.5 mr-1" />
                     Plan
                   </Button>
                   <Button 
                     variant="outline" 
                     size="sm"
-                    className="flex-1 border-[#E6E8EC] text-slate-700 hover:bg-slate-50"
+                    className="flex-1 border-[#E6E8EC] text-slate-700 hover:bg-slate-50 px-2"
                   >
-                    <Scale className="h-4 w-4 mr-1.5" />
+                    <Scale className="h-3.5 w-3.5 mr-1" />
                     Dispute
                   </Button>
                   <Button 
                     variant="outline" 
                     size="sm"
-                    className="flex-1 border-[#E6E8EC] text-slate-700 hover:bg-slate-50"
+                    className="flex-1 border-[#E6E8EC] text-slate-700 hover:bg-slate-50 px-2"
                   >
-                    <Shield className="h-4 w-4 mr-1.5" />
+                    <Shield className="h-3.5 w-3.5 mr-1" />
                     Recovery
                   </Button>
                 </div>
