@@ -4533,9 +4533,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         })),
         paymentPlan: null,
         tone: tone || 'professional',
-        senderName: user.firstName && user.lastName 
-          ? `${user.firstName} ${user.lastName}` 
-          : user.email.split('@')[0],
+        senderName: user.firstName || user.email.split('@')[0],
         senderCompany: tenant?.name || 'Accounts Receivable'
       });
 
