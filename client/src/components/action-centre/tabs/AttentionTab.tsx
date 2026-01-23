@@ -148,10 +148,10 @@ export function AttentionTab({ items, onSelectDebtor, isLoading, search = '' }: 
                 return (
                   <tr 
                     key={item.id} 
-                    className={`hover:bg-slate-100 transition-colors cursor-pointer ${!isLast ? 'border-b border-slate-200' : ''}`}
+                    className={`group hover:bg-slate-100 transition-colors cursor-pointer ${!isLast ? 'border-b border-slate-200' : ''}`}
                     onClick={() => onSelectDebtor(item.debtorId)}
                   >
-                    <td className="py-[5px] px-3 sticky left-0 bg-white z-10">
+                    <td className="py-[5px] px-3 sticky left-0 bg-white group-hover:bg-slate-100 z-10 transition-colors">
                       <div className="text-[13px] font-medium text-slate-900 truncate max-w-[170px]">
                         {item.debtorName}
                       </div>
