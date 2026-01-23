@@ -393,10 +393,10 @@ export function CustomerPreviewDrawer({
                                 const amount = item.outcome?.extracted?.amount;
                                 
                                 return (
-                                  <div key={item.id} className="border-b border-slate-100 last:border-b-0">
+                                  <div key={item.id} className="border-b border-slate-100 last:border-b-0 min-w-0">
                                     <button
                                       onClick={() => toggleTimelineItem(item.id)}
-                                      className="w-full flex items-center gap-2 py-2 hover:bg-slate-50 transition-colors text-left"
+                                      className="w-full flex items-center gap-2 py-2 hover:bg-slate-50 transition-colors text-left min-w-0 overflow-hidden"
                                     >
                                       <TooltipProvider delayDuration={300}>
                                         <Tooltip>
