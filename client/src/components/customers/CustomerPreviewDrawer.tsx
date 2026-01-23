@@ -728,27 +728,7 @@ export function CustomerPreviewDrawer({
                               />
                             </div>
 
-                            <div className="flex gap-2">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={resetNoteForm}
-                                className="flex-1 border-slate-200 text-xs"
-                              >
-                                <X className="h-4 w-4 mr-1.5" />
-                                Cancel
-                              </Button>
-                              <Button
-                                size="sm"
-                                onClick={handleSaveNote}
-                                disabled={createNoteMutation.isPending || !noteContent.trim()}
-                                className="flex-1 bg-[#17B6C3] hover:bg-[#1396A1] text-white text-xs"
-                              >
-                                <Save className="h-4 w-4 mr-1.5" />
-                                {createNoteMutation.isPending ? "Saving..." : "Save"}
-                              </Button>
                             </div>
-                          </div>
                         </section>
                       </>
                     )}
@@ -953,6 +933,32 @@ export function CustomerPreviewDrawer({
                   >
                     <MessageSquare className="h-4 w-4 mr-1.5" />
                     SMS
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* Left Footer - Note Mode Actions */}
+            {preview && isNoteMode && (
+              <div className="px-6 py-4 border-t border-slate-100 flex-shrink-0">
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={resetNoteForm}
+                    className="flex-1 border-slate-200 text-xs"
+                  >
+                    <X className="h-4 w-4 mr-1.5" />
+                    Cancel
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={handleSaveNote}
+                    disabled={createNoteMutation.isPending || !noteContent.trim()}
+                    className="flex-1 bg-[#17B6C3] hover:bg-[#1396A1] text-white text-xs"
+                  >
+                    <Save className="h-4 w-4 mr-1.5" />
+                    {createNoteMutation.isPending ? "Saving..." : "Save"}
                   </Button>
                 </div>
               </div>
