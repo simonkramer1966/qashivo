@@ -47,7 +47,10 @@ import {
   Handshake,
   Calendar,
   Scale,
-  Shield
+  Shield,
+  User,
+  Bot,
+  Settings
 } from "lucide-react";
 import { useCurrency } from "@/hooks/useCurrency";
 import { useToast } from "@/hooks/use-toast";
@@ -85,6 +88,7 @@ export function CustomerPreviewDrawer({
   const [reminderTime, setReminderTime] = useState("");
   const [assignedToUserId, setAssignedToUserId] = useState<string>("");
   const [isRecentActivityExpanded, setIsRecentActivityExpanded] = useState(true);
+  const [expandedTimelineItems, setExpandedTimelineItems] = useState<Set<string>>(new Set());
   const [invoiceFilter, setInvoiceFilter] = useState<"all" | "overdue">("all");
   const [invoiceSortColumn, setInvoiceSortColumn] = useState<"issueDate" | "invoiceNumber" | "dueDate" | "daysOverdue" | "balance">("daysOverdue");
   const [invoiceSortDirection, setInvoiceSortDirection] = useState<"asc" | "desc">("desc");
@@ -181,18 +185,48 @@ export function CustomerPreviewDrawer({
     switch (channel) {
       case "email": return <Mail className="h-3.5 w-3.5" />;
       case "sms": return <MessageSquare className="h-3.5 w-3.5" />;
-      case "voice": return <Mic className="h-3.5 w-3.5" />;
+      case "voice": return <Phone className="h-3.5 w-3.5" />;
+      case "note": return <StickyNote className="h-3.5 w-3.5" />;
+      case "system": return <Settings className="h-3.5 w-3.5" />;
       default: return <Clock className="h-3.5 w-3.5" />;
     }
   };
 
-  const getDirectionIcon = (direction: string) => {
-    if (direction === "outbound") return <ArrowUpRight className="h-3 w-3 text-slate-400" />;
-    if (direction === "inbound") return <ArrowDownLeft className="h-3 w-3 text-slate-400" />;
-    return null;
+  const getChannelLabel = (channel: string) => {
+    switch (channel) {
+      case "email": return "Email";
+      case "sms": return "SMS";
+      case "voice": return "Call";
+      case "note": return "Note";
+      case "system": return "System";
+      default: return "Event";
+    }
   };
 
-  const formatTimeAgo = (dateStr: string) => {
+  const getOutcomeLabel = (outcomeType: string | undefined) => {
+    if (!outcomeType) return null;
+    switch (outcomeType) {
+      case "promise_to_pay": return { label: "PTP", color: "bg-emerald-100 text-emerald-700" };
+      case "payment_plan": return { label: "Plan", color: "bg-blue-100 text-blue-700" };
+      case "dispute": return { label: "Dispute", color: "bg-amber-100 text-amber-700" };
+      case "request_more_time": return { label: "More Time", color: "bg-purple-100 text-purple-700" };
+      case "paid_confirmed": return { label: "Paid", color: "bg-green-100 text-green-700" };
+      case "refused": return { label: "Refused", color: "bg-red-100 text-red-700" };
+      case "no_response": return { label: "No Response", color: "bg-slate-100 text-slate-600" };
+      case "wrong_contact": return { label: "Wrong Contact", color: "bg-orange-100 text-orange-700" };
+      default: return { label: outcomeType, color: "bg-slate-100 text-slate-600" };
+    }
+  };
+
+  const getActorIcon = (createdByType: string | undefined) => {
+    switch (createdByType) {
+      case "user": return <User className="h-3 w-3" />;
+      case "system": return <Bot className="h-3 w-3" />;
+      default: return null;
+    }
+  };
+
+  const formatRelativeDate = (dateStr: string) => {
     const date = new Date(dateStr);
     const now = new Date();
     const diffMs = now.getTime() - date.getTime();
@@ -200,10 +234,38 @@ export function CustomerPreviewDrawer({
     const diffHours = Math.floor(diffMs / 3600000);
     const diffDays = Math.floor(diffMs / 86400000);
 
-    if (diffMins < 60) return `${diffMins}m ago`;
-    if (diffHours < 24) return `${diffHours}h ago`;
-    if (diffDays < 7) return `${diffDays}d ago`;
-    return date.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+    const time = date.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+    
+    if (diffMins < 60) return { relative: `${diffMins}m ago`, time };
+    if (diffHours < 24) return { relative: `${diffHours}h ago`, time };
+    if (diffDays === 1) return { relative: "Yesterday", time };
+    if (diffDays < 7) return { relative: `${diffDays}d ago`, time };
+    
+    const dateFormatted = date.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+    return { relative: dateFormatted, time };
+  };
+
+  const formatExactDate = (dateStr: string) => {
+    const date = new Date(dateStr);
+    return date.toLocaleString("en-GB", { 
+      day: "numeric", 
+      month: "short", 
+      year: "numeric",
+      hour: "2-digit", 
+      minute: "2-digit" 
+    });
+  };
+
+  const toggleTimelineItem = (itemId: string) => {
+    setExpandedTimelineItems(prev => {
+      const next = new Set(prev);
+      if (next.has(itemId)) {
+        next.delete(itemId);
+      } else {
+        next.add(itemId);
+      }
+      return next;
+    });
   };
 
   const formatShortDate = (dateStr: string) => {
@@ -323,26 +385,95 @@ export function CustomerPreviewDrawer({
                       {isRecentActivityExpanded && (
                         <div className="mt-3">
                           {preview.latestTimeline && preview.latestTimeline.length > 0 ? (
-                            <div className="space-y-3">
-                              {preview.latestTimeline.map((item) => (
-                                <div 
-                                  key={item.id} 
-                                  className="flex items-start gap-3 text-sm"
-                                >
-                                  <div className="flex items-center gap-1 text-slate-400 flex-shrink-0 mt-0.5">
-                                    {getChannelIcon(item.channel)}
-                                    {getDirectionIcon(item.direction)}
+                            <div className="space-y-1">
+                              {preview.latestTimeline.map((item) => {
+                                const dateInfo = formatRelativeDate(item.occurredAt);
+                                const isExpanded = expandedTimelineItems.has(item.id);
+                                const outcomeLabel = getOutcomeLabel(item.outcome?.type);
+                                const amount = item.outcome?.extracted?.amount;
+                                
+                                return (
+                                  <div key={item.id} className="border-b border-slate-100 last:border-b-0">
+                                    <button
+                                      onClick={() => toggleTimelineItem(item.id)}
+                                      className="w-full flex items-center gap-2 py-2 hover:bg-slate-50 transition-colors text-left"
+                                    >
+                                      <TooltipProvider delayDuration={300}>
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <span className="text-xs text-slate-400 w-16 flex-shrink-0 tabular-nums">
+                                              {dateInfo.relative}
+                                            </span>
+                                          </TooltipTrigger>
+                                          <TooltipContent side="top" className="text-xs">
+                                            {formatExactDate(item.occurredAt)}
+                                          </TooltipContent>
+                                        </Tooltip>
+                                      </TooltipProvider>
+                                      
+                                      <div className="flex items-center gap-1.5 text-slate-500 flex-shrink-0">
+                                        {getChannelIcon(item.channel)}
+                                        <span className="text-xs font-medium">{getChannelLabel(item.channel)}</span>
+                                      </div>
+                                      
+                                      <span className="text-xs text-slate-700 flex-1 min-w-0 truncate">
+                                        {item.preview || item.summary}
+                                      </span>
+                                      
+                                      <div className="flex items-center gap-1.5 flex-shrink-0">
+                                        {outcomeLabel && (
+                                          <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${outcomeLabel.color}`}>
+                                            {outcomeLabel.label}
+                                          </span>
+                                        )}
+                                        {amount && (
+                                          <span className="text-xs font-semibold text-slate-700">
+                                            {formatCurrency(amount)}
+                                          </span>
+                                        )}
+                                        {isExpanded ? (
+                                          <ChevronDown className="h-3.5 w-3.5 text-slate-400" />
+                                        ) : (
+                                          <ChevronRight className="h-3.5 w-3.5 text-slate-400" />
+                                        )}
+                                      </div>
+                                    </button>
+                                    
+                                    {isExpanded && (
+                                      <div className="pl-[72px] pr-2 pb-3 space-y-2">
+                                        {item.body && (
+                                          <p className="text-xs text-slate-600 whitespace-pre-wrap">
+                                            {item.body}
+                                          </p>
+                                        )}
+                                        {item.invoiceId && (() => {
+                                          const linkedInvoice = preview.invoices?.find(inv => inv.id === item.invoiceId);
+                                          return linkedInvoice ? (
+                                            <div className="flex items-center gap-2 text-xs">
+                                              <FileText className="h-3 w-3 text-slate-400" />
+                                              <span className="text-slate-600">Linked to:</span>
+                                              <span className="font-medium text-slate-700">{linkedInvoice.invoiceNumber}</span>
+                                              <span className="text-slate-500">({formatCurrency(linkedInvoice.balance)})</span>
+                                            </div>
+                                          ) : null;
+                                        })()}
+                                        <div className="flex items-center gap-3 text-[10px] text-slate-400">
+                                          {item.createdBy && (
+                                            <span className="flex items-center gap-1">
+                                              {getActorIcon(item.createdBy.type)}
+                                              {item.createdBy.name || (item.createdBy.type === 'system' ? 'System' : 'User')}
+                                            </span>
+                                          )}
+                                          {item.status && (
+                                            <span className="capitalize">{item.status}</span>
+                                          )}
+                                          <span>{formatExactDate(item.occurredAt)}</span>
+                                        </div>
+                                      </div>
+                                    )}
                                   </div>
-                                  <div className="flex-1 min-w-0">
-                                    <p className="text-slate-700 line-clamp-2">
-                                      {item.summary}
-                                    </p>
-                                    <p className="text-xs text-slate-400 mt-0.5">
-                                      {formatTimeAgo(item.occurredAt)}
-                                    </p>
-                                  </div>
-                                </div>
-                              ))}
+                                );
+                              })}
                             </div>
                           ) : (
                             <p className="text-sm text-slate-400">No recent activity</p>

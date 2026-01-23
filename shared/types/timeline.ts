@@ -109,7 +109,19 @@ export interface CustomerPreview {
     channel: TimelineChannel;
     direction: TimelineDirection;
     summary: string;
+    preview?: string;
+    body?: string;
     status?: TimelineStatus;
+    invoiceId?: string;
+    outcome?: {
+      type: TimelineOutcomeType;
+      confidence: number;
+      extracted?: Record<string, any>;
+    };
+    createdBy?: {
+      type: TimelineCreatedByType;
+      name?: string;
+    };
   }>;
   invoices: CustomerPreviewInvoice[];
 }

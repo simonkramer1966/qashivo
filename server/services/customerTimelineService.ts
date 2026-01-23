@@ -107,7 +107,15 @@ export class CustomerTimelineService {
         channel: timelineEvents.channel,
         direction: timelineEvents.direction,
         summary: timelineEvents.summary,
-        status: timelineEvents.status
+        preview: timelineEvents.preview,
+        body: timelineEvents.body,
+        status: timelineEvents.status,
+        invoiceId: timelineEvents.invoiceId,
+        outcomeType: timelineEvents.outcomeType,
+        outcomeConfidence: timelineEvents.outcomeConfidence,
+        outcomeExtracted: timelineEvents.outcomeExtracted,
+        createdByType: timelineEvents.createdByType,
+        createdByName: timelineEvents.createdByName
       })
       .from(timelineEvents)
       .where(and(
@@ -115,7 +123,7 @@ export class CustomerTimelineService {
         eq(timelineEvents.tenantId, tenantId)
       ))
       .orderBy(desc(timelineEvents.occurredAt))
-      .limit(3);
+      .limit(5);
 
     const behaviourLabel = customer.riskBand 
       ? `${customer.riskBand} rated` 
@@ -146,7 +154,19 @@ export class CustomerTimelineService {
         channel: item.channel as TimelineChannel,
         direction: item.direction as TimelineDirection,
         summary: item.summary,
-        status: item.status as TimelineStatus | undefined
+        preview: item.preview || undefined,
+        body: item.body || undefined,
+        status: item.status as TimelineStatus | undefined,
+        invoiceId: item.invoiceId || undefined,
+        outcome: item.outcomeType ? {
+          type: item.outcomeType as any,
+          confidence: Number(item.outcomeConfidence || 0),
+          extracted: item.outcomeExtracted as Record<string, any> | undefined
+        } : undefined,
+        createdBy: item.createdByType ? {
+          type: item.createdByType as any,
+          name: item.createdByName || undefined
+        } : undefined
       })),
       invoices: invoiceList
     };

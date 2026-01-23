@@ -4289,6 +4289,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ? noteData.content.substring(0, 100) + '...' 
         : noteData.content;
       
+      const userName = user.firstName || user.lastName 
+        ? `${user.firstName || ''} ${user.lastName || ''}`.trim() 
+        : user.email;
+      
       await db.insert(timelineEvents).values({
         tenantId: user.tenantId,
         customerId: contactId,
@@ -4298,7 +4302,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         summary: `${noteTypeLabel} added`,
         preview: preview,
         body: noteData.content,
-        status: 'completed'
+        status: 'completed',
+        createdByType: 'user',
+        createdByName: userName
       });
       
       // Return a properly structured JSON response
