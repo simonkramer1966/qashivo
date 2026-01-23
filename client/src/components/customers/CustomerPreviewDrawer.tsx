@@ -233,7 +233,7 @@ export function CustomerPreviewDrawer({
       if (!newOpen) resetNoteForm();
       onOpenChange(newOpen);
     }}>
-      <SheetContent className="w-full sm:max-w-3xl p-0 flex flex-col" hideCloseButton>
+      <SheetContent className="w-full sm:max-w-4xl p-0 flex flex-col" hideCloseButton>
         <SheetHeader className="px-6 pt-6 pb-4 flex-shrink-0 border-b border-slate-100">
           <div className="flex items-center justify-between">
             <SheetTitle className="text-lg font-semibold text-slate-900">
@@ -260,8 +260,8 @@ export function CustomerPreviewDrawer({
         </SheetHeader>
 
         <div className="flex-1 flex min-h-0">
-          {/* Left Column */}
-          <div className="flex-1 flex flex-col border-r border-slate-100">
+          {/* Left Column - Balance & Activity */}
+          <div className="w-2/5 min-w-[280px] flex flex-col border-r border-slate-100">
             <ScrollArea className="flex-1">
               <div className="px-6 py-6 space-y-6">
                 {isLoading ? (
@@ -513,7 +513,7 @@ export function CustomerPreviewDrawer({
           </div>
 
           {/* Right Column - Invoices */}
-          <div className="flex-1 flex flex-col">
+          <div className="w-3/5 flex flex-col">
             <ScrollArea className="flex-1">
               <div className="px-6 py-6">
                 {isLoading ? (
