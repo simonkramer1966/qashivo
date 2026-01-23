@@ -637,7 +637,7 @@ export function CustomerPreviewDrawer({
                             </button>
                           </div>
                           {/* Invoice Rows */}
-                          <TooltipProvider delayDuration={300}>
+                          <TooltipProvider delayDuration={600}>
                             {filteredInvoices.map((invoice) => (
                               <Tooltip key={invoice.id}>
                                 <TooltipTrigger asChild>
