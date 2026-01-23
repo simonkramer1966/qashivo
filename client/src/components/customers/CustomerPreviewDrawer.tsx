@@ -1103,7 +1103,7 @@ export function CustomerPreviewDrawer({
                                 placeholder="Type your message..."
                                 value={emailBody}
                                 onChange={(e) => setEmailBody(e.target.value)}
-                                className="min-h-[200px] bg-white border-slate-200 resize-none text-xs"
+                                className="min-h-[200px] bg-white border-slate-200 resize-none text-[12px]"
                               />
                             </div>
 
