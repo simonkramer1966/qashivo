@@ -681,46 +681,6 @@ Your Company`;
             </div>
           )}
 
-          {showOtherOutcomes && step === "outcome" && (
-            <div className="pt-4 border-t border-[#E6E8EC]">
-              <p className="text-sm text-[#556070] mb-3">See other outcomes</p>
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleOtherOutcome("PROMISE_TO_PAY")}
-                  className="border-[#E6E8EC] text-sm"
-                >
-                  Promise to pay
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleOtherOutcome("REQUEST_TIME")}
-                  className="border-[#E6E8EC] text-sm"
-                >
-                  Request more time
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleOtherOutcome("DISPUTE")}
-                  className="border-[#E6E8EC] text-sm"
-                >
-                  Dispute
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleOtherOutcome("AMBIGUOUS")}
-                  className="border-[#E6E8EC] text-sm"
-                >
-                  Call me tomorrow
-                </Button>
-              </div>
-              <p className="text-xs text-[#556070] mt-2">Demo: choose a different reply to see how the plan and forecast change.</p>
-            </div>
-          )}
         </div>
 
         <div className="space-y-6">
@@ -779,6 +739,47 @@ Your Company`;
                   </p>
                 </div>
               </div>
+            </div>
+          )}
+
+          {showOtherOutcomes && step === "outcome" && (
+            <div className="pt-4 border-t border-[#E6E8EC]">
+              <p className="text-sm text-[#556070] mb-3">See other outcomes</p>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleOtherOutcome("PROMISE_TO_PAY")}
+                  className="border-[#E6E8EC] text-sm"
+                >
+                  Promise to pay
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleOtherOutcome("REQUEST_TIME")}
+                  className="border-[#E6E8EC] text-sm"
+                >
+                  Request more time
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleOtherOutcome("DISPUTE")}
+                  className="border-[#E6E8EC] text-sm"
+                >
+                  Dispute
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleOtherOutcome("AMBIGUOUS")}
+                  className="border-[#E6E8EC] text-sm"
+                >
+                  Call me tomorrow
+                </Button>
+              </div>
+              <p className="text-xs text-[#556070] mt-2">Demo: choose a different reply to see how the plan and forecast change.</p>
             </div>
           )}
         </div>
