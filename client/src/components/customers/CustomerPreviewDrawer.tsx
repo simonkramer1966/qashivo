@@ -556,7 +556,7 @@ export function CustomerPreviewDrawer({
                             </div>
                             {/* Second Row: Description */}
                             {invoice.description && (
-                              <p className="text-xs text-slate-500 mt-1 truncate">
+                              <p className="text-xs text-slate-500 mt-1 truncate max-w-full">
                                 {invoice.description}
                               </p>
                             )}
