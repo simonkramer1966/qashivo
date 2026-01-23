@@ -4362,16 +4362,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Contact has no phone number" });
       }
 
-      const { reason, tone, goal, maxDuration, scheduleMode, scheduledFor } = req.body;
+      const { reason, tone, goal, maxDuration, scheduleMode, scheduledFor, recipientPhone } = req.body;
+
+      // Use recipientPhone if provided, otherwise fall back to contact.phone
+      const phoneToCall = recipientPhone || contact.phone;
 
       // Map tone number (0=Friendly, 1=Professional, 2=Firm) to voice tone profile
       const toneProfiles = ['VOICE_TONE_WARM_FRIENDLY', 'VOICE_TONE_CALM_COLLABORATIVE', 'VOICE_TONE_FIRM_ASSERTIVE'];
       const voiceTone = toneProfiles[tone] || toneProfiles[1];
+      const toneLabels = ['Friendly', 'Professional', 'Firm'];
+      const toneLabel = toneLabels[tone] || 'Professional';
 
       // Calculate scheduledFor time
       let scheduledTime: Date;
-      if (scheduleMode === 'asap') {
-        // ASAP: schedule for now (will be picked up by executor immediately)
+      if (scheduleMode === 'now' || scheduleMode === 'asap') {
+        // NOW/ASAP: schedule for now (will be picked up by executor immediately)
         scheduledTime = new Date();
       } else if (scheduledFor) {
         scheduledTime = new Date(scheduledFor);
@@ -4400,7 +4405,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         invoiceId: primaryInvoice?.id || null,
         userId: user.id,
         type: 'voice',
-        status: 'scheduled',
+        status: scheduleMode === 'now' ? 'in_progress' : 'scheduled',
         scheduledFor: scheduledTime,
         approvedBy: user.id, // Auto-approved since user manually scheduled
         approvedAt: new Date(),
@@ -4412,8 +4417,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           goal,
           maxDuration,
           voiceTone,
+          toneLabel,
           reason,
           scheduleMode,
+          recipientPhone: phoneToCall,
           invoiceNumber: primaryInvoice?.invoiceNumber,
           daysOverdue: primaryInvoice?.dueDate 
             ? Math.max(0, Math.floor((Date.now() - new Date(primaryInvoice.dueDate).getTime()) / (1000 * 60 * 60 * 24)))
@@ -4433,19 +4440,86 @@ export async function registerRoutes(app: Express): Promise<Server> {
         occurredAt: new Date(),
         direction: 'outbound',
         channel: 'voice',
-        summary: scheduleMode === 'asap' ? 'AI call initiated' : 'AI call scheduled',
+        summary: scheduleMode === 'now' ? 'AI call started' : (scheduleMode === 'asap' ? 'AI call initiated' : 'AI call scheduled'),
         preview: reason || `Goal: ${goal.replace(/_/g, ' ')}`,
-        body: JSON.stringify({ reason, goal, tone, maxDuration, scheduledFor: scheduledTime }),
+        body: JSON.stringify({ reason, goal, tone, toneLabel, maxDuration, recipientPhone: phoneToCall, scheduledFor: scheduledTime }),
         status: 'pending',
         createdByType: 'user',
         createdByName: userName,
         actionId: newAction.id
       });
 
+      // If scheduleMode is 'now', immediately trigger Retell call
+      let retellResult = null;
+      if (scheduleMode === 'now') {
+        try {
+          const { RetellService } = await import('./retell-service');
+          const retellService = new RetellService();
+          
+          // Get tenant for agent configuration
+          const tenant = await storage.getTenant(user.tenantId);
+          
+          // Use default agent if tenant doesn't have one configured
+          const agentId = tenant?.retellAgentId || process.env.RETELL_AGENT_ID || '';
+          
+          if (!agentId) {
+            console.warn('⚠️ No Retell agent ID configured, call will be scheduled for executor pickup');
+          } else {
+            console.log(`📞 Immediately initiating Retell call to ${phoneToCall}`);
+            
+            retellResult = await retellService.createCall({
+              fromNumber: process.env.RETELL_PHONE_NUMBER || '+442045772088',
+              toNumber: phoneToCall,
+              agentId: agentId,
+              dynamicVariables: {
+                customerName: contact.name,
+                companyName: contact.companyName || contact.name,
+                invoiceNumber: primaryInvoice?.invoiceNumber || 'N/A',
+                amount: primaryInvoice?.balance || 'N/A',
+                daysOverdue: primaryInvoice?.dueDate 
+                  ? Math.max(0, Math.floor((Date.now() - new Date(primaryInvoice.dueDate).getTime()) / (1000 * 60 * 60 * 24)))
+                  : 0,
+                voiceTone: voiceTone,
+                toneLabel: toneLabel,
+                reasonForCall: reason || '',
+                callGoal: goal || 'payment_commitment',
+              },
+              metadata: {
+                tenantId: user.tenantId,
+                contactId: contact.id,
+                invoiceId: primaryInvoice?.id,
+                actionId: newAction.id,
+                voiceTone,
+                goal,
+                reason,
+              }
+            });
+            
+            console.log(`✅ Retell call initiated: ${JSON.stringify(retellResult)}`);
+            
+            // Update action with call ID
+            if (retellResult?.call_id) {
+              await db.update(actions)
+                .set({ 
+                  metadata: { 
+                    ...newAction.metadata as any, 
+                    retellCallId: retellResult.call_id 
+                  } 
+                })
+                .where(eq(actions.id, newAction.id));
+            }
+          }
+        } catch (retellError: any) {
+          console.error('❌ Failed to initiate immediate Retell call:', retellError.message);
+          // Don't fail the request - the call is still scheduled for executor pickup
+        }
+      }
+
       return res.status(201).json({
         success: true,
         action: newAction,
-        message: scheduleMode === 'asap' ? "AI call initiated" : "AI call scheduled"
+        retellCall: retellResult,
+        message: scheduleMode === 'now' ? "AI call started" : (scheduleMode === 'asap' ? "AI call initiated" : "AI call scheduled")
       });
     } catch (error) {
       console.error("Error scheduling AI call:", error);

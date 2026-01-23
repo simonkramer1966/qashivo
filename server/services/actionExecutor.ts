@@ -497,6 +497,8 @@ export class ActionExecutor {
           stage: action.metadata?.stage || 'CREDIT_CONTROL',
           reasonCode: action.metadata?.reasonCode || 'GENERIC_OVERDUE_FOLLOWUP',
           openingScript: openingScript || '',
+          reasonForCall: action.metadata?.reason || action.content || '',
+          callGoal: action.metadata?.goal || 'payment_commitment',
         },
         metadata: {
           tenantId: tenant.id,
