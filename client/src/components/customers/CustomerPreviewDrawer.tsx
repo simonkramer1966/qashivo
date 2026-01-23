@@ -94,9 +94,10 @@ export function CustomerPreviewDrawer({
     enabled: !!customerId && open,
   });
 
-  const { data: currentUser } = useQuery<{ id: string; firstName: string | null; lastName: string | null; email: string; tenantId: string }>({
+  const { data: userResponse } = useQuery<{ user: { id: string; firstName: string | null; lastName: string | null; email: string; tenantId: string } }>({
     queryKey: ['/api/user'],
   });
+  const currentUser = userResponse?.user;
 
   const { data: tenantUsers } = useQuery<TenantUser[]>({
     queryKey: [`/api/tenants/${currentUser?.tenantId}/users`],
