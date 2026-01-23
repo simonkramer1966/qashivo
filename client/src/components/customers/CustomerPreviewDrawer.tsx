@@ -1017,8 +1017,8 @@ export function CustomerPreviewDrawer({
                           </div>
                           
                           <div className="space-y-3">
-                            <div className="grid grid-cols-2 gap-2">
-                              <div>
+                            <div className="flex gap-2">
+                              <div className="flex-1">
                                 <Label htmlFor="emailTemplate" className="text-xs text-slate-500 mb-1.5 block">
                                   Template
                                 </Label>
@@ -1050,11 +1050,11 @@ export function CustomerPreviewDrawer({
                                   />
                                 </div>
                               </div>
-                              <div>
+                              <div className="flex-shrink-0">
                                 <Label className="text-xs text-slate-500 mb-1.5 block">
                                   Interest
                                 </Label>
-                                <div className="flex items-center h-9">
+                                <div className="flex items-center justify-center h-9">
                                   <Checkbox
                                     id="includeInterest"
                                     checked={includeStatutoryInterest}
