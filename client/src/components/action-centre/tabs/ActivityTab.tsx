@@ -143,7 +143,7 @@ export function ActivityTab({ items, onSelectCustomer, isLoading, search = '' }:
                 return (
                   <tr 
                     key={item.id} 
-                    className={`hover:bg-slate-50/50 transition-colors ${hasCustomerId ? 'cursor-pointer' : ''} ${!isLast ? 'border-b border-slate-200' : ''}`}
+                    className={`hover:bg-slate-100 transition-colors ${hasCustomerId ? 'cursor-pointer' : ''} ${!isLast ? 'border-b border-slate-200' : ''}`}
                     onClick={() => hasCustomerId && onSelectCustomer(item.customerId)}
                   >
                     <td className="py-[5px] px-3">
