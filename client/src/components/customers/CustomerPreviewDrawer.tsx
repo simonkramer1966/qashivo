@@ -89,7 +89,7 @@ export function CustomerPreviewDrawer({
   const [assignedToUserId, setAssignedToUserId] = useState<string>("");
   const [isRecentActivityExpanded, setIsRecentActivityExpanded] = useState(true);
   const [expandedTimelineItems, setExpandedTimelineItems] = useState<Set<string>>(new Set());
-  const [invoiceFilter, setInvoiceFilter] = useState<"all" | "overdue">("all");
+  const [invoiceFilter, setInvoiceFilter] = useState<"all" | "overdue">("overdue");
   const [invoiceSortColumn, setInvoiceSortColumn] = useState<"issueDate" | "invoiceNumber" | "dueDate" | "daysOverdue" | "balance">("daysOverdue");
   const [invoiceSortDirection, setInvoiceSortDirection] = useState<"asc" | "desc">("desc");
 
