@@ -1011,10 +1011,12 @@ export function CustomerPreviewDrawer({
                     {isEmailMode && (
                       <>
                         <Separator className="bg-slate-100" />
-                        <section className="py-4 space-y-4">
-                          <p className="text-[10px] text-slate-400 uppercase tracking-wider">
-                            Compose Email
-                          </p>
+                        <section className="space-y-4">
+                          <div className="flex items-center justify-between">
+                            <p className="text-[10px] text-slate-400 uppercase tracking-wider">
+                              Compose Email
+                            </p>
+                          </div>
                           
                           <div className="space-y-3">
                             <div className="grid grid-cols-2 gap-2">
