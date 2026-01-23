@@ -103,10 +103,10 @@ export function CashboardTab({ debtors, onSelectDebtor, isLoading }: CashboardTa
               {paginatedMatrix.map(row => (
                 <tr 
                   key={row.debtor.id} 
-                  className="border-b border-slate-200 hover:bg-slate-100 transition-colors cursor-pointer"
+                  className="group border-b border-slate-200 hover:bg-slate-100 transition-colors cursor-pointer"
                   onClick={() => onSelectDebtor(row.debtor.id)}
                 >
-                  <td className="py-[5px] px-3 sticky left-0 bg-white z-10">
+                  <td className="py-[5px] px-3 sticky left-0 bg-white group-hover:bg-slate-100 z-10 transition-colors">
                     <div className="text-[13px] font-medium text-slate-900 truncate max-w-[170px]">
                       {row.debtor.name}
                     </div>
