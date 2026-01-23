@@ -272,8 +272,6 @@ export default function CustomerDetailPage() {
             
             {/* Section 1: Profile */}
             <section>
-              <p className="text-[10px] text-slate-400 uppercase tracking-wider mb-4">Profile</p>
-              
               {loadingProfile ? (
                 <div className="space-y-3">
                   <Skeleton className="h-5 w-48" />
