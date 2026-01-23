@@ -94,6 +94,11 @@ export default function CustomerDetailPage() {
   // Fetch customer contact persons
   const { data: contactPersons, isLoading: loadingPersons } = useQuery<CustomerContactPerson[]>({
     queryKey: ['/api/contacts', customerId, 'persons'],
+    queryFn: async () => {
+      const res = await fetch(`/api/contacts/${customerId}/persons`, { credentials: 'include' });
+      if (!res.ok) throw new Error('Failed to fetch contact persons');
+      return res.json();
+    },
     enabled: !!customerId,
   });
 
