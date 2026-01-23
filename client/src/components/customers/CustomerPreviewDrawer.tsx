@@ -440,7 +440,7 @@ export function CustomerPreviewDrawer({
                                     </button>
                                     
                                     {isExpanded && (
-                                      <div className="pl-[72px] pr-2 pb-3 space-y-2">
+                                      <div className="pl-[72px] pr-2 pb-3 space-y-2 overflow-hidden min-w-0">
                                         {item.body && (
                                           <p className="text-xs text-slate-600 whitespace-pre-wrap">
                                             {item.body}
