@@ -1012,9 +1012,9 @@ export function CustomerPreviewDrawer({
                       <>
                         <Separator className="bg-slate-100" />
                         <section className="py-4 space-y-4">
-                          <h3 className="text-xs font-semibold text-slate-900 uppercase tracking-wide">
+                          <p className="text-[10px] text-slate-400 uppercase tracking-wider">
                             Compose Email
-                          </h3>
+                          </p>
                           
                           <div className="space-y-3">
                             <div className="grid grid-cols-2 gap-2">
