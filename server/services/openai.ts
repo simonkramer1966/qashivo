@@ -414,3 +414,167 @@ FORMATTING INSTRUCTIONS:
     return "I apologize for the technical difficulty. As your AI CFO, I'm temporarily unable to provide advice. Please try your question again in a moment.";
   }
 }
+
+// Email template types for collections
+export type EmailTemplateType = 'full_payment_request' | 'plan_confirmation' | 'remittance_request' | 'statement';
+
+interface CollectionEmailContext {
+  contactName: string;
+  companyName: string;
+  totalOutstanding: number;
+  oldestOverdueDays: number;
+  invoices: Array<{
+    invoiceNumber: string;
+    amount: number;
+    dueDate: string;
+    daysOverdue: number;
+  }>;
+  recentActivity?: Array<{
+    type: string;
+    date: string;
+    summary?: string;
+  }>;
+  paymentPlan?: {
+    totalAmount: number;
+    installments: number;
+    nextPaymentDate: string;
+    nextPaymentAmount: number;
+  } | null;
+  tone: 'friendly' | 'professional' | 'firm';
+  senderName: string;
+  senderCompany: string;
+}
+
+export interface CollectionEmailDraft {
+  subject: string;
+  body: string;
+  templateType: EmailTemplateType;
+}
+
+const templateDescriptions: Record<EmailTemplateType, string> = {
+  full_payment_request: "Request for full payment of all outstanding invoices, emphasizing the importance of settling the account",
+  plan_confirmation: "Confirmation of an agreed payment plan with details of the installments and next steps",
+  remittance_request: "Request for remittance advice or proof of payment for recent payments made",
+  statement: "Statement of account showing all outstanding invoices with a request to review and confirm balances"
+};
+
+export async function generateCollectionEmail(
+  templateType: EmailTemplateType,
+  context: CollectionEmailContext
+): Promise<CollectionEmailDraft> {
+  try {
+    const templateDescription = templateDescriptions[templateType];
+    
+    const invoicesList = context.invoices.map(inv => 
+      `- Invoice ${inv.invoiceNumber}: £${inv.amount.toFixed(2)} (Due: ${inv.dueDate}, ${inv.daysOverdue} days overdue)`
+    ).join('\n');
+
+    const recentActivityText = context.recentActivity?.length 
+      ? context.recentActivity.slice(0, 5).map(a => `- ${a.date}: ${a.type} - ${a.summary || ''}`).join('\n')
+      : 'No recent communication on file';
+
+    const paymentPlanText = context.paymentPlan
+      ? `Active payment plan: £${context.paymentPlan.totalAmount} over ${context.paymentPlan.installments} installments. Next payment: £${context.paymentPlan.nextPaymentAmount} due ${context.paymentPlan.nextPaymentDate}`
+      : 'No active payment plan';
+
+    const prompt = `
+Generate a professional UK business collection email with these details:
+
+Template Type: ${templateType.replace(/_/g, ' ').toUpperCase()}
+Purpose: ${templateDescription}
+
+Customer Details:
+- Contact Name: ${context.contactName}
+- Company: ${context.companyName}
+- Total Outstanding: £${context.totalOutstanding.toFixed(2)}
+- Oldest Overdue: ${context.oldestOverdueDays} days
+
+Outstanding Invoices:
+${invoicesList}
+
+Recent Communication History:
+${recentActivityText}
+
+Payment Plan Status:
+${paymentPlanText}
+
+Desired Tone: ${context.tone}
+
+From:
+${context.senderName}
+${context.senderCompany}
+
+Generate an appropriate email in JSON format:
+{
+  "subject": "Clear, professional subject line",
+  "body": "Full email body with proper UK business formatting. Use £ for currency. Include greeting, main content, call to action, and professional sign-off. Do not include placeholder brackets like [Name] - use the actual values provided."
+}
+
+Guidelines:
+- Use British English spelling
+- Be professional but ${context.tone}
+- Include specific invoice/amount details where relevant
+- End with clear next steps or call to action
+- Sign off appropriately for the tone
+`;
+
+    const response = await openai.chat.completions.create({
+      model: "gpt-5",
+      messages: [
+        {
+          role: "system",
+          content: "You are an experienced UK credit controller writing professional collection emails. You balance firmness with maintaining positive customer relationships. Always use British English and £ currency formatting."
+        },
+        {
+          role: "user",
+          content: prompt
+        }
+      ],
+      response_format: { type: "json_object" },
+    });
+
+    const result = JSON.parse(response.choices[0].message.content || '{}');
+    
+    return {
+      subject: result.subject || getDefaultSubject(templateType, context),
+      body: result.body || getDefaultBody(templateType, context),
+      templateType
+    };
+  } catch (error) {
+    console.error("Error generating collection email:", error);
+    return {
+      subject: getDefaultSubject(templateType, context),
+      body: getDefaultBody(templateType, context),
+      templateType
+    };
+  }
+}
+
+function getDefaultSubject(templateType: EmailTemplateType, context: CollectionEmailContext): string {
+  switch (templateType) {
+    case 'full_payment_request':
+      return `Payment Required - £${context.totalOutstanding.toFixed(2)} Outstanding`;
+    case 'plan_confirmation':
+      return `Payment Plan Confirmation - ${context.companyName}`;
+    case 'remittance_request':
+      return `Remittance Advice Required - ${context.companyName}`;
+    case 'statement':
+      return `Statement of Account - ${context.companyName}`;
+  }
+}
+
+function getDefaultBody(templateType: EmailTemplateType, context: CollectionEmailContext): string {
+  const greeting = `Dear ${context.contactName},`;
+  const signOff = `Kind regards,\n${context.senderName}\n${context.senderCompany}`;
+  
+  switch (templateType) {
+    case 'full_payment_request':
+      return `${greeting}\n\nI am writing regarding the outstanding balance on your account of £${context.totalOutstanding.toFixed(2)}.\n\nPlease arrange payment at your earliest convenience.\n\n${signOff}`;
+    case 'plan_confirmation':
+      return `${greeting}\n\nThank you for discussing a payment arrangement with us.\n\nPlease confirm you are happy to proceed with the agreed plan.\n\n${signOff}`;
+    case 'remittance_request':
+      return `${greeting}\n\nWe have received a payment but require remittance advice to allocate it correctly.\n\nPlease provide details of the invoices this payment relates to.\n\n${signOff}`;
+    case 'statement':
+      return `${greeting}\n\nPlease find below a summary of your outstanding invoices totalling £${context.totalOutstanding.toFixed(2)}.\n\nKindly review and let us know if you have any queries.\n\n${signOff}`;
+  }
+}

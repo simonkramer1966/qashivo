@@ -51,7 +51,10 @@ import {
   Shield,
   User,
   Bot,
-  Settings
+  Settings,
+  Sparkles,
+  Send,
+  Loader2
 } from "lucide-react";
 import { useCurrency } from "@/hooks/useCurrency";
 import { useToast } from "@/hooks/use-toast";
@@ -67,12 +70,28 @@ interface CustomerPreviewDrawerProps {
 type NoteType = "internal" | "reminder";
 type CallGoal = "payment_commitment" | "payment_plan" | "query_resolution" | "general_followup";
 type CallScheduleMode = "now" | "asap" | "scheduled";
+type EmailTemplateType = "full_payment_request" | "plan_confirmation" | "remittance_request" | "statement" | "manual";
+type EmailTone = "friendly" | "professional" | "firm";
 
 const callGoalLabels: Record<CallGoal, string> = {
   payment_commitment: "Payment Commitment",
   payment_plan: "Payment Plan",
   query_resolution: "Query Resolution",
   general_followup: "General Follow-up",
+};
+
+const emailTemplateLabels: Record<EmailTemplateType, string> = {
+  full_payment_request: "Full Payment Request",
+  plan_confirmation: "Plan Confirmation",
+  remittance_request: "Remittance Request",
+  statement: "Statement",
+  manual: "Write Manually",
+};
+
+const emailToneLabels: Record<EmailTone, string> = {
+  friendly: "Friendly",
+  professional: "Professional",
+  firm: "Firm",
 };
 
 const toneLabels = ["Friendly", "Professional", "Firm"];
@@ -108,6 +127,13 @@ export function CustomerPreviewDrawer({
   const [callScheduleMode, setCallScheduleMode] = useState<CallScheduleMode>("asap");
   const [callScheduleDate, setCallScheduleDate] = useState("");
   const [callScheduleTime, setCallScheduleTime] = useState("");
+  
+  const [isEmailMode, setIsEmailMode] = useState(false);
+  const [emailTemplate, setEmailTemplate] = useState<EmailTemplateType>("full_payment_request");
+  const [emailTone, setEmailTone] = useState<EmailTone>("professional");
+  const [emailSubject, setEmailSubject] = useState("");
+  const [emailBody, setEmailBody] = useState("");
+  const [isGeneratingEmail, setIsGeneratingEmail] = useState(false);
   
   const [isRecentActivityExpanded, setIsRecentActivityExpanded] = useState(true);
   const [expandedTimelineItems, setExpandedTimelineItems] = useState<Set<string>>(new Set());
@@ -176,6 +202,7 @@ export function CustomerPreviewDrawer({
   const handleNoteButtonClick = () => {
     setIsNoteMode(true);
     setIsCallMode(false);
+    setIsEmailMode(false);
     setIsRecentActivityExpanded(false);
   };
 
@@ -223,7 +250,97 @@ export function CustomerPreviewDrawer({
   const handleCallButtonClick = () => {
     setIsCallMode(true);
     setIsNoteMode(false);
+    setIsEmailMode(false);
     setIsRecentActivityExpanded(false);
+  };
+
+  const handleEmailButtonClick = () => {
+    setIsEmailMode(true);
+    setIsNoteMode(false);
+    setIsCallMode(false);
+    setIsRecentActivityExpanded(false);
+  };
+
+  const resetEmailForm = () => {
+    setIsEmailMode(false);
+    setEmailTemplate("full_payment_request");
+    setEmailTone("professional");
+    setEmailSubject("");
+    setEmailBody("");
+    setIsGeneratingEmail(false);
+    setIsRecentActivityExpanded(true);
+  };
+
+  const handleGenerateEmail = async () => {
+    if (emailTemplate === "manual") {
+      return;
+    }
+    
+    setIsGeneratingEmail(true);
+    try {
+      const res = await apiRequest("POST", `/api/contacts/${customerId}/generate-email`, {
+        templateType: emailTemplate,
+        tone: emailTone,
+      });
+      const data = await res.json();
+      setEmailSubject(data.subject);
+      setEmailBody(data.body);
+      toast({
+        title: "Email generated",
+        description: "AI has drafted an email based on customer context",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Failed to generate email",
+        description: error.message || "Please try again",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGeneratingEmail(false);
+    }
+  };
+
+  const sendEmailMutation = useMutation({
+    mutationFn: async (emailData: {
+      subject: string;
+      body: string;
+      templateType: string;
+    }) => {
+      const res = await apiRequest("POST", `/api/contacts/${customerId}/send-email`, emailData);
+      return await res.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Email sent",
+        description: "Your email has been sent successfully",
+      });
+      resetEmailForm();
+      queryClient.invalidateQueries({ queryKey: [`/api/contacts/${customerId}/preview`] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to send email",
+        description: error.message || "Please try again",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleSendEmail = () => {
+    if (!emailSubject.trim() || !emailBody.trim()) {
+      toast({
+        title: "Email content required",
+        description: "Please enter a subject and message",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    sendEmailMutation.mutate({
+      subject: emailSubject,
+      body: emailBody,
+      templateType: emailTemplate,
+    });
   };
 
   const handleScheduleCall = () => {
@@ -889,6 +1006,116 @@ export function CustomerPreviewDrawer({
                         </section>
                       </>
                     )}
+
+                    {/* Email Section */}
+                    {isEmailMode && (
+                      <>
+                        <Separator className="bg-slate-100" />
+                        <section className="py-4 space-y-4">
+                          <div className="flex items-center gap-2">
+                            <div className="p-1.5 bg-[#17B6C3]/10 rounded">
+                              <Mail className="h-3.5 w-3.5 text-[#17B6C3]" />
+                            </div>
+                            <h3 className="text-xs font-semibold text-slate-900 uppercase tracking-wide">
+                              Compose Email
+                            </h3>
+                          </div>
+                          
+                          <div className="space-y-3">
+                            <div className="grid grid-cols-2 gap-2">
+                              <div>
+                                <Label htmlFor="emailTemplate" className="text-xs text-slate-500 mb-1.5 block">
+                                  Template
+                                </Label>
+                                <Select value={emailTemplate} onValueChange={(v: EmailTemplateType) => setEmailTemplate(v)}>
+                                  <SelectTrigger className="h-9 bg-white border-slate-200 text-xs">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {(Object.keys(emailTemplateLabels) as EmailTemplateType[]).map((key) => (
+                                      <SelectItem key={key} value={key} className="text-xs">
+                                        {emailTemplateLabels[key]}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <div>
+                                <Label htmlFor="emailTone" className="text-xs text-slate-500 mb-1.5 block">
+                                  Tone
+                                </Label>
+                                <Select value={emailTone} onValueChange={(v: EmailTone) => setEmailTone(v)}>
+                                  <SelectTrigger className="h-9 bg-white border-slate-200 text-xs">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {(Object.keys(emailToneLabels) as EmailTone[]).map((key) => (
+                                      <SelectItem key={key} value={key} className="text-xs">
+                                        {emailToneLabels[key]}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            </div>
+
+                            {emailTemplate !== "manual" && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={handleGenerateEmail}
+                                disabled={isGeneratingEmail}
+                                className="w-full border-[#17B6C3] text-[#17B6C3] hover:bg-[#17B6C3]/10 text-xs"
+                              >
+                                {isGeneratingEmail ? (
+                                  <>
+                                    <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+                                    Generating...
+                                  </>
+                                ) : (
+                                  <>
+                                    <Sparkles className="h-4 w-4 mr-1.5" />
+                                    Generate with AI
+                                  </>
+                                )}
+                              </Button>
+                            )}
+
+                            <div>
+                              <Label htmlFor="emailSubject" className="text-xs text-slate-500 mb-1.5 block">
+                                Subject
+                              </Label>
+                              <Input
+                                id="emailSubject"
+                                placeholder="Email subject..."
+                                value={emailSubject}
+                                onChange={(e) => setEmailSubject(e.target.value)}
+                                className="h-9 bg-white border-slate-200 text-xs"
+                              />
+                            </div>
+
+                            <div>
+                              <Label htmlFor="emailBody" className="text-xs text-slate-500 mb-1.5 block">
+                                Message
+                              </Label>
+                              <Textarea
+                                id="emailBody"
+                                placeholder="Type your message..."
+                                value={emailBody}
+                                onChange={(e) => setEmailBody(e.target.value)}
+                                className="min-h-[200px] bg-white border-slate-200 resize-none text-xs"
+                              />
+                            </div>
+
+                            {preview?.creditControlContact?.email && (
+                              <p className="text-xs text-slate-500">
+                                Sending to: {preview.creditControlContact.email}
+                              </p>
+                            )}
+                          </div>
+                        </section>
+                      </>
+                    )}
                   </>
                 ) : (
                   <p className="text-sm text-slate-400">Customer not found</p>
@@ -897,7 +1124,7 @@ export function CustomerPreviewDrawer({
             </ScrollArea>
 
             {/* Left Footer - Action Buttons */}
-            {preview && !isNoteMode && !isCallMode && (
+            {preview && !isNoteMode && !isCallMode && !isEmailMode && (
               <div className="px-6 py-4 border-t border-slate-100 flex-shrink-0">
                 <div className="flex gap-2">
                   <Button 
@@ -922,6 +1149,7 @@ export function CustomerPreviewDrawer({
                     variant="outline" 
                     size="sm"
                     className="flex-1 basis-0 border-[#E6E8EC] text-[#64748b] text-xs hover:bg-slate-100"
+                    onClick={handleEmailButtonClick}
                   >
                     <Mail className="h-4 w-4 mr-1.5" />
                     Email
@@ -985,6 +1213,32 @@ export function CustomerPreviewDrawer({
                   >
                     <Phone className="h-4 w-4 mr-1.5" />
                     {scheduleCallMutation.isPending ? "Scheduling..." : "Schedule Call"}
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* Left Footer - Email Mode Actions */}
+            {preview && isEmailMode && (
+              <div className="px-6 py-4 border-t border-slate-100 flex-shrink-0">
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={resetEmailForm}
+                    className="flex-1 border-slate-200 text-xs"
+                  >
+                    <X className="h-4 w-4 mr-1.5" />
+                    Cancel
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={handleSendEmail}
+                    disabled={sendEmailMutation.isPending || !emailSubject.trim() || !emailBody.trim()}
+                    className="flex-1 bg-[#17B6C3] hover:bg-[#1396A1] text-white text-xs"
+                  >
+                    <Send className="h-4 w-4 mr-1.5" />
+                    {sendEmailMutation.isPending ? "Sending..." : "Send Email"}
                   </Button>
                 </div>
               </div>

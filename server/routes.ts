@@ -4456,6 +4456,203 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Generate AI email draft for a contact
+  app.post("/api/contacts/:contactId/generate-email", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { contactId } = req.params;
+      const { templateType, tone } = req.body;
+
+      // Verify contact exists and user has access
+      const contact = await storage.getContact(contactId, user.tenantId);
+      if (!contact) {
+        return res.status(404).json({ message: "Contact not found" });
+      }
+
+      // Get overdue invoices for this contact
+      const overdueInvoicesList = await db.select()
+        .from(invoices)
+        .where(
+          and(
+            eq(invoices.contactId, contactId),
+            eq(invoices.tenantId, user.tenantId),
+            eq(invoices.status, 'overdue')
+          )
+        )
+        .orderBy(desc(invoices.dueDate));
+
+      // Get recent timeline events
+      const recentEvents = await db.select()
+        .from(timelineEvents)
+        .where(
+          and(
+            eq(timelineEvents.customerId, contactId),
+            eq(timelineEvents.tenantId, user.tenantId)
+          )
+        )
+        .orderBy(desc(timelineEvents.occurredAt))
+        .limit(10);
+
+      // Calculate total outstanding and oldest overdue
+      const totalOutstanding = overdueInvoicesList.reduce((sum, inv) => sum + Number(inv.balance || 0), 0);
+      const oldestOverdueDays = overdueInvoicesList.length > 0
+        ? Math.max(...overdueInvoicesList.map(inv => 
+            inv.dueDate ? Math.max(0, Math.floor((Date.now() - new Date(inv.dueDate).getTime()) / (1000 * 60 * 60 * 24))) : 0
+          ))
+        : 0;
+
+      // Get tenant info
+      const tenant = await db.query.tenants.findFirst({
+        where: eq(tenants.id, user.tenantId),
+      });
+
+      // Build context for AI email generation
+      const { generateCollectionEmail } = await import("./services/openai.js");
+      
+      const emailDraft = await generateCollectionEmail(templateType, {
+        contactName: contact.name || 'Valued Customer',
+        companyName: contact.name || 'Customer',
+        totalOutstanding,
+        oldestOverdueDays,
+        invoices: overdueInvoicesList.map(inv => ({
+          invoiceNumber: inv.invoiceNumber || 'N/A',
+          amount: Number(inv.balance || 0),
+          dueDate: inv.dueDate ? new Date(inv.dueDate).toLocaleDateString('en-GB') : 'N/A',
+          daysOverdue: inv.dueDate 
+            ? Math.max(0, Math.floor((Date.now() - new Date(inv.dueDate).getTime()) / (1000 * 60 * 60 * 24)))
+            : 0
+        })),
+        recentActivity: recentEvents.map(e => ({
+          type: e.channel || 'event',
+          date: new Date(e.occurredAt).toLocaleDateString('en-GB'),
+          summary: e.summary || ''
+        })),
+        paymentPlan: null,
+        tone: tone || 'professional',
+        senderName: user.firstName && user.lastName 
+          ? `${user.firstName} ${user.lastName}` 
+          : user.email.split('@')[0],
+        senderCompany: tenant?.name || 'Accounts Receivable'
+      });
+
+      res.json({
+        subject: emailDraft.subject,
+        body: emailDraft.body,
+        templateType: emailDraft.templateType,
+        contactEmail: contact.email
+      });
+    } catch (error) {
+      console.error("Error generating email:", error);
+      res.status(500).json({ message: "Failed to generate email" });
+    }
+  });
+
+  // Send email to a contact
+  app.post("/api/contacts/:contactId/send-email", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { contactId } = req.params;
+      const { subject, body, templateType } = req.body;
+
+      // Verify contact exists
+      const contact = await storage.getContact(contactId, user.tenantId);
+      if (!contact) {
+        return res.status(404).json({ message: "Contact not found" });
+      }
+
+      if (!contact.email) {
+        return res.status(400).json({ message: "Contact has no email address" });
+      }
+
+      // Get tenant for sender info
+      const tenant = await db.query.tenants.findFirst({
+        where: eq(tenants.id, user.tenantId),
+      });
+
+      // Send email via SendGrid
+      const { sendEmail, DEFAULT_FROM_EMAIL, DEFAULT_FROM } = await import("./services/sendgrid.js");
+      
+      const htmlBody = body.replace(/\n/g, '<br>');
+      
+      const result = await sendEmail({
+        to: contact.email,
+        from: `${tenant?.name || DEFAULT_FROM} <${DEFAULT_FROM_EMAIL}>`,
+        subject,
+        html: htmlBody,
+        text: body,
+        customerId: contactId,
+      });
+
+      if (!result.success) {
+        return res.status(500).json({ message: result.error || "Failed to send email" });
+      }
+
+      // Create action record
+      const [newAction] = await db.insert(actions).values({
+        tenantId: user.tenantId,
+        contactId: contactId,
+        invoiceId: null,
+        userId: user.id,
+        type: 'email',
+        status: 'completed',
+        scheduledFor: new Date(),
+        completedAt: new Date(),
+        approvedBy: user.id,
+        approvedAt: new Date(),
+        subject,
+        content: body,
+        source: 'manual',
+        aiGenerated: templateType !== 'manual',
+        metadata: {
+          templateType,
+          messageId: result.messageId,
+          sentTo: contact.email
+        }
+      }).returning();
+
+      // Create timeline event
+      const userName = user.firstName || user.lastName 
+        ? `${user.firstName || ''} ${user.lastName || ''}`.trim() 
+        : user.email;
+
+      await db.insert(timelineEvents).values({
+        tenantId: user.tenantId,
+        customerId: contactId,
+        occurredAt: new Date(),
+        direction: 'outbound',
+        channel: 'email',
+        summary: `Email sent: ${subject}`,
+        preview: body.substring(0, 200) + (body.length > 200 ? '...' : ''),
+        body: body,
+        status: 'sent',
+        createdByUserId: user.id,
+        createdByName: userName,
+        metadata: {
+          templateType,
+          messageId: result.messageId,
+          actionId: newAction.id
+        }
+      });
+
+      res.json({ 
+        success: true, 
+        messageId: result.messageId,
+        actionId: newAction.id 
+      });
+    } catch (error) {
+      console.error("Error sending email:", error);
+      res.status(500).json({ message: "Failed to send email" });
+    }
+  });
+
   // Complete a reminder note
   app.patch("/api/notes/:noteId/complete", isAuthenticated, async (req: any, res) => {
     try {
