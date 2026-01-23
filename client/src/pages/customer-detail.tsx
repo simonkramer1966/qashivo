@@ -265,14 +265,6 @@ export default function CustomerDetailPage() {
         <div className="flex-1 overflow-y-auto">
           <div className="container-apple py-6 space-y-8">
             
-            {/* Back Link */}
-            <Link href="/customers">
-              <Button variant="ghost" size="sm" className="text-slate-500 hover:text-slate-700 -ml-2">
-                <ArrowLeft className="h-4 w-4 mr-1" />
-                Back to Customers
-              </Button>
-            </Link>
-
             {/* Section 1: Profile */}
             <section>
               <p className="text-[10px] text-slate-400 uppercase tracking-wider mb-4">Profile</p>
