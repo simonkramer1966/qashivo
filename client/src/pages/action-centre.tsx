@@ -820,7 +820,7 @@ function PlannedTabContent({
                     key={item.id}
                     onClick={() => onPreviewAction(item)}
                     className={`group border-b border-slate-200 cursor-pointer transition-colors ${
-                      selectedIds.has(item.id) ? 'bg-slate-50' : 'hover:bg-slate-50/50'
+                      selectedIds.has(item.id) ? 'bg-slate-100' : 'hover:bg-slate-100'
                     }`}
                   >
                     <td className="py-[5px] px-3" onClick={(e) => e.stopPropagation()}>
