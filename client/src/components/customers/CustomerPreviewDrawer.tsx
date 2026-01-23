@@ -130,6 +130,7 @@ export function CustomerPreviewDrawer({
   const [emailBody, setEmailBody] = useState("");
   const [isGeneratingEmail, setIsGeneratingEmail] = useState(false);
   const [includeStatutoryInterest, setIncludeStatutoryInterest] = useState(true);
+  const [selectedRecipientEmail, setSelectedRecipientEmail] = useState<string>("");
   
   const [isRecentActivityExpanded, setIsRecentActivityExpanded] = useState(true);
   const [expandedTimelineItems, setExpandedTimelineItems] = useState<Set<string>>(new Set());
@@ -255,6 +256,10 @@ export function CustomerPreviewDrawer({
     setIsNoteMode(false);
     setIsCallMode(false);
     setIsRecentActivityExpanded(false);
+    // Pre-populate with primary AR contact
+    const primaryContact = preview?.allCreditControlContacts?.find(c => c.isPrimary);
+    const defaultEmail = primaryContact?.email || preview?.creditControlContact?.email || '';
+    setSelectedRecipientEmail(defaultEmail);
   };
 
   const resetEmailForm = () => {
@@ -266,6 +271,7 @@ export function CustomerPreviewDrawer({
     setIsGeneratingEmail(false);
     setIncludeStatutoryInterest(true);
     setIsRecentActivityExpanded(true);
+    setSelectedRecipientEmail("");
   };
 
   const handleGenerateEmail = async () => {
@@ -334,10 +340,20 @@ export function CustomerPreviewDrawer({
       return;
     }
 
+    if (!selectedRecipientEmail) {
+      toast({
+        title: "Recipient required",
+        description: "Please select a recipient",
+        variant: "destructive",
+      });
+      return;
+    }
+
     sendEmailMutation.mutate({
       subject: emailSubject,
       body: emailBody,
       templateType: emailTemplate,
+      recipientEmail: selectedRecipientEmail,
     });
   };
 
@@ -1090,6 +1106,37 @@ export function CustomerPreviewDrawer({
                             </div>
 
                             <div>
+                              <Label htmlFor="emailRecipient" className="text-xs text-slate-500 mb-1.5 block">
+                                To
+                              </Label>
+                              <Select 
+                                value={selectedRecipientEmail} 
+                                onValueChange={setSelectedRecipientEmail}
+                              >
+                                <SelectTrigger className="h-9 bg-white border-slate-200 text-xs">
+                                  <SelectValue placeholder="Select recipient..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {preview?.allCreditControlContacts?.map((contact) => (
+                                    <SelectItem 
+                                      key={contact.id} 
+                                      value={contact.email || ''} 
+                                      className="text-xs"
+                                    >
+                                      {contact.name || contact.email}{contact.isPrimary ? ' (Primary)' : ''}
+                                    </SelectItem>
+                                  ))}
+                                  {(!preview?.allCreditControlContacts || preview.allCreditControlContacts.length === 0) && 
+                                    preview?.creditControlContact?.email && (
+                                    <SelectItem value={preview.creditControlContact.email} className="text-xs">
+                                      {preview.creditControlContact.name || preview.creditControlContact.email}
+                                    </SelectItem>
+                                  )}
+                                </SelectContent>
+                              </Select>
+                            </div>
+
+                            <div>
                               <Label htmlFor="emailSubject" className="text-xs text-slate-500 mb-1.5 block">
                                 Subject
                               </Label>
@@ -1114,12 +1161,6 @@ export function CustomerPreviewDrawer({
                                 className="min-h-[200px] bg-white border-slate-200 resize-none text-[12px]"
                               />
                             </div>
-
-                            {preview?.creditControlContact?.email && (
-                              <p className="text-xs text-slate-500">
-                                Sending to: {preview.creditControlContact.email}
-                              </p>
-                            )}
                           </div>
                         </section>
                       </>

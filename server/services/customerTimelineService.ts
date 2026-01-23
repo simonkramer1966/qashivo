@@ -93,6 +93,16 @@ export class CustomerTimelineService {
       )
     });
 
+    // Fetch all credit control contacts for the dropdown
+    const allCreditControlContacts = await db.query.customerContactRoles.findMany({
+      where: and(
+        eq(customerContactRoles.customerId, customerId),
+        eq(customerContactRoles.tenantId, tenantId),
+        eq(customerContactRoles.role, "credit_control")
+      ),
+      orderBy: [desc(customerContactRoles.isPrimary)]
+    });
+
     const preferences = await db.query.customerPreferences.findFirst({
       where: and(
         eq(customerPreferences.contactId, customerId),
@@ -143,6 +153,13 @@ export class CustomerTimelineService {
         email: creditControlContact.email || undefined,
         phone: creditControlContact.phone || undefined
       } : undefined,
+      allCreditControlContacts: allCreditControlContacts.map(c => ({
+        id: c.id,
+        name: c.name || undefined,
+        email: c.email || undefined,
+        phone: c.phone || undefined,
+        isPrimary: c.isPrimary || false
+      })),
       messagingStatus: preferences ? {
         emailOptedOut: !preferences.emailEnabled,
         smsOptedOut: !preferences.smsEnabled,

@@ -98,6 +98,13 @@ export interface CustomerPreview {
     email?: string;
     phone?: string;
   };
+  allCreditControlContacts?: Array<{
+    id: string;
+    name?: string;
+    email?: string;
+    phone?: string;
+    isPrimary: boolean;
+  }>;
   messagingStatus?: {
     emailOptedOut?: boolean;
     smsOptedOut?: boolean;

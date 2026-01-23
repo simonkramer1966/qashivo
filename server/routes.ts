@@ -4590,7 +4590,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const { contactId } = req.params;
-      const { subject, body, templateType } = req.body;
+      const { subject, body, templateType, recipientEmail: providedRecipient } = req.body;
 
       // Verify contact exists
       const contact = await storage.getContact(contactId, user.tenantId);
@@ -4598,8 +4598,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Contact not found" });
       }
 
-      // Use AR contact email (credit control contact) if available, fallback to primary email
-      const recipientEmail = contact.arContactEmail || contact.email;
+      // Use provided recipient email, or fallback to AR contact email, then primary email
+      const recipientEmail = providedRecipient || contact.arContactEmail || contact.email;
       if (!recipientEmail) {
         return res.status(400).json({ message: "Contact has no email address" });
       }
