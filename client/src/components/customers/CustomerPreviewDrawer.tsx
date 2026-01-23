@@ -169,18 +169,6 @@ export function CustomerPreviewDrawer({
 
                 <Separator className="bg-slate-100" />
 
-                {/* Behaviour Label */}
-                {preview.customer.behaviourLabel && (
-                  <section>
-                    <p className="text-[10px] text-slate-400 uppercase tracking-wider mb-2">
-                      Payment Behaviour
-                    </p>
-                    <p className="text-sm text-slate-600">
-                      {preview.customer.behaviourLabel}
-                    </p>
-                  </section>
-                )}
-
                 {/* Credit Control Contact */}
                 {preview.creditControlContact && (
                   <section>
