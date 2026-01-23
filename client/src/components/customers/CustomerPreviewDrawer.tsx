@@ -786,12 +786,12 @@ export function CustomerPreviewDrawer({
                                   Primary Goal
                                 </Label>
                                 <Select value={callGoal} onValueChange={(v) => setCallGoal(v as CallGoal)}>
-                                  <SelectTrigger id="callGoal" className="h-9 bg-white border-slate-200">
+                                  <SelectTrigger id="callGoal" className="h-9 bg-white border-slate-200 text-xs">
                                     <SelectValue />
                                   </SelectTrigger>
                                   <SelectContent>
                                     {Object.entries(callGoalLabels).map(([value, label]) => (
-                                      <SelectItem key={value} value={value}>{label}</SelectItem>
+                                      <SelectItem key={value} value={value} className="text-xs">{label}</SelectItem>
                                     ))}
                                   </SelectContent>
                                 </Select>
