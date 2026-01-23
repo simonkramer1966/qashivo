@@ -4362,10 +4362,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Contact has no phone number" });
       }
 
-      const { reason, tone, goal, maxDuration, scheduleMode, scheduledFor, recipientPhone } = req.body;
+      const { reason, tone, goal, maxDuration, scheduleMode, scheduledFor, recipientPhone, recipientName } = req.body;
 
       // Use recipientPhone if provided, otherwise fall back to contact.phone
       const phoneToCall = recipientPhone || contact.phone;
+      // Use recipientName if provided, otherwise fall back to contact.name
+      const nameToCall = recipientName || contact.name;
 
       // Map tone number (0=Friendly, 1=Professional, 2=Firm) to voice tone profile
       const toneProfiles = ['VOICE_TONE_WARM_FRIENDLY', 'VOICE_TONE_CALM_COLLABORATIVE', 'VOICE_TONE_FIRM_ASSERTIVE'];
@@ -4421,6 +4423,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           reason,
           scheduleMode,
           recipientPhone: phoneToCall,
+          recipientName: nameToCall,
           invoiceNumber: primaryInvoice?.invoiceNumber,
           daysOverdue: primaryInvoice?.dueDate 
             ? Math.max(0, Math.floor((Date.now() - new Date(primaryInvoice.dueDate).getTime()) / (1000 * 60 * 60 * 24)))
@@ -4470,7 +4473,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               toNumber: phoneToCall,
               agentId: agentId,
               dynamicVariables: {
-                customerName: contact.name,
+                customerName: nameToCall,
                 companyName: contact.companyName || contact.name,
                 invoiceNumber: primaryInvoice?.invoiceNumber || 'N/A',
                 amount: primaryInvoice?.balance || 'N/A',

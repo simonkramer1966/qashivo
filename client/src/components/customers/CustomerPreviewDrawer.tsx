@@ -131,6 +131,7 @@ export function CustomerPreviewDrawer({
   const [callScheduleDate, setCallScheduleDate] = useState("");
   const [callScheduleTime, setCallScheduleTime] = useState("");
   const [selectedCallRecipientPhone, setSelectedCallRecipientPhone] = useState<string>("");
+  const [selectedCallRecipientName, setSelectedCallRecipientName] = useState<string>("");
   
   const [isEmailMode, setIsEmailMode] = useState(false);
   const [emailTemplate, setEmailTemplate] = useState<EmailTemplateType>("full_payment_request");
@@ -228,6 +229,7 @@ export function CustomerPreviewDrawer({
       scheduleMode: CallScheduleMode;
       scheduledFor?: string | null;
       recipientPhone: string;
+      recipientName: string;
     }) => {
       const res = await apiRequest("POST", `/api/contacts/${customerId}/schedule-call`, callData);
       return await res.json();
@@ -259,6 +261,7 @@ export function CustomerPreviewDrawer({
     setCallScheduleDate("");
     setCallScheduleTime("");
     setSelectedCallRecipientPhone("");
+    setSelectedCallRecipientName("");
     setIsRecentActivityExpanded(true);
   };
 
@@ -268,10 +271,12 @@ export function CustomerPreviewDrawer({
     setIsEmailMode(false);
     setIsSmsMode(false);
     setIsRecentActivityExpanded(false);
-    // Pre-populate with primary AR contact phone, or fallback to customer phone
+    // Pre-populate with primary AR contact phone and name, or fallback to customer phone
     const primaryContact = preview?.allCreditControlContacts?.find(c => c.isPrimary);
     const defaultPhone = primaryContact?.phone || preview?.creditControlContact?.phone || '';
+    const defaultName = primaryContact?.name || preview?.creditControlContact?.name || preview?.contact?.name || '';
     setSelectedCallRecipientPhone(defaultPhone);
+    setSelectedCallRecipientName(defaultName);
   };
 
   const handleEmailButtonClick = () => {
@@ -505,6 +510,7 @@ export function CustomerPreviewDrawer({
       scheduleMode: callScheduleMode,
       scheduledFor,
       recipientPhone: selectedCallRecipientPhone,
+      recipientName: selectedCallRecipientName,
     });
   };
 
@@ -1018,7 +1024,14 @@ export function CustomerPreviewDrawer({
                               </Label>
                               <Select 
                                 value={selectedCallRecipientPhone} 
-                                onValueChange={setSelectedCallRecipientPhone}
+                                onValueChange={(phone) => {
+                                  setSelectedCallRecipientPhone(phone);
+                                  // Find the contact name for the selected phone
+                                  const contact = preview?.allCreditControlContacts?.find(c => c.phone === phone);
+                                  const fallbackContact = preview?.creditControlContact;
+                                  const name = contact?.name || (fallbackContact?.phone === phone ? fallbackContact?.name : '') || '';
+                                  setSelectedCallRecipientName(name);
+                                }}
                               >
                                 <SelectTrigger className="h-9 bg-white border-slate-200 text-xs">
                                   <SelectValue placeholder="Select recipient..." />

@@ -482,12 +482,16 @@ export class ActionExecutor {
 
       const retellService = new RetellService();
       
+      // Use recipientPhone/recipientName from metadata if available (set by schedule-call)
+      const phoneToCall = action.metadata?.recipientPhone || contact.phone;
+      const nameToCall = action.metadata?.recipientName || contact.name;
+      
       const result = await retellService.createCall({
         fromNumber: process.env.RETELL_PHONE_NUMBER || '+442045772088',
-        toNumber: contact.phone,
+        toNumber: phoneToCall,
         agentId: agentId,
         dynamicVariables: {
-          customerName: contact.name,
+          customerName: nameToCall,
           companyName: contact.companyName || contact.name,
           invoiceNumber: invoice?.invoiceNumber || 'N/A',
           amount: invoice?.amount || 'N/A',
