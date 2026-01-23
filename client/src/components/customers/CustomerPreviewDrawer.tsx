@@ -635,7 +635,7 @@ export function CustomerPreviewDrawer({
                                 placeholder="Type your note here..."
                                 value={noteContent}
                                 onChange={(e) => setNoteContent(e.target.value)}
-                                className="min-h-[100px] bg-white border-slate-200 resize-none"
+                                className="min-h-[100px] bg-white border-slate-200 resize-none text-xs"
                               />
                             </div>
 
