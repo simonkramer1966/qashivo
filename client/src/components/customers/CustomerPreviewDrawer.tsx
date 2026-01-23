@@ -337,7 +337,7 @@ export function CustomerPreviewDrawer({
           {/* Left Column - Balance & Activity */}
           <div className="w-1/2 flex flex-col border-r border-slate-100 min-w-0 overflow-hidden">
             <ScrollArea className="flex-1">
-              <div className="px-6 py-6 space-y-6">
+              <div className="px-6 py-6 space-y-6 min-w-0 overflow-hidden">
                 {isLoading ? (
                   <div className="space-y-4">
                     <Skeleton className="h-4 w-24" />
@@ -383,9 +383,9 @@ export function CustomerPreviewDrawer({
                       </button>
                       
                       {isRecentActivityExpanded && (
-                        <div className="mt-3">
+                        <div className="mt-3 min-w-0 overflow-hidden">
                           {preview.latestTimeline && preview.latestTimeline.length > 0 ? (
-                            <div className="space-y-1">
+                            <div className="space-y-1 min-w-0">
                               {preview.latestTimeline.map((item) => {
                                 const dateInfo = formatRelativeDate(item.occurredAt);
                                 const isExpanded = expandedTimelineItems.has(item.id);
