@@ -590,3 +590,104 @@ function getDefaultBody(templateType: EmailTemplateType, context: CollectionEmai
       return `${greeting}\n\nPlease find below a summary of your outstanding invoices totalling £${context.totalOutstanding.toFixed(2)}.\n\nKindly review and let us know if you have any queries.\n\n${signOff}`;
   }
 }
+
+// SMS Template Types
+export type SmsTemplateType = 'payment_reminder' | 'payment_received' | 'payment_overdue' | 'manual';
+
+interface CollectionSmsContext {
+  contactName: string;
+  companyName: string;
+  totalOutstanding: number;
+  oldestOverdueDays: number;
+  tone: 'friendly' | 'professional' | 'firm';
+  senderCompany: string;
+}
+
+const smsTemplateDescriptions: Record<Exclude<SmsTemplateType, 'manual'>, string> = {
+  payment_reminder: 'Friendly reminder about upcoming or recently due payment',
+  payment_received: 'Thank you message acknowledging payment received',
+  payment_overdue: 'Firm notification about overdue payment requiring action'
+};
+
+export async function generateCollectionSms(
+  templateType: SmsTemplateType,
+  context: CollectionSmsContext
+): Promise<{ body: string; templateType: SmsTemplateType }> {
+  if (templateType === 'manual') {
+    return { body: '', templateType };
+  }
+
+  try {
+    const templateDescription = smsTemplateDescriptions[templateType];
+    
+    const prompt = `
+Generate a concise UK business SMS message (max 160 characters preferred, absolute max 320):
+
+Template Type: ${templateType.replace(/_/g, ' ').toUpperCase()}
+Purpose: ${templateDescription}
+
+Customer Details:
+- Contact Name: ${context.contactName}
+- Company: ${context.companyName}
+- Total Overdue: £${context.totalOutstanding.toFixed(2)}
+- Days Overdue: ${context.oldestOverdueDays}
+
+Desired Tone: ${context.tone}
+From: ${context.senderCompany}
+
+Generate in JSON format:
+{
+  "body": "Complete SMS message. Keep under 160 chars if possible. Be direct and clear. No subject line needed."
+}
+
+Guidelines:
+- Use British English
+- Use £ for currency
+- Be concise - every character counts in SMS
+- Include clear call to action
+- Professional but ${context.tone}
+- Do NOT include greetings like "Dear" - start directly with the message
+`;
+
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        {
+          role: "system",
+          content: "You are a UK credit controller writing concise SMS collection messages. Keep messages under 160 characters when possible. Be direct, professional, and clear."
+        },
+        {
+          role: "user",
+          content: prompt
+        }
+      ],
+      response_format: { type: "json_object" },
+    });
+
+    const result = JSON.parse(response.choices[0].message.content || '{}');
+    
+    return {
+      body: result.body || getDefaultSmsBody(templateType, context),
+      templateType
+    };
+  } catch (error) {
+    console.error("Error generating collection SMS:", error);
+    return {
+      body: getDefaultSmsBody(templateType, context),
+      templateType
+    };
+  }
+}
+
+function getDefaultSmsBody(templateType: SmsTemplateType, context: CollectionSmsContext): string {
+  switch (templateType) {
+    case 'payment_reminder':
+      return `Hi ${context.contactName}, friendly reminder: £${context.totalOutstanding.toFixed(2)} is due. Please arrange payment. ${context.senderCompany}`;
+    case 'payment_received':
+      return `Thank you for your payment. Your account with ${context.senderCompany} is now up to date.`;
+    case 'payment_overdue':
+      return `Payment of £${context.totalOutstanding.toFixed(2)} is now ${context.oldestOverdueDays} days overdue. Please contact us urgently. ${context.senderCompany}`;
+    default:
+      return '';
+  }
+}

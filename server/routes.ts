@@ -4685,6 +4685,172 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Generate AI-powered SMS for a contact
+  app.post("/api/contacts/:contactId/generate-sms", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { contactId } = req.params;
+      const { templateType, tone } = req.body;
+
+      // Verify contact exists and user has access
+      const contact = await storage.getContact(contactId, user.tenantId);
+      if (!contact) {
+        return res.status(404).json({ message: "Contact not found" });
+      }
+
+      // Get overdue invoices for this contact
+      const overdueInvoicesList = await db.select()
+        .from(invoices)
+        .where(
+          and(
+            eq(invoices.contactId, contactId),
+            eq(invoices.tenantId, user.tenantId),
+            lt(invoices.dueDate, new Date()),
+            not(eq(invoices.status, 'paid'))
+          )
+        )
+        .orderBy(desc(invoices.dueDate));
+
+      // Calculate total outstanding
+      const totalOutstanding = overdueInvoicesList.reduce((sum, inv) => {
+        const balance = Number(inv.amount || 0) - Number(inv.amountPaid || 0);
+        return sum + balance;
+      }, 0);
+
+      const oldestOverdueDays = overdueInvoicesList.length > 0
+        ? Math.max(...overdueInvoicesList.map(inv => {
+            return inv.dueDate 
+              ? Math.max(0, Math.floor((Date.now() - new Date(inv.dueDate).getTime()) / (1000 * 60 * 60 * 24)))
+              : 0;
+          }))
+        : 0;
+
+      // Get tenant info
+      const tenant = await db.query.tenants.findFirst({
+        where: eq(tenants.id, user.tenantId),
+      });
+
+      // Build context for AI SMS generation
+      const { generateCollectionSms } = await import("./services/openai.js");
+      
+      const arContactFirstName = contact.arContactName?.split(' ')[0];
+      
+      const smsDraft = await generateCollectionSms(templateType, {
+        contactName: arContactFirstName || 'there',
+        companyName: contact.name || 'Customer',
+        totalOutstanding,
+        oldestOverdueDays,
+        tone: tone || 'professional',
+        senderCompany: tenant?.name || 'Accounts Receivable'
+      });
+
+      res.json({
+        body: smsDraft.body,
+        templateType: smsDraft.templateType
+      });
+    } catch (error) {
+      console.error("Error generating SMS:", error);
+      res.status(500).json({ message: "Failed to generate SMS" });
+    }
+  });
+
+  // Send SMS to a contact
+  app.post("/api/contacts/:contactId/send-sms", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { contactId } = req.params;
+      const { body, templateType, recipientPhone: providedPhone } = req.body;
+
+      // Verify contact exists
+      const contact = await storage.getContact(contactId, user.tenantId);
+      if (!contact) {
+        return res.status(404).json({ message: "Contact not found" });
+      }
+
+      // Use provided phone, or fallback to AR contact phone
+      const recipientPhone = providedPhone || contact.arContactPhone || contact.phone;
+      if (!recipientPhone) {
+        return res.status(400).json({ message: "Contact has no phone number" });
+      }
+
+      // Send SMS via Vonage
+      const { sendSMS } = await import("./services/vonage.js");
+      
+      const result = await sendSMS({
+        to: recipientPhone,
+        message: body
+      });
+
+      if (!result.success) {
+        return res.status(500).json({ message: result.error || "Failed to send SMS" });
+      }
+
+      // Create action record
+      const [newAction] = await db.insert(actions).values({
+        tenantId: user.tenantId,
+        contactId: contactId,
+        invoiceId: null,
+        userId: user.id,
+        type: 'sms',
+        status: 'completed',
+        scheduledFor: new Date(),
+        completedAt: new Date(),
+        approvedBy: user.id,
+        approvedAt: new Date(),
+        subject: null,
+        content: body,
+        source: 'manual',
+        aiGenerated: templateType !== 'manual',
+        metadata: {
+          templateType,
+          messageId: result.messageId,
+          sentTo: recipientPhone
+        }
+      }).returning();
+
+      // Create timeline event
+      const userName = user.firstName || user.lastName 
+        ? `${user.firstName || ''} ${user.lastName || ''}`.trim() 
+        : user.email;
+
+      await db.insert(timelineEvents).values({
+        tenantId: user.tenantId,
+        customerId: contactId,
+        occurredAt: new Date(),
+        direction: 'outbound',
+        channel: 'sms',
+        summary: `SMS sent to ${recipientPhone}`,
+        preview: body.substring(0, 100) + (body.length > 100 ? '...' : ''),
+        body: body,
+        status: 'sent',
+        createdByUserId: user.id,
+        createdByName: userName,
+        metadata: {
+          templateType,
+          messageId: result.messageId,
+          actionId: newAction.id
+        }
+      });
+
+      res.json({ 
+        success: true, 
+        messageId: result.messageId,
+        actionId: newAction.id 
+      });
+    } catch (error) {
+      console.error("Error sending SMS:", error);
+      res.status(500).json({ message: "Failed to send SMS" });
+    }
+  });
+
   // Complete a reminder note
   app.patch("/api/notes/:noteId/complete", isAuthenticated, async (req: any, res) => {
     try {
