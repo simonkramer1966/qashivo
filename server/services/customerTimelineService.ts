@@ -143,6 +143,7 @@ export class CustomerTimelineService {
       customer: {
         id: customer.id,
         name: customer.name,
+        email: customer.email || undefined,
         companyName: customer.companyName || undefined,
         behaviourLabel,
         outstandingTotal,

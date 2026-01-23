@@ -88,6 +88,7 @@ export interface CustomerPreview {
   customer: {
     id: string;
     name: string;
+    email?: string;
     companyName?: string;
     behaviourLabel?: string;
     outstandingTotal: number;

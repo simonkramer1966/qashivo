@@ -256,9 +256,9 @@ export function CustomerPreviewDrawer({
     setIsNoteMode(false);
     setIsCallMode(false);
     setIsRecentActivityExpanded(false);
-    // Pre-populate with primary AR contact
+    // Pre-populate with primary AR contact, or fallback to customer email
     const primaryContact = preview?.allCreditControlContacts?.find(c => c.isPrimary);
-    const defaultEmail = primaryContact?.email || preview?.creditControlContact?.email || '';
+    const defaultEmail = primaryContact?.email || preview?.creditControlContact?.email || preview?.customer?.email || '';
     setSelectedRecipientEmail(defaultEmail);
   };
 
@@ -309,6 +309,7 @@ export function CustomerPreviewDrawer({
       subject: string;
       body: string;
       templateType: string;
+      recipientEmail: string;
     }) => {
       const res = await apiRequest("POST", `/api/contacts/${customerId}/send-email`, emailData);
       return await res.json();
@@ -1117,19 +1118,29 @@ export function CustomerPreviewDrawer({
                                   <SelectValue placeholder="Select recipient..." />
                                 </SelectTrigger>
                                 <SelectContent>
+                                  {/* Show AR contacts if they exist */}
                                   {preview?.allCreditControlContacts?.map((contact) => (
                                     <SelectItem 
                                       key={contact.id} 
                                       value={contact.email || ''} 
                                       className="text-xs"
                                     >
-                                      {contact.name || contact.email}{contact.isPrimary ? ' (Primary)' : ''}
+                                      {contact.name || contact.email}{contact.isPrimary ? ' (Primary AR)' : ''}
                                     </SelectItem>
                                   ))}
+                                  {/* Fallback 1: creditControlContact when no allCreditControlContacts */}
                                   {(!preview?.allCreditControlContacts || preview.allCreditControlContacts.length === 0) && 
                                     preview?.creditControlContact?.email && (
                                     <SelectItem value={preview.creditControlContact.email} className="text-xs">
-                                      {preview.creditControlContact.name || preview.creditControlContact.email}
+                                      {preview.creditControlContact.name || preview.creditControlContact.email} (AR Contact)
+                                    </SelectItem>
+                                  )}
+                                  {/* Fallback 2: primary customer email when no AR contacts at all */}
+                                  {(!preview?.allCreditControlContacts || preview.allCreditControlContacts.length === 0) && 
+                                    !preview?.creditControlContact?.email &&
+                                    preview?.customer?.email && (
+                                    <SelectItem value={preview.customer.email} className="text-xs">
+                                      {preview.customer.name} ({preview.customer.email})
                                     </SelectItem>
                                   )}
                                 </SelectContent>
