@@ -39,6 +39,7 @@ export class CustomerTimelineService {
         id: invoices.id,
         invoiceNumber: invoices.invoiceNumber,
         description: invoices.description,
+        issueDate: invoices.issueDate,
         amount: invoices.amount,
         amountPaid: invoices.amountPaid,
         status: invoices.status,
@@ -72,7 +73,8 @@ export class CustomerTimelineService {
       return {
         id: inv.id,
         invoiceNumber: inv.invoiceNumber,
-        reference: inv.description || undefined,
+        description: inv.description || undefined,
+        issueDate: inv.issueDate ? new Date(inv.issueDate).toISOString() : new Date().toISOString(),
         dueDate: inv.dueDate ? new Date(inv.dueDate).toISOString() : new Date().toISOString(),
         amount: Number(inv.amount),
         amountPaid: Number(inv.amountPaid || 0),

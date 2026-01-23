@@ -74,7 +74,8 @@ export interface TimelineResponse {
 export interface CustomerPreviewInvoice {
   id: string;
   invoiceNumber: string;
-  reference?: string;
+  description?: string;
+  issueDate: string;
   dueDate: string;
   amount: number;
   amountPaid: number;

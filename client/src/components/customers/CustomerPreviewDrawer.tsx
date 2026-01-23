@@ -194,7 +194,7 @@ export function CustomerPreviewDrawer({
     return date.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
   };
 
-  const formatDueDate = (dateStr: string) => {
+  const formatShortDate = (dateStr: string) => {
     const date = new Date(dateStr);
     return date.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
   };
@@ -515,7 +515,7 @@ export function CustomerPreviewDrawer({
           {/* Right Column - Invoices */}
           <div className="w-1/2 flex flex-col">
             <ScrollArea className="flex-1">
-              <div className="px-4 py-6">
+              <div className="px-6 py-6">
                 {isLoading ? (
                   <div className="space-y-3">
                     <Skeleton className="h-4 w-32" />
@@ -536,36 +536,30 @@ export function CustomerPreviewDrawer({
                             key={invoice.id}
                             className="p-2.5 rounded-lg border border-slate-100 hover:border-slate-200 transition-colors cursor-pointer"
                           >
-                            <div className="flex items-start justify-between gap-2">
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2">
-                                  <FileText className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
-                                  <span className="text-sm font-medium text-slate-900 truncate">
-                                    {invoice.invoiceNumber}
-                                  </span>
-                                </div>
-                                {invoice.reference && (
-                                  <p className="text-xs text-slate-500 mt-0.5 pl-5.5 truncate">
-                                    {invoice.reference}
-                                  </p>
-                                )}
-                              </div>
-                              <div className="text-right flex-shrink-0">
-                                <p className="text-sm font-semibold text-slate-900 tabular-nums">
-                                  {formatCurrency(invoice.balance)}
-                                </p>
-                              </div>
-                            </div>
-                            <div className="flex items-center justify-between mt-2 pl-5.5">
-                              <span className="text-xs text-slate-500">
-                                Due {formatDueDate(invoice.dueDate)}
+                            {/* Top Row: Inv Date | Inv Number | Due Date | Amount */}
+                            <div className="flex items-center gap-1.5 text-xs min-w-0 overflow-hidden">
+                              <span className="text-slate-500 tabular-nums flex-shrink-0">
+                                {formatShortDate(invoice.issueDate)}
                               </span>
-                              {invoice.daysOverdue && invoice.daysOverdue > 0 && (
-                                <span className={`text-xs font-medium ${getInvoiceStatusColor(invoice)}`}>
-                                  {invoice.daysOverdue}d overdue
-                                </span>
-                              )}
+                              <span className="text-slate-300 flex-shrink-0">|</span>
+                              <span className="font-medium text-slate-900 truncate flex-1 min-w-0">
+                                {invoice.invoiceNumber}
+                              </span>
+                              <span className="text-slate-300 flex-shrink-0">|</span>
+                              <span className={`tabular-nums flex-shrink-0 ${invoice.daysOverdue && invoice.daysOverdue > 0 ? getInvoiceStatusColor(invoice) : 'text-slate-500'}`}>
+                                {formatShortDate(invoice.dueDate)}
+                              </span>
+                              <span className="text-slate-300 flex-shrink-0">|</span>
+                              <span className="font-semibold text-slate-900 tabular-nums flex-shrink-0">
+                                {formatCurrency(invoice.balance)}
+                              </span>
                             </div>
+                            {/* Second Row: Description */}
+                            {invoice.description && (
+                              <p className="text-xs text-slate-500 mt-1 truncate">
+                                {invoice.description}
+                              </p>
+                            )}
                           </div>
                         ))}
                       </div>
@@ -582,38 +576,38 @@ export function CustomerPreviewDrawer({
 
             {/* Right Footer - Action Buttons */}
             {preview && (
-              <div className="px-4 py-3 border-t border-slate-100 flex-shrink-0">
-                <div className="flex gap-1.5">
+              <div className="px-6 py-4 border-t border-slate-100 flex-shrink-0">
+                <div className="flex gap-2">
                   <Button 
                     variant="outline" 
                     size="sm"
-                    className="flex-1 border-[#E6E8EC] text-slate-700 hover:bg-slate-50 px-2"
+                    className="flex-1 border-[#E6E8EC] text-slate-700 hover:bg-slate-50"
                   >
-                    <Handshake className="h-3.5 w-3.5 mr-1" />
+                    <Handshake className="h-4 w-4 mr-1.5" />
                     PTP
                   </Button>
                   <Button 
                     variant="outline" 
                     size="sm"
-                    className="flex-1 border-[#E6E8EC] text-slate-700 hover:bg-slate-50 px-2"
+                    className="flex-1 border-[#E6E8EC] text-slate-700 hover:bg-slate-50"
                   >
-                    <Calendar className="h-3.5 w-3.5 mr-1" />
+                    <Calendar className="h-4 w-4 mr-1.5" />
                     Plan
                   </Button>
                   <Button 
                     variant="outline" 
                     size="sm"
-                    className="flex-1 border-[#E6E8EC] text-slate-700 hover:bg-slate-50 px-2"
+                    className="flex-1 border-[#E6E8EC] text-slate-700 hover:bg-slate-50"
                   >
-                    <Scale className="h-3.5 w-3.5 mr-1" />
+                    <Scale className="h-4 w-4 mr-1.5" />
                     Dispute
                   </Button>
                   <Button 
                     variant="outline" 
                     size="sm"
-                    className="flex-1 border-[#E6E8EC] text-slate-700 hover:bg-slate-50 px-2"
+                    className="flex-1 border-[#E6E8EC] text-slate-700 hover:bg-slate-50"
                   >
-                    <Shield className="h-3.5 w-3.5 mr-1" />
+                    <Shield className="h-4 w-4 mr-1.5" />
                     Recovery
                   </Button>
                 </div>
