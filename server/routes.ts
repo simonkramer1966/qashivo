@@ -4781,11 +4781,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Contact has no phone number" });
       }
 
+      // Normalize UK phone numbers to E.164 format for Vonage
+      // UK local: 07xxx -> 447xxx, +44 7xxx -> 447xxx
+      const normalizeUKPhone = (phone: string): string => {
+        let normalized = phone.replace(/[\s\-\(\)]/g, ''); // Remove spaces, dashes, parentheses
+        if (normalized.startsWith('+44')) {
+          normalized = '44' + normalized.slice(3);
+        } else if (normalized.startsWith('0044')) {
+          normalized = '44' + normalized.slice(4);
+        } else if (normalized.startsWith('0')) {
+          normalized = '44' + normalized.slice(1);
+        }
+        return normalized;
+      };
+      
+      const normalizedPhone = normalizeUKPhone(recipientPhone);
+
       // Send SMS via Vonage
       const { sendSMS } = await import("./services/vonage.js");
       
       const result = await sendSMS({
-        to: recipientPhone,
+        to: normalizedPhone,
         message: body
       });
 
