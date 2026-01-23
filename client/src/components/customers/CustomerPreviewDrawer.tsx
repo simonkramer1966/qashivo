@@ -513,9 +513,9 @@ export function CustomerPreviewDrawer({
           </div>
 
           {/* Right Column - Invoices */}
-          <div className="w-1/2 flex flex-col">
+          <div className="w-1/2 flex flex-col min-w-0 overflow-hidden">
             <ScrollArea className="flex-1">
-              <div className="px-6 py-6">
+              <div className="px-6 py-6 min-w-0 overflow-hidden">
                 {isLoading ? (
                   <div className="space-y-3">
                     <Skeleton className="h-4 w-32" />
