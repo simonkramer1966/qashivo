@@ -139,9 +139,9 @@ export function ForecastTab({ debtors, onSelectDebtor, isLoading }: ForecastTabP
                   return (
                     <tr 
                       key={debtor.id} 
-                      className={`hover:bg-slate-100 transition-colors ${!isLast ? 'border-b border-slate-200' : ''}`}
+                      className={`group hover:bg-slate-100 transition-colors ${!isLast ? 'border-b border-slate-200' : ''}`}
                     >
-                      <td className="py-[5px] px-3 sticky left-0 bg-white z-10 pt-[5px] pb-[5px]">
+                      <td className="py-[5px] px-3 sticky left-0 bg-white group-hover:bg-slate-100 z-10 pt-[5px] pb-[5px] transition-colors">
                         <button
                           onClick={() => onSelectDebtor(debtor.id)}
                           className="text-left w-full group"
@@ -170,7 +170,7 @@ export function ForecastTab({ debtors, onSelectDebtor, isLoading }: ForecastTabP
                         return (
                           <td 
                             key={bucket.weekCommencing}
-                            className={`text-right py-[5px] px-2 cursor-pointer transition-colors hover:bg-slate-100 ${borderClass}`}
+                            className={`text-right py-[5px] px-2 cursor-pointer transition-colors ${borderClass}`}
                             onClick={() => onSelectDebtor(debtor.id)}
                           >
                             <Tooltip>
