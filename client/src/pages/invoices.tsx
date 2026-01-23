@@ -251,7 +251,7 @@ export default function Invoices() {
                   return (
                     <div 
                       key={invoice.id} 
-                      className={`py-3 cursor-pointer hover:bg-slate-50/50 transition-colors ${idx !== invoices.length - 1 ? 'border-b border-slate-100' : ''}`}
+                      className={`py-3 cursor-pointer hover:bg-slate-100 transition-colors ${idx !== invoices.length - 1 ? 'border-b border-slate-100' : ''}`}
                       onClick={() => setSelectedInvoice(invoice)}
                       data-testid={`invoice-item-${invoice.id}`}
                     >
@@ -346,7 +346,7 @@ export default function Invoices() {
                         return (
                           <tr
                             key={invoice.id}
-                            className="border-b border-slate-100 hover:bg-slate-50/50 cursor-pointer transition-colors"
+                            className="border-b border-slate-100 hover:bg-slate-100 cursor-pointer transition-colors"
                             onClick={() => setSelectedInvoice(invoice)}
                             data-testid={`invoice-item-${invoice.id}`}
                           >

@@ -176,7 +176,7 @@ export default function Customers() {
                 contacts.map((contact, idx) => (
                   <div 
                     key={contact.id} 
-                    className={`py-3 cursor-pointer hover:bg-slate-50/50 transition-colors ${idx !== contacts.length - 1 ? 'border-b border-slate-100' : ''}`}
+                    className={`py-3 cursor-pointer hover:bg-slate-100 transition-colors ${idx !== contacts.length - 1 ? 'border-b border-slate-100' : ''}`}
                     onClick={() => {
                       setSelectedContactId(contact.id);
                       setShowPreviewDrawer(true);
@@ -234,7 +234,7 @@ export default function Customers() {
                       {contacts.map((contact, idx) => (
                         <tr
                           key={contact.id}
-                          className="border-b border-slate-100 hover:bg-slate-50/50 cursor-pointer transition-colors"
+                          className="border-b border-slate-100 hover:bg-slate-100 cursor-pointer transition-colors"
                           onClick={() => {
                             setSelectedContactId(contact.id);
                             setShowPreviewDrawer(true);
