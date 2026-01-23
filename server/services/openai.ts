@@ -469,18 +469,14 @@ export async function generateCollectionEmail(
   try {
     const templateDescription = templateDescriptions[templateType];
     
-    const invoicesList = context.invoices.map(inv => {
-      if (context.includeStatutoryInterest && inv.interest && inv.interest > 0) {
-        return `- Invoice ${inv.invoiceNumber}: £${inv.amount.toFixed(2)} + £${inv.interest.toFixed(2)} interest (Due: ${inv.dueDate}, ${inv.daysOverdue} days overdue)`;
-      }
-      return `- Invoice ${inv.invoiceNumber}: £${inv.amount.toFixed(2)} (Due: ${inv.dueDate}, ${inv.daysOverdue} days overdue)`;
-    }).join('\n');
+    const invoicesList = context.invoices.map(inv => 
+      `- Invoice ${inv.invoiceNumber}: £${inv.amount.toFixed(2)}`
+    ).join('\n');
     
     const statutoryInterestSection = context.includeStatutoryInterest && context.totalInterest && context.totalInterest > 0
-      ? `\nStatutory Interest Information:
-- Total interest accrued: £${context.totalInterest.toFixed(2)}
-- Interest rate: ${context.statutoryInterestRate}% (Bank of England base rate + 8% per Late Payment of Commercial Debts (Interest) Act 1998)
-- Include a paragraph explaining that statutory interest applies to late B2B payments in the UK, calculated at the Bank of England base rate plus 8% per annum, as per the Late Payment of Commercial Debts (Interest) Act 1998.`
+      ? `\nStatutory Interest (to be included as a SEPARATE paragraph AFTER the invoice list):
+- Total interest amount: £${context.totalInterest.toFixed(2)}
+- IMPORTANT: After listing the invoices, include a separate paragraph stating that you reserve the right to charge statutory interest of £${context.totalInterest.toFixed(2)} under the Late Payment of Commercial Debts (Interest) Act 1998. Do NOT list interest per invoice - just state the total amount you reserve the right to charge.`
       : '';
 
     const recentActivityText = context.recentActivity?.length 
