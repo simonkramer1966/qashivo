@@ -266,7 +266,12 @@ export function CustomerPreviewDrawer({
     setIsCallMode(true);
     setIsNoteMode(false);
     setIsEmailMode(false);
+    setIsSmsMode(false);
     setIsRecentActivityExpanded(false);
+    // Pre-populate with primary AR contact phone, or fallback to customer phone
+    const primaryContact = preview?.allCreditControlContacts?.find(c => c.isPrimary);
+    const defaultPhone = primaryContact?.phone || preview?.creditControlContact?.phone || '';
+    setSelectedCallRecipientPhone(defaultPhone);
   };
 
   const handleEmailButtonClick = () => {
