@@ -4274,12 +4274,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Ensure proper content-type is set before parsing
       res.setHeader('Content-Type', 'application/json');
 
-      const noteData = insertContactNoteSchema.parse({
+      const parsedData = insertContactNoteSchema.parse({
         ...req.body,
         contactId,
         createdByUserId: user.id,
         tenantId: user.tenantId,
       });
+
+      // Convert reminderDate string to Date object for Drizzle
+      const noteData = {
+        ...parsedData,
+        reminderDate: parsedData.reminderDate ? new Date(parsedData.reminderDate) : null,
+      };
 
       const note = await storage.createNote(noteData);
       
