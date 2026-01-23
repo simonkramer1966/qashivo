@@ -71,7 +71,7 @@ import {
 } from "@shared/schema";
 import { getOverdueCategoryFromDueDate } from "@shared/utils/overdueUtils";
 import { calculateLatePaymentInterest } from "./utils/interestCalculator";
-import { eq, and, desc, asc, sql, count, avg, gte, lte, inArray, or, isNull, gt } from 'drizzle-orm';
+import { eq, and, desc, asc, sql, count, avg, gte, lte, lt, inArray, or, isNull, gt, not } from 'drizzle-orm';
 import { db } from './db';
 import { z } from "zod";
 
@@ -4473,14 +4473,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Contact not found" });
       }
 
-      // Get overdue invoices for this contact
+      // Get overdue invoices for this contact (unpaid invoices past due date)
       const overdueInvoicesList = await db.select()
         .from(invoices)
         .where(
           and(
             eq(invoices.contactId, contactId),
             eq(invoices.tenantId, user.tenantId),
-            eq(invoices.status, 'overdue')
+            lt(invoices.dueDate, new Date()),
+            not(eq(invoices.status, 'paid'))
           )
         )
         .orderBy(desc(invoices.dueDate));
@@ -4497,8 +4498,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .orderBy(desc(timelineEvents.occurredAt))
         .limit(10);
 
-      // Calculate total outstanding and oldest overdue
-      const totalOutstanding = overdueInvoicesList.reduce((sum, inv) => sum + Number(inv.balance || 0), 0);
+      // Calculate total outstanding and oldest overdue (balance = amount - amountPaid)
+      const totalOutstanding = overdueInvoicesList.reduce((sum, inv) => {
+        const balance = Number(inv.amount || 0) - Number(inv.amountPaid || 0);
+        return sum + balance;
+      }, 0);
       const oldestOverdueDays = overdueInvoicesList.length > 0
         ? Math.max(...overdueInvoicesList.map(inv => 
             inv.dueDate ? Math.max(0, Math.floor((Date.now() - new Date(inv.dueDate).getTime()) / (1000 * 60 * 60 * 24))) : 0
@@ -4521,14 +4525,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         companyName: contact.name || 'Customer',
         totalOutstanding,
         oldestOverdueDays,
-        invoices: overdueInvoicesList.map(inv => ({
-          invoiceNumber: inv.invoiceNumber || 'N/A',
-          amount: Number(inv.balance || 0),
-          dueDate: inv.dueDate ? new Date(inv.dueDate).toLocaleDateString('en-GB') : 'N/A',
-          daysOverdue: inv.dueDate 
-            ? Math.max(0, Math.floor((Date.now() - new Date(inv.dueDate).getTime()) / (1000 * 60 * 60 * 24)))
-            : 0
-        })),
+        invoices: overdueInvoicesList.map(inv => {
+          const balance = Number(inv.amount || 0) - Number(inv.amountPaid || 0);
+          return {
+            invoiceNumber: inv.invoiceNumber || 'N/A',
+            amount: balance,
+            dueDate: inv.dueDate ? new Date(inv.dueDate).toLocaleDateString('en-GB') : 'N/A',
+            daysOverdue: inv.dueDate 
+              ? Math.max(0, Math.floor((Date.now() - new Date(inv.dueDate).getTime()) / (1000 * 60 * 60 * 24)))
+              : 0
+          };
+        }),
         recentActivity: recentEvents.map(e => ({
           type: e.channel || 'event',
           date: new Date(e.occurredAt).toLocaleDateString('en-GB'),
