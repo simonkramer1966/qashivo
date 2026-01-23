@@ -644,7 +644,7 @@ export function CustomerPreviewDrawer({
                                 variant="outline"
                                 size="sm"
                                 onClick={resetNoteForm}
-                                className="flex-1 border-slate-200"
+                                className="flex-1 border-slate-200 text-xs"
                               >
                                 <X className="h-4 w-4 mr-1.5" />
                                 Cancel
@@ -653,7 +653,7 @@ export function CustomerPreviewDrawer({
                                 size="sm"
                                 onClick={handleSaveNote}
                                 disabled={createNoteMutation.isPending || !noteContent.trim()}
-                                className="flex-1 bg-[#17B6C3] hover:bg-[#1396A1] text-white"
+                                className="flex-1 bg-[#17B6C3] hover:bg-[#1396A1] text-white text-xs"
                               >
                                 <Save className="h-4 w-4 mr-1.5" />
                                 {createNoteMutation.isPending ? "Saving..." : "Save"}
