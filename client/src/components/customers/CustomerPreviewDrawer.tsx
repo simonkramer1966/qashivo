@@ -534,7 +534,7 @@ export function CustomerPreviewDrawer({
                         {preview.invoices.map((invoice) => (
                           <div
                             key={invoice.id}
-                            className="p-2.5 rounded-lg border border-slate-100 hover:border-slate-200 transition-colors cursor-pointer"
+                            className="p-2.5 rounded-lg border border-slate-100 hover:border-slate-200 transition-colors cursor-pointer min-w-0 overflow-hidden"
                           >
                             {/* Top Row: Inv Date | Inv Number | Due Date | Amount */}
                             <div className="flex items-center gap-1.5 text-xs min-w-0 overflow-hidden">
