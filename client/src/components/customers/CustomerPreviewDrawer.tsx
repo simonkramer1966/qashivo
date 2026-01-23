@@ -11,6 +11,12 @@ import {
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -569,28 +575,62 @@ export function CustomerPreviewDrawer({
                             <span className="w-[90px] flex-shrink-0 text-right pr-2">Amount</span>
                           </div>
                           {/* Invoice Rows */}
-                          {filteredInvoices.map((invoice) => (
-                          <div
-                            key={invoice.id}
-                            className="flex items-center text-xs py-1.5 hover:bg-slate-100 cursor-pointer transition-colors"
-                          >
-                            <span className="w-[60px] flex-shrink-0 text-slate-500 tabular-nums">
-                              {formatShortDate(invoice.issueDate)}
-                            </span>
-                            <span className="flex-1 min-w-0 font-medium text-slate-900 truncate pr-2">
-                              {invoice.invoiceNumber}
-                            </span>
-                            <span className={`w-[60px] flex-shrink-0 text-right tabular-nums ${invoice.daysOverdue && invoice.daysOverdue > 0 ? getInvoiceStatusColor(invoice) : 'text-slate-500'}`}>
-                              {formatShortDate(invoice.dueDate)}
-                            </span>
-                            <span className={`w-[50px] flex-shrink-0 text-right tabular-nums ${invoice.daysOverdue && invoice.daysOverdue > 0 ? getInvoiceStatusColor(invoice) : 'text-slate-500'}`}>
-                              {invoice.daysOverdue && invoice.daysOverdue > 0 ? invoice.daysOverdue : '-'}
-                            </span>
-                            <span className="w-[90px] flex-shrink-0 text-right font-semibold text-slate-900 tabular-nums pr-2">
-                              {formatCurrency(invoice.balance)}
-                            </span>
-                          </div>
-                        ))}
+                          <TooltipProvider delayDuration={300}>
+                            {filteredInvoices.map((invoice) => (
+                              <Tooltip key={invoice.id}>
+                                <TooltipTrigger asChild>
+                                  <div className="flex items-center text-xs py-1.5 hover:bg-slate-100 cursor-pointer transition-colors">
+                                    <span className="w-[60px] flex-shrink-0 text-slate-500 tabular-nums">
+                                      {formatShortDate(invoice.issueDate)}
+                                    </span>
+                                    <span className="flex-1 min-w-0 font-medium text-slate-900 truncate pr-2">
+                                      {invoice.invoiceNumber}
+                                    </span>
+                                    <span className={`w-[60px] flex-shrink-0 text-right tabular-nums ${invoice.daysOverdue && invoice.daysOverdue > 0 ? getInvoiceStatusColor(invoice) : 'text-slate-500'}`}>
+                                      {formatShortDate(invoice.dueDate)}
+                                    </span>
+                                    <span className={`w-[50px] flex-shrink-0 text-right tabular-nums ${invoice.daysOverdue && invoice.daysOverdue > 0 ? getInvoiceStatusColor(invoice) : 'text-slate-500'}`}>
+                                      {invoice.daysOverdue && invoice.daysOverdue > 0 ? invoice.daysOverdue : '-'}
+                                    </span>
+                                    <span className="w-[90px] flex-shrink-0 text-right font-semibold text-slate-900 tabular-nums pr-2">
+                                      {formatCurrency(invoice.balance)}
+                                    </span>
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent side="left" className="max-w-xs p-3">
+                                  <div className="space-y-2 text-xs">
+                                    <div className="font-semibold text-slate-900">{invoice.invoiceNumber}</div>
+                                    {invoice.description && (
+                                      <p className="text-slate-600">{invoice.description}</p>
+                                    )}
+                                    <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-slate-600">
+                                      <span>Issue Date:</span>
+                                      <span className="text-right">{formatShortDate(invoice.issueDate)}</span>
+                                      <span>Due Date:</span>
+                                      <span className="text-right">{formatShortDate(invoice.dueDate)}</span>
+                                      <span>Status:</span>
+                                      <span className="text-right capitalize">{invoice.status}</span>
+                                      {invoice.daysOverdue && invoice.daysOverdue > 0 && (
+                                        <>
+                                          <span>Days Overdue:</span>
+                                          <span className="text-right text-red-600 font-medium">{invoice.daysOverdue}</span>
+                                        </>
+                                      )}
+                                    </div>
+                                    <Separator className="my-2" />
+                                    <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                                      <span className="text-slate-600">Invoice Total:</span>
+                                      <span className="text-right font-medium">{formatCurrency(invoice.amount)}</span>
+                                      <span className="text-slate-600">Paid:</span>
+                                      <span className="text-right font-medium text-green-600">{formatCurrency(invoice.amountPaid)}</span>
+                                      <span className="text-slate-600">Balance:</span>
+                                      <span className="text-right font-semibold text-slate-900">{formatCurrency(invoice.balance)}</span>
+                                    </div>
+                                  </div>
+                                </TooltipContent>
+                              </Tooltip>
+                            ))}
+                          </TooltipProvider>
                       </div>
                     ) : (
                         <div className="text-center py-8">
