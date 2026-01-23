@@ -99,10 +99,11 @@ export function CustomerPreviewDrawer({
   });
   const currentUser = userResponse?.user;
 
-  const { data: tenantUsers } = useQuery<TenantUser[]>({
+  const { data: tenantUsersResponse } = useQuery<{ users: TenantUser[] }>({
     queryKey: [`/api/tenants/${currentUser?.tenantId}/users`],
     enabled: !!currentUser?.tenantId && isNoteMode && noteType === "reminder",
   });
+  const tenantUsers = tenantUsersResponse?.users;
 
   const createNoteMutation = useMutation({
     mutationFn: async (noteData: {
