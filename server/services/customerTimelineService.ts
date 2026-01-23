@@ -5,7 +5,7 @@ import {
   actions, 
   timelineEvents, 
   customerPreferences,
-  customerContactRoles,
+  customerContactPersons,
   inboundMessages,
   contactOutcomes
 } from "@shared/schema";
@@ -84,23 +84,22 @@ export class CustomerTimelineService {
       };
     });
 
-    const creditControlContact = await db.query.customerContactRoles.findFirst({
+    // Fetch primary credit control contact from customerContactPersons
+    const creditControlContact = await db.query.customerContactPersons.findFirst({
       where: and(
-        eq(customerContactRoles.customerId, customerId),
-        eq(customerContactRoles.tenantId, tenantId),
-        eq(customerContactRoles.role, "credit_control"),
-        eq(customerContactRoles.isPrimary, true)
+        eq(customerContactPersons.contactId, customerId),
+        eq(customerContactPersons.tenantId, tenantId),
+        eq(customerContactPersons.isPrimaryCreditControl, true)
       )
     });
 
-    // Fetch all credit control contacts for the dropdown
-    const allCreditControlContacts = await db.query.customerContactRoles.findMany({
+    // Fetch all contact persons for the dropdown (for email recipient selection)
+    const allContactPersons = await db.query.customerContactPersons.findMany({
       where: and(
-        eq(customerContactRoles.customerId, customerId),
-        eq(customerContactRoles.tenantId, tenantId),
-        eq(customerContactRoles.role, "credit_control")
+        eq(customerContactPersons.contactId, customerId),
+        eq(customerContactPersons.tenantId, tenantId)
       ),
-      orderBy: [desc(customerContactRoles.isPrimary)]
+      orderBy: [desc(customerContactPersons.isPrimaryCreditControl)]
     });
 
     const preferences = await db.query.customerPreferences.findFirst({
@@ -154,12 +153,12 @@ export class CustomerTimelineService {
         email: creditControlContact.email || undefined,
         phone: creditControlContact.phone || undefined
       } : undefined,
-      allCreditControlContacts: allCreditControlContacts.map(c => ({
+      allCreditControlContacts: allContactPersons.map(c => ({
         id: c.id,
         name: c.name || undefined,
         email: c.email || undefined,
         phone: c.phone || undefined,
-        isPrimary: c.isPrimary || false
+        isPrimary: c.isPrimaryCreditControl || false
       })),
       messagingStatus: preferences ? {
         emailOptedOut: !preferences.emailEnabled,
