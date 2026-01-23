@@ -277,52 +277,23 @@ export default function CustomerDetailPage() {
                 </div>
               ) : contact ? (
                 <div className="space-y-4">
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-6">
-                    {contact.email && (
-                      <div>
-                        <p className="text-[11px] text-slate-400 mb-1">Email</p>
-                        <div className="flex items-center gap-1.5 text-sm text-slate-700">
-                          <Mail className="h-3.5 w-3.5 text-slate-400" />
-                          <span className="truncate">{contact.email}</span>
-                        </div>
-                      </div>
-                    )}
-                    {contact.phone && (
-                      <div>
-                        <p className="text-[11px] text-slate-400 mb-1">Phone</p>
-                        <div className="flex items-center gap-1.5 text-sm text-slate-700">
-                          <Phone className="h-3.5 w-3.5 text-slate-400" />
-                          <span>{contact.phone}</span>
-                        </div>
-                      </div>
-                    )}
-                    {contact.arContactPhone && (
-                      <div>
-                        <p className="text-[11px] text-slate-400 mb-1">SMS Phone</p>
-                        <div className="flex items-center gap-1.5 text-sm text-slate-700">
-                          <MessageSquare className="h-3.5 w-3.5 text-slate-400" />
-                          <span>{contact.arContactPhone}</span>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                  
-                  {contact.xeroContactId && (
-                    <a 
-                      href={`https://go.xero.com/Contacts/View/${contact.xeroContactId}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 text-xs text-[#17B6C3] hover:text-[#1396A1]"
-                    >
-                      View in Xero
-                      <ExternalLink className="h-3 w-3" />
-                    </a>
-                  )}
-
                   {/* Contacts List */}
-                  <div className="pt-6">
+                  <div>
                     <div className="flex items-center justify-between mb-3">
-                      <p className="text-[11px] text-slate-400">Contact People</p>
+                      <div className="flex items-center gap-3">
+                        <p className="text-[11px] text-slate-400">Contact People</p>
+                        {contact.xeroContactId && (
+                          <a 
+                            href={`https://go.xero.com/Contacts/View/${contact.xeroContactId}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 text-xs text-[#17B6C3] hover:text-[#1396A1]"
+                          >
+                            View in Xero
+                            <ExternalLink className="h-3 w-3" />
+                          </a>
+                        )}
+                      </div>
                       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
                         <DialogTrigger asChild>
                           <Button variant="ghost" size="sm" className="h-7 text-xs text-[#17B6C3] hover:text-[#1396A1]">
