@@ -66,7 +66,7 @@ interface CustomerPreviewDrawerProps {
 
 type NoteType = "internal" | "reminder";
 type CallGoal = "payment_commitment" | "payment_plan" | "query_resolution" | "general_followup";
-type CallScheduleMode = "asap" | "scheduled";
+type CallScheduleMode = "now" | "asap" | "scheduled";
 
 const callGoalLabels: Record<CallGoal, string> = {
   payment_commitment: "Payment Commitment",
@@ -193,8 +193,8 @@ export function CustomerPreviewDrawer({
     },
     onSuccess: () => {
       toast({
-        title: "Call scheduled",
-        description: callScheduleMode === "asap" ? "AI call will be initiated shortly" : "AI call has been scheduled",
+        title: callScheduleMode === "now" ? "Call initiated" : "Call scheduled",
+        description: callScheduleMode === "now" ? "AI call is starting now" : callScheduleMode === "asap" ? "AI call will be initiated shortly" : "AI call has been scheduled",
       });
       resetCallForm();
       queryClient.invalidateQueries({ queryKey: [`/api/contacts/${customerId}/preview`] });
@@ -838,6 +838,17 @@ export function CustomerPreviewDrawer({
                                 When to Call
                               </Label>
                               <div className="flex gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => setCallScheduleMode("now")}
+                                  className={`flex-1 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                                    callScheduleMode === "now"
+                                      ? "bg-slate-900 text-white"
+                                      : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                                  }`}
+                                >
+                                  Now
+                                </button>
                                 <button
                                   type="button"
                                   onClick={() => setCallScheduleMode("asap")}
