@@ -365,7 +365,8 @@ export function CustomerPreviewDrawer({
                             <span className="text-xs text-slate-500">
                               {new Date().toLocaleString("en-GB", { 
                                 day: "numeric", 
-                                month: "short", 
+                                month: "short",
+                                year: "numeric",
                                 hour: "2-digit", 
                                 minute: "2-digit" 
                               })} - {getUserDisplayName()}
