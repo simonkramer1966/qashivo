@@ -118,7 +118,7 @@ export default function Customers() {
         />
         
         <div className="flex-1 flex flex-col min-h-0 overflow-y-auto">
-          <div className="container-apple py-4 sm:py-6 flex-1 flex flex-col min-h-0">
+          <div className="p-6 lg:p-8 flex-1 flex flex-col min-h-0">
             
 
             {/* Debtor Behaviour Profiles - KPI Section */}
