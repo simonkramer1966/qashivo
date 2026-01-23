@@ -605,7 +605,7 @@ Your Company`;
               className="bg-white border-[#E6E8EC] resize-none"
             />
           </div>
-          <div className="flex gap-3">
+          <div className="flex flex-wrap gap-3">
             <Button
               onClick={handleApproveAndSend}
               className="bg-[#12B8C4] hover:bg-[#0fa3ae] text-white"
@@ -623,7 +623,7 @@ Your Company`;
             <Button
               variant="ghost"
               onClick={handleDecline}
-              className="text-[#556070]"
+              className="text-[#556070] w-full md:w-auto"
             >
               Decline
             </Button>
