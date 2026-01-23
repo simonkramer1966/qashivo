@@ -67,14 +67,14 @@ const navigationSections = [
   {
     label: "REFERENCE",
     items: [
-      { name: "Customers", href: "/contacts", icon: null },
-      { name: "Invoices", href: "/invoices", icon: null },
+      { name: "Customers", href: "/contacts", icon: Users },
+      { name: "Invoices", href: "/invoices", icon: FileText },
     ]
   },
   {
     label: "SYSTEM",
     items: [
-      { name: "Workflows", href: "/workflow-settings", icon: null },
+      { name: "Workflows", href: "/workflow-settings", icon: Workflow },
     ]
   }
 ];
@@ -90,8 +90,8 @@ const partnerNavigationSections = [
   {
     label: "MANAGE",
     items: [
-      { name: "Team & Users", href: "/partner/team", icon: null },
-      { name: "Settings", href: "/partner/settings", icon: null },
+      { name: "Team & Users", href: "/partner/team", icon: Users },
+      { name: "Settings", href: "/partner/settings", icon: Settings },
     ]
   }
 ];
