@@ -1017,6 +1017,27 @@ export function CustomerPreviewDrawer({
                             <p className="text-[10px] text-slate-400 uppercase tracking-wider">
                               Compose Email
                             </p>
+                            {emailTemplate !== "manual" && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={handleGenerateEmail}
+                                disabled={isGeneratingEmail}
+                                className="border-[#17B6C3] text-[#17B6C3] hover:bg-[#17B6C3]/10 text-xs h-7 px-2"
+                              >
+                                {isGeneratingEmail ? (
+                                  <>
+                                    <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
+                                    Generating...
+                                  </>
+                                ) : (
+                                  <>
+                                    <Sparkles className="h-3.5 w-3.5 mr-1" />
+                                    Generate
+                                  </>
+                                )}
+                              </Button>
+                            )}
                           </div>
                           
                           <div className="space-y-3">
@@ -1067,28 +1088,6 @@ export function CustomerPreviewDrawer({
                                 </div>
                               </div>
                             </div>
-
-                            {emailTemplate !== "manual" && (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={handleGenerateEmail}
-                                disabled={isGeneratingEmail}
-                                className="w-full border-[#17B6C3] text-[#17B6C3] hover:bg-[#17B6C3]/10 text-xs"
-                              >
-                                {isGeneratingEmail ? (
-                                  <>
-                                    <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
-                                    Generating...
-                                  </>
-                                ) : (
-                                  <>
-                                    <Sparkles className="h-4 w-4 mr-1.5" />
-                                    Generate with AI
-                                  </>
-                                )}
-                              </Button>
-                            )}
 
                             <div>
                               <Label htmlFor="emailSubject" className="text-xs text-slate-500 mb-1.5 block">
