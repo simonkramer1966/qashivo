@@ -38,6 +38,7 @@ import {
   ArrowDownLeft,
   StickyNote,
   ChevronDown,
+  ChevronUp,
   ChevronRight,
   X,
   Save,
@@ -85,6 +86,8 @@ export function CustomerPreviewDrawer({
   const [assignedToUserId, setAssignedToUserId] = useState<string>("");
   const [isRecentActivityExpanded, setIsRecentActivityExpanded] = useState(true);
   const [invoiceFilter, setInvoiceFilter] = useState<"all" | "overdue">("all");
+  const [invoiceSortColumn, setInvoiceSortColumn] = useState<"issueDate" | "invoiceNumber" | "dueDate" | "daysOverdue" | "balance">("daysOverdue");
+  const [invoiceSortDirection, setInvoiceSortDirection] = useState<"asc" | "desc">("desc");
 
   const { data: preview, isLoading } = useQuery<CustomerPreview>({
     queryKey: [`/api/contacts/${customerId}/preview`],
@@ -560,19 +563,78 @@ export function CustomerPreviewDrawer({
                     </div>
                     
                     {(() => {
-                      const filteredInvoices = invoiceFilter === "overdue"
+                      const toggleSort = (column: typeof invoiceSortColumn) => {
+                        if (invoiceSortColumn === column) {
+                          setInvoiceSortDirection(prev => prev === "asc" ? "desc" : "asc");
+                        } else {
+                          setInvoiceSortColumn(column);
+                          setInvoiceSortDirection("desc");
+                        }
+                      };
+                      
+                      const SortIcon = ({ column }: { column: typeof invoiceSortColumn }) => {
+                        if (invoiceSortColumn !== column) return null;
+                        return invoiceSortDirection === "asc" 
+                          ? <ChevronUp className="h-3 w-3 inline ml-0.5" />
+                          : <ChevronDown className="h-3 w-3 inline ml-0.5" />;
+                      };
+                      
+                      const baseInvoices = invoiceFilter === "overdue"
                         ? preview.invoices?.filter(inv => inv.daysOverdue && inv.daysOverdue > 0)
                         : preview.invoices;
+                      
+                      const filteredInvoices = baseInvoices?.slice().sort((a, b) => {
+                        const dir = invoiceSortDirection === "asc" ? 1 : -1;
+                        switch (invoiceSortColumn) {
+                          case "issueDate":
+                            return dir * (new Date(a.issueDate).getTime() - new Date(b.issueDate).getTime());
+                          case "invoiceNumber":
+                            return dir * a.invoiceNumber.localeCompare(b.invoiceNumber);
+                          case "dueDate":
+                            return dir * (new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
+                          case "daysOverdue":
+                            return dir * ((a.daysOverdue || 0) - (b.daysOverdue || 0));
+                          case "balance":
+                            return dir * (a.balance - b.balance);
+                          default:
+                            return 0;
+                        }
+                      });
                       
                       return filteredInvoices && filteredInvoices.length > 0 ? (
                         <div className="space-y-1">
                           {/* Header Row */}
                           <div className="flex items-center text-[10px] text-slate-400 uppercase tracking-wider pb-1 border-b border-slate-100">
-                            <span className="w-[60px] flex-shrink-0">Inv Date</span>
-                            <span className="flex-1 min-w-0">Invoice #</span>
-                            <span className="w-[60px] flex-shrink-0 text-right">Due</span>
-                            <span className="w-[50px] flex-shrink-0 text-right">Days</span>
-                            <span className="w-[90px] flex-shrink-0 text-right pr-2">Amount</span>
+                            <button 
+                              onClick={() => toggleSort("issueDate")}
+                              className={`w-[60px] flex-shrink-0 text-left hover:text-slate-600 transition-colors ${invoiceSortColumn === "issueDate" ? "text-slate-600 font-medium" : ""}`}
+                            >
+                              Inv Date<SortIcon column="issueDate" />
+                            </button>
+                            <button 
+                              onClick={() => toggleSort("invoiceNumber")}
+                              className={`flex-1 min-w-0 text-left hover:text-slate-600 transition-colors ${invoiceSortColumn === "invoiceNumber" ? "text-slate-600 font-medium" : ""}`}
+                            >
+                              Invoice #<SortIcon column="invoiceNumber" />
+                            </button>
+                            <button 
+                              onClick={() => toggleSort("dueDate")}
+                              className={`w-[60px] flex-shrink-0 text-right hover:text-slate-600 transition-colors ${invoiceSortColumn === "dueDate" ? "text-slate-600 font-medium" : ""}`}
+                            >
+                              Due<SortIcon column="dueDate" />
+                            </button>
+                            <button 
+                              onClick={() => toggleSort("daysOverdue")}
+                              className={`w-[50px] flex-shrink-0 text-right hover:text-slate-600 transition-colors ${invoiceSortColumn === "daysOverdue" ? "text-slate-600 font-medium" : ""}`}
+                            >
+                              Days<SortIcon column="daysOverdue" />
+                            </button>
+                            <button 
+                              onClick={() => toggleSort("balance")}
+                              className={`w-[90px] flex-shrink-0 text-right pr-2 hover:text-slate-600 transition-colors ${invoiceSortColumn === "balance" ? "text-slate-600 font-medium" : ""}`}
+                            >
+                              Amount<SortIcon column="balance" />
+                            </button>
                           </div>
                           {/* Invoice Rows */}
                           <TooltipProvider delayDuration={300}>
