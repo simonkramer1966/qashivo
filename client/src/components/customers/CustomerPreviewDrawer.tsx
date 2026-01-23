@@ -416,8 +416,12 @@ export function CustomerPreviewDrawer({
                                         <span className="text-xs font-medium">{getChannelLabel(item.channel)}</span>
                                       </div>
                                       
-                                      <span className="text-xs text-slate-700 flex-1 min-w-0 truncate">
-                                        {item.preview || item.summary}
+                                      <span className="text-xs text-slate-700 flex-1 min-w-0">
+                                        {(() => {
+                                          const text = item.preview || item.summary;
+                                          const maxLen = 35;
+                                          return text.length > maxLen ? text.slice(0, maxLen) + '...' : text;
+                                        })()}
                                       </span>
                                       
                                       <div className="flex items-center gap-1.5 flex-shrink-0">
