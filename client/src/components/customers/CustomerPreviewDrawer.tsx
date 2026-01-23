@@ -196,7 +196,10 @@ export function CustomerPreviewDrawer({
 
   const formatShortDate = (dateStr: string) => {
     const date = new Date(dateStr);
-    return date.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+    const day = date.getDate().toString().padStart(2, '0');
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const year = date.getFullYear().toString().slice(-2);
+    return `${day}/${month}/${year}`;
   };
 
   const handleDetailClick = () => {
@@ -530,30 +533,36 @@ export function CustomerPreviewDrawer({
                     </p>
                     
                     {preview.invoices && preview.invoices.length > 0 ? (
-                      <div className="space-y-2">
+                      <div className="space-y-1">
+                        {/* Header Row */}
+                        <div className="flex items-center text-[10px] text-slate-400 uppercase tracking-wider pb-1 border-b border-slate-100">
+                          <span className="w-[60px] flex-shrink-0">Inv Date</span>
+                          <span className="flex-1 min-w-0">Invoice #</span>
+                          <span className="w-[60px] flex-shrink-0 text-right">Due</span>
+                          <span className="w-[50px] flex-shrink-0 text-right">Days</span>
+                          <span className="w-[90px] flex-shrink-0 text-right">Amount</span>
+                        </div>
+                        {/* Invoice Rows */}
                         {preview.invoices.map((invoice) => (
                           <div
                             key={invoice.id}
-                            className="p-2.5 rounded-lg border border-slate-100 hover:border-slate-200 transition-colors cursor-pointer min-w-0 overflow-hidden"
+                            className="flex items-center text-xs py-1.5 hover:bg-slate-50 cursor-pointer transition-colors"
                           >
-                            {/* Top Row: Inv Date | Inv Number | Due Date | Amount */}
-                            <div className="flex items-center gap-1.5 text-xs min-w-0 overflow-hidden">
-                              <span className="text-slate-500 tabular-nums flex-shrink-0">
-                                {formatShortDate(invoice.issueDate)}
-                              </span>
-                              <span className="text-slate-300 flex-shrink-0">|</span>
-                              <span className="font-medium text-slate-900 truncate flex-1 min-w-0">
-                                {invoice.invoiceNumber}
-                              </span>
-                              <span className="text-slate-300 flex-shrink-0">|</span>
-                              <span className={`tabular-nums flex-shrink-0 ${invoice.daysOverdue && invoice.daysOverdue > 0 ? getInvoiceStatusColor(invoice) : 'text-slate-500'}`}>
-                                {formatShortDate(invoice.dueDate)}
-                              </span>
-                              <span className="text-slate-300 flex-shrink-0">|</span>
-                              <span className="font-semibold text-slate-900 tabular-nums flex-shrink-0">
-                                {formatCurrency(invoice.balance)}
-                              </span>
-                            </div>
+                            <span className="w-[60px] flex-shrink-0 text-slate-500 tabular-nums">
+                              {formatShortDate(invoice.issueDate)}
+                            </span>
+                            <span className="flex-1 min-w-0 font-medium text-slate-900 truncate pr-2">
+                              {invoice.invoiceNumber}
+                            </span>
+                            <span className={`w-[60px] flex-shrink-0 text-right tabular-nums ${invoice.daysOverdue && invoice.daysOverdue > 0 ? getInvoiceStatusColor(invoice) : 'text-slate-500'}`}>
+                              {formatShortDate(invoice.dueDate)}
+                            </span>
+                            <span className={`w-[50px] flex-shrink-0 text-right tabular-nums ${invoice.daysOverdue && invoice.daysOverdue > 0 ? getInvoiceStatusColor(invoice) : 'text-slate-500'}`}>
+                              {invoice.daysOverdue && invoice.daysOverdue > 0 ? invoice.daysOverdue : '-'}
+                            </span>
+                            <span className="w-[90px] flex-shrink-0 text-right font-semibold text-slate-900 tabular-nums">
+                              {formatCurrency(invoice.balance)}
+                            </span>
                           </div>
                         ))}
                       </div>
