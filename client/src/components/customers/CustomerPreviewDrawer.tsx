@@ -130,6 +130,7 @@ export function CustomerPreviewDrawer({
   const [callScheduleMode, setCallScheduleMode] = useState<CallScheduleMode>("asap");
   const [callScheduleDate, setCallScheduleDate] = useState("");
   const [callScheduleTime, setCallScheduleTime] = useState("");
+  const [selectedCallRecipientPhone, setSelectedCallRecipientPhone] = useState<string>("");
   
   const [isEmailMode, setIsEmailMode] = useState(false);
   const [emailTemplate, setEmailTemplate] = useState<EmailTemplateType>("full_payment_request");
@@ -226,6 +227,7 @@ export function CustomerPreviewDrawer({
       maxDuration: number;
       scheduleMode: CallScheduleMode;
       scheduledFor?: string | null;
+      recipientPhone: string;
     }) => {
       const res = await apiRequest("POST", `/api/contacts/${customerId}/schedule-call`, callData);
       return await res.json();
@@ -256,6 +258,7 @@ export function CustomerPreviewDrawer({
     setCallScheduleMode("asap");
     setCallScheduleDate("");
     setCallScheduleTime("");
+    setSelectedCallRecipientPhone("");
     setIsRecentActivityExpanded(true);
   };
 
@@ -472,6 +475,15 @@ export function CustomerPreviewDrawer({
   };
 
   const handleScheduleCall = () => {
+    if (!selectedCallRecipientPhone) {
+      toast({
+        title: "Recipient required",
+        description: "Please select an AR contact to call",
+        variant: "destructive",
+      });
+      return;
+    }
+
     let scheduledFor: string | null = null;
     if (callScheduleMode === "scheduled" && callScheduleDate) {
       const dateTime = callScheduleTime 
@@ -487,6 +499,7 @@ export function CustomerPreviewDrawer({
       maxDuration: callMaxDuration,
       scheduleMode: callScheduleMode,
       scheduledFor,
+      recipientPhone: selectedCallRecipientPhone,
     });
   };
 
@@ -993,6 +1006,38 @@ export function CustomerPreviewDrawer({
                           </div>
 
                           <div className="space-y-3">
+                            {/* AR Contact Selection */}
+                            <div>
+                              <Label htmlFor="callRecipient" className="text-xs text-slate-500 mb-1.5 block">
+                                To
+                              </Label>
+                              <Select 
+                                value={selectedCallRecipientPhone} 
+                                onValueChange={setSelectedCallRecipientPhone}
+                              >
+                                <SelectTrigger className="h-9 bg-white border-slate-200 text-xs">
+                                  <SelectValue placeholder="Select recipient..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {preview?.allCreditControlContacts?.filter(c => c.phone).map((contact) => (
+                                    <SelectItem 
+                                      key={contact.id} 
+                                      value={contact.phone || ''} 
+                                      className="text-xs"
+                                    >
+                                      {contact.name || contact.phone}{contact.isPrimary ? ' (Primary AR)' : ''}
+                                    </SelectItem>
+                                  ))}
+                                  {(!preview?.allCreditControlContacts?.some(c => c.phone)) && 
+                                    preview?.creditControlContact?.phone && (
+                                    <SelectItem value={preview.creditControlContact.phone} className="text-xs">
+                                      {preview.creditControlContact.name || preview.creditControlContact.phone} (AR Contact)
+                                    </SelectItem>
+                                  )}
+                                </SelectContent>
+                              </Select>
+                            </div>
+
                             {/* Reason for Call */}
                             <div>
                               <Label htmlFor="callReason" className="text-xs text-slate-500 mb-1.5 block">
@@ -1492,7 +1537,7 @@ export function CustomerPreviewDrawer({
                   <Button
                     size="sm"
                     onClick={handleScheduleCall}
-                    disabled={scheduleCallMutation.isPending || (callScheduleMode === "scheduled" && !callScheduleDate)}
+                    disabled={scheduleCallMutation.isPending || !selectedCallRecipientPhone || (callScheduleMode === "scheduled" && !callScheduleDate)}
                     className="flex-1 bg-[#17B6C3] hover:bg-[#1396A1] text-white text-xs"
                   >
                     <Phone className="h-4 w-4 mr-1.5" />
