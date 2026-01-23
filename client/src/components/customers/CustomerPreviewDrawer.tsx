@@ -323,7 +323,7 @@ export function CustomerPreviewDrawer({
         tone: toneLabels[smsTone].toLowerCase(),
       });
       const data = await res.json();
-      setSmsBody(data.message || "");
+      setSmsBody(data.body || "");
     } catch (error) {
       toast({
         title: "Failed to generate SMS",
