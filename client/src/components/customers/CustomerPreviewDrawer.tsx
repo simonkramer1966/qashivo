@@ -388,10 +388,23 @@ export function CustomerPreviewDrawer({
                       {isRecentActivityExpanded && (
                         <div className="mt-3 min-w-0 overflow-hidden">
                           {preview.latestTimeline && preview.latestTimeline.length > 0 ? (
-                            <div className="space-y-1 min-w-0">
-                              {preview.latestTimeline.map((item) => {
+                            (() => {
+                              const getTimeBucket = (dateStr: string) => {
+                                const date = new Date(dateStr);
+                                const now = new Date();
+                                const diffMs = now.getTime() - date.getTime();
+                                const diffDays = Math.floor(diffMs / 86400000);
+                                if (diffDays === 0) return 'Today';
+                                if (diffDays === 1) return 'Yesterday';
+                                return 'Earlier';
+                              };
+                              
+                              const items = preview.latestTimeline;
+                              const showBuckets = items.length > 6;
+                              
+                              const renderItem = (item: typeof items[0]) => {
                                 const dateInfo = formatRelativeDate(item.occurredAt);
-                                const isExpanded = expandedTimelineItems.has(item.id);
+                                const isItemExpanded = expandedTimelineItems.has(item.id);
                                 const outcomeLabel = getOutcomeLabel(item.outcome?.type);
                                 const amount = item.outcome?.extracted?.amount;
                                 
@@ -399,12 +412,12 @@ export function CustomerPreviewDrawer({
                                   <div key={item.id} className="border-b border-slate-100 last:border-b-0 min-w-0 w-full max-w-full overflow-hidden">
                                     <button
                                       onClick={() => toggleTimelineItem(item.id)}
-                                      className="w-full max-w-full flex items-center gap-2 py-1.5 hover:bg-slate-100 transition-colors text-left min-w-0 overflow-hidden"
+                                      className="group w-full max-w-full flex items-center gap-2 py-1.5 hover:bg-slate-100 transition-colors text-left min-w-0 overflow-hidden"
                                     >
                                       <TooltipProvider delayDuration={300}>
                                         <Tooltip>
                                           <TooltipTrigger asChild>
-                                            <span className="text-xs text-slate-400 w-16 flex-shrink-0 tabular-nums">
+                                            <span className="text-xs text-slate-400 min-w-[72px] w-[72px] flex-shrink-0 tabular-nums">
                                               {dateInfo.relative}
                                             </span>
                                           </TooltipTrigger>
@@ -414,17 +427,13 @@ export function CustomerPreviewDrawer({
                                         </Tooltip>
                                       </TooltipProvider>
                                       
-                                      <div className="flex items-center gap-1.5 text-slate-500 flex-shrink-0">
-                                        {getChannelIcon(item.channel)}
+                                      <div className="flex items-center gap-1 text-slate-500 flex-shrink-0 w-14">
+                                        <span className="w-4 flex-shrink-0">{getChannelIcon(item.channel)}</span>
                                         <span className="text-xs font-medium">{getChannelLabel(item.channel)}</span>
                                       </div>
                                       
-                                      <span className="text-xs text-slate-700 flex-1 min-w-0">
-                                        {(() => {
-                                          const text = item.preview || item.summary;
-                                          const maxLen = 35;
-                                          return text.length > maxLen ? text.slice(0, maxLen) + '...' : text;
-                                        })()}
+                                      <span className="text-xs text-slate-700 flex-1 min-w-0 truncate">
+                                        {item.preview || item.summary}
                                       </span>
                                       
                                       <div className="flex items-center gap-1.5 flex-shrink-0">
@@ -438,15 +447,15 @@ export function CustomerPreviewDrawer({
                                             {formatCurrency(amount)}
                                           </span>
                                         )}
-                                        {isExpanded ? (
+                                        {isItemExpanded ? (
                                           <ChevronDown className="h-3.5 w-3.5 text-slate-400" />
                                         ) : (
-                                          <ChevronRight className="h-3.5 w-3.5 text-slate-400" />
+                                          <ChevronRight className="h-3.5 w-3.5 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity" />
                                         )}
                                       </div>
                                     </button>
                                     
-                                    {isExpanded && (
+                                    {isItemExpanded && (
                                       <div className="pl-[72px] pr-2 pb-3 space-y-2 overflow-hidden min-w-0">
                                         {item.body && (
                                           <p className="text-xs text-slate-600 whitespace-pre-wrap">
@@ -480,8 +489,31 @@ export function CustomerPreviewDrawer({
                                     )}
                                   </div>
                                 );
-                              })}
-                            </div>
+                              };
+                              
+                              if (!showBuckets) {
+                                return <div className="space-y-0 min-w-0">{items.map(renderItem)}</div>;
+                              }
+                              
+                              const buckets = { Today: [] as typeof items, Yesterday: [] as typeof items, Earlier: [] as typeof items };
+                              items.forEach(item => {
+                                const bucket = getTimeBucket(item.occurredAt);
+                                buckets[bucket as keyof typeof buckets].push(item);
+                              });
+                              
+                              return (
+                                <div className="space-y-3 min-w-0">
+                                  {(['Today', 'Yesterday', 'Earlier'] as const).map(bucket => 
+                                    buckets[bucket].length > 0 && (
+                                      <div key={bucket}>
+                                        <p className="text-[10px] text-slate-400 uppercase tracking-wider mb-1">{bucket}</p>
+                                        <div className="space-y-0">{buckets[bucket].map(renderItem)}</div>
+                                      </div>
+                                    )
+                                  )}
+                                </div>
+                              );
+                            })()
                           ) : (
                             <p className="text-sm text-slate-400">No recent activity</p>
                           )}
