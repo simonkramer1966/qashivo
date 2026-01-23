@@ -486,10 +486,10 @@ Purpose: ${templateDescription}
 Customer Details:
 - Contact Name: ${context.contactName}
 - Company: ${context.companyName}
-- Total Outstanding: £${context.totalOutstanding.toFixed(2)}
+- Total Overdue Balance: £${context.totalOutstanding.toFixed(2)} (amount past due date)
 - Oldest Overdue: ${context.oldestOverdueDays} days
 
-Outstanding Invoices:
+Overdue Invoices (past due date):
 ${invoicesList}
 
 Recent Communication History:
@@ -514,6 +514,7 @@ Guidelines:
 - Use British English spelling
 - Be professional but ${context.tone}
 - Include specific invoice/amount details where relevant
+- IMPORTANT: Refer to the total as "overdue balance" (past due), not "outstanding balance" (outstanding could include invoices not yet due)
 - End with clear next steps or call to action
 - Sign off appropriately for the tone
 `;
