@@ -3746,13 +3746,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
       const { contactId } = req.params;
+      
+      const { insertCustomerContactPersonSchema } = await import("@shared/schema");
+      const createSchema = insertCustomerContactPersonSchema.pick({
+        name: true,
+        email: true,
+        phone: true,
+        jobTitle: true,
+        isPrimaryCreditControl: true,
+        isEscalation: true,
+        notes: true,
+      });
+      
+      const validatedBody = createSchema.parse(req.body);
+      
       const person = await storage.createCustomerContactPerson({
-        ...req.body,
+        ...validatedBody,
         tenantId: user.tenantId,
         contactId,
       });
       res.json(person);
-    } catch (error) {
+    } catch (error: any) {
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ message: "Invalid request body", errors: error.errors });
+      }
       console.error("Error creating customer contact person:", error);
       res.status(500).json({ message: "Failed to create contact person" });
     }
@@ -3765,9 +3782,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "User not associated with a tenant" });
       }
       const { personId } = req.params;
-      const person = await storage.updateCustomerContactPerson(personId, user.tenantId, req.body);
+      
+      const { insertCustomerContactPersonSchema } = await import("@shared/schema");
+      const updateSchema = insertCustomerContactPersonSchema.pick({
+        name: true,
+        email: true,
+        phone: true,
+        jobTitle: true,
+        isPrimaryCreditControl: true,
+        isEscalation: true,
+        notes: true,
+      }).partial();
+      
+      const validatedBody = updateSchema.parse(req.body);
+      
+      const person = await storage.updateCustomerContactPerson(personId, user.tenantId, validatedBody);
       res.json(person);
-    } catch (error) {
+    } catch (error: any) {
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ message: "Invalid request body", errors: error.errors });
+      }
       console.error("Error updating customer contact person:", error);
       res.status(500).json({ message: "Failed to update contact person" });
     }

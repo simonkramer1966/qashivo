@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useRoute, Link } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { ArrowLeft, Mail, Phone, MessageSquare, Mic, ExternalLink, Clock, Zap } from "lucide-react";
+import { ArrowLeft, Mail, Phone, MessageSquare, Mic, ExternalLink, Clock, Zap, Plus, User, Trash2, Star, AlertCircle } from "lucide-react";
 import NewSidebar from "@/components/layout/new-sidebar";
 import BottomNav from "@/components/layout/bottom-nav";
 import Header from "@/components/layout/header";
@@ -10,6 +10,8 @@ import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from "@/components/ui/dialog";
 import { useCurrency } from "@/hooks/useCurrency";
 import { Timeline } from "@/components/customers/Timeline";
 import { queryClient, apiRequest } from "@/lib/queryClient";
@@ -42,6 +44,23 @@ interface FullProfileResponse {
   timeline: TimelineResponse;
 }
 
+interface CustomerContactPerson {
+  id: string;
+  tenantId: string;
+  contactId: string;
+  name: string;
+  email?: string | null;
+  phone?: string | null;
+  jobTitle?: string | null;
+  isPrimaryCreditControl: boolean;
+  isEscalation: boolean;
+  isFromXero: boolean;
+  xeroContactPersonId?: string | null;
+  notes?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 const TIME_OPTIONS = [
   "00:00", "01:00", "02:00", "03:00", "04:00", "05:00",
   "06:00", "07:00", "08:00", "09:00", "10:00", "11:00", "12:00",
@@ -70,6 +89,49 @@ export default function CustomerDetailPage() {
   }
   const { data: workflows } = useQuery<Workflow[]>({
     queryKey: ['/api/workflows'],
+  });
+
+  // Fetch customer contact persons
+  const { data: contactPersons, isLoading: loadingPersons } = useQuery<CustomerContactPerson[]>({
+    queryKey: ['/api/contacts', customerId, 'persons'],
+    enabled: !!customerId,
+  });
+
+  // State for add contact dialog
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [newPerson, setNewPerson] = useState({ name: '', email: '', phone: '', jobTitle: '' });
+
+  // Mutations for contact persons
+  const createPersonMutation = useMutation({
+    mutationFn: async (data: { name: string; email?: string; phone?: string; jobTitle?: string }) => {
+      if (!customerId) throw new Error("No customer selected");
+      return apiRequest("POST", `/api/contacts/${customerId}/persons`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/contacts', customerId, 'persons'] });
+      setNewPerson({ name: '', email: '', phone: '', jobTitle: '' });
+      setIsAddDialogOpen(false);
+    }
+  });
+
+  const updatePersonMutation = useMutation({
+    mutationFn: async ({ personId, updates }: { personId: string; updates: Partial<CustomerContactPerson> }) => {
+      if (!customerId) throw new Error("No customer selected");
+      return apiRequest("PATCH", `/api/contacts/${customerId}/persons/${personId}`, updates);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/contacts', customerId, 'persons'] });
+    }
+  });
+
+  const deletePersonMutation = useMutation({
+    mutationFn: async (personId: string) => {
+      if (!customerId) throw new Error("No customer selected");
+      return apiRequest("DELETE", `/api/contacts/${customerId}/persons/${personId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/contacts', customerId, 'persons'] });
+    }
   });
 
   const contact = profile?.contact;
@@ -264,6 +326,171 @@ export default function CustomerDetailPage() {
                       <ExternalLink className="h-3 w-3" />
                     </a>
                   )}
+
+                  {/* Contacts List */}
+                  <div className="pt-6">
+                    <div className="flex items-center justify-between mb-3">
+                      <p className="text-[11px] text-slate-400">Contact People</p>
+                      <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+                        <DialogTrigger asChild>
+                          <Button variant="ghost" size="sm" className="h-7 text-xs text-[#17B6C3] hover:text-[#1396A1]">
+                            <Plus className="h-3 w-3 mr-1" />
+                            Add Contact
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-md">
+                          <DialogHeader>
+                            <DialogTitle>Add Contact Person</DialogTitle>
+                          </DialogHeader>
+                          <div className="space-y-4 py-4">
+                            <div>
+                              <label className="text-sm text-slate-600">Name *</label>
+                              <Input 
+                                value={newPerson.name}
+                                onChange={(e) => setNewPerson(p => ({ ...p, name: e.target.value }))}
+                                placeholder="Full name"
+                                className="mt-1"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-sm text-slate-600">Job Title</label>
+                              <Input 
+                                value={newPerson.jobTitle}
+                                onChange={(e) => setNewPerson(p => ({ ...p, jobTitle: e.target.value }))}
+                                placeholder="e.g. Finance Director"
+                                className="mt-1"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-sm text-slate-600">Email</label>
+                              <Input 
+                                type="email"
+                                value={newPerson.email}
+                                onChange={(e) => setNewPerson(p => ({ ...p, email: e.target.value }))}
+                                placeholder="email@example.com"
+                                className="mt-1"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-sm text-slate-600">Phone</label>
+                              <Input 
+                                value={newPerson.phone}
+                                onChange={(e) => setNewPerson(p => ({ ...p, phone: e.target.value }))}
+                                placeholder="+44 7XXX XXXXXX"
+                                className="mt-1"
+                              />
+                            </div>
+                          </div>
+                          <div className="flex justify-end gap-2">
+                            <DialogClose asChild>
+                              <Button variant="outline" size="sm">Cancel</Button>
+                            </DialogClose>
+                            <Button 
+                              size="sm"
+                              onClick={() => createPersonMutation.mutate(newPerson)}
+                              disabled={!newPerson.name.trim() || createPersonMutation.isPending}
+                            >
+                              {createPersonMutation.isPending ? "Adding..." : "Add Contact"}
+                            </Button>
+                          </div>
+                        </DialogContent>
+                      </Dialog>
+                    </div>
+
+                    {loadingPersons ? (
+                      <div className="space-y-2">
+                        <Skeleton className="h-12 w-full" />
+                        <Skeleton className="h-12 w-full" />
+                      </div>
+                    ) : contactPersons && contactPersons.length > 0 ? (
+                      <div className="space-y-0">
+                        {contactPersons.map((person, idx) => (
+                          <div 
+                            key={person.id}
+                            className={`py-3 ${idx !== contactPersons.length - 1 ? 'border-b border-slate-100' : ''}`}
+                          >
+                            <div className="flex items-start justify-between gap-4">
+                              <div className="flex items-start gap-3 flex-1 min-w-0">
+                                <User className="h-4 w-4 text-slate-400 mt-0.5" />
+                                <div className="min-w-0">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <span className="text-sm font-medium text-slate-900">{person.name}</span>
+                                    {person.jobTitle && (
+                                      <span className="text-xs text-slate-400">• {person.jobTitle}</span>
+                                    )}
+                                    {person.isFromXero && (
+                                      <span className="text-[10px] px-1.5 py-0.5 bg-blue-50 text-blue-600 rounded">Xero</span>
+                                    )}
+                                  </div>
+                                  <div className="flex items-center gap-4 mt-1 text-xs text-slate-500">
+                                    {person.email && (
+                                      <span className="flex items-center gap-1">
+                                        <Mail className="h-3 w-3" />
+                                        {person.email}
+                                      </span>
+                                    )}
+                                    {person.phone && (
+                                      <span className="flex items-center gap-1">
+                                        <Phone className="h-3 w-3" />
+                                        {person.phone}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-3 flex-shrink-0">
+                                <button
+                                  onClick={() => updatePersonMutation.mutate({
+                                    personId: person.id,
+                                    updates: { isPrimaryCreditControl: !person.isPrimaryCreditControl }
+                                  })}
+                                  className={`flex items-center gap-1 text-xs px-2 py-1 rounded transition-colors ${
+                                    person.isPrimaryCreditControl 
+                                      ? 'bg-amber-50 text-amber-700' 
+                                      : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50'
+                                  }`}
+                                  title="Primary Credit Control Contact"
+                                >
+                                  <Star className={`h-3 w-3 ${person.isPrimaryCreditControl ? 'fill-amber-500' : ''}`} />
+                                  <span className="hidden sm:inline">Primary</span>
+                                </button>
+                                <button
+                                  onClick={() => updatePersonMutation.mutate({
+                                    personId: person.id,
+                                    updates: { isEscalation: !person.isEscalation }
+                                  })}
+                                  className={`flex items-center gap-1 text-xs px-2 py-1 rounded transition-colors ${
+                                    person.isEscalation 
+                                      ? 'bg-red-50 text-red-700' 
+                                      : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50'
+                                  }`}
+                                  title="Escalation Contact"
+                                >
+                                  <AlertCircle className={`h-3 w-3 ${person.isEscalation ? 'fill-red-200' : ''}`} />
+                                  <span className="hidden sm:inline">Escalation</span>
+                                </button>
+                                {!person.isFromXero && (
+                                  <button
+                                    onClick={() => {
+                                      if (confirm('Delete this contact?')) {
+                                        deletePersonMutation.mutate(person.id);
+                                      }
+                                    }}
+                                    className="text-slate-400 hover:text-red-500 p-1"
+                                    title="Delete"
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-slate-400 py-2">No contacts added yet</p>
+                    )}
+                  </div>
                 </div>
               ) : (
                 <p className="text-sm text-slate-400">Customer not found</p>
