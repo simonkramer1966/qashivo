@@ -65,11 +65,12 @@ import {
   messageDrafts,
   tenants,
   paymentPromises,
-  smeClients
+  smeClients,
+  contactNotes
 } from "@shared/schema";
 import { getOverdueCategoryFromDueDate } from "@shared/utils/overdueUtils";
 import { calculateLatePaymentInterest } from "./utils/interestCalculator";
-import { eq, and, desc, sql, count, avg, gte, lte, inArray, or, isNull, gt } from 'drizzle-orm';
+import { eq, and, desc, asc, sql, count, avg, gte, lte, inArray, or, isNull, gt } from 'drizzle-orm';
 import { db } from './db';
 import { z } from "zod";
 
@@ -4305,6 +4306,74 @@ export async function registerRoutes(app: Express): Promise<Server> {
         success: false,
         message: "Failed to create contact note" 
       });
+    }
+  });
+
+  // Complete a reminder note
+  app.patch("/api/notes/:noteId/complete", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { noteId } = req.params;
+      
+      const [updatedNote] = await db
+        .update(contactNotes)
+        .set({ 
+          status: "completed",
+          completedAt: new Date()
+        })
+        .where(
+          and(
+            eq(contactNotes.id, noteId),
+            eq(contactNotes.tenantId, user.tenantId)
+          )
+        )
+        .returning();
+
+      if (!updatedNote) {
+        return res.status(404).json({ message: "Note not found" });
+      }
+
+      res.json({ success: true, note: updatedNote });
+    } catch (error) {
+      console.error("Error completing reminder:", error);
+      res.status(500).json({ message: "Failed to complete reminder" });
+    }
+  });
+
+  // Get pending reminders for current user (for Action Centre Attention tab)
+  app.get("/api/reminders/pending", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const reminders = await db.query.contactNotes.findMany({
+        where: and(
+          eq(contactNotes.tenantId, user.tenantId),
+          eq(contactNotes.noteType, "reminder"),
+          eq(contactNotes.status, "active"),
+          or(
+            eq(contactNotes.assignedToUserId, user.id),
+            eq(contactNotes.createdByUserId, user.id)
+          )
+        ),
+        orderBy: [asc(contactNotes.reminderDate)],
+        with: {
+          contact: true,
+          createdByUser: true,
+          assignedToUser: true,
+        },
+      });
+
+      res.json(reminders);
+    } catch (error) {
+      console.error("Error fetching pending reminders:", error);
+      res.status(500).json({ message: "Failed to fetch pending reminders" });
     }
   });
 

@@ -191,12 +191,19 @@ export const contactNotes = pgTable("contact_notes", {
   contactId: varchar("contact_id").notNull().references(() => contacts.id),
   content: text("content").notNull(),
   createdByUserId: varchar("created_by_user_id").notNull().references(() => users.id),
+  noteType: varchar("note_type").default("general"), // general, follow-up, internal, important, reminder
+  reminderDate: timestamp("reminder_date"), // Only for reminder type
+  assignedToUserId: varchar("assigned_to_user_id").references(() => users.id), // Only for reminder type
+  status: varchar("status").default("active"), // active, completed (for reminders)
+  completedAt: timestamp("completed_at"),
   createdAt: timestamp("created_at").defaultNow(),
 }, (table) => [
   // Performance indexes for querying notes by contact
   index("idx_contact_notes_contact_id").on(table.contactId),
   index("idx_contact_notes_tenant_id").on(table.tenantId),
   index("idx_contact_notes_created_at").on(table.createdAt),
+  index("idx_contact_notes_reminder_date").on(table.reminderDate),
+  index("idx_contact_notes_assigned_to").on(table.assignedToUserId),
 ]);
 
 // Customer Contact Persons table (multiple contacts per customer with role designations)
@@ -1728,6 +1735,28 @@ export const contactsRelations = relations(contacts, ({ one, many }) => ({
   bankTransactions: many(bankTransactions),
   actions: many(actions),
   voiceCalls: many(voiceCalls),
+  notes: many(contactNotes),
+}));
+
+export const contactNotesRelations = relations(contactNotes, ({ one }) => ({
+  contact: one(contacts, {
+    fields: [contactNotes.contactId],
+    references: [contacts.id],
+  }),
+  tenant: one(tenants, {
+    fields: [contactNotes.tenantId],
+    references: [tenants.id],
+  }),
+  createdByUser: one(users, {
+    fields: [contactNotes.createdByUserId],
+    references: [users.id],
+    relationName: "noteCreator",
+  }),
+  assignedToUser: one(users, {
+    fields: [contactNotes.assignedToUserId],
+    references: [users.id],
+    relationName: "noteAssignee",
+  }),
 }));
 
 export const invoicesRelations = relations(invoices, ({ one, many }) => ({
@@ -2475,8 +2504,13 @@ export const insertContactSchema = createInsertSchema(contacts).omit({
 export const insertContactNoteSchema = createInsertSchema(contactNotes).omit({
   id: true,
   createdAt: true,
+  completedAt: true,
 }).extend({
   content: z.string().min(1, "Content is required").max(5000, "Content must be 5000 characters or less"),
+  noteType: z.enum(["general", "follow-up", "internal", "important", "reminder"]).optional().default("general"),
+  reminderDate: z.string().datetime().optional().nullable(),
+  assignedToUserId: z.string().optional().nullable(),
+  status: z.enum(["active", "completed"]).optional().default("active"),
 });
 
 export const insertInvoiceSchema = createInsertSchema(invoices).omit({
