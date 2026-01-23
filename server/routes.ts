@@ -4573,7 +4573,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         subject: emailDraft.subject,
         body: emailDraft.body,
         templateType: emailDraft.templateType,
-        contactEmail: contact.email
+        contactEmail: contact.arContactEmail || contact.email
       });
     } catch (error) {
       console.error("Error generating email:", error);
@@ -4598,7 +4598,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Contact not found" });
       }
 
-      if (!contact.email) {
+      // Use AR contact email (credit control contact) if available, fallback to primary email
+      const recipientEmail = contact.arContactEmail || contact.email;
+      if (!recipientEmail) {
         return res.status(400).json({ message: "Contact has no email address" });
       }
 
@@ -4613,7 +4615,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const htmlBody = body.replace(/\n/g, '<br>');
       
       const result = await sendEmail({
-        to: contact.email,
+        to: recipientEmail,
         from: `${tenant?.name || DEFAULT_FROM} <${DEFAULT_FROM_EMAIL}>`,
         subject,
         html: htmlBody,
