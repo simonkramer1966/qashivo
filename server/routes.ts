@@ -4282,9 +4282,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       // Convert reminderDate string to Date object for Drizzle
+      // Also convert "self" assignedToUserId to the current user's ID
       const noteData = {
         ...parsedData,
         reminderDate: parsedData.reminderDate ? new Date(parsedData.reminderDate) : null,
+        assignedToUserId: parsedData.assignedToUserId === "self" ? user.id : parsedData.assignedToUserId,
       };
 
       const note = await storage.createNote(noteData);
