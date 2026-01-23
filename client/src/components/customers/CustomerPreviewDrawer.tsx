@@ -1090,7 +1090,7 @@ export function CustomerPreviewDrawer({
                                 placeholder="Email subject..."
                                 value={emailSubject}
                                 onChange={(e) => setEmailSubject(e.target.value)}
-                                className="h-9 bg-white border-slate-200 text-xs"
+                                className="h-9 bg-white border-slate-200 text-[12px]"
                               />
                             </div>
 
