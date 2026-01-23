@@ -4405,7 +4405,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         invoiceId: primaryInvoice?.id || null,
         userId: user.id,
         type: 'voice',
-        status: scheduleMode === 'now' ? 'in_progress' : 'scheduled',
+        status: 'scheduled',
         scheduledFor: scheduledTime,
         approvedBy: user.id, // Auto-approved since user manually scheduled
         approvedAt: new Date(),
@@ -4453,8 +4453,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let retellResult = null;
       if (scheduleMode === 'now') {
         try {
-          const { RetellService } = await import('./retell-service');
-          const retellService = new RetellService();
           
           // Get tenant for agent configuration
           const tenant = await storage.getTenant(user.tenantId);
@@ -4497,10 +4495,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
             
             console.log(`✅ Retell call initiated: ${JSON.stringify(retellResult)}`);
             
-            // Update action with call ID
+            // Update action with call ID and status
             if (retellResult?.call_id) {
               await db.update(actions)
                 .set({ 
+                  status: 'executing',
+                  executedAt: new Date(),
                   metadata: { 
                     ...newAction.metadata as any, 
                     retellCallId: retellResult.call_id 
@@ -4511,7 +4511,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         } catch (retellError: any) {
           console.error('❌ Failed to initiate immediate Retell call:', retellError.message);
-          // Don't fail the request - the call is still scheduled for executor pickup
+          // Update action status back to scheduled for executor pickup
+          await db.update(actions)
+            .set({ status: 'scheduled' })
+            .where(eq(actions.id, newAction.id));
         }
       }
 
