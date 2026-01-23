@@ -4513,8 +4513,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Build context for AI email generation
       const { generateCollectionEmail } = await import("./services/openai.js");
       
+      // Extract first name from arContactName for personal greeting
+      const arContactFirstName = contact.arContactName?.split(' ')[0];
+      
       const emailDraft = await generateCollectionEmail(templateType, {
-        contactName: contact.name || 'Valued Customer',
+        contactName: arContactFirstName || 'there',
         companyName: contact.name || 'Customer',
         totalOutstanding,
         oldestOverdueDays,
