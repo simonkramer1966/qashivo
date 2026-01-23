@@ -477,7 +477,7 @@ export function CustomerPreviewDrawer({
                   <Button 
                     variant="outline" 
                     size="sm"
-                    className="flex-1 border-[#E6E8EC] text-slate-700 hover:bg-slate-50"
+                    className="flex-1 basis-0 border-[#E6E8EC] text-slate-700 hover:bg-slate-50"
                     onClick={handleNoteButtonClick}
                   >
                     <StickyNote className="h-4 w-4 mr-1.5" />
@@ -486,7 +486,7 @@ export function CustomerPreviewDrawer({
                   <Button 
                     variant="outline" 
                     size="sm"
-                    className="flex-1 border-[#E6E8EC] text-slate-700 hover:bg-slate-50"
+                    className="flex-1 basis-0 border-[#E6E8EC] text-slate-700 hover:bg-slate-50"
                   >
                     <Phone className="h-4 w-4 mr-1.5" />
                     Call
@@ -494,7 +494,7 @@ export function CustomerPreviewDrawer({
                   <Button 
                     variant="outline" 
                     size="sm"
-                    className="flex-1 border-[#E6E8EC] text-slate-700 hover:bg-slate-50"
+                    className="flex-1 basis-0 border-[#E6E8EC] text-slate-700 hover:bg-slate-50"
                   >
                     <Mail className="h-4 w-4 mr-1.5" />
                     Email
@@ -502,7 +502,7 @@ export function CustomerPreviewDrawer({
                   <Button 
                     variant="outline" 
                     size="sm"
-                    className="flex-1 border-[#E6E8EC] text-slate-700 hover:bg-slate-50"
+                    className="flex-1 basis-0 border-[#E6E8EC] text-slate-700 hover:bg-slate-50"
                   >
                     <MessageSquare className="h-4 w-4 mr-1.5" />
                     SMS
@@ -581,7 +581,7 @@ export function CustomerPreviewDrawer({
                   <Button 
                     variant="outline" 
                     size="sm"
-                    className="flex-1 border-[#E6E8EC] text-slate-700 hover:bg-slate-50"
+                    className="flex-1 basis-0 border-[#E6E8EC] text-slate-700 hover:bg-slate-50"
                   >
                     <Handshake className="h-4 w-4 mr-1.5" />
                     PTP
@@ -589,7 +589,7 @@ export function CustomerPreviewDrawer({
                   <Button 
                     variant="outline" 
                     size="sm"
-                    className="flex-1 border-[#E6E8EC] text-slate-700 hover:bg-slate-50"
+                    className="flex-1 basis-0 border-[#E6E8EC] text-slate-700 hover:bg-slate-50"
                   >
                     <Calendar className="h-4 w-4 mr-1.5" />
                     Plan
@@ -597,7 +597,7 @@ export function CustomerPreviewDrawer({
                   <Button 
                     variant="outline" 
                     size="sm"
-                    className="flex-1 border-[#E6E8EC] text-slate-700 hover:bg-slate-50"
+                    className="flex-1 basis-0 border-[#E6E8EC] text-slate-700 hover:bg-slate-50"
                   >
                     <Scale className="h-4 w-4 mr-1.5" />
                     Dispute
@@ -605,7 +605,7 @@ export function CustomerPreviewDrawer({
                   <Button 
                     variant="outline" 
                     size="sm"
-                    className="flex-1 border-[#E6E8EC] text-slate-700 hover:bg-slate-50"
+                    className="flex-1 basis-0 border-[#E6E8EC] text-slate-700 hover:bg-slate-50"
                   >
                     <Shield className="h-4 w-4 mr-1.5" />
                     Recovery
