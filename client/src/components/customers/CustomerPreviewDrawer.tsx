@@ -608,7 +608,7 @@ export function CustomerPreviewDrawer({
                     className="flex-1 basis-0 border-[#E6E8EC] text-slate-700 hover:bg-slate-50"
                   >
                     <Shield className="h-4 w-4 mr-1.5" />
-                    Recovery
+                    Debt
                   </Button>
                 </div>
               </div>
