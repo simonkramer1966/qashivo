@@ -283,7 +283,7 @@ export default function CustomerDetailPage() {
                   {/* Contacts List */}
                   <div>
                     <div className="flex items-center justify-between mb-3">
-                      <p className="text-[11px] text-slate-400">Contact People</p>
+                      <p className="text-[10px] text-slate-400 uppercase tracking-wider">Contacts</p>
                       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
                         <DialogTrigger asChild>
                           <Button variant="ghost" size="sm" className="h-7 text-xs text-[#17B6C3] hover:text-[#1396A1]">
