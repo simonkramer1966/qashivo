@@ -657,24 +657,24 @@ Your Company`;
               <div className="divide-y divide-[#E6E8EC]">
                 {messages.map((msg) => (
                   <div key={msg.id} className={`py-4 first:pt-0 last:pb-0 ${msg.direction === "inbound" ? "bg-[#12B8C4]/5 -mx-4 px-4 rounded-lg" : ""}`}>
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        <span className={`text-xs font-medium px-2 py-0.5 rounded ${msg.direction === "outbound" ? "bg-[#F8FAFC] text-[#556070]" : "bg-[#12B8C4]/10 text-[#12B8C4]"}`}>
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-2 mb-2">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className={`text-xs font-medium px-2 py-0.5 rounded flex-shrink-0 ${msg.direction === "outbound" ? "bg-[#F8FAFC] text-[#556070]" : "bg-[#12B8C4]/10 text-[#12B8C4]"}`}>
                           {msg.direction === "outbound" ? "Sent" : "Received"}
                         </span>
                         {msg.direction === "outbound" ? (
-                          <ArrowRight className="w-3 h-3 text-[#556070]" />
+                          <ArrowRight className="w-3 h-3 text-[#556070] flex-shrink-0" />
                         ) : (
-                          <ArrowLeft className="w-3 h-3 text-[#12B8C4]" />
+                          <ArrowLeft className="w-3 h-3 text-[#12B8C4] flex-shrink-0" />
                         )}
-                        <span className="text-sm text-[#0B0F17]">
+                        <span className="text-sm text-[#0B0F17] truncate">
                           {msg.direction === "outbound" ? msg.to : msg.from}
                         </span>
                       </div>
-                      <span className="text-xs text-[#556070]">{formatTime(msg.timestamp)}</span>
+                      <span className="text-xs text-[#556070] flex-shrink-0">{formatTime(msg.timestamp)}</span>
                     </div>
-                    <p className="text-sm font-medium text-[#0B0F17] mb-1">{msg.subject}</p>
-                    <p className="text-sm text-[#556070] whitespace-pre-line">{msg.body}</p>
+                    <p className="text-sm font-medium text-[#0B0F17] mb-1 break-words">{msg.subject}</p>
+                    <p className="text-sm text-[#556070] whitespace-pre-line break-words">{msg.body}</p>
                   </div>
                 ))}
               </div>
