@@ -533,118 +533,151 @@ Your Company`;
 
   return (
     <div className="space-y-6">
-      <div className="grid lg:grid-cols-2 gap-8">
-        <div className="space-y-6">
-          <div>
-            <label className="block text-[14px] font-medium text-[#0B0F17] mb-2">
-              Select Invoice
-            </label>
-            <Select value={selectedInvoiceNumber} onValueChange={handleSelectInvoice}>
-              <SelectTrigger className="w-full bg-white border-[#E6E8EC]">
-                <SelectValue placeholder="Choose an invoice to demo..." />
-              </SelectTrigger>
-              <SelectContent>
-                {DEMO_INVOICES.map((inv) => (
-                  <SelectItem key={inv.invoiceNumber} value={inv.invoiceNumber}>
-                    <div className="flex items-center gap-3">
-                      <span className="font-medium">{inv.customerName}</span>
-                      <span className="text-[#556070]">{inv.invoiceNumber}</span>
-                      <span className="font-semibold">{formatCurrency(inv.amount, inv.currency)}</span>
-                      <span className="text-[#556070] text-sm">{inv.daysOverdueLabel}</span>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {selectedInvoice && (
-            <div className="flex items-center gap-3 py-3 border-b border-[#E6E8EC]">
-              <div className="flex-1">
-                <p className="font-medium text-[#0B0F17]">{selectedInvoice.customerName}</p>
-                <p className="text-sm text-[#556070]">{selectedInvoice.invoiceNumber} · {selectedInvoice.daysOverdueLabel}</p>
-              </div>
-              <div className="text-right">
-                <p className="font-semibold text-[#0B0F17]">{formatCurrency(selectedInvoice.amount, selectedInvoice.currency)}</p>
-                <div className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium transition-all duration-500 ${getConfidenceBandColor(displayedConfidenceBand || selectedInvoice.confidenceBand)}`}>
-                  Confidence: {displayedConfidenceBand || selectedInvoice.confidenceBand}
-                  {showForecastUpdated && (
-                    <span className="ml-1 text-[10px] animate-pulse">· Forecast updated</span>
-                  )}
+      <div>
+        <label className="block text-[14px] font-medium text-[#0B0F17] mb-2">
+          Select Invoice
+        </label>
+        <Select value={selectedInvoiceNumber} onValueChange={handleSelectInvoice}>
+          <SelectTrigger className="w-full bg-white border-[#E6E8EC]">
+            <SelectValue placeholder="Choose an invoice to demo..." />
+          </SelectTrigger>
+          <SelectContent>
+            {DEMO_INVOICES.map((inv) => (
+              <SelectItem key={inv.invoiceNumber} value={inv.invoiceNumber}>
+                <div className="flex items-center gap-3">
+                  <span className="font-medium">{inv.customerName}</span>
+                  <span className="text-[#556070]">{inv.invoiceNumber}</span>
+                  <span className="font-semibold">{formatCurrency(inv.amount, inv.currency)}</span>
+                  <span className="text-[#556070] text-sm">{inv.daysOverdueLabel}</span>
                 </div>
-              </div>
-            </div>
-          )}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
 
-          {step === "select" && selectedInvoice && (
+      {selectedInvoice && (
+        <div className="flex items-center gap-3 py-3 border-b border-[#E6E8EC]">
+          <div className="flex-1">
+            <p className="font-medium text-[#0B0F17]">{selectedInvoice.customerName}</p>
+            <p className="text-sm text-[#556070]">{selectedInvoice.invoiceNumber} · {selectedInvoice.daysOverdueLabel}</p>
+          </div>
+          <div className="text-right">
+            <p className="font-semibold text-[#0B0F17]">{formatCurrency(selectedInvoice.amount, selectedInvoice.currency)}</p>
+            <div className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium transition-all duration-500 ${getConfidenceBandColor(displayedConfidenceBand || selectedInvoice.confidenceBand)}`}>
+              Confidence: {displayedConfidenceBand || selectedInvoice.confidenceBand}
+              {showForecastUpdated && (
+                <span className="ml-1 text-[10px] animate-pulse">· Forecast updated</span>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {step === "select" && selectedInvoice && (
+        <Button
+          onClick={generateReminder}
+          className="bg-[#12B8C4] hover:bg-[#0fa3ae] text-white"
+        >
+          <Mail className="w-4 h-4 mr-2" />
+          Generate reminder
+        </Button>
+      )}
+
+      {step === "generated" && (
+        <div className="space-y-4">
+          <div>
+            <label className="block text-[14px] font-medium text-[#0B0F17] mb-2">Subject</label>
+            <Input
+              value={emailSubject}
+              onChange={(e) => setEmailSubject(e.target.value)}
+              disabled={!isEditing}
+              className="bg-white border-[#E6E8EC]"
+            />
+          </div>
+          <div>
+            <label className="block text-[14px] font-medium text-[#0B0F17] mb-2">Message</label>
+            <Textarea
+              value={emailBody}
+              onChange={(e) => setEmailBody(e.target.value)}
+              disabled={!isEditing}
+              rows={8}
+              className="bg-white border-[#E6E8EC] resize-none"
+            />
+          </div>
+          <div className="flex gap-3">
             <Button
-              onClick={generateReminder}
+              onClick={handleApproveAndSend}
               className="bg-[#12B8C4] hover:bg-[#0fa3ae] text-white"
             >
-              <Mail className="w-4 h-4 mr-2" />
-              Generate reminder
+              <Check className="w-4 h-4 mr-2" />
+              Approve & send
             </Button>
-          )}
+            <Button
+              variant="outline"
+              onClick={() => setIsEditing(!isEditing)}
+              className="border-[#E6E8EC]"
+            >
+              {isEditing ? "Lock message" : "Edit message"}
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={handleDecline}
+              className="text-[#556070]"
+            >
+              Decline
+            </Button>
+          </div>
+        </div>
+      )}
 
-          {step === "generated" && (
-            <div className="space-y-4">
-              <div>
-                <label className="block text-[14px] font-medium text-[#0B0F17] mb-2">Subject</label>
-                <Input
-                  value={emailSubject}
-                  onChange={(e) => setEmailSubject(e.target.value)}
-                  disabled={!isEditing}
-                  className="bg-white border-[#E6E8EC]"
-                />
-              </div>
-              <div>
-                <label className="block text-[14px] font-medium text-[#0B0F17] mb-2">Message</label>
-                <Textarea
-                  value={emailBody}
-                  onChange={(e) => setEmailBody(e.target.value)}
-                  disabled={!isEditing}
-                  rows={8}
-                  className="bg-white border-[#E6E8EC] resize-none"
-                />
-              </div>
-              <div className="flex gap-3">
-                <Button
-                  onClick={handleApproveAndSend}
-                  className="bg-[#12B8C4] hover:bg-[#0fa3ae] text-white"
-                >
-                  <Check className="w-4 h-4 mr-2" />
-                  Approve & send
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => setIsEditing(!isEditing)}
-                  className="border-[#E6E8EC]"
-                >
-                  {isEditing ? "Lock message" : "Edit message"}
-                </Button>
-                <Button
-                  variant="ghost"
-                  onClick={handleDecline}
-                  className="text-[#556070]"
-                >
-                  Decline
-                </Button>
-              </div>
-            </div>
-          )}
+      {step === "sent" && (
+        <div className="flex items-center gap-2 text-emerald-600">
+          <Check className="w-5 h-5" />
+          <span className="font-medium">Sent</span>
+          <span className="text-[#556070] text-sm">· {formatTime(new Date())}</span>
+        </div>
+      )}
 
-          {step === "sent" && (
-            <div className="flex items-center gap-2 text-emerald-600">
-              <Check className="w-5 h-5" />
-              <span className="font-medium">Sent</span>
-              <span className="text-[#556070] text-sm">· {formatTime(new Date())}</span>
-            </div>
-          )}
+      {step === "interpreting" && (
+        <div className="flex items-center gap-3 py-4">
+          <div className="w-5 h-5 border-2 border-[#12B8C4] border-t-transparent rounded-full animate-spin" />
+          <span className="text-[#556070]">Interpreting reply...</span>
+        </div>
+      )}
 
-          {step === "interpreting" && (
-            <div className="flex items-center gap-3 py-4">
-              <div className="w-5 h-5 border-2 border-[#12B8C4] border-t-transparent rounded-full animate-spin" />
-              <span className="text-[#556070]">Interpreting reply...</span>
+      <div className="grid lg:grid-cols-2 gap-8">
+        <div className="space-y-6">
+          {messages.length > 0 && (
+            <div>
+              <h4 className="text-[14px] font-medium text-[#0B0F17] mb-3 flex items-center gap-2">
+                <Mail className="w-4 h-4 text-[#12B8C4]" />
+                Conversation Thread
+              </h4>
+              <div className="divide-y divide-[#E6E8EC]">
+                {messages.map((msg) => (
+                  <div key={msg.id} className={`py-4 first:pt-0 last:pb-0 ${msg.direction === "inbound" ? "bg-[#12B8C4]/5 -mx-4 px-4 rounded-lg" : ""}`}>
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <span className={`text-xs font-medium px-2 py-0.5 rounded ${msg.direction === "outbound" ? "bg-[#F8FAFC] text-[#556070]" : "bg-[#12B8C4]/10 text-[#12B8C4]"}`}>
+                          {msg.direction === "outbound" ? "Sent" : "Received"}
+                        </span>
+                        {msg.direction === "outbound" ? (
+                          <ArrowRight className="w-3 h-3 text-[#556070]" />
+                        ) : (
+                          <ArrowLeft className="w-3 h-3 text-[#12B8C4]" />
+                        )}
+                        <span className="text-sm text-[#0B0F17]">
+                          {msg.direction === "outbound" ? msg.to : msg.from}
+                        </span>
+                      </div>
+                      <span className="text-xs text-[#556070]">{formatTime(msg.timestamp)}</span>
+                    </div>
+                    <p className="text-sm font-medium text-[#0B0F17] mb-1">{msg.subject}</p>
+                    <p className="text-sm text-[#556070] whitespace-pre-line">{msg.body}</p>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 
@@ -688,9 +721,11 @@ Your Company`;
               <p className="text-xs text-[#556070] mt-2">Demo: choose a different reply to see how the plan and forecast change.</p>
             </div>
           )}
+        </div>
 
+        <div className="space-y-6">
           {currentOutcome && (
-            <div className="pt-4 border-t border-[#E6E8EC]">
+            <div className="pt-4 border-t border-[#E6E8EC] lg:border-t-0 lg:pt-0">
               <div className="flex items-center justify-between mb-4">
                 <h4 className="text-[14px] font-medium text-[#0B0F17] flex items-center gap-2">
                   <FileText className="w-4 h-4 text-[#12B8C4]" />
@@ -743,41 +778,6 @@ Your Company`;
                     <span className="font-medium text-[#0B0F17]">Next step:</span> {currentOutcome.recommendedNextStep}
                   </p>
                 </div>
-              </div>
-            </div>
-          )}
-        </div>
-
-        <div className="space-y-6">
-          {messages.length > 0 && (
-            <div>
-              <h4 className="text-[14px] font-medium text-[#0B0F17] mb-3 flex items-center gap-2">
-                <Mail className="w-4 h-4 text-[#12B8C4]" />
-                Conversation Thread
-              </h4>
-              <div className="divide-y divide-[#E6E8EC]">
-                {messages.map((msg) => (
-                  <div key={msg.id} className={`py-4 first:pt-0 last:pb-0 ${msg.direction === "inbound" ? "bg-[#12B8C4]/5 -mx-4 px-4 rounded-lg" : ""}`}>
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        <span className={`text-xs font-medium px-2 py-0.5 rounded ${msg.direction === "outbound" ? "bg-[#F8FAFC] text-[#556070]" : "bg-[#12B8C4]/10 text-[#12B8C4]"}`}>
-                          {msg.direction === "outbound" ? "Sent" : "Received"}
-                        </span>
-                        {msg.direction === "outbound" ? (
-                          <ArrowRight className="w-3 h-3 text-[#556070]" />
-                        ) : (
-                          <ArrowLeft className="w-3 h-3 text-[#12B8C4]" />
-                        )}
-                        <span className="text-sm text-[#0B0F17]">
-                          {msg.direction === "outbound" ? msg.to : msg.from}
-                        </span>
-                      </div>
-                      <span className="text-xs text-[#556070]">{formatTime(msg.timestamp)}</span>
-                    </div>
-                    <p className="text-sm font-medium text-[#0B0F17] mb-1">{msg.subject}</p>
-                    <p className="text-sm text-[#556070] whitespace-pre-line">{msg.body}</p>
-                  </div>
-                ))}
               </div>
             </div>
           )}
