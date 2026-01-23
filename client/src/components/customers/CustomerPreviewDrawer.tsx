@@ -905,28 +905,7 @@ export function CustomerPreviewDrawer({
                               </div>
                             )}
 
-                            {/* Action Buttons */}
-                            <div className="flex gap-2">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={resetCallForm}
-                                className="flex-1 border-slate-200 text-xs"
-                              >
-                                <X className="h-4 w-4 mr-1.5" />
-                                Cancel
-                              </Button>
-                              <Button
-                                size="sm"
-                                onClick={handleScheduleCall}
-                                disabled={scheduleCallMutation.isPending || (callScheduleMode === "scheduled" && !callScheduleDate)}
-                                className="flex-1 bg-[#17B6C3] hover:bg-[#1396A1] text-white text-xs"
-                              >
-                                <Phone className="h-4 w-4 mr-1.5" />
-                                {scheduleCallMutation.isPending ? "Scheduling..." : "Schedule Call"}
-                              </Button>
                             </div>
-                          </div>
                         </section>
                       </>
                     )}
@@ -974,6 +953,32 @@ export function CustomerPreviewDrawer({
                   >
                     <MessageSquare className="h-4 w-4 mr-1.5" />
                     SMS
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* Left Footer - Call Mode Actions */}
+            {preview && isCallMode && (
+              <div className="px-6 py-4 border-t border-slate-100 flex-shrink-0">
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={resetCallForm}
+                    className="flex-1 border-slate-200 text-xs"
+                  >
+                    <X className="h-4 w-4 mr-1.5" />
+                    Cancel
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={handleScheduleCall}
+                    disabled={scheduleCallMutation.isPending || (callScheduleMode === "scheduled" && !callScheduleDate)}
+                    className="flex-1 bg-[#17B6C3] hover:bg-[#1396A1] text-white text-xs"
+                  >
+                    <Phone className="h-4 w-4 mr-1.5" />
+                    {scheduleCallMutation.isPending ? "Scheduling..." : "Schedule Call"}
                   </Button>
                 </div>
               </div>
