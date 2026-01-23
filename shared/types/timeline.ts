@@ -71,6 +71,18 @@ export interface TimelineResponse {
   hasMore: boolean;
 }
 
+export interface CustomerPreviewInvoice {
+  id: string;
+  invoiceNumber: string;
+  reference?: string;
+  dueDate: string;
+  amount: number;
+  amountPaid: number;
+  balance: number;
+  status: string;
+  daysOverdue?: number;
+}
+
 export interface CustomerPreview {
   customer: {
     id: string;
@@ -98,6 +110,7 @@ export interface CustomerPreview {
     summary: string;
     status?: TimelineStatus;
   }>;
+  invoices: CustomerPreviewInvoice[];
 }
 
 export interface CustomerPreferences {

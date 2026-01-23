@@ -9,7 +9,7 @@ import {
   inboundMessages,
   contactOutcomes
 } from "@shared/schema";
-import { eq, and, desc, lt, or, sql } from "drizzle-orm";
+import { eq, and, desc, asc, lt, or, sql } from "drizzle-orm";
 import type { 
   TimelineItem, 
   TimelineResponse, 
@@ -36,6 +36,9 @@ export class CustomerTimelineService {
 
     const customerInvoices = await db
       .select({
+        id: invoices.id,
+        invoiceNumber: invoices.invoiceNumber,
+        reference: invoices.reference,
         amount: invoices.amount,
         amountPaid: invoices.amountPaid,
         status: invoices.status,
@@ -49,19 +52,35 @@ export class CustomerTimelineService {
           eq(invoices.status, "pending"),
           eq(invoices.status, "overdue")
         )
-      ));
+      ))
+      .orderBy(asc(invoices.dueDate));
 
     const now = new Date();
     let outstandingTotal = 0;
     let overdueTotal = 0;
 
-    for (const inv of customerInvoices) {
+    const invoiceList = customerInvoices.map(inv => {
       const balance = Number(inv.amount) - Number(inv.amountPaid || 0);
       outstandingTotal += balance;
+      
+      let daysOverdue: number | undefined;
       if (inv.dueDate && new Date(inv.dueDate) < now) {
         overdueTotal += balance;
+        daysOverdue = Math.floor((now.getTime() - new Date(inv.dueDate).getTime()) / (1000 * 60 * 60 * 24));
       }
-    }
+      
+      return {
+        id: inv.id,
+        invoiceNumber: inv.invoiceNumber,
+        reference: inv.reference || undefined,
+        dueDate: inv.dueDate ? new Date(inv.dueDate).toISOString() : new Date().toISOString(),
+        amount: Number(inv.amount),
+        amountPaid: Number(inv.amountPaid || 0),
+        balance,
+        status: inv.status,
+        daysOverdue
+      };
+    });
 
     const creditControlContact = await db.query.customerContactRoles.findFirst({
       where: and(
@@ -126,7 +145,8 @@ export class CustomerTimelineService {
         direction: item.direction as TimelineDirection,
         summary: item.summary,
         status: item.status as TimelineStatus | undefined
-      }))
+      })),
+      invoices: invoiceList
     };
   }
 
