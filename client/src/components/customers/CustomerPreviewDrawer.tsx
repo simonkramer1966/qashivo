@@ -241,7 +241,7 @@ export function CustomerPreviewDrawer({
     if (diffDays === 1) return { relative: "Yesterday", time };
     if (diffDays < 7) return { relative: `${diffDays}d ago`, time };
     
-    const dateFormatted = date.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+    const dateFormatted = date.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "2-digit" });
     return { relative: dateFormatted, time };
   };
 
