@@ -2149,7 +2149,7 @@ export function CustomerPreviewDrawer({
                                     {invoice.daysOverdue && invoice.daysOverdue > 0 ? invoice.daysOverdue : '-'}
                                   </span>
                                   <span className={`w-[70px] flex-shrink-0 text-right font-semibold tabular-nums ${invoice.daysOverdue && invoice.daysOverdue > 0 ? getInvoiceStatusColor(invoice) : 'text-slate-900'}`}>
-                                    {formatCurrency(invoice.balance)}
+                                    {formatCurrency(invoice.balance, { showDecimals: true })}
                                   </span>
                                   <span className="w-[20px] flex-shrink-0 flex justify-end">
                                     {!isPtpMode && isExpanded ? (
