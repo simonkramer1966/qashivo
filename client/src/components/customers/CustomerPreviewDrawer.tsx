@@ -1001,11 +1001,11 @@ export function CustomerPreviewDrawer({
                       </p>
                       <div className="space-y-1">
                         <p className="text-2xl font-semibold text-slate-900 tabular-nums">
-                          {formatCurrency(preview.customer.outstandingTotal)}
+                          {formatCurrency(preview.customer.outstandingTotal, { showDecimals: true })}
                         </p>
                         {preview.customer.overdueTotal > 0 && (
                           <p className="text-sm text-[#C75C5C]">
-                            {formatCurrency(preview.customer.overdueTotal)} overdue
+                            {formatCurrency(preview.customer.overdueTotal, { showDecimals: true })} overdue
                           </p>
                         )}
                       </div>
