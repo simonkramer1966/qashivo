@@ -4387,13 +4387,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Get ALL overdue invoices for this contact to calculate total outstanding
+      // Filter by both status='overdue' AND due_date < today for robustness
       const overdueInvoices = await db.select()
         .from(invoices)
         .where(
           and(
             eq(invoices.contactId, contactId),
             eq(invoices.tenantId, user.tenantId),
-            eq(invoices.status, 'overdue')
+            eq(invoices.status, 'overdue'),
+            sql`${invoices.dueDate} < CURRENT_DATE`
           )
         )
         .orderBy(sql`COALESCE(${invoices.dueDate}, ${invoices.createdAt}) ASC`); // Oldest first, null-safe
