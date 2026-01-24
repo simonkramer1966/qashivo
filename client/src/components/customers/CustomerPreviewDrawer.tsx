@@ -2258,8 +2258,14 @@ export function CustomerPreviewDrawer({
             </ScrollArea>
 
             {/* PTP Form Footer - shown in PTP mode */}
-            {preview && isPtpMode && (
-              <div className="px-6 py-4 flex-1 space-y-3 overflow-y-auto border-t border-slate-100">
+            <div 
+              className={`space-y-3 overflow-y-auto border-t border-slate-100 transition-all duration-300 ease-out ${
+                preview && isPtpMode 
+                  ? 'flex-1 px-6 py-4 opacity-100 translate-y-0' 
+                  : 'flex-none max-h-0 opacity-0 translate-y-4 overflow-hidden pointer-events-none'
+              }`}
+              aria-hidden={!(preview && isPtpMode)}
+            >
                 <p className="text-[10px] text-slate-400 uppercase tracking-wider">
                   Promise to Pay Details
                 </p>
@@ -2371,8 +2377,7 @@ export function CustomerPreviewDrawer({
                   />
                 </div>
                 
-              </div>
-            )}
+            </div>
 
             {/* Right Footer - Action Buttons */}
             {preview && !isPtpMode && (
