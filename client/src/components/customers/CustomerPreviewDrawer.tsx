@@ -153,6 +153,7 @@ export function CustomerPreviewDrawer({
   const [isPtpMode, setIsPtpMode] = useState(false);
   const [selectedPtpInvoices, setSelectedPtpInvoices] = useState<Set<string>>(new Set());
   const [ptpAllocations, setPtpAllocations] = useState<Record<string, string>>({});
+  const [editingPtpInvoiceId, setEditingPtpInvoiceId] = useState<string | null>(null);
   const [ptpPaymentDate, setPtpPaymentDate] = useState("");
   const [ptpPaymentType, setPtpPaymentType] = useState<"full" | "part">("full");
   const [ptpAmount, setPtpAmount] = useState("");
@@ -2138,7 +2139,7 @@ export function CustomerPreviewDrawer({
                             return (
                               <div key={invoice.id} className="min-w-0 w-full">
                                 <div
-                                  className="group w-full flex items-center text-xs py-2 hover:bg-slate-100 cursor-pointer transition-colors text-left min-h-[28px]"
+                                  className="group w-full flex items-center text-xs py-2 hover:bg-slate-100 cursor-pointer transition-colors text-left"
                                 >
                                   {isPtpMode && (
                                     <div 
@@ -2175,20 +2176,29 @@ export function CustomerPreviewDrawer({
                                       {formatCurrency(invoice.balance)}
                                     </span>
                                     {isPtpMode && (
-                                      <div className="w-[90px] flex-shrink-0 flex justify-end" onClick={(e) => e.stopPropagation()}>
-                                        <div className="relative w-[85px]">
-                                          <span className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" style={{ fontSize: '11px' }}>£</span>
+                                      <div className="w-[70px] flex-shrink-0 flex justify-end" onClick={(e) => e.stopPropagation()}>
+                                        {editingPtpInvoiceId === invoice.id ? (
                                           <Input
                                             type="text"
                                             inputMode="decimal"
+                                            autoFocus
                                             value={ptpAllocations[invoice.id] ? formatNumberWithCommas(ptpAllocations[invoice.id]) : ""}
                                             onChange={(e) => updatePtpAllocation(invoice.id, e.target.value)}
-                                            disabled={!isPtpSelected}
-                                            className={`h-4 text-right pr-2 pl-5 border-slate-200 tabular-nums ${isPtpSelected ? 'bg-white text-slate-900' : 'bg-slate-50 text-slate-400'}`}
+                                            onBlur={() => setEditingPtpInvoiceId(null)}
+                                            onKeyDown={(e) => e.key === 'Enter' && setEditingPtpInvoiceId(null)}
+                                            className="h-5 w-[70px] text-right pr-1 pl-1 border-slate-300 tabular-nums bg-white text-slate-900"
                                             style={{ fontSize: '11px', fontWeight: 400 }}
                                             placeholder="0.00"
                                           />
-                                        </div>
+                                        ) : (
+                                          <span
+                                            onClick={() => isPtpSelected && setEditingPtpInvoiceId(invoice.id)}
+                                            className={`text-right tabular-nums cursor-pointer ${isPtpSelected ? 'text-slate-900 hover:text-[#17B6C3]' : 'text-slate-400'}`}
+                                            style={{ fontSize: '11px' }}
+                                          >
+                                            {ptpAllocations[invoice.id] ? `£${formatNumberWithCommas(ptpAllocations[invoice.id])}` : (isPtpSelected ? '£0.00' : '')}
+                                          </span>
+                                        )}
                                       </div>
                                     )}
                                     {!isPtpMode && (
