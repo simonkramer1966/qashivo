@@ -18,7 +18,7 @@ export default function Home() {
   const [enlargedImage, setEnlargedImage] = useState<{ src: string; alt: string } | null>(null);
 
   return (
-    <div className="min-h-screen bg-[#FBFBFC]">
+    <div className="min-h-screen bg-white">
       {/* Navigation */}
       <nav className="sticky top-0 z-50 bg-white border-b border-[#E6E8EC]">
         <div className="max-w-[1200px] mx-auto px-6">
@@ -147,7 +147,7 @@ export default function Home() {
         </div>
       </section>
       {/* Social Proof */}
-      <section className="py-16 border-y border-[#E6E8EC] bg-white">
+      <section className="py-12">
         <div className="max-w-[1200px] mx-auto px-6">
           <p className="text-center text-[18px] text-[#556070] mb-8">
             Integrated with your favourite accounting software ...
@@ -162,7 +162,7 @@ export default function Home() {
         </div>
       </section>
       {/* Value Props */}
-      <section className="py-24 md:py-32">
+      <section className="py-20 md:py-28">
         <div className="max-w-[1200px] mx-auto px-6">
           <h2 className="text-[32px] md:text-[40px] font-semibold text-[#0B0F17] text-center leading-[1.15] mb-16">
             Everything you need, without the noise.
@@ -199,7 +199,7 @@ export default function Home() {
         </div>
       </section>
       {/* Cash Forecast Section */}
-      <section className="py-24 md:py-32 border-t border-[#E6E8EC]">
+      <section className="py-20 md:py-28">
         <div className="max-w-[1200px] mx-auto px-6">
           <div className="grid lg:grid-cols-2 gap-16 items-center">
             <div>
@@ -239,7 +239,7 @@ export default function Home() {
         </div>
       </section>
       {/* Collections Performance Section */}
-      <section className="py-24 md:py-32 border-t border-[#E6E8EC]">
+      <section className="py-20 md:py-28">
         <div className="max-w-[1200px] mx-auto px-6">
           <div className="grid lg:grid-cols-2 gap-16 items-center">
             <div className="order-2 lg:order-1 bg-[#F0F2F5] rounded-2xl p-3">
@@ -276,7 +276,7 @@ export default function Home() {
         </div>
       </section>
       {/* How It Works */}
-      <section id="how-it-works" className="py-24 md:py-32 border-t border-[#E6E8EC] bg-white">
+      <section id="how-it-works" className="py-20 md:py-28">
         <div className="max-w-[1200px] mx-auto px-6">
           <h2 className="text-[32px] md:text-[40px] font-semibold text-[#0B0F17] text-center leading-[1.15] mb-16">
             Set it up once. Then operate by exceptions.
@@ -322,7 +322,7 @@ export default function Home() {
         </div>
       </section>
       {/* Final CTA */}
-      <section className="py-24 md:py-32 border-t border-[#E6E8EC]">
+      <section className="py-20 md:py-28">
         <div className="max-w-[700px] mx-auto px-6 text-center">
           <h2 className="text-[32px] md:text-[40px] font-semibold text-[#0B0F17] leading-[1.15] mb-6">
             See Qashivo on your receivables.
@@ -349,7 +349,7 @@ export default function Home() {
         </div>
       </section>
       {/* Footer */}
-      <footer className="py-16 border-t border-[#E6E8EC] bg-white">
+      <footer className="py-16 border-t border-[#E6E8EC]">
         <div className="max-w-[1200px] mx-auto px-6">
           <div className="grid grid-cols-2 md:grid-cols-5 gap-8">
             <div className="col-span-2 md:col-span-1">

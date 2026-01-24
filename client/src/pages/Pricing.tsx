@@ -125,7 +125,7 @@ export default function Pricing() {
       </section>
 
       {/* Plans */}
-      <section className="py-16 md:py-20">
+      <section className="py-20 md:py-28">
         <div className="max-w-[1200px] mx-auto px-6">
           <div className="grid md:grid-cols-3 gap-8 md:gap-10">
             {/* Essentials */}
@@ -248,7 +248,7 @@ export default function Pricing() {
       </section>
 
       {/* FAQ */}
-      <section className="py-24 md:py-32 border-t border-[#E6E8EC]">
+      <section className="py-20 md:py-28">
         <div className="max-w-[700px] mx-auto px-6">
           <h2 className="text-[32px] md:text-[40px] font-semibold text-[#0B0F17] text-center leading-[1.15] mb-12">
             Frequently asked questions
@@ -280,7 +280,7 @@ export default function Pricing() {
       </section>
 
       {/* Final CTA */}
-      <section className="py-24 md:py-32 border-t border-[#E6E8EC] bg-white">
+      <section className="py-20 md:py-28">
         <div className="max-w-[700px] mx-auto px-6 text-center">
           <h2 className="text-[32px] md:text-[40px] font-semibold text-[#0B0F17] leading-[1.15] mb-6">
             Get to cash clarity … fast.
@@ -308,7 +308,7 @@ export default function Pricing() {
       </section>
 
       {/* Footer */}
-      <footer className="py-16 border-t border-[#E6E8EC] bg-white">
+      <footer className="py-16 border-t border-[#E6E8EC]">
         <div className="max-w-[1200px] mx-auto px-6">
           <div className="grid grid-cols-2 md:grid-cols-5 gap-8">
             <div className="col-span-2 md:col-span-1">

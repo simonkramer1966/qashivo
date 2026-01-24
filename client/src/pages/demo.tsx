@@ -942,7 +942,7 @@ export default function InvestorDemo() {
         </div>
       </section>
       {/* Footer */}
-      <footer className="py-12 px-6 text-center">
+      <footer className="py-12 px-6 text-center border-t border-[#E6E8EC]">
         <p className="text-[14px] text-[#556070]">
           © 2026 Nexus KPI Limited. Built in London. Backed by innovation. All rights reserved.
         </p>

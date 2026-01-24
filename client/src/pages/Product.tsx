@@ -122,7 +122,7 @@ export default function Product() {
         </div>
       </section>
       {/* Module: Overview */}
-      <section id="overview" className="py-24 md:py-32 border-t border-[#E6E8EC]">
+      <section id="overview" className="py-20 md:py-28">
         <div className="max-w-[1200px] mx-auto px-6">
           <div className="grid lg:grid-cols-2 gap-16 items-center">
             <div>
@@ -159,7 +159,7 @@ export default function Product() {
         </div>
       </section>
       {/* Module: Attention */}
-      <section id="attention" className="py-24 md:py-32 border-t border-[#E6E8EC] bg-white">
+      <section id="attention" className="py-20 md:py-28">
         <div className="max-w-[1200px] mx-auto px-6">
           <div className="grid lg:grid-cols-2 gap-16 items-center">
             <div className="order-2 lg:order-1 bg-[#F0F2F5] rounded-2xl p-3">
@@ -196,7 +196,7 @@ export default function Product() {
         </div>
       </section>
       {/* Module: Cash Flow */}
-      <section id="cashflow" className="py-24 md:py-32 border-t border-[#E6E8EC]">
+      <section id="cashflow" className="py-20 md:py-28">
         <div className="max-w-[1200px] mx-auto px-6">
           <div className="grid lg:grid-cols-2 gap-16 items-center">
             <div>
@@ -233,7 +233,7 @@ export default function Product() {
         </div>
       </section>
       {/* Module: Follow-ups */}
-      <section id="followups" className="py-24 md:py-32 border-t border-[#E6E8EC] bg-white">
+      <section id="followups" className="py-20 md:py-28">
         <div className="max-w-[1200px] mx-auto px-6">
           <div className="grid lg:grid-cols-2 gap-16 items-center">
             <div className="order-2 lg:order-1 bg-[#F0F2F5] rounded-2xl p-3">
@@ -270,7 +270,7 @@ export default function Product() {
         </div>
       </section>
       {/* Final CTA */}
-      <section className="py-24 md:py-32 border-t border-[#E6E8EC]">
+      <section className="py-20 md:py-28">
         <div className="max-w-[700px] mx-auto px-6 text-center">
           <h2 className="text-[32px] md:text-[40px] font-semibold text-[#0B0F17] leading-[1.15] mb-6">
             See Qashivo on your receivables.
@@ -297,7 +297,7 @@ export default function Product() {
         </div>
       </section>
       {/* Footer */}
-      <footer className="py-16 border-t border-[#E6E8EC] bg-white">
+      <footer className="py-16 border-t border-[#E6E8EC]">
         <div className="max-w-[1200px] mx-auto px-6">
           <div className="grid grid-cols-2 md:grid-cols-5 gap-8">
             <div className="col-span-2 md:col-span-1">

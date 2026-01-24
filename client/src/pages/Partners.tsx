@@ -137,7 +137,7 @@ export default function Partners() {
       </section>
 
       {/* Who it's for */}
-      <section className="py-24 md:py-32 border-t border-[#E6E8EC] bg-white">
+      <section className="py-20 md:py-28">
         <div className="max-w-[1200px] mx-auto px-6">
           <h2 className="text-[32px] md:text-[40px] font-semibold text-[#0B0F17] text-center leading-[1.15] mb-16">
             Built for partners who manage finance outcomes.
@@ -175,7 +175,7 @@ export default function Partners() {
       </section>
 
       {/* What you can offer clients */}
-      <section className="py-24 md:py-32 border-t border-[#E6E8EC]">
+      <section className="py-20 md:py-28">
         <div className="max-w-[1200px] mx-auto px-6">
           <div className="max-w-[700px] mx-auto">
             <h2 className="text-[32px] md:text-[40px] font-semibold text-[#0B0F17] leading-[1.15] mb-8">
@@ -204,7 +204,7 @@ export default function Partners() {
       </section>
 
       {/* Partner Benefits */}
-      <section className="py-24 md:py-32 border-t border-[#E6E8EC] bg-white">
+      <section className="py-20 md:py-28">
         <div className="max-w-[1200px] mx-auto px-6">
           <div className="max-w-[700px] mx-auto">
             <h2 className="text-[32px] md:text-[40px] font-semibold text-[#0B0F17] leading-[1.15] mb-8">
@@ -241,7 +241,7 @@ export default function Partners() {
       </section>
 
       {/* How the program works */}
-      <section className="py-24 md:py-32 border-t border-[#E6E8EC]">
+      <section className="py-20 md:py-28">
         <div className="max-w-[1200px] mx-auto px-6">
           <h2 className="text-[32px] md:text-[40px] font-semibold text-[#0B0F17] text-center leading-[1.15] mb-16">
             Simple, practical partnership.
@@ -300,7 +300,7 @@ export default function Partners() {
       </section>
 
       {/* FAQ */}
-      <section className="py-24 md:py-32 border-t border-[#E6E8EC] bg-white">
+      <section className="py-20 md:py-28">
         <div className="max-w-[700px] mx-auto px-6">
           <h2 className="text-[32px] md:text-[40px] font-semibold text-[#0B0F17] text-center leading-[1.15] mb-12">
             Partner questions
@@ -332,7 +332,7 @@ export default function Partners() {
       </section>
 
       {/* Final CTA */}
-      <section id="refer" className="py-24 md:py-32 border-t border-[#E6E8EC]">
+      <section id="refer" className="py-20 md:py-28">
         <div className="max-w-[700px] mx-auto px-6 text-center">
           <h2 className="text-[32px] md:text-[40px] font-semibold text-[#0B0F17] leading-[1.15] mb-6">
             Let's help your clients get to cash clarity.
@@ -360,7 +360,7 @@ export default function Partners() {
       </section>
 
       {/* Footer */}
-      <footer className="py-16 border-t border-[#E6E8EC] bg-white">
+      <footer className="py-16 border-t border-[#E6E8EC]">
         <div className="max-w-[1200px] mx-auto px-6">
           <div className="grid grid-cols-2 md:grid-cols-5 gap-8">
             <div className="col-span-2 md:col-span-1">
