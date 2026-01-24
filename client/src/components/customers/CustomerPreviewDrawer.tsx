@@ -2317,6 +2317,35 @@ export function CustomerPreviewDrawer({
                     placeholder="Any additional notes about this commitment..."
                   />
                 </div>
+                
+                {/* Validation Alert */}
+                {(() => {
+                  const errors: string[] = [];
+                  if (selectedPtpInvoices.size === 0) errors.push("Select at least one invoice");
+                  if (!ptpPaymentDate) errors.push("Payment Date is required");
+                  if (!ptpConfirmedBy) errors.push("Confirmed By is required");
+                  if (ptpConfirmedBy === "new" && !ptpNewContactName) errors.push("Contact Name is required");
+                  if (!ptpAmount || parseFloat(ptpAmount) <= 0) errors.push("Amount is required");
+                  
+                  if (selectedPtpInvoices.size > 0 && ptpAmount && parseFloat(ptpAmount) > 0) {
+                    const selectedTotal = Array.from(selectedPtpInvoices.values()).reduce((sum, bal) => sum + (typeof bal === 'number' ? bal : parseFloat(String(bal)) || 0), 0);
+                    const enteredAmount = parseFloat(ptpAmount) || 0;
+                    if (enteredAmount > selectedTotal) {
+                      errors.push(`Amount cannot exceed selected invoices total (£${formatNumberWithCommas(selectedTotal.toFixed(2))})`);
+                    }
+                  }
+                  
+                  return errors.length > 0 ? (
+                    <div className="mt-3 p-2.5 bg-amber-50 border border-amber-200 rounded-md">
+                      <p className="text-xs text-amber-700 font-medium mb-1">Please complete the following:</p>
+                      <ul className="text-xs text-amber-600 space-y-0.5">
+                        {errors.map((error, i) => (
+                          <li key={i}>• {error}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : null;
+                })()}
               </div>
             )}
 
@@ -2377,7 +2406,18 @@ export function CustomerPreviewDrawer({
                   <Button
                     size="sm"
                     onClick={handleSavePtp}
-                    disabled={createPtpMutation.isPending || selectedPtpInvoices.size === 0 || !ptpPaymentDate || !ptpConfirmedBy || (ptpConfirmedBy === "new" && !ptpNewContactName)}
+                    disabled={(() => {
+                      if (createPtpMutation.isPending) return true;
+                      if (selectedPtpInvoices.size === 0) return true;
+                      if (!ptpPaymentDate || !ptpConfirmedBy) return true;
+                      if (ptpConfirmedBy === "new" && !ptpNewContactName) return true;
+                      if (!ptpAmount || parseFloat(ptpAmount) <= 0) return true;
+                      if (selectedPtpInvoices.size > 0) {
+                        const selectedTotal = Array.from(selectedPtpInvoices.values()).reduce((sum, bal) => sum + (typeof bal === 'number' ? bal : parseFloat(String(bal)) || 0), 0);
+                        if (parseFloat(ptpAmount) > selectedTotal) return true;
+                      }
+                      return false;
+                    })()}
                     className="flex-1 bg-[#17B6C3] hover:bg-[#1396A1] text-white text-xs"
                   >
                     <Save className="h-4 w-4 mr-1.5" />
