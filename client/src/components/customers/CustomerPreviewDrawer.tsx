@@ -150,6 +150,9 @@ export function CustomerPreviewDrawer({
   const [isGeneratingSms, setIsGeneratingSms] = useState(false);
   const [selectedRecipientPhone, setSelectedRecipientPhone] = useState<string>("");
   
+  const [isPtpMode, setIsPtpMode] = useState(false);
+  const [selectedPtpInvoices, setSelectedPtpInvoices] = useState<Set<string>>(new Set());
+  
   const [expandedTimelineItems, setExpandedTimelineItems] = useState<Set<string>>(new Set());
   const [activitySearchOpen, setActivitySearchOpen] = useState(false);
   const [activitySearchQuery, setActivitySearchQuery] = useState("");
@@ -157,7 +160,7 @@ export function CustomerPreviewDrawer({
   const [invoiceFilter, setInvoiceFilter] = useState<"all" | "overdue">("overdue");
   const [invoiceSortColumn, setInvoiceSortColumn] = useState<"issueDate" | "invoiceNumber" | "dueDate" | "daysOverdue" | "balance">("daysOverdue");
   const [invoiceSortDirection, setInvoiceSortDirection] = useState<"asc" | "desc">("desc");
-  const [expandedInvoices, setExpandedInvoices] = useState<Set<number>>(new Set());
+  const [expandedInvoices, setExpandedInvoices] = useState<Set<string>>(new Set());
   
   const [additionalTimelineItems, setAdditionalTimelineItems] = useState<CustomerPreview['latestTimeline']>([]);
   const [isLoadingMoreTimeline, setIsLoadingMoreTimeline] = useState(false);
@@ -398,6 +401,43 @@ export function CustomerPreviewDrawer({
     setSmsBody("");
     setIsGeneratingSms(false);
     setSelectedRecipientPhone("");
+  };
+
+  const handlePtpButtonClick = () => {
+    setIsPtpMode(true);
+    setIsNoteMode(false);
+    setIsCallMode(false);
+    setIsEmailMode(false);
+    setIsSmsMode(false);
+    setSelectedPtpInvoices(new Set());
+  };
+
+  const resetPtpMode = () => {
+    setIsPtpMode(false);
+    setSelectedPtpInvoices(new Set());
+  };
+
+  const togglePtpInvoice = (invoiceId: string) => {
+    setSelectedPtpInvoices(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(invoiceId)) {
+        newSet.delete(invoiceId);
+      } else {
+        newSet.add(invoiceId);
+      }
+      return newSet;
+    });
+  };
+
+  const toggleAllPtpInvoices = (invoiceIds: string[]) => {
+    setSelectedPtpInvoices(prev => {
+      const allSelected = invoiceIds.every(id => prev.has(id));
+      if (allSelected) {
+        return new Set();
+      } else {
+        return new Set(invoiceIds);
+      }
+    });
   };
 
   const handleGenerateSms = async () => {
@@ -706,7 +746,7 @@ export function CustomerPreviewDrawer({
     });
   };
 
-  const toggleInvoice = (invoiceId: number) => {
+  const toggleInvoice = (invoiceId: string) => {
     setExpandedInvoices(prev => {
       const next = new Set(prev);
       if (next.has(invoiceId)) {
@@ -1865,7 +1905,7 @@ export function CustomerPreviewDrawer({
                         ? allInvoices.filter(inv => inv.daysOverdue && inv.daysOverdue > 0)
                         : allInvoices;
                       
-                      const filteredInvoices = baseInvoices?.slice().sort((a, b) => {
+                      const sortedInvoices = baseInvoices?.slice().sort((a, b) => {
                         const dir = invoiceSortDirection === "asc" ? 1 : -1;
                         switch (invoiceSortColumn) {
                           case "issueDate":
@@ -1883,10 +1923,24 @@ export function CustomerPreviewDrawer({
                         }
                       });
                       
+                      // Limit to 10 rows when in PTP mode
+                      const filteredInvoices = isPtpMode ? sortedInvoices?.slice(0, 10) : sortedInvoices;
+                      const displayedInvoiceIds = filteredInvoices?.map(inv => inv.id) || [];
+                      const allDisplayedSelected = displayedInvoiceIds.length > 0 && displayedInvoiceIds.every(id => selectedPtpInvoices.has(id));
+                      
                       return filteredInvoices && filteredInvoices.length > 0 ? (
                         <div className="space-y-1">
                           {/* Header Row */}
                           <div className="flex items-center text-[10px] text-slate-400 uppercase tracking-wider pb-1 border-b border-slate-100">
+                            {isPtpMode && (
+                              <div className="w-[24px] flex-shrink-0 flex items-center justify-center">
+                                <Checkbox 
+                                  checked={allDisplayedSelected}
+                                  onCheckedChange={() => toggleAllPtpInvoices(displayedInvoiceIds)}
+                                  className="h-3.5 w-3.5"
+                                />
+                              </div>
+                            )}
                             <button 
                               onClick={() => toggleSort("issueDate")}
                               className={`w-[60px] flex-shrink-0 text-left hover:text-slate-600 transition-colors ${invoiceSortColumn === "issueDate" ? "text-slate-600 font-medium" : ""}`}
@@ -1895,7 +1949,7 @@ export function CustomerPreviewDrawer({
                             </button>
                             <button 
                               onClick={() => toggleSort("invoiceNumber")}
-                              className={`flex-1 min-w-0 text-left hover:text-slate-600 transition-colors ${invoiceSortColumn === "invoiceNumber" ? "text-slate-600 font-medium" : ""}`}
+                              className={`${isPtpMode ? 'w-[60px]' : 'flex-1'} min-w-0 text-left hover:text-slate-600 transition-colors truncate ${invoiceSortColumn === "invoiceNumber" ? "text-slate-600 font-medium" : ""}`}
                             >
                               Invoice #<SortIcon column="invoiceNumber" />
                             </button>
@@ -1922,37 +1976,60 @@ export function CustomerPreviewDrawer({
                           {/* Invoice Rows */}
                           {filteredInvoices.map((invoice) => {
                             const isExpanded = expandedInvoices.has(invoice.id);
+                            const isPtpSelected = selectedPtpInvoices.has(invoice.id);
                             return (
                               <div key={invoice.id} className="min-w-0 w-full">
-                                <button
-                                  onClick={() => toggleInvoice(invoice.id)}
+                                <div
                                   className="group w-full flex items-center text-xs py-1.5 hover:bg-slate-100 cursor-pointer transition-colors text-left"
                                 >
-                                  <span className="w-[60px] flex-shrink-0 text-slate-500 tabular-nums">
-                                    {formatShortDate(invoice.issueDate)}
-                                  </span>
-                                  <span className="flex-1 min-w-0 font-medium text-slate-900 truncate pr-2">
-                                    {invoice.invoiceNumber}
-                                  </span>
-                                  <span className={`w-[60px] flex-shrink-0 text-right tabular-nums ${invoice.daysOverdue && invoice.daysOverdue > 0 ? getInvoiceStatusColor(invoice) : 'text-slate-500'}`}>
-                                    {formatShortDate(invoice.dueDate)}
-                                  </span>
-                                  <span className={`w-[50px] flex-shrink-0 text-right tabular-nums ${invoice.daysOverdue && invoice.daysOverdue > 0 ? getInvoiceStatusColor(invoice) : 'text-slate-500'}`}>
-                                    {invoice.daysOverdue && invoice.daysOverdue > 0 ? invoice.daysOverdue : '-'}
-                                  </span>
-                                  <span className="w-[70px] flex-shrink-0 text-right font-semibold text-slate-900 tabular-nums">
-                                    {formatCurrency(invoice.balance)}
-                                  </span>
-                                  <span className="w-[20px] flex-shrink-0 flex justify-end">
-                                    {isExpanded ? (
-                                      <ChevronDown className="h-3.5 w-3.5 text-slate-400" />
-                                    ) : (
-                                      <ChevronRight className="h-3.5 w-3.5 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity" />
-                                    )}
-                                  </span>
-                                </button>
+                                  {isPtpMode && (
+                                    <div 
+                                      className="w-[24px] flex-shrink-0 flex items-center justify-center"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        togglePtpInvoice(invoice.id);
+                                      }}
+                                    >
+                                      <Checkbox 
+                                        checked={isPtpSelected}
+                                        onCheckedChange={() => togglePtpInvoice(invoice.id)}
+                                        className="h-3.5 w-3.5"
+                                      />
+                                    </div>
+                                  )}
+                                  <button
+                                    onClick={() => !isPtpMode && toggleInvoice(invoice.id)}
+                                    className="flex-1 flex items-center"
+                                    disabled={isPtpMode}
+                                  >
+                                    <span className="w-[60px] flex-shrink-0 text-slate-500 tabular-nums text-left">
+                                      {formatShortDate(invoice.issueDate)}
+                                    </span>
+                                    <span className={`${isPtpMode ? 'w-[60px]' : 'flex-1'} min-w-0 font-medium text-slate-900 truncate pr-2 text-left`}>
+                                      {invoice.invoiceNumber}
+                                    </span>
+                                    <span className={`w-[60px] flex-shrink-0 text-right tabular-nums ${invoice.daysOverdue && invoice.daysOverdue > 0 ? getInvoiceStatusColor(invoice) : 'text-slate-500'}`}>
+                                      {formatShortDate(invoice.dueDate)}
+                                    </span>
+                                    <span className={`w-[50px] flex-shrink-0 text-right tabular-nums ${invoice.daysOverdue && invoice.daysOverdue > 0 ? getInvoiceStatusColor(invoice) : 'text-slate-500'}`}>
+                                      {invoice.daysOverdue && invoice.daysOverdue > 0 ? invoice.daysOverdue : '-'}
+                                    </span>
+                                    <span className="w-[70px] flex-shrink-0 text-right font-semibold text-slate-900 tabular-nums">
+                                      {formatCurrency(invoice.balance)}
+                                    </span>
+                                    <span className="w-[20px] flex-shrink-0 flex justify-end">
+                                      {!isPtpMode && (
+                                        isExpanded ? (
+                                          <ChevronDown className="h-3.5 w-3.5 text-slate-400" />
+                                        ) : (
+                                          <ChevronRight className="h-3.5 w-3.5 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                        )
+                                      )}
+                                    </span>
+                                  </button>
+                                </div>
                                 
-                                {isExpanded && (
+                                {isExpanded && !isPtpMode && (
                                   <div className="pl-[60px] pr-2 pb-3 pt-1 space-y-2">
                                     {invoice.description && (
                                       <p className="text-xs text-slate-600">{invoice.description}</p>
@@ -1981,8 +2058,13 @@ export function CustomerPreviewDrawer({
                             );
                           })}
                           
+                          {/* Dividing line for PTP mode */}
+                          {isPtpMode && (
+                            <div className="mt-3 border-t border-slate-200" />
+                          )}
+                          
                           {/* Load more button */}
-                          {(hasMoreInvoicesState !== null ? hasMoreInvoicesState : preview.hasMoreInvoices) && invoiceFilter === "all" && (
+                          {!isPtpMode && (hasMoreInvoicesState !== null ? hasMoreInvoicesState : preview.hasMoreInvoices) && invoiceFilter === "all" && (
                             <button
                               onClick={loadMoreInvoices}
                               disabled={isLoadingMoreInvoices}
@@ -2018,10 +2100,20 @@ export function CustomerPreviewDrawer({
                   <Button 
                     variant="outline" 
                     size="sm"
-                    className="flex-1 basis-0 border-[#E6E8EC] text-[#64748b] text-xs hover:bg-slate-100"
+                    onClick={isPtpMode ? resetPtpMode : handlePtpButtonClick}
+                    className={`flex-1 basis-0 text-xs ${isPtpMode ? 'border-[#17B6C3] bg-[#17B6C3]/10 text-[#17B6C3]' : 'border-[#E6E8EC] text-[#64748b] hover:bg-slate-100'}`}
                   >
-                    <Handshake className="h-4 w-4 mr-1.5" />
-                    PTP
+                    {isPtpMode ? (
+                      <>
+                        <X className="h-4 w-4 mr-1.5" />
+                        Cancel
+                      </>
+                    ) : (
+                      <>
+                        <Handshake className="h-4 w-4 mr-1.5" />
+                        PTP
+                      </>
+                    )}
                   </Button>
                   <Button 
                     variant="outline" 
