@@ -2282,8 +2282,8 @@ export function CustomerPreviewDrawer({
                         inputMode="decimal"
                         value={ptpAmount ? formatNumberWithCommas(ptpAmount) : ""}
                         onChange={(e) => setPtpAmount(stripCommas(e.target.value.replace(/[^0-9.,]/g, '')))}
-                        className="h-9 border-slate-200 text-xs pl-7 bg-white"
-                        placeholder="0.00"
+                        className="h-9 border-slate-200 text-xs pl-7 pr-3 bg-white text-right tabular-nums"
+                        placeholder="0,000.00"
                       />
                     </div>
                   </div>
