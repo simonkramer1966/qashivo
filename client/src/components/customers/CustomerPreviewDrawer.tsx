@@ -2063,6 +2063,7 @@ export function CustomerPreviewDrawer({
                             <span className="w-[20px] flex-shrink-0" />
                           </div>
                           {/* Invoice Rows */}
+                          <div className={isPtpMode ? "max-h-[240px] overflow-y-auto" : ""}>
                           {filteredInvoices.map((invoice) => {
                             const isExpanded = expandedInvoices.has(invoice.id);
                             const isPtpSelected = selectedPtpInvoices.has(invoice.id);
@@ -2146,6 +2147,7 @@ export function CustomerPreviewDrawer({
                               </div>
                             );
                           })}
+                          </div>
                           
                           {/* Dividing line and PTP Form */}
                           {isPtpMode && (
