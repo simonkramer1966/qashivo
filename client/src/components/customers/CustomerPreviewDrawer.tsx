@@ -152,6 +152,12 @@ export function CustomerPreviewDrawer({
   
   const [isPtpMode, setIsPtpMode] = useState(false);
   const [selectedPtpInvoices, setSelectedPtpInvoices] = useState<Set<string>>(new Set());
+  const [ptpPaymentDate, setPtpPaymentDate] = useState("");
+  const [ptpPaymentType, setPtpPaymentType] = useState<"full" | "part">("full");
+  const [ptpAmount, setPtpAmount] = useState("");
+  const [ptpConfirmedBy, setPtpConfirmedBy] = useState("");
+  const [ptpNewContactName, setPtpNewContactName] = useState("");
+  const [ptpNotes, setPtpNotes] = useState("");
   
   const [expandedTimelineItems, setExpandedTimelineItems] = useState<Set<string>>(new Set());
   const [activitySearchOpen, setActivitySearchOpen] = useState(false);
@@ -415,6 +421,12 @@ export function CustomerPreviewDrawer({
   const resetPtpMode = () => {
     setIsPtpMode(false);
     setSelectedPtpInvoices(new Set());
+    setPtpPaymentDate("");
+    setPtpPaymentType("full");
+    setPtpAmount("");
+    setPtpConfirmedBy("");
+    setPtpNewContactName("");
+    setPtpNotes("");
   };
 
   const togglePtpInvoice = (invoiceId: string) => {
@@ -570,6 +582,83 @@ export function CustomerPreviewDrawer({
       message: smsBody,
       templateType: smsTemplate,
       recipientPhone: selectedRecipientPhone,
+    });
+  };
+
+  const createPtpMutation = useMutation({
+    mutationFn: async (ptpData: {
+      invoiceIds: string[];
+      paymentDate: string;
+      paymentType: "full" | "part";
+      amount?: number;
+      confirmedBy: string;
+      notes?: string;
+    }) => {
+      const res = await apiRequest("POST", `/api/contacts/${customerId}/promise-to-pay`, ptpData);
+      return await res.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Promise to Pay recorded",
+        description: "The payment commitment has been saved",
+      });
+      resetPtpMode();
+      queryClient.invalidateQueries({ queryKey: [`/api/contacts/${customerId}/preview`] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to save PTP",
+        description: error.message || "Please try again",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleSavePtp = () => {
+    if (selectedPtpInvoices.size === 0) {
+      toast({
+        title: "Select invoices",
+        description: "Please select at least one invoice",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!ptpPaymentDate) {
+      toast({
+        title: "Payment date required",
+        description: "Please select a payment date",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const confirmedByValue = ptpConfirmedBy === "new" ? ptpNewContactName : ptpConfirmedBy;
+    if (!confirmedByValue) {
+      toast({
+        title: "Confirmation required",
+        description: "Please select or enter who confirmed this commitment",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (ptpPaymentType === "part" && (!ptpAmount || parseFloat(ptpAmount) <= 0)) {
+      toast({
+        title: "Amount required",
+        description: "Please enter the payment amount for partial payments",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    createPtpMutation.mutate({
+      invoiceIds: Array.from(selectedPtpInvoices),
+      paymentDate: ptpPaymentDate,
+      paymentType: ptpPaymentType,
+      amount: ptpPaymentType === "part" ? parseFloat(ptpAmount) : undefined,
+      confirmedBy: confirmedByValue,
+      notes: ptpNotes || undefined,
     });
   };
 
@@ -1698,7 +1787,7 @@ export function CustomerPreviewDrawer({
             </ScrollArea>
 
             {/* Left Footer - Action Buttons */}
-            {preview && !isNoteMode && !isCallMode && !isEmailMode && !isSmsMode && (
+            {preview && !isNoteMode && !isCallMode && !isEmailMode && !isSmsMode && !isPtpMode && (
               <div className="px-6 py-4 border-t border-slate-100 flex-shrink-0">
                 <div className="flex gap-2">
                   <Button 
@@ -2058,9 +2147,119 @@ export function CustomerPreviewDrawer({
                             );
                           })}
                           
-                          {/* Dividing line for PTP mode */}
+                          {/* Dividing line and PTP Form */}
                           {isPtpMode && (
-                            <div className="mt-3 border-t border-slate-200" />
+                            <>
+                              <div className="mt-3 border-t border-slate-200" />
+                              
+                              {/* PTP Form */}
+                              <div className="mt-4 space-y-3">
+                                <p className="text-[10px] text-slate-400 uppercase tracking-wider">
+                                  Promise to Pay Details
+                                </p>
+                                
+                                <div className="grid grid-cols-2 gap-3">
+                                  <div>
+                                    <Label htmlFor="ptpPaymentDate" className="text-xs text-slate-500 mb-1.5 block">
+                                      Payment Date
+                                    </Label>
+                                    <Input
+                                      id="ptpPaymentDate"
+                                      type="date"
+                                      value={ptpPaymentDate}
+                                      onChange={(e) => setPtpPaymentDate(e.target.value)}
+                                      className="h-9 bg-white border-slate-200 text-xs"
+                                      min={new Date().toISOString().split('T')[0]}
+                                    />
+                                  </div>
+                                  <div>
+                                    <Label htmlFor="ptpPaymentType" className="text-xs text-slate-500 mb-1.5 block">
+                                      Payment Type
+                                    </Label>
+                                    <Select value={ptpPaymentType} onValueChange={(v) => setPtpPaymentType(v as "full" | "part")}>
+                                      <SelectTrigger id="ptpPaymentType" className="h-9 bg-white border-slate-200 text-xs">
+                                        <SelectValue />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="full">Full Payment</SelectItem>
+                                        <SelectItem value="part">Part Payment</SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                </div>
+                                
+                                {ptpPaymentType === "part" && (
+                                  <div>
+                                    <Label htmlFor="ptpAmount" className="text-xs text-slate-500 mb-1.5 block">
+                                      Amount
+                                    </Label>
+                                    <div className="relative">
+                                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-slate-500">£</span>
+                                      <Input
+                                        id="ptpAmount"
+                                        type="number"
+                                        step="0.01"
+                                        min="0"
+                                        value={ptpAmount}
+                                        onChange={(e) => setPtpAmount(e.target.value)}
+                                        className="h-9 bg-white border-slate-200 text-xs pl-7"
+                                        placeholder="0.00"
+                                      />
+                                    </div>
+                                  </div>
+                                )}
+                                
+                                <div>
+                                  <Label htmlFor="ptpConfirmedBy" className="text-xs text-slate-500 mb-1.5 block">
+                                    Confirmed by
+                                  </Label>
+                                  <Select value={ptpConfirmedBy} onValueChange={setPtpConfirmedBy}>
+                                    <SelectTrigger id="ptpConfirmedBy" className="h-9 bg-white border-slate-200 text-xs">
+                                      <SelectValue placeholder="Select contact..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {preview?.allCreditControlContacts?.map((contact) => (
+                                        <SelectItem key={contact.id} value={contact.name || contact.email || contact.id} className="text-xs">
+                                          {contact.name || contact.email}{contact.isPrimary ? ' (Primary AR)' : ''}
+                                        </SelectItem>
+                                      ))}
+                                      <SelectItem value="new" className="text-xs text-[#17B6C3]">
+                                        + Add new contact
+                                      </SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                                
+                                {ptpConfirmedBy === "new" && (
+                                  <div>
+                                    <Label htmlFor="ptpNewContactName" className="text-xs text-slate-500 mb-1.5 block">
+                                      Contact Name
+                                    </Label>
+                                    <Input
+                                      id="ptpNewContactName"
+                                      type="text"
+                                      value={ptpNewContactName}
+                                      onChange={(e) => setPtpNewContactName(e.target.value)}
+                                      className="h-9 bg-white border-slate-200 text-xs"
+                                      placeholder="Enter contact name"
+                                    />
+                                  </div>
+                                )}
+                                
+                                <div>
+                                  <Label htmlFor="ptpNotes" className="text-xs text-slate-500 mb-1.5 block">
+                                    Notes (optional)
+                                  </Label>
+                                  <Textarea
+                                    id="ptpNotes"
+                                    value={ptpNotes}
+                                    onChange={(e) => setPtpNotes(e.target.value)}
+                                    className="min-h-[60px] bg-white border-slate-200 resize-none text-xs"
+                                    placeholder="Any additional notes about this commitment..."
+                                  />
+                                </div>
+                              </div>
+                            </>
                           )}
                           
                           {/* Load more button */}
@@ -2094,26 +2293,17 @@ export function CustomerPreviewDrawer({
             </ScrollArea>
 
             {/* Right Footer - Action Buttons */}
-            {preview && (
+            {preview && !isPtpMode && (
               <div className="px-6 py-4 border-t border-slate-100 flex-shrink-0">
                 <div className="flex gap-2">
                   <Button 
                     variant="outline" 
                     size="sm"
-                    onClick={isPtpMode ? resetPtpMode : handlePtpButtonClick}
-                    className={`flex-1 basis-0 text-xs ${isPtpMode ? 'border-[#17B6C3] bg-[#17B6C3]/10 text-[#17B6C3]' : 'border-[#E6E8EC] text-[#64748b] hover:bg-slate-100'}`}
+                    onClick={handlePtpButtonClick}
+                    className="flex-1 basis-0 border-[#E6E8EC] text-[#64748b] text-xs hover:bg-slate-100"
                   >
-                    {isPtpMode ? (
-                      <>
-                        <X className="h-4 w-4 mr-1.5" />
-                        Cancel
-                      </>
-                    ) : (
-                      <>
-                        <Handshake className="h-4 w-4 mr-1.5" />
-                        PTP
-                      </>
-                    )}
+                    <Handshake className="h-4 w-4 mr-1.5" />
+                    PTP
                   </Button>
                   <Button 
                     variant="outline" 
@@ -2138,6 +2328,32 @@ export function CustomerPreviewDrawer({
                   >
                     <Shield className="h-4 w-4 mr-1.5" />
                     Debt
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* Right Footer - PTP Mode Actions */}
+            {preview && isPtpMode && (
+              <div className="px-6 py-4 border-t border-slate-100 flex-shrink-0">
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={resetPtpMode}
+                    className="flex-1 border-slate-200 text-xs"
+                  >
+                    <X className="h-4 w-4 mr-1.5" />
+                    Cancel
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={handleSavePtp}
+                    disabled={createPtpMutation.isPending || selectedPtpInvoices.size === 0 || !ptpPaymentDate || !ptpConfirmedBy || (ptpConfirmedBy === "new" && !ptpNewContactName)}
+                    className="flex-1 bg-[#17B6C3] hover:bg-[#1396A1] text-white text-xs"
+                  >
+                    <Save className="h-4 w-4 mr-1.5" />
+                    {createPtpMutation.isPending ? "Saving..." : "Save PTP"}
                   </Button>
                 </div>
               </div>
