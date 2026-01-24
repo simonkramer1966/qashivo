@@ -5074,6 +5074,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Customer Timeline page endpoint with offset pagination
+  app.get("/api/contacts/:contactId/timeline/page", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { contactId } = req.params;
+      const { offset, limit } = req.query;
+      
+      const contact = await storage.getContact(contactId, user.tenantId);
+      if (!contact) {
+        return res.status(404).json({ message: "Customer not found" });
+      }
+
+      const { customerTimelineService } = await import("./services/customerTimelineService");
+      
+      const result = await customerTimelineService.getTimelinePage(
+        user.tenantId, 
+        contactId,
+        offset ? parseInt(offset as string, 10) : 0,
+        limit ? parseInt(limit as string, 10) : 20
+      );
+
+      res.json(result);
+    } catch (error) {
+      console.error("Error fetching customer timeline page:", error);
+      res.status(500).json({ message: "Failed to fetch customer timeline" });
+    }
+  });
+
   // Customer Timeline endpoint with cursor pagination and filters
   app.get("/api/contacts/:contactId/timeline", isAuthenticated, async (req: any, res) => {
     try {

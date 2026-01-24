@@ -131,6 +131,8 @@ export interface CustomerPreview {
       name?: string;
     };
   }>;
+  totalTimelineCount?: number;
+  hasMoreTimeline?: boolean;
   invoices: CustomerPreviewInvoice[];
 }
 

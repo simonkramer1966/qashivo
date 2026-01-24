@@ -132,7 +132,17 @@ export class CustomerTimelineService {
         eq(timelineEvents.tenantId, tenantId)
       ))
       .orderBy(desc(timelineEvents.occurredAt))
-      .limit(5);
+      .limit(20);
+
+    // Get total count for pagination
+    const countResult = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(timelineEvents)
+      .where(and(
+        eq(timelineEvents.customerId, customerId),
+        eq(timelineEvents.tenantId, tenantId)
+      ));
+    const totalTimelineCount = countResult[0]?.count || 0;
 
     const behaviourLabel = customer.riskBand 
       ? `${customer.riskBand} rated` 
@@ -185,7 +195,76 @@ export class CustomerTimelineService {
           name: item.createdByName || undefined
         } : undefined
       })),
+      totalTimelineCount,
+      hasMoreTimeline: totalTimelineCount > 20,
       invoices: invoiceList
+    };
+  }
+
+  async getTimelinePage(
+    tenantId: string, 
+    customerId: string, 
+    offset: number = 0,
+    limit: number = 20
+  ) {
+    const items = await db
+      .select({
+        id: timelineEvents.id,
+        occurredAt: timelineEvents.occurredAt,
+        channel: timelineEvents.channel,
+        direction: timelineEvents.direction,
+        summary: timelineEvents.summary,
+        preview: timelineEvents.preview,
+        body: timelineEvents.body,
+        status: timelineEvents.status,
+        invoiceId: timelineEvents.invoiceId,
+        outcomeType: timelineEvents.outcomeType,
+        outcomeConfidence: timelineEvents.outcomeConfidence,
+        outcomeExtracted: timelineEvents.outcomeExtracted,
+        createdByType: timelineEvents.createdByType,
+        createdByName: timelineEvents.createdByName
+      })
+      .from(timelineEvents)
+      .where(and(
+        eq(timelineEvents.customerId, customerId),
+        eq(timelineEvents.tenantId, tenantId)
+      ))
+      .orderBy(desc(timelineEvents.occurredAt))
+      .offset(offset)
+      .limit(limit);
+
+    const countResult = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(timelineEvents)
+      .where(and(
+        eq(timelineEvents.customerId, customerId),
+        eq(timelineEvents.tenantId, tenantId)
+      ));
+    const total = countResult[0]?.count || 0;
+
+    return {
+      items: items.map(item => ({
+        id: item.id,
+        occurredAt: item.occurredAt?.toISOString() || new Date().toISOString(),
+        channel: item.channel as TimelineChannel,
+        direction: item.direction as TimelineDirection,
+        summary: item.summary,
+        preview: item.preview || undefined,
+        body: item.body || undefined,
+        status: item.status as TimelineStatus | undefined,
+        invoiceId: item.invoiceId || undefined,
+        outcome: item.outcomeType ? {
+          type: item.outcomeType as any,
+          confidence: Number(item.outcomeConfidence || 0),
+          extracted: item.outcomeExtracted as Record<string, any> | undefined
+        } : undefined,
+        createdBy: item.createdByType ? {
+          type: item.createdByType as any,
+          name: item.createdByName || undefined
+        } : undefined
+      })),
+      total,
+      hasMore: offset + items.length < total
     };
   }
 

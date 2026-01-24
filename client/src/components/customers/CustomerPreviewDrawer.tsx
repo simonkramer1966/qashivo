@@ -159,13 +159,35 @@ export function CustomerPreviewDrawer({
   const [invoiceSortColumn, setInvoiceSortColumn] = useState<"issueDate" | "invoiceNumber" | "dueDate" | "daysOverdue" | "balance">("daysOverdue");
   const [invoiceSortDirection, setInvoiceSortDirection] = useState<"asc" | "desc">("desc");
   const [expandedInvoices, setExpandedInvoices] = useState<Set<number>>(new Set());
+  
+  const [additionalTimelineItems, setAdditionalTimelineItems] = useState<CustomerPreview['latestTimeline']>([]);
+  const [isLoadingMoreTimeline, setIsLoadingMoreTimeline] = useState(false);
+  const [timelineOffset, setTimelineOffset] = useState(20);
 
-  // Reset search state when customer changes or drawer opens
+  // Reset search and pagination state when customer changes or drawer opens
   useEffect(() => {
     setActivitySearchOpen(false);
     setActivitySearchQuery("");
     setDebouncedSearchQuery("");
+    setAdditionalTimelineItems([]);
+    setTimelineOffset(20);
   }, [customerId]);
+
+  const loadMoreTimeline = useCallback(async () => {
+    if (!customerId || isLoadingMoreTimeline) return;
+    
+    setIsLoadingMoreTimeline(true);
+    try {
+      const res = await apiRequest("GET", `/api/contacts/${customerId}/timeline/page?offset=${timelineOffset}&limit=20`);
+      const data = await res.json();
+      setAdditionalTimelineItems(prev => [...prev, ...data.items]);
+      setTimelineOffset(prev => prev + data.items.length);
+    } catch (error) {
+      console.error("Failed to load more timeline items:", error);
+    } finally {
+      setIsLoadingMoreTimeline(false);
+    }
+  }, [customerId, timelineOffset, isLoadingMoreTimeline]);
 
   // Debounce activity search
   useEffect(() => {
@@ -841,8 +863,8 @@ export function CustomerPreviewDrawer({
                                 return 'Earlier';
                               };
                               
-                              // Filter items based on search query
-                              const allItems = preview.latestTimeline;
+                              // Combine initial items with loaded additional items
+                              const allItems = [...preview.latestTimeline, ...additionalTimelineItems];
                               const items = debouncedSearchQuery
                                 ? allItems.filter(item => {
                                     const query = debouncedSearchQuery.toLowerCase();
@@ -851,7 +873,7 @@ export function CustomerPreviewDrawer({
                                       item.summary,
                                       item.preview,
                                       item.body,
-                                      item.createdByName,
+                                      item.createdBy?.name,
                                     ].filter(Boolean);
                                     return searchFields.some(field => 
                                       field?.toLowerCase().includes(query)
@@ -1038,6 +1060,24 @@ export function CustomerPreviewDrawer({
                             })()
                           ) : (
                             <p className="text-sm text-slate-400">No recent activity</p>
+                          )}
+                          
+                          {/* Load more button */}
+                          {preview.hasMoreTimeline && timelineOffset < (preview.totalTimelineCount || 0) && !debouncedSearchQuery && (
+                            <button
+                              onClick={loadMoreTimeline}
+                              disabled={isLoadingMoreTimeline}
+                              className="w-full mt-3 py-2 text-xs text-slate-500 hover:text-slate-700 hover:bg-slate-50 rounded transition-colors flex items-center justify-center gap-2"
+                            >
+                              {isLoadingMoreTimeline ? (
+                                <>
+                                  <Loader2 className="h-3 w-3 animate-spin" />
+                                  Loading...
+                                </>
+                              ) : (
+                                <>Load more activity</>
+                              )}
+                            </button>
                           )}
                         </div>
                       )}
