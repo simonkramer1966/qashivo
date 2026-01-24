@@ -2190,46 +2190,47 @@ export function CustomerPreviewDrawer({
                                   </div>
                                 </div>
                                 
-                                {ptpPaymentType === "part" && (
+                                <div className="grid grid-cols-2 gap-3">
                                   <div>
-                                    <Label htmlFor="ptpAmount" className="text-xs text-slate-500 mb-1.5 block">
-                                      Amount
+                                    <Label htmlFor="ptpConfirmedBy" className="text-xs text-slate-500 mb-1.5 block">
+                                      Confirmed by
                                     </Label>
-                                    <div className="relative">
-                                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-slate-500">£</span>
-                                      <Input
-                                        id="ptpAmount"
-                                        type="number"
-                                        step="0.01"
-                                        min="0"
-                                        value={ptpAmount}
-                                        onChange={(e) => setPtpAmount(e.target.value)}
-                                        className="h-9 bg-white border-slate-200 text-xs pl-7"
-                                        placeholder="0.00"
-                                      />
-                                    </div>
-                                  </div>
-                                )}
-                                
-                                <div>
-                                  <Label htmlFor="ptpConfirmedBy" className="text-xs text-slate-500 mb-1.5 block">
-                                    Confirmed by
-                                  </Label>
-                                  <Select value={ptpConfirmedBy} onValueChange={setPtpConfirmedBy}>
-                                    <SelectTrigger id="ptpConfirmedBy" className="h-9 bg-white border-slate-200 text-xs">
-                                      <SelectValue placeholder="Select contact..." />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      {preview?.allCreditControlContacts?.map((contact) => (
-                                        <SelectItem key={contact.id} value={contact.name || contact.email || contact.id} className="text-xs">
-                                          {contact.name || contact.email}{contact.isPrimary ? ' (Primary AR)' : ''}
+                                    <Select value={ptpConfirmedBy} onValueChange={setPtpConfirmedBy}>
+                                      <SelectTrigger id="ptpConfirmedBy" className="h-9 bg-white border-slate-200 text-xs">
+                                        <SelectValue placeholder="Select contact..." />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        {preview?.allCreditControlContacts?.map((contact) => (
+                                          <SelectItem key={contact.id} value={contact.name || contact.email || contact.id} className="text-xs">
+                                            {contact.name || contact.email}{contact.isPrimary ? ' (Primary AR)' : ''}
+                                          </SelectItem>
+                                        ))}
+                                        <SelectItem value="new" className="text-xs text-[#17B6C3]">
+                                          + Add new contact
                                         </SelectItem>
-                                      ))}
-                                      <SelectItem value="new" className="text-xs text-[#17B6C3]">
-                                        + Add new contact
-                                      </SelectItem>
-                                    </SelectContent>
-                                  </Select>
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                  {ptpPaymentType === "part" && (
+                                    <div>
+                                      <Label htmlFor="ptpAmount" className="text-xs text-slate-500 mb-1.5 block">
+                                        Amount
+                                      </Label>
+                                      <div className="relative">
+                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-slate-500">£</span>
+                                        <Input
+                                          id="ptpAmount"
+                                          type="number"
+                                          step="0.01"
+                                          min="0"
+                                          value={ptpAmount}
+                                          onChange={(e) => setPtpAmount(e.target.value)}
+                                          className="h-9 bg-white border-slate-200 text-xs pl-7"
+                                          placeholder="0.00"
+                                        />
+                                      </div>
+                                    </div>
+                                  )}
                                 </div>
                                 
                                 {ptpConfirmedBy === "new" && (
