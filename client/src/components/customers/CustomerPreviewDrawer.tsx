@@ -2325,10 +2325,18 @@ export function CustomerPreviewDrawer({
                         id="ptpAmount"
                         type="text"
                         inputMode="decimal"
-                        value={ptpAmount ? formatNumberWithCommas(ptpAmount) : ""}
-                        onChange={(e) => setPtpAmount(stripCommas(e.target.value.replace(/[^0-9.,]/g, '')))}
+                        value={ptpAmount ? formatNumberWithCommas(ptpAmount) : "0.00"}
+                        onChange={(e) => {
+                          const raw = stripCommas(e.target.value.replace(/[^0-9.,]/g, ''));
+                          setPtpAmount(raw === "0.00" ? "" : raw);
+                        }}
+                        onFocus={(e) => {
+                          if (e.target.value === "0.00") {
+                            setPtpAmount("");
+                          }
+                        }}
                         className={`h-9 text-xs pl-7 pr-3 bg-white text-right tabular-nums ${ptpValidationAttempted && (!ptpAmount || parseFloat(stripCommas(ptpAmount)) <= 0) ? 'border-[#0B0F17]' : 'border-slate-200'}`}
-                        placeholder="0,000.00"
+                        placeholder="0.00"
                       />
                     </div>
                   </div>
