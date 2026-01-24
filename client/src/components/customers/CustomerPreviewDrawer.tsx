@@ -294,14 +294,12 @@ export function CustomerPreviewDrawer({
     setReminderDate("");
     setReminderTime("");
     setAssignedToUserId("");
-    setIsRecentActivityExpanded(true);
   };
 
   const handleNoteButtonClick = () => {
     setIsNoteMode(true);
     setIsCallMode(false);
     setIsEmailMode(false);
-    setIsRecentActivityExpanded(false);
   };
 
   const scheduleCallMutation = useMutation({
@@ -346,7 +344,6 @@ export function CustomerPreviewDrawer({
     setCallScheduleTime("");
     setSelectedCallRecipientPhone("");
     setSelectedCallRecipientName("");
-    setIsRecentActivityExpanded(true);
   };
 
   const handleCallButtonClick = () => {
@@ -354,11 +351,10 @@ export function CustomerPreviewDrawer({
     setIsNoteMode(false);
     setIsEmailMode(false);
     setIsSmsMode(false);
-    setIsRecentActivityExpanded(false);
     // Pre-populate with primary AR contact phone and name, or fallback to customer phone
     const primaryContact = preview?.allCreditControlContacts?.find(c => c.isPrimary);
     const defaultPhone = primaryContact?.phone || preview?.creditControlContact?.phone || '';
-    const defaultName = primaryContact?.name || preview?.creditControlContact?.name || preview?.contact?.name || '';
+    const defaultName = primaryContact?.name || preview?.creditControlContact?.name || '';
     setSelectedCallRecipientPhone(defaultPhone);
     setSelectedCallRecipientName(defaultName);
   };
@@ -367,7 +363,6 @@ export function CustomerPreviewDrawer({
     setIsEmailMode(true);
     setIsNoteMode(false);
     setIsCallMode(false);
-    setIsRecentActivityExpanded(false);
     // Pre-populate with primary AR contact, or fallback to customer email
     const primaryContact = preview?.allCreditControlContacts?.find(c => c.isPrimary);
     const defaultEmail = primaryContact?.email || preview?.creditControlContact?.email || preview?.customer?.email || '';
@@ -382,7 +377,6 @@ export function CustomerPreviewDrawer({
     setEmailBody("");
     setIsGeneratingEmail(false);
     setIncludeStatutoryInterest(true);
-    setIsRecentActivityExpanded(true);
     setSelectedRecipientEmail("");
   };
 
@@ -391,7 +385,6 @@ export function CustomerPreviewDrawer({
     setIsEmailMode(false);
     setIsNoteMode(false);
     setIsCallMode(false);
-    setIsRecentActivityExpanded(false);
     // Pre-populate with primary AR contact phone, or fallback to customer phone
     const primaryContact = preview?.allCreditControlContacts?.find(c => c.isPrimary);
     const defaultPhone = primaryContact?.phone || preview?.creditControlContact?.phone || '';
@@ -404,7 +397,6 @@ export function CustomerPreviewDrawer({
     setSmsTone(1);
     setSmsBody("");
     setIsGeneratingSms(false);
-    setIsRecentActivityExpanded(true);
     setSelectedRecipientPhone("");
   };
 
