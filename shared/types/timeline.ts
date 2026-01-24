@@ -134,6 +134,8 @@ export interface CustomerPreview {
   totalTimelineCount?: number;
   hasMoreTimeline?: boolean;
   invoices: CustomerPreviewInvoice[];
+  totalInvoiceCount?: number;
+  hasMoreInvoices?: boolean;
 }
 
 export interface CustomerPreferences {

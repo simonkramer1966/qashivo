@@ -164,6 +164,11 @@ export function CustomerPreviewDrawer({
   const [isLoadingMoreTimeline, setIsLoadingMoreTimeline] = useState(false);
   const [timelineOffset, setTimelineOffset] = useState(20);
 
+  const [additionalInvoices, setAdditionalInvoices] = useState<CustomerPreviewInvoice[]>([]);
+  const [isLoadingMoreInvoices, setIsLoadingMoreInvoices] = useState(false);
+  const [invoiceOffset, setInvoiceOffset] = useState(20);
+  const [hasMoreInvoicesState, setHasMoreInvoicesState] = useState<boolean | null>(null);
+
   // Reset search and pagination state when customer changes or drawer opens
   useEffect(() => {
     setActivitySearchOpen(false);
@@ -171,6 +176,9 @@ export function CustomerPreviewDrawer({
     setDebouncedSearchQuery("");
     setAdditionalTimelineItems([]);
     setTimelineOffset(20);
+    setAdditionalInvoices([]);
+    setInvoiceOffset(20);
+    setHasMoreInvoicesState(null);
   }, [customerId]);
 
   const loadMoreTimeline = useCallback(async () => {
@@ -188,6 +196,23 @@ export function CustomerPreviewDrawer({
       setIsLoadingMoreTimeline(false);
     }
   }, [customerId, timelineOffset, isLoadingMoreTimeline]);
+
+  const loadMoreInvoices = useCallback(async () => {
+    if (!customerId || isLoadingMoreInvoices) return;
+    
+    setIsLoadingMoreInvoices(true);
+    try {
+      const res = await apiRequest("GET", `/api/contacts/${customerId}/invoices/page?offset=${invoiceOffset}&limit=20`);
+      const data = await res.json();
+      setAdditionalInvoices(prev => [...prev, ...data.items]);
+      setInvoiceOffset(prev => prev + data.items.length);
+      setHasMoreInvoicesState(data.hasMore);
+    } catch (error) {
+      console.error("Failed to load more invoices:", error);
+    } finally {
+      setIsLoadingMoreInvoices(false);
+    }
+  }, [customerId, invoiceOffset, isLoadingMoreInvoices]);
 
   // Debounce activity search
   useEffect(() => {
@@ -1827,7 +1852,7 @@ export function CustomerPreviewDrawer({
                             : "bg-slate-100 text-slate-600 hover:bg-slate-200"
                         }`}
                       >
-                        All ({preview.invoices?.length || 0})
+                        All ({preview.totalInvoiceCount || preview.invoices?.length || 0})
                       </button>
                       <button
                         onClick={() => setInvoiceFilter("overdue")}
@@ -1837,7 +1862,7 @@ export function CustomerPreviewDrawer({
                             : "bg-slate-100 text-slate-600 hover:bg-slate-200"
                         }`}
                       >
-                        Overdue ({preview.invoices?.filter(inv => inv.daysOverdue && inv.daysOverdue > 0).length || 0})
+                        Overdue ({[...(preview.invoices || []), ...additionalInvoices].filter(inv => inv.daysOverdue && inv.daysOverdue > 0).length || 0})
                       </button>
                     </div>
                     
@@ -1858,9 +1883,10 @@ export function CustomerPreviewDrawer({
                           : <ChevronDown className="h-3 w-3 inline ml-0.5" />;
                       };
                       
+                      const allInvoices = [...(preview.invoices || []), ...additionalInvoices];
                       const baseInvoices = invoiceFilter === "overdue"
-                        ? preview.invoices?.filter(inv => inv.daysOverdue && inv.daysOverdue > 0)
-                        : preview.invoices;
+                        ? allInvoices.filter(inv => inv.daysOverdue && inv.daysOverdue > 0)
+                        : allInvoices;
                       
                       const filteredInvoices = baseInvoices?.slice().sort((a, b) => {
                         const dir = invoiceSortDirection === "asc" ? 1 : -1;
@@ -1977,6 +2003,24 @@ export function CustomerPreviewDrawer({
                               </div>
                             );
                           })}
+                          
+                          {/* Load more button */}
+                          {(hasMoreInvoicesState !== null ? hasMoreInvoicesState : preview.hasMoreInvoices) && invoiceFilter === "all" && (
+                            <button
+                              onClick={loadMoreInvoices}
+                              disabled={isLoadingMoreInvoices}
+                              className="w-full mt-3 py-2 text-xs text-slate-500 hover:text-slate-700 hover:bg-slate-50 rounded transition-colors flex items-center justify-center gap-2"
+                            >
+                              {isLoadingMoreInvoices ? (
+                                <>
+                                  <Loader2 className="h-3 w-3 animate-spin" />
+                                  Loading...
+                                </>
+                              ) : (
+                                <>Load more invoices</>
+                              )}
+                            </button>
+                          )}
                       </div>
                     ) : (
                         <div className="text-center py-8">

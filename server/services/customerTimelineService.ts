@@ -54,7 +54,21 @@ export class CustomerTimelineService {
           eq(invoices.status, "overdue")
         )
       ))
-      .orderBy(asc(invoices.dueDate));
+      .orderBy(asc(invoices.dueDate))
+      .limit(20);
+
+    const invoiceCountResult = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(invoices)
+      .where(and(
+        eq(invoices.contactId, customerId),
+        eq(invoices.tenantId, tenantId),
+        or(
+          eq(invoices.status, "pending"),
+          eq(invoices.status, "overdue")
+        )
+      ));
+    const totalInvoiceCount = invoiceCountResult[0]?.count || 0;
 
     const now = new Date();
     let outstandingTotal = 0;
@@ -197,7 +211,80 @@ export class CustomerTimelineService {
       })),
       totalTimelineCount,
       hasMoreTimeline: totalTimelineCount > 20,
-      invoices: invoiceList
+      invoices: invoiceList,
+      totalInvoiceCount,
+      hasMoreInvoices: totalInvoiceCount > 20
+    };
+  }
+
+  async getInvoicesPage(
+    tenantId: string,
+    customerId: string,
+    offset: number = 0,
+    limit: number = 20
+  ) {
+    const customerInvoices = await db
+      .select({
+        id: invoices.id,
+        invoiceNumber: invoices.invoiceNumber,
+        description: invoices.description,
+        issueDate: invoices.issueDate,
+        amount: invoices.amount,
+        amountPaid: invoices.amountPaid,
+        status: invoices.status,
+        dueDate: invoices.dueDate
+      })
+      .from(invoices)
+      .where(and(
+        eq(invoices.contactId, customerId),
+        eq(invoices.tenantId, tenantId),
+        or(
+          eq(invoices.status, "pending"),
+          eq(invoices.status, "overdue")
+        )
+      ))
+      .orderBy(asc(invoices.dueDate))
+      .offset(offset)
+      .limit(limit);
+
+    const countResult = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(invoices)
+      .where(and(
+        eq(invoices.contactId, customerId),
+        eq(invoices.tenantId, tenantId),
+        or(
+          eq(invoices.status, "pending"),
+          eq(invoices.status, "overdue")
+        )
+      ));
+    const total = countResult[0]?.count || 0;
+
+    const now = new Date();
+    const items = customerInvoices.map(inv => {
+      const balance = Number(inv.amount) - Number(inv.amountPaid || 0);
+      let daysOverdue: number | undefined;
+      if (inv.dueDate && new Date(inv.dueDate) < now) {
+        daysOverdue = Math.floor((now.getTime() - new Date(inv.dueDate).getTime()) / (1000 * 60 * 60 * 24));
+      }
+      return {
+        id: inv.id,
+        invoiceNumber: inv.invoiceNumber,
+        description: inv.description || undefined,
+        issueDate: inv.issueDate ? new Date(inv.issueDate).toISOString() : new Date().toISOString(),
+        dueDate: inv.dueDate ? new Date(inv.dueDate).toISOString() : new Date().toISOString(),
+        amount: Number(inv.amount),
+        amountPaid: Number(inv.amountPaid || 0),
+        balance,
+        status: inv.status,
+        daysOverdue
+      };
+    });
+
+    return {
+      items,
+      total,
+      hasMore: offset + limit < total
     };
   }
 
