@@ -677,15 +677,6 @@ export function CustomerPreviewDrawer({
   });
 
   const handleSavePtp = () => {
-    if (selectedPtpInvoices.size === 0) {
-      toast({
-        title: "Select invoices",
-        description: "Please select at least one invoice",
-        variant: "destructive",
-      });
-      return;
-    }
-
     if (!ptpPaymentDate) {
       toast({
         title: "Payment date required",
@@ -705,20 +696,32 @@ export function CustomerPreviewDrawer({
       return;
     }
 
-    if (ptpPaymentType === "part" && (!ptpAmount || parseFloat(ptpAmount) <= 0)) {
+    if (!ptpAmount || parseFloat(ptpAmount) <= 0) {
       toast({
         title: "Amount required",
-        description: "Please enter the payment amount for partial payments",
+        description: "Please enter the payment amount",
         variant: "destructive",
       });
       return;
     }
 
+    if (selectedPtpInvoices.size > 0) {
+      const selectedTotal = Array.from(selectedPtpInvoices.values()).reduce((sum, bal) => sum + (typeof bal === 'number' ? bal : parseFloat(String(bal)) || 0), 0);
+      if (parseFloat(ptpAmount) > selectedTotal) {
+        toast({
+          title: "Amount exceeds selected invoices",
+          description: `Amount cannot exceed £${formatNumberWithCommas(selectedTotal.toFixed(2))}`,
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
     createPtpMutation.mutate({
-      invoiceIds: Array.from(selectedPtpInvoices),
+      invoiceIds: Array.from(selectedPtpInvoices.keys()),
       paymentDate: ptpPaymentDate,
       paymentType: ptpPaymentType,
-      amount: ptpPaymentType === "part" ? parseFloat(ptpAmount) : undefined,
+      amount: parseFloat(ptpAmount),
       confirmedBy: confirmedByValue,
       notes: ptpNotes || undefined,
     });
@@ -2229,7 +2232,7 @@ export function CustomerPreviewDrawer({
                       type="date"
                       value={ptpPaymentDate}
                       onChange={(e) => setPtpPaymentDate(e.target.value)}
-                      className="h-9 bg-white border-slate-200 text-xs"
+                      className={`h-9 bg-white text-xs ${!ptpPaymentDate ? 'border-[#C75C5C]' : 'border-slate-200'}`}
                       min={new Date().toISOString().split('T')[0]}
                     />
                   </div>
@@ -2255,7 +2258,7 @@ export function CustomerPreviewDrawer({
                       Confirmed by
                     </Label>
                     <Select value={ptpConfirmedBy} onValueChange={setPtpConfirmedBy}>
-                      <SelectTrigger id="ptpConfirmedBy" className="h-9 bg-white border-slate-200 text-xs">
+                      <SelectTrigger id="ptpConfirmedBy" className={`h-9 bg-white text-xs ${!ptpConfirmedBy ? 'border-[#C75C5C]' : 'border-slate-200'}`}>
                         <SelectValue placeholder="Select contact..." />
                       </SelectTrigger>
                       <SelectContent>
@@ -2282,7 +2285,7 @@ export function CustomerPreviewDrawer({
                         inputMode="decimal"
                         value={ptpAmount ? formatNumberWithCommas(ptpAmount) : ""}
                         onChange={(e) => setPtpAmount(stripCommas(e.target.value.replace(/[^0-9.,]/g, '')))}
-                        className="h-9 border-slate-200 text-xs pl-7 pr-3 bg-white text-right tabular-nums"
+                        className={`h-9 text-xs pl-7 pr-3 bg-white text-right tabular-nums ${!ptpAmount || parseFloat(ptpAmount) <= 0 ? 'border-[#C75C5C]' : 'border-slate-200'}`}
                         placeholder="0,000.00"
                       />
                     </div>
@@ -2299,7 +2302,7 @@ export function CustomerPreviewDrawer({
                       type="text"
                       value={ptpNewContactName}
                       onChange={(e) => setPtpNewContactName(e.target.value)}
-                      className="h-9 bg-white border-slate-200 text-xs"
+                      className={`h-9 bg-white text-xs ${!ptpNewContactName ? 'border-[#C75C5C]' : 'border-slate-200'}`}
                       placeholder="Enter contact name"
                     />
                   </div>
@@ -2318,34 +2321,6 @@ export function CustomerPreviewDrawer({
                   />
                 </div>
                 
-                {/* Validation Alert */}
-                {(() => {
-                  const errors: string[] = [];
-                  if (selectedPtpInvoices.size === 0) errors.push("Select at least one invoice");
-                  if (!ptpPaymentDate) errors.push("Payment Date is required");
-                  if (!ptpConfirmedBy) errors.push("Confirmed By is required");
-                  if (ptpConfirmedBy === "new" && !ptpNewContactName) errors.push("Contact Name is required");
-                  if (!ptpAmount || parseFloat(ptpAmount) <= 0) errors.push("Amount is required");
-                  
-                  if (selectedPtpInvoices.size > 0 && ptpAmount && parseFloat(ptpAmount) > 0) {
-                    const selectedTotal = Array.from(selectedPtpInvoices.values()).reduce((sum, bal) => sum + (typeof bal === 'number' ? bal : parseFloat(String(bal)) || 0), 0);
-                    const enteredAmount = parseFloat(ptpAmount) || 0;
-                    if (enteredAmount > selectedTotal) {
-                      errors.push(`Amount cannot exceed selected invoices total (£${formatNumberWithCommas(selectedTotal.toFixed(2))})`);
-                    }
-                  }
-                  
-                  return errors.length > 0 ? (
-                    <div className="mt-3 p-2.5 bg-amber-50 border border-amber-200 rounded-md">
-                      <p className="text-xs text-amber-700 font-medium mb-1">Please complete the following:</p>
-                      <ul className="text-xs text-amber-600 space-y-0.5">
-                        {errors.map((error, i) => (
-                          <li key={i}>• {error}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  ) : null;
-                })()}
               </div>
             )}
 
@@ -2408,7 +2383,6 @@ export function CustomerPreviewDrawer({
                     onClick={handleSavePtp}
                     disabled={(() => {
                       if (createPtpMutation.isPending) return true;
-                      if (selectedPtpInvoices.size === 0) return true;
                       if (!ptpPaymentDate || !ptpConfirmedBy) return true;
                       if (ptpConfirmedBy === "new" && !ptpNewContactName) return true;
                       if (!ptpAmount || parseFloat(ptpAmount) <= 0) return true;
