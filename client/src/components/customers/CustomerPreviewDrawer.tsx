@@ -2138,7 +2138,7 @@ export function CustomerPreviewDrawer({
                             return (
                               <div key={invoice.id} className="min-w-0 w-full">
                                 <div
-                                  className="group w-full flex items-center text-xs py-1.5 hover:bg-slate-100 cursor-pointer transition-colors text-left"
+                                  className="group w-full flex items-center text-xs py-2 hover:bg-slate-100 cursor-pointer transition-colors text-left"
                                 >
                                   {isPtpMode && (
                                     <div 
