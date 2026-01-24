@@ -2262,7 +2262,7 @@ export function CustomerPreviewDrawer({
               className={`space-y-3 overflow-y-auto border-t border-slate-100 transition-all duration-300 ease-out ${
                 preview && isPtpMode 
                   ? 'flex-1 px-6 py-4 opacity-100 translate-y-0' 
-                  : 'flex-none max-h-0 opacity-0 translate-y-4 overflow-hidden pointer-events-none'
+                  : 'flex-none max-h-0 opacity-0 translate-y-12 overflow-hidden pointer-events-none'
               }`}
               aria-hidden={!(preview && isPtpMode)}
             >
