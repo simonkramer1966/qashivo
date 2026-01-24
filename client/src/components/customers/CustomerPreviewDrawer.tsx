@@ -2232,7 +2232,7 @@ export function CustomerPreviewDrawer({
                       type="date"
                       value={ptpPaymentDate}
                       onChange={(e) => setPtpPaymentDate(e.target.value)}
-                      className={`h-9 bg-white text-xs ${!ptpPaymentDate ? 'border-[#C75C5C]' : 'border-slate-200'}`}
+                      className={`h-9 bg-white text-xs ${!ptpPaymentDate ? 'border-[#0B0F17]' : 'border-slate-200'}`}
                       min={new Date().toISOString().split('T')[0]}
                     />
                   </div>
@@ -2258,7 +2258,7 @@ export function CustomerPreviewDrawer({
                       Confirmed by
                     </Label>
                     <Select value={ptpConfirmedBy} onValueChange={setPtpConfirmedBy}>
-                      <SelectTrigger id="ptpConfirmedBy" className={`h-9 bg-white text-xs ${!ptpConfirmedBy ? 'border-[#C75C5C]' : 'border-slate-200'}`}>
+                      <SelectTrigger id="ptpConfirmedBy" className={`h-9 bg-white text-xs ${!ptpConfirmedBy ? 'border-[#0B0F17]' : 'border-slate-200'}`}>
                         <SelectValue placeholder="Select contact..." />
                       </SelectTrigger>
                       <SelectContent>
@@ -2285,7 +2285,7 @@ export function CustomerPreviewDrawer({
                         inputMode="decimal"
                         value={ptpAmount ? formatNumberWithCommas(ptpAmount) : ""}
                         onChange={(e) => setPtpAmount(stripCommas(e.target.value.replace(/[^0-9.,]/g, '')))}
-                        className={`h-9 text-xs pl-7 pr-3 bg-white text-right tabular-nums ${!ptpAmount || parseFloat(ptpAmount) <= 0 ? 'border-[#C75C5C]' : 'border-slate-200'}`}
+                        className={`h-9 text-xs pl-7 pr-3 bg-white text-right tabular-nums ${!ptpAmount || parseFloat(ptpAmount) <= 0 ? 'border-[#0B0F17]' : 'border-slate-200'}`}
                         placeholder="0,000.00"
                       />
                     </div>
@@ -2302,7 +2302,7 @@ export function CustomerPreviewDrawer({
                       type="text"
                       value={ptpNewContactName}
                       onChange={(e) => setPtpNewContactName(e.target.value)}
-                      className={`h-9 bg-white text-xs ${!ptpNewContactName ? 'border-[#C75C5C]' : 'border-slate-200'}`}
+                      className={`h-9 bg-white text-xs ${!ptpNewContactName ? 'border-[#0B0F17]' : 'border-slate-200'}`}
                       placeholder="Enter contact name"
                     />
                   </div>
