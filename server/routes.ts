@@ -4398,10 +4398,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         )
         .orderBy(sql`COALESCE(${invoices.dueDate}, ${invoices.createdAt}) ASC`); // Oldest first, null-safe
 
-      // Calculate totals across all overdue invoices
+      // Calculate totals across all overdue invoices (amount - amountPaid)
       const totalOutstanding = overdueInvoices.reduce((sum, inv) => {
-        const balance = parseFloat(String(inv.balance || inv.total || 0));
-        return sum + (isNaN(balance) ? 0 : balance);
+        const amount = parseFloat(String(inv.amount || 0));
+        const amountPaid = parseFloat(String(inv.amountPaid || 0));
+        const outstanding = amount - amountPaid;
+        return sum + (isNaN(outstanding) ? 0 : outstanding);
       }, 0);
       const invoiceCount = overdueInvoices.length;
       
