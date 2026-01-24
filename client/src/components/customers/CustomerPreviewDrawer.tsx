@@ -492,6 +492,9 @@ export function CustomerPreviewDrawer({
         return sum + num;
       }, 0);
       setPtpAmount(total.toFixed(2));
+    } else {
+      // Clear amount when all invoices unchecked (unallocated mode)
+      setPtpAmount("");
     }
   }, [ptpAllocations, selectedPtpInvoices.size]);
 
