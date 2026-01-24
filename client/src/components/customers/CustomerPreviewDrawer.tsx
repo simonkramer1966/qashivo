@@ -2082,7 +2082,7 @@ export function CustomerPreviewDrawer({
                       return filteredInvoices && filteredInvoices.length > 0 ? (
                         <div className="space-y-1">
                           {/* Header Row */}
-                          <div className="flex items-center text-[10px] text-slate-400 uppercase tracking-wider pb-1 border-b border-slate-100">
+                          <div className="flex items-center text-[10px] text-slate-400 uppercase tracking-wider pb-1 border-b border-slate-100 pr-2">
                             {isPtpMode && (
                               <div className="w-[24px] flex-shrink-0 flex items-center justify-center">
                                 <Checkbox 
