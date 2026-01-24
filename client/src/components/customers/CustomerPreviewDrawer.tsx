@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import {
@@ -55,7 +55,8 @@ import {
   Settings,
   Sparkles,
   Send,
-  Loader2
+  Loader2,
+  Search
 } from "lucide-react";
 import { useCurrency } from "@/hooks/useCurrency";
 import { useToast } from "@/hooks/use-toast";
@@ -151,10 +152,40 @@ export function CustomerPreviewDrawer({
   
   const [isRecentActivityExpanded, setIsRecentActivityExpanded] = useState(true);
   const [expandedTimelineItems, setExpandedTimelineItems] = useState<Set<string>>(new Set());
+  const [activitySearchOpen, setActivitySearchOpen] = useState(false);
+  const [activitySearchQuery, setActivitySearchQuery] = useState("");
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
   const [invoiceFilter, setInvoiceFilter] = useState<"all" | "overdue">("overdue");
   const [invoiceSortColumn, setInvoiceSortColumn] = useState<"issueDate" | "invoiceNumber" | "dueDate" | "daysOverdue" | "balance">("daysOverdue");
   const [invoiceSortDirection, setInvoiceSortDirection] = useState<"asc" | "desc">("desc");
   const [expandedInvoices, setExpandedInvoices] = useState<Set<number>>(new Set());
+
+  // Debounce activity search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(activitySearchQuery);
+    }, 200);
+    return () => clearTimeout(timer);
+  }, [activitySearchQuery]);
+
+  // Handle Escape key to close search
+  const handleSearchKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      setActivitySearchOpen(false);
+      setActivitySearchQuery("");
+      setDebouncedSearchQuery("");
+    }
+  }, []);
+
+  // Close search and clear state
+  const toggleActivitySearch = useCallback(() => {
+    if (activitySearchOpen) {
+      // Closing - clear search state
+      setActivitySearchQuery("");
+      setDebouncedSearchQuery("");
+    }
+    setActivitySearchOpen(!activitySearchOpen);
+  }, [activitySearchOpen]);
 
   const { data: preview, isLoading } = useQuery<CustomerPreview>({
     queryKey: [`/api/contacts/${customerId}/preview`],
@@ -743,19 +774,51 @@ export function CustomerPreviewDrawer({
                     <>
                     <Separator className="bg-slate-100" />
                     <section>
-                      <button
-                        onClick={() => setIsRecentActivityExpanded(!isRecentActivityExpanded)}
-                        className="flex items-center gap-2 w-full text-left"
-                      >
-                        {isRecentActivityExpanded ? (
-                          <ChevronDown className="h-3 w-3 text-slate-400" />
-                        ) : (
-                          <ChevronRight className="h-3 w-3 text-slate-400" />
+                      <div className="flex items-center justify-between">
+                        <button
+                          onClick={() => setIsRecentActivityExpanded(!isRecentActivityExpanded)}
+                          className="flex items-center gap-2 text-left"
+                        >
+                          {isRecentActivityExpanded ? (
+                            <ChevronDown className="h-3 w-3 text-slate-400" />
+                          ) : (
+                            <ChevronRight className="h-3 w-3 text-slate-400" />
+                          )}
+                          <p className="text-[10px] text-slate-400 uppercase tracking-wider">
+                            Recent Activity
+                          </p>
+                        </button>
+                        {isRecentActivityExpanded && (
+                          <button
+                            onClick={toggleActivitySearch}
+                            className="p-1 hover:bg-slate-100 rounded transition-colors"
+                          >
+                            <Search className={`h-3.5 w-3.5 ${activitySearchOpen ? 'text-slate-600' : 'text-slate-400'}`} />
+                          </button>
                         )}
-                        <p className="text-[10px] text-slate-400 uppercase tracking-wider">
-                          Recent Activity
-                        </p>
-                      </button>
+                      </div>
+                      
+                      {isRecentActivityExpanded && activitySearchOpen && (
+                        <div className="mt-2 relative">
+                          <Input
+                            type="text"
+                            placeholder="Search activity..."
+                            value={activitySearchQuery}
+                            onChange={(e) => setActivitySearchQuery(e.target.value)}
+                            onKeyDown={handleSearchKeyDown}
+                            className="h-7 text-xs pr-7 bg-white/70 border-gray-200/50"
+                            autoFocus
+                          />
+                          {activitySearchQuery && (
+                            <button
+                              onClick={() => setActivitySearchQuery("")}
+                              className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 hover:bg-slate-100 rounded"
+                            >
+                              <X className="h-3 w-3 text-slate-400" />
+                            </button>
+                          )}
+                        </div>
+                      )}
                       
                       {isRecentActivityExpanded && (
                         <div className="mt-3 min-w-0 overflow-hidden">
@@ -771,7 +834,23 @@ export function CustomerPreviewDrawer({
                                 return 'Earlier';
                               };
                               
-                              const items = preview.latestTimeline;
+                              // Filter items based on search query
+                              const allItems = preview.latestTimeline;
+                              const items = debouncedSearchQuery
+                                ? allItems.filter(item => {
+                                    const query = debouncedSearchQuery.toLowerCase();
+                                    const searchFields = [
+                                      item.channel,
+                                      item.summary,
+                                      item.preview,
+                                      item.body,
+                                      item.createdByName,
+                                    ].filter(Boolean);
+                                    return searchFields.some(field => 
+                                      field?.toLowerCase().includes(query)
+                                    );
+                                  })
+                                : allItems;
                               const showBuckets = items.length > 6;
                               
                               const renderItem = (item: typeof items[0]) => {
@@ -917,10 +996,20 @@ export function CustomerPreviewDrawer({
                                 );
                               };
                               
+                              // Show empty state if search returns no results
+                              if (items.length === 0 && debouncedSearchQuery) {
+                                return (
+                                  <div className="text-center py-4">
+                                    <Search className="h-6 w-6 text-slate-300 mx-auto mb-2" />
+                                    <p className="text-sm text-slate-400">No activity matches your search</p>
+                                  </div>
+                                );
+                              }
+
                               if (!showBuckets) {
                                 return <div className="space-y-0 min-w-0">{items.map(renderItem)}</div>;
                               }
-                              
+
                               const buckets = { Today: [] as typeof items, Yesterday: [] as typeof items, Earlier: [] as typeof items };
                               items.forEach(item => {
                                 const bucket = getTimeBucket(item.occurredAt);
