@@ -2117,34 +2117,35 @@ export function CustomerPreviewDrawer({
                             >
                               Days<SortIcon column="daysOverdue" />
                             </button>
-                            {isPtpMode ? (
-                              <button
-                                onClick={() => {
-                                  if (allDisplayedSelected) {
-                                    setSelectedPtpInvoices(new Map());
-                                    setPtpAmount("");
-                                  } else {
-                                    const newSelected = new Map<string, number>();
-                                    filteredInvoices.forEach(inv => {
-                                      newSelected.set(inv.id, inv.balance);
-                                    });
-                                    setSelectedPtpInvoices(newSelected);
-                                    const total = filteredInvoices.reduce((sum, inv) => sum + inv.balance, 0);
-                                    setPtpAmount(total.toFixed(2));
-                                  }
-                                }}
-                                className="w-[70px] flex-shrink-0 text-right text-[#17B6C3] hover:text-[#1396A1] transition-colors normal-case font-medium"
-                              >
-                                {allDisplayedSelected ? "Deselect All" : "Select All"}
-                              </button>
-                            ) : (
+                            <div className="w-[70px] flex-shrink-0 flex flex-col items-end">
+                              {isPtpMode && (
+                                <button
+                                  onClick={() => {
+                                    if (allDisplayedSelected) {
+                                      setSelectedPtpInvoices(new Map());
+                                      setPtpAmount("");
+                                    } else {
+                                      const newSelected = new Map<string, number>();
+                                      filteredInvoices.forEach(inv => {
+                                        newSelected.set(inv.id, inv.balance);
+                                      });
+                                      setSelectedPtpInvoices(newSelected);
+                                      const total = filteredInvoices.reduce((sum, inv) => sum + inv.balance, 0);
+                                      setPtpAmount(total.toFixed(2));
+                                    }
+                                  }}
+                                  className="text-[#17B6C3] hover:text-[#1396A1] transition-colors normal-case font-medium text-right"
+                                >
+                                  {allDisplayedSelected ? "Deselect All" : "Select All"}
+                                </button>
+                              )}
                               <button 
                                 onClick={() => toggleSort("balance")}
-                                className={`w-[70px] flex-shrink-0 text-right hover:text-slate-600 transition-colors ${invoiceSortColumn === "balance" ? "text-slate-600 font-medium" : ""}`}
+                                className={`text-right hover:text-slate-600 transition-colors ${invoiceSortColumn === "balance" ? "text-slate-600 font-medium" : ""}`}
                               >
                                 Amount<SortIcon column="balance" />
                               </button>
-                            )}
+                            </div>
                             <span className="w-[20px] flex-shrink-0" />
                           </div>
                           {/* Invoice Rows */}
