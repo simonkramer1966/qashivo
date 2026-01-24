@@ -103,8 +103,11 @@ export default function Home() {
               <h1 className="text-[40px] md:text-[52px] font-semibold text-[#0B0F17] leading-[1.05] tracking-[-0.02em] mb-6">
                 Get paid faster with less effort. Forecast with confidence.
               </h1>
-              <p className="text-[18px] md:text-[20px] text-[#556070] leading-[1.55] mb-8">
+              <p className="text-[18px] md:text-[20px] text-[#556070] leading-[1.55] mb-4">
                 Qashivo chases invoices, captures debtor intent (promises, delays, disputes), and instantly updates your cash-in forecast so you step in only for exceptions.
+              </p>
+              <p className="text-[18px] md:text-[20px] text-[#0B0F17] font-semibold leading-[1.55] mb-8">
+                Always on. Never calls in sick. Never forgets. Always follows up.
               </p>
               <div className="flex flex-col sm:flex-row items-start gap-4 mb-6">
                 <Button
