@@ -4509,10 +4509,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 callGoal: goal || 'payment_commitment',
               },
               metadata: {
-                tenantId: user.tenantId,
-                contactId: contact.id,
-                invoiceId: primaryInvoice?.id,
-                actionId: newAction.id,
+                // Use snake_case keys to match webhook expectations
+                tenant_id: user.tenantId,
+                contact_id: contact.id,
+                invoice_id: primaryInvoice?.id,
+                action_id: newAction.id,
+                invoice_amount: primaryInvoice?.balance || primaryInvoice?.total || 0,
                 type: 'system_call',
                 voiceTone,
                 goal,
