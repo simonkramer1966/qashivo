@@ -2184,7 +2184,7 @@ export function CustomerPreviewDrawer({
                                             value={ptpAllocations[invoice.id] ? formatNumberWithCommas(ptpAllocations[invoice.id]) : ""}
                                             onChange={(e) => updatePtpAllocation(invoice.id, e.target.value)}
                                             disabled={!isPtpSelected}
-                                            className={`h-6 text-right pr-2 pl-5 border-slate-200 tabular-nums ${isPtpSelected ? 'bg-white text-slate-900' : 'bg-slate-50 text-slate-400'}`}
+                                            className={`h-5 text-right pr-2 pl-5 border-slate-200 tabular-nums ${isPtpSelected ? 'bg-white text-slate-900' : 'bg-slate-50 text-slate-400'}`}
                                             style={{ fontSize: '11px', fontWeight: 400 }}
                                             placeholder="0.00"
                                           />
