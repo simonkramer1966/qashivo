@@ -1043,7 +1043,7 @@ export function CustomerPreviewDrawer({
                         </div>
                       )}
                       
-                      <div className="mt-3 min-w-0 overflow-hidden">
+                      <div className="mt-1 min-w-0 overflow-hidden">
                         {preview.latestTimeline && preview.latestTimeline.length > 0 ? (
                             (() => {
                               const getTimeBucket = (dateStr: string) => {
