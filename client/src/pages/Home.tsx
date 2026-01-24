@@ -107,7 +107,8 @@ export default function Home() {
                 Qashivo chases invoices, captures debtor intent (promises, delays, disputes), and instantly updates your cash-in forecast so you step in only for exceptions.
               </p>
               <p className="text-[18px] md:text-[20px] text-[#0B0F17] font-semibold leading-[1.55] mb-8">
-                Always on. Never calls in sick. Never forgets. Always follows up.
+                Always on. Never calls in sick.<br />
+                Never forgets. Always follows up.
               </p>
               <div className="flex flex-col sm:flex-row items-start gap-4 mb-6">
                 <Button
