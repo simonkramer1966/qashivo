@@ -306,7 +306,8 @@ export default function Product() {
                 <span className="text-[16px] font-semibold text-[#0B0F17]">Qashivo</span>
               </a>
               <p className="text-[13px] text-[#556070]">
-                Receivables, managed continuously.
+                Always on. Never calls in sick.<br />
+                Never forgets. Always follows up.
               </p>
             </div>
             
