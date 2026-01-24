@@ -789,7 +789,7 @@ export function CustomerPreviewDrawer({
                                       <TooltipProvider delayDuration={300}>
                                         <Tooltip>
                                           <TooltipTrigger asChild>
-                                            <span className="text-xs text-slate-400 min-w-[72px] w-[72px] flex-shrink-0 tabular-nums">
+                                            <span className="text-xs text-slate-500 min-w-[60px] w-[60px] flex-shrink-0 tabular-nums">
                                               {dateInfo.relative}
                                             </span>
                                           </TooltipTrigger>
@@ -804,7 +804,7 @@ export function CustomerPreviewDrawer({
                                         <span className="text-xs font-medium">{getChannelLabel(item.channel)}</span>
                                       </div>
                                       
-                                      <span className="text-xs font-medium text-slate-700 flex-1 min-w-0">
+                                      <span className="text-xs font-medium text-slate-900 flex-1 min-w-0 truncate pr-2">
                                         {(() => {
                                           const text = item.preview || item.summary;
                                           const maxLen = 35;
@@ -832,7 +832,7 @@ export function CustomerPreviewDrawer({
                                     </button>
                                     
                                     {isItemExpanded && (
-                                      <div className="pl-[72px] pr-2 pb-3 space-y-2 overflow-hidden min-w-0">
+                                      <div className="pl-[60px] pr-2 pb-3 space-y-2 overflow-hidden min-w-0">
                                         {/* Voice call results - show sentiment, intent, and extracted data */}
                                         {item.channel === 'voice' && item.outcome?.extracted && (
                                           <div className="bg-slate-50 rounded-md p-2 space-y-1.5 border border-slate-100">
