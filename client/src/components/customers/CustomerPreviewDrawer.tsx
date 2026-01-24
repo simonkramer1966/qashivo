@@ -1787,7 +1787,7 @@ export function CustomerPreviewDrawer({
             </ScrollArea>
 
             {/* Left Footer - Action Buttons */}
-            {preview && !isNoteMode && !isCallMode && !isEmailMode && !isSmsMode && !isPtpMode && (
+            {preview && !isNoteMode && !isCallMode && !isEmailMode && !isSmsMode && (
               <div className="px-6 py-4 border-t border-slate-100 flex-shrink-0">
                 <div className="flex gap-2">
                   <Button 
