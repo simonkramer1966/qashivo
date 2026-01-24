@@ -2009,9 +2009,9 @@ export function CustomerPreviewDrawer({
                     <Skeleton className="h-16 w-full" />
                   </div>
                 ) : preview ? (
-                  <section>
+                  <section className={isPtpMode ? "flex flex-col flex-1 min-h-0" : ""}>
                     {/* Filter Buttons */}
-                    <div className="flex items-center gap-2 mb-4">
+                    <div className={`flex items-center gap-2 ${isPtpMode ? 'flex-shrink-0 mb-2' : 'mb-4'}`}>
                       <button
                         onClick={() => setInvoiceFilter("all")}
                         className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
@@ -2074,15 +2074,15 @@ export function CustomerPreviewDrawer({
                         }
                       });
                       
-                      // Limit to 10 rows when in PTP mode
-                      const filteredInvoices = isPtpMode ? sortedInvoices?.slice(0, 10) : sortedInvoices;
+                      // Show all invoices in both modes
+                      const filteredInvoices = sortedInvoices;
                       const displayedInvoiceIds = filteredInvoices?.map(inv => inv.id) || [];
                       const allDisplayedSelected = displayedInvoiceIds.length > 0 && displayedInvoiceIds.every(id => selectedPtpInvoices.has(id));
                       
                       return filteredInvoices && filteredInvoices.length > 0 ? (
-                        <div className="space-y-1">
+                        <div className={isPtpMode ? "flex flex-col h-full" : "space-y-1"}>
                           {/* Header Row */}
-                          <div className="flex items-center text-[10px] text-slate-400 uppercase tracking-wider pb-1 border-b border-slate-100">
+                          <div className={`flex items-center text-[10px] text-slate-400 uppercase tracking-wider pb-1 border-b border-slate-100 ${isPtpMode ? 'flex-shrink-0 mb-1' : ''}`}>
                             {isPtpMode && (
                               <div className="w-[24px] flex-shrink-0 flex items-center justify-center">
                                 <Checkbox 
@@ -2132,7 +2132,7 @@ export function CustomerPreviewDrawer({
                             {!isPtpMode && <span className="w-[20px] flex-shrink-0" />}
                           </div>
                           {/* Invoice Rows */}
-                          <div className={`pr-2 ${isPtpMode ? 'max-h-[200px] overflow-y-auto' : ''}`}>
+                          <div className={`pr-2 ${isPtpMode ? 'flex-1 overflow-y-auto' : ''}`}>
                           {filteredInvoices.map((invoice) => {
                             const isExpanded = expandedInvoices.has(invoice.id);
                             const isPtpSelected = selectedPtpInvoices.has(invoice.id);
