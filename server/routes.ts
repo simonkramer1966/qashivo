@@ -4572,6 +4572,211 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Poll system call status from Retell API and update timeline when complete
+  app.get("/api/contacts/:contactId/call-status/:callId", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const { contactId, callId } = req.params;
+      const { actionId } = req.query;
+
+      console.log(`📞 [SYSTEM-CALL-STATUS] Checking call status for: ${callId}, contact: ${contactId}, action: ${actionId}`);
+
+      if (!callId) {
+        return res.status(400).json({ message: "Call ID is required" });
+      }
+
+      // Get call details from Retell API
+      const { retellService } = await import('./retell-service.js');
+      const callData = await retellService.getCall(callId);
+
+      console.log(`📞 [SYSTEM-CALL-STATUS] Retell call data:`, JSON.stringify({
+        call_id: callData.call_id,
+        call_status: callData.call_status,
+        end_timestamp: callData.end_timestamp,
+        disconnection_reason: callData.disconnection_reason,
+        has_transcript: !!callData.transcript
+      }));
+
+      // Check if call is ended
+      const isEnded = callData.call_status === 'ended' || callData.call_status === 'error';
+
+      if (isEnded && actionId) {
+        // Check if we already processed this call by looking at the timeline event
+        const existingEvent = await db.select()
+          .from(timelineEvents)
+          .where(
+            and(
+              eq(timelineEvents.actionId, actionId as string),
+              eq(timelineEvents.tenantId, user.tenantId)
+            )
+          )
+          .limit(1);
+
+        if (existingEvent.length > 0 && existingEvent[0].status !== 'transcribed') {
+          console.log(`📞 [SYSTEM-CALL-STATUS] Processing completed call for action: ${actionId}`);
+
+          // Process the call - analyze transcript with OpenAI
+          const OpenAI = (await import('openai')).default;
+          const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+          const transcriptText = callData.transcript || 'No transcript available';
+
+          const completion = await openai.chat.completions.create({
+            model: "gpt-4o-mini",
+            messages: [{
+              role: "system",
+              content: `Analyze this debt collection AI call transcript and extract detailed insights:
+1) Primary Intent: payment_plan, dispute, promise_to_pay, general_query, refused, wrong_contact, or unknown
+2) Sentiment: positive, neutral, negative, cooperative, or hostile
+3) Confidence Score: 0-100 (how confident are you in the intent detection)
+4) Promise to Pay: If a payment commitment was made, extract amount and date
+5) Dispute: If a dispute was raised, extract details
+6) Summary: 1-2 sentence summary of the call outcome
+7) Next Steps: Recommended follow-up actions
+
+Return only JSON with keys: intent, sentiment, confidence, ptpAmount, ptpDate, disputeDetails, summary, nextSteps`
+            }, {
+              role: "user",
+              content: transcriptText
+            }],
+            response_format: { type: "json_object" }
+          });
+
+          const analysis = JSON.parse(completion.choices[0].message.content || '{}');
+
+          // Map intent to outcome type
+          const intentToOutcomeMap: Record<string, string> = {
+            'payment_plan': 'promise_to_pay',
+            'promise_to_pay': 'promise_to_pay',
+            'dispute': 'dispute',
+            'refused': 'refused',
+            'wrong_contact': 'wrong_contact',
+            'general_query': 'other',
+            'unknown': 'other'
+          };
+          const outcomeType = intentToOutcomeMap[analysis.intent] || 'other';
+
+          // Build extracted data
+          const extractedData: Record<string, any> = {
+            sentiment: analysis.sentiment,
+            intent: analysis.intent,
+            summary: analysis.summary,
+            nextSteps: analysis.nextSteps
+          };
+          if (analysis.ptpAmount) extractedData.amount = analysis.ptpAmount;
+          if (analysis.ptpDate) extractedData.promiseDate = analysis.ptpDate;
+          if (analysis.disputeDetails) extractedData.disputeDetails = analysis.disputeDetails;
+
+          // Update the timeline event with call results
+          await db.update(timelineEvents)
+            .set({
+              status: 'transcribed',
+              body: transcriptText || null,
+              summary: analysis.summary || 'AI call completed',
+              outcomeType: outcomeType,
+              outcomeConfidence: String(analysis.confidence || 80),
+              outcomeExtracted: Object.keys(extractedData).length > 0 ? extractedData : null,
+              outcomeRequiresReview: outcomeType === 'dispute' || outcomeType === 'wrong_contact',
+              provider: 'retell',
+              providerMessageId: callId,
+            })
+            .where(
+              and(
+                eq(timelineEvents.actionId, actionId as string),
+                eq(timelineEvents.tenantId, user.tenantId)
+              )
+            );
+
+          // Also update the action status
+          await db.update(actions)
+            .set({
+              status: 'completed',
+              outcome: outcomeType,
+              completedAt: new Date()
+            })
+            .where(eq(actions.id, actionId as string));
+
+          console.log('✅ [SYSTEM-CALL-STATUS] Call analysis saved via polling:', {
+            intent: analysis.intent,
+            sentiment: analysis.sentiment,
+            confidence: analysis.confidence,
+            outcomeType
+          });
+
+          return res.json({
+            callStatus: callData.call_status,
+            isEnded: true,
+            processed: true,
+            analysis: {
+              intent: analysis.intent,
+              sentiment: analysis.sentiment,
+              confidence: analysis.confidence,
+              summary: analysis.summary,
+              outcomeType,
+              ptpAmount: analysis.ptpAmount,
+              ptpDate: analysis.ptpDate,
+              disputeDetails: analysis.disputeDetails,
+              nextSteps: analysis.nextSteps,
+              transcript: transcriptText
+            }
+          });
+        } else if (existingEvent.length > 0 && existingEvent[0].status === 'transcribed') {
+          // Already processed
+          return res.json({
+            callStatus: callData.call_status,
+            isEnded: true,
+            processed: true,
+            alreadyProcessed: true,
+            analysis: {
+              outcomeType: existingEvent[0].outcomeType,
+              summary: existingEvent[0].summary,
+              ...((existingEvent[0].outcomeExtracted as any) || {})
+            }
+          });
+        } else if (existingEvent.length === 0) {
+          // No timeline event found - call ended but we can't process it
+          // Return as processed to stop polling (webhook may handle it instead)
+          console.log(`⚠️ [SYSTEM-CALL-STATUS] No timeline event found for action: ${actionId}`);
+          return res.json({
+            callStatus: callData.call_status,
+            isEnded: true,
+            processed: true,
+            noEventFound: true,
+            analysis: {
+              summary: 'Call ended - results will appear in activity log'
+            }
+          });
+        }
+      }
+
+      // If call ended without actionId, return terminal state
+      if (isEnded && !actionId) {
+        return res.json({
+          callStatus: callData.call_status,
+          isEnded: true,
+          processed: true,
+          noActionId: true,
+          analysis: {
+            summary: 'Call ended - check activity log for details'
+          }
+        });
+      }
+
+      res.json({
+        callStatus: callData.call_status,
+        isEnded,
+        processed: false
+      });
+    } catch (error: any) {
+      console.error("❌ [SYSTEM-CALL-STATUS] Error checking call status:", error?.message);
+      res.status(500).json({ message: "Failed to check call status", error: error?.message });
+    }
+  });
+
   // Generate AI email draft for a contact
   app.post("/api/contacts/:contactId/generate-email", isAuthenticated, async (req: any, res) => {
     try {

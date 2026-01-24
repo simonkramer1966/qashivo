@@ -180,6 +180,14 @@ export function CustomerPreviewDrawer({
   const [invoiceOffset, setInvoiceOffset] = useState(20);
   const [hasMoreInvoicesState, setHasMoreInvoicesState] = useState<boolean | null>(null);
 
+  // Call polling state
+  const [activeCallPolling, setActiveCallPolling] = useState<{
+    callId: string;
+    actionId: string;
+    contactId: string;
+  } | null>(null);
+  const [callPollingStatus, setCallPollingStatus] = useState<string>("");
+
   // Reset search and pagination state when customer changes or drawer opens
   useEffect(() => {
     setActivitySearchOpen(false);
@@ -190,7 +198,84 @@ export function CustomerPreviewDrawer({
     setAdditionalInvoices([]);
     setInvoiceOffset(20);
     setHasMoreInvoicesState(null);
+    setActiveCallPolling(null);
+    setCallPollingStatus("");
   }, [customerId]);
+
+  // Poll for call status when an active call is in progress
+  useEffect(() => {
+    if (!activeCallPolling) return;
+
+    let pollCount = 0;
+    const maxPolls = 120; // Stop after 6 minutes (120 * 3 seconds)
+    const currentContactId = activeCallPolling.contactId;
+
+    const pollInterval = setInterval(async () => {
+      pollCount++;
+      
+      // Stop polling after max attempts
+      if (pollCount >= maxPolls) {
+        setCallPollingStatus("");
+        setActiveCallPolling(null);
+        toast({
+          title: "Call status unknown",
+          description: "Call monitoring timed out. Check the activity log for results.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      try {
+        const res = await apiRequest(
+          "GET", 
+          `/api/contacts/${activeCallPolling.contactId}/call-status/${activeCallPolling.callId}?actionId=${activeCallPolling.actionId}`
+        );
+        const data = await res.json();
+
+        // Handle various Retell call statuses
+        if (data.callStatus === 'ongoing' || data.callStatus === 'in_progress') {
+          setCallPollingStatus("Call in progress...");
+        } else if (data.callStatus === 'registered' || data.callStatus === 'queued') {
+          setCallPollingStatus("Connecting...");
+        } else if (data.isEnded || data.callStatus === 'ended' || data.callStatus === 'error') {
+          // Terminal states - stop polling
+          setCallPollingStatus("");
+          setActiveCallPolling(null);
+          
+          if (data.processed) {
+            toast({
+              title: "Call completed",
+              description: data.analysis?.summary || "AI call has been processed",
+            });
+          } else if (data.callStatus === 'error') {
+            toast({
+              title: "Call failed",
+              description: "The call could not be completed",
+              variant: "destructive",
+            });
+          } else {
+            toast({
+              title: "Call ended",
+              description: "Call results will appear in the activity log",
+            });
+          }
+          
+          queryClient.invalidateQueries({ queryKey: [`/api/contacts/${currentContactId}/preview`] });
+        }
+      } catch (error) {
+        console.error("Failed to poll call status:", error);
+        pollCount++; // Increment on error to eventually stop
+        
+        // Stop polling after 3 consecutive errors (pollCount jumps by 2 each time)
+        if (pollCount >= maxPolls) {
+          setCallPollingStatus("");
+          setActiveCallPolling(null);
+        }
+      }
+    }, 3000);
+
+    return () => clearInterval(pollInterval);
+  }, [activeCallPolling, toast]);
 
   const loadMoreTimeline = useCallback(async () => {
     if (!customerId || isLoadingMoreTimeline) return;
@@ -328,11 +413,22 @@ export function CustomerPreviewDrawer({
       const res = await apiRequest("POST", `/api/contacts/${customerId}/schedule-call`, callData);
       return await res.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       toast({
         title: callScheduleMode === "now" ? "Call initiated" : "Call scheduled",
         description: callScheduleMode === "now" ? "AI call is starting now" : callScheduleMode === "asap" ? "AI call will be initiated shortly" : "AI call has been scheduled",
       });
+      
+      // Start polling for call status if call was initiated immediately
+      if ((callScheduleMode === "now" || callScheduleMode === "asap") && data.retellCall?.call_id && data.action?.id && customerId) {
+        setActiveCallPolling({
+          callId: data.retellCall.call_id,
+          actionId: data.action.id,
+          contactId: customerId,
+        });
+        setCallPollingStatus("Connecting...");
+      }
+      
       resetCallForm();
       queryClient.invalidateQueries({ queryKey: [`/api/contacts/${customerId}/preview`] });
     },
@@ -983,6 +1079,14 @@ export function CustomerPreviewDrawer({
             Quick view of customer details and recent activity
           </SheetDescription>
         </SheetHeader>
+
+        {/* Active Call Status Indicator */}
+        {activeCallPolling && (
+          <div className="mx-6 mt-4 mb-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg flex items-center gap-2">
+            <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
+            <span className="text-sm text-blue-700 font-medium">{callPollingStatus || "AI call in progress..."}</span>
+          </div>
+        )}
 
         <div className="flex-1 flex min-h-0 overflow-hidden">
           {/* Left Column - Balance & Activity */}
