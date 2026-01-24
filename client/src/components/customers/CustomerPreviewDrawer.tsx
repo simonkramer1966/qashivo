@@ -2128,10 +2128,6 @@ export function CustomerPreviewDrawer({
                                   {isPtpMode && (
                                     <div 
                                       className="w-[24px] flex-shrink-0 flex items-center justify-center"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        togglePtpInvoice(invoice.id, invoice.balance);
-                                      }}
                                     >
                                       <Checkbox 
                                         checked={isPtpSelected}
