@@ -700,7 +700,8 @@ export function CustomerPreviewDrawer({
       return;
     }
 
-    if (!ptpAmount || parseFloat(ptpAmount) <= 0) {
+    const parsedAmount = parseFloat(stripCommas(ptpAmount || "0"));
+    if (!ptpAmount || parsedAmount <= 0) {
       toast({
         title: "Amount required",
         description: "Please enter the payment amount",
@@ -711,7 +712,7 @@ export function CustomerPreviewDrawer({
 
     if (selectedPtpInvoices.size > 0) {
       const selectedTotal = Array.from(selectedPtpInvoices.values()).reduce((sum, bal) => sum + (typeof bal === 'number' ? bal : parseFloat(String(bal)) || 0), 0);
-      if (parseFloat(ptpAmount) > selectedTotal) {
+      if (parsedAmount > selectedTotal) {
         toast({
           title: "Amount exceeds selected invoices",
           description: `Amount cannot exceed £${formatNumberWithCommas(selectedTotal.toFixed(2))}`,
@@ -725,7 +726,7 @@ export function CustomerPreviewDrawer({
       invoiceIds: Array.from(selectedPtpInvoices.keys()),
       paymentDate: ptpPaymentDate,
       paymentType: ptpPaymentType,
-      amount: parseFloat(ptpAmount),
+      amount: parsedAmount,
       confirmedBy: confirmedByValue,
       notes: ptpNotes || undefined,
     });
@@ -2289,7 +2290,7 @@ export function CustomerPreviewDrawer({
                         inputMode="decimal"
                         value={ptpAmount ? formatNumberWithCommas(ptpAmount) : ""}
                         onChange={(e) => setPtpAmount(stripCommas(e.target.value.replace(/[^0-9.,]/g, '')))}
-                        className={`h-9 text-xs pl-7 pr-3 bg-white text-right tabular-nums ${ptpValidationAttempted && (!ptpAmount || parseFloat(ptpAmount) <= 0) ? 'border-[#0B0F17]' : 'border-slate-200'}`}
+                        className={`h-9 text-xs pl-7 pr-3 bg-white text-right tabular-nums ${ptpValidationAttempted && (!ptpAmount || parseFloat(stripCommas(ptpAmount)) <= 0) ? 'border-[#0B0F17]' : 'border-slate-200'}`}
                         placeholder="0,000.00"
                       />
                     </div>
@@ -2389,10 +2390,11 @@ export function CustomerPreviewDrawer({
                       if (createPtpMutation.isPending) return true;
                       if (!ptpPaymentDate || !ptpConfirmedBy) return true;
                       if (ptpConfirmedBy === "new" && !ptpNewContactName) return true;
-                      if (!ptpAmount || parseFloat(ptpAmount) <= 0) return true;
+                      const parsedAmount = parseFloat(stripCommas(ptpAmount || "0"));
+                      if (!ptpAmount || parsedAmount <= 0) return true;
                       if (selectedPtpInvoices.size > 0) {
                         const selectedTotal = Array.from(selectedPtpInvoices.values()).reduce((sum, bal) => sum + (typeof bal === 'number' ? bal : parseFloat(String(bal)) || 0), 0);
-                        if (parseFloat(ptpAmount) > selectedTotal) return true;
+                        if (parsedAmount > selectedTotal) return true;
                       }
                       return false;
                     })()}
