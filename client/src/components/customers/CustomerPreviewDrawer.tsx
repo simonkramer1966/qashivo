@@ -2079,7 +2079,7 @@ export function CustomerPreviewDrawer({
                       const allDisplayedSelected = displayedInvoiceIds.length > 0 && displayedInvoiceIds.every(id => selectedPtpInvoices.has(id));
                       
                       return filteredInvoices && filteredInvoices.length > 0 ? (
-                        <div className="space-y-1">
+                        <div className={isPtpMode ? "flex flex-col min-h-[400px]" : "space-y-1"}>
                           {/* Header Row */}
                           <div className="flex items-center text-[10px] text-slate-400 uppercase tracking-wider pb-1 border-b border-slate-100">
                             {isPtpMode && (
@@ -2236,10 +2236,10 @@ export function CustomerPreviewDrawer({
                           {/* Dividing line and PTP Form */}
                           {isPtpMode && (
                             <>
-                              <div className="mt-3 border-t border-slate-200" />
+                              <div className="mt-auto pt-3 border-t border-slate-200" />
                               
                               {/* PTP Form */}
-                              <div className="mt-6 space-y-3">
+                              <div className="space-y-3">
                                 <p className="text-[10px] text-slate-400 uppercase tracking-wider">
                                   Promise to Pay Details
                                 </p>
