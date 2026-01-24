@@ -786,7 +786,7 @@ export default function InvestorDemo() {
                 </div>
                 <div>
                   <h3 className="text-[24px] font-semibold text-[#0B0F17]">
-                    {isDemoProcessing ? "AI Analysis - In Progress" : currentResults ? "AI Analysis Complete" : "AI Analysis"}
+                    {isDemoProcessing ? "AI Credit Control Insights - In Progress" : currentResults ? "AI Credit Control Insights" : "AI Credit Control Insights"}
                   </h3>
                   <p className="text-[14px] text-[#556070]">Voice Call Intelligence Report</p>
                 </div>
