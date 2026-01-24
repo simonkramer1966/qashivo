@@ -2042,6 +2042,39 @@ export function CustomerPreviewDrawer({
                       >
                         Overdue ({[...(preview.invoices || []), ...additionalInvoices].filter(inv => inv.daysOverdue && inv.daysOverdue > 0).length || 0})
                       </button>
+                      {isPtpMode && (
+                        <button
+                          onClick={() => {
+                            const allInvoices = [...(preview.invoices || []), ...additionalInvoices];
+                            const baseInvoices = invoiceFilter === "overdue"
+                              ? allInvoices.filter(inv => inv.daysOverdue && inv.daysOverdue > 0)
+                              : allInvoices;
+                            const allSelected = baseInvoices.length > 0 && baseInvoices.every(inv => selectedPtpInvoices.has(inv.id));
+                            if (allSelected) {
+                              setSelectedPtpInvoices(new Map());
+                              setPtpAmount("");
+                            } else {
+                              const newSelected = new Map<string, number>();
+                              baseInvoices.forEach(inv => {
+                                newSelected.set(inv.id, inv.balance);
+                              });
+                              setSelectedPtpInvoices(newSelected);
+                              const total = baseInvoices.reduce((sum, inv) => sum + inv.balance, 0);
+                              setPtpAmount(total.toFixed(2));
+                            }
+                          }}
+                          className="ml-auto px-3 py-1 text-xs font-medium rounded-md transition-colors text-[#17B6C3] hover:text-[#1396A1] hover:bg-[#17B6C3]/10"
+                        >
+                          {(() => {
+                            const allInvoices = [...(preview.invoices || []), ...additionalInvoices];
+                            const baseInvoices = invoiceFilter === "overdue"
+                              ? allInvoices.filter(inv => inv.daysOverdue && inv.daysOverdue > 0)
+                              : allInvoices;
+                            const allSelected = baseInvoices.length > 0 && baseInvoices.every(inv => selectedPtpInvoices.has(inv.id));
+                            return allSelected ? "Deselect All" : "Select All";
+                          })()}
+                        </button>
+                      )}
                     </div>
                     
                     {(() => {
@@ -2117,35 +2150,12 @@ export function CustomerPreviewDrawer({
                             >
                               Days<SortIcon column="daysOverdue" />
                             </button>
-                            <div className="w-[70px] flex-shrink-0 flex flex-col items-end">
-                              {isPtpMode && (
-                                <button
-                                  onClick={() => {
-                                    if (allDisplayedSelected) {
-                                      setSelectedPtpInvoices(new Map());
-                                      setPtpAmount("");
-                                    } else {
-                                      const newSelected = new Map<string, number>();
-                                      filteredInvoices.forEach(inv => {
-                                        newSelected.set(inv.id, inv.balance);
-                                      });
-                                      setSelectedPtpInvoices(newSelected);
-                                      const total = filteredInvoices.reduce((sum, inv) => sum + inv.balance, 0);
-                                      setPtpAmount(total.toFixed(2));
-                                    }
-                                  }}
-                                  className="text-[#17B6C3] hover:text-[#1396A1] transition-colors normal-case font-medium text-right"
-                                >
-                                  {allDisplayedSelected ? "Deselect All" : "Select All"}
-                                </button>
-                              )}
-                              <button 
-                                onClick={() => toggleSort("balance")}
-                                className={`text-right hover:text-slate-600 transition-colors ${invoiceSortColumn === "balance" ? "text-slate-600 font-medium" : ""}`}
-                              >
-                                Amount<SortIcon column="balance" />
-                              </button>
-                            </div>
+                            <button 
+                              onClick={() => toggleSort("balance")}
+                              className={`w-[70px] flex-shrink-0 text-right hover:text-slate-600 transition-colors ${invoiceSortColumn === "balance" ? "text-slate-600 font-medium" : ""}`}
+                            >
+                              Amount<SortIcon column="balance" />
+                            </button>
                             <span className="w-[20px] flex-shrink-0" />
                           </div>
                           {/* Invoice Rows */}
