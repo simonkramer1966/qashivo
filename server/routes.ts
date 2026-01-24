@@ -4386,7 +4386,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         scheduledTime = new Date();
       }
 
-      // Get the first overdue invoice for this contact (for call context)
+      // Get ALL overdue invoices for this contact to calculate total outstanding
       const overdueInvoices = await db.select()
         .from(invoices)
         .where(
@@ -4396,8 +4396,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
             eq(invoices.status, 'overdue')
           )
         )
-        .limit(1);
+        .orderBy(sql`COALESCE(${invoices.dueDate}, ${invoices.createdAt}) ASC`); // Oldest first, null-safe
 
+      // Calculate totals across all overdue invoices
+      const totalOutstanding = overdueInvoices.reduce((sum, inv) => {
+        const balance = parseFloat(String(inv.balance || inv.total || 0));
+        return sum + (isNaN(balance) ? 0 : balance);
+      }, 0);
+      const invoiceCount = overdueInvoices.length;
+      
+      // Use the oldest (most overdue) invoice as the primary reference
       const primaryInvoice = overdueInvoices[0] || null;
 
       // Create an action for the AI voice call
@@ -4428,7 +4436,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           daysOverdue: primaryInvoice?.dueDate 
             ? Math.max(0, Math.floor((Date.now() - new Date(primaryInvoice.dueDate).getTime()) / (1000 * 60 * 60 * 24)))
             : 0,
-          totalOutstanding: primaryInvoice?.balance || 0,
+          totalOutstanding: totalOutstanding,
+          invoiceCount: invoiceCount,
         }
       }).returning();
 
@@ -4468,18 +4477,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
           } else {
             console.log(`📞 Immediately initiating Retell call to ${phoneToCall}`);
             
-            retellResult = await retellService.createCall({
+            // Import and use the unified Retell call helper with standard variables
+            const { createUnifiedRetellCall, createStandardCollectionVariables } = await import('./utils/retellCallHelper.js');
+            
+            // Calculate days overdue from the oldest invoice
+            const daysOverdue = primaryInvoice?.dueDate 
+              ? Math.max(0, Math.floor((Date.now() - new Date(primaryInvoice.dueDate).getTime()) / (1000 * 60 * 60 * 24)))
+              : 0;
+            
+            // Create standard collection variables with real customer data
+            const callVariables = createStandardCollectionVariables({
+              customerName: nameToCall,
+              companyName: contact.companyName || contact.name,
+              invoiceNumber: primaryInvoice?.invoiceNumber || 'N/A',
+              invoiceAmount: primaryInvoice?.balance || primaryInvoice?.total || 0,
+              totalOutstanding: totalOutstanding,
+              invoiceCount: invoiceCount,
+              daysOverdue: daysOverdue,
+              dueDate: primaryInvoice?.dueDate,
+            });
+            
+            const unifiedResult = await createUnifiedRetellCall({
               fromNumber: process.env.RETELL_PHONE_NUMBER || '+442045772088',
               toNumber: phoneToCall,
               agentId: agentId,
               dynamicVariables: {
-                customerName: nameToCall,
-                companyName: contact.companyName || contact.name,
-                invoiceNumber: primaryInvoice?.invoiceNumber || 'N/A',
-                amount: primaryInvoice?.balance || 'N/A',
-                daysOverdue: primaryInvoice?.dueDate 
-                  ? Math.max(0, Math.floor((Date.now() - new Date(primaryInvoice.dueDate).getTime()) / (1000 * 60 * 60 * 24)))
-                  : 0,
+                ...callVariables,
                 voiceTone: voiceTone,
                 toneLabel: toneLabel,
                 reasonForCall: reason || '',
@@ -4490,11 +4513,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 contactId: contact.id,
                 invoiceId: primaryInvoice?.id,
                 actionId: newAction.id,
+                type: 'system_call',
                 voiceTone,
                 goal,
                 reason,
-              }
+              },
+              context: 'SYSTEM_CALL'
             });
+            
+            // Convert unified result to expected format
+            retellResult = {
+              call_id: unifiedResult.callId,
+              status: unifiedResult.status,
+              from_number: unifiedResult.fromNumber,
+              to_number: unifiedResult.toNumber,
+              agent_id: unifiedResult.agentId,
+            };
             
             console.log(`✅ Retell call initiated: ${JSON.stringify(retellResult)}`);
             
