@@ -706,7 +706,7 @@ export default function InvestorDemo() {
                   <Phone className="w-6 h-6 text-[#12B8C4]" />
                 </div>
                 <div>
-                  <h3 className="text-[24px] font-semibold text-[#0B0F17]">AI Voice Call Demo</h3>
+                  <h3 className="text-[24px] font-semibold text-[#0B0F17]">AI Credit Controller Demo</h3>
                   <p className="text-[14px] text-[#556070]">Real-time intent detection</p>
                 </div>
               </div>
