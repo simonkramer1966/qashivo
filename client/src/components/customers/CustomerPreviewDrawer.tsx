@@ -2197,11 +2197,11 @@ export function CustomerPreviewDrawer({
                                     </div>
                                     <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs max-w-[200px] pt-1 border-t border-slate-100">
                                       <span className="text-slate-600">Invoice Total:</span>
-                                      <span className="text-right font-medium">{formatCurrency(invoice.amount)}</span>
+                                      <span className="text-right font-medium">{formatCurrency(invoice.amount, { showDecimals: true })}</span>
                                       <span className="text-slate-600">Paid:</span>
-                                      <span className="text-right font-medium text-green-600">{formatCurrency(invoice.amountPaid)}</span>
+                                      <span className="text-right font-medium text-green-600">{formatCurrency(invoice.amountPaid, { showDecimals: true })}</span>
                                       <span className="text-slate-600">Balance:</span>
-                                      <span className="text-right font-semibold text-slate-900">{formatCurrency(invoice.balance)}</span>
+                                      <span className="text-right font-semibold text-slate-900">{formatCurrency(invoice.balance, { showDecimals: true })}</span>
                                     </div>
                                   </div>
                                 )}
