@@ -2156,10 +2156,10 @@ export function CustomerPreviewDrawer({
                                     onClick={() => !isPtpMode && toggleInvoice(invoice.id)}
                                     className={`flex-1 flex items-center ${!isPtpMode ? 'cursor-pointer' : ''}`}
                                   >
-                                    <span className="w-[60px] flex-shrink-0 text-slate-500 tabular-nums text-left">
+                                    <span className={`w-[60px] flex-shrink-0 tabular-nums text-left ${invoice.daysOverdue && invoice.daysOverdue > 0 ? getInvoiceStatusColor(invoice) : 'text-slate-500'}`}>
                                       {formatShortDate(invoice.issueDate)}
                                     </span>
-                                    <span className="flex-1 min-w-0 font-medium text-slate-900 truncate pr-2 text-left">
+                                    <span className={`flex-1 min-w-0 font-medium truncate pr-2 text-left ${invoice.daysOverdue && invoice.daysOverdue > 0 ? getInvoiceStatusColor(invoice) : 'text-slate-900'}`}>
                                       {invoice.invoiceNumber}
                                     </span>
                                     {!isPtpMode && (
@@ -2172,7 +2172,7 @@ export function CustomerPreviewDrawer({
                                         </span>
                                       </>
                                     )}
-                                    <span className="w-[70px] flex-shrink-0 text-right font-semibold text-slate-900 tabular-nums">
+                                    <span className={`w-[70px] flex-shrink-0 text-right font-semibold tabular-nums ${invoice.daysOverdue && invoice.daysOverdue > 0 ? getInvoiceStatusColor(invoice) : 'text-slate-900'}`}>
                                       {formatCurrency(invoice.balance)}
                                     </span>
                                     {isPtpMode && (
