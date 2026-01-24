@@ -2038,26 +2038,6 @@ export function CustomerPreviewDrawer({
                       >
                         Overdue ({[...(preview.invoices || []), ...additionalInvoices].filter(inv => inv.daysOverdue && inv.daysOverdue > 0).length || 0})
                       </button>
-                      {isPtpMode && (
-                        <button
-                          onClick={() => {
-                            const allInvoices = [...(preview.invoices || []), ...additionalInvoices];
-                            const filteredInvoices = invoiceFilter === "overdue"
-                              ? allInvoices.filter(inv => inv.daysOverdue && inv.daysOverdue > 0)
-                              : allInvoices;
-                            const newSelected = new Map<string, number>();
-                            filteredInvoices.forEach(inv => {
-                              newSelected.set(inv.id, inv.balance);
-                            });
-                            setSelectedPtpInvoices(newSelected);
-                            const total = filteredInvoices.reduce((sum, inv) => sum + inv.balance, 0);
-                            setPtpAmount(total.toFixed(2));
-                          }}
-                          className="ml-auto px-3 py-1 text-xs font-medium rounded-md transition-colors text-[#17B6C3] hover:bg-[#17B6C3]/10"
-                        >
-                          Select All
-                        </button>
-                      )}
                     </div>
                     
                     {(() => {
@@ -2133,12 +2113,34 @@ export function CustomerPreviewDrawer({
                             >
                               Days<SortIcon column="daysOverdue" />
                             </button>
-                            <button 
-                              onClick={() => toggleSort("balance")}
-                              className={`w-[70px] flex-shrink-0 text-right hover:text-slate-600 transition-colors ${invoiceSortColumn === "balance" ? "text-slate-600 font-medium" : ""}`}
-                            >
-                              Amount<SortIcon column="balance" />
-                            </button>
+                            {isPtpMode ? (
+                              <button
+                                onClick={() => {
+                                  if (allDisplayedSelected) {
+                                    setSelectedPtpInvoices(new Map());
+                                    setPtpAmount("");
+                                  } else {
+                                    const newSelected = new Map<string, number>();
+                                    filteredInvoices.forEach(inv => {
+                                      newSelected.set(inv.id, inv.balance);
+                                    });
+                                    setSelectedPtpInvoices(newSelected);
+                                    const total = filteredInvoices.reduce((sum, inv) => sum + inv.balance, 0);
+                                    setPtpAmount(total.toFixed(2));
+                                  }
+                                }}
+                                className="w-[70px] flex-shrink-0 text-right text-[#17B6C3] hover:text-[#1396A1] transition-colors normal-case font-medium"
+                              >
+                                {allDisplayedSelected ? "Deselect All" : "Select All"}
+                              </button>
+                            ) : (
+                              <button 
+                                onClick={() => toggleSort("balance")}
+                                className={`w-[70px] flex-shrink-0 text-right hover:text-slate-600 transition-colors ${invoiceSortColumn === "balance" ? "text-slate-600 font-medium" : ""}`}
+                              >
+                                Amount<SortIcon column="balance" />
+                              </button>
+                            )}
                             <span className="w-[20px] flex-shrink-0" />
                           </div>
                           {/* Invoice Rows */}
