@@ -2177,15 +2177,15 @@ export function CustomerPreviewDrawer({
                                     {isPtpMode && (
                                       <div className="w-[90px] flex-shrink-0 flex justify-end" onClick={(e) => e.stopPropagation()}>
                                         <div className="relative w-[85px]">
-                                          <span className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" style={{ fontSize: '12px' }}>£</span>
+                                          <span className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" style={{ fontSize: '11px' }}>£</span>
                                           <Input
                                             type="text"
                                             inputMode="decimal"
                                             value={ptpAllocations[invoice.id] ? formatNumberWithCommas(ptpAllocations[invoice.id]) : ""}
                                             onChange={(e) => updatePtpAllocation(invoice.id, e.target.value)}
                                             disabled={!isPtpSelected}
-                                            className={`h-6 font-normal text-right pr-2 pl-5 border-slate-200 tabular-nums ${isPtpSelected ? 'bg-white text-slate-900' : 'bg-slate-50 text-slate-400'}`}
-                                            style={{ fontSize: '12px' }}
+                                            className={`h-6 text-right pr-2 pl-5 border-slate-200 tabular-nums ${isPtpSelected ? 'bg-white text-slate-900' : 'bg-slate-50 text-slate-400'}`}
+                                            style={{ fontSize: '11px', fontWeight: 400 }}
                                             placeholder="0.00"
                                           />
                                         </div>
