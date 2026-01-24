@@ -784,7 +784,7 @@ export function CustomerPreviewDrawer({
                                   <div key={item.id} className="min-w-0 w-full max-w-full overflow-hidden">
                                     <button
                                       onClick={() => toggleTimelineItem(item.id)}
-                                      className="group w-full max-w-full flex items-center gap-2 py-1.5 hover:bg-slate-100 transition-colors text-left min-w-0 overflow-hidden"
+                                      className="group w-full max-w-full flex items-center text-xs py-1.5 hover:bg-slate-100 transition-colors text-left min-w-0 overflow-hidden"
                                     >
                                       <TooltipProvider delayDuration={300}>
                                         <Tooltip>
@@ -799,10 +799,10 @@ export function CustomerPreviewDrawer({
                                         </Tooltip>
                                       </TooltipProvider>
                                       
-                                      <div className="flex items-center gap-1 text-slate-500 flex-shrink-0 w-14">
+                                      <span className="text-slate-500 flex-shrink-0 w-[50px] flex items-center">
                                         <span className="w-4 flex-shrink-0">{getChannelIcon(item.channel)}</span>
-                                        <span className="text-xs font-medium">{getChannelLabel(item.channel)}</span>
-                                      </div>
+                                        <span className="font-medium ml-1">{getChannelLabel(item.channel)}</span>
+                                      </span>
                                       
                                       <span className="text-xs font-medium text-slate-900 flex-1 min-w-0 truncate pr-2">
                                         {(() => {
@@ -812,23 +812,16 @@ export function CustomerPreviewDrawer({
                                         })()}
                                       </span>
                                       
-                                      <div className="flex items-center gap-1.5 flex-shrink-0">
-                                        {outcomeLabel && (
-                                          <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${outcomeLabel.color}`}>
-                                            {outcomeLabel.label}
-                                          </span>
-                                        )}
-                                        {amount && (
-                                          <span className="text-xs font-semibold text-slate-700">
-                                            {formatCurrency(amount)}
-                                          </span>
-                                        )}
+                                      <span className="w-[70px] flex-shrink-0 text-right font-semibold text-slate-900 tabular-nums">
+                                        {amount ? formatCurrency(amount) : ''}
+                                      </span>
+                                      <span className="w-[20px] flex-shrink-0 flex justify-end">
                                         {isItemExpanded ? (
                                           <ChevronDown className="h-3.5 w-3.5 text-slate-400" />
                                         ) : (
                                           <ChevronRight className="h-3.5 w-3.5 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity" />
                                         )}
-                                      </div>
+                                      </span>
                                     </button>
                                     
                                     {isItemExpanded && (
