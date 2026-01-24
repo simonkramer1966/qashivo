@@ -694,7 +694,7 @@ export default function InvestorDemo() {
           <div className="max-w-[700px] mx-auto text-center mb-12">
             <h2 className="text-[40px] md:text-[48px] font-semibold text-[#0B0F17] leading-[1.1] tracking-[-0.02em] mb-6">Meet your AI Credit Controller</h2>
             <p className="text-[18px] md:text-[20px] text-[#556070] leading-[1.55]">
-              Try our real-time AI voice agent. Receive an automated collection call and watch our AI detect intent and sentiment in real-time.
+              Try Qashivo, the real-time AI credit controller. Receive an automated collections call and see intent, sentiment, and payment commitment detected live.
             </p>
           </div>
 
