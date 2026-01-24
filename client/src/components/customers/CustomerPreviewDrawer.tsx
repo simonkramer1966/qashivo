@@ -160,6 +160,13 @@ export function CustomerPreviewDrawer({
   const [invoiceSortDirection, setInvoiceSortDirection] = useState<"asc" | "desc">("desc");
   const [expandedInvoices, setExpandedInvoices] = useState<Set<number>>(new Set());
 
+  // Reset search state when customer changes or drawer opens
+  useEffect(() => {
+    setActivitySearchOpen(false);
+    setActivitySearchQuery("");
+    setDebouncedSearchQuery("");
+  }, [customerId]);
+
   // Debounce activity search
   useEffect(() => {
     const timer = setTimeout(() => {
