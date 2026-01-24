@@ -2138,7 +2138,7 @@ export function CustomerPreviewDrawer({
                             return (
                               <div key={invoice.id} className="min-w-0 w-full">
                                 <div
-                                  className="group w-full flex items-center text-xs py-2 hover:bg-slate-100 cursor-pointer transition-colors text-left"
+                                  className="group w-full flex items-center text-xs py-2 hover:bg-slate-100 cursor-pointer transition-colors text-left min-h-[28px]"
                                 >
                                   {isPtpMode && (
                                     <div 
@@ -2184,7 +2184,7 @@ export function CustomerPreviewDrawer({
                                             value={ptpAllocations[invoice.id] ? formatNumberWithCommas(ptpAllocations[invoice.id]) : ""}
                                             onChange={(e) => updatePtpAllocation(invoice.id, e.target.value)}
                                             disabled={!isPtpSelected}
-                                            className={`h-5 text-right pr-2 pl-5 border-slate-200 tabular-nums ${isPtpSelected ? 'bg-white text-slate-900' : 'bg-slate-50 text-slate-400'}`}
+                                            className={`h-4 text-right pr-2 pl-5 border-slate-200 tabular-nums ${isPtpSelected ? 'bg-white text-slate-900' : 'bg-slate-50 text-slate-400'}`}
                                             style={{ fontSize: '11px', fontWeight: 400 }}
                                             placeholder="0.00"
                                           />
