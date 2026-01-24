@@ -2127,7 +2127,7 @@ export function CustomerPreviewDrawer({
                               Amount<SortIcon column="balance" />
                             </button>
                             {isPtpMode && (
-                              <span className="w-[90px] flex-shrink-0 text-right">PTP</span>
+                              <span className="w-[70px] flex-shrink-0 text-right pr-2">PTP</span>
                             )}
                             {!isPtpMode && <span className="w-[20px] flex-shrink-0" />}
                           </div>
