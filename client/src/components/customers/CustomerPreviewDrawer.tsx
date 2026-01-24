@@ -936,9 +936,7 @@ export function CustomerPreviewDrawer({
 
   const getInvoiceStatusColor = (invoice: CustomerPreviewInvoice) => {
     if (invoice.daysOverdue && invoice.daysOverdue > 0) {
-      if (invoice.daysOverdue > 90) return "text-red-600";
-      if (invoice.daysOverdue > 30) return "text-orange-500";
-      return "text-amber-500";
+      return "text-[#C75C5C]";
     }
     return "text-slate-600";
   };
