@@ -53,11 +53,11 @@ export default function Homepage() {
               <span className="text-[#17B6C3] font-semibold text-sm uppercase tracking-wide">CUTTING EDGE CREDIT CONTROL</span>
             </div>
             <h1 className="text-4xl md:text-6xl font-bold text-gray-900 mb-6 leading-tight font-heading">
-              Get paid faster.{" "}
-              <span className="text-[#17B6C3]">Forecast with confidence.</span>
+              Get Paid 60% Faster,{" "}
+              <span className="text-[#17B6C3]">Automated Cashflow Made Simple</span>
             </h1>
             <p className="text-lg md:text-xl text-gray-600 mb-8 max-w-4xl mx-auto leading-relaxed">
-              Qashivo chases invoices, captures debtor intent (promises, delays, disputes), and instantly updates your cash-in forecast so you step in only for exceptions.
+              Qashivo connects seamlessly with Xero to chase late invoices automatically, forecasts your cash flow and provides finance options to keep your business flowing. Backed by UK Chartered Accountants and built with bank-grade security, it's the stress-free way to stay in control of your business finances.
             </p>
             
             <Link href="/client/register">

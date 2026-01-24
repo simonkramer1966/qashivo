@@ -101,10 +101,10 @@ export default function Home() {
             {/* Left - Text Content */}
             <div>
               <h1 className="text-[40px] md:text-[52px] font-semibold text-[#0B0F17] leading-[1.05] tracking-[-0.02em] mb-6">
-                Receivables, managed continuously.
+                Get paid faster. Forecast with confidence.
               </h1>
               <p className="text-[18px] md:text-[20px] text-[#556070] leading-[1.55] mb-8">
-                Qashivo monitors invoices, nudges customers, tracks promises, and updates your cash outlook automatically. Step in only when something needs Attention.
+                Qashivo chases invoices, captures debtor intent (promises, delays, disputes), and instantly updates your cash-in forecast so you step in only for exceptions.
               </p>
               <div className="flex flex-col sm:flex-row items-start gap-4 mb-6">
                 <Button
@@ -354,7 +354,7 @@ export default function Home() {
                 <span className="text-[16px] font-semibold text-[#0B0F17]">Qashivo</span>
               </a>
               <p className="text-[13px] text-[#556070]">
-                Receivables, managed continuously.
+                Get paid faster. Forecast with confidence.
               </p>
             </div>
             
