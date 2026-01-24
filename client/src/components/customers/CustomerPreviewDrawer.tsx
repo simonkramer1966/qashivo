@@ -1997,7 +1997,7 @@ export function CustomerPreviewDrawer({
 
           {/* Right Column - Invoices */}
           <div className="w-1/2 flex flex-col min-w-0 overflow-hidden">
-            <ScrollArea className="flex-1">
+            <ScrollArea className={isPtpMode ? "h-1/2" : "flex-1"}>
               <div className="px-6 py-6 min-w-0 overflow-hidden">
                 {isLoading ? (
                   <div className="space-y-3">
@@ -2081,15 +2081,6 @@ export function CustomerPreviewDrawer({
                         <div className="space-y-1">
                           {/* Header Row */}
                           <div className="flex items-center text-[10px] text-slate-400 uppercase tracking-wider pb-1 border-b border-slate-100 pr-2">
-                            {isPtpMode && (
-                              <div className="w-[24px] flex-shrink-0 flex items-center justify-center">
-                                <Checkbox 
-                                  checked={allDisplayedSelected}
-                                  onCheckedChange={() => toggleAllPtpInvoices(displayedInvoiceIds, filteredInvoices?.map(inv => ({ id: inv.id, balance: inv.balance })))}
-                                  className="h-3.5 w-3.5"
-                                />
-                              </div>
-                            )}
                             <button 
                               onClick={() => toggleSort("issueDate")}
                               className={`w-[60px] flex-shrink-0 text-left hover:text-slate-600 transition-colors ${invoiceSortColumn === "issueDate" ? "text-slate-600 font-medium" : ""}`}
@@ -2102,113 +2093,63 @@ export function CustomerPreviewDrawer({
                             >
                               Invoice #<SortIcon column="invoiceNumber" />
                             </button>
-                            {!isPtpMode && (
-                              <>
-                                <button 
-                                  onClick={() => toggleSort("dueDate")}
-                                  className={`w-[60px] flex-shrink-0 text-right hover:text-slate-600 transition-colors ${invoiceSortColumn === "dueDate" ? "text-slate-600 font-medium" : ""}`}
-                                >
-                                  Due<SortIcon column="dueDate" />
-                                </button>
-                                <button 
-                                  onClick={() => toggleSort("daysOverdue")}
-                                  className={`w-[50px] flex-shrink-0 text-right hover:text-slate-600 transition-colors ${invoiceSortColumn === "daysOverdue" ? "text-slate-600 font-medium" : ""}`}
-                                >
-                                  Days<SortIcon column="daysOverdue" />
-                                </button>
-                              </>
-                            )}
+                            <button 
+                              onClick={() => toggleSort("dueDate")}
+                              className={`w-[60px] flex-shrink-0 text-right hover:text-slate-600 transition-colors ${invoiceSortColumn === "dueDate" ? "text-slate-600 font-medium" : ""}`}
+                            >
+                              Due<SortIcon column="dueDate" />
+                            </button>
+                            <button 
+                              onClick={() => toggleSort("daysOverdue")}
+                              className={`w-[50px] flex-shrink-0 text-right hover:text-slate-600 transition-colors ${invoiceSortColumn === "daysOverdue" ? "text-slate-600 font-medium" : ""}`}
+                            >
+                              Days<SortIcon column="daysOverdue" />
+                            </button>
                             <button 
                               onClick={() => toggleSort("balance")}
                               className={`w-[70px] flex-shrink-0 text-right hover:text-slate-600 transition-colors ${invoiceSortColumn === "balance" ? "text-slate-600 font-medium" : ""}`}
                             >
                               Amount<SortIcon column="balance" />
                             </button>
-                            {isPtpMode && (
-                              <span className="w-[70px] flex-shrink-0 text-right pr-2">PTP</span>
-                            )}
-                            {!isPtpMode && <span className="w-[20px] flex-shrink-0" />}
+                            <span className="w-[20px] flex-shrink-0" />
                           </div>
                           {/* Invoice Rows */}
-                          <div className={`pr-2 ${isPtpMode ? 'max-h-[320px] overflow-y-auto' : ''}`}>
+                          <div className="pr-2">
                           {filteredInvoices.map((invoice) => {
                             const isExpanded = expandedInvoices.has(invoice.id);
                             const isPtpSelected = selectedPtpInvoices.has(invoice.id);
                             return (
                               <div key={invoice.id} className="min-w-0 w-full">
                                 <div
-                                  className="group w-full flex items-center text-xs py-2 hover:bg-slate-100 cursor-pointer transition-colors text-left"
+                                  onClick={() => isPtpMode ? togglePtpInvoice(invoice.id, invoice.balance) : toggleInvoice(invoice.id)}
+                                  className={`group w-full flex items-center text-xs py-2 cursor-pointer transition-colors text-left ${
+                                    isPtpMode && isPtpSelected 
+                                      ? 'bg-[#17B6C3]/10 hover:bg-[#17B6C3]/15' 
+                                      : 'hover:bg-slate-100'
+                                  }`}
                                 >
-                                  {isPtpMode && (
-                                    <div 
-                                      className="w-[24px] flex-shrink-0 flex items-center justify-center"
-                                    >
-                                      <Checkbox 
-                                        checked={isPtpSelected}
-                                        onCheckedChange={() => togglePtpInvoice(invoice.id, invoice.balance)}
-                                        className="h-3.5 w-3.5"
-                                      />
-                                    </div>
-                                  )}
-                                  <div
-                                    onClick={() => !isPtpMode && toggleInvoice(invoice.id)}
-                                    className={`flex-1 flex items-center ${!isPtpMode ? 'cursor-pointer' : ''}`}
-                                  >
-                                    <span className={`w-[60px] flex-shrink-0 tabular-nums text-left ${invoice.daysOverdue && invoice.daysOverdue > 0 ? getInvoiceStatusColor(invoice) : 'text-slate-500'}`}>
-                                      {formatShortDate(invoice.issueDate)}
-                                    </span>
-                                    <span className={`flex-1 min-w-0 font-medium truncate pr-2 text-left ${invoice.daysOverdue && invoice.daysOverdue > 0 ? getInvoiceStatusColor(invoice) : 'text-slate-900'}`}>
-                                      {invoice.invoiceNumber}
-                                    </span>
-                                    {!isPtpMode && (
-                                      <>
-                                        <span className={`w-[60px] flex-shrink-0 text-right tabular-nums ${invoice.daysOverdue && invoice.daysOverdue > 0 ? getInvoiceStatusColor(invoice) : 'text-slate-500'}`}>
-                                          {formatShortDate(invoice.dueDate)}
-                                        </span>
-                                        <span className={`w-[50px] flex-shrink-0 text-right tabular-nums ${invoice.daysOverdue && invoice.daysOverdue > 0 ? getInvoiceStatusColor(invoice) : 'text-slate-500'}`}>
-                                          {invoice.daysOverdue && invoice.daysOverdue > 0 ? invoice.daysOverdue : '-'}
-                                        </span>
-                                      </>
-                                    )}
-                                    <span className={`w-[70px] flex-shrink-0 text-right font-semibold tabular-nums ${invoice.daysOverdue && invoice.daysOverdue > 0 ? getInvoiceStatusColor(invoice) : 'text-slate-900'}`}>
-                                      {formatCurrency(invoice.balance)}
-                                    </span>
-                                    {isPtpMode && (
-                                      <div className="w-[70px] flex-shrink-0 flex justify-end" onClick={(e) => e.stopPropagation()}>
-                                        {editingPtpInvoiceId === invoice.id ? (
-                                          <Input
-                                            type="text"
-                                            inputMode="decimal"
-                                            autoFocus
-                                            value={ptpAllocations[invoice.id] ? formatNumberWithCommas(ptpAllocations[invoice.id]) : ""}
-                                            onChange={(e) => updatePtpAllocation(invoice.id, e.target.value)}
-                                            onBlur={() => setEditingPtpInvoiceId(null)}
-                                            onKeyDown={(e) => e.key === 'Enter' && setEditingPtpInvoiceId(null)}
-                                            className="h-5 w-[70px] text-right pr-1 pl-1 border-slate-300 tabular-nums bg-white text-slate-900"
-                                            style={{ fontSize: '11px', fontWeight: 400 }}
-                                            placeholder="0.00"
-                                          />
-                                        ) : (
-                                          <span
-                                            onClick={() => isPtpSelected && setEditingPtpInvoiceId(invoice.id)}
-                                            className={`text-right tabular-nums cursor-pointer ${isPtpSelected ? 'text-slate-900 hover:text-[#17B6C3]' : 'text-slate-400'}`}
-                                            style={{ fontSize: '11px' }}
-                                          >
-                                            {ptpAllocations[invoice.id] ? `£${formatNumberWithCommas(ptpAllocations[invoice.id])}` : (isPtpSelected ? '£0.00' : '')}
-                                          </span>
-                                        )}
-                                      </div>
-                                    )}
-                                    {!isPtpMode && (
-                                      <span className="w-[20px] flex-shrink-0 flex justify-end">
-                                        {isExpanded ? (
-                                          <ChevronDown className="h-3.5 w-3.5 text-slate-400" />
-                                        ) : (
-                                          <ChevronRight className="h-3.5 w-3.5 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity" />
-                                        )}
-                                      </span>
-                                    )}
-                                  </div>
+                                  <span className={`w-[60px] flex-shrink-0 tabular-nums text-left ${invoice.daysOverdue && invoice.daysOverdue > 0 ? getInvoiceStatusColor(invoice) : 'text-slate-500'}`}>
+                                    {formatShortDate(invoice.issueDate)}
+                                  </span>
+                                  <span className={`flex-1 min-w-0 font-medium truncate pr-2 text-left ${invoice.daysOverdue && invoice.daysOverdue > 0 ? getInvoiceStatusColor(invoice) : 'text-slate-900'}`}>
+                                    {invoice.invoiceNumber}
+                                  </span>
+                                  <span className={`w-[60px] flex-shrink-0 text-right tabular-nums ${invoice.daysOverdue && invoice.daysOverdue > 0 ? getInvoiceStatusColor(invoice) : 'text-slate-500'}`}>
+                                    {formatShortDate(invoice.dueDate)}
+                                  </span>
+                                  <span className={`w-[50px] flex-shrink-0 text-right tabular-nums ${invoice.daysOverdue && invoice.daysOverdue > 0 ? getInvoiceStatusColor(invoice) : 'text-slate-500'}`}>
+                                    {invoice.daysOverdue && invoice.daysOverdue > 0 ? invoice.daysOverdue : '-'}
+                                  </span>
+                                  <span className={`w-[70px] flex-shrink-0 text-right font-semibold tabular-nums ${invoice.daysOverdue && invoice.daysOverdue > 0 ? getInvoiceStatusColor(invoice) : 'text-slate-900'}`}>
+                                    {formatCurrency(invoice.balance)}
+                                  </span>
+                                  <span className="w-[20px] flex-shrink-0 flex justify-end">
+                                    {!isPtpMode && isExpanded ? (
+                                      <ChevronDown className="h-3.5 w-3.5 text-slate-400" />
+                                    ) : !isPtpMode ? (
+                                      <ChevronRight className="h-3.5 w-3.5 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                    ) : null}
+                                  </span>
                                 </div>
                                 
                                 {isExpanded && !isPtpMode && (
@@ -2273,7 +2214,7 @@ export function CustomerPreviewDrawer({
 
             {/* PTP Form Footer - shown in PTP mode */}
             {preview && isPtpMode && (
-              <div className="px-6 py-4 flex-shrink-0 space-y-3 max-h-[320px] overflow-y-auto">
+              <div className="px-6 py-4 flex-1 space-y-3 overflow-y-auto border-t border-slate-100">
                 <p className="text-[10px] text-slate-400 uppercase tracking-wider">
                   Promise to Pay Details
                 </p>
@@ -2331,7 +2272,7 @@ export function CustomerPreviewDrawer({
                   </div>
                   <div>
                     <Label htmlFor="ptpAmount" className="text-xs text-slate-500 mb-1.5 block">
-                      Amount {selectedPtpInvoices.size > 0 && <span className="text-slate-400 font-normal">(allocated)</span>}
+                      Amount {selectedPtpInvoices.size > 0 && <span className="text-slate-400 font-normal">({selectedPtpInvoices.size} invoice{selectedPtpInvoices.size !== 1 ? 's' : ''})</span>}
                     </Label>
                     <div className="relative">
                       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-slate-500">£</span>
@@ -2341,8 +2282,7 @@ export function CustomerPreviewDrawer({
                         inputMode="decimal"
                         value={ptpAmount ? formatNumberWithCommas(ptpAmount) : ""}
                         onChange={(e) => setPtpAmount(stripCommas(e.target.value.replace(/[^0-9.,]/g, '')))}
-                        disabled={selectedPtpInvoices.size > 0}
-                        className={`h-9 border-slate-200 text-xs pl-7 ${selectedPtpInvoices.size > 0 ? 'bg-slate-50 text-slate-500' : 'bg-white'}`}
+                        className="h-9 border-slate-200 text-xs pl-7 bg-white"
                         placeholder="0.00"
                       />
                     </div>
