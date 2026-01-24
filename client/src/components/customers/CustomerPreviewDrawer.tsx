@@ -2084,7 +2084,7 @@ export function CustomerPreviewDrawer({
                             </button>
                             <button 
                               onClick={() => toggleSort("invoiceNumber")}
-                              className={`${isPtpMode ? 'w-[70px]' : 'flex-1'} min-w-0 text-left hover:text-slate-600 transition-colors truncate ${invoiceSortColumn === "invoiceNumber" ? "text-slate-600 font-medium" : ""}`}
+                              className={`flex-1 min-w-0 text-left hover:text-slate-600 transition-colors truncate ${invoiceSortColumn === "invoiceNumber" ? "text-slate-600 font-medium" : ""}`}
                             >
                               Invoice #<SortIcon column="invoiceNumber" />
                             </button>
@@ -2147,7 +2147,7 @@ export function CustomerPreviewDrawer({
                                     <span className="w-[60px] flex-shrink-0 text-slate-500 tabular-nums text-left">
                                       {formatShortDate(invoice.issueDate)}
                                     </span>
-                                    <span className={`${isPtpMode ? 'w-[70px]' : 'flex-1'} min-w-0 font-medium text-slate-900 truncate pr-2 text-left`}>
+                                    <span className="flex-1 min-w-0 font-medium text-slate-900 truncate pr-2 text-left">
                                       {invoice.invoiceNumber}
                                     </span>
                                     {!isPtpMode && (
