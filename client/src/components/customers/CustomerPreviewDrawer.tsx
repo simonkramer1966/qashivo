@@ -2235,8 +2235,8 @@ export function CustomerPreviewDrawer({
                           
                           {/* Dividing line and PTP Form */}
                           {isPtpMode && (
-                            <>
-                              <div className="mt-auto pt-3 border-t border-slate-200" />
+                            <div className="mt-auto">
+                              <div className="pt-3 border-t border-slate-200" />
                               
                               {/* PTP Form */}
                               <div className="space-y-3">
@@ -2344,7 +2344,7 @@ export function CustomerPreviewDrawer({
                                   />
                                 </div>
                               </div>
-                            </>
+                            </div>
                           )}
                           
                           {/* Load more button */}
