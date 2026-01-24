@@ -781,7 +781,7 @@ export function CustomerPreviewDrawer({
                     <>
                     <Separator className="bg-slate-100" />
                     <section>
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
                         <button
                           onClick={() => setIsRecentActivityExpanded(!isRecentActivityExpanded)}
                           className="flex items-center gap-2 text-left"
