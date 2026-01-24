@@ -4678,7 +4678,7 @@ Return only JSON with keys: intent, sentiment, confidence, ptpAmount, ptpDate, d
               body: transcriptText || null,
               summary: analysis.summary || 'AI call completed',
               outcomeType: outcomeType,
-              outcomeConfidence: String(analysis.confidence || 80),
+              outcomeConfidence: String(((analysis.confidence || 80) / 100).toFixed(2)),
               outcomeExtracted: Object.keys(extractedData).length > 0 ? extractedData : null,
               outcomeRequiresReview: outcomeType === 'dispute' || outcomeType === 'wrong_contact',
               provider: 'retell',
