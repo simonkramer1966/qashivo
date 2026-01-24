@@ -2164,9 +2164,8 @@ export function CustomerPreviewDrawer({
                                         <div className="relative w-[85px]">
                                           <span className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" style={{ fontSize: '12px' }}>£</span>
                                           <Input
-                                            type="number"
-                                            step="0.01"
-                                            min="0"
+                                            type="text"
+                                            inputMode="decimal"
                                             value={ptpAllocations[invoice.id] || ""}
                                             onChange={(e) => updatePtpAllocation(invoice.id, e.target.value)}
                                             disabled={!isPtpSelected}
@@ -2289,9 +2288,8 @@ export function CustomerPreviewDrawer({
                                       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-slate-500">£</span>
                                       <Input
                                         id="ptpAmount"
-                                        type="number"
-                                        step="0.01"
-                                        min="0"
+                                        type="text"
+                                        inputMode="decimal"
                                         value={ptpAmount}
                                         onChange={(e) => setPtpAmount(e.target.value)}
                                         disabled={selectedPtpInvoices.size > 0}
