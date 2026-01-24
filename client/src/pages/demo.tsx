@@ -711,7 +711,7 @@ export default function InvestorDemo() {
                 </div>
               </div>
               <p className="text-[16px] text-[#556070] leading-[1.6] mb-6">
-                Receive an automated collection call. Our system analyses your responses in real-time, detecting intent, sentiment, commitment to pay and provides an accurate transcript of the call for system notes.
+                Receive an automated credit control call and see how Qashivo detects intent, sentiment, and payment commitment in real time — then generates an accurate transcript and ready-to-use call notes.
               </p>
               <div className="space-y-4">
                 <div>
