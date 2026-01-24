@@ -696,6 +696,9 @@ export default function InvestorDemo() {
             <p className="text-[18px] md:text-[20px] text-[#556070] leading-[1.55]">
               Try Qashivo, the real-time AI credit controller. Receive an automated collections call and see intent, sentiment, and payment commitment detected live.
             </p>
+            <p className="text-[18px] md:text-[20px] text-[#0B0F17] font-semibold leading-[1.55] mt-4">
+              Always on. Never calls in sick. Never forgets. Never stops following up.
+            </p>
           </div>
 
           <div className="grid lg:grid-cols-2 gap-8 items-stretch">
