@@ -2275,7 +2275,7 @@ export function CustomerPreviewDrawer({
 
             {/* PTP Form Footer - shown in PTP mode */}
             {preview && isPtpMode && (
-              <div className="px-6 py-4 border-t border-slate-200 flex-shrink-0 space-y-3 max-h-[320px] overflow-y-auto">
+              <div className="px-6 py-4 flex-shrink-0 space-y-3 max-h-[320px] overflow-y-auto">
                 <p className="text-[10px] text-slate-400 uppercase tracking-wider">
                   Promise to Pay Details
                 </p>
