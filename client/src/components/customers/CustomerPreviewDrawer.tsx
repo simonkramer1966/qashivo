@@ -1085,7 +1085,7 @@ export function CustomerPreviewDrawer({
                                   <div key={item.id} className="min-w-0 w-full max-w-full overflow-hidden">
                                     <button
                                       onClick={() => toggleTimelineItem(item.id)}
-                                      className="group w-full max-w-full flex items-center text-xs py-1.5 hover:bg-slate-100 transition-colors text-left min-w-0 overflow-hidden"
+                                      className="group w-full max-w-full flex items-center text-xs py-2 hover:bg-slate-100 transition-colors text-left min-w-0 overflow-hidden"
                                     >
                                       <TooltipProvider delayDuration={300}>
                                         <Tooltip>
