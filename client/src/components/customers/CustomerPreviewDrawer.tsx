@@ -2145,7 +2145,7 @@ export function CustomerPreviewDrawer({
                                   <span className={`w-[60px] flex-shrink-0 text-right tabular-nums ${invoice.daysOverdue && invoice.daysOverdue > 0 ? getInvoiceStatusColor(invoice) : 'text-slate-500'}`}>
                                     {formatShortDate(invoice.dueDate)}
                                   </span>
-                                  <span className={`w-[50px] flex-shrink-0 text-right tabular-nums ${invoice.daysOverdue && invoice.daysOverdue > 0 ? getInvoiceStatusColor(invoice) : 'text-slate-500'}`}>
+                                  <span className={`w-[50px] flex-shrink-0 text-center tabular-nums ${invoice.daysOverdue && invoice.daysOverdue > 0 ? getInvoiceStatusColor(invoice) : 'text-slate-500'}`}>
                                     {invoice.daysOverdue && invoice.daysOverdue > 0 ? invoice.daysOverdue : '-'}
                                   </span>
                                   <span className={`w-[70px] flex-shrink-0 text-right font-semibold tabular-nums ${invoice.daysOverdue && invoice.daysOverdue > 0 ? getInvoiceStatusColor(invoice) : 'text-slate-900'}`}>
