@@ -336,7 +336,7 @@ export default function Pricing() {
               <ul className="space-y-3">
                 <li><a href="/partners" className="text-[14px] text-[#556070] hover:text-[#0B0F17]">Partner program</a></li>
                 <li><a href="/partners#refer" className="text-[14px] text-[#556070] hover:text-[#0B0F17]">Refer a client</a></li>
-                <li><a href="/partners" className="text-[14px] text-[#556070] hover:text-[#0B0F17]">Become a partner</a></li>
+                <li><a href="/partner-contact" className="text-[14px] text-[#556070] hover:text-[#0B0F17]">Become a partner</a></li>
               </ul>
             </div>
             

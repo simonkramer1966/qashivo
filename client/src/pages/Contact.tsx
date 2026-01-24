@@ -366,18 +366,59 @@ export default function Contact() {
         </div>
       </section>
       {/* Footer */}
-      <footer className="border-t border-[#E6E8EC] py-12">
+      <footer className="py-16 border-t border-[#E6E8EC]">
         <div className="max-w-[1200px] mx-auto px-6">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-6">
-            <div className="flex items-center gap-2">
-              <img src={logo} alt="Qashivo" className="h-6 w-6" />
-              <span className="text-[15px] font-medium text-[#0B0F17]">Qashivo</span>
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-8">
+            <div className="col-span-2 md:col-span-1">
+              <a href="/home" className="flex items-center gap-2 mb-4">
+                <img src={logo} alt="Qashivo" className="h-7 w-7" />
+                <span className="text-[16px] font-semibold text-[#0B0F17]">Qashivo</span>
+              </a>
+              <p className="text-[13px] text-[#556070]">
+                Receivables, managed continuously.
+              </p>
             </div>
-            <div className="flex items-center gap-8 text-[14px] text-[#556070]">
-              <a href="/privacy" className="hover:text-[#0B0F17] transition-colors">Privacy</a>
-              <a href="/terms" className="hover:text-[#0B0F17] transition-colors">Terms</a>
-              <span>© 2026 Nexus KPI Limited. Built in London. Backed by innovation. All rights reserved.</span>
+            
+            <div>
+              <h4 className="text-[13px] font-medium text-[#0B0F17] uppercase tracking-wide mb-4">Product</h4>
+              <ul className="space-y-3">
+                <li><a href="/product" className="text-[14px] text-[#556070] hover:text-[#0B0F17]">Overview</a></li>
+                <li><a href="/product#attention" className="text-[14px] text-[#556070] hover:text-[#0B0F17]">Attention</a></li>
+                <li><a href="/product#cashflow" className="text-[14px] text-[#556070] hover:text-[#0B0F17]">Cash Flow</a></li>
+                <li><a href="/product#followups" className="text-[14px] text-[#556070] hover:text-[#0B0F17]">Follow-ups</a></li>
+              </ul>
             </div>
+            
+            <div>
+              <h4 className="text-[13px] font-medium text-[#0B0F17] uppercase tracking-wide mb-4">Partners</h4>
+              <ul className="space-y-3">
+                <li><a href="/partners" className="text-[14px] text-[#556070] hover:text-[#0B0F17]">Partner program</a></li>
+                <li><a href="/partners#refer" className="text-[14px] text-[#556070] hover:text-[#0B0F17]">Refer a client</a></li>
+                <li><a href="/partner-contact" className="text-[14px] text-[#556070] hover:text-[#0B0F17]">Become a partner</a></li>
+              </ul>
+            </div>
+            
+            <div>
+              <h4 className="text-[13px] font-medium text-[#0B0F17] uppercase tracking-wide mb-4">Company</h4>
+              <ul className="space-y-3">
+                <li><a href="/about" className="text-[14px] text-[#556070] hover:text-[#0B0F17]">About</a></li>
+                <li><a href="/contact" className="text-[14px] text-[#556070] hover:text-[#0B0F17]">Contact</a></li>
+              </ul>
+            </div>
+            
+            <div>
+              <h4 className="text-[13px] font-medium text-[#0B0F17] uppercase tracking-wide mb-4">Legal</h4>
+              <ul className="space-y-3">
+                <li><a href="/privacy" className="text-[14px] text-[#556070] hover:text-[#0B0F17]">Privacy</a></li>
+                <li><a href="/terms" className="text-[14px] text-[#556070] hover:text-[#0B0F17]">Terms</a></li>
+              </ul>
+            </div>
+          </div>
+          
+          <div className="mt-12 pt-8 border-t border-[#E6E8EC]">
+            <p className="text-[13px] text-[#556070] text-center">
+              © 2026 Nexus KPI Limited. Built in London. Backed by innovation. All rights reserved.
+            </p>
           </div>
         </div>
       </footer>
