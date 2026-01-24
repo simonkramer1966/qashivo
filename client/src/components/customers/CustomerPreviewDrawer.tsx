@@ -152,6 +152,7 @@ export function CustomerPreviewDrawer({
   
   const [isPtpMode, setIsPtpMode] = useState(false);
   const [selectedPtpInvoices, setSelectedPtpInvoices] = useState<Set<string>>(new Set());
+  const [ptpAllocations, setPtpAllocations] = useState<Record<string, string>>({});
   const [ptpPaymentDate, setPtpPaymentDate] = useState("");
   const [ptpPaymentType, setPtpPaymentType] = useState<"full" | "part">("full");
   const [ptpAmount, setPtpAmount] = useState("");
@@ -421,6 +422,7 @@ export function CustomerPreviewDrawer({
   const resetPtpMode = () => {
     setIsPtpMode(false);
     setSelectedPtpInvoices(new Set());
+    setPtpAllocations({});
     setPtpPaymentDate("");
     setPtpPaymentType("full");
     setPtpAmount("");
@@ -429,28 +431,69 @@ export function CustomerPreviewDrawer({
     setPtpNotes("");
   };
 
-  const togglePtpInvoice = (invoiceId: string) => {
+  const togglePtpInvoice = (invoiceId: string, invoiceBalance?: number) => {
     setSelectedPtpInvoices(prev => {
       const newSet = new Set(prev);
       if (newSet.has(invoiceId)) {
         newSet.delete(invoiceId);
+        // Clear allocation when unchecking
+        setPtpAllocations(prevAlloc => {
+          const newAlloc = { ...prevAlloc };
+          delete newAlloc[invoiceId];
+          return newAlloc;
+        });
       } else {
         newSet.add(invoiceId);
+        // Set allocation to full invoice balance when checking
+        if (invoiceBalance !== undefined) {
+          setPtpAllocations(prevAlloc => ({
+            ...prevAlloc,
+            [invoiceId]: invoiceBalance.toFixed(2)
+          }));
+        }
       }
       return newSet;
     });
   };
 
-  const toggleAllPtpInvoices = (invoiceIds: string[]) => {
+  const toggleAllPtpInvoices = (invoiceIds: string[], invoices?: { id: string; balance: number }[]) => {
     setSelectedPtpInvoices(prev => {
       const allSelected = invoiceIds.every(id => prev.has(id));
       if (allSelected) {
+        // Clear all allocations
+        setPtpAllocations({});
         return new Set();
       } else {
+        // Set allocations for all invoices
+        if (invoices) {
+          const newAllocations: Record<string, string> = {};
+          invoices.forEach(inv => {
+            newAllocations[inv.id] = inv.balance.toFixed(2);
+          });
+          setPtpAllocations(newAllocations);
+        }
         return new Set(invoiceIds);
       }
     });
   };
+
+  const updatePtpAllocation = (invoiceId: string, value: string) => {
+    setPtpAllocations(prev => ({
+      ...prev,
+      [invoiceId]: value
+    }));
+  };
+
+  // Calculate total from allocations and update ptpAmount
+  useEffect(() => {
+    if (selectedPtpInvoices.size > 0) {
+      const total = Object.values(ptpAllocations).reduce((sum, val) => {
+        const num = parseFloat(val) || 0;
+        return sum + num;
+      }, 0);
+      setPtpAmount(total.toFixed(2));
+    }
+  }, [ptpAllocations, selectedPtpInvoices.size]);
 
   const handleGenerateSms = async () => {
     if (smsTemplate === "manual") {
@@ -2025,7 +2068,7 @@ export function CustomerPreviewDrawer({
                               <div className="w-[24px] flex-shrink-0 flex items-center justify-center">
                                 <Checkbox 
                                   checked={allDisplayedSelected}
-                                  onCheckedChange={() => toggleAllPtpInvoices(displayedInvoiceIds)}
+                                  onCheckedChange={() => toggleAllPtpInvoices(displayedInvoiceIds, filteredInvoices?.map(inv => ({ id: inv.id, balance: inv.balance })))}
                                   className="h-3.5 w-3.5"
                                 />
                               </div>
@@ -2038,29 +2081,36 @@ export function CustomerPreviewDrawer({
                             </button>
                             <button 
                               onClick={() => toggleSort("invoiceNumber")}
-                              className={`${isPtpMode ? 'w-[60px]' : 'flex-1'} min-w-0 text-left hover:text-slate-600 transition-colors truncate ${invoiceSortColumn === "invoiceNumber" ? "text-slate-600 font-medium" : ""}`}
+                              className={`${isPtpMode ? 'w-[70px]' : 'flex-1'} min-w-0 text-left hover:text-slate-600 transition-colors truncate ${invoiceSortColumn === "invoiceNumber" ? "text-slate-600 font-medium" : ""}`}
                             >
                               Invoice #<SortIcon column="invoiceNumber" />
                             </button>
-                            <button 
-                              onClick={() => toggleSort("dueDate")}
-                              className={`w-[60px] flex-shrink-0 text-right hover:text-slate-600 transition-colors ${invoiceSortColumn === "dueDate" ? "text-slate-600 font-medium" : ""}`}
-                            >
-                              Due<SortIcon column="dueDate" />
-                            </button>
-                            <button 
-                              onClick={() => toggleSort("daysOverdue")}
-                              className={`w-[50px] flex-shrink-0 text-right hover:text-slate-600 transition-colors ${invoiceSortColumn === "daysOverdue" ? "text-slate-600 font-medium" : ""}`}
-                            >
-                              Days<SortIcon column="daysOverdue" />
-                            </button>
+                            {!isPtpMode && (
+                              <>
+                                <button 
+                                  onClick={() => toggleSort("dueDate")}
+                                  className={`w-[60px] flex-shrink-0 text-right hover:text-slate-600 transition-colors ${invoiceSortColumn === "dueDate" ? "text-slate-600 font-medium" : ""}`}
+                                >
+                                  Due<SortIcon column="dueDate" />
+                                </button>
+                                <button 
+                                  onClick={() => toggleSort("daysOverdue")}
+                                  className={`w-[50px] flex-shrink-0 text-right hover:text-slate-600 transition-colors ${invoiceSortColumn === "daysOverdue" ? "text-slate-600 font-medium" : ""}`}
+                                >
+                                  Days<SortIcon column="daysOverdue" />
+                                </button>
+                              </>
+                            )}
                             <button 
                               onClick={() => toggleSort("balance")}
                               className={`w-[70px] flex-shrink-0 text-right hover:text-slate-600 transition-colors ${invoiceSortColumn === "balance" ? "text-slate-600 font-medium" : ""}`}
                             >
                               Amount<SortIcon column="balance" />
                             </button>
-                            <span className="w-[20px] flex-shrink-0" />
+                            {isPtpMode && (
+                              <span className="w-[80px] flex-shrink-0 text-right">PTP</span>
+                            )}
+                            {!isPtpMode && <span className="w-[20px] flex-shrink-0" />}
                           </div>
                           {/* Invoice Rows */}
                           <div className={isPtpMode ? "max-h-[240px] overflow-y-auto" : ""}>
@@ -2077,46 +2127,66 @@ export function CustomerPreviewDrawer({
                                       className="w-[24px] flex-shrink-0 flex items-center justify-center"
                                       onClick={(e) => {
                                         e.stopPropagation();
-                                        togglePtpInvoice(invoice.id);
+                                        togglePtpInvoice(invoice.id, invoice.balance);
                                       }}
                                     >
                                       <Checkbox 
                                         checked={isPtpSelected}
-                                        onCheckedChange={() => togglePtpInvoice(invoice.id)}
+                                        onCheckedChange={() => togglePtpInvoice(invoice.id, invoice.balance)}
                                         className="h-3.5 w-3.5"
                                       />
                                     </div>
                                   )}
-                                  <button
+                                  <div
                                     onClick={() => !isPtpMode && toggleInvoice(invoice.id)}
-                                    className="flex-1 flex items-center"
-                                    disabled={isPtpMode}
+                                    className={`flex-1 flex items-center ${!isPtpMode ? 'cursor-pointer' : ''}`}
                                   >
                                     <span className="w-[60px] flex-shrink-0 text-slate-500 tabular-nums text-left">
                                       {formatShortDate(invoice.issueDate)}
                                     </span>
-                                    <span className={`${isPtpMode ? 'w-[60px]' : 'flex-1'} min-w-0 font-medium text-slate-900 truncate pr-2 text-left`}>
+                                    <span className={`${isPtpMode ? 'w-[70px]' : 'flex-1'} min-w-0 font-medium text-slate-900 truncate pr-2 text-left`}>
                                       {invoice.invoiceNumber}
                                     </span>
-                                    <span className={`w-[60px] flex-shrink-0 text-right tabular-nums ${invoice.daysOverdue && invoice.daysOverdue > 0 ? getInvoiceStatusColor(invoice) : 'text-slate-500'}`}>
-                                      {formatShortDate(invoice.dueDate)}
-                                    </span>
-                                    <span className={`w-[50px] flex-shrink-0 text-right tabular-nums ${invoice.daysOverdue && invoice.daysOverdue > 0 ? getInvoiceStatusColor(invoice) : 'text-slate-500'}`}>
-                                      {invoice.daysOverdue && invoice.daysOverdue > 0 ? invoice.daysOverdue : '-'}
-                                    </span>
+                                    {!isPtpMode && (
+                                      <>
+                                        <span className={`w-[60px] flex-shrink-0 text-right tabular-nums ${invoice.daysOverdue && invoice.daysOverdue > 0 ? getInvoiceStatusColor(invoice) : 'text-slate-500'}`}>
+                                          {formatShortDate(invoice.dueDate)}
+                                        </span>
+                                        <span className={`w-[50px] flex-shrink-0 text-right tabular-nums ${invoice.daysOverdue && invoice.daysOverdue > 0 ? getInvoiceStatusColor(invoice) : 'text-slate-500'}`}>
+                                          {invoice.daysOverdue && invoice.daysOverdue > 0 ? invoice.daysOverdue : '-'}
+                                        </span>
+                                      </>
+                                    )}
                                     <span className="w-[70px] flex-shrink-0 text-right font-semibold text-slate-900 tabular-nums">
                                       {formatCurrency(invoice.balance)}
                                     </span>
-                                    <span className="w-[20px] flex-shrink-0 flex justify-end">
-                                      {!isPtpMode && (
-                                        isExpanded ? (
+                                    {isPtpMode && (
+                                      <div className="w-[80px] flex-shrink-0 flex justify-end" onClick={(e) => e.stopPropagation()}>
+                                        <div className="relative w-[70px]">
+                                          <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] text-slate-400">£</span>
+                                          <Input
+                                            type="number"
+                                            step="0.01"
+                                            min="0"
+                                            value={ptpAllocations[invoice.id] || ""}
+                                            onChange={(e) => updatePtpAllocation(invoice.id, e.target.value)}
+                                            disabled={!isPtpSelected}
+                                            className={`h-6 text-xs text-right pr-2 pl-5 border-slate-200 ${isPtpSelected ? 'bg-white' : 'bg-slate-50 text-slate-400'}`}
+                                            placeholder="0.00"
+                                          />
+                                        </div>
+                                      </div>
+                                    )}
+                                    {!isPtpMode && (
+                                      <span className="w-[20px] flex-shrink-0 flex justify-end">
+                                        {isExpanded ? (
                                           <ChevronDown className="h-3.5 w-3.5 text-slate-400" />
                                         ) : (
                                           <ChevronRight className="h-3.5 w-3.5 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity" />
-                                        )
-                                      )}
-                                    </span>
-                                  </button>
+                                        )}
+                                      </span>
+                                    )}
+                                  </div>
                                 </div>
                                 
                                 {isExpanded && !isPtpMode && (
@@ -2211,26 +2281,25 @@ export function CustomerPreviewDrawer({
                                       </SelectContent>
                                     </Select>
                                   </div>
-                                  {ptpPaymentType === "part" && (
-                                    <div>
-                                      <Label htmlFor="ptpAmount" className="text-xs text-slate-500 mb-1.5 block">
-                                        Amount
-                                      </Label>
-                                      <div className="relative">
-                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-slate-500">£</span>
-                                        <Input
-                                          id="ptpAmount"
-                                          type="number"
-                                          step="0.01"
-                                          min="0"
-                                          value={ptpAmount}
-                                          onChange={(e) => setPtpAmount(e.target.value)}
-                                          className="h-9 bg-white border-slate-200 text-xs pl-7"
-                                          placeholder="0.00"
-                                        />
-                                      </div>
+                                  <div>
+                                    <Label htmlFor="ptpAmount" className="text-xs text-slate-500 mb-1.5 block">
+                                      Amount {selectedPtpInvoices.size > 0 && <span className="text-slate-400 font-normal">(allocated)</span>}
+                                    </Label>
+                                    <div className="relative">
+                                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-slate-500">£</span>
+                                      <Input
+                                        id="ptpAmount"
+                                        type="number"
+                                        step="0.01"
+                                        min="0"
+                                        value={ptpAmount}
+                                        onChange={(e) => setPtpAmount(e.target.value)}
+                                        disabled={selectedPtpInvoices.size > 0}
+                                        className={`h-9 border-slate-200 text-xs pl-7 ${selectedPtpInvoices.size > 0 ? 'bg-slate-50 text-slate-500' : 'bg-white'}`}
+                                        placeholder="0.00"
+                                      />
                                     </div>
-                                  )}
+                                  </div>
                                 </div>
                                 
                                 {ptpConfirmedBy === "new" && (
