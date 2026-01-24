@@ -151,7 +151,7 @@ export function CustomerPreviewDrawer({
   const [selectedRecipientPhone, setSelectedRecipientPhone] = useState<string>("");
   
   const [isPtpMode, setIsPtpMode] = useState(false);
-  const [selectedPtpInvoices, setSelectedPtpInvoices] = useState<Set<string>>(new Set());
+  const [selectedPtpInvoices, setSelectedPtpInvoices] = useState<Map<string, number>>(new Map());
   const [ptpAllocations, setPtpAllocations] = useState<Record<string, string>>({});
   const [editingPtpInvoiceId, setEditingPtpInvoiceId] = useState<string | null>(null);
   const [ptpPaymentDate, setPtpPaymentDate] = useState("");
@@ -418,12 +418,12 @@ export function CustomerPreviewDrawer({
     setIsCallMode(false);
     setIsEmailMode(false);
     setIsSmsMode(false);
-    setSelectedPtpInvoices(new Set());
+    setSelectedPtpInvoices(new Map());
   };
 
   const resetPtpMode = () => {
     setIsPtpMode(false);
-    setSelectedPtpInvoices(new Set());
+    setSelectedPtpInvoices(new Map());
     setPtpAllocations({});
     setPtpPaymentDate("");
     setPtpPaymentType("full");
@@ -436,9 +436,9 @@ export function CustomerPreviewDrawer({
 
   const togglePtpInvoice = (invoiceId: string, invoiceBalance?: number) => {
     setSelectedPtpInvoices(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(invoiceId)) {
-        newSet.delete(invoiceId);
+      const newMap = new Map(prev);
+      if (newMap.has(invoiceId)) {
+        newMap.delete(invoiceId);
         // Clear allocation when unchecking
         setPtpAllocations(prevAlloc => {
           const newAlloc = { ...prevAlloc };
@@ -446,7 +446,7 @@ export function CustomerPreviewDrawer({
           return newAlloc;
         });
       } else {
-        newSet.add(invoiceId);
+        newMap.set(invoiceId, invoiceBalance || 0);
         // Set allocation to full invoice balance when checking
         if (invoiceBalance !== undefined) {
           setPtpAllocations(prevAlloc => ({
@@ -455,7 +455,7 @@ export function CustomerPreviewDrawer({
           }));
         }
       }
-      return newSet;
+      return newMap;
     });
   };
 
@@ -465,17 +465,21 @@ export function CustomerPreviewDrawer({
       if (allSelected) {
         // Clear all allocations
         setPtpAllocations({});
-        return new Set();
+        return new Map();
       } else {
         // Set allocations for all invoices
+        const newMap = new Map<string, number>();
         if (invoices) {
           const newAllocations: Record<string, string> = {};
           invoices.forEach(inv => {
+            newMap.set(inv.id, inv.balance);
             newAllocations[inv.id] = inv.balance.toFixed(2);
           });
           setPtpAllocations(newAllocations);
+        } else {
+          invoiceIds.forEach(id => newMap.set(id, 0));
         }
-        return new Set(invoiceIds);
+        return newMap;
       }
     });
   };
@@ -599,7 +603,7 @@ export function CustomerPreviewDrawer({
 
   const sendSmsMutation = useMutation({
     mutationFn: async (smsData: {
-      message: string;
+      body: string;
       templateType: string;
       recipientPhone: string;
     }) => {
@@ -643,7 +647,7 @@ export function CustomerPreviewDrawer({
     }
 
     sendSmsMutation.mutate({
-      message: smsBody,
+      body: smsBody,
       templateType: smsTemplate,
       recipientPhone: selectedRecipientPhone,
     });
