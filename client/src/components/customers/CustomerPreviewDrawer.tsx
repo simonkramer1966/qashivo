@@ -477,10 +477,25 @@ export function CustomerPreviewDrawer({
     });
   };
 
+  // Format number with thousand separators (1,234.56)
+  const formatNumberWithCommas = (value: string | number): string => {
+    if (value === "" || value === null || value === undefined) return "";
+    const num = typeof value === 'string' ? parseFloat(value.replace(/,/g, '')) : value;
+    if (isNaN(num)) return "";
+    return num.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  };
+
+  // Strip commas for numeric parsing
+  const stripCommas = (value: string): string => value.replace(/,/g, '');
+
   const updatePtpAllocation = (invoiceId: string, value: string) => {
+    // Allow only digits, comma, and decimal point
+    const cleaned = value.replace(/[^0-9.,]/g, '');
+    // Store raw value without commas
+    const rawValue = stripCommas(cleaned);
     setPtpAllocations(prev => ({
       ...prev,
-      [invoiceId]: value
+      [invoiceId]: rawValue
     }));
   };
 
@@ -2166,7 +2181,7 @@ export function CustomerPreviewDrawer({
                                           <Input
                                             type="text"
                                             inputMode="decimal"
-                                            value={ptpAllocations[invoice.id] || ""}
+                                            value={ptpAllocations[invoice.id] ? formatNumberWithCommas(ptpAllocations[invoice.id]) : ""}
                                             onChange={(e) => updatePtpAllocation(invoice.id, e.target.value)}
                                             disabled={!isPtpSelected}
                                             className={`h-6 font-normal text-right pr-2 pl-5 border-slate-200 tabular-nums ${isPtpSelected ? 'bg-white text-slate-900' : 'bg-slate-50 text-slate-400'}`}
@@ -2290,8 +2305,8 @@ export function CustomerPreviewDrawer({
                                         id="ptpAmount"
                                         type="text"
                                         inputMode="decimal"
-                                        value={ptpAmount}
-                                        onChange={(e) => setPtpAmount(e.target.value)}
+                                        value={ptpAmount ? formatNumberWithCommas(ptpAmount) : ""}
+                                        onChange={(e) => setPtpAmount(stripCommas(e.target.value.replace(/[^0-9.,]/g, '')))}
                                         disabled={selectedPtpInvoices.size > 0}
                                         className={`h-9 border-slate-200 text-xs pl-7 ${selectedPtpInvoices.size > 0 ? 'bg-slate-50 text-slate-500' : 'bg-white'}`}
                                         placeholder="0.00"
