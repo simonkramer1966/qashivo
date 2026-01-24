@@ -2131,7 +2131,7 @@ export function CustomerPreviewDrawer({
                             {!isPtpMode && <span className="w-[20px] flex-shrink-0" />}
                           </div>
                           {/* Invoice Rows */}
-                          <div>
+                          <div className="pr-2">
                           {filteredInvoices.map((invoice) => {
                             const isExpanded = expandedInvoices.has(invoice.id);
                             const isPtpSelected = selectedPtpInvoices.has(invoice.id);
