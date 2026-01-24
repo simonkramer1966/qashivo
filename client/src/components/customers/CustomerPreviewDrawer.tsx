@@ -2166,7 +2166,7 @@ export function CustomerPreviewDrawer({
                                     {isPtpMode && (
                                       <div className="w-[80px] flex-shrink-0 flex justify-end" onClick={(e) => e.stopPropagation()}>
                                         <div className="relative w-[70px]">
-                                          <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] text-slate-400">£</span>
+                                          <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[12px] text-slate-400">£</span>
                                           <Input
                                             type="number"
                                             step="0.01"
@@ -2174,7 +2174,7 @@ export function CustomerPreviewDrawer({
                                             value={ptpAllocations[invoice.id] || ""}
                                             onChange={(e) => updatePtpAllocation(invoice.id, e.target.value)}
                                             disabled={!isPtpSelected}
-                                            className={`h-6 text-xs text-right pr-2 pl-5 border-slate-200 ${isPtpSelected ? 'bg-white' : 'bg-slate-50 text-slate-400'}`}
+                                            className={`h-6 text-[12px] text-right pr-2 pl-5 border-slate-200 ${isPtpSelected ? 'bg-white' : 'bg-slate-50 text-slate-400'}`}
                                             placeholder="0.00"
                                           />
                                         </div>
