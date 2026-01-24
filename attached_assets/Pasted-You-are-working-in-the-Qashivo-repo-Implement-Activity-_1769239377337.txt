@@ -1,0 +1,44 @@
+You are working in the Qashivo repo. Implement “Activity Search” for the Customer Tray’s Recent Activity list.
+
+Goal
+- Add a lightweight search control above the Recent Activity list that filters the timeline rows in real time.
+- Search should match across relevant fields (type, title/summary, body/content, invoiceRef if present, createdBy if present).
+- Keep the UI compact and consistent with existing styling (Tailwind/shadcn style). Default state should be calm.
+
+UI/UX requirements
+1) In the Customer Tray panel, in the “Recent Activity” header row, add:
+   - a search icon button (magnifying glass) that toggles the search input open/closed
+   - when open, show an inline input with placeholder “Search activity…”
+   - Esc closes the search and clears it (or closes but preserves text—choose whichever matches existing patterns; prefer clear for simplicity)
+   - a small clear “x” button appears when there is text
+2) The Recent Activity list should filter as the user types (debounced ~150–250ms).
+3) If no results, show an empty state: “No activity matches your search.”
+4) Do not affect the invoices list (activity search only).
+
+Data/logic requirements
+- The Recent Activity list currently comes from the API (or state) as `timelineEvents` / `recentActivity` (use whatever is in code).
+- Implement filtering in the client first (no backend changes required).
+- Filtering should be case-insensitive.
+- If you have structured fields, search should check:
+  - event.type (e.g. note/call/email/sms/ptp/plan/dispute/debt)
+  - event.title or event.summary (if exists)
+  - event.body/content/message (if exists)
+  - event.invoiceNumber / invoiceId / reference (if exists)
+  - event.createdByName / actor (if exists)
+- If an event doesn’t have a field, safely ignore it (no runtime errors).
+
+Implementation details
+- Add a `query` state (string).
+- Add a memoized computed list: `filteredEvents = useMemo(...)`.
+- Add a small debounce hook or debounce in effect (keep simple).
+- Ensure rows remain the same height and alignment as the invoice table, and long text truncates properly (min-w-0 + truncate).
+
+Deliverables
+- Updated Customer Tray component with search UI in the Recent Activity header.
+- Filtering logic with debounce and empty state.
+- Ensure TypeScript types remain correct and lint/build passes.
+- Provide the file paths you changed and a brief summary of what you did.
+
+Notes
+- Reuse existing Input/Button components if the project has them (shadcn/ui).
+- Use lucide-react icons if already in the project.
