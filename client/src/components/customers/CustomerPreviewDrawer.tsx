@@ -150,7 +150,6 @@ export function CustomerPreviewDrawer({
   const [isGeneratingSms, setIsGeneratingSms] = useState(false);
   const [selectedRecipientPhone, setSelectedRecipientPhone] = useState<string>("");
   
-  const [isRecentActivityExpanded, setIsRecentActivityExpanded] = useState(true);
   const [expandedTimelineItems, setExpandedTimelineItems] = useState<Set<string>>(new Set());
   const [activitySearchOpen, setActivitySearchOpen] = useState(false);
   const [activitySearchQuery, setActivitySearchQuery] = useState("");
@@ -823,36 +822,24 @@ export function CustomerPreviewDrawer({
                       </div>
                     </section>
 
-                    {/* Recent Timeline - Collapsible */}
+                    {/* Recent Timeline */}
                     {!isNoteMode && !isCallMode && !isEmailMode && !isSmsMode && (
                     <>
                     <Separator className="bg-slate-100" />
                     <section>
                       <div className="flex items-center gap-2">
+                        <p className="text-[10px] text-slate-400 uppercase tracking-wider">
+                          Recent Activity
+                        </p>
                         <button
-                          onClick={() => setIsRecentActivityExpanded(!isRecentActivityExpanded)}
-                          className="flex items-center gap-2 text-left"
+                          onClick={toggleActivitySearch}
+                          className="p-1 hover:bg-slate-100 rounded transition-colors"
                         >
-                          {isRecentActivityExpanded ? (
-                            <ChevronDown className="h-3 w-3 text-slate-400" />
-                          ) : (
-                            <ChevronRight className="h-3 w-3 text-slate-400" />
-                          )}
-                          <p className="text-[10px] text-slate-400 uppercase tracking-wider">
-                            Recent Activity
-                          </p>
+                          <Search className={`h-3.5 w-3.5 ${activitySearchOpen ? 'text-slate-600' : 'text-slate-400'}`} />
                         </button>
-                        {isRecentActivityExpanded && (
-                          <button
-                            onClick={toggleActivitySearch}
-                            className="p-1 hover:bg-slate-100 rounded transition-colors"
-                          >
-                            <Search className={`h-3.5 w-3.5 ${activitySearchOpen ? 'text-slate-600' : 'text-slate-400'}`} />
-                          </button>
-                        )}
                       </div>
                       
-                      {isRecentActivityExpanded && activitySearchOpen && (
+                      {activitySearchOpen && (
                         <div className="mt-2 relative">
                           <Input
                             type="text"
@@ -874,9 +861,8 @@ export function CustomerPreviewDrawer({
                         </div>
                       )}
                       
-                      {isRecentActivityExpanded && (
-                        <div className="mt-3 min-w-0 overflow-hidden">
-                          {preview.latestTimeline && preview.latestTimeline.length > 0 ? (
+                      <div className="mt-3 min-w-0 overflow-hidden">
+                        {preview.latestTimeline && preview.latestTimeline.length > 0 ? (
                             (() => {
                               const getTimeBucket = (dateStr: string) => {
                                 const date = new Date(dateStr);
@@ -1105,7 +1091,6 @@ export function CustomerPreviewDrawer({
                             </button>
                           )}
                         </div>
-                      )}
                     </section>
                     </>
                     )}
