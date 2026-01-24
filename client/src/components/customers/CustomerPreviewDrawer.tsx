@@ -2079,7 +2079,7 @@ export function CustomerPreviewDrawer({
                       const allDisplayedSelected = displayedInvoiceIds.length > 0 && displayedInvoiceIds.every(id => selectedPtpInvoices.has(id));
                       
                       return filteredInvoices && filteredInvoices.length > 0 ? (
-                        <div className={isPtpMode ? "flex flex-col min-h-[400px]" : "space-y-1"}>
+                        <div className="space-y-1">
                           {/* Header Row */}
                           <div className="flex items-center text-[10px] text-slate-400 uppercase tracking-wider pb-1 border-b border-slate-100">
                             {isPtpMode && (
@@ -2131,7 +2131,7 @@ export function CustomerPreviewDrawer({
                             {!isPtpMode && <span className="w-[20px] flex-shrink-0" />}
                           </div>
                           {/* Invoice Rows */}
-                          <div className={isPtpMode ? "max-h-[240px] overflow-y-auto" : ""}>
+                          <div>
                           {filteredInvoices.map((invoice) => {
                             const isExpanded = expandedInvoices.has(invoice.id);
                             const isPtpSelected = selectedPtpInvoices.has(invoice.id);
@@ -2233,120 +2233,6 @@ export function CustomerPreviewDrawer({
                           })}
                           </div>
                           
-                          {/* Dividing line and PTP Form */}
-                          {isPtpMode && (
-                            <div className="mt-auto">
-                              <div className="pt-3 border-t border-slate-200" />
-                              
-                              {/* PTP Form */}
-                              <div className="space-y-3">
-                                <p className="text-[10px] text-slate-400 uppercase tracking-wider">
-                                  Promise to Pay Details
-                                </p>
-                                
-                                <div className="grid grid-cols-2 gap-3">
-                                  <div>
-                                    <Label htmlFor="ptpPaymentDate" className="text-xs text-slate-500 mb-1.5 block">
-                                      Payment Date
-                                    </Label>
-                                    <Input
-                                      id="ptpPaymentDate"
-                                      type="date"
-                                      value={ptpPaymentDate}
-                                      onChange={(e) => setPtpPaymentDate(e.target.value)}
-                                      className="h-9 bg-white border-slate-200 text-xs"
-                                      min={new Date().toISOString().split('T')[0]}
-                                    />
-                                  </div>
-                                  <div>
-                                    <Label htmlFor="ptpPaymentType" className="text-xs text-slate-500 mb-1.5 block">
-                                      Payment Type
-                                    </Label>
-                                    <Select value={ptpPaymentType} onValueChange={(v) => setPtpPaymentType(v as "full" | "part")}>
-                                      <SelectTrigger id="ptpPaymentType" className="h-9 bg-white border-slate-200 text-xs">
-                                        <SelectValue />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        <SelectItem value="full">Full Payment</SelectItem>
-                                        <SelectItem value="part">Part Payment</SelectItem>
-                                      </SelectContent>
-                                    </Select>
-                                  </div>
-                                </div>
-                                
-                                <div className="grid grid-cols-2 gap-3">
-                                  <div>
-                                    <Label htmlFor="ptpConfirmedBy" className="text-xs text-slate-500 mb-1.5 block">
-                                      Confirmed by
-                                    </Label>
-                                    <Select value={ptpConfirmedBy} onValueChange={setPtpConfirmedBy}>
-                                      <SelectTrigger id="ptpConfirmedBy" className="h-9 bg-white border-slate-200 text-xs">
-                                        <SelectValue placeholder="Select contact..." />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        {preview?.allCreditControlContacts?.map((contact) => (
-                                          <SelectItem key={contact.id} value={contact.name || contact.email || contact.id} className="text-xs">
-                                            {contact.name || contact.email}{contact.isPrimary ? ' (Primary AR)' : ''}
-                                          </SelectItem>
-                                        ))}
-                                        <SelectItem value="new" className="text-xs text-[#17B6C3]">
-                                          + Add new contact
-                                        </SelectItem>
-                                      </SelectContent>
-                                    </Select>
-                                  </div>
-                                  <div>
-                                    <Label htmlFor="ptpAmount" className="text-xs text-slate-500 mb-1.5 block">
-                                      Amount {selectedPtpInvoices.size > 0 && <span className="text-slate-400 font-normal">(allocated)</span>}
-                                    </Label>
-                                    <div className="relative">
-                                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-slate-500">£</span>
-                                      <Input
-                                        id="ptpAmount"
-                                        type="text"
-                                        inputMode="decimal"
-                                        value={ptpAmount ? formatNumberWithCommas(ptpAmount) : ""}
-                                        onChange={(e) => setPtpAmount(stripCommas(e.target.value.replace(/[^0-9.,]/g, '')))}
-                                        disabled={selectedPtpInvoices.size > 0}
-                                        className={`h-9 border-slate-200 text-xs pl-7 ${selectedPtpInvoices.size > 0 ? 'bg-slate-50 text-slate-500' : 'bg-white'}`}
-                                        placeholder="0.00"
-                                      />
-                                    </div>
-                                  </div>
-                                </div>
-                                
-                                {ptpConfirmedBy === "new" && (
-                                  <div>
-                                    <Label htmlFor="ptpNewContactName" className="text-xs text-slate-500 mb-1.5 block">
-                                      Contact Name
-                                    </Label>
-                                    <Input
-                                      id="ptpNewContactName"
-                                      type="text"
-                                      value={ptpNewContactName}
-                                      onChange={(e) => setPtpNewContactName(e.target.value)}
-                                      className="h-9 bg-white border-slate-200 text-xs"
-                                      placeholder="Enter contact name"
-                                    />
-                                  </div>
-                                )}
-                                
-                                <div>
-                                  <Label htmlFor="ptpNotes" className="text-xs text-slate-500 mb-1.5 block">
-                                    Notes (optional)
-                                  </Label>
-                                  <Textarea
-                                    id="ptpNotes"
-                                    value={ptpNotes}
-                                    onChange={(e) => setPtpNotes(e.target.value)}
-                                    className="min-h-[60px] bg-white border-slate-200 resize-none text-xs"
-                                    placeholder="Any additional notes about this commitment..."
-                                  />
-                                </div>
-                              </div>
-                            </div>
-                          )}
-                          
                           {/* Load more button */}
                           {!isPtpMode && (hasMoreInvoicesState !== null ? hasMoreInvoicesState : preview.hasMoreInvoices) && invoiceFilter === "all" && (
                             <button
@@ -2376,6 +2262,115 @@ export function CustomerPreviewDrawer({
                 ) : null}
               </div>
             </ScrollArea>
+
+            {/* PTP Form Footer - shown in PTP mode */}
+            {preview && isPtpMode && (
+              <div className="px-6 py-4 border-t border-slate-200 flex-shrink-0 space-y-3 max-h-[320px] overflow-y-auto">
+                <p className="text-[10px] text-slate-400 uppercase tracking-wider">
+                  Promise to Pay Details
+                </p>
+                
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label htmlFor="ptpPaymentDate" className="text-xs text-slate-500 mb-1.5 block">
+                      Payment Date
+                    </Label>
+                    <Input
+                      id="ptpPaymentDate"
+                      type="date"
+                      value={ptpPaymentDate}
+                      onChange={(e) => setPtpPaymentDate(e.target.value)}
+                      className="h-9 bg-white border-slate-200 text-xs"
+                      min={new Date().toISOString().split('T')[0]}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="ptpPaymentType" className="text-xs text-slate-500 mb-1.5 block">
+                      Payment Type
+                    </Label>
+                    <Select value={ptpPaymentType} onValueChange={(v) => setPtpPaymentType(v as "full" | "part")}>
+                      <SelectTrigger id="ptpPaymentType" className="h-9 bg-white border-slate-200 text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="full">Full Payment</SelectItem>
+                        <SelectItem value="part">Part Payment</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label htmlFor="ptpConfirmedBy" className="text-xs text-slate-500 mb-1.5 block">
+                      Confirmed by
+                    </Label>
+                    <Select value={ptpConfirmedBy} onValueChange={setPtpConfirmedBy}>
+                      <SelectTrigger id="ptpConfirmedBy" className="h-9 bg-white border-slate-200 text-xs">
+                        <SelectValue placeholder="Select contact..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {preview?.allCreditControlContacts?.map((contact) => (
+                          <SelectItem key={contact.id} value={contact.name || contact.email || contact.id} className="text-xs">
+                            {contact.name || contact.email}{contact.isPrimary ? ' (Primary AR)' : ''}
+                          </SelectItem>
+                        ))}
+                        <SelectItem value="new" className="text-xs text-[#17B6C3]">
+                          + Add new contact
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label htmlFor="ptpAmount" className="text-xs text-slate-500 mb-1.5 block">
+                      Amount {selectedPtpInvoices.size > 0 && <span className="text-slate-400 font-normal">(allocated)</span>}
+                    </Label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-slate-500">£</span>
+                      <Input
+                        id="ptpAmount"
+                        type="text"
+                        inputMode="decimal"
+                        value={ptpAmount ? formatNumberWithCommas(ptpAmount) : ""}
+                        onChange={(e) => setPtpAmount(stripCommas(e.target.value.replace(/[^0-9.,]/g, '')))}
+                        disabled={selectedPtpInvoices.size > 0}
+                        className={`h-9 border-slate-200 text-xs pl-7 ${selectedPtpInvoices.size > 0 ? 'bg-slate-50 text-slate-500' : 'bg-white'}`}
+                        placeholder="0.00"
+                      />
+                    </div>
+                  </div>
+                </div>
+                
+                {ptpConfirmedBy === "new" && (
+                  <div>
+                    <Label htmlFor="ptpNewContactName" className="text-xs text-slate-500 mb-1.5 block">
+                      Contact Name
+                    </Label>
+                    <Input
+                      id="ptpNewContactName"
+                      type="text"
+                      value={ptpNewContactName}
+                      onChange={(e) => setPtpNewContactName(e.target.value)}
+                      className="h-9 bg-white border-slate-200 text-xs"
+                      placeholder="Enter contact name"
+                    />
+                  </div>
+                )}
+                
+                <div>
+                  <Label htmlFor="ptpNotes" className="text-xs text-slate-500 mb-1.5 block">
+                    Notes (optional)
+                  </Label>
+                  <Textarea
+                    id="ptpNotes"
+                    value={ptpNotes}
+                    onChange={(e) => setPtpNotes(e.target.value)}
+                    className="min-h-[60px] bg-white border-slate-200 resize-none text-xs"
+                    placeholder="Any additional notes about this commitment..."
+                  />
+                </div>
+              </div>
+            )}
 
             {/* Right Footer - Action Buttons */}
             {preview && !isPtpMode && (
