@@ -2153,7 +2153,7 @@ export function CustomerPreviewDrawer({
                               <div className="mt-3 border-t border-slate-200" />
                               
                               {/* PTP Form */}
-                              <div className="mt-4 space-y-3">
+                              <div className="mt-6 space-y-3">
                                 <p className="text-[10px] text-slate-400 uppercase tracking-wider">
                                   Promise to Pay Details
                                 </p>
