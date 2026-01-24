@@ -799,7 +799,7 @@ export function CustomerPreviewDrawer({
                                         </Tooltip>
                                       </TooltipProvider>
                                       
-                                      <span className="text-slate-500 flex-shrink-0 w-[50px] flex items-center">
+                                      <span className="text-slate-500 flex-shrink-0 w-[50px] flex items-center mr-2">
                                         <span className="w-4 flex-shrink-0">{getChannelIcon(item.channel)}</span>
                                         <span className="font-medium ml-1">{getChannelLabel(item.channel)}</span>
                                       </span>
