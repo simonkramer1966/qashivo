@@ -2038,6 +2038,26 @@ export function CustomerPreviewDrawer({
                       >
                         Overdue ({[...(preview.invoices || []), ...additionalInvoices].filter(inv => inv.daysOverdue && inv.daysOverdue > 0).length || 0})
                       </button>
+                      {isPtpMode && (
+                        <button
+                          onClick={() => {
+                            const allInvoices = [...(preview.invoices || []), ...additionalInvoices];
+                            const filteredInvoices = invoiceFilter === "overdue"
+                              ? allInvoices.filter(inv => inv.daysOverdue && inv.daysOverdue > 0)
+                              : allInvoices;
+                            const newSelected = new Map<string, number>();
+                            filteredInvoices.forEach(inv => {
+                              newSelected.set(inv.id, inv.balance);
+                            });
+                            setSelectedPtpInvoices(newSelected);
+                            const total = filteredInvoices.reduce((sum, inv) => sum + inv.balance, 0);
+                            setPtpAmount(total.toFixed(2));
+                          }}
+                          className="ml-auto px-3 py-1 text-xs font-medium rounded-md transition-colors text-[#17B6C3] hover:bg-[#17B6C3]/10"
+                        >
+                          Select All
+                        </button>
+                      )}
                     </div>
                     
                     {(() => {
