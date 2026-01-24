@@ -1244,7 +1244,7 @@ export function CustomerPreviewDrawer({
                                       <div className="pl-[60px] pr-2 pb-3 space-y-2 overflow-hidden min-w-0">
                                         {/* Voice call results - show sentiment, intent, and extracted data */}
                                         {item.channel === 'voice' && item.outcome?.extracted && (
-                                          <div className="bg-slate-50 rounded-md p-2 space-y-1.5 border border-slate-100">
+                                          <div className="bg-slate-50 rounded-md p-2 space-y-1.5 border border-slate-100 mr-5">
                                             <div className="flex flex-wrap gap-2">
                                               {item.outcome.extracted.sentiment && (
                                                 <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${
