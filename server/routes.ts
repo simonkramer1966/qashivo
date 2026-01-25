@@ -22939,7 +22939,7 @@ ${tenant.name}
         timelineEvents, paymentPromises, disputes, voiceCalls, emailMessages, smsMessages,
         contactNotes, customerContactPersons, paymentPlans, paymentPlanSchedules, paymentPlanInvoices,
         workflowTimers, inboundMessages, detectedOutcomes, contactOutcomes, policyDecisions,
-        messageDrafts, customerBehaviorSignals
+        messageDrafts, customerBehaviorSignals, customerScheduleAssignments
       } = await import('@shared/schema.js');
       
       // Delete in order respecting foreign key constraints (child tables first)
@@ -22983,10 +22983,11 @@ ${tenant.name}
         // Invoices (before contacts due to foreign key)
         const deletedInvoices = await tx.delete(invoices).where(eq(invoices.tenantId, tenantId)).returning();
         
-        // Contact-related (notes, contact persons, behavior signals)
+        // Contact-related (notes, contact persons, behavior signals, schedule assignments)
         const deletedNotes = await tx.delete(contactNotes).where(eq(contactNotes.tenantId, tenantId)).returning();
         const deletedContactPersons = await tx.delete(customerContactPersons).where(eq(customerContactPersons.tenantId, tenantId)).returning();
         const deletedSignals = await tx.delete(customerBehaviorSignals).where(eq(customerBehaviorSignals.tenantId, tenantId)).returning();
+        const deletedScheduleAssignments = await tx.delete(customerScheduleAssignments).where(eq(customerScheduleAssignments.tenantId, tenantId)).returning();
         
         // Contacts (last due to foreign keys)
         const deletedContacts = await tx.delete(contacts).where(eq(contacts.tenantId, tenantId)).returning();
@@ -23012,6 +23013,7 @@ ${tenant.name}
           contactNotes: deletedNotes.length,
           contactPersons: deletedContactPersons.length,
           behaviorSignals: deletedSignals.length,
+          scheduleAssignments: deletedScheduleAssignments.length,
           contacts: deletedContacts.length,
         };
       });
