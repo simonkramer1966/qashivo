@@ -22972,6 +22972,8 @@ ${tenant.name}
         if (planIds.length > 0) {
           deletedPlanSchedules = await tx.delete(paymentPlanSchedules).where(inArray(paymentPlanSchedules.paymentPlanId, planIds)).returning();
           deletedPlanInvoices = await tx.delete(paymentPlanInvoices).where(inArray(paymentPlanInvoices.paymentPlanId, planIds)).returning();
+          // Clear payment_plan_id on invoices before deleting payment plans (foreign key constraint)
+          await tx.update(invoices).set({ paymentPlanId: null }).where(inArray(invoices.paymentPlanId, planIds));
         }
         const deletedPlans = await tx.delete(paymentPlans).where(eq(paymentPlans.tenantId, tenantId)).returning();
         
