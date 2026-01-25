@@ -1726,13 +1726,17 @@ export function CardlessCustomerDrawer({
                             const allSelected = baseInvoices.length > 0 && baseInvoices.every(inv => selectedPtpInvoices.has(inv.id));
                             if (allSelected) {
                               setSelectedPtpInvoices(new Map());
+                              setPtpAllocations({});
                               setPtpAmount("");
                             } else {
                               const newSelected = new Map<string, number>();
-                              baseInvoices.forEach(inv => newSelected.set(inv.id, inv.balance));
+                              const newAllocations: Record<string, string> = {};
+                              baseInvoices.forEach(inv => {
+                                newSelected.set(inv.id, inv.balance);
+                                newAllocations[inv.id] = inv.balance.toFixed(2);
+                              });
                               setSelectedPtpInvoices(newSelected);
-                              const total = baseInvoices.reduce((sum, inv) => sum + inv.balance, 0);
-                              setPtpAmount(total.toFixed(2));
+                              setPtpAllocations(newAllocations);
                             }
                           }}
                           className="ml-auto text-sm text-gray-500 hover:text-gray-900 transition-colors"
