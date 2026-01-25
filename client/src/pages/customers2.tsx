@@ -9,7 +9,7 @@ import {
 import NewSidebar from "@/components/layout/new-sidebar";
 import BottomNav from "@/components/layout/bottom-nav";
 import { useCurrency } from "@/hooks/useCurrency";
-import { CustomerPreviewDrawer } from "@/components/customers/CustomerPreviewDrawer";
+import { CardlessCustomerDrawer } from "@/components/customers/CardlessCustomerDrawer";
 import { getBehaviourLabel } from "@/lib/behaviourLabels";
 
 interface Contact {
@@ -363,7 +363,7 @@ export default function Customers2() {
 
       <BottomNav />
 
-      <CustomerPreviewDrawer
+      <CardlessCustomerDrawer
         customerId={selectedContactId}
         open={showPreviewDrawer}
         onOpenChange={setShowPreviewDrawer}
