@@ -22959,9 +22959,17 @@ ${tenant.name}
         const deletedDisputes = await tx.delete(disputes).where(eq(disputes.tenantId, tenantId)).returning();
         const deletedTimers = await tx.delete(workflowTimers).where(eq(workflowTimers.tenantId, tenantId)).returning();
         
-        // Payment plans (schedules and invoices depend on plans)
-        const deletedPlanSchedules = await tx.delete(paymentPlanSchedules).where(eq(paymentPlanSchedules.tenantId, tenantId)).returning();
-        const deletedPlanInvoices = await tx.delete(paymentPlanInvoices).where(eq(paymentPlanInvoices.tenantId, tenantId)).returning();
+        // Payment plans (schedules and invoices depend on plans - they don't have tenantId, so delete via parent)
+        // First get all payment plan IDs for this tenant
+        const tenantPaymentPlans = await tx.select({ id: paymentPlans.id }).from(paymentPlans).where(eq(paymentPlans.tenantId, tenantId));
+        const planIds = tenantPaymentPlans.map(p => p.id);
+        
+        let deletedPlanSchedules: any[] = [];
+        let deletedPlanInvoices: any[] = [];
+        if (planIds.length > 0) {
+          deletedPlanSchedules = await tx.delete(paymentPlanSchedules).where(inArray(paymentPlanSchedules.paymentPlanId, planIds)).returning();
+          deletedPlanInvoices = await tx.delete(paymentPlanInvoices).where(inArray(paymentPlanInvoices.paymentPlanId, planIds)).returning();
+        }
         const deletedPlans = await tx.delete(paymentPlans).where(eq(paymentPlans.tenantId, tenantId)).returning();
         
         // Actions
