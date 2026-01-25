@@ -1013,30 +1013,33 @@ function DemoDataTabContent() {
         </p>
         
         {isLoadingStats ? (
-          <div className="animate-pulse grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="animate-pulse flex flex-wrap gap-x-16 gap-y-6">
             {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="h-20 bg-gray-100 rounded-lg"></div>
+              <div key={i} className="space-y-2">
+                <div className="h-4 w-16 bg-gray-200 rounded"></div>
+                <div className="h-8 w-20 bg-gray-200 rounded"></div>
+              </div>
             ))}
           </div>
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-              <p className="text-sm text-gray-500">Customers</p>
-              <p className="text-2xl font-bold text-gray-900">{stats?.customers ?? 0}</p>
+          <div className="flex flex-wrap gap-x-16 gap-y-6">
+            <div>
+              <p className="text-sm text-gray-500 mb-1">Customers</p>
+              <p className="text-3xl font-semibold text-gray-900">{stats?.customers ?? 0}</p>
             </div>
-            <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-              <p className="text-sm text-gray-500">Invoices</p>
-              <p className="text-2xl font-bold text-gray-900">{stats?.invoices ?? 0}</p>
+            <div>
+              <p className="text-sm text-gray-500 mb-1">Invoices</p>
+              <p className="text-3xl font-semibold text-gray-900">{stats?.invoices ?? 0}</p>
             </div>
-            <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-              <p className="text-sm text-gray-500">Outstanding</p>
-              <p className="text-2xl font-bold text-gray-900">
+            <div>
+              <p className="text-sm text-gray-500 mb-1">Outstanding</p>
+              <p className="text-3xl font-semibold text-gray-900">
                 £{(stats?.totalOutstanding ?? 0).toLocaleString()}
               </p>
             </div>
-            <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-              <p className="text-sm text-gray-500">Paid</p>
-              <p className="text-2xl font-bold text-green-600">
+            <div>
+              <p className="text-sm text-gray-500 mb-1">Paid</p>
+              <p className="text-3xl font-semibold text-green-600">
                 £{(stats?.totalPaid ?? 0).toLocaleString()}
               </p>
             </div>
