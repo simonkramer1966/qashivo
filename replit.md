@@ -103,16 +103,18 @@ Stored on invoice, persists after payment for learning/analytics:
 - `Disputed`: Invoice is disputed
 - `Plan`: Payment plan in place (see payment_plans table)
 
-### Payment Plans
-Multi-invoice payment plans are supported via:
-- `payment_plans` - Main plan record with total amount, frequency, source (manual/voice)
+### Payment Plans (Simplified for MVP)
+Multi-invoice payment plans with plan-level breach detection:
+- `payment_plans` - Main plan record with total amount, frequency, source, and breach detection fields (outstanding_at_creation, next_check_date, last_checked_outstanding)
 - `payment_plan_invoices` - Junction table linking invoices to plans
-- `payment_plan_schedules` - Individual installments with due dates and payment status
+
+Breach detection runs daily: if total outstanding hasn't decreased by next_check_date, a follow-up action is created. No individual installment tracking for MVP.
 
 ### Key Files
 - Schema: `shared/schema.ts` (invoices.outcomeOverride, payment_plans tables)
 - Types: `client/src/components/action-centre/types.ts` (OutcomeOverride type)
 - Utils: `client/src/components/action-centre/utils.ts` (getDebtorStatus with outcome mapping)
+- Breach Detection: `server/services/ptpBreachDetector.ts` (PTP and payment plan breach detection)
 
 ### Documentation
 See `Invoice-Status-Outcomes.md` for detailed documentation for production developers.

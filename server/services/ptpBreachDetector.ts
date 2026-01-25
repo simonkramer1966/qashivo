@@ -1,6 +1,6 @@
-import { eq, and, lt, ne } from "drizzle-orm";
+import { eq, and, lt, ne, isNotNull, inArray, sql } from "drizzle-orm";
 import { db } from "../db";
-import { tenants, promisesToPay, invoices, actions } from "@shared/schema";
+import { tenants, promisesToPay, invoices, actions, paymentPlans, paymentPlanInvoices } from "@shared/schema";
 import { pauseManager } from "../lib/pause-manager";
 
 interface BreachDetectorConfig {
@@ -78,34 +78,194 @@ class PTPBreachDetector {
   }
 
   /**
-   * Check for breached promises across all tenants
+   * Check for breached promises and payment plans across all tenants
    */
   private async checkForBreaches(): Promise<void> {
     try {
-      console.log("🔍 Checking for breached promises to pay...");
+      console.log("🔍 Checking for breached promises to pay and payment plans...");
       
       const now = new Date();
       const allTenants = await db.select().from(tenants);
       
-      let totalBreaches = 0;
+      let totalPTPBreaches = 0;
+      let totalPlanBreaches = 0;
 
       for (const tenant of allTenants) {
         try {
-          const breachCount = await this.checkTenantBreaches(tenant.id, now);
-          totalBreaches += breachCount;
+          const ptpBreachCount = await this.checkTenantBreaches(tenant.id, now);
+          const planBreachCount = await this.checkPaymentPlanBreaches(tenant.id, now);
+          totalPTPBreaches += ptpBreachCount;
+          totalPlanBreaches += planBreachCount;
         } catch (error: any) {
           console.error(`❌ Error checking breaches for tenant ${tenant.id}:`, error.message);
         }
       }
 
-      if (totalBreaches > 0) {
-        console.log(`⚠️  Found ${totalBreaches} breached promise(s) to pay`);
-      } else {
-        console.log("✅ No breached promises found");
+      if (totalPTPBreaches > 0) {
+        console.log(`⚠️  Found ${totalPTPBreaches} breached promise(s) to pay`);
+      }
+      if (totalPlanBreaches > 0) {
+        console.log(`⚠️  Found ${totalPlanBreaches} payment plan(s) with no payment activity`);
+      }
+      if (totalPTPBreaches === 0 && totalPlanBreaches === 0) {
+        console.log("✅ No breaches found");
       }
     } catch (error: any) {
       console.error("❌ PTP breach detector error:", error.message);
     }
+  }
+
+  /**
+   * Check for payment plan breaches in a specific tenant
+   * A breach is detected when nextCheckDate has passed and outstanding hasn't decreased
+   */
+  private async checkPaymentPlanBreaches(tenantId: string, now: Date): Promise<number> {
+    // Find active payment plans where nextCheckDate has passed
+    const duePlans = await db
+      .select()
+      .from(paymentPlans)
+      .where(and(
+        eq(paymentPlans.tenantId, tenantId),
+        eq(paymentPlans.status, 'active'),
+        isNotNull(paymentPlans.nextCheckDate),
+        lt(paymentPlans.nextCheckDate, now)
+      ));
+
+    let breachCount = 0;
+
+    for (const plan of duePlans) {
+      try {
+        // Get all invoices linked to this plan
+        const planInvoiceLinks = await db
+          .select({ invoiceId: paymentPlanInvoices.invoiceId })
+          .from(paymentPlanInvoices)
+          .where(eq(paymentPlanInvoices.paymentPlanId, plan.id));
+
+        // Handle plans with no linked invoices - mark as cancelled
+        if (planInvoiceLinks.length === 0) {
+          await db
+            .update(paymentPlans)
+            .set({
+              status: 'cancelled',
+              nextCheckDate: null,
+              updatedAt: now
+            })
+            .where(eq(paymentPlans.id, plan.id));
+          console.log(`⚠️  Payment plan ${plan.id} cancelled - no linked invoices`);
+          continue;
+        }
+
+        const invoiceIds = planInvoiceLinks.map(l => l.invoiceId);
+
+        // Calculate current total outstanding
+        const planInvoices = await db
+          .select()
+          .from(invoices)
+          .where(inArray(invoices.id, invoiceIds));
+
+        const currentOutstanding = planInvoices.reduce((sum, inv) => {
+          const balance = inv.balance ? parseFloat(inv.balance) : (parseFloat(inv.amount) - parseFloat(inv.amountPaid || "0"));
+          return sum + balance;
+        }, 0);
+
+        const lastChecked = plan.lastCheckedOutstanding ? parseFloat(plan.lastCheckedOutstanding) : null;
+
+        if (currentOutstanding === 0) {
+          // All invoices paid - complete the plan
+          await db
+            .update(paymentPlans)
+            .set({
+              status: 'completed',
+              nextCheckDate: null,
+              lastCheckedOutstanding: "0",
+              lastCheckedAt: now,
+              updatedAt: now
+            })
+            .where(eq(paymentPlans.id, plan.id));
+          console.log(`✅ Payment plan ${plan.id} completed - all invoices paid`);
+          
+        } else if (lastChecked !== null && currentOutstanding >= lastChecked) {
+          // No payment received - breach detected
+          console.log(`⚠️  Payment plan ${plan.id} breached - no payment activity (outstanding: ${currentOutstanding}, last checked: ${lastChecked})`);
+          
+          // Mark plan as defaulted and stop checking
+          await db
+            .update(paymentPlans)
+            .set({
+              status: 'defaulted',
+              nextCheckDate: null, // Stop further checks
+              lastCheckedOutstanding: currentOutstanding.toFixed(2),
+              lastCheckedAt: now,
+              updatedAt: now
+            })
+            .where(eq(paymentPlans.id, plan.id));
+          
+          // Create a follow-up action
+          await db.insert(actions).values({
+            tenantId: tenantId,
+            invoiceId: planInvoices[0]?.id || null,
+            contactId: plan.contactId,
+            userId: null,
+            type: 'note',
+            status: 'open',
+            subject: 'Payment Plan Defaulted - No Payment Received',
+            content: `Payment plan defaulted: no payment received by ${plan.nextCheckDate?.toISOString().split('T')[0]}. Total outstanding: ${currentOutstanding.toFixed(2)}. Follow-up required.`,
+            metadata: {
+              paymentPlanId: plan.id,
+              expectedOutstanding: lastChecked,
+              actualOutstanding: currentOutstanding,
+              breachType: 'payment_plan_defaulted',
+              autoGenerated: true,
+              exceptionType: 'Broken Promise',
+              priority: 'high'
+            },
+            aiGenerated: false,
+            source: 'automated'
+          });
+
+          // Clear outcomeOverride on linked invoices so they return to collections
+          await db
+            .update(invoices)
+            .set({ outcomeOverride: null })
+            .where(inArray(invoices.id, invoiceIds));
+
+          breachCount++;
+          
+        } else {
+          // Payment received - outstanding decreased, schedule next check
+          console.log(`✅ Payment received on plan ${plan.id} (outstanding decreased from ${lastChecked} to ${currentOutstanding})`);
+          
+          // Calculate next check date based on frequency
+          const nextCheckDate = new Date(now);
+          switch (plan.paymentFrequency) {
+            case 'weekly':
+              nextCheckDate.setDate(nextCheckDate.getDate() + 7);
+              break;
+            case 'monthly':
+              nextCheckDate.setMonth(nextCheckDate.getMonth() + 1);
+              break;
+            case 'quarterly':
+              nextCheckDate.setMonth(nextCheckDate.getMonth() + 3);
+              break;
+          }
+          
+          await db
+            .update(paymentPlans)
+            .set({
+              lastCheckedOutstanding: currentOutstanding.toFixed(2),
+              lastCheckedAt: now,
+              nextCheckDate: nextCheckDate,
+              updatedAt: now
+            })
+            .where(eq(paymentPlans.id, plan.id));
+        }
+
+      } catch (error: any) {
+        console.error(`❌ Error checking payment plan ${plan.id}:`, error.message);
+      }
+    }
+
+    return breachCount;
   }
 
   /**

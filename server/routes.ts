@@ -7463,7 +7463,7 @@ Guidelines:
       // 6. ON HOLD - invoices with active PTP, Payment Plan, or Dispute (paused from dunning)
       const onHoldRaw = allInvoices.filter(inv => {
         const isOverdueOrUnpaid = inv.status === 'overdue' || inv.status === 'unpaid';
-        const hasPaymentPlan = inv.paymentPlanId;
+        const hasPaymentPlan = inv.outcomeOverride === 'Plan';
         const hasActionDispute = allActions.some(a => a.invoiceId === inv.id && a.intentType === 'dispute' && a.status === 'open');
         const hasFormalDispute = invoiceIdsWithDisputes.includes(inv.id);
         const hasDispute = hasActionDispute || hasFormalDispute;
@@ -7476,7 +7476,7 @@ Guidelines:
         const enriched = await enrichInvoice(inv);
         
         // Determine why it's on hold
-        const hasPaymentPlan = inv.paymentPlanId;
+        const hasPaymentPlan = inv.outcomeOverride === 'Plan';
         const hasActionDispute = allActions.some(a => a.invoiceId === inv.id && a.intentType === 'dispute' && a.status === 'open');
         const hasFormalDispute = invoiceIdsWithDisputes.includes(inv.id);
         const hasDispute = hasActionDispute || hasFormalDispute;
@@ -7491,7 +7491,7 @@ Guidelines:
       }));
       
       // 7. PAYMENT PLANS - invoices with active payment plans
-      const paymentPlansRaw = allInvoices.filter(inv => inv.paymentPlanId);
+      const paymentPlansRaw = allInvoices.filter(inv => inv.outcomeOverride === 'Plan');
       const paymentPlansItems = await Promise.all(paymentPlansRaw.map(enrichInvoice));
       
       // 8. DEBT RECOVERY - invoices with stage = 'debt_recovery'
@@ -9297,7 +9297,7 @@ Guidelines:
           // Broken Promises = invoices with broken PTPs (0 until PTP system implemented)
           brokenPromises: 0,
           // Payment Plans = invoices with active payment arrangements (query needed)
-          paymentPlans: 0, // TODO: Query invoices.paymentPlanId IS NOT NULL count
+          paymentPlans: 0, // TODO: Query invoices.outcomeOverride = 'Plan' count
           // Legal = invoices in legal proceedings (0 until legal status implemented)  
           legal: 0,
           // Debt Recovery = invoices with external agencies (0 until debt recovery implemented)
@@ -10149,47 +10149,41 @@ Guidelines:
 
       const paymentPlan = await storage.createPaymentPlan(paymentPlanData);
 
-      // Generate payment schedules
-      const schedules = [];
-      const remainingAmount = parseFloat(totalAmount) - parseFloat(initialPaymentAmount || "0");
-      const installmentAmount = remainingAmount / numberOfPayments;
-      
-      let currentDate = new Date(planStartDate);
-      
-      for (let i = 1; i <= numberOfPayments; i++) {
-        // Calculate next payment date based on frequency
-        if (i > 1) {
-          switch (paymentFrequency) {
-            case 'weekly':
-              currentDate.setDate(currentDate.getDate() + 7);
-              break;
-            case 'monthly':
-              currentDate.setMonth(currentDate.getMonth() + 1);
-              break;
-            case 'quarterly':
-              currentDate.setMonth(currentDate.getMonth() + 3);
-              break;
-          }
-        }
-
-        const scheduleData = {
-          paymentPlanId: paymentPlan.id,
-          paymentNumber: i,
-          dueDate: new Date(currentDate),
-          amount: installmentAmount.toFixed(2),
-        };
-
-        const schedule = await storage.createPaymentPlanSchedule(scheduleData);
-        schedules.push(schedule);
-      }
-
       // Link invoices to payment plan
       await storage.linkInvoicesToPaymentPlan(paymentPlan.id, invoiceIds, user.id);
 
-      // Return the complete payment plan with schedules
+      // Calculate outstanding at creation and set up breach detection
+      const linkedInvoices = await db.select().from(invoices).where(inArray(invoices.id, invoiceIds));
+      const outstandingAtCreation = linkedInvoices.reduce((sum, inv) => {
+        const balance = inv.balance ? parseFloat(inv.balance) : (parseFloat(inv.amount) - parseFloat(inv.amountPaid || "0"));
+        return sum + balance;
+      }, 0);
+
+      // Calculate first check date based on frequency
+      let nextCheckDate = new Date(planStartDate);
+      switch (paymentFrequency) {
+        case 'weekly':
+          nextCheckDate.setDate(nextCheckDate.getDate() + 7);
+          break;
+        case 'monthly':
+          nextCheckDate.setMonth(nextCheckDate.getMonth() + 1);
+          break;
+        case 'quarterly':
+          nextCheckDate.setMonth(nextCheckDate.getMonth() + 3);
+          break;
+      }
+
+      // Update payment plan with breach detection fields
+      const updatedPaymentPlan = await storage.updatePaymentPlan(paymentPlan.id, paymentPlan.tenantId, {
+        outstandingAtCreation: outstandingAtCreation.toFixed(2),
+        nextCheckDate,
+        lastCheckedOutstanding: outstandingAtCreation.toFixed(2),
+        lastCheckedAt: new Date(),
+      } as any);
+
+      // Return the complete payment plan
       res.status(201).json({
-        paymentPlan,
-        schedules,
+        paymentPlan: updatedPaymentPlan,
         linkedInvoices: invoiceIds.length,
       });
 
@@ -22990,7 +22984,7 @@ ${tenant.name}
       // Import all tenant-scoped tables for deletion (comprehensive list based on FK constraints to contacts)
       const { 
         timelineEvents, paymentPromises, disputes, voiceCalls, emailMessages, smsMessages,
-        contactNotes, customerContactPersons, paymentPlans, paymentPlanSchedules, paymentPlanInvoices,
+        contactNotes, customerContactPersons, paymentPlans, paymentPlanInvoices,
         workflowTimers, inboundMessages, detectedOutcomes, contactOutcomes, policyDecisions,
         messageDrafts, customerBehaviorSignals, customerScheduleAssignments,
         customerPreferences, customerContactRoles, customerLearningProfiles, customerSegmentAssignments,
@@ -23019,18 +23013,14 @@ ${tenant.name}
         const deletedDisputes = await tx.delete(disputes).where(eq(disputes.tenantId, tenantId)).returning();
         const deletedTimers = await tx.delete(workflowTimers).where(eq(workflowTimers.tenantId, tenantId)).returning();
         
-        // Payment plans (schedules and invoices depend on plans - they don't have tenantId, so delete via parent)
+        // Payment plans (invoices depend on plans - they don't have tenantId, so delete via parent)
         // First get all payment plan IDs for this tenant
         const tenantPaymentPlans = await tx.select({ id: paymentPlans.id }).from(paymentPlans).where(eq(paymentPlans.tenantId, tenantId));
         const planIds = tenantPaymentPlans.map(p => p.id);
         
-        let deletedPlanSchedules: any[] = [];
         let deletedPlanInvoices: any[] = [];
         if (planIds.length > 0) {
-          deletedPlanSchedules = await tx.delete(paymentPlanSchedules).where(inArray(paymentPlanSchedules.paymentPlanId, planIds)).returning();
           deletedPlanInvoices = await tx.delete(paymentPlanInvoices).where(inArray(paymentPlanInvoices.paymentPlanId, planIds)).returning();
-          // Clear payment_plan_id on invoices before deleting payment plans (foreign key constraint)
-          await tx.update(invoices).set({ paymentPlanId: null }).where(inArray(invoices.paymentPlanId, planIds));
         }
         const deletedPlans = await tx.delete(paymentPlans).where(eq(paymentPlans.tenantId, tenantId)).returning();
         
@@ -23082,7 +23072,6 @@ ${tenant.name}
           disputes: deletedDisputes.length,
           workflowTimers: deletedTimers.length,
           paymentPlans: deletedPlans.length,
-          paymentPlanSchedules: deletedPlanSchedules.length,
           paymentPlanInvoices: deletedPlanInvoices.length,
           actions: deletedActions.length,
           invoices: deletedInvoices.length,

@@ -250,7 +250,6 @@ export const invoices = pgTable("invoices", {
   status: varchar("status").notNull().default("pending"), // pending, paid, overdue, cancelled, payment_plan
   collectionStage: varchar("collection_stage").default("initial"), // initial, reminder_1, reminder_2, formal_notice, final_notice, escalated
   stage: varchar("stage").default("overdue"), // overdue, debt_recovery, enforcement
-  paymentPlanId: varchar("payment_plan_id").references(() => paymentPlans.id),
   isOnHold: boolean("is_on_hold").default(false), // whether invoice is on hold (excluded from collections workflow)
   escalationFlag: boolean("escalation_flag").default(false), // flagged for debt recovery escalation
   legalFlag: boolean("legal_flag").default(false), // flagged for legal action
@@ -296,7 +295,6 @@ export const invoices = pgTable("invoices", {
   index("idx_invoices_created_at").on(table.createdAt),
   index("idx_invoices_contact_id").on(table.contactId),
   index("idx_invoices_next_action_date").on(table.tenantId, table.nextActionDate),
-  index("idx_invoices_payment_plan_id").on(table.paymentPlanId),
   index("idx_invoices_workflow_state").on(table.tenantId, table.workflowState),
   index("idx_invoices_pause_state").on(table.tenantId, table.pauseState),
 ]);
@@ -348,8 +346,12 @@ export const paymentPlans = pgTable("payment_plans", {
   
   // Status and tracking
   status: varchar("status").notNull().default("active"), // active, completed, defaulted, cancelled
-  currentPaymentNumber: integer("current_payment_number").default(0),
-  totalPaidAmount: decimal("total_paid_amount", { precision: 10, scale: 2 }).default("0"),
+  
+  // Breach detection - simplified for MVP
+  outstandingAtCreation: decimal("outstanding_at_creation", { precision: 10, scale: 2 }), // Snapshot of total outstanding when plan created
+  nextCheckDate: timestamp("next_check_date"), // When to check for payment activity
+  lastCheckedOutstanding: decimal("last_checked_outstanding", { precision: 10, scale: 2 }), // Last verified total outstanding
+  lastCheckedAt: timestamp("last_checked_at"), // When we last checked
   
   // Source of plan creation
   source: varchar("source").default("manual"), // manual (customer drawer), voice (voice agent)
@@ -364,33 +366,7 @@ export const paymentPlans = pgTable("payment_plans", {
   index("idx_payment_plans_contact").on(table.contactId),
   index("idx_payment_plans_status").on(table.status),
   index("idx_payment_plans_start_date").on(table.planStartDate),
-]);
-
-// Payment Plan Schedules table (individual scheduled payments)
-export const paymentPlanSchedules = pgTable("payment_plan_schedules", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  paymentPlanId: varchar("payment_plan_id").notNull().references(() => paymentPlans.id),
-  
-  // Payment details
-  paymentNumber: integer("payment_number").notNull(), // 1, 2, 3, etc.
-  dueDate: timestamp("due_date").notNull(),
-  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
-  
-  // Status tracking
-  status: varchar("status").notNull().default("pending"), // pending, paid, overdue, skipped
-  paymentDate: timestamp("payment_date"),
-  paymentReference: varchar("payment_reference"), // Reference from accounting system
-  paymentMethod: varchar("payment_method"), // bank_transfer, credit_card, cheque, etc.
-  
-  // Metadata
-  notes: text("notes"),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-}, (table) => [
-  index("idx_payment_plan_schedules_plan").on(table.paymentPlanId),
-  index("idx_payment_plan_schedules_due_date").on(table.dueDate),
-  index("idx_payment_plan_schedules_status").on(table.status),
-  unique("unique_payment_plan_payment_number").on(table.paymentPlanId, table.paymentNumber),
+  index("idx_payment_plans_next_check").on(table.nextCheckDate),
 ]);
 
 // Payment Plan Invoices table (links invoices to payment plans)
@@ -2538,8 +2514,10 @@ export const insertPaymentPlanSchema = createInsertSchema(paymentPlans).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
-  currentPaymentNumber: true,
-  totalPaidAmount: true,
+  outstandingAtCreation: true,
+  nextCheckDate: true,
+  lastCheckedOutstanding: true,
+  lastCheckedAt: true,
 }).extend({
   totalAmount: z.string().min(1, "Total amount is required"),
   initialPaymentAmount: z.string().default("0"),
@@ -2547,15 +2525,6 @@ export const insertPaymentPlanSchema = createInsertSchema(paymentPlans).omit({
   planStartDate: z.date({ required_error: "Plan start date is required" }),
   initialPaymentDate: z.date().optional(),
   notes: z.string().max(1000, "Notes must be 1000 characters or less").optional(),
-});
-
-export const insertPaymentPlanScheduleSchema = createInsertSchema(paymentPlanSchedules).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-  paymentDate: true,
-  paymentReference: true,
-  paymentMethod: true,
 });
 
 export const insertPaymentPlanInvoiceSchema = createInsertSchema(paymentPlanInvoices).omit({
@@ -2566,8 +2535,6 @@ export const insertPaymentPlanInvoiceSchema = createInsertSchema(paymentPlanInvo
 // Payment Plan TypeScript types
 export type PaymentPlan = typeof paymentPlans.$inferSelect;
 export type InsertPaymentPlan = z.infer<typeof insertPaymentPlanSchema>;
-export type PaymentPlanSchedule = typeof paymentPlanSchedules.$inferSelect;
-export type InsertPaymentPlanSchedule = z.infer<typeof insertPaymentPlanScheduleSchema>;
 export type PaymentPlanInvoice = typeof paymentPlanInvoices.$inferSelect;
 export type InsertPaymentPlanInvoice = z.infer<typeof insertPaymentPlanInvoiceSchema>;
 
@@ -5728,4 +5695,5 @@ export const outcomeOverrideEnum = ['Silent', 'Disputed', 'Plan'] as const;
 
 // NOTE: The old 'outcomes' and 'invoice_outcome_latest' tables have been removed.
 // Invoice outcomes are now tracked via the simpler 'outcomeOverride' field on invoices.
-// For payment plans, use the payment_plans, payment_plan_invoices, payment_plan_schedules tables.
+// For payment plans, use the payment_plans and payment_plan_invoices tables.
+// Breach detection uses plan-level outstanding comparison (not individual installment tracking).

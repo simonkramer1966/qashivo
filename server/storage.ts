@@ -35,7 +35,6 @@ import {
   budgetLines,
   exchangeRates,
   paymentPlans,
-  paymentPlanSchedules,
   paymentPlanInvoices,
   globalTemplates,
   tenantTemplates,
@@ -126,8 +125,6 @@ import {
   type InsertPaymentPromise,
   type PaymentPlan,
   type InsertPaymentPlan,
-  type PaymentPlanSchedule,
-  type InsertPaymentPlanSchedule,
   type PaymentPlanInvoice,
   type InsertPaymentPlanInvoice,
   subscriptionPlans,
@@ -471,18 +468,12 @@ export interface IStorage {
   getPaymentPlanWithDetails(id: string, tenantId: string): Promise<(PaymentPlan & { 
     contact: Contact; 
     createdByUser: User; 
-    schedules: PaymentPlanSchedule[]; 
     invoices: (Invoice & { contact: Contact })[] 
   }) | undefined>;
   createPaymentPlan(paymentPlan: InsertPaymentPlan): Promise<PaymentPlan>;
   updatePaymentPlan(id: string, tenantId: string, updates: Partial<InsertPaymentPlan>): Promise<PaymentPlan>;
   deletePaymentPlan(id: string, tenantId: string): Promise<void>;
 
-  // Payment Plan Schedule operations
-  getPaymentPlanSchedules(paymentPlanId: string): Promise<PaymentPlanSchedule[]>;
-  createPaymentPlanSchedule(schedule: InsertPaymentPlanSchedule): Promise<PaymentPlanSchedule>;
-  updatePaymentPlanSchedule(id: string, updates: Partial<InsertPaymentPlanSchedule>): Promise<PaymentPlanSchedule>;
-  
   // Payment Plan Invoice linking operations
   linkInvoicesToPaymentPlan(paymentPlanId: string, invoiceIds: string[], addedByUserId: string): Promise<PaymentPlanInvoice[]>;
   unlinkInvoiceFromPaymentPlan(paymentPlanId: string, invoiceId: string): Promise<void>;
@@ -4217,15 +4208,11 @@ export class DatabaseStorage implements IStorage {
   async getPaymentPlanWithDetails(id: string, tenantId: string): Promise<(PaymentPlan & { 
     contact: Contact; 
     createdByUser: User; 
-    schedules: PaymentPlanSchedule[]; 
     invoices: (Invoice & { contact: Contact })[] 
   }) | undefined> {
     // Get the payment plan with contact and user
     const paymentPlan = await this.getPaymentPlan(id, tenantId);
     if (!paymentPlan) return undefined;
-
-    // Get payment schedules
-    const schedules = await this.getPaymentPlanSchedules(id);
 
     // Get linked invoices
     const invoiceLinks = await db
@@ -4242,7 +4229,6 @@ export class DatabaseStorage implements IStorage {
 
     return {
       ...paymentPlan,
-      schedules,
       invoices: linkedInvoices,
     };
   }
@@ -4262,9 +4248,6 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deletePaymentPlan(id: string, tenantId: string): Promise<void> {
-    // Delete payment plan schedules first (cascade)
-    await db.delete(paymentPlanSchedules).where(eq(paymentPlanSchedules.paymentPlanId, id));
-    
     // Delete payment plan invoice links
     await db.delete(paymentPlanInvoices).where(eq(paymentPlanInvoices.paymentPlanId, id));
     
@@ -4272,30 +4255,6 @@ export class DatabaseStorage implements IStorage {
     await db
       .delete(paymentPlans)
       .where(and(eq(paymentPlans.id, id), eq(paymentPlans.tenantId, tenantId)));
-  }
-
-  // Payment Plan Schedule operations implementation
-  async getPaymentPlanSchedules(paymentPlanId: string): Promise<PaymentPlanSchedule[]> {
-    const schedules = await db
-      .select()
-      .from(paymentPlanSchedules)
-      .where(eq(paymentPlanSchedules.paymentPlanId, paymentPlanId))
-      .orderBy(paymentPlanSchedules.paymentNumber);
-    return schedules;
-  }
-
-  async createPaymentPlanSchedule(scheduleData: InsertPaymentPlanSchedule): Promise<PaymentPlanSchedule> {
-    const [schedule] = await db.insert(paymentPlanSchedules).values(scheduleData).returning();
-    return schedule;
-  }
-
-  async updatePaymentPlanSchedule(id: string, updates: Partial<InsertPaymentPlanSchedule>): Promise<PaymentPlanSchedule> {
-    const [schedule] = await db
-      .update(paymentPlanSchedules)
-      .set({ ...updates, updatedAt: new Date() })
-      .where(eq(paymentPlanSchedules.id, id))
-      .returning();
-    return schedule;
   }
 
   // Payment Plan Invoice linking operations implementation
@@ -4308,10 +4267,10 @@ export class DatabaseStorage implements IStorage {
 
     const links = await db.insert(paymentPlanInvoices).values(linksData).returning();
     
-    // Update invoice status to 'payment_plan'
+    // Update invoice outcomeOverride to 'Plan'
     await db
       .update(invoices)
-      .set({ status: 'payment_plan', paymentPlanId })
+      .set({ outcomeOverride: 'Plan' })
       .where(inArray(invoices.id, invoiceIds));
 
     return links;
@@ -4326,10 +4285,10 @@ export class DatabaseStorage implements IStorage {
         eq(paymentPlanInvoices.invoiceId, invoiceId)
       ));
 
-    // Reset invoice status to 'pending' and clear payment plan reference
+    // Clear invoice outcomeOverride
     await db
       .update(invoices)
-      .set({ status: 'pending', paymentPlanId: null })
+      .set({ outcomeOverride: null })
       .where(eq(invoices.id, invoiceId));
   }
 

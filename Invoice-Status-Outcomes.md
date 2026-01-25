@@ -84,14 +84,14 @@ The outcome override is **not cleared when the invoice is paid**. This allows th
 
 ---
 
-## Payment Plans
+## Payment Plans (Simplified for MVP)
 
-Payment plans can cover multiple invoices and have multiple installments.
+Payment plans can cover multiple invoices. Breach detection uses plan-level outstanding comparison rather than individual installment tracking.
 
 ### Tables
 
 #### payment_plans
-Main plan record.
+Main plan record with breach detection fields.
 
 | Column | Type | Description |
 |--------|------|-------------|
@@ -105,6 +105,10 @@ Main plan record.
 | number_of_payments | INTEGER | Total number of payments |
 | status | VARCHAR | `active`, `completed`, `defaulted`, `cancelled` |
 | source | VARCHAR | `manual` (from UI) or `voice` (from voice agent) |
+| outstanding_at_creation | DECIMAL | Snapshot of total outstanding when plan created |
+| next_check_date | TIMESTAMP | When to check for payment activity |
+| last_checked_outstanding | DECIMAL | Last verified total outstanding |
+| last_checked_at | TIMESTAMP | When we last checked |
 | created_by_user_id | VARCHAR | User who created (nullable for voice agent) |
 
 #### payment_plan_invoices
@@ -118,45 +122,25 @@ Junction table linking invoices to plans (supports multi-invoice plans).
 | added_at | TIMESTAMP | When invoice was added |
 | added_by_user_id | VARCHAR | User who added |
 
-#### payment_plan_schedules
-Individual installments.
+### Breach Detection
 
-| Column | Type | Description |
-|--------|------|-------------|
-| id | VARCHAR (UUID) | Primary key |
-| payment_plan_id | VARCHAR | Reference to plan |
-| payment_number | INTEGER | 1, 2, 3, etc. |
-| due_date | TIMESTAMP | When this payment is due |
-| amount | DECIMAL | Amount due |
-| status | VARCHAR | `pending`, `paid`, `overdue`, `skipped` |
-| payment_date | TIMESTAMP | When actually paid (if paid) |
-| payment_reference | VARCHAR | Reference from accounting system |
-| payment_method | VARCHAR | `bank_transfer`, `credit_card`, etc. |
+The system uses a simplified approach for MVP:
+
+1. **When plan is created:**
+   - Sum all outstanding balances from linked invoices
+   - Store as `outstanding_at_creation` and `last_checked_outstanding`
+   - Set `next_check_date` = planStartDate + frequency
+
+2. **Daily breach detection job:**
+   - Find active plans where `next_check_date < today`
+   - For each plan: sum current outstanding across all linked invoices
+   - If outstanding decreased → payment received, bump `next_check_date` by frequency
+   - If outstanding unchanged → flag as potential breach, create follow-up action
+   - If outstanding = 0 → mark plan as completed
 
 ### Plan Entry Points
 1. **Customer Drawer (Manual)** - User selects invoices and defines payment terms
 2. **Voice Agent** - Agrees plan for total outstanding (covers all open invoices)
-
----
-
-## Forecasting with Payment Plans
-
-When forecasting expected cash:
-
-```sql
--- Expected cash from non-plan invoices
-SELECT due_date, balance FROM invoices 
-WHERE invoice_status = 'OPEN' 
-  AND (outcome_override IS NULL OR outcome_override != 'Plan')
-
-UNION ALL
-
--- Expected cash from payment plans
-SELECT due_date, amount FROM payment_plan_schedules
-WHERE status = 'pending'
-```
-
-**Important:** Do not double-count invoices that are in a payment plan.
 
 ---
 
@@ -202,11 +186,12 @@ The old "canonical" model (removed) had:
 - `invoice_outcome_latest` table - Materialized view of latest outcome
 - Complex age bands (DUE, PENDING, OVERDUE, CRITICAL, RECOVERY, LEGAL)
 - Outcome types (PROMISE_TO_PAY, REQUEST_MORE_TIME, PAYMENT_PLAN, DISPUTE, NO_RESPONSE)
+- `payment_plan_schedules` table - Individual installment tracking
 
 This has been simplified to:
 - `outcome_override` column on invoices (Silent, Disputed, Plan, or null)
 - Simple computed `daysOverdue` value
-- Payment plans tracked in dedicated tables
+- Payment plans tracked with breach detection at plan level (no installment-by-installment tracking)
 
 ---
 
@@ -218,3 +203,4 @@ This has been simplified to:
 | `client/src/components/action-centre/types.ts` | TypeScript types including `OutcomeOverride` |
 | `client/src/components/action-centre/utils.ts` | `getDebtorStatus()` function with outcome mapping |
 | `client/src/pages/action-centre2.tsx` | Cashboard implementation |
+| `server/services/ptpBreachDetector.ts` | PTP and Payment Plan breach detection service |
