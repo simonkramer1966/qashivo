@@ -7,7 +7,6 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import NewSidebar from "@/components/layout/new-sidebar";
-import Header from "@/components/layout/header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -1966,21 +1965,21 @@ export default function Settings() {
 
   return (
     <div className="flex h-screen bg-white">
-      <NewSidebar />
-      
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <Header />
-        
-        <main className="flex-1 overflow-auto">
-          <div className="max-w-7xl mx-auto px-6 py-5">
-            <div className="mb-6">
-              <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
-              <p className="text-sm text-gray-500 mt-1">
-                Manage your account, integrations, and preferences
-              </p>
-            </div>
+      <div className="hidden lg:block">
+        <NewSidebar />
+      </div>
 
-            <Tabs defaultValue="general" className="space-y-6">
+      <main className="flex-1 flex flex-col min-h-0">
+        <div className="max-w-7xl mx-auto w-full px-6 py-5">
+          <h1 className="text-2xl font-bold text-gray-900 font-heading">Settings</h1>
+          <p className="text-sm text-gray-500 mt-1">
+            Manage your account, integrations, and preferences
+          </p>
+        </div>
+        
+        <div className="flex-1 flex flex-col min-h-0 overflow-y-auto">
+          <div className="max-w-7xl mx-auto w-full px-6 flex-1 flex flex-col min-h-0">
+            <Tabs defaultValue="general" className="space-y-6 flex-1 flex flex-col min-h-0">
               <div className="border-b border-gray-100 overflow-x-auto">
                 <TabsList className="bg-transparent h-auto p-0 gap-0">
                   <TabsTrigger 
@@ -2591,8 +2590,8 @@ export default function Settings() {
               </TabsContent>
             </Tabs>
           </div>
-        </main>
-      </div>
+        </div>
+      </main>
     </div>
   );
 }
