@@ -1116,20 +1116,20 @@ export function CardlessCustomerDrawer({
                                     const amount = item.outcome?.extracted?.amount;
                                     
                                     return (
-                                      <div key={item.id} className="border-b border-gray-50 last:border-0">
+                                      <div key={item.id} className="border-b border-gray-50 last:border-0 overflow-hidden">
                                         <button
                                           onClick={() => toggleTimelineItem(item.id)}
-                                          className="group w-full flex items-center py-2.5 hover:bg-gray-50 transition-colors text-left"
+                                          className="group w-full flex items-center py-2.5 hover:bg-gray-50 transition-colors text-left overflow-hidden"
                                         >
                                           <span className="text-gray-400 mr-3 flex-shrink-0">
                                             {getChannelIcon(item.channel)}
                                           </span>
                                           
-                                          <div className="flex-1 min-w-0 mr-3 overflow-hidden">
-                                            <p className="text-sm text-gray-900 truncate max-w-full">
+                                          <div className="flex-1 w-0 min-w-0 mr-3 overflow-hidden">
+                                            <p className="text-sm text-gray-900 truncate block">
                                               {item.preview || item.summary}
                                             </p>
-                                            <p className="text-xs text-gray-400 mt-0.5">
+                                            <p className="text-xs text-gray-400 mt-0.5 truncate block">
                                               {dateInfo.relative}
                                             </p>
                                           </div>
