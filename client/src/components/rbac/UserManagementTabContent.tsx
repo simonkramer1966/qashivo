@@ -1,6 +1,4 @@
-import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -22,7 +20,6 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { usePermissions } from '@/hooks/usePermissions';
-import ProtectedComponent from './ProtectedComponent';
 import PermissionMatrix from './PermissionMatrix';
 import UserInviteModal from './UserInviteModal';
 import {
@@ -30,9 +27,7 @@ import {
   UserPlus,
   Shield,
   Activity,
-  Settings,
   AlertCircle,
-  CheckCircle,
   Clock,
   Trash2
 } from 'lucide-react';
@@ -189,46 +184,39 @@ export default function UserManagementTabContent() {
   }
 
   return (
-    <div className="space-y-8" data-testid="user-management-content">
-      {/* Header with Invite Button */}
-      <Card className="card-glass">
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="text-xl font-bold flex items-center">
-                <div className="p-2 bg-[#17B6C3]/10 rounded-lg mr-3">
-                  <Users className="h-5 w-5 text-[#17B6C3]" />
-                </div>
-                User Management
-              </CardTitle>
-              <CardDescription className="text-base">
-                Manage team members, roles, and permissions for your organization
-              </CardDescription>
+    <div className="space-y-0" data-testid="user-management-content">
+      <div className="py-6 border-b border-gray-100">
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="flex items-center mb-1">
+              <Users className="h-5 w-5 text-[#17B6C3] mr-2" />
+              <h2 className="text-lg font-semibold text-gray-900">User Management</h2>
             </div>
-            
-            <UserInviteModal
-              trigger={
-                <Button className="bg-[#17B6C3] hover:bg-[#1396A1] text-white" data-testid="invite-user-button">
-                  <UserPlus className="h-4 w-4 mr-2" />
-                  Invite User
-                </Button>
-              }
-              onInviteSent={(invitation) => {
-                // Refresh user list after successful invitation
-                queryClient.invalidateQueries({ queryKey: ['/api/rbac/users'] });
-                queryClient.invalidateQueries({ queryKey: ['/api/rbac/invitations'] });
-              }}
-            />
+            <p className="text-sm text-gray-500">
+              Manage team members, roles, and permissions for your organization
+            </p>
           </div>
-        </CardHeader>
-      </Card>
+          
+          <UserInviteModal
+            trigger={
+              <Button className="h-9 rounded-full bg-[#17B6C3] hover:bg-[#1396A1] text-white" data-testid="invite-user-button">
+                <UserPlus className="h-4 w-4 mr-2" />
+                Invite User
+              </Button>
+            }
+            onInviteSent={(invitation) => {
+              queryClient.invalidateQueries({ queryKey: ['/api/rbac/users'] });
+              queryClient.invalidateQueries({ queryKey: ['/api/rbac/invitations'] });
+            }}
+          />
+        </div>
+      </div>
 
-      {/* User Management Tabs */}
-      <Tabs defaultValue="users" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3 bg-slate-50/80">
+      <Tabs defaultValue="users" className="mt-6">
+        <TabsList className="h-9 bg-gray-100 p-0.5 rounded-lg">
           <TabsTrigger 
             value="users" 
-            className="data-[state=active]:bg-[#17B6C3] data-[state=active]:text-white"
+            className="h-8 px-3 text-[13px] rounded-md data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm"
             data-testid="tab-users-list"
           >
             <Users className="h-4 w-4 mr-2" />
@@ -236,7 +224,7 @@ export default function UserManagementTabContent() {
           </TabsTrigger>
           <TabsTrigger 
             value="permissions" 
-            className="data-[state=active]:bg-[#17B6C3] data-[state=active]:text-white"
+            className="h-8 px-3 text-[13px] rounded-md data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm"
             data-testid="tab-permissions-matrix"
           >
             <Shield className="h-4 w-4 mr-2" />
@@ -244,7 +232,7 @@ export default function UserManagementTabContent() {
           </TabsTrigger>
           <TabsTrigger 
             value="activity" 
-            className="data-[state=active]:bg-[#17B6C3] data-[state=active]:text-white"
+            className="h-8 px-3 text-[13px] rounded-md data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm"
             data-testid="tab-activity-log"
           >
             <Activity className="h-4 w-4 mr-2" />
@@ -252,157 +240,150 @@ export default function UserManagementTabContent() {
           </TabsTrigger>
         </TabsList>
 
-        {/* Users List Tab */}
-        <TabsContent value="users" className="space-y-6">
-          <Card className="card-glass">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Users className="h-5 w-5" />
-                Team Members ({tenantUsers.length})
-              </CardTitle>
-              <CardDescription>
-                View and manage user roles within your organization
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {tenantUsers.length === 0 ? (
-                <div className="text-center py-12">
-                  <Users className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">No team members yet</h3>
-                  <p className="text-muted-foreground mb-4">
-                    Start building your team by inviting users to your organization
-                  </p>
-                  <UserInviteModal
-                    trigger={
-                      <Button data-testid="invite-first-user">
-                        <UserPlus className="h-4 w-4 mr-2" />
-                        Invite Your First User
-                      </Button>
-                    }
-                  />
-                </div>
-              ) : (
-                <div className="rounded-md border">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>User</TableHead>
-                        <TableHead>Role</TableHead>
-                        <TableHead>Permissions</TableHead>
-                        <TableHead>Joined</TableHead>
-                        <TableHead>Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {tenantUsers.map((user) => (
-                        <TableRow key={user.id} data-testid={`user-row-${user.id}`}>
-                          <TableCell>
-                            <div className="space-y-1">
-                              <div className="font-medium">
-                                {user.firstName && user.lastName 
-                                  ? `${user.firstName} ${user.lastName}`
-                                  : user.email}
-                              </div>
-                              <div className="text-sm text-muted-foreground">
-                                {user.email}
-                              </div>
-                            </div>
-                          </TableCell>
-                          
-                          <TableCell>
-                            <Select
-                              value={user.role}
-                              onValueChange={(newRole) => handleRoleChange(user.id, newRole)}
-                              disabled={changeRoleMutation.isPending || user.id === userPermissions?.userId}
-                            >
-                              <SelectTrigger className="w-32">
-                                <Badge className={getRoleColor(user.role)}>
-                                  {user.role}
-                                </Badge>
-                              </SelectTrigger>
-                              <SelectContent>
-                                {roleHierarchy?.assignableRoles?.map((role: string) => (
-                                  <SelectItem key={role} value={role}>
-                                    <Badge className={getRoleColor(role)}>
-                                      {role}
-                                    </Badge>
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </TableCell>
-                          
-                          <TableCell>
-                            <div className="text-sm text-muted-foreground">
-                              {user.permissions?.length || 0} permissions
-                            </div>
-                          </TableCell>
-                          
-                          <TableCell>
-                            <div className="text-sm text-muted-foreground">
-                              {new Date(user.createdAt).toLocaleDateString()}
-                            </div>
-                          </TableCell>
-                          
-                          <TableCell>
-                            {user.id !== userPermissions?.userId && userPermissions?.role === 'owner' && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleRemoveUser(user.id)}
-                                disabled={removeUserMutation.isPending}
-                                className="text-red-600 hover:text-red-800 hover:bg-red-50"
-                                data-testid={`remove-user-${user.id}`}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            )}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Permission Matrix Tab */}
-        <TabsContent value="permissions" className="space-y-6">
-          <PermissionMatrix 
-            restrictToUserLevel={userPermissions?.role !== 'owner'}
-            allowComparison={true}
-            showDescriptions={true}
-            data-testid="permissions-matrix"
-          />
-        </TabsContent>
-
-        {/* Activity Log Tab */}
-        <TabsContent value="activity" className="space-y-6">
-          <Card className="card-glass">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Activity className="h-5 w-5" />
-                User Activity Log
-              </CardTitle>
-              <CardDescription>
-                Track user management actions and permission changes
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
+        <TabsContent value="users" className="mt-6">
+          <div className="py-6 border-b border-gray-100">
+            <div className="flex items-center mb-1">
+              <Users className="h-5 w-5 text-[#17B6C3] mr-2" />
+              <h3 className="text-lg font-semibold text-gray-900">Team Members ({tenantUsers.length})</h3>
+            </div>
+            <p className="text-sm text-gray-500 mb-6">
+              View and manage user roles within your organization
+            </p>
+            
+            {tenantUsers.length === 0 ? (
               <div className="text-center py-12">
-                <Clock className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-semibold mb-2">Activity Log</h3>
-                <p className="text-muted-foreground">
-                  User activity and permission change logs will appear here
+                <Users className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">No team members yet</h3>
+                <p className="text-sm text-gray-500 mb-4">
+                  Start building your team by inviting users to your organization
                 </p>
-                <p className="text-sm text-muted-foreground mt-2">
-                  This feature tracks role changes, permission modifications, and user invitations
-                </p>
+                <UserInviteModal
+                  trigger={
+                    <Button className="h-9 rounded-full bg-[#17B6C3] hover:bg-[#1396A1] text-white" data-testid="invite-first-user">
+                      <UserPlus className="h-4 w-4 mr-2" />
+                      Invite Your First User
+                    </Button>
+                  }
+                />
               </div>
-            </CardContent>
-          </Card>
+            ) : (
+              <div className="rounded-lg border border-gray-100 overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-gray-50 border-b border-gray-100">
+                      <TableHead className="text-[11px] font-medium text-gray-400 uppercase tracking-wider">User</TableHead>
+                      <TableHead className="text-[11px] font-medium text-gray-400 uppercase tracking-wider">Role</TableHead>
+                      <TableHead className="text-[11px] font-medium text-gray-400 uppercase tracking-wider">Permissions</TableHead>
+                      <TableHead className="text-[11px] font-medium text-gray-400 uppercase tracking-wider">Joined</TableHead>
+                      <TableHead className="text-[11px] font-medium text-gray-400 uppercase tracking-wider">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {tenantUsers.map((user) => (
+                      <TableRow key={user.id} className="border-b border-gray-50 hover:bg-gray-50" data-testid={`user-row-${user.id}`}>
+                        <TableCell className="py-3">
+                          <div className="space-y-0.5">
+                            <div className="text-[13px] font-medium text-gray-900">
+                              {user.firstName && user.lastName 
+                                ? `${user.firstName} ${user.lastName}`
+                                : user.email}
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              {user.email}
+                            </div>
+                          </div>
+                        </TableCell>
+                        
+                        <TableCell className="py-3">
+                          <Select
+                            value={user.role}
+                            onValueChange={(newRole) => handleRoleChange(user.id, newRole)}
+                            disabled={changeRoleMutation.isPending || user.id === userPermissions?.userId}
+                          >
+                            <SelectTrigger className="h-8 w-28 rounded-lg border-gray-200">
+                              <Badge className={getRoleColor(user.role)}>
+                                {user.role}
+                              </Badge>
+                            </SelectTrigger>
+                            <SelectContent>
+                              {roleHierarchy?.assignableRoles?.map((role: string) => (
+                                <SelectItem key={role} value={role}>
+                                  <Badge className={getRoleColor(role)}>
+                                    {role}
+                                  </Badge>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
+                        
+                        <TableCell className="py-3">
+                          <span className="text-[13px] text-gray-500">
+                            {user.permissions?.length || 0} permissions
+                          </span>
+                        </TableCell>
+                        
+                        <TableCell className="py-3">
+                          <span className="text-[13px] text-gray-500">
+                            {new Date(user.createdAt).toLocaleDateString()}
+                          </span>
+                        </TableCell>
+                        
+                        <TableCell className="py-3">
+                          {user.id !== userPermissions?.userId && userPermissions?.role === 'owner' && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleRemoveUser(user.id)}
+                              disabled={removeUserMutation.isPending}
+                              className="h-8 w-8 p-0 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg"
+                              data-testid={`remove-user-${user.id}`}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="permissions" className="mt-6">
+          <div className="py-6 border-b border-gray-100">
+            <PermissionMatrix 
+              restrictToUserLevel={userPermissions?.role !== 'owner'}
+              allowComparison={true}
+              showDescriptions={true}
+              data-testid="permissions-matrix"
+            />
+          </div>
+        </TabsContent>
+
+        <TabsContent value="activity" className="mt-6">
+          <div className="py-6 border-b border-gray-100">
+            <div className="flex items-center mb-1">
+              <Activity className="h-5 w-5 text-[#17B6C3] mr-2" />
+              <h3 className="text-lg font-semibold text-gray-900">User Activity Log</h3>
+            </div>
+            <p className="text-sm text-gray-500 mb-6">
+              Track user management actions and permission changes
+            </p>
+            
+            <div className="text-center py-12">
+              <Clock className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">Activity Log</h3>
+              <p className="text-sm text-gray-500">
+                User activity and permission change logs will appear here
+              </p>
+              <p className="text-xs text-gray-400 mt-2">
+                This feature tracks role changes, permission modifications, and user invitations
+              </p>
+            </div>
+          </div>
         </TabsContent>
       </Tabs>
     </div>

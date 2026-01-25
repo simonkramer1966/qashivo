@@ -156,7 +156,7 @@ function PlaybookTabContent() {
 
   return (
     <div className="space-y-0">
-      <div className="py-8 border-b border-gray-200">
+      <div className="py-6 border-b border-gray-100">
         <div className="flex items-center mb-1">
           <BookOpen className="h-5 w-5 text-[#17B6C3] mr-2" />
           <h2 className="text-lg font-semibold text-gray-900">AI Collections Playbook</h2>
@@ -165,16 +165,16 @@ function PlaybookTabContent() {
           Configure how Qashivo's AI autonomously manages your credit control and collections. 
           The playbook determines who to contact, when, and how - based on best-practice credit control principles.
         </p>
-        <Alert className="bg-blue-50 border-blue-200">
+        <Alert className="bg-blue-50 border-blue-100 rounded-lg">
           <AlertCircle className="h-4 w-4 text-blue-600" />
-          <AlertDescription className="text-blue-800">
+          <AlertDescription className="text-[13px] text-blue-800">
             <strong>AI-First Collections:</strong> Qashivo decides the optimal contact strategy based on invoice age, 
             amount, payment history, and customer behaviour. You set the guardrails; the AI executes.
           </AlertDescription>
         </Alert>
       </div>
 
-      <div className="py-8 border-b border-gray-200">
+      <div className="py-6 border-b border-gray-100">
         <div className="flex items-center mb-1">
           <Volume2 className="h-5 w-5 text-[#17B6C3] mr-2" />
           <h2 className="text-lg font-semibold text-gray-900">Communication Tone</h2>
@@ -184,9 +184,9 @@ function PlaybookTabContent() {
         </p>
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="tenantStyle">Tenant Communication Style</Label>
+            <Label htmlFor="tenantStyle" className="text-sm">Tenant Communication Style</Label>
             <Select value={tenantStyle} onValueChange={setTenantStyle}>
-              <SelectTrigger className="bg-white border-gray-200 max-w-md" data-testid="select-tenant-style">
+              <SelectTrigger className="h-9 rounded-lg bg-white border-gray-200 max-w-md focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]" data-testid="select-tenant-style">
                 <SelectValue placeholder="Select style" />
               </SelectTrigger>
               <SelectContent>
@@ -202,7 +202,7 @@ function PlaybookTabContent() {
         </div>
       </div>
 
-      <div className="py-8 border-b border-gray-200">
+      <div className="py-6 border-b border-gray-100">
         <div className="flex items-center mb-1">
           <Gauge className="h-5 w-5 text-[#17B6C3] mr-2" />
           <h2 className="text-lg font-semibold text-gray-900">High-Value Thresholds</h2>
@@ -210,15 +210,15 @@ function PlaybookTabContent() {
         <p className="text-sm text-gray-500 mb-6">
           Define what constitutes a high-value customer for escalation and VIP handling.
         </p>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label htmlFor="highValueThreshold">Total Overdue Threshold (£)</Label>
+            <Label htmlFor="highValueThreshold" className="text-sm">Total Overdue Threshold (£)</Label>
             <Input 
               id="highValueThreshold"
               type="number"
               value={highValueThreshold}
               onChange={(e) => setHighValueThreshold(e.target.value)}
-              className="bg-white border-gray-200"
+              className="h-9 rounded-lg bg-white border-gray-200 focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
               data-testid="input-high-value-threshold"
             />
             <p className="text-sm text-gray-500">
@@ -226,13 +226,13 @@ function PlaybookTabContent() {
             </p>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="singleInvoiceThreshold">Single Invoice Threshold (£)</Label>
+            <Label htmlFor="singleInvoiceThreshold" className="text-sm">Single Invoice Threshold (£)</Label>
             <Input 
               id="singleInvoiceThreshold"
               type="number"
               value={singleInvoiceThreshold}
               onChange={(e) => setSingleInvoiceThreshold(e.target.value)}
-              className="bg-white border-gray-200"
+              className="h-9 rounded-lg bg-white border-gray-200 focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
               data-testid="input-single-invoice-threshold"
             />
             <p className="text-sm text-gray-500">
@@ -242,7 +242,7 @@ function PlaybookTabContent() {
         </div>
       </div>
 
-      <div className="py-8 border-b border-gray-200">
+      <div className="py-6 border-b border-gray-100">
         <div className="flex items-center mb-1">
           <Timer className="h-5 w-5 text-[#17B6C3] mr-2" />
           <h2 className="text-lg font-semibold text-gray-900">Contact Frequency & Cooldowns</h2>
@@ -251,9 +251,9 @@ function PlaybookTabContent() {
           Control how often AI contacts customers to avoid over-communication.
         </p>
         <div className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="emailCooldown">Email Cooldown (days)</Label>
+              <Label htmlFor="emailCooldown" className="text-sm">Email Cooldown (days)</Label>
               <Input 
                 id="emailCooldown"
                 type="number"
@@ -261,12 +261,12 @@ function PlaybookTabContent() {
                 max="30"
                 value={emailCooldown}
                 onChange={(e) => setEmailCooldown(e.target.value)}
-                className="bg-white border-gray-200"
+                className="h-9 rounded-lg bg-white border-gray-200 focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
                 data-testid="input-email-cooldown"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="smsCooldown">SMS Cooldown (days)</Label>
+              <Label htmlFor="smsCooldown" className="text-sm">SMS Cooldown (days)</Label>
               <Input 
                 id="smsCooldown"
                 type="number"
@@ -274,12 +274,12 @@ function PlaybookTabContent() {
                 max="30"
                 value={smsCooldown}
                 onChange={(e) => setSmsCooldown(e.target.value)}
-                className="bg-white border-gray-200"
+                className="h-9 rounded-lg bg-white border-gray-200 focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
                 data-testid="input-sms-cooldown"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="voiceCooldown">Voice Call Cooldown (days)</Label>
+              <Label htmlFor="voiceCooldown" className="text-sm">Voice Call Cooldown (days)</Label>
               <Input 
                 id="voiceCooldown"
                 type="number"
@@ -287,16 +287,16 @@ function PlaybookTabContent() {
                 max="30"
                 value={voiceCooldown}
                 onChange={(e) => setVoiceCooldown(e.target.value)}
-                className="bg-white border-gray-200"
+                className="h-9 rounded-lg bg-white border-gray-200 focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
                 data-testid="input-voice-cooldown"
               />
             </div>
           </div>
           
           <div className="border-t border-gray-100 pt-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="maxTouches">Max Touches per 14-day Window</Label>
+                <Label htmlFor="maxTouches" className="text-sm">Max Touches per 14-day Window</Label>
                 <Input 
                   id="maxTouches"
                   type="number"
@@ -304,7 +304,7 @@ function PlaybookTabContent() {
                   max="10"
                   value={maxTouchesPerWindow}
                   onChange={(e) => setMaxTouchesPerWindow(e.target.value)}
-                  className="bg-white border-gray-200"
+                  className="h-9 rounded-lg bg-white border-gray-200 focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
                   data-testid="input-max-touches"
                 />
                 <p className="text-sm text-gray-500">
@@ -312,21 +312,21 @@ function PlaybookTabContent() {
                 </p>
               </div>
               <div className="space-y-2">
-                <Label>Business Hours for Voice Calls</Label>
+                <Label className="text-sm">Business Hours for Voice Calls</Label>
                 <div className="flex items-center gap-4">
                   <Input 
                     type="time"
                     value={businessHoursStart}
                     onChange={(e) => setBusinessHoursStart(e.target.value)}
-                    className="bg-white border-gray-200 w-32"
+                    className="h-9 rounded-lg bg-white border-gray-200 w-32 focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
                     data-testid="input-business-hours-start"
                   />
-                  <span className="text-gray-500">to</span>
+                  <span className="text-sm text-gray-500">to</span>
                   <Input 
                     type="time"
                     value={businessHoursEnd}
                     onChange={(e) => setBusinessHoursEnd(e.target.value)}
-                    className="bg-white border-gray-200 w-32"
+                    className="h-9 rounded-lg bg-white border-gray-200 w-32 focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
                     data-testid="input-business-hours-end"
                   />
                 </div>
@@ -336,7 +336,7 @@ function PlaybookTabContent() {
         </div>
       </div>
 
-      <div className="py-8 border-b border-gray-200">
+      <div className="py-6 border-b border-gray-100">
         <div className="flex items-center mb-1">
           <ShieldAlert className="h-5 w-5 text-[#17B6C3] mr-2" />
           <h2 className="text-lg font-semibold text-gray-900">Late Payment Legislation</h2>
@@ -346,7 +346,7 @@ function PlaybookTabContent() {
         </p>
         <div className="flex items-center justify-between py-4">
           <div>
-            <p className="font-medium text-gray-900">Enable Late Payment Legislation</p>
+            <p className="text-[13px] font-medium text-gray-900">Enable Late Payment Legislation</p>
             <p className="text-sm text-gray-500">
               When enabled, AI will include statutory interest (Bank of England base rate + 8%) 
               and compensation information in recovery-stage communications.
@@ -360,11 +360,11 @@ function PlaybookTabContent() {
         </div>
       </div>
 
-      <div className="py-8">
+      <div className="py-6">
         <Button 
           onClick={handleSave}
           disabled={updatePlaybookMutation.isPending}
-          className="bg-[#17B6C3] hover:bg-[#1396A1] text-white"
+          className="h-9 rounded-full bg-[#17B6C3] hover:bg-[#1396A1] text-white"
           data-testid="button-save-playbook"
         >
           {updatePlaybookMutation.isPending ? 'Saving...' : 'Save Playbook Settings'}
@@ -678,7 +678,7 @@ function TestTabContent() {
 
   return (
     <div className="space-y-0">
-      <div className="py-8 border-b border-gray-200">
+      <div className="py-6 border-b border-gray-100">
         <div className="flex items-center mb-1">
           <TestTube className="h-5 w-5 text-[#17B6C3] mr-2" />
           <h2 className="text-lg font-semibold text-gray-900">Communication Testing</h2>
@@ -698,7 +698,7 @@ function TestTabContent() {
                   type="email"
                   value={testEmail}
                   onChange={(e) => setTestEmail(e.target.value)}
-                  className="bg-white border-gray-200"
+                  className="h-9 rounded-lg bg-white border-gray-200 focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
                   data-testid="input-test-email"
                 />
               </div>
@@ -709,7 +709,7 @@ function TestTabContent() {
                   type="tel"
                   value={testMobile}
                   onChange={(e) => setTestMobile(e.target.value)}
-                  className="bg-white border-gray-200"
+                  className="h-9 rounded-lg bg-white border-gray-200 focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
                   data-testid="input-test-mobile"
                 />
               </div>
@@ -720,7 +720,7 @@ function TestTabContent() {
                   type="tel"
                   value={testTelephone}
                   onChange={(e) => setTestTelephone(e.target.value)}
-                  className="bg-white border-gray-200"
+                  className="h-9 rounded-lg bg-white border-gray-200 focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
                   data-testid="input-test-telephone"
                 />
               </div>
@@ -736,7 +736,7 @@ function TestTabContent() {
                   id="customerName"
                   value={customerName}
                   onChange={(e) => setCustomerName(e.target.value)}
-                  className="bg-white border-gray-200"
+                  className="h-9 rounded-lg bg-white border-gray-200 focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
                   data-testid="input-customer-name"
                 />
               </div>
@@ -746,7 +746,7 @@ function TestTabContent() {
                   id="companyName"
                   value={companyName}
                   onChange={(e) => setCompanyName(e.target.value)}
-                  className="bg-white border-gray-200"
+                  className="h-9 rounded-lg bg-white border-gray-200 focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
                   data-testid="input-company-name"
                 />
               </div>
@@ -756,7 +756,7 @@ function TestTabContent() {
                   id="invoiceNumber"
                   value={invoiceNumber}
                   onChange={(e) => setInvoiceNumber(e.target.value)}
-                  className="bg-white border-gray-200"
+                  className="h-9 rounded-lg bg-white border-gray-200 focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
                   data-testid="input-invoice-number"
                 />
               </div>
@@ -767,7 +767,7 @@ function TestTabContent() {
                   type="number"
                   value={invoiceAmount}
                   onChange={(e) => setInvoiceAmount(e.target.value)}
-                  className="bg-white border-gray-200"
+                  className="h-9 rounded-lg bg-white border-gray-200 focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
                   data-testid="input-invoice-amount"
                 />
               </div>
@@ -778,7 +778,7 @@ function TestTabContent() {
                   type="number"
                   value={daysOverdue}
                   onChange={(e) => setDaysOverdue(e.target.value)}
-                  className="bg-white border-gray-200"
+                  className="h-9 rounded-lg bg-white border-gray-200 focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
                   data-testid="input-days-overdue"
                 />
               </div>
@@ -788,7 +788,7 @@ function TestTabContent() {
                   id="organisationName"
                   value={organisationName}
                   onChange={(e) => setOrganisationName(e.target.value)}
-                  className="bg-white border-gray-200"
+                  className="h-9 rounded-lg bg-white border-gray-200 focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
                   data-testid="input-organisation-name"
                 />
               </div>
@@ -801,7 +801,7 @@ function TestTabContent() {
               <Button 
                 onClick={handleTestEmail}
                 disabled={isTestingEmail}
-                className="bg-[#17B6C3] hover:bg-[#1396A1] text-white"
+                className="h-9 rounded-full bg-[#17B6C3] hover:bg-[#1396A1] text-white"
                 data-testid="button-test-email"
               >
                 <Mail className="h-4 w-4 mr-2" />
@@ -810,7 +810,7 @@ function TestTabContent() {
               <Button 
                 onClick={handleTestSMS}
                 disabled={isTestingSMS}
-                className="bg-[#17B6C3] hover:bg-[#1396A1] text-white"
+                className="h-9 rounded-full bg-[#17B6C3] hover:bg-[#1396A1] text-white"
                 data-testid="button-test-sms"
               >
                 <MessageSquare className="h-4 w-4 mr-2" />
@@ -819,7 +819,7 @@ function TestTabContent() {
               <Button 
                 onClick={handleTestVoice}
                 disabled={isTestingVoice}
-                className="bg-[#17B6C3] hover:bg-[#1396A1] text-white"
+                className="h-9 rounded-full bg-[#17B6C3] hover:bg-[#1396A1] text-white"
                 data-testid="button-test-voice"
               >
                 <Phone className="h-4 w-4 mr-2" />
@@ -830,7 +830,7 @@ function TestTabContent() {
         </div>
       </div>
 
-      <div className="py-8">
+      <div className="py-6">
         <div className="flex items-center mb-1">
           <Database className="h-5 w-5 text-[#17B6C3] mr-2" />
           <h2 className="text-lg font-semibold text-gray-900">Demo Data Management</h2>
@@ -844,7 +844,7 @@ function TestTabContent() {
             onClick={handleDemoSetup}
             disabled={isDemoSetup}
             variant="outline"
-            className="border-gray-200"
+            className="h-9 rounded-lg border-gray-200"
             data-testid="button-demo-setup"
           >
             <Zap className="h-4 w-4 mr-2" />
@@ -854,7 +854,7 @@ function TestTabContent() {
             onClick={handleRegenerate}
             disabled={isRegenerating}
             variant="outline"
-            className="border-gray-200"
+            className="h-9 rounded-lg border-gray-200"
             data-testid="button-regenerate"
           >
             <RefreshCw className={`h-4 w-4 mr-2 ${isRegenerating ? 'animate-spin' : ''}`} />
@@ -864,7 +864,7 @@ function TestTabContent() {
             onClick={handleGenerateMockData}
             disabled={isGeneratingMockData}
             variant="outline"
-            className="border-gray-200"
+            className="h-9 rounded-lg border-gray-200"
             data-testid="button-generate-mock"
           >
             <Database className="h-4 w-4 mr-2" />
@@ -1003,7 +1003,7 @@ function DemoDataTabContent() {
 
   return (
     <div className="space-y-0">
-      <div className="py-8 border-b border-gray-200">
+      <div className="py-6 border-b border-gray-100">
         <div className="flex items-center mb-1">
           <Database className="h-5 w-5 text-[#17B6C3] mr-2" />
           <h2 className="text-lg font-semibold text-gray-900">Demo Data Statistics</h2>
@@ -1016,8 +1016,8 @@ function DemoDataTabContent() {
           <div className="animate-pulse flex flex-wrap gap-x-16 gap-y-6">
             {[1, 2, 3, 4].map((i) => (
               <div key={i} className="space-y-2">
-                <div className="h-4 w-16 bg-gray-200 rounded"></div>
-                <div className="h-8 w-20 bg-gray-200 rounded"></div>
+                <div className="h-4 w-16 bg-gray-200 rounded-lg"></div>
+                <div className="h-8 w-20 bg-gray-200 rounded-lg"></div>
               </div>
             ))}
           </div>
@@ -1047,7 +1047,7 @@ function DemoDataTabContent() {
         )}
       </div>
 
-      <div className="py-8 border-b border-gray-200">
+      <div className="py-6 border-b border-gray-100">
         <div className="flex items-center mb-1">
           <PlusCircle className="h-5 w-5 text-[#17B6C3] mr-2" />
           <h2 className="text-lg font-semibold text-gray-900">Create Demo Data</h2>
@@ -1065,7 +1065,7 @@ function DemoDataTabContent() {
             <Button 
               onClick={handleCreateDemoCustomer}
               disabled={isCreatingCustomer}
-              className="bg-[#17B6C3] hover:bg-[#1396A1] text-white"
+              className="h-9 rounded-full bg-[#17B6C3] hover:bg-[#1396A1] text-white"
               data-testid="button-create-demo-customer"
             >
               <UserPlus className="h-4 w-4 mr-2" />
@@ -1081,7 +1081,7 @@ function DemoDataTabContent() {
             <Button 
               onClick={handleGenerateInvoice}
               disabled={isGeneratingInvoice}
-              className="bg-[#17B6C3] hover:bg-[#1396A1] text-white"
+              className="h-9 rounded-full bg-[#17B6C3] hover:bg-[#1396A1] text-white"
               data-testid="button-generate-invoice"
             >
               <FileText className="h-4 w-4 mr-2" />
@@ -1097,7 +1097,7 @@ function DemoDataTabContent() {
             <Button 
               onClick={handleSimulatePayment}
               disabled={isSimulatingPayment}
-              className="bg-[#17B6C3] hover:bg-[#1396A1] text-white"
+              className="h-9 rounded-full bg-[#17B6C3] hover:bg-[#1396A1] text-white"
               data-testid="button-simulate-payment"
             >
               <CreditCard className="h-4 w-4 mr-2" />
@@ -1107,7 +1107,7 @@ function DemoDataTabContent() {
         </div>
       </div>
 
-      <div className="py-8">
+      <div className="py-6">
         <div className="flex items-center mb-1">
           <RotateCcw className="h-5 w-5 text-red-500 mr-2" />
           <h2 className="text-lg font-semibold text-gray-900">Reset Data</h2>
@@ -1120,7 +1120,7 @@ function DemoDataTabContent() {
           onClick={handleResetAll}
           disabled={isResetting}
           variant="destructive"
-          className="bg-red-600 hover:bg-red-700 text-white"
+          className="h-9 rounded-lg bg-red-600 hover:bg-red-700 text-white"
           data-testid="button-reset-all"
         >
           <Trash2 className="h-4 w-4 mr-2" />
@@ -1271,7 +1271,7 @@ function AutomationTabContent() {
 
   return (
     <div className="space-y-0">
-      <Alert className="mb-6 bg-blue-50 border-blue-200">
+      <Alert className="mb-6 bg-blue-50 border-blue-100 rounded-lg">
         <Bot className="h-4 w-4 text-blue-600" />
         <AlertDescription className="text-blue-800">
           <strong>Supervised Autonomy:</strong> AI generates a daily plan overnight, you approve it each morning, then AI executes throughout the day. This gives you control while saving 2-3 hours daily.
@@ -1280,7 +1280,7 @@ function AutomationTabContent() {
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-0">
-          <div className="py-8 border-b border-gray-200">
+          <div className="py-6 border-b border-gray-100">
             <div className="flex items-center mb-1">
               <Zap className="h-5 w-5 text-[#17B6C3] mr-2" />
               <h2 className="text-lg font-semibold text-gray-900">Automation Mode</h2>
@@ -1294,7 +1294,7 @@ function AutomationTabContent() {
               name="approvalMode"
               render={({ field }) => (
                 <FormItem>
-                  <div className="flex items-center justify-between py-4 border border-gray-200 rounded-lg px-4 bg-gray-50">
+                  <div className="flex items-center justify-between py-4 border border-gray-100 rounded-lg px-4 bg-gray-50">
                     <div className="space-y-0.5 flex-1">
                       <FormLabel className="text-base font-semibold text-gray-900">
                         {field.value === 'manual' ? 'Manual Approval (Recommended)' : 'Full Automation'}
@@ -1314,7 +1314,7 @@ function AutomationTabContent() {
                     </FormControl>
                   </div>
                   {field.value === 'auto' && (
-                    <Alert className="mt-4 bg-yellow-50 border-yellow-300">
+                    <Alert className="mt-4 bg-yellow-50 border-yellow-200 rounded-lg">
                       <AlertCircle className="h-4 w-4 text-yellow-600" />
                       <AlertDescription className="text-yellow-900">
                         Full automation mode executes all actions without human review. Use with caution.
@@ -1327,7 +1327,7 @@ function AutomationTabContent() {
             />
           </div>
 
-          <div className="py-8 border-b border-gray-200">
+          <div className="py-6 border-b border-gray-100">
             <div className="flex items-center mb-1">
               <Clock className="h-5 w-5 text-[#17B6C3] mr-2" />
               <h2 className="text-lg font-semibold text-gray-900">Execution Timing</h2>
@@ -1346,7 +1346,7 @@ function AutomationTabContent() {
                     <Input
                       type="time"
                       placeholder="09:00"
-                      className="bg-white border-gray-200 max-w-xs"
+                      className="h-9 rounded-lg bg-white border-gray-200 max-w-xs focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
                       data-testid="input-execution-time"
                       {...field}
                     />
@@ -1360,7 +1360,7 @@ function AutomationTabContent() {
             />
           </div>
 
-          <div className="py-8 border-b border-gray-200">
+          <div className="py-6 border-b border-gray-100">
             <div className="flex items-center mb-1">
               <TrendingUp className="h-5 w-5 text-[#17B6C3] mr-2" />
               <h2 className="text-lg font-semibold text-gray-900">Daily Limits by Channel</h2>
@@ -1384,7 +1384,7 @@ function AutomationTabContent() {
                         type="number"
                         min="0"
                         max="500"
-                        className="bg-white border-gray-200 max-w-xs"
+                        className="h-9 rounded-lg bg-white border-gray-200 max-w-xs focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
                         data-testid="input-limit-email"
                         {...field}
                         onChange={(e) => field.onChange(parseInt(e.target.value))}
@@ -1412,7 +1412,7 @@ function AutomationTabContent() {
                         type="number"
                         min="0"
                         max="200"
-                        className="bg-white border-gray-200 max-w-xs"
+                        className="h-9 rounded-lg bg-white border-gray-200 max-w-xs focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
                         data-testid="input-limit-sms"
                         {...field}
                         onChange={(e) => field.onChange(parseInt(e.target.value))}
@@ -1440,7 +1440,7 @@ function AutomationTabContent() {
                         type="number"
                         min="0"
                         max="100"
-                        className="bg-white border-gray-200 max-w-xs"
+                        className="h-9 rounded-lg bg-white border-gray-200 max-w-xs focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
                         data-testid="input-limit-voice"
                         {...field}
                         onChange={(e) => field.onChange(parseInt(e.target.value))}
@@ -1456,7 +1456,7 @@ function AutomationTabContent() {
             </div>
           </div>
 
-          <div className="py-8 border-b border-gray-200">
+          <div className="py-6 border-b border-gray-100">
             <div className="flex items-center mb-1">
               <CheckCircle className="h-5 w-5 text-[#17B6C3] mr-2" />
               <h2 className="text-lg font-semibold text-gray-900">AI Confidence Thresholds</h2>
@@ -1564,7 +1564,7 @@ function AutomationTabContent() {
             </div>
           </div>
 
-          <div className="py-8 border-b border-gray-200">
+          <div className="py-6 border-b border-gray-100">
             <div className="flex items-center mb-1">
               <ShieldAlert className="h-5 w-5 text-[#17B6C3] mr-2" />
               <h2 className="text-lg font-semibold text-gray-900">Exception Rules</h2>
@@ -1608,7 +1608,7 @@ function AutomationTabContent() {
                         min="0"
                         step="1000"
                         placeholder="10000"
-                        className="bg-white border-gray-200 max-w-xs"
+                        className="h-9 rounded-lg bg-white border-gray-200 max-w-xs focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
                         data-testid="input-exception-high-value"
                         {...field}
                         onChange={(e) => field.onChange(parseInt(e.target.value))}
@@ -1668,9 +1668,9 @@ function AutomationTabContent() {
             </div>
           </div>
 
-          <div className="py-8 border-b border-gray-200">
+          <div className="py-6 border-b border-gray-100">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Current Configuration Summary</h3>
-            <div className="space-y-2 text-sm bg-gray-50 p-4 rounded-lg border border-gray-200">
+            <div className="space-y-2 text-sm bg-gray-50 p-4 rounded-lg border border-gray-100">
               <div className="flex justify-between">
                 <span className="text-gray-500">Mode:</span>
                 <Badge variant={approvalMode === 'manual' ? 'default' : 'destructive'}>
@@ -1681,7 +1681,7 @@ function AutomationTabContent() {
                 <span className="text-gray-500">Execution Time:</span>
                 <strong className="text-gray-900">{executionTime}</strong>
               </div>
-              <div className="border-t border-gray-200 pt-2 mt-2">
+              <div className="border-t border-gray-100 pt-2 mt-2">
                 <div className="flex justify-between">
                   <span className="text-gray-500">Daily Capacity:</span>
                   <strong className="text-gray-900">{dailyLimits.email + dailyLimits.sms + dailyLimits.voice} actions/day</strong>
@@ -1702,11 +1702,11 @@ function AutomationTabContent() {
             </div>
           </div>
 
-          <div className="py-8">
+          <div className="py-6">
             <Button 
               type="submit"
               disabled={updateSettingsMutation.isPending}
-              className="bg-[#17B6C3] hover:bg-[#1396A1] text-white"
+              className="h-9 rounded-full bg-[#17B6C3] hover:bg-[#1396A1] text-white"
               data-testid="button-save-automation"
             >
               {updateSettingsMutation.isPending ? 'Saving...' : 'Save Automation Settings'}
@@ -1972,48 +1972,48 @@ export default function Settings() {
         <Header />
         
         <main className="flex-1 overflow-auto">
-          <div className="max-w-5xl mx-auto px-6 py-8">
-            <div className="mb-8">
+          <div className="max-w-7xl mx-auto px-6 py-5">
+            <div className="mb-6">
               <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
-              <p className="text-gray-500 mt-1">
+              <p className="text-sm text-gray-500 mt-1">
                 Manage your account, integrations, and preferences
               </p>
             </div>
 
-            <Tabs defaultValue="general" className="space-y-8">
-              <div className="border-b border-gray-200 overflow-x-auto">
+            <Tabs defaultValue="general" className="space-y-6">
+              <div className="border-b border-gray-100 overflow-x-auto">
                 <TabsList className="bg-transparent h-auto p-0 gap-0">
                   <TabsTrigger 
                     value="general" 
-                    className="px-4 py-3 rounded-none border-b-2 border-transparent data-[state=active]:border-[#17B6C3] data-[state=active]:bg-transparent data-[state=active]:text-[#17B6C3] text-gray-600 hover:text-gray-900"
+                    className="px-4 py-2.5 text-[13px] rounded-none border-b-2 border-transparent data-[state=active]:border-[#17B6C3] data-[state=active]:bg-transparent data-[state=active]:text-[#17B6C3] text-gray-600 hover:text-gray-900"
                     data-testid="tab-general"
                   >
                     General
                   </TabsTrigger>
                   <TabsTrigger 
                     value="integrations" 
-                    className="px-4 py-3 rounded-none border-b-2 border-transparent data-[state=active]:border-[#17B6C3] data-[state=active]:bg-transparent data-[state=active]:text-[#17B6C3] text-gray-600 hover:text-gray-900"
+                    className="px-4 py-2.5 text-[13px] rounded-none border-b-2 border-transparent data-[state=active]:border-[#17B6C3] data-[state=active]:bg-transparent data-[state=active]:text-[#17B6C3] text-gray-600 hover:text-gray-900"
                     data-testid="tab-integrations"
                   >
                     Integrations
                   </TabsTrigger>
                   <TabsTrigger 
                     value="notifications" 
-                    className="px-4 py-3 rounded-none border-b-2 border-transparent data-[state=active]:border-[#17B6C3] data-[state=active]:bg-transparent data-[state=active]:text-[#17B6C3] text-gray-600 hover:text-gray-900"
+                    className="px-4 py-2.5 text-[13px] rounded-none border-b-2 border-transparent data-[state=active]:border-[#17B6C3] data-[state=active]:bg-transparent data-[state=active]:text-[#17B6C3] text-gray-600 hover:text-gray-900"
                     data-testid="tab-notifications"
                   >
                     Notifications
                   </TabsTrigger>
                   <TabsTrigger 
                     value="security" 
-                    className="px-4 py-3 rounded-none border-b-2 border-transparent data-[state=active]:border-[#17B6C3] data-[state=active]:bg-transparent data-[state=active]:text-[#17B6C3] text-gray-600 hover:text-gray-900"
+                    className="px-4 py-2.5 text-[13px] rounded-none border-b-2 border-transparent data-[state=active]:border-[#17B6C3] data-[state=active]:bg-transparent data-[state=active]:text-[#17B6C3] text-gray-600 hover:text-gray-900"
                     data-testid="tab-security"
                   >
                     Security
                   </TabsTrigger>
                   <TabsTrigger 
                     value="branding" 
-                    className="px-4 py-3 rounded-none border-b-2 border-transparent data-[state=active]:border-[#17B6C3] data-[state=active]:bg-transparent data-[state=active]:text-[#17B6C3] text-gray-600 hover:text-gray-900"
+                    className="px-4 py-2.5 text-[13px] rounded-none border-b-2 border-transparent data-[state=active]:border-[#17B6C3] data-[state=active]:bg-transparent data-[state=active]:text-[#17B6C3] text-gray-600 hover:text-gray-900"
                     data-testid="tab-branding"
                   >
                     Branding
@@ -2021,7 +2021,7 @@ export default function Settings() {
                   <ProtectedComponent permission="admin:users" hideOnDeny>
                     <TabsTrigger 
                       value="users" 
-                      className="px-4 py-3 rounded-none border-b-2 border-transparent data-[state=active]:border-[#17B6C3] data-[state=active]:bg-transparent data-[state=active]:text-[#17B6C3] text-gray-600 hover:text-gray-900"
+                      className="px-4 py-2.5 text-[13px] rounded-none border-b-2 border-transparent data-[state=active]:border-[#17B6C3] data-[state=active]:bg-transparent data-[state=active]:text-[#17B6C3] text-gray-600 hover:text-gray-900"
                       data-testid="tab-users"
                     >
                       Users
@@ -2029,21 +2029,21 @@ export default function Settings() {
                   </ProtectedComponent>
                   <TabsTrigger 
                     value="playbook" 
-                    className="px-4 py-3 rounded-none border-b-2 border-transparent data-[state=active]:border-[#17B6C3] data-[state=active]:bg-transparent data-[state=active]:text-[#17B6C3] text-gray-600 hover:text-gray-900"
+                    className="px-4 py-2.5 text-[13px] rounded-none border-b-2 border-transparent data-[state=active]:border-[#17B6C3] data-[state=active]:bg-transparent data-[state=active]:text-[#17B6C3] text-gray-600 hover:text-gray-900"
                     data-testid="tab-playbook"
                   >
                     Playbook
                   </TabsTrigger>
                   <TabsTrigger 
                     value="test" 
-                    className="px-4 py-3 rounded-none border-b-2 border-transparent data-[state=active]:border-[#17B6C3] data-[state=active]:bg-transparent data-[state=active]:text-[#17B6C3] text-gray-600 hover:text-gray-900"
+                    className="px-4 py-2.5 text-[13px] rounded-none border-b-2 border-transparent data-[state=active]:border-[#17B6C3] data-[state=active]:bg-transparent data-[state=active]:text-[#17B6C3] text-gray-600 hover:text-gray-900"
                     data-testid="tab-test"
                   >
                     Test
                   </TabsTrigger>
                   <TabsTrigger 
                     value="demo-data" 
-                    className="px-4 py-3 rounded-none border-b-2 border-transparent data-[state=active]:border-[#17B6C3] data-[state=active]:bg-transparent data-[state=active]:text-[#17B6C3] text-gray-600 hover:text-gray-900"
+                    className="px-4 py-2.5 text-[13px] rounded-none border-b-2 border-transparent data-[state=active]:border-[#17B6C3] data-[state=active]:bg-transparent data-[state=active]:text-[#17B6C3] text-gray-600 hover:text-gray-900"
                     data-testid="tab-demo-data"
                   >
                     Demo Data
@@ -2052,7 +2052,7 @@ export default function Settings() {
               </div>
 
               <TabsContent value="general" className="mt-0">
-                <div className="py-8 border-b border-gray-200">
+                <div className="py-6 border-b border-gray-100">
                   <div className="flex items-center mb-1">
                     <User className="h-5 w-5 text-[#17B6C3] mr-2" />
                     <h2 className="text-lg font-semibold text-gray-900">Profile Information</h2>
@@ -2064,45 +2064,45 @@ export default function Settings() {
                   <div className="space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="firstName">First Name</Label>
+                        <Label htmlFor="firstName" className="text-sm">First Name</Label>
                         <Input 
                           id="firstName"
                           defaultValue={(user as any)?.firstName || ""}
-                          className="bg-white border-gray-200"
+                          className="h-9 rounded-lg bg-white border-gray-200 focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
                           data-testid="input-first-name"
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="lastName">Last Name</Label>
+                        <Label htmlFor="lastName" className="text-sm">Last Name</Label>
                         <Input 
                           id="lastName"
                           defaultValue={(user as any)?.lastName || ""}
-                          className="bg-white border-gray-200"
+                          className="h-9 rounded-lg bg-white border-gray-200 focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
                           data-testid="input-last-name"
                         />
                       </div>
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="email">Email Address</Label>
+                      <Label htmlFor="email" className="text-sm">Email Address</Label>
                       <Input 
                         id="email"
                         type="email"
                         defaultValue={(user as any)?.email || ""}
                         disabled
-                        className="bg-gray-100 border-gray-200"
+                        className="h-9 rounded-lg bg-gray-50 border-gray-200"
                         data-testid="input-email"
                       />
                       <p className="text-sm text-gray-500">
                         Email cannot be changed. Contact support if needed.
                       </p>
                     </div>
-                    <Button className="bg-[#17B6C3] hover:bg-[#1396A1] text-white" data-testid="button-save-profile">
+                    <Button className="h-9 rounded-full bg-[#17B6C3] hover:bg-[#1396A1] text-white" data-testid="button-save-profile">
                       Save Changes
                     </Button>
                   </div>
                 </div>
 
-                <div className="py-8">
+                <div className="py-6">
                   <div className="flex items-center mb-1">
                     <Building2 className="h-5 w-5 text-[#17B6C3] mr-2" />
                     <h2 className="text-lg font-semibold text-gray-900">Organization Settings</h2>
@@ -2113,23 +2113,23 @@ export default function Settings() {
                   
                   <div className="space-y-4">
                     <div className="space-y-2">
-                      <Label htmlFor="orgName">Organization Name</Label>
+                      <Label htmlFor="orgName" className="text-sm">Organization Name</Label>
                       <Input 
                         id="orgName"
                         value={organizationName}
                         onChange={(e) => setOrganizationName(e.target.value)}
                         placeholder="Your Company Name"
-                        className="bg-white border-gray-200 max-w-md"
+                        className="h-9 rounded-lg bg-white border-gray-200 max-w-md focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
                         data-testid="input-org-name"
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="currency">Organisation Currency</Label>
+                      <Label htmlFor="currency" className="text-sm">Organisation Currency</Label>
                       <Select 
                         value={organizationCurrency} 
                         onValueChange={setOrganizationCurrency}
                       >
-                        <SelectTrigger className="bg-white border-gray-200 max-w-md" data-testid="select-currency">
+                        <SelectTrigger className="h-9 rounded-lg bg-white border-gray-200 max-w-md focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]" data-testid="select-currency">
                           <SelectValue placeholder="Select currency" />
                         </SelectTrigger>
                         <SelectContent className="bg-white border-gray-200">
@@ -2142,12 +2142,12 @@ export default function Settings() {
                       </Select>
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="eomDay">EOM Day for Cash Flow</Label>
+                      <Label htmlFor="eomDay" className="text-sm">EOM Day for Cash Flow</Label>
                       <Select 
                         value={eomDay} 
                         onValueChange={setEomDay}
                       >
-                        <SelectTrigger className="bg-white border-gray-200 max-w-md" data-testid="select-eom-day">
+                        <SelectTrigger className="h-9 rounded-lg bg-white border-gray-200 max-w-md focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]" data-testid="select-eom-day">
                           <SelectValue placeholder="Select EOM day" />
                         </SelectTrigger>
                         <SelectContent className="bg-white border-gray-200">
@@ -2163,15 +2163,15 @@ export default function Settings() {
                       </p>
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="subdomain">Subdomain</Label>
+                      <Label htmlFor="subdomain" className="text-sm">Subdomain</Label>
                       <div className="flex max-w-md">
                         <Input 
                           id="subdomain"
                           placeholder="yourcompany"
-                          className="rounded-r-none bg-white border-gray-200"
+                          className="h-9 rounded-l-lg rounded-r-none bg-white border-gray-200 focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
                           data-testid="input-subdomain"
                         />
-                        <div className="inline-flex items-center px-3 rounded-r-md border border-l-0 border-gray-200 bg-gray-50 text-gray-600">
+                        <div className="inline-flex items-center px-3 h-9 rounded-r-lg border border-l-0 border-gray-200 bg-gray-50 text-[13px] text-gray-600">
                           .arpro.com
                         </div>
                       </div>
@@ -2179,7 +2179,7 @@ export default function Settings() {
                     <Button 
                       onClick={handleSaveOrganization}
                       disabled={updateTenantMutation.isPending}
-                      className="bg-[#17B6C3] hover:bg-[#1396A1] text-white" 
+                      className="h-9 rounded-full bg-[#17B6C3] hover:bg-[#1396A1] text-white" 
                       data-testid="button-save-org"
                     >
                       {updateTenantMutation.isPending ? "Saving..." : "Save Changes"}
@@ -2189,7 +2189,7 @@ export default function Settings() {
               </TabsContent>
 
               <TabsContent value="integrations" className="mt-0">
-                <div className="py-8 border-b border-gray-200">
+                <div className="py-6 border-b border-gray-100">
                   <div className="flex items-center justify-between mb-1">
                     <div className="flex items-center">
                       <BarChart3 className="h-5 w-5 text-[#17B6C3] mr-2" />
@@ -2197,8 +2197,8 @@ export default function Settings() {
                     </div>
                     <Badge 
                       className={accountingStatus?.connectedProvider 
-                        ? "bg-green-100 text-green-800 border-green-200" 
-                        : "bg-red-100 text-red-800 border-red-200"
+                        ? "bg-[#4FAD80]/10 text-[#4FAD80] border-[#4FAD80]/20" 
+                        : "bg-[#C75C5C]/10 text-[#C75C5C] border-[#C75C5C]/20"
                       } 
                       data-testid="badge-accounting-status"
                     >
@@ -2211,22 +2211,22 @@ export default function Settings() {
 
                   {!accountingStatus?.connectedProvider ? (
                     <div className="space-y-4">
-                      <h4 className="font-medium text-gray-900">Choose Your Accounting Software</h4>
+                      <h4 className="text-[13px] font-medium text-gray-900">Choose Your Accounting Software</h4>
                       <div className="space-y-3">
-                        <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
+                        <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-100">
                           <div className="flex items-center space-x-4">
                             <div className="p-3 bg-blue-100 rounded-lg">
                               <SiXero className="h-6 w-6 text-blue-600" />
                             </div>
                             <div>
-                              <p className="font-semibold text-gray-900">Xero</p>
+                              <p className="text-[13px] font-semibold text-gray-900">Xero</p>
                               <p className="text-sm text-gray-500">Cloud-based accounting software</p>
                             </div>
                           </div>
                           <Button 
                             onClick={() => handleProviderConnect('xero', 'Xero')}
                             disabled={isConnecting}
-                            className="bg-[#17B6C3] hover:bg-[#1396A1] text-white"
+                            className="h-9 rounded-lg bg-[#17B6C3] hover:bg-[#1396A1] text-white"
                             data-testid="button-connect-xero"
                           >
                             {isConnecting ? "Connecting..." : "Connect"}
@@ -2236,7 +2236,7 @@ export default function Settings() {
                     </div>
                   ) : (
                     <div className="space-y-6">
-                      <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
+                      <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-100">
                         <div className="flex items-center space-x-4">
                           <div className={`p-3 rounded-lg ${
                             accountingStatus.connectedProvider.name === 'xero' ? 'bg-blue-100' :
@@ -2248,14 +2248,14 @@ export default function Settings() {
                             {accountingStatus.connectedProvider.name === 'quickbooks' && <SiQuickbooks className="h-6 w-6 text-orange-600" />}
                           </div>
                           <div>
-                            <p className="font-semibold text-gray-900">
+                            <p className="text-[13px] font-semibold text-gray-900">
                               Connected to {accountingStatus.connectedProvider.displayName}
                             </p>
                             <p className="text-sm text-gray-500">
                               Syncing invoices, contacts, and payment data
                             </p>
                             {accountingStatus.connectedProvider.organizationName && (
-                              <p className="text-sm text-gray-700 font-medium mt-1">
+                              <p className="text-[13px] text-gray-700 font-medium mt-1">
                                 Organization: {accountingStatus.connectedProvider.organizationName}
                               </p>
                             )}
@@ -2266,11 +2266,11 @@ export default function Settings() {
                             )}
                           </div>
                         </div>
-                        <div className="flex items-center space-x-2">
+                        <div className="flex items-center gap-2">
                           <Button 
                             onClick={() => triggerSyncMutation.mutate()}
                             disabled={triggerSyncMutation.isPending}
-                            className="bg-[#17B6C3] hover:bg-[#1396A1] text-white"
+                            className="h-9 rounded-lg bg-[#17B6C3] hover:bg-[#1396A1] text-white"
                             data-testid="button-sync-now"
                           >
                             <RefreshCw className={`h-4 w-4 mr-2 ${triggerSyncMutation.isPending ? 'animate-spin' : ''}`} />
@@ -2283,7 +2283,7 @@ export default function Settings() {
                             )}
                             disabled={isDisconnecting}
                             variant="outline"
-                            className="border-red-300 text-red-600 hover:bg-red-50"
+                            className="h-9 rounded-lg border-[#C75C5C]/30 text-[#C75C5C] hover:bg-[#C75C5C]/5"
                             data-testid="button-disconnect-provider"
                           >
                             {isDisconnecting ? "Disconnecting..." : "Disconnect"}
@@ -2292,10 +2292,10 @@ export default function Settings() {
                       </div>
 
                       <div className="border-t border-gray-100 pt-6">
-                        <h4 className="font-medium text-gray-900 mb-4">Sync Settings</h4>
+                        <h4 className="text-[13px] font-medium text-gray-900 mb-4">Sync Settings</h4>
                         <div className="flex items-center justify-between py-4">
                           <div>
-                            <p className="font-medium text-gray-900">Auto Sync</p>
+                            <p className="text-[13px] font-medium text-gray-900">Auto Sync</p>
                             <p className="text-sm text-gray-500">
                               Automatically sync invoices at regular intervals
                             </p>
@@ -2309,7 +2309,7 @@ export default function Settings() {
                         <Button 
                           onClick={handleSaveSyncSettings}
                           disabled={updateSyncSettingsMutation.isPending}
-                          className="bg-[#17B6C3] hover:bg-[#1396A1] text-white mt-4"
+                          className="h-9 rounded-full bg-[#17B6C3] hover:bg-[#1396A1] text-white mt-4"
                           data-testid="button-save-sync-settings"
                         >
                           {updateSyncSettingsMutation.isPending ? "Saving..." : "Save Sync Settings"}
@@ -2319,13 +2319,13 @@ export default function Settings() {
                   )}
                 </div>
 
-                <div className="py-8 border-b border-gray-200">
+                <div className="py-6 border-b border-gray-100">
                   <div className="flex items-center justify-between mb-1">
                     <div className="flex items-center">
                       <Bot className="h-5 w-5 text-[#17B6C3] mr-2" />
                       <h2 className="text-lg font-semibold text-gray-900">AI Integration (OpenAI)</h2>
                     </div>
-                    <Badge className="bg-green-100 text-green-800 border-green-200" data-testid="badge-openai-status">
+                    <Badge className="bg-[#4FAD80]/10 text-[#4FAD80] border-[#4FAD80]/20" data-testid="badge-openai-status">
                       Active
                     </Badge>
                   </div>
@@ -2336,14 +2336,14 @@ export default function Settings() {
                   <div className="space-y-0">
                     <div className="flex items-center justify-between py-4 border-b border-gray-100">
                       <div>
-                        <p className="font-medium text-gray-900">Enable AI Suggestions</p>
+                        <p className="text-[13px] font-medium text-gray-900">Enable AI Suggestions</p>
                         <p className="text-sm text-gray-500">Get intelligent collection recommendations</p>
                       </div>
                       <Switch defaultChecked data-testid="switch-ai-suggestions" />
                     </div>
                     <div className="flex items-center justify-between py-4">
                       <div>
-                        <p className="font-medium text-gray-900">Auto-generate Email Content</p>
+                        <p className="text-[13px] font-medium text-gray-900">Auto-generate Email Content</p>
                         <p className="text-sm text-gray-500">Use AI to create personalized reminder emails</p>
                       </div>
                       <Switch defaultChecked data-testid="switch-ai-emails" />
@@ -2351,13 +2351,13 @@ export default function Settings() {
                   </div>
                 </div>
 
-                <div className="py-8">
+                <div className="py-6">
                   <div className="flex items-center justify-between mb-1">
                     <div className="flex items-center">
                       <Database className="h-5 w-5 text-[#17B6C3] mr-2" />
                       <h2 className="text-lg font-semibold text-gray-900">Developer Tools</h2>
                     </div>
-                    <Badge className="bg-orange-100 text-orange-800 border-orange-200" data-testid="badge-dev-tools-status">
+                    <Badge className="bg-[#E8A23B]/10 text-[#E8A23B] border-[#E8A23B]/20" data-testid="badge-dev-tools-status">
                       Demo Mode
                     </Badge>
                   </div>
@@ -2366,9 +2366,9 @@ export default function Settings() {
                   </p>
 
                   <div className="space-y-4">
-                    <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
+                    <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-100">
                       <div>
-                        <p className="font-medium text-gray-900 flex items-center">
+                        <p className="text-[13px] font-medium text-gray-900 flex items-center">
                           <Zap className="h-4 w-4 mr-2 text-[#17B6C3]" />
                           Generate Mock AR Data
                         </p>
@@ -2408,7 +2408,7 @@ export default function Settings() {
               </TabsContent>
 
               <TabsContent value="notifications" className="mt-0">
-                <div className="py-8 border-b border-gray-200">
+                <div className="py-6 border-b border-gray-100">
                   <div className="flex items-center mb-1">
                     <Bell className="h-5 w-5 text-[#17B6C3] mr-2" />
                     <h2 className="text-lg font-semibold text-gray-900">Notification Preferences</h2>
@@ -2420,28 +2420,28 @@ export default function Settings() {
                   <div className="space-y-0">
                     <div className="flex items-center justify-between py-4 border-b border-gray-100">
                       <div>
-                        <p className="font-medium text-gray-900">New Overdue Invoices</p>
+                        <p className="text-[13px] font-medium text-gray-900">New Overdue Invoices</p>
                         <p className="text-sm text-gray-500">Get notified when invoices become overdue</p>
                       </div>
                       <Switch defaultChecked data-testid="switch-notify-overdue" />
                     </div>
                     <div className="flex items-center justify-between py-4 border-b border-gray-100">
                       <div>
-                        <p className="font-medium text-gray-900">Payment Received</p>
+                        <p className="text-[13px] font-medium text-gray-900">Payment Received</p>
                         <p className="text-sm text-gray-500">Get notified when payments are received</p>
                       </div>
                       <Switch defaultChecked data-testid="switch-notify-payment" />
                     </div>
                     <div className="flex items-center justify-between py-4 border-b border-gray-100">
                       <div>
-                        <p className="font-medium text-gray-900">Collection Status Updates</p>
+                        <p className="text-[13px] font-medium text-gray-900">Collection Status Updates</p>
                         <p className="text-sm text-gray-500">Get notified about collection workflow changes</p>
                       </div>
                       <Switch defaultChecked data-testid="switch-notify-collection" />
                     </div>
                     <div className="flex items-center justify-between py-4">
                       <div>
-                        <p className="font-medium text-gray-900">Weekly Summary</p>
+                        <p className="text-[13px] font-medium text-gray-900">Weekly Summary</p>
                         <p className="text-sm text-gray-500">Receive a weekly summary of your AR status</p>
                       </div>
                       <Switch defaultChecked data-testid="switch-notify-weekly" />
@@ -2449,15 +2449,15 @@ export default function Settings() {
                   </div>
                 </div>
 
-                <div className="py-8">
-                  <Button className="bg-[#17B6C3] hover:bg-[#1396A1] text-white" data-testid="button-save-notifications">
+                <div className="py-6">
+                  <Button className="h-9 rounded-full bg-[#17B6C3] hover:bg-[#1396A1] text-white" data-testid="button-save-notifications">
                     Save Preferences
                   </Button>
                 </div>
               </TabsContent>
 
               <TabsContent value="security" className="mt-0">
-                <div className="py-8 border-b border-gray-200">
+                <div className="py-6 border-b border-gray-100">
                   <div className="flex items-center mb-1">
                     <Shield className="h-5 w-5 text-[#17B6C3] mr-2" />
                     <h2 className="text-lg font-semibold text-gray-900">Account Security</h2>
@@ -2469,29 +2469,29 @@ export default function Settings() {
                   <div className="space-y-0">
                     <div className="flex items-center justify-between py-4 border-b border-gray-100">
                       <div>
-                        <p className="font-medium text-gray-900">Two-Factor Authentication</p>
+                        <p className="text-[13px] font-medium text-gray-900">Two-Factor Authentication</p>
                         <p className="text-sm text-gray-500">Add an extra layer of security to your account</p>
                       </div>
-                      <Button variant="outline" className="border-gray-200" data-testid="button-enable-2fa">
+                      <Button variant="outline" className="h-9 rounded-lg border-gray-200" data-testid="button-enable-2fa">
                         Enable
                       </Button>
                     </div>
                     <div className="flex items-center justify-between py-4 border-b border-gray-100">
                       <div>
-                        <p className="font-medium text-gray-900">Change Password</p>
+                        <p className="text-[13px] font-medium text-gray-900">Change Password</p>
                         <p className="text-sm text-gray-500">Update your password regularly for better security</p>
                       </div>
-                      <Button variant="outline" className="border-gray-200" data-testid="button-change-password">
+                      <Button variant="outline" className="h-9 rounded-lg border-gray-200" data-testid="button-change-password">
                         Change
                       </Button>
                     </div>
                     <div className="flex items-center justify-between py-4">
                       <div>
-                        <p className="font-medium text-gray-900">Session Timeout</p>
+                        <p className="text-[13px] font-medium text-gray-900">Session Timeout</p>
                         <p className="text-sm text-gray-500">Auto-logout after period of inactivity</p>
                       </div>
                       <Select defaultValue="30">
-                        <SelectTrigger className="w-32 bg-white border-gray-200" data-testid="select-session-timeout">
+                        <SelectTrigger className="h-9 w-32 rounded-lg bg-white border-gray-200 focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]" data-testid="select-session-timeout">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -2505,15 +2505,15 @@ export default function Settings() {
                   </div>
                 </div>
 
-                <div className="py-8">
-                  <Button className="bg-[#17B6C3] hover:bg-[#1396A1] text-white" data-testid="button-save-security">
+                <div className="py-6">
+                  <Button className="h-9 rounded-full bg-[#17B6C3] hover:bg-[#1396A1] text-white" data-testid="button-save-security">
                     Save Security Settings
                   </Button>
                 </div>
               </TabsContent>
 
               <TabsContent value="branding" className="mt-0">
-                <div className="py-8 border-b border-gray-200">
+                <div className="py-6 border-b border-gray-100">
                   <div className="flex items-center mb-1">
                     <Palette className="h-5 w-5 text-[#17B6C3] mr-2" />
                     <h2 className="text-lg font-semibold text-gray-900">Brand Settings</h2>
@@ -2524,13 +2524,13 @@ export default function Settings() {
 
                   <div className="space-y-6">
                     <div className="space-y-2">
-                      <Label htmlFor="logoUrl">Company Logo URL</Label>
+                      <Label htmlFor="logoUrl" className="text-sm">Company Logo URL</Label>
                       <Input 
                         id="logoUrl"
                         value={logoUrl}
                         onChange={(e) => setLogoUrl(e.target.value)}
                         placeholder="https://example.com/logo.png"
-                        className="bg-white border-gray-200 max-w-md"
+                        className="h-9 rounded-lg bg-white border-gray-200 max-w-md focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
                         data-testid="input-logo-url"
                       />
                       <p className="text-sm text-gray-500">
@@ -2538,20 +2538,20 @@ export default function Settings() {
                       </p>
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="primaryColor">Primary Brand Color</Label>
+                      <Label htmlFor="primaryColor" className="text-sm">Primary Brand Color</Label>
                       <div className="flex items-center gap-4 max-w-md">
                         <Input 
                           id="primaryColor"
                           type="color"
                           value={primaryColor}
                           onChange={(e) => setPrimaryColor(e.target.value)}
-                          className="w-16 h-10 p-1 bg-white border-gray-200"
+                          className="w-16 h-9 p-1 rounded-lg bg-white border-gray-200"
                           data-testid="input-primary-color"
                         />
                         <Input 
                           value={primaryColor}
                           onChange={(e) => setPrimaryColor(e.target.value)}
-                          className="flex-1 bg-white border-gray-200"
+                          className="h-9 flex-1 rounded-lg bg-white border-gray-200 focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
                           placeholder="#17B6C3"
                         />
                       </div>
@@ -2562,11 +2562,11 @@ export default function Settings() {
                   </div>
                 </div>
 
-                <div className="py-8">
+                <div className="py-6">
                   <Button 
                     onClick={handleSaveBranding}
                     disabled={updateTenantMutation.isPending}
-                    className="bg-[#17B6C3] hover:bg-[#1396A1] text-white" 
+                    className="h-9 rounded-full bg-[#17B6C3] hover:bg-[#1396A1] text-white" 
                     data-testid="button-save-branding"
                   >
                     {updateTenantMutation.isPending ? "Saving..." : "Save Branding"}
