@@ -6921,9 +6921,10 @@ Guidelines:
           and(
             eq(invoices.tenantId, tenantId),
             or(
-              // Include ALL overdue and unpaid invoices (active work items)
+              // Include ALL overdue, unpaid, and outstanding invoices (active work items)
               eq(invoices.status, 'overdue'),
               eq(invoices.status, 'unpaid'),
+              eq(invoices.status, 'outstanding'),
               // Or recently paid invoices (last 90 days)
               and(
                 eq(invoices.status, 'paid'),
@@ -7505,9 +7506,9 @@ Guidelines:
       // Each invoice appears in exactly ONE tab based on precedence:
       // Recovery > Disputes > Queries > Broken > Promises > VIP > Overdue > Due
       
-      // Get all unpaid invoices
+      // Get all unpaid invoices (includes various unpaid statuses)
       const unpaidInvoices = allInvoices.filter(inv => 
-        inv.status === 'unpaid' || inv.status === 'overdue'
+        inv.status === 'unpaid' || inv.status === 'overdue' || inv.status === 'outstanding'
       );
       
       // Get invoice IDs for each category (for precedence checks)
