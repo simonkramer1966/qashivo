@@ -1416,18 +1416,18 @@ function CashboardTab2({ debtors, onSelectDebtor, isLoading, formatCurrency }: C
                 <col key={status} style={{ width: `${82 / STATUS_ORDER.length}%` }} />
               ))}
             </colgroup>
-            <thead className="sticky top-0 z-20">
-              <tr className="border-b border-gray-100 bg-gray-50 h-16">
-                <th className="px-3 text-left text-[11px] font-medium text-gray-400 uppercase tracking-wider sticky left-0 bg-gray-50 z-30 align-middle">
+            <thead className="sticky top-0 z-20 bg-white">
+              <tr className="border-b border-gray-100">
+                <th className="py-2 px-3 text-left text-[11px] font-medium text-gray-400 uppercase tracking-wider sticky left-0 bg-white z-30 align-bottom">
                   Customer
                 </th>
                 {STATUS_ORDER.map((status, idx) => (
                   <th 
                     key={status} 
-                    className={`px-2 text-right bg-gray-50 align-middle ${idx > 0 ? 'border-l border-gray-100' : ''}`}
+                    className={`py-2 px-2 text-right bg-white align-bottom ${idx > 0 ? 'border-l border-gray-100' : ''}`}
                   >
                     <div className="text-[11px] font-medium text-gray-400 uppercase tracking-wider">{getStatusLabel(status)}</div>
-                    <div className="font-semibold text-gray-900 text-[13px] mt-1 tabular-nums">
+                    <div className="font-semibold text-gray-900 text-[13px] mt-0.5 tabular-nums">
                       {formatCurrencyCompact(columnTotals[status])}
                     </div>
                   </th>
@@ -1627,18 +1627,18 @@ function ForecastTab2({ debtors, onSelectDebtor, isLoading }: ForecastTab2Props)
                   <col key={bucket.weekCommencing} style={{ width: `${82 / weekBuckets.length}%` }} />
                 ))}
               </colgroup>
-              <thead className="sticky top-0 z-20">
-                <tr className="border-b border-gray-100 bg-gray-50 h-16">
-                  <th className="px-3 text-left text-[11px] font-medium text-gray-400 uppercase tracking-wider sticky left-0 bg-gray-50 z-30 align-middle">
+              <thead className="sticky top-0 z-20 bg-white">
+                <tr className="border-b border-gray-100">
+                  <th className="py-2 px-3 text-left text-[11px] font-medium text-gray-400 uppercase tracking-wider sticky left-0 bg-white z-30 align-bottom">
                     Customer
                   </th>
                   {weekBuckets.map((bucket, idx) => (
                     <th 
                       key={bucket.weekCommencing} 
-                      className={`text-right px-2 bg-gray-50 align-middle ${idx > 0 ? 'border-l border-gray-100' : ''}`}
+                      className={`py-2 text-right px-2 bg-white align-bottom ${idx > 0 ? 'border-l border-gray-100' : ''}`}
                     >
                       <div className="text-[11px] font-medium text-gray-400 uppercase tracking-wider">{bucket.weekCommencing}</div>
-                      <div className="font-semibold text-gray-900 text-[13px] mt-1 tabular-nums">
+                      <div className="font-semibold text-gray-900 text-[13px] mt-0.5 tabular-nums">
                         {formatCurrencyCompact(weekTotals[bucket.weekCommencing])}
                       </div>
                     </th>
