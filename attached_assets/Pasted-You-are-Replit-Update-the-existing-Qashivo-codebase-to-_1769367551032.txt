@@ -1,0 +1,166 @@
+You are Replit. Update the existing Qashivo codebase to implement a canonical database model for invoice lifecycle status vs collections condition, with outcome overlay. Do this in a minimally disruptive way that maps cleanly to existing fields/routes, and add a small “Schema + Mapping” developer panel so we can visually confirm it matches the current structure.
+
+GOALS
+1) Canonicalize invoice lifecycle truth as invoice_status (stable, stored).
+2) Compute collections_condition (derived from due_date + today + open balance), with an outcome override layer.
+3) Store outcomes as append-only events and maintain a “latest outcome” projection for fast reads.
+4) Preserve backward compatibility: if the app currently uses fields like status, stage, overdueBand, risk, etc., map them to the new canonical model (do NOT remove old fields without a migration/mapping).
+5) Add a lightweight UI panel (dev-only or admin-only) showing: old fields → new fields mapping + computed outputs for sample invoices.
+
+DEFINITIONS
+
+A) Invoice lifecycle status (stored, minimal, stable)
+invoice_status enum:
+- OPEN
+- PAID
+- VOID
+- WRITTEN_OFF
+
+Rules:
+- invoice_status is the truth. It does NOT change just because time passes.
+- An invoice is “unpaid/open” if invoice_status == OPEN AND balance_due > 0.
+
+B) Collections condition (derived; optionally snapshotted)
+collections_condition enum:
+- DUE                (more than 7 days before due_date)
+- PENDING            (0–7 days before due_date)
+- OVERDUE            (0–30 days past due_date)
+- CRITICAL           (31–60 days past due_date)
+- RECOVERY           (61–90 days past due_date)
+- LEGAL              (90+ days past due_date)
+- DISPUTED           (override)
+- PROMISED           (override; promise_to_pay_date in future)
+- PLAN_REQUESTED     (override; request more time/payment plan)
+
+Outcome overlay rules (override precedence, top to bottom):
+1) If latest_outcome_type == DISPUTE → collections_condition = DISPUTED
+2) Else if latest_outcome_type == PROMISE_TO_PAY AND promise_to_pay_date >= today → PROMISED
+3) Else if latest_outcome_type IN (REQUEST_MORE_TIME, PAYMENT_PLAN) → PLAN_REQUESTED
+4) Else fall back to age-based ladder derived from due_date.
+
+C) Outcome types (stored as events)
+outcome_type enum:
+- PROMISE_TO_PAY
+- REQUEST_MORE_TIME
+- PAYMENT_PLAN
+- DISPUTE
+- NO_RESPONSE
+- OTHER
+
+DATA MODEL CHANGES (IMPLEMENT IN DB + ORM)
+1) invoices table/model:
+- add invoice_status (enum) default OPEN
+- ensure due_date exists (date)
+- ensure balance_due (numeric) exists (or remaining_amount)
+- add computed/read-only field collections_condition (not persisted in invoices; computed in API)
+- add computed days_past_due in API
+- keep existing columns untouched; only add what’s missing.
+
+2) outcomes table/model (append-only):
+- id (uuid)
+- invoice_id (fk)
+- tenant_id (fk, for safety)
+- source enum (EMAIL | SMS | VOICE | MANUAL)
+- outcome_type enum
+- promise_to_pay_date (nullable date)
+- confidence (float 0..1)
+- raw_text (nullable, store only if already storing; otherwise store raw_text_ref or snippet)
+- created_at
+- created_by (AI | USER)
+
+3) invoice_outcome_latest projection (table OR materialized read model):
+- invoice_id (pk)
+- tenant_id
+- latest_outcome_type
+- promise_to_pay_date
+- confidence
+- updated_at
+
+On outcome insert: upsert the projection row for that invoice.
+
+API CHANGES (DO NOT BREAK EXISTING UI)
+1) Add /api/invoices/:id/state endpoint returning:
+{
+  invoice: { ...existing fields... },
+  canonical: {
+    invoice_status,
+    balance_due,
+    due_date,
+    days_to_due,
+    days_past_due,
+    collections_condition,
+    latest_outcome: { outcome_type, promise_to_pay_date, confidence, updated_at }
+  },
+  mapping: {
+    legacy_status: <value if exists>,
+    legacy_stage: <value if exists>,
+    mapped_invoice_status: <derived mapping>,
+    mapped_condition: <derived mapping>
+  }
+}
+
+2) Update existing invoices list endpoint to include:
+- canonical.invoice_status
+- canonical.collections_condition
+- canonical.latest_outcome (summary)
+But keep existing response shape intact; add new fields under a `canonical` key.
+
+LEGACY FIELD MAPPING (IMPORTANT)
+Implement mapping functions to translate legacy invoice fields into canonical ones where needed:
+- If legacy status indicates paid/void → map invoice_status accordingly.
+- If legacy only has “overdue”/“due” strings → map to invoice_status OPEN and compute collections_condition.
+- If legacy has bands already (0-30, 30-60, etc.) → map to collections_condition but still compute to validate differences.
+- If legacy has “dispute” flags → map to outcome_type DISPUTE and collections_condition DISPUTED.
+
+Create a file like `src/lib/invoiceCanonical.ts` with:
+- mapLegacyToCanonicalInvoiceStatus(invoice): invoice_status
+- computeAgeBandCondition(due_date, today): collections_condition
+- applyOutcomeOverride(ageBandCondition, latestOutcome, today): collections_condition
+- computeCanonicalState(invoice, latestOutcome, today): canonicalState
+
+UI CHANGES (MINIMAL, VERIFIABLE)
+1) Add a Dev / Admin panel page:
+Route: /admin/schema
+Visible only to admin users or when NODE_ENV != production.
+
+Panel shows:
+- a table of 10 invoices (seed if needed)
+- legacy fields (whatever exists)
+- canonical.invoice_status
+- canonical.collections_condition
+- latest outcome summary
+- an “Explain” drawer per invoice showing which rule fired (e.g., “Override: DISPUTE” or “Age band: 31–60 → CRITICAL”)
+
+2) In existing invoice list UI:
+- display collections_condition as a small label next to existing status without removing existing UI labels.
+- if there is a conflict between legacy vs canonical, show a subtle “!” tooltip: “Canonical differs from legacy. See /admin/schema.”
+
+SEED DATA (FOR VALIDATION)
+Ensure seed data includes:
+- OPEN invoice due in 14 days → DUE
+- OPEN invoice due in 3 days → PENDING
+- OPEN invoice overdue 10 days → OVERDUE
+- OPEN invoice overdue 45 days → CRITICAL
+- OPEN invoice overdue 75 days → RECOVERY
+- OPEN invoice overdue 120 days → LEGAL
+- OPEN invoice overdue 10 days with DISPUTE outcome → DISPUTED
+- OPEN invoice overdue 10 days with PROMISE_TO_PAY outcome for next week → PROMISED
+- OPEN invoice overdue 10 days with REQUEST_MORE_TIME → PLAN_REQUESTED
+Also include one PAID invoice to confirm it does not get a collections_condition.
+
+MIGRATIONS
+- Write a migration that adds the new tables/enums/columns.
+- Do NOT drop or rename existing columns.
+- If invoices currently lack balance_due, create it and backfill as total_amount minus payments (or total_amount if no payment data exists).
+
+TESTS / CHECKS
+- Unit test computeCanonicalState for each band and override.
+- Add a quick API smoke test that calls /api/invoices/:id/state and asserts collections_condition.
+
+DELIVERABLES
+- Updated DB schema + migrations
+- Canonical logic module
+- Updated APIs (non-breaking, add `canonical` key)
+- Admin schema/mapping page for verification
+- Seed data covering the ladder + overrides
+- Minimal UI label additions for collections_condition
