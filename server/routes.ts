@@ -4909,6 +4909,19 @@ Return only JSON with keys: intent, sentiment, confidence, ptpAmount, ptpDate, d
         ? recipientName.split(' ')[0] 
         : contact.arContactName?.split(' ')[0];
       
+      // Calculate 7-day notice date for debt escalation template
+      let debtEscalationNoticeDate: string | undefined;
+      if (templateType === 'debt_escalation') {
+        const noticeDate = new Date();
+        noticeDate.setDate(noticeDate.getDate() + 7);
+        debtEscalationNoticeDate = noticeDate.toLocaleDateString('en-GB', { 
+          weekday: 'long', 
+          day: 'numeric', 
+          month: 'long', 
+          year: 'numeric' 
+        });
+      }
+      
       const emailDraft = await generateCollectionEmail(templateType, {
         contactName: recipientFirstName || 'there',
         companyName: contact.name || 'Customer',
@@ -4927,7 +4940,8 @@ Return only JSON with keys: intent, sentiment, confidence, ptpAmount, ptpDate, d
         includeStatutoryInterest,
         totalInterest,
         statutoryInterestRate: BOE_BASE_RATE + STATUTORY_MARKUP,
-        failedPtpDetails
+        failedPtpDetails,
+        debtEscalationNoticeDate
       });
 
       res.json({

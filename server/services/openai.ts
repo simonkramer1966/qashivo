@@ -453,6 +453,7 @@ interface CollectionEmailContext {
     invoiceNumbers: string[];
     daysSinceBreach: number;
   } | null;
+  debtEscalationNoticeDate?: string;
 }
 
 export interface CollectionEmailDraft {
@@ -503,6 +504,12 @@ export async function generateCollectionEmail(
 - Days Since Breach: ${context.failedPtpDetails.daysSinceBreach}`
       : '';
 
+    const debtEscalationText = templateType === 'debt_escalation' && context.debtEscalationNoticeDate
+      ? `\nDebt Escalation Notice (CRITICAL - include this deadline in the email):
+- Final Notice Date: ${context.debtEscalationNoticeDate}
+- IMPORTANT: State clearly that if payment is not received by ${context.debtEscalationNoticeDate}, the account will be passed to debt recovery agents/legal action which will incur additional costs to their account.`
+      : '';
+
     const prompt = `
 Generate a professional UK business collection email with these details:
 
@@ -519,6 +526,7 @@ Overdue Invoices (past due date):
 ${invoicesList}
 ${statutoryInterestSection}
 ${failedPtpText}
+${debtEscalationText}
 
 Recent Communication History:
 ${recentActivityText}
