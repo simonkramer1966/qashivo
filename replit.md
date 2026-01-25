@@ -83,3 +83,38 @@ Features robust authentication (OAuth 2.0 with Replit OIDC), granular RBAC (50+ 
 -   **Lucide**: Icon library.
 -   **Tailwind CSS**: Utility-first CSS framework.
 -   **Class Variance Authority**: Component variant management.
+
+## Canonical Invoice Status Model (Jan 2026)
+
+The system uses a canonical model separating invoice lifecycle from collections condition:
+
+### Invoice Lifecycle Status (Stored, Stable)
+- `OPEN`: Invoice is unpaid/outstanding
+- `PAID`: Invoice has been fully paid
+- `VOID`: Invoice was voided/cancelled
+- `WRITTEN_OFF`: Invoice written off as bad debt
+
+This is the truth. It does NOT change just because time passes.
+
+### Collections Condition (Computed from due_date + today)
+Age-based bands:
+- `DUE`: More than 7 days before due_date
+- `PENDING`: 0-7 days before due_date
+- `OVERDUE`: 0-30 days past due_date
+- `CRITICAL`: 31-60 days past due_date
+- `RECOVERY`: 61-90 days past due_date
+- `LEGAL`: 90+ days past due_date
+
+Outcome overrides (in precedence order):
+1. `DISPUTED`: Active dispute on invoice
+2. `PROMISED`: Promise to pay date in future
+3. `PLAN_REQUESTED`: Payment plan or more time requested
+
+### Key Files
+- Schema: `shared/schema.ts` (outcomes, invoiceOutcomeLatest tables)
+- Logic: `shared/lib/invoiceCanonical.ts` (computeCanonicalState, mapLegacyToCanonicalInvoiceStatus)
+- Admin Panel: `/admin/schema` - Visual mapping verification
+
+### API Endpoints
+- `GET /api/invoices/:id/state` - Returns invoice with canonical state and legacy mapping
+- `GET /api/admin/schema-mapping` - Bulk view of all invoices with canonical mapping

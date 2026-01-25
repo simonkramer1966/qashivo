@@ -72,6 +72,14 @@ import {
 } from "@shared/schema";
 import { getOverdueCategoryFromDueDate } from "@shared/utils/overdueUtils";
 import { calculateLatePaymentInterest } from "./utils/interestCalculator";
+import { 
+  computeCanonicalState, 
+  computeLegacyMapping,
+  mapLegacyToCanonicalInvoiceStatus,
+  computeAgeBandCondition,
+  computeBalanceDue,
+} from "@shared/lib/invoiceCanonical";
+import { invoiceOutcomeLatest, outcomes } from "@shared/schema";
 import { eq, and, desc, asc, sql, count, avg, gte, lte, lt, inArray, or, isNull, gt, not } from 'drizzle-orm';
 import { db } from './db';
 import { z } from "zod";
@@ -2756,6 +2764,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching invoice:", error);
       res.status(500).json({ message: "Failed to fetch invoice" });
+    }
+  });
+
+  // Canonical Invoice State endpoint - returns invoice with canonical status model
+  app.get("/api/invoices/:id/state", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      const invoice = await storage.getInvoice(req.params.id, user.tenantId);
+      if (!invoice) {
+        return res.status(404).json({ message: "Invoice not found" });
+      }
+
+      // Get latest outcome for this invoice
+      const latestOutcomeResult = await db
+        .select()
+        .from(invoiceOutcomeLatest)
+        .where(
+          and(
+            eq(invoiceOutcomeLatest.invoiceId, req.params.id),
+            eq(invoiceOutcomeLatest.tenantId, user.tenantId)
+          )
+        )
+        .limit(1);
+      
+      const latestOutcome = latestOutcomeResult[0] || null;
+
+      // Compute canonical state
+      const canonical = computeCanonicalState(invoice, latestOutcome);
+      
+      // Compute legacy mapping
+      const mapping = computeLegacyMapping(invoice);
+
+      res.json({
+        invoice,
+        canonical,
+        mapping,
+      });
+    } catch (error) {
+      console.error("Error fetching invoice state:", error);
+      res.status(500).json({ message: "Failed to fetch invoice state" });
     }
   });
 
@@ -9541,6 +9593,78 @@ Guidelines:
     } catch (error) {
       console.error("Error fetching outcomes:", error);
       res.status(500).json({ message: "Failed to fetch outcomes" });
+    }
+  });
+
+  // Admin Schema Mapping - Shows canonical vs legacy invoice states for verification
+  app.get("/api/admin/schema-mapping", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.tenantId) {
+        return res.status(400).json({ message: "User not associated with a tenant" });
+      }
+
+      // Get limit from query params (default 50)
+      const limit = Math.min(parseInt(req.query.limit as string) || 50, 200);
+
+      // Fetch invoices
+      const invoicesList = await db
+        .select()
+        .from(invoices)
+        .where(eq(invoices.tenantId, user.tenantId))
+        .orderBy(desc(invoices.dueDate))
+        .limit(limit);
+
+      // Fetch all outcome latest projections for these invoices
+      const invoiceIds = invoicesList.map(inv => inv.id);
+      const outcomeLatestList = invoiceIds.length > 0 
+        ? await db
+            .select()
+            .from(invoiceOutcomeLatest)
+            .where(
+              and(
+                eq(invoiceOutcomeLatest.tenantId, user.tenantId),
+                inArray(invoiceOutcomeLatest.invoiceId, invoiceIds)
+              )
+            )
+        : [];
+
+      // Create map of invoice ID to latest outcome
+      const outcomeMap = new Map(
+        outcomeLatestList.map(o => [o.invoiceId, o])
+      );
+
+      // Compute canonical state for each invoice
+      const results = invoicesList.map(invoice => {
+        const latestOutcome = outcomeMap.get(invoice.id) || null;
+        const canonical = computeCanonicalState(invoice, latestOutcome);
+        const mapping = computeLegacyMapping(invoice);
+
+        return {
+          invoiceId: invoice.id,
+          invoiceNumber: invoice.invoiceNumber,
+          contactId: invoice.contactId,
+          amount: invoice.amount,
+          amountPaid: invoice.amountPaid,
+          dueDate: invoice.dueDate,
+          legacy: {
+            status: invoice.status,
+            stage: invoice.stage,
+            workflowState: invoice.workflowState,
+            pauseState: invoice.pauseState,
+          },
+          canonical,
+          mapping,
+        };
+      });
+
+      res.json({
+        count: results.length,
+        invoices: results,
+      });
+    } catch (error) {
+      console.error("Error fetching schema mapping:", error);
+      res.status(500).json({ message: "Failed to fetch schema mapping" });
     }
   });
 

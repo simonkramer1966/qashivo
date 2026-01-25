@@ -278,11 +278,17 @@ export const invoices = pgTable("invoices", {
   pauseReason: text("pause_reason"), // Human-readable reason for pause
   pauseMetadata: jsonb("pause_metadata"), // Additional pause data (promise details, dispute ID, etc.)
   
+  // CANONICAL INVOICE STATUS (new model - see schema documentation)
+  // This is the stable, stored truth - does NOT change just because time passes
+  invoiceStatus: varchar("invoice_status").default("OPEN"), // OPEN, PAID, VOID, WRITTEN_OFF
+  // Note: collectionsCondition is COMPUTED, not stored (see invoiceCanonical.ts)
+  
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => [
   // Performance indexes for server-side filtering optimization
   index("idx_invoices_tenant_status").on(table.tenantId, table.status),
+  index("idx_invoices_invoice_status").on(table.tenantId, table.invoiceStatus),
   index("idx_invoices_due_date").on(table.dueDate),
   index("idx_invoices_invoice_number").on(table.invoiceNumber),
   index("idx_invoices_created_at").on(table.createdAt),
@@ -5688,3 +5694,193 @@ export const WorkflowRequiredFooterSchema = z.object({
   disputeGuidance: z.string().default('If you have any queries about this invoice, please reply to this email.'),
 });
 export type WorkflowRequiredFooter = z.infer<typeof WorkflowRequiredFooterSchema>;
+
+// ============================================================
+// CANONICAL INVOICE STATUS MODEL
+// ============================================================
+// This model separates:
+// 1. Invoice lifecycle status (stored, stable) - what IS the invoice
+// 2. Collections condition (computed from due_date + today) - WHERE is it in collections
+// 3. Outcome overlay (from debtor responses) - what happened with it
+
+// Invoice lifecycle status - the stable, stored truth
+export const INVOICE_STATUS = {
+  OPEN: 'OPEN',           // Invoice is unpaid/outstanding
+  PAID: 'PAID',           // Invoice has been fully paid
+  VOID: 'VOID',           // Invoice was voided/cancelled
+  WRITTEN_OFF: 'WRITTEN_OFF', // Invoice written off as bad debt
+} as const;
+export type InvoiceStatus = typeof INVOICE_STATUS[keyof typeof INVOICE_STATUS];
+export const invoiceStatusEnum = ['OPEN', 'PAID', 'VOID', 'WRITTEN_OFF'] as const;
+
+// Collections condition - computed from due_date vs today, with outcome overrides
+export const COLLECTIONS_CONDITION = {
+  DUE: 'DUE',                 // More than 7 days before due_date
+  PENDING: 'PENDING',         // 0-7 days before due_date
+  OVERDUE: 'OVERDUE',         // 0-30 days past due_date
+  CRITICAL: 'CRITICAL',       // 31-60 days past due_date
+  RECOVERY: 'RECOVERY',       // 61-90 days past due_date
+  LEGAL: 'LEGAL',             // 90+ days past due_date
+  DISPUTED: 'DISPUTED',       // Override: active dispute
+  PROMISED: 'PROMISED',       // Override: promise to pay in future
+  PLAN_REQUESTED: 'PLAN_REQUESTED', // Override: payment plan or more time requested
+} as const;
+export type CollectionsCondition = typeof COLLECTIONS_CONDITION[keyof typeof COLLECTIONS_CONDITION];
+export const collectionsConditionEnum = ['DUE', 'PENDING', 'OVERDUE', 'CRITICAL', 'RECOVERY', 'LEGAL', 'DISPUTED', 'PROMISED', 'PLAN_REQUESTED'] as const;
+
+// Outcome types - what the debtor said/did
+export const OUTCOME_TYPE = {
+  PROMISE_TO_PAY: 'PROMISE_TO_PAY',       // Will pay by specific date
+  REQUEST_MORE_TIME: 'REQUEST_MORE_TIME', // Asking for extension
+  PAYMENT_PLAN: 'PAYMENT_PLAN',           // Wants installment plan
+  DISPUTE: 'DISPUTE',                     // Disputes the invoice
+  NO_RESPONSE: 'NO_RESPONSE',             // Contact made, no response
+  OTHER: 'OTHER',                         // Other outcome
+} as const;
+export type OutcomeType = typeof OUTCOME_TYPE[keyof typeof OUTCOME_TYPE];
+export const outcomeTypeEnum = ['PROMISE_TO_PAY', 'REQUEST_MORE_TIME', 'PAYMENT_PLAN', 'DISPUTE', 'NO_RESPONSE', 'OTHER'] as const;
+
+// Outcome source - how was the outcome detected
+export const OUTCOME_SOURCE = {
+  EMAIL: 'EMAIL',     // Email reply analysis
+  SMS: 'SMS',         // SMS reply analysis
+  VOICE: 'VOICE',     // Voice call analysis
+  MANUAL: 'MANUAL',   // User manually recorded
+  PORTAL: 'PORTAL',   // Debtor portal submission
+} as const;
+export type OutcomeSource = typeof OUTCOME_SOURCE[keyof typeof OUTCOME_SOURCE];
+export const outcomeSourceEnum = ['EMAIL', 'SMS', 'VOICE', 'MANUAL', 'PORTAL'] as const;
+
+// Outcome creator type
+export const OUTCOME_CREATOR = {
+  AI: 'AI',
+  USER: 'USER',
+} as const;
+export type OutcomeCreator = typeof OUTCOME_CREATOR[keyof typeof OUTCOME_CREATOR];
+export const outcomeCreatorEnum = ['AI', 'USER'] as const;
+
+// Outcomes table - append-only log of debtor responses/events
+export const outcomes = pgTable("outcomes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  invoiceId: varchar("invoice_id").notNull().references(() => invoices.id, { onDelete: "cascade" }),
+  contactId: varchar("contact_id").notNull().references(() => contacts.id),
+  
+  source: varchar("source").notNull(), // EMAIL, SMS, VOICE, MANUAL, PORTAL
+  outcomeType: varchar("outcome_type").notNull(), // PROMISE_TO_PAY, REQUEST_MORE_TIME, etc.
+  promiseToPayDate: timestamp("promise_to_pay_date"), // For PROMISE_TO_PAY outcomes
+  confidence: decimal("confidence", { precision: 3, scale: 2 }), // 0.00 to 1.00 (AI confidence)
+  rawTextSnippet: text("raw_text_snippet"), // Excerpt of source text (for audit)
+  
+  createdBy: varchar("created_by").notNull().default("AI"), // AI or USER
+  createdByUserId: varchar("created_by_user_id").references(() => users.id), // If USER created
+  
+  metadata: jsonb("metadata"), // Additional outcome-specific data
+  
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_outcomes_tenant").on(table.tenantId),
+  index("idx_outcomes_invoice").on(table.invoiceId),
+  index("idx_outcomes_contact").on(table.contactId),
+  index("idx_outcomes_created_at").on(table.createdAt),
+  index("idx_outcomes_type").on(table.outcomeType),
+]);
+
+// Invoice outcome latest projection - materialized view of latest outcome per invoice
+// This enables fast reads without scanning the full outcomes history
+export const invoiceOutcomeLatest = pgTable("invoice_outcome_latest", {
+  invoiceId: varchar("invoice_id").primaryKey().references(() => invoices.id, { onDelete: "cascade" }),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  
+  latestOutcomeType: varchar("latest_outcome_type").notNull(), // Most recent outcome type
+  promiseToPayDate: timestamp("promise_to_pay_date"), // If applicable
+  confidence: decimal("confidence", { precision: 3, scale: 2 }),
+  
+  sourceOutcomeId: varchar("source_outcome_id").references(() => outcomes.id), // Link to full outcome record
+  
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_invoice_outcome_latest_tenant").on(table.tenantId),
+  index("idx_invoice_outcome_latest_type").on(table.latestOutcomeType),
+]);
+
+// Outcomes relations
+export const outcomesRelations = relations(outcomes, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [outcomes.tenantId],
+    references: [tenants.id],
+  }),
+  invoice: one(invoices, {
+    fields: [outcomes.invoiceId],
+    references: [invoices.id],
+  }),
+  contact: one(contacts, {
+    fields: [outcomes.contactId],
+    references: [contacts.id],
+  }),
+  createdByUser: one(users, {
+    fields: [outcomes.createdByUserId],
+    references: [users.id],
+  }),
+}));
+
+export const invoiceOutcomeLatestRelations = relations(invoiceOutcomeLatest, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [invoiceOutcomeLatest.tenantId],
+    references: [tenants.id],
+  }),
+  invoice: one(invoices, {
+    fields: [invoiceOutcomeLatest.invoiceId],
+    references: [invoices.id],
+  }),
+  sourceOutcome: one(outcomes, {
+    fields: [invoiceOutcomeLatest.sourceOutcomeId],
+    references: [outcomes.id],
+  }),
+}));
+
+// Insert schemas for outcomes
+export const insertOutcomeSchema = createInsertSchema(outcomes).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertOutcome = z.infer<typeof insertOutcomeSchema>;
+export type Outcome = typeof outcomes.$inferSelect;
+
+export const insertInvoiceOutcomeLatestSchema = createInsertSchema(invoiceOutcomeLatest).omit({
+  updatedAt: true,
+});
+export type InsertInvoiceOutcomeLatest = z.infer<typeof insertInvoiceOutcomeLatestSchema>;
+export type InvoiceOutcomeLatest = typeof invoiceOutcomeLatest.$inferSelect;
+
+// Canonical state response type - what the API returns
+export const canonicalStateSchema = z.object({
+  invoiceStatus: z.enum(invoiceStatusEnum),
+  balanceDue: z.number(),
+  dueDate: z.string(),
+  daysToDue: z.number(), // Positive if before due, negative if after
+  daysPastDue: z.number(), // 0 if not overdue, positive days if overdue
+  collectionsCondition: z.enum(collectionsConditionEnum),
+  ageBandCondition: z.enum(collectionsConditionEnum), // Before outcome override
+  inCollections: z.boolean(), // True if invoice is OPEN with balance > 0, false otherwise
+  latestOutcome: z.object({
+    outcomeType: z.enum(outcomeTypeEnum).nullable(),
+    promiseToPayDate: z.string().nullable(),
+    confidence: z.number().nullable(),
+    updatedAt: z.string().nullable(),
+  }).nullable(),
+  conditionExplanation: z.string(), // Human-readable explanation of why this condition
+});
+export type CanonicalState = z.infer<typeof canonicalStateSchema>;
+
+// Legacy to canonical mapping response
+export const legacyMappingSchema = z.object({
+  legacyStatus: z.string().nullable(),
+  legacyStage: z.string().nullable(),
+  legacyWorkflowState: z.string().nullable(),
+  legacyPauseState: z.string().nullable(),
+  mappedInvoiceStatus: z.enum(invoiceStatusEnum),
+  mappedCondition: z.enum(collectionsConditionEnum),
+  conflicts: z.array(z.string()), // Any conflicts between legacy and canonical
+});
+export type LegacyMapping = z.infer<typeof legacyMappingSchema>;
