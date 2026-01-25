@@ -1,9 +1,11 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { 
   Search, 
   ChevronRight,
   ChevronLeft,
+  ChevronUp,
+  ChevronDown,
   User
 } from "lucide-react";
 import NewSidebar from "@/components/layout/new-sidebar";
@@ -31,6 +33,9 @@ interface Contact {
   workflowId?: string | null;
 }
 
+type SortKey = 'customer' | 'outstanding' | 'overdue' | 'adpd' | 'lastPaid';
+type SortDirection = 'asc' | 'desc';
+
 export default function Customers2() {
   const { formatCurrency } = useCurrency();
   const [search, setSearch] = useState("");
@@ -38,6 +43,8 @@ export default function Customers2() {
   const [limit, setLimit] = useState(20);
   const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
   const [showPreviewDrawer, setShowPreviewDrawer] = useState(false);
+  const [sortKey, setSortKey] = useState<SortKey>('outstanding');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
 
   const formatDateShort = (dateStr: string | null) => {
     if (!dateStr) return '-';
@@ -56,13 +63,61 @@ export default function Customers2() {
     queryKey: ["/api/contacts", { search, page, limit }],
   });
 
-  const contacts = contactsResponse?.contacts || [];
+  const contactsRaw = contactsResponse?.contacts || [];
   const aggregates = contactsResponse?.aggregates || { totalOutstanding: 0, highRiskCount: 0, totalContacts: 0 };
   const pagination = contactsResponse?.pagination || { total: 0, page: 1, limit: 20, totalPages: 1 };
 
   const handleSearchChange = (value: string) => {
     setSearch(value);
     setPage(1);
+  };
+
+  const handleSort = (key: SortKey) => {
+    if (sortKey === key) {
+      setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortKey(key);
+      setSortDirection(key === 'customer' ? 'asc' : 'desc');
+    }
+  };
+
+  const contacts = useMemo(() => {
+    const sorted = [...contactsRaw].sort((a, b) => {
+      let comparison = 0;
+      
+      switch (sortKey) {
+        case 'customer':
+          const nameA = (a.companyName || a.name || '').toLowerCase();
+          const nameB = (b.companyName || b.name || '').toLowerCase();
+          comparison = nameA.localeCompare(nameB);
+          break;
+        case 'outstanding':
+          comparison = a.outstandingAmount - b.outstandingAmount;
+          break;
+        case 'overdue':
+          comparison = a.overdueAmount - b.overdueAmount;
+          break;
+        case 'adpd':
+          comparison = a.averageDaysPastDue - b.averageDaysPastDue;
+          break;
+        case 'lastPaid':
+          const dateA = a.lastPaymentDate ? new Date(a.lastPaymentDate).getTime() : 0;
+          const dateB = b.lastPaymentDate ? new Date(b.lastPaymentDate).getTime() : 0;
+          comparison = dateA - dateB;
+          break;
+      }
+      
+      return sortDirection === 'asc' ? comparison : -comparison;
+    });
+    
+    return sorted;
+  }, [contactsRaw, sortKey, sortDirection]);
+
+  const SortIndicator = ({ columnKey }: { columnKey: SortKey }) => {
+    if (sortKey !== columnKey) return null;
+    return sortDirection === 'asc' 
+      ? <ChevronUp className="h-3 w-3 inline-block ml-0.5" />
+      : <ChevronDown className="h-3 w-3 inline-block ml-0.5" />;
   };
 
   const getBehaviourDot = (riskBand?: string | null, riskScore?: number | null) => {
@@ -220,14 +275,39 @@ export default function Customers2() {
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full">
-                    {/* Compact header v2.0 */}
+                    {/* Compact sortable header v2.0 */}
                     <thead>
                       <tr className="border-b border-gray-200">
-                        <th className="text-left py-2 text-[11px] font-medium text-gray-400 uppercase tracking-wider">Customer</th>
-                        <th className="text-right py-2 text-[11px] font-medium text-gray-400 uppercase tracking-wider">Outstanding</th>
-                        <th className="text-right py-2 text-[11px] font-medium text-gray-400 uppercase tracking-wider">Overdue</th>
-                        <th className="text-right py-2 text-[11px] font-medium text-gray-400 uppercase tracking-wider">ADPD</th>
-                        <th className="text-right py-2 text-[11px] font-medium text-gray-400 uppercase tracking-wider">Last Paid</th>
+                        <th 
+                          className="text-left py-2 text-[11px] font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:text-gray-600 transition-colors select-none"
+                          onClick={() => handleSort('customer')}
+                        >
+                          Customer<SortIndicator columnKey="customer" />
+                        </th>
+                        <th 
+                          className="text-right py-2 text-[11px] font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:text-gray-600 transition-colors select-none"
+                          onClick={() => handleSort('outstanding')}
+                        >
+                          Outstanding<SortIndicator columnKey="outstanding" />
+                        </th>
+                        <th 
+                          className="text-right py-2 text-[11px] font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:text-gray-600 transition-colors select-none"
+                          onClick={() => handleSort('overdue')}
+                        >
+                          Overdue<SortIndicator columnKey="overdue" />
+                        </th>
+                        <th 
+                          className="text-right py-2 text-[11px] font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:text-gray-600 transition-colors select-none"
+                          onClick={() => handleSort('adpd')}
+                        >
+                          ADPD<SortIndicator columnKey="adpd" />
+                        </th>
+                        <th 
+                          className="text-right py-2 text-[11px] font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:text-gray-600 transition-colors select-none"
+                          onClick={() => handleSort('lastPaid')}
+                        >
+                          Last Paid<SortIndicator columnKey="lastPaid" />
+                        </th>
                         <th className="text-right py-2 text-[11px] font-medium text-gray-400 uppercase tracking-wider pr-1"></th>
                       </tr>
                     </thead>

@@ -182,8 +182,15 @@ The desktop application follows **Cardless v2.0 (Compact)** design principles, i
 **Table Design:**
 - No visible table element - use `div` rows with `border-b border-gray-50`
 - Row hover: `hover:bg-gray-50`
-- Sortable columns with subtle indicators
 - Inline actions on hover
+
+**Sortable Column Headers:**
+- Header styling: `text-[11px] font-medium text-gray-400 uppercase tracking-wider`
+- Clickable: `cursor-pointer hover:text-gray-600 transition-colors select-none`
+- Sort indicator: `ChevronUp` or `ChevronDown` icon (`h-3 w-3 inline-block ml-0.5`)
+- Only show indicator on active sort column
+- Default sort: descending for numeric columns, ascending for text columns
+- Click toggles direction: same column = flip direction, new column = set default direction
 
 **Drawer Layout (CardlessCustomerDrawer):**
 - Full-height panel with two-column layout (50/50 split)
