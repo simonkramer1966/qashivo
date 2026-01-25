@@ -141,8 +141,72 @@ All data visualizations must adhere to the principles espoused by **Edward Tufte
 
 ## System Architecture
 
-### UI/UX Design
-The application features a Premium Glassmorphism UI with a `bg-gradient-to-br from-slate-50 via-blue-50 to-teal-50` page background. Cards use `bg-white/80 backdrop-blur-sm border-white/50 shadow-lg`, and metrics utilize `bg-white/70 backdrop-blur-md border-0 shadow-xl`. The primary brand color is #17B6C3 (Nexus teal). Typography includes `text-2xl font-bold` for page titles and `text-xl font-bold` for card titles. Icons are wrapped in `p-2 bg-[#17B6C3]/10 rounded-lg`. Form elements use `bg-white/70 border-gray-200/30` for inputs and `bg-[#17B6C3] hover:bg-[#1396A1] text-white` for primary buttons.
+### UI/UX Design System
+
+#### Cardless v2.0 (Compact) - Desktop Application Standard
+The desktop application follows **Cardless v2.0 (Compact)** design principles, implemented on the Customers2 page and CardlessCustomerDrawer. This system prioritizes data density, typography-driven layouts, and minimal decoration.
+
+**Design Philosophy:**
+- Pure white backgrounds (`bg-white`) - no gradients or glassmorphism
+- Typography-driven hierarchy - content speaks for itself
+- Minimal decoration - remove visual noise that doesn't convey meaning
+- Data-dense layouts - max-w-7xl containers for wider data views
+- Compact sizing - ~25% smaller than standard v1.0
+
+**Brand Color Palette:**
+- **Green #4FAD80**: Positive states, success, paid status
+- **Amber #E8A23B**: Warning states, pending, attention needed
+- **Red #C75C5C**: Negative states, overdue, errors
+- **Teal #17B6C3**: Interactive actions only (buttons, links) - never for status
+
+**Typography Scale (Compact):**
+- Page titles: `text-2xl font-bold text-gray-900`
+- Section headers: `text-xs text-gray-400 uppercase tracking-wider`
+- Table text: `text-[13px] text-gray-900`
+- Labels: `text-xs text-gray-500`
+- Metric values: `text-lg font-semibold tabular-nums`
+
+**Spacing (Compact):**
+- Page padding: `px-6 py-5`
+- Section gaps: `space-y-4` or `gap-4`
+- Table row padding: `py-2` or `py-2.5`
+- Between elements: `gap-3`
+- Dividers: `border-gray-100` (subtle)
+
+**Component Sizing:**
+- Inputs/Buttons: `h-9` (36px - minimum desktop touch target)
+- Icon buttons: `h-9 w-9` with `p-2.5`
+- Button padding: `px-2.5` minimum
+- Border radius: `rounded-lg` (8px)
+
+**Table Design:**
+- No visible table element - use `div` rows with `border-b border-gray-50`
+- Row hover: `hover:bg-gray-50`
+- Sortable columns with subtle indicators
+- Inline actions on hover
+
+**Drawer Layout (CardlessCustomerDrawer):**
+- Full-height panel with two-column layout (50/50 split)
+- Left: Customer info, activity timeline, communication forms
+- Right: Invoice list with filtering and selection
+- Footer actions: fixed position, `border-t border-gray-100`
+- Inline metrics in header (not separate cards)
+
+**Activity Timeline:**
+- Vertical timeline with `border-l-2 border-gray-100`
+- Timeline dots: `w-2 h-2 rounded-full` with status colors
+- Truncation fix: `w-0 flex-1 min-w-0` on text containers
+- Channel icons in muted gray
+
+**Form Elements:**
+- Inputs: `bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]`
+- Primary buttons: `bg-[#17B6C3] hover:bg-[#1396A1] text-white rounded-full`
+- Secondary buttons: `text-gray-600 hover:text-gray-900`
+
+**Reference Implementation:** `client/src/pages/customers2.tsx` and `client/src/components/customers/CardlessCustomerDrawer.tsx`
+
+#### Cardless v3.0 - Mobile Application (Future)
+Reserved for future mobile-optimized design guidelines. Will include larger touch targets (h-11+), simplified navigation, and mobile-first layouts.
 
 ### Technical Implementation
 - **Frontend**: React with TypeScript (Vite), Shadcn/ui (Radix UI), Tailwind CSS, Wouter for routing, TanStack Query for state management, React Hook Form with Zod validation.
