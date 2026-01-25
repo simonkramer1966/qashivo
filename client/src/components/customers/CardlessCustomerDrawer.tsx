@@ -1044,7 +1044,7 @@ export function CardlessCustomerDrawer({
 
                     {/* Recent Timeline - Compact v2.0 */}
                     {!isNoteMode && !isCallMode && !isEmailMode && !isSmsMode && (
-                      <section className="pt-5">
+                      <section className="pt-5 overflow-hidden">
                         <div className="flex items-center gap-2 mb-4">
                           <p className="text-[11px] text-gray-400 uppercase tracking-wider">
                             Recent Activity
@@ -1125,8 +1125,8 @@ export function CardlessCustomerDrawer({
                                             {getChannelIcon(item.channel)}
                                           </span>
                                           
-                                          <div className="flex-1 min-w-0 mr-3">
-                                            <p className="text-sm text-gray-900 truncate">
+                                          <div className="flex-1 min-w-0 mr-3 overflow-hidden">
+                                            <p className="text-sm text-gray-900 truncate max-w-full">
                                               {item.preview || item.summary}
                                             </p>
                                             <p className="text-xs text-gray-400 mt-0.5">
