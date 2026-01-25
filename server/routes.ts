@@ -7537,6 +7537,38 @@ Guidelines:
         exceptions.filter(e => e.contactId).map(e => e.contactId)
       );
       
+      // Pre-compute GLOBAL overdue metrics per contact (across ALL their unpaid invoices)
+      // This ensures consistent overdue data regardless of which bucket a debtor is pulled from
+      const globalOverdueMetrics = new Map<string, { 
+        oldestOverdueDueDate: string | null;
+        totalOverdue: number;
+        oldestDaysOverdue: number;
+      }>();
+      
+      for (const inv of unpaidInvoices) {
+        const contactId = inv.contactId;
+        const invDueDate = new Date(inv.dueDate);
+        invDueDate.setUTCHours(0, 0, 0, 0);
+        
+        if (invDueDate < today) {
+          const invAmount = parseFloat(inv.amount || '0');
+          const metrics = globalOverdueMetrics.get(contactId) || { 
+            oldestOverdueDueDate: null, 
+            totalOverdue: 0, 
+            oldestDaysOverdue: 0 
+          };
+          
+          metrics.totalOverdue += invAmount;
+          
+          if (!metrics.oldestOverdueDueDate || invDueDate < new Date(metrics.oldestOverdueDueDate)) {
+            metrics.oldestOverdueDueDate = inv.dueDate;
+            metrics.oldestDaysOverdue = Math.floor((today.getTime() - invDueDate.getTime()) / (1000 * 60 * 60 * 24));
+          }
+          
+          globalOverdueMetrics.set(contactId, metrics);
+        }
+      }
+      
       // Categorize each invoice using precedence
       const categorizedInvoices: Record<string, any[]> = {
         recovery: [],
@@ -7599,12 +7631,18 @@ Guidelines:
             // Get all payment promises for this contact
             const promises = contactPromisesMap.get(contactId) || [];
             
+            // Get GLOBAL overdue metrics for this contact (computed across all their invoices)
+            const globalMetrics = globalOverdueMetrics.get(contactId);
+            
             debtorMap.set(contactId, {
               contactId,
               companyName,
               contactName,
               contact,
               totalOutstanding: 0,
+              // Use GLOBAL overdue metrics to ensure correct classification
+              totalOverdue: globalMetrics?.totalOverdue || 0,
+              oldestDaysOverdue: globalMetrics?.oldestDaysOverdue || 0,
               invoiceCount: 0,
               invoices: [],
               oldestDueDate: inv.dueDate,
@@ -7618,10 +7656,12 @@ Guidelines:
           }
           
           const debtor = debtorMap.get(contactId)!;
-          debtor.totalOutstanding += parseFloat(inv.amount || '0');
+          const invAmount = parseFloat(inv.amount || '0');
+          debtor.totalOutstanding += invAmount;
           debtor.invoiceCount += 1;
           debtor.invoices.push(inv);
           
+          // Track oldest due date
           if (new Date(inv.dueDate) < new Date(debtor.oldestDueDate)) {
             debtor.oldestDueDate = inv.dueDate;
           }
