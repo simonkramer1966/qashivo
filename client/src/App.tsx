@@ -16,7 +16,6 @@ const NotFound = lazy(() => import("@/pages/not-found"));
 const Cashboard = lazy(() => import("@/pages/cashboard"));
 const Invoices = lazy(() => import("@/pages/invoices"));
 const Contacts = lazy(() => import("@/pages/contacts"));
-const ActionCentre = lazy(() => import("@/pages/action-centre"));
 const ActionCentre2 = lazy(() => import("@/pages/action-centre2"));
 const ActivityLog = lazy(() => import("@/pages/activity-log"));
 const Settings = lazy(() => import("@/pages/settings"));
@@ -167,7 +166,7 @@ function Router() {
           <Route path="/customers/:customerId" component={CustomerDetail} />
           <Route path="/customers2" component={Customers2} />
           <Route path="/invoices" component={Invoices} />
-          <Route path="/action-centre" component={ActionCentre} />
+          <Route path="/action-centre" component={ActionCentre2} />
           <Route path="/action-centre2" component={ActionCentre2} />
           <Route path="/overview2" component={Overview2} />
           <Route path="/inbox" component={Inbox} />
