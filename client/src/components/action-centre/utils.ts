@@ -6,31 +6,23 @@ import {
   WeekBucket,
   ExecutedAction,
   AttentionItem,
-  CanonicalCollectionsCondition
+  OutcomeOverride
 } from './types';
 
 /**
- * Maps canonical collections condition to display status for Cashboard
- * Uses canonical model when available, falls back to legacy logic
+ * Maps outcomeOverride to display status for Cashboard
+ * Simplified model: Silent, Disputed, Plan or null
  */
-function mapCanonicalToDebtorStatus(condition: CanonicalCollectionsCondition): DebtorStatus {
-  switch (condition) {
-    case 'DISPUTED':
+function mapOutcomeToDebtorStatus(outcome: OutcomeOverride): DebtorStatus | null {
+  switch (outcome) {
+    case 'Disputed':
       return 'dispute';
-    case 'PROMISED':
-      return 'promised';
-    case 'PLAN_REQUESTED':
-      return 'query';
-    case 'DUE':
-    case 'PENDING':
-      return 'due';
-    case 'OVERDUE':
-    case 'CRITICAL':
-    case 'RECOVERY':
-    case 'LEGAL':
-      return 'overdue';
+    case 'Plan':
+      return 'query'; // Payment plan shows as query/plan status
+    case 'Silent':
+      return 'no_contact'; // Action taken, no response
     default:
-      return 'due';
+      return null; // No outcome override, use default logic
   }
 }
 
@@ -38,9 +30,10 @@ export function getDebtorStatus(debtor: Partial<Debtor> & { brokenFlag?: boolean
   // Check if paid first
   if (debtor.totalOutstanding === 0) return 'paid';
   
-  // Use canonical collectionsCondition if available
-  if (debtor.collectionsCondition && debtor.inCollections) {
-    return mapCanonicalToDebtorStatus(debtor.collectionsCondition);
+  // Use outcomeOverride if available (simplified model)
+  if (debtor.outcomeOverride) {
+    const status = mapOutcomeToDebtorStatus(debtor.outcomeOverride);
+    if (status) return status;
   }
   
   // Fallback to legacy logic for backward compatibility

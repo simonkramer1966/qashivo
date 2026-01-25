@@ -29,17 +29,9 @@ export interface PaymentPromise {
   invoiceId?: string;
 }
 
-// Canonical collections conditions from the invoice model
-export type CanonicalCollectionsCondition = 
-  | 'DUE' 
-  | 'PENDING' 
-  | 'OVERDUE' 
-  | 'CRITICAL' 
-  | 'RECOVERY' 
-  | 'LEGAL'
-  | 'DISPUTED'
-  | 'PROMISED'
-  | 'PLAN_REQUESTED';
+// Outcome override values from simplified invoice model (Jan 2026)
+// null = no action taken, Silent = action taken but no response
+export type OutcomeOverride = 'Silent' | 'Disputed' | 'Plan' | null;
 
 export interface Debtor {
   id: string;
@@ -58,9 +50,8 @@ export interface Debtor {
   paymentPromises?: PaymentPromise[];
   disputeFlag?: boolean;
   queryFlag?: boolean;
-  // Canonical model fields
-  collectionsCondition?: CanonicalCollectionsCondition;
-  inCollections?: boolean;
+  // Simplified outcome model fields
+  outcomeOverride?: OutcomeOverride;
 }
 
 export interface ExecutedAction {

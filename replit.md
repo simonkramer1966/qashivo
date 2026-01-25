@@ -84,37 +84,35 @@ Features robust authentication (OAuth 2.0 with Replit OIDC), granular RBAC (50+ 
 -   **Tailwind CSS**: Utility-first CSS framework.
 -   **Class Variance Authority**: Component variant management.
 
-## Canonical Invoice Status Model (Jan 2026)
+## Simplified Invoice Status Model (Jan 2026)
 
-The system uses a canonical model separating invoice lifecycle from collections condition:
+The system uses a simplified model with invoice status from accounting software and outcome tracking:
 
-### Invoice Lifecycle Status (Stored, Stable)
+### Invoice Status (from Xero/QB - Source of Truth)
 - `OPEN`: Invoice is unpaid/outstanding
 - `PAID`: Invoice has been fully paid
 - `VOID`: Invoice was voided/cancelled
-- `WRITTEN_OFF`: Invoice written off as bad debt
 
-This is the truth. It does NOT change just because time passes.
+### Days Overdue
+Computed as `today - dueDate`. Negative values mean the invoice is not yet due.
 
-### Collections Condition (Computed from due_date + today)
-Age-based bands:
-- `DUE`: More than 7 days before due_date
-- `PENDING`: 0-7 days before due_date
-- `OVERDUE`: 0-30 days past due_date
-- `CRITICAL`: 31-60 days past due_date
-- `RECOVERY`: 61-90 days past due_date
-- `LEGAL`: 90+ days past due_date
+### Outcome Override (Debtor Response Tracking)
+Stored on invoice, persists after payment for learning/analytics:
+- `null`: No action taken yet
+- `Silent`: Action taken, no response received
+- `Disputed`: Invoice is disputed
+- `Plan`: Payment plan in place (see payment_plans table)
 
-Outcome overrides (in precedence order):
-1. `DISPUTED`: Active dispute on invoice
-2. `PROMISED`: Promise to pay date in future
-3. `PLAN_REQUESTED`: Payment plan or more time requested
+### Payment Plans
+Multi-invoice payment plans are supported via:
+- `payment_plans` - Main plan record with total amount, frequency, source (manual/voice)
+- `payment_plan_invoices` - Junction table linking invoices to plans
+- `payment_plan_schedules` - Individual installments with due dates and payment status
 
 ### Key Files
-- Schema: `shared/schema.ts` (outcomes, invoiceOutcomeLatest tables)
-- Logic: `shared/lib/invoiceCanonical.ts` (computeCanonicalState, mapLegacyToCanonicalInvoiceStatus)
-- Admin Panel: `/admin/schema` - Visual mapping verification
+- Schema: `shared/schema.ts` (invoices.outcomeOverride, payment_plans tables)
+- Types: `client/src/components/action-centre/types.ts` (OutcomeOverride type)
+- Utils: `client/src/components/action-centre/utils.ts` (getDebtorStatus with outcome mapping)
 
-### API Endpoints
-- `GET /api/invoices/:id/state` - Returns invoice with canonical state and legacy mapping
-- `GET /api/admin/schema-mapping` - Bulk view of all invoices with canonical mapping
+### Documentation
+See `Invoice-Status-Outcomes.md` for detailed documentation for production developers.
