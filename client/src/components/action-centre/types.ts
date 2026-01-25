@@ -29,6 +29,18 @@ export interface PaymentPromise {
   invoiceId?: string;
 }
 
+// Canonical collections conditions from the invoice model
+export type CanonicalCollectionsCondition = 
+  | 'DUE' 
+  | 'PENDING' 
+  | 'OVERDUE' 
+  | 'CRITICAL' 
+  | 'RECOVERY' 
+  | 'LEGAL'
+  | 'DISPUTED'
+  | 'PROMISED'
+  | 'PLAN_REQUESTED';
+
 export interface Debtor {
   id: string;
   name: string;
@@ -46,6 +58,9 @@ export interface Debtor {
   paymentPromises?: PaymentPromise[];
   disputeFlag?: boolean;
   queryFlag?: boolean;
+  // Canonical model fields
+  collectionsCondition?: CanonicalCollectionsCondition;
+  inCollections?: boolean;
 }
 
 export interface ExecutedAction {

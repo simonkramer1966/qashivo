@@ -185,14 +185,53 @@ export default function ActionCentre2() {
       }
     }
     
+    // Helper to compute canonical collections condition based on debtor data
+    type CanonicalConditionType = 'DUE' | 'PENDING' | 'OVERDUE' | 'CRITICAL' | 'RECOVERY' | 'LEGAL' | 'DISPUTED' | 'PROMISED' | 'PLAN_REQUESTED';
+    const computeCanonicalCondition = (item: any): { condition: CanonicalConditionType; inCollections: boolean } => {
+      const totalOutstanding = item.totalOutstanding || 0;
+      
+      // Not in collections if no outstanding balance
+      if (totalOutstanding <= 0) {
+        return { condition: 'DUE', inCollections: false };
+      }
+      
+      // Outcome overrides take precedence (DISPUTED > PROMISED > PLAN_REQUESTED)
+      if (item.disputeFlag) {
+        return { condition: 'DISPUTED', inCollections: true };
+      }
+      if (item.promiseFlag || (item.ptpDate && new Date(item.ptpDate) >= new Date())) {
+        return { condition: 'PROMISED', inCollections: true };
+      }
+      if (item.queryFlag) {
+        return { condition: 'PLAN_REQUESTED', inCollections: true };
+      }
+      
+      // Compute age band from oldestDaysOverdue
+      const daysPastDue = item.oldestDaysOverdue || 0;
+      if (daysPastDue > 90) return { condition: 'LEGAL', inCollections: true };
+      if (daysPastDue > 60) return { condition: 'RECOVERY', inCollections: true };
+      if (daysPastDue > 30) return { condition: 'CRITICAL', inCollections: true };
+      if (daysPastDue > 0) return { condition: 'OVERDUE', inCollections: true };
+      if (daysPastDue > -7) return { condition: 'PENDING', inCollections: true };
+      return { condition: 'DUE', inCollections: true };
+    };
+
     return allItems.map(item => {
-      const debtorWithFlags = {
+      // Compute canonical collections condition first
+      const canonical = computeCanonicalCondition(item);
+      
+      // Build debtor with flags AND canonical fields so getDebtorStatus can use them
+      const debtorWithCanonical = {
         ...item,
         disputeFlag: item.disputeFlag,
         queryFlag: item.queryFlag,
         brokenFlag: item.brokenFlag,
         promiseFlag: item.promiseFlag,
+        totalOutstanding: item.totalOutstanding || 0,
+        collectionsCondition: canonical.condition,
+        inCollections: canonical.inCollections,
       };
+      
       return {
         id: item.contactId,
         name: item.companyName || item.contactName || 'Unknown',
@@ -205,11 +244,14 @@ export default function ActionCentre2() {
         invoiceCount: item.invoiceCount || 1,
         lastActionAt: item.lastActionAt,
         lastActionChannel: item.lastActionChannel,
-        status: getDebtorStatus(debtorWithFlags),
+        status: getDebtorStatus(debtorWithCanonical),
         ptpDate: item.ptpDate,
         paymentPromises: item.paymentPromises,
         disputeFlag: item.disputeFlag,
         queryFlag: item.queryFlag,
+        // Canonical model fields
+        collectionsCondition: canonical.condition,
+        inCollections: canonical.inCollections,
       };
     });
   }, [tabData]);

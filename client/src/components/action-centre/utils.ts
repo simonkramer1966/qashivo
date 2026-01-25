@@ -5,12 +5,45 @@ import {
   ForecastCell, 
   WeekBucket,
   ExecutedAction,
-  AttentionItem
+  AttentionItem,
+  CanonicalCollectionsCondition
 } from './types';
 
+/**
+ * Maps canonical collections condition to display status for Cashboard
+ * Uses canonical model when available, falls back to legacy logic
+ */
+function mapCanonicalToDebtorStatus(condition: CanonicalCollectionsCondition): DebtorStatus {
+  switch (condition) {
+    case 'DISPUTED':
+      return 'dispute';
+    case 'PROMISED':
+      return 'promised';
+    case 'PLAN_REQUESTED':
+      return 'query';
+    case 'DUE':
+    case 'PENDING':
+      return 'due';
+    case 'OVERDUE':
+    case 'CRITICAL':
+    case 'RECOVERY':
+    case 'LEGAL':
+      return 'overdue';
+    default:
+      return 'due';
+  }
+}
+
 export function getDebtorStatus(debtor: Partial<Debtor> & { brokenFlag?: boolean; promiseFlag?: boolean }): DebtorStatus {
+  // Check if paid first
   if (debtor.totalOutstanding === 0) return 'paid';
   
+  // Use canonical collectionsCondition if available
+  if (debtor.collectionsCondition && debtor.inCollections) {
+    return mapCanonicalToDebtorStatus(debtor.collectionsCondition);
+  }
+  
+  // Fallback to legacy logic for backward compatibility
   // Precedence: disputes > queries > broken > promised > no_contact > overdue > due
   if (debtor.disputeFlag) return 'dispute';
   if (debtor.queryFlag) return 'query';
