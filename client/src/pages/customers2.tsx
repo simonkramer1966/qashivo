@@ -91,218 +91,200 @@ export default function Customers2() {
       </div>
 
       <main className="flex-1 flex flex-col min-h-0 main-with-bottom-nav">
-        {/* Cardless Header - Typography driven */}
-        <div className="max-w-5xl mx-auto w-full px-6 py-12 border-b border-gray-100">
-          <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-2 font-heading">Customers</h1>
-          <p className="text-lg text-gray-600">
-            Qashivo manages collections automatically. Review is only needed when something is flagged.
+        {/* Compact Header - v2.0 */}
+        <div className="max-w-7xl mx-auto w-full px-6 py-5 border-b border-gray-100">
+          <h1 className="text-2xl font-bold text-gray-900 font-heading">Customers</h1>
+          <p className="text-sm text-gray-500 mt-1">
+            Qashivo manages collections automatically. Review only when flagged.
           </p>
         </div>
         
         <div className="flex-1 flex flex-col min-h-0 overflow-y-auto">
-          <div className="max-w-5xl mx-auto w-full px-6 flex-1 flex flex-col min-h-0">
+          <div className="max-w-7xl mx-auto w-full px-6 flex-1 flex flex-col min-h-0">
             
-            {/* Search - Cardless style */}
-            <div className="py-6 border-b border-gray-100">
-              <div className="relative max-w-sm">
-                <Search className="absolute left-0 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+            {/* Compact Search - v2.0 */}
+            <div className="py-3 border-b border-gray-100">
+              <div className="relative max-w-xs">
+                <Search className="absolute left-0 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
                 <input
                   type="text"
                   placeholder="Find a customer…"
                   value={search}
                   onChange={(e) => handleSearchChange(e.target.value)}
-                  className="w-full pl-6 pr-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-transparent border-b border-gray-200 focus:outline-none focus:border-[#17B6C3] transition-colors"
+                  className="w-full pl-5 pr-3 py-1.5 text-sm text-gray-900 placeholder:text-gray-400 bg-transparent border-b border-gray-200 focus:outline-none focus:border-[#17B6C3] transition-colors"
                   data-testid="input-search-customers2"
                 />
               </div>
             </div>
 
-            {/* Debtor Behaviour Profiles - Pure Typography */}
-            <div className="py-12 md:py-16 border-b border-gray-100">
-              <p className="text-xs text-gray-400 uppercase tracking-wider mb-8">Debtor Behaviour Profiles</p>
-              <div className="flex flex-wrap gap-x-16 gap-y-8">
-                <div>
-                  <p className="text-base text-gray-600 mb-2 flex items-center gap-2">
-                    <span className="inline-block w-2.5 h-2.5 rounded-full bg-[#4FAD80]" />
-                    Usually pay on time
-                  </p>
-                  <p className="text-4xl font-semibold text-gray-900 tabular-nums">38%</p>
-                </div>
-                <div>
-                  <p className="text-base text-gray-600 mb-2 flex items-center gap-2">
-                    <span className="inline-block w-2.5 h-2.5 rounded-full bg-[#E8A23B]" />
-                    Pay late but reliably
-                  </p>
-                  <p className="text-4xl font-semibold text-gray-900 tabular-nums">44%</p>
-                </div>
-                <div>
-                  <p className="text-base text-gray-600 mb-2 flex items-center gap-2">
-                    <span className="inline-block w-2.5 h-2.5 rounded-full bg-[#C75C5C]" />
-                    Inconsistent
-                  </p>
-                  <p className="text-4xl font-semibold text-gray-900 tabular-nums">12%</p>
-                </div>
-                <div>
-                  <p className="text-base text-gray-600 mb-2 flex items-center gap-2">
-                    <span className="inline-block w-2.5 h-2.5 rounded-full bg-slate-300" />
-                    Unknown
-                  </p>
-                  <p className="text-4xl font-semibold text-gray-500 tabular-nums">6%</p>
-                </div>
+            {/* Compact Metrics Row - v2.0: Inline horizontal layout */}
+            <div className="py-4 border-b border-gray-100 flex flex-wrap items-center gap-x-10 gap-y-3">
+              {/* Behaviour Profiles */}
+              <div className="flex items-center gap-1.5">
+                <span className="inline-block w-2 h-2 rounded-full bg-[#4FAD80]" />
+                <span className="text-sm text-gray-600">On time</span>
+                <span className="text-sm font-semibold text-gray-900 tabular-nums ml-1">38%</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="inline-block w-2 h-2 rounded-full bg-[#E8A23B]" />
+                <span className="text-sm text-gray-600">Late reliable</span>
+                <span className="text-sm font-semibold text-gray-900 tabular-nums ml-1">44%</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="inline-block w-2 h-2 rounded-full bg-[#C75C5C]" />
+                <span className="text-sm text-gray-600">Inconsistent</span>
+                <span className="text-sm font-semibold text-gray-900 tabular-nums ml-1">12%</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="inline-block w-2 h-2 rounded-full bg-slate-300" />
+                <span className="text-sm text-gray-600">Unknown</span>
+                <span className="text-sm font-semibold text-gray-500 tabular-nums ml-1">6%</span>
+              </div>
+              
+              {/* Divider */}
+              <div className="h-4 w-px bg-gray-200 hidden md:block" />
+              
+              {/* Portfolio Summary */}
+              <div className="flex items-center gap-1.5">
+                <span className="text-sm text-gray-500">Customers</span>
+                <span className="text-sm font-semibold text-gray-900 tabular-nums">{aggregates.totalContacts}</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-sm text-gray-500">Outstanding</span>
+                <span className="text-sm font-semibold text-gray-900 tabular-nums">{formatCurrency(aggregates.totalOutstanding)}</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-sm text-gray-500">High Risk</span>
+                <span className="text-sm font-semibold text-[#C75C5C] tabular-nums">{aggregates.highRiskCount}</span>
               </div>
             </div>
 
-            {/* Aggregates - Pure Typography */}
-            <div className="py-12 md:py-16 border-b border-gray-100">
-              <p className="text-xs text-gray-400 uppercase tracking-wider mb-8">Portfolio Summary</p>
-              <div className="flex flex-wrap gap-x-16 gap-y-8">
-                <div>
-                  <p className="text-base text-gray-600 mb-2">Total Customers</p>
-                  <p className="text-4xl font-semibold text-gray-900 tabular-nums">{aggregates.totalContacts}</p>
-                </div>
-                <div>
-                  <p className="text-base text-gray-600 mb-2">Total Outstanding</p>
-                  <p className="text-4xl font-semibold text-gray-900 tabular-nums">{formatCurrency(aggregates.totalOutstanding)}</p>
-                </div>
-                <div>
-                  <p className="text-base text-gray-600 mb-2">High Risk</p>
-                  <p className="text-4xl font-semibold text-[#C75C5C] tabular-nums">{aggregates.highRiskCount}</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Mobile View - Clean List */}
-            <div className="space-y-0 sm:hidden flex-1 py-4">
+            {/* Mobile View - Compact List v2.0 */}
+            <div className="space-y-0 sm:hidden flex-1 py-2">
               {isLoading ? (
                 [...Array(5)].map((_, i) => (
-                  <div key={i} className="py-4 border-b border-gray-100">
-                    <div className="h-12 bg-gray-100 animate-pulse rounded"></div>
+                  <div key={i} className="py-2.5 border-b border-gray-100">
+                    <div className="h-10 bg-gray-100 animate-pulse rounded"></div>
                   </div>
                 ))
               ) : contacts.length === 0 ? (
-                <div className="py-12 text-center">
-                  <User className="h-10 w-10 mx-auto mb-3 text-gray-300" />
+                <div className="py-8 text-center">
+                  <User className="h-8 w-8 mx-auto mb-2 text-gray-300" />
                   <p className="text-sm text-gray-500">No customers found</p>
                 </div>
               ) : (
                 contacts.map((contact, idx) => (
                   <div 
                     key={contact.id} 
-                    className={`py-4 cursor-pointer hover:bg-gray-50 transition-colors ${idx !== contacts.length - 1 ? 'border-b border-gray-100' : ''}`}
+                    className={`py-2.5 cursor-pointer hover:bg-gray-50 transition-colors ${idx !== contacts.length - 1 ? 'border-b border-gray-100' : ''}`}
                     onClick={() => {
                       setSelectedContactId(contact.id);
                       setShowPreviewDrawer(true);
                     }}
                     data-testid={`customer2-item-${contact.id}`}
                   >
-                    <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center justify-between gap-2">
                       <div className="flex-1 min-w-0">
-                        <p className="text-base font-medium text-gray-900 truncate">
+                        <p className="text-sm font-medium text-gray-900 truncate">
                           {contact.companyName || contact.name}
                         </p>
-                        <div className="flex items-center gap-4 mt-1 text-sm text-gray-500">
+                        <div className="flex items-center gap-3 mt-0.5 text-xs text-gray-500">
                           <span className="tabular-nums">{formatCurrency(contact.outstandingAmount)}</span>
                           {contact.overdueAmount > 0 && (
                             <span className="text-[#C75C5C] tabular-nums">{formatCurrency(contact.overdueAmount)} overdue</span>
                           )}
                         </div>
                       </div>
-                      <ChevronRight className="h-4 w-4 text-gray-300 flex-shrink-0" />
+                      <ChevronRight className="h-3.5 w-3.5 text-gray-300 flex-shrink-0" />
                     </div>
                   </div>
                 ))
               )}
             </div>
 
-            {/* Desktop View - Cardless Table */}
-            <div className="hidden sm:block flex-1 py-4">
+            {/* Desktop View - Compact Table v2.0 */}
+            <div className="hidden sm:block flex-1 py-2">
               {isLoading ? (
                 <div>
                   {[...Array(8)].map((_, i) => (
-                    <div key={i} className="py-4 border-b border-gray-100">
-                      <div className="h-5 bg-gray-100 animate-pulse rounded w-3/4"></div>
+                    <div key={i} className="py-2 border-b border-gray-100">
+                      <div className="h-4 bg-gray-100 animate-pulse rounded w-3/4"></div>
                     </div>
                   ))}
                 </div>
               ) : contacts.length === 0 ? (
-                <div className="py-16 text-center">
-                  <User className="h-10 w-10 mx-auto mb-3 text-gray-300" />
+                <div className="py-10 text-center">
+                  <User className="h-8 w-8 mx-auto mb-2 text-gray-300" />
                   <p className="text-sm text-gray-500">No customers found</p>
                 </div>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full">
-                    {/* Cardless header - no background, just typography */}
+                    {/* Compact header v2.0 */}
                     <thead>
                       <tr className="border-b border-gray-200">
-                        <th className="text-left py-3 text-xs font-medium text-gray-400 uppercase tracking-wider">Customer</th>
-                        <th className="text-right py-3 text-xs font-medium text-gray-400 uppercase tracking-wider">Outstanding</th>
-                        <th className="text-right py-3 text-xs font-medium text-gray-400 uppercase tracking-wider">Overdue</th>
-                        <th className="text-right py-3 text-xs font-medium text-gray-400 uppercase tracking-wider">ADPD</th>
-                        <th className="text-right py-3 text-xs font-medium text-gray-400 uppercase tracking-wider">Last Payment</th>
-                        <th className="text-right py-3 text-xs font-medium text-gray-400 uppercase tracking-wider">Behaviour</th>
+                        <th className="text-left py-2 text-[11px] font-medium text-gray-400 uppercase tracking-wider">Customer</th>
+                        <th className="text-right py-2 text-[11px] font-medium text-gray-400 uppercase tracking-wider">Outstanding</th>
+                        <th className="text-right py-2 text-[11px] font-medium text-gray-400 uppercase tracking-wider">Overdue</th>
+                        <th className="text-right py-2 text-[11px] font-medium text-gray-400 uppercase tracking-wider">ADPD</th>
+                        <th className="text-right py-2 text-[11px] font-medium text-gray-400 uppercase tracking-wider">Last Paid</th>
+                        <th className="text-right py-2 text-[11px] font-medium text-gray-400 uppercase tracking-wider pr-1"></th>
                       </tr>
                     </thead>
                     <tbody>
                       {contacts.map((contact) => (
                         <tr
                           key={contact.id}
-                          className="border-b border-gray-100 hover:bg-gray-50 cursor-pointer transition-colors"
+                          className="border-b border-gray-50 hover:bg-gray-50/50 cursor-pointer transition-colors"
                           onClick={() => {
                             setSelectedContactId(contact.id);
                             setShowPreviewDrawer(true);
                           }}
                           data-testid={`customer2-item-${contact.id}`}
                         >
-                          <td className="py-4">
-                            <p className="text-sm font-medium text-gray-900 truncate">
+                          <td className="py-2">
+                            <p className="text-[13px] font-medium text-gray-900 truncate max-w-[200px]">
                               {contact.companyName || contact.name}
                             </p>
-                            <p className="text-xs text-gray-400 truncate mt-0.5">
-                              {contact.name}
-                              {contact.phone && (
-                                <span className="ml-2 text-gray-500">{contact.phone}</span>
-                              )}
-                            </p>
                           </td>
 
-                          <td className="py-4 text-right">
-                            <span className="text-sm text-gray-700 tabular-nums">
+                          <td className="py-2 text-right">
+                            <span className="text-[13px] text-gray-700 tabular-nums">
                               {formatCurrency(contact.outstandingAmount)}
                             </span>
-                            <span className="text-xs text-gray-400 ml-1">({contact.invoiceCount})</span>
+                            <span className="text-[11px] text-gray-400 ml-0.5">({contact.invoiceCount})</span>
                           </td>
 
-                          <td className="py-4 text-right">
+                          <td className="py-2 text-right">
                             {contact.overdueAmount > 0 ? (
                               <>
-                                <span className="text-sm text-[#C75C5C] tabular-nums">
+                                <span className="text-[13px] text-[#C75C5C] tabular-nums">
                                   {formatCurrency(contact.overdueAmount)}
                                 </span>
-                                <span className="text-xs text-gray-400 ml-1">({contact.overdueCount})</span>
+                                <span className="text-[11px] text-gray-400 ml-0.5">({contact.overdueCount})</span>
                               </>
                             ) : (
-                              <span className="text-sm text-gray-400">-</span>
+                              <span className="text-[13px] text-gray-300">–</span>
                             )}
                           </td>
 
-                          <td className="py-4 text-right">
+                          <td className="py-2 text-right">
                             {contact.averageDaysPastDue > 0 ? (
-                              <span className="text-sm text-gray-700 tabular-nums">
-                                {contact.averageDaysPastDue}
+                              <span className="text-[13px] text-gray-600 tabular-nums">
+                                {contact.averageDaysPastDue}d
                               </span>
                             ) : (
-                              <span className="text-sm text-gray-400">-</span>
+                              <span className="text-[13px] text-gray-300">–</span>
                             )}
                           </td>
 
-                          <td className="py-4 text-right">
-                            <span className="text-sm text-gray-500 tabular-nums">
+                          <td className="py-2 text-right">
+                            <span className="text-[13px] text-gray-500 tabular-nums">
                               {formatDateShort(contact.lastPaymentDate)}
                             </span>
                           </td>
 
-                          <td className="py-4 text-right">
+                          <td className="py-2 text-right pr-1">
                             {getBehaviourDot(contact.riskBand, contact.riskScore)}
                           </td>
                         </tr>
@@ -313,9 +295,9 @@ export default function Customers2() {
               )}
             </div>
 
-            {/* Footer Pagination - Clean typography */}
-            <div className="sticky bottom-0 flex items-center justify-end gap-6 py-4 border-t border-gray-100 bg-white shrink-0">
-              <span className="text-sm text-gray-500">
+            {/* Compact Pagination v2.0 */}
+            <div className="sticky bottom-0 flex items-center justify-end gap-4 py-2.5 border-t border-gray-100 bg-white shrink-0">
+              <span className="text-xs text-gray-400">
                 {pagination.total} customer{pagination.total !== 1 ? 's' : ''}
               </span>
               
@@ -325,7 +307,7 @@ export default function Customers2() {
                   setLimit(Number(e.target.value));
                   setPage(1);
                 }}
-                className="text-sm text-gray-600 bg-transparent border-b border-gray-200 px-1 py-1 focus:outline-none focus:border-[#17B6C3] cursor-pointer"
+                className="text-xs text-gray-600 bg-transparent border-b border-gray-200 px-0.5 py-0.5 focus:outline-none focus:border-[#17B6C3] cursor-pointer"
                 data-testid="select-page-size2"
               >
                 <option value={10}>10</option>
@@ -334,9 +316,9 @@ export default function Customers2() {
                 <option value={100}>100</option>
               </select>
 
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-500">
-                  {page} of {pagination.totalPages}
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs text-gray-400">
+                  {page}/{pagination.totalPages}
                 </span>
                 <button
                   onClick={() => setPage(Math.max(1, page - 1))}
@@ -344,7 +326,7 @@ export default function Customers2() {
                   className="p-1 hover:bg-gray-100 rounded disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                   data-testid="button-previous-page2"
                 >
-                  <ChevronLeft className="h-4 w-4 text-gray-600" />
+                  <ChevronLeft className="h-3.5 w-3.5 text-gray-500" />
                 </button>
                 <button
                   onClick={() => setPage(Math.min(pagination.totalPages, page + 1))}
@@ -352,7 +334,7 @@ export default function Customers2() {
                   className="p-1 hover:bg-gray-100 rounded disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                   data-testid="button-next-page2"
                 >
-                  <ChevronRight className="h-4 w-4 text-gray-600" />
+                  <ChevronRight className="h-3.5 w-3.5 text-gray-500" />
                 </button>
               </div>
             </div>

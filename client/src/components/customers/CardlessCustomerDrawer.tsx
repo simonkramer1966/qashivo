@@ -976,20 +976,20 @@ export function CardlessCustomerDrawer({
       onOpenChange(newOpen);
     }}>
       <SheetContent className="w-full sm:max-w-4xl p-0 flex flex-col bg-white" hideCloseButton>
-        {/* Cardless Header - Typography driven */}
-        <SheetHeader className="px-8 pt-10 pb-8 flex-shrink-0 border-b border-gray-100">
+        {/* Compact Header - v2.0 */}
+        <SheetHeader className="px-6 pt-5 pb-4 flex-shrink-0 border-b border-gray-100">
           <div className="flex items-start justify-between">
             <div>
-              <SheetTitle className="text-3xl font-bold text-gray-900 mb-1">
+              <SheetTitle className="text-xl font-bold text-gray-900">
                 {isLoading ? (
-                  <Skeleton className="h-9 w-64" />
+                  <Skeleton className="h-6 w-48" />
                 ) : (
                   preview?.customer.companyName || preview?.customer.name || "Customer"
                 )}
               </SheetTitle>
-              <SheetDescription className="text-base text-gray-500">
+              <SheetDescription className="text-sm text-gray-500 mt-0.5">
                 {isLoading ? (
-                  <Skeleton className="h-5 w-48" />
+                  <Skeleton className="h-4 w-36" />
                 ) : (
                   preview?.creditControlContact?.name || "View customer details and activity"
                 )}
@@ -998,60 +998,60 @@ export function CardlessCustomerDrawer({
             {!isLoading && preview && (
               <button
                 onClick={handleDetailClick}
-                className="text-base text-gray-500 hover:text-gray-900 transition-colors flex items-center gap-1"
+                className="text-sm text-gray-500 hover:text-gray-900 transition-colors flex items-center gap-1"
               >
                 Full profile
-                <ArrowUpRight className="h-4 w-4" />
+                <ArrowUpRight className="h-3.5 w-3.5" />
               </button>
             )}
           </div>
         </SheetHeader>
 
-        {/* Active Call Status */}
+        {/* Active Call Status - Compact v2.0 */}
         {activeCallPolling && (
-          <div className="mx-8 mt-6 px-4 py-3 border-l-2 border-blue-500 bg-blue-50/50 flex items-center gap-3">
-            <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
-            <span className="text-base text-blue-700">{callPollingStatus || "AI call in progress..."}</span>
+          <div className="mx-6 mt-4 px-3 py-2 border-l-2 border-blue-500 bg-blue-50/50 flex items-center gap-2">
+            <Loader2 className="h-3.5 w-3.5 animate-spin text-blue-600" />
+            <span className="text-sm text-blue-700">{callPollingStatus || "AI call in progress..."}</span>
           </div>
         )}
 
         <div className="flex-1 flex min-h-0 overflow-hidden">
-          {/* Left Column - Balance & Activity */}
+          {/* Left Column - Balance & Activity - Compact v2.0 */}
           <div className="w-1/2 flex flex-col border-r border-gray-100 min-w-0 overflow-hidden">
             <ScrollArea className="flex-1">
-              <div className="px-8 py-10 min-w-0 overflow-hidden">
+              <div className="px-6 py-5 min-w-0 overflow-hidden">
                 {isLoading ? (
-                  <div className="space-y-6">
-                    <Skeleton className="h-6 w-32" />
-                    <Skeleton className="h-16 w-full" />
+                  <div className="space-y-4">
+                    <Skeleton className="h-5 w-28" />
+                    <Skeleton className="h-10 w-full" />
                   </div>
                 ) : preview ? (
                   <>
-                    {/* Financial Summary - Cardless Typography */}
-                    <section className="pb-10 border-b border-gray-100">
-                      <p className="text-xs text-gray-400 uppercase tracking-wider mb-4">
+                    {/* Financial Summary - Compact v2.0 */}
+                    <section className="pb-5 border-b border-gray-100">
+                      <p className="text-[11px] text-gray-400 uppercase tracking-wider mb-2">
                         Outstanding Balance
                       </p>
-                      <p className="text-4xl font-semibold text-gray-900 tabular-nums mb-2">
+                      <p className="text-2xl font-semibold text-gray-900 tabular-nums">
                         {formatCurrency(preview.customer.outstandingTotal, { showDecimals: true })}
                       </p>
                       {preview.customer.overdueTotal > 0 && (
-                        <p className="text-lg text-[#C75C5C]">
+                        <p className="text-sm text-[#C75C5C] mt-1">
                           {formatCurrency(preview.customer.overdueTotal, { showDecimals: true })} overdue
                         </p>
                       )}
                     </section>
 
-                    {/* Recent Timeline - Cardless */}
+                    {/* Recent Timeline - Compact v2.0 */}
                     {!isNoteMode && !isCallMode && !isEmailMode && !isSmsMode && (
-                      <section className="pt-10">
-                        <div className="flex items-center gap-3 mb-6">
-                          <p className="text-xs text-gray-400 uppercase tracking-wider">
+                      <section className="pt-5">
+                        <div className="flex items-center gap-2 mb-4">
+                          <p className="text-[11px] text-gray-400 uppercase tracking-wider">
                             Recent Activity
                           </p>
                           <button
                             onClick={toggleActivitySearch}
-                            className="min-h-[44px] min-w-[44px] flex items-center justify-center hover:bg-gray-100 rounded-full transition-colors"
+                            className="h-9 w-9 flex items-center justify-center hover:bg-gray-100 rounded-full transition-colors"
                           >
                             <Search className={`h-4 w-4 ${activitySearchOpen ? 'text-gray-900' : 'text-gray-400'}`} />
                           </button>
@@ -1065,7 +1065,7 @@ export function CardlessCustomerDrawer({
                               value={activitySearchQuery}
                               onChange={(e) => setActivitySearchQuery(e.target.value)}
                               onKeyDown={handleSearchKeyDown}
-                              className="h-11 text-base bg-white border border-gray-200 rounded-lg px-4 focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
+                              className="h-9 text-sm bg-white border border-gray-200 rounded-lg px-3 focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
                               autoFocus
                             />
                             {activitySearchQuery && (
@@ -1119,38 +1119,38 @@ export function CardlessCustomerDrawer({
                                       <div key={item.id} className="border-b border-gray-50 last:border-0">
                                         <button
                                           onClick={() => toggleTimelineItem(item.id)}
-                                          className="group w-full flex items-center py-4 hover:bg-gray-50 transition-colors text-left"
+                                          className="group w-full flex items-center py-2.5 hover:bg-gray-50 transition-colors text-left"
                                         >
-                                          <span className="text-gray-400 mr-4 flex-shrink-0">
+                                          <span className="text-gray-400 mr-3 flex-shrink-0">
                                             {getChannelIcon(item.channel)}
                                           </span>
                                           
-                                          <div className="flex-1 min-w-0 mr-4">
-                                            <p className="text-base text-gray-900 truncate">
+                                          <div className="flex-1 min-w-0 mr-3">
+                                            <p className="text-sm text-gray-900 truncate">
                                               {item.preview || item.summary}
                                             </p>
-                                            <p className="text-sm text-gray-400 mt-0.5">
+                                            <p className="text-xs text-gray-400 mt-0.5">
                                               {dateInfo.relative}
                                             </p>
                                           </div>
                                           
                                           {amount && (
-                                            <span className="text-base font-semibold text-gray-900 tabular-nums mr-4">
+                                            <span className="text-sm font-semibold text-gray-900 tabular-nums mr-3">
                                               {formatCurrency(amount)}
                                             </span>
                                           )}
                                           
-                                          <ChevronRight className={`h-4 w-4 text-gray-300 transition-transform ${isItemExpanded ? 'rotate-90' : ''}`} />
+                                          <ChevronRight className={`h-3.5 w-3.5 text-gray-300 transition-transform ${isItemExpanded ? 'rotate-90' : ''}`} />
                                         </button>
                                         
                                         {isItemExpanded && (
-                                          <div className="pl-10 pr-4 pb-4 space-y-3">
+                                          <div className="pl-8 pr-3 pb-3 space-y-2">
                                             {item.body && (
-                                              <p className="text-base text-gray-600 whitespace-pre-wrap leading-relaxed">
+                                              <p className="text-sm text-gray-600 whitespace-pre-wrap leading-relaxed">
                                                 {item.body}
                                               </p>
                                             )}
-                                            <p className="text-sm text-gray-400">
+                                            <p className="text-xs text-gray-400">
                                               {formatExactDate(item.occurredAt)}
                                               {item.createdBy && ` · ${item.createdBy.name || (item.createdBy.type === 'system' ? 'System' : 'User')}`}
                                             </p>
@@ -1193,9 +1193,9 @@ export function CardlessCustomerDrawer({
                         
                         <div className="space-y-4">
                           <div className="w-40">
-                            <Label className="text-sm text-gray-500 mb-2 block">Type</Label>
+                            <Label className="text-xs text-gray-500 mb-1.5 block">Type</Label>
                             <Select value={noteType} onValueChange={(v) => setNoteType(v as NoteType)}>
-                              <SelectTrigger className="h-11 bg-white border border-gray-200 rounded-lg px-4 text-base focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]">
+                              <SelectTrigger className="h-9 bg-white border border-gray-200 rounded-lg px-3 text-sm focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]">
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
@@ -1210,30 +1210,30 @@ export function CardlessCustomerDrawer({
                             <>
                               <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                  <Label className="text-sm text-gray-500 mb-2 block">Date</Label>
+                                  <Label className="text-xs text-gray-500 mb-1.5 block">Date</Label>
                                   <Input
                                     type="date"
                                     value={reminderDate}
                                     onChange={(e) => setReminderDate(e.target.value)}
-                                    className="h-11 bg-white border border-gray-200 rounded-lg px-4 text-base focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
+                                    className="h-9 bg-white border border-gray-200 rounded-lg px-3 text-sm focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
                                     min={new Date().toISOString().split('T')[0]}
                                   />
                                 </div>
                                 <div>
-                                  <Label className="text-sm text-gray-500 mb-2 block">Time</Label>
+                                  <Label className="text-xs text-gray-500 mb-1.5 block">Time</Label>
                                   <Input
                                     type="time"
                                     value={reminderTime}
                                     onChange={(e) => setReminderTime(e.target.value)}
-                                    className="h-11 bg-white border border-gray-200 rounded-lg px-4 text-base focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
+                                    className="h-9 bg-white border border-gray-200 rounded-lg px-3 text-sm focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
                                   />
                                 </div>
                               </div>
 
                               <div>
-                                <Label className="text-sm text-gray-500 mb-2 block">Assign to</Label>
+                                <Label className="text-xs text-gray-500 mb-1.5 block">Assign to</Label>
                                 <Select value={assignedToUserId} onValueChange={setAssignedToUserId}>
-                                  <SelectTrigger className="h-11 bg-white border border-gray-200 rounded-lg px-4 text-base focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]">
+                                  <SelectTrigger className="h-9 bg-white border border-gray-200 rounded-lg px-3 text-sm focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]">
                                     <SelectValue placeholder="Select user (optional)" />
                                   </SelectTrigger>
                                   <SelectContent>
@@ -1256,7 +1256,7 @@ export function CardlessCustomerDrawer({
                               placeholder="Type your note here..."
                               value={noteContent}
                               onChange={(e) => setNoteContent(e.target.value)}
-                              className="min-h-[120px] bg-white border border-gray-200 rounded-lg px-4 py-3 text-base resize-none focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
+                              className="min-h-[100px] bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm resize-none focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
                             />
                           </div>
                         </div>
@@ -1270,7 +1270,7 @@ export function CardlessCustomerDrawer({
                         
                         <div className="space-y-4">
                           <div>
-                            <Label className="text-sm text-gray-500 mb-2 block">To</Label>
+                            <Label className="text-xs text-gray-500 mb-1.5 block">To</Label>
                             <Select 
                               value={selectedCallRecipientPhone} 
                               onValueChange={(phone) => {
@@ -1281,7 +1281,7 @@ export function CardlessCustomerDrawer({
                                 setSelectedCallRecipientName(name);
                               }}
                             >
-                              <SelectTrigger className="h-11 bg-white border border-gray-200 rounded-lg px-4 text-base focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]">
+                              <SelectTrigger className="h-9 bg-white border border-gray-200 rounded-lg px-3 text-sm focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]">
                                 <SelectValue placeholder="Select recipient..." />
                               </SelectTrigger>
                               <SelectContent>
@@ -1295,20 +1295,20 @@ export function CardlessCustomerDrawer({
                           </div>
 
                           <div>
-                            <Label className="text-sm text-gray-500 mb-2 block">Reason</Label>
+                            <Label className="text-xs text-gray-500 mb-1.5 block">Reason</Label>
                             <Textarea
                               placeholder="e.g., Follow up on overdue invoice..."
                               value={callReason}
                               onChange={(e) => setCallReason(e.target.value)}
-                              className="min-h-[80px] bg-white border border-gray-200 rounded-lg px-4 py-3 text-base resize-none focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
+                              className="min-h-[70px] bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm resize-none focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
                             />
                           </div>
 
                           <div className="grid grid-cols-2 gap-4">
                             <div>
-                              <Label className="text-sm text-gray-500 mb-2 block">Goal</Label>
+                              <Label className="text-xs text-gray-500 mb-1.5 block">Goal</Label>
                               <Select value={callGoal} onValueChange={(v) => setCallGoal(v as CallGoal)}>
-                                <SelectTrigger className="h-11 bg-white border border-gray-200 rounded-lg px-4 text-base focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]">
+                                <SelectTrigger className="h-9 bg-white border border-gray-200 rounded-lg px-3 text-sm focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]">
                                   <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -1319,7 +1319,7 @@ export function CardlessCustomerDrawer({
                               </Select>
                             </div>
                             <div>
-                              <Label className="text-sm text-gray-500 mb-2 block">Max Duration</Label>
+                              <Label className="text-xs text-gray-500 mb-1.5 block">Max Duration</Label>
                               <div className="flex items-center gap-3 h-11">
                                 <Slider
                                   value={[callMaxDuration]}
@@ -1335,7 +1335,7 @@ export function CardlessCustomerDrawer({
                           </div>
 
                           <div>
-                            <Label className="text-sm text-gray-500 mb-2 block">Tone</Label>
+                            <Label className="text-xs text-gray-500 mb-1.5 block">Tone</Label>
                             <div className="flex items-center gap-3 h-11">
                               <Slider
                                 value={[callTone]}
@@ -1372,22 +1372,22 @@ export function CardlessCustomerDrawer({
                           {callScheduleMode === "scheduled" && (
                             <div className="grid grid-cols-2 gap-4">
                               <div>
-                                <Label className="text-sm text-gray-500 mb-2 block">Date</Label>
+                                <Label className="text-xs text-gray-500 mb-1.5 block">Date</Label>
                                 <Input
                                   type="date"
                                   value={callScheduleDate}
                                   onChange={(e) => setCallScheduleDate(e.target.value)}
-                                  className="h-11 bg-white border border-gray-200 rounded-lg px-4 text-base focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
+                                  className="h-9 bg-white border border-gray-200 rounded-lg px-3 text-sm focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
                                   min={new Date().toISOString().split('T')[0]}
                                 />
                               </div>
                               <div>
-                                <Label className="text-sm text-gray-500 mb-2 block">Time</Label>
+                                <Label className="text-xs text-gray-500 mb-1.5 block">Time</Label>
                                 <Input
                                   type="time"
                                   value={callScheduleTime}
                                   onChange={(e) => setCallScheduleTime(e.target.value)}
-                                  className="h-11 bg-white border border-gray-200 rounded-lg px-4 text-base focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
+                                  className="h-9 bg-white border border-gray-200 rounded-lg px-3 text-sm focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
                                 />
                               </div>
                             </div>
@@ -1404,9 +1404,9 @@ export function CardlessCustomerDrawer({
                         <div className="space-y-4">
                           <div className="flex gap-4">
                             <div className="flex-1">
-                              <Label className="text-sm text-gray-500 mb-2 block">Template</Label>
+                              <Label className="text-xs text-gray-500 mb-1.5 block">Template</Label>
                               <Select value={emailTemplate} onValueChange={(v: EmailTemplateType) => setEmailTemplate(v)}>
-                                <SelectTrigger className="h-11 bg-white border border-gray-200 rounded-lg px-4 text-base focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]">
+                                <SelectTrigger className="h-9 bg-white border border-gray-200 rounded-lg px-3 text-sm focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]">
                                   <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -1417,7 +1417,7 @@ export function CardlessCustomerDrawer({
                               </Select>
                             </div>
                             <div className="w-32">
-                              <Label className="text-sm text-gray-500 mb-2 block">Tone</Label>
+                              <Label className="text-xs text-gray-500 mb-1.5 block">Tone</Label>
                               <div className="flex items-center gap-2 h-11">
                                 <Slider
                                   value={[emailTone]}
@@ -1432,10 +1432,10 @@ export function CardlessCustomerDrawer({
                           </div>
 
                           <div>
-                            <Label className="text-sm text-gray-500 mb-2 block">To</Label>
+                            <Label className="text-xs text-gray-500 mb-1.5 block">To</Label>
                             <div className="flex gap-3 items-center">
                               <Select value={selectedRecipientEmail} onValueChange={setSelectedRecipientEmail}>
-                                <SelectTrigger className="h-11 bg-white border border-gray-200 rounded-lg px-4 text-base focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3] flex-1">
+                                <SelectTrigger className="h-9 bg-white border border-gray-200 rounded-lg px-3 text-sm focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3] flex-1">
                                   <SelectValue placeholder="Select recipient..." />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -1464,22 +1464,22 @@ export function CardlessCustomerDrawer({
                           </div>
 
                           <div>
-                            <Label className="text-sm text-gray-500 mb-2 block">Subject</Label>
+                            <Label className="text-xs text-gray-500 mb-1.5 block">Subject</Label>
                             <Input
                               placeholder="Email subject..."
                               value={emailSubject}
                               onChange={(e) => setEmailSubject(e.target.value)}
-                              className="h-11 bg-white border border-gray-200 rounded-lg px-4 text-base focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
+                              className="h-9 bg-white border border-gray-200 rounded-lg px-3 text-sm focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
                             />
                           </div>
 
                           <div>
-                            <Label className="text-sm text-gray-500 mb-2 block">Message</Label>
+                            <Label className="text-xs text-gray-500 mb-1.5 block">Message</Label>
                             <Textarea
                               placeholder="Type your message..."
                               value={emailBody}
                               onChange={(e) => setEmailBody(e.target.value)}
-                              className="min-h-[200px] bg-white border border-gray-200 rounded-lg px-4 py-3 text-base resize-none focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
+                              className="min-h-[140px] bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm resize-none focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
                             />
                           </div>
                         </div>
@@ -1494,9 +1494,9 @@ export function CardlessCustomerDrawer({
                         <div className="space-y-4">
                           <div className="flex gap-4">
                             <div className="flex-1">
-                              <Label className="text-sm text-gray-500 mb-2 block">Template</Label>
+                              <Label className="text-xs text-gray-500 mb-1.5 block">Template</Label>
                               <Select value={smsTemplate} onValueChange={(v: SmsTemplateType) => setSmsTemplate(v)}>
-                                <SelectTrigger className="h-11 bg-white border border-gray-200 rounded-lg px-4 text-base focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]">
+                                <SelectTrigger className="h-9 bg-white border border-gray-200 rounded-lg px-3 text-sm focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]">
                                   <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -1507,7 +1507,7 @@ export function CardlessCustomerDrawer({
                               </Select>
                             </div>
                             <div className="w-32">
-                              <Label className="text-sm text-gray-500 mb-2 block">Tone</Label>
+                              <Label className="text-xs text-gray-500 mb-1.5 block">Tone</Label>
                               <div className="flex items-center gap-2 h-11">
                                 <Slider
                                   value={[smsTone]}
@@ -1522,10 +1522,10 @@ export function CardlessCustomerDrawer({
                           </div>
 
                           <div>
-                            <Label className="text-sm text-gray-500 mb-2 block">To</Label>
+                            <Label className="text-xs text-gray-500 mb-1.5 block">To</Label>
                             <div className="flex gap-3 items-center">
                               <Select value={selectedRecipientPhone} onValueChange={setSelectedRecipientPhone}>
-                                <SelectTrigger className="h-11 bg-white border border-gray-200 rounded-lg px-4 text-base focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3] flex-1">
+                                <SelectTrigger className="h-9 bg-white border border-gray-200 rounded-lg px-3 text-sm focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3] flex-1">
                                   <SelectValue placeholder="Select recipient..." />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -1554,12 +1554,12 @@ export function CardlessCustomerDrawer({
                           </div>
 
                           <div>
-                            <Label className="text-sm text-gray-500 mb-2 block">Message</Label>
+                            <Label className="text-xs text-gray-500 mb-1.5 block">Message</Label>
                             <Textarea
                               placeholder="Type your message..."
                               value={smsBody}
                               onChange={(e) => setSmsBody(e.target.value)}
-                              className="min-h-[120px] bg-white border border-gray-200 rounded-lg px-4 py-3 text-base resize-none focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
+                              className="min-h-[100px] bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm resize-none focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
                             />
                             <p className="text-sm text-gray-400 mt-2">{smsBody.length}/160 characters</p>
                           </div>
@@ -1571,20 +1571,20 @@ export function CardlessCustomerDrawer({
               </div>
             </ScrollArea>
 
-            {/* Left Footer - Communication Actions */}
-            <div className="px-8 py-6 border-t border-gray-100 flex-shrink-0">
+            {/* Left Footer - Communication Actions - Compact v2.0 */}
+            <div className="px-6 py-3 border-t border-gray-100 flex-shrink-0">
               {isNoteMode ? (
                 <div className="flex gap-3">
                   <button
                     onClick={resetNoteForm}
-                    className="flex-1 min-h-[44px] py-3 text-base text-gray-600 font-medium hover:text-gray-900 transition-colors"
+                    className="flex-1 h-9 py-2 text-sm text-gray-600 font-medium hover:text-gray-900 transition-colors"
                   >
                     Cancel
                   </button>
                   <button
                     onClick={handleSaveNote}
                     disabled={createNoteMutation.isPending || !noteContent.trim()}
-                    className="flex-1 min-h-[44px] py-3 text-base font-medium bg-[#17B6C3] hover:bg-[#1396A1] text-white rounded-full disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    className="flex-1 h-9 py-2 text-sm font-medium bg-[#17B6C3] hover:bg-[#1396A1] text-white rounded-full disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
                     {createNoteMutation.isPending ? "Saving..." : "Save Note"}
                   </button>
@@ -1593,14 +1593,14 @@ export function CardlessCustomerDrawer({
                 <div className="flex gap-3">
                   <button
                     onClick={resetCallForm}
-                    className="flex-1 min-h-[44px] py-3 text-base text-gray-600 font-medium hover:text-gray-900 transition-colors"
+                    className="flex-1 h-9 py-2 text-sm text-gray-600 font-medium hover:text-gray-900 transition-colors"
                   >
                     Cancel
                   </button>
                   <button
                     onClick={handleScheduleCall}
                     disabled={scheduleCallMutation.isPending || !selectedCallRecipientPhone}
-                    className="flex-1 min-h-[44px] py-3 text-base font-medium bg-[#17B6C3] hover:bg-[#1396A1] text-white rounded-full disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    className="flex-1 h-9 py-2 text-sm font-medium bg-[#17B6C3] hover:bg-[#1396A1] text-white rounded-full disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
                     {scheduleCallMutation.isPending ? "Scheduling..." : callScheduleMode === "now" ? "Start Call" : "Schedule Call"}
                   </button>
@@ -1609,14 +1609,14 @@ export function CardlessCustomerDrawer({
                 <div className="flex gap-3">
                   <button
                     onClick={resetEmailForm}
-                    className="flex-1 min-h-[44px] py-3 text-base text-gray-600 font-medium hover:text-gray-900 transition-colors"
+                    className="flex-1 h-9 py-2 text-sm text-gray-600 font-medium hover:text-gray-900 transition-colors"
                   >
                     Cancel
                   </button>
                   <button
                     onClick={handleSendEmail}
                     disabled={sendEmailMutation.isPending || !emailSubject.trim() || !emailBody.trim()}
-                    className="flex-1 min-h-[44px] py-3 text-base font-medium bg-[#17B6C3] hover:bg-[#1396A1] text-white rounded-full disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    className="flex-1 h-9 py-2 text-sm font-medium bg-[#17B6C3] hover:bg-[#1396A1] text-white rounded-full disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
                     {sendEmailMutation.isPending ? "Sending..." : "Send Email"}
                   </button>
@@ -1625,14 +1625,14 @@ export function CardlessCustomerDrawer({
                 <div className="flex gap-3">
                   <button
                     onClick={resetSmsForm}
-                    className="flex-1 min-h-[44px] py-3 text-base text-gray-600 font-medium hover:text-gray-900 transition-colors"
+                    className="flex-1 h-9 py-2 text-sm text-gray-600 font-medium hover:text-gray-900 transition-colors"
                   >
                     Cancel
                   </button>
                   <button
                     onClick={handleSendSms}
                     disabled={sendSmsMutation.isPending || !smsBody.trim()}
-                    className="flex-1 min-h-[44px] py-3 text-base font-medium bg-[#17B6C3] hover:bg-[#1396A1] text-white rounded-full disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    className="flex-1 h-9 py-2 text-sm font-medium bg-[#17B6C3] hover:bg-[#1396A1] text-white rounded-full disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
                     {sendSmsMutation.isPending ? "Sending..." : "Send SMS"}
                   </button>
@@ -1641,30 +1641,30 @@ export function CardlessCustomerDrawer({
                 <div className="flex gap-4">
                   <button
                     onClick={handleNoteButtonClick}
-                    className="flex items-center gap-2 min-h-[44px] min-w-[44px] px-3 text-base text-gray-600 font-medium hover:text-gray-900 transition-colors"
+                    className="flex items-center gap-1.5 h-9 px-2.5 text-sm text-gray-600 font-medium hover:text-gray-900 transition-colors"
                   >
-                    <StickyNote className="h-5 w-5" />
+                    <StickyNote className="h-4 w-4" />
                     Note
                   </button>
                   <button
                     onClick={handleEmailButtonClick}
-                    className="flex items-center gap-2 min-h-[44px] min-w-[44px] px-3 text-base text-gray-600 font-medium hover:text-gray-900 transition-colors"
+                    className="flex items-center gap-1.5 h-9 px-2.5 text-sm text-gray-600 font-medium hover:text-gray-900 transition-colors"
                   >
-                    <Mail className="h-5 w-5" />
+                    <Mail className="h-4 w-4" />
                     Email
                   </button>
                   <button
                     onClick={handleSmsButtonClick}
-                    className="flex items-center gap-2 min-h-[44px] min-w-[44px] px-3 text-base text-gray-600 font-medium hover:text-gray-900 transition-colors"
+                    className="flex items-center gap-1.5 h-9 px-2.5 text-sm text-gray-600 font-medium hover:text-gray-900 transition-colors"
                   >
-                    <MessageSquare className="h-5 w-5" />
+                    <MessageSquare className="h-4 w-4" />
                     SMS
                   </button>
                   <button
                     onClick={handleCallButtonClick}
-                    className="flex items-center gap-2 min-h-[44px] min-w-[44px] px-3 text-base text-gray-600 font-medium hover:text-gray-900 transition-colors"
+                    className="flex items-center gap-1.5 h-9 px-2.5 text-sm text-gray-600 font-medium hover:text-gray-900 transition-colors"
                   >
-                    <Phone className="h-5 w-5" />
+                    <Phone className="h-4 w-4" />
                     Call
                   </button>
                 </div>
@@ -1672,23 +1672,23 @@ export function CardlessCustomerDrawer({
             </div>
           </div>
 
-          {/* Right Column - Invoices */}
+          {/* Right Column - Invoices - Compact v2.0 */}
           <div className="w-1/2 flex flex-col min-w-0 overflow-hidden">
             <ScrollArea className={isPtpMode ? "h-1/2" : "flex-1"}>
-              <div className="px-8 py-10 min-w-0 overflow-hidden">
+              <div className="px-6 py-5 min-w-0 overflow-hidden">
                 {isLoading ? (
-                  <div className="space-y-4">
-                    <Skeleton className="h-6 w-32" />
-                    <Skeleton className="h-16 w-full" />
-                    <Skeleton className="h-16 w-full" />
+                  <div className="space-y-3">
+                    <Skeleton className="h-5 w-28" />
+                    <Skeleton className="h-12 w-full" />
+                    <Skeleton className="h-12 w-full" />
                   </div>
                 ) : preview ? (
                   <section>
-                    {/* Filter Buttons - Cardless */}
-                    <div className="flex items-center gap-4 mb-8">
+                    {/* Filter Buttons - Compact v2.0 */}
+                    <div className="flex items-center gap-3 mb-4">
                       <button
                         onClick={() => setInvoiceFilter("all")}
-                        className={`text-base transition-colors ${
+                        className={`text-sm transition-colors ${
                           invoiceFilter === "all"
                             ? "text-gray-900 font-medium"
                             : "text-gray-400 hover:text-gray-600"
@@ -1698,7 +1698,7 @@ export function CardlessCustomerDrawer({
                       </button>
                       <button
                         onClick={() => setInvoiceFilter("overdue")}
-                        className={`text-base transition-colors ${
+                        className={`text-sm transition-colors ${
                           invoiceFilter === "overdue"
                             ? "text-gray-900 font-medium"
                             : "text-gray-400 hover:text-gray-600"
@@ -1725,7 +1725,7 @@ export function CardlessCustomerDrawer({
                               setPtpAmount(total.toFixed(2));
                             }
                           }}
-                          className="ml-auto text-base text-gray-500 hover:text-gray-900 transition-colors"
+                          className="ml-auto text-sm text-gray-500 hover:text-gray-900 transition-colors"
                         >
                           {(() => {
                             const allInvoices = [...(preview.invoices || []), ...additionalInvoices];
@@ -1768,14 +1768,14 @@ export function CardlessCustomerDrawer({
                               <div key={invoice.id} className="border-b border-gray-50 last:border-0">
                                 <div
                                   onClick={() => isPtpMode ? togglePtpInvoice(invoice.id, invoice.balance) : toggleInvoice(invoice.id)}
-                                  className={`group w-full flex items-center py-4 cursor-pointer transition-colors ${
+                                  className={`group w-full flex items-center py-2.5 cursor-pointer transition-colors ${
                                     isPtpMode && isPtpSelected 
                                       ? 'bg-gray-50' 
                                       : 'hover:bg-gray-50'
                                   }`}
                                 >
-                                  <div className="flex-1 min-w-0 mr-4">
-                                    <p className={`text-base font-medium ${isOverdue ? 'text-[#C75C5C]' : 'text-gray-900'}`}>
+                                  <div className="flex-1 min-w-0 mr-3">
+                                    <p className={`text-sm font-medium ${isOverdue ? 'text-[#C75C5C]' : 'text-gray-900'}`}>
                                       {invoice.invoiceNumber}
                                     </p>
                                     <p className="text-sm text-gray-400 mt-0.5">
@@ -1851,26 +1851,26 @@ export function CardlessCustomerDrawer({
               </div>
             </ScrollArea>
 
-            {/* PTP Form Footer */}
+            {/* PTP Form Footer - Compact v2.0 */}
             {preview && isPtpMode && (
-              <div className="px-8 py-6 flex-1 space-y-4 overflow-y-auto border-t border-gray-100">
-                <p className="text-xs text-gray-400 uppercase tracking-wider">Promise to Pay</p>
+              <div className="px-6 py-4 flex-1 space-y-3 overflow-y-auto border-t border-gray-100">
+                <p className="text-[11px] text-gray-400 uppercase tracking-wider">Promise to Pay</p>
                 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label className="text-sm text-gray-500 mb-2 block">Payment Date</Label>
+                    <Label className="text-xs text-gray-500 mb-1.5 block">Payment Date</Label>
                     <Input
                       type="date"
                       value={ptpPaymentDate}
                       onChange={(e) => setPtpPaymentDate(e.target.value)}
-                      className={`h-11 bg-white border rounded-lg px-4 text-base focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3] ${ptpValidationAttempted && !ptpPaymentDate ? 'border-[#C75C5C]' : 'border-gray-200'}`}
+                      className={`h-9 bg-white border rounded-lg px-3 text-sm focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3] ${ptpValidationAttempted && !ptpPaymentDate ? 'border-[#C75C5C]' : 'border-gray-200'}`}
                       min={new Date().toISOString().split('T')[0]}
                     />
                   </div>
                   <div>
-                    <Label className="text-sm text-gray-500 mb-2 block">Type</Label>
+                    <Label className="text-xs text-gray-500 mb-1.5 block">Type</Label>
                     <Select value={ptpPaymentType} onValueChange={(v) => setPtpPaymentType(v as "full" | "part")}>
-                      <SelectTrigger className="h-11 bg-white border border-gray-200 rounded-lg px-4 text-base focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]">
+                      <SelectTrigger className="h-9 bg-white border border-gray-200 rounded-lg px-3 text-sm focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -1883,9 +1883,9 @@ export function CardlessCustomerDrawer({
                 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label className="text-sm text-gray-500 mb-2 block">Confirmed by</Label>
+                    <Label className="text-xs text-gray-500 mb-1.5 block">Confirmed by</Label>
                     <Select value={ptpConfirmedBy} onValueChange={setPtpConfirmedBy}>
-                      <SelectTrigger className={`h-11 bg-white border rounded-lg px-4 text-base focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3] ${ptpValidationAttempted && !ptpConfirmedBy ? 'border-[#C75C5C]' : 'border-gray-200'}`}>
+                      <SelectTrigger className={`h-9 bg-white border rounded-lg px-3 text-sm focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3] ${ptpValidationAttempted && !ptpConfirmedBy ? 'border-[#C75C5C]' : 'border-gray-200'}`}>
                         <SelectValue placeholder="Select contact..." />
                       </SelectTrigger>
                       <SelectContent>
@@ -1899,11 +1899,11 @@ export function CardlessCustomerDrawer({
                     </Select>
                   </div>
                   <div>
-                    <Label className="text-sm text-gray-500 mb-2 block">
+                    <Label className="text-xs text-gray-500 mb-1.5 block">
                       Amount {selectedPtpInvoices.size > 0 && <span className="text-gray-400">({selectedPtpInvoices.size})</span>}
                     </Label>
                     <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-base text-gray-500">£</span>
+                      <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-gray-500">£</span>
                       <Input
                         type="text"
                         inputMode="decimal"
@@ -1912,7 +1912,7 @@ export function CardlessCustomerDrawer({
                           const raw = stripCommas(e.target.value.replace(/[^0-9.,]/g, ''));
                           setPtpAmount(raw === "0.00" ? "" : raw);
                         }}
-                        className={`h-11 bg-white border rounded-lg pl-8 pr-4 text-base text-right tabular-nums focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3] ${ptpValidationAttempted && (!ptpAmount || parseFloat(stripCommas(ptpAmount)) <= 0) ? 'border-[#C75C5C]' : 'border-gray-200'}`}
+                        className={`h-9 bg-white border rounded-lg pl-7 pr-3 text-sm text-right tabular-nums focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3] ${ptpValidationAttempted && (!ptpAmount || parseFloat(stripCommas(ptpAmount)) <= 0) ? 'border-[#C75C5C]' : 'border-gray-200'}`}
                       />
                     </div>
                   </div>
@@ -1920,63 +1920,63 @@ export function CardlessCustomerDrawer({
                 
                 {ptpConfirmedBy === "new" && (
                   <div>
-                    <Label className="text-sm text-gray-500 mb-2 block">Contact Name</Label>
+                    <Label className="text-xs text-gray-500 mb-1.5 block">Contact Name</Label>
                     <Input
                       type="text"
                       value={ptpNewContactName}
                       onChange={(e) => setPtpNewContactName(e.target.value)}
-                      className={`h-11 bg-white border rounded-lg px-4 text-base focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3] ${ptpValidationAttempted && !ptpNewContactName ? 'border-[#C75C5C]' : 'border-gray-200'}`}
+                      className={`h-9 bg-white border rounded-lg px-3 text-sm focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3] ${ptpValidationAttempted && !ptpNewContactName ? 'border-[#C75C5C]' : 'border-gray-200'}`}
                       placeholder="Enter contact name"
                     />
                   </div>
                 )}
                 
                 <div>
-                  <Label className="text-sm text-gray-500 mb-2 block">Notes (optional)</Label>
+                  <Label className="text-xs text-gray-500 mb-1.5 block">Notes (optional)</Label>
                   <Textarea
                     value={ptpNotes}
                     onChange={(e) => setPtpNotes(e.target.value)}
-                    className="min-h-[80px] bg-white border border-gray-200 rounded-lg px-4 py-3 text-base resize-none focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
+                    className="min-h-[70px] bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm resize-none focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3]"
                     placeholder="Any additional notes..."
                   />
                 </div>
               </div>
             )}
 
-            {/* Right Footer - Action Buttons */}
+            {/* Right Footer - Action Buttons - Compact v2.0 */}
             {preview && !isPtpMode && (
-              <div className="px-8 py-6 border-t border-gray-100 flex-shrink-0">
+              <div className="px-6 py-3 border-t border-gray-100 flex-shrink-0">
                 <div className="flex gap-4">
                   <button
                     onClick={handlePtpButtonClick}
-                    className="flex items-center gap-2 min-h-[44px] min-w-[44px] px-3 text-base text-gray-600 font-medium hover:text-gray-900 transition-colors"
+                    className="flex items-center gap-1.5 h-9 px-2.5 text-sm text-gray-600 font-medium hover:text-gray-900 transition-colors"
                   >
-                    <Handshake className="h-5 w-5" />
+                    <Handshake className="h-4 w-4" />
                     PTP
                   </button>
-                  <button className="flex items-center gap-2 min-h-[44px] min-w-[44px] px-3 text-base text-gray-600 font-medium hover:text-gray-900 transition-colors">
-                    <Calendar className="h-5 w-5" />
+                  <button className="flex items-center gap-1.5 h-9 px-2.5 text-sm text-gray-600 font-medium hover:text-gray-900 transition-colors">
+                    <Calendar className="h-4 w-4" />
                     Plan
                   </button>
-                  <button className="flex items-center gap-2 min-h-[44px] min-w-[44px] px-3 text-base text-gray-600 font-medium hover:text-gray-900 transition-colors">
-                    <Scale className="h-5 w-5" />
+                  <button className="flex items-center gap-1.5 h-9 px-2.5 text-sm text-gray-600 font-medium hover:text-gray-900 transition-colors">
+                    <Scale className="h-4 w-4" />
                     Dispute
                   </button>
-                  <button className="flex items-center gap-2 min-h-[44px] min-w-[44px] px-3 text-base text-gray-600 font-medium hover:text-gray-900 transition-colors">
-                    <Shield className="h-5 w-5" />
+                  <button className="flex items-center gap-1.5 h-9 px-2.5 text-sm text-gray-600 font-medium hover:text-gray-900 transition-colors">
+                    <Shield className="h-4 w-4" />
                     Debt
                   </button>
                 </div>
               </div>
             )}
 
-            {/* PTP Mode Actions */}
+            {/* PTP Mode Actions - Compact v2.0 */}
             {preview && isPtpMode && (
-              <div className="px-8 py-6 border-t border-gray-100 flex-shrink-0">
+              <div className="px-6 py-3 border-t border-gray-100 flex-shrink-0">
                 <div className="flex gap-3">
                   <button
                     onClick={resetPtpMode}
-                    className="flex-1 min-h-[44px] py-3 text-base text-gray-600 font-medium hover:text-gray-900 transition-colors"
+                    className="flex-1 h-9 py-2 text-sm text-gray-600 font-medium hover:text-gray-900 transition-colors"
                   >
                     Cancel
                   </button>
@@ -1990,7 +1990,7 @@ export function CardlessCustomerDrawer({
                       if (!ptpAmount || parsedAmount <= 0) return true;
                       return false;
                     })()}
-                    className="flex-1 min-h-[44px] py-3 text-base font-medium bg-[#17B6C3] hover:bg-[#1396A1] text-white rounded-full disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    className="flex-1 h-9 py-2 text-sm font-medium bg-[#17B6C3] hover:bg-[#1396A1] text-white rounded-full disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
                     {createPtpMutation.isPending ? "Saving..." : "Save PTP"}
                   </button>
