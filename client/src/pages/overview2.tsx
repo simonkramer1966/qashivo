@@ -1,9 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import NewSidebar from "@/components/layout/new-sidebar";
 import BottomNav from "@/components/layout/bottom-nav";
-import Header from "@/components/layout/header";
 import { useCurrency } from "@/hooks/useCurrency";
 import { ComposedChart, Bar, Line, XAxis, YAxis, ResponsiveContainer, Tooltip as RechartsTooltip } from 'recharts';
 
@@ -144,110 +142,90 @@ export default function Overview2() {
 
   return (
     <div className="flex h-screen bg-white">
-      {/* Desktop Sidebar */}
       <div className="hidden lg:block">
         <NewSidebar />
       </div>
 
       <main className="flex-1 flex flex-col min-h-0 main-with-bottom-nav">
-        <Header 
-          title="Overview" 
-          subtitle=""
-          systemMessage="Qashivo is continuously managing receivables. No action is required unless something is flagged in Attention."
-        />
+        <div className="max-w-7xl mx-auto w-full px-6 py-5 border-b border-gray-100">
+          <h1 className="text-2xl font-bold text-gray-900 font-heading">Overview</h1>
+          <p className="text-sm text-gray-500 mt-1">
+            Qashivo manages collections automatically. Review only when flagged.
+          </p>
+        </div>
         
         <div className="flex-1 flex flex-col min-h-0 overflow-y-auto">
-          <div className="max-w-7xl mx-auto w-full px-6 py-5 flex-1 flex flex-col min-h-0">
+          <div className="max-w-7xl mx-auto w-full px-6 flex-1 flex flex-col min-h-0">
           
-          {/* Desktop: State of Cash - Cardless v2.0 */}
-          <section className="hidden sm:block mb-6 flex-shrink-0">
-            <p className="text-[11px] text-gray-400 uppercase tracking-wider font-medium mb-4">State of Cash</p>
-            <div className="grid grid-cols-4 gap-8">
-              <div data-testid="card-total-outstanding">
-                <p className="text-xs text-gray-500 mb-1">Total Outstanding</p>
-                {metricsLoading ? (
-                  <div className="h-6 w-24 bg-gray-50 animate-pulse rounded-lg"></div>
-                ) : (
-                  <p className="text-lg font-semibold text-gray-900 tabular-nums">
-                    {formatCurrency(totalOutstanding)} <span className="text-xs font-normal text-gray-400">({totalInvoiceCount})</span>
-                  </p>
-                )}
-              </div>
-
-              <div data-testid="card-overdue">
-                <p className="text-xs text-gray-500 mb-1">Overdue</p>
-                {metricsLoading ? (
-                  <div className="h-6 w-24 bg-gray-50 animate-pulse rounded-lg"></div>
-                ) : (
-                  <p className="text-lg font-semibold text-gray-900 tabular-nums">
-                    {formatCurrency(overdueAmount)} <span className="text-xs font-normal text-gray-400">({overdueCount})</span>
-                  </p>
-                )}
-              </div>
-
-              <div data-testid="card-collected-month">
-                <p className="text-xs text-gray-500 mb-1">Collected This Month</p>
-                {metricsLoading ? (
-                  <div className="h-6 w-24 bg-gray-50 animate-pulse rounded-lg"></div>
-                ) : (
-                  <p className="text-lg font-semibold text-[#4FAD80] tabular-nums">
-                    {formatCurrency(metrics?.collectedThisMonth || 0)}
-                  </p>
-                )}
-              </div>
-
-              <div data-testid="card-collected-week">
-                <p className="text-xs text-gray-500 mb-1">Collected This Week</p>
-                {metricsLoading ? (
-                  <div className="h-6 w-24 bg-gray-50 animate-pulse rounded-lg"></div>
-                ) : (
-                  <p className="text-lg font-semibold text-[#4FAD80] tabular-nums">
-                    {formatCurrency(metrics?.collectedThisWeek || 0)}
-                  </p>
-                )}
-              </div>
+          <div className="py-4 border-b border-gray-100 flex flex-wrap items-center gap-x-10 gap-y-3">
+            <div>
+              <span className="text-xs text-gray-500">Outstanding</span>
+              {metricsLoading ? (
+                <div className="h-5 w-20 bg-gray-100 animate-pulse rounded mt-0.5"></div>
+              ) : (
+                <p className="text-sm font-semibold text-gray-900 tabular-nums">
+                  {formatCurrency(totalOutstanding)} <span className="text-xs font-normal text-gray-400">({totalInvoiceCount})</span>
+                </p>
+              )}
             </div>
-          </section>
-
-          {/* Mobile: State of Cash - Cardless v2.0 */}
-          <section className="sm:hidden mb-6 flex-shrink-0">
-            <p className="text-[11px] text-gray-400 uppercase tracking-wider font-medium mb-3">State of Cash</p>
-            <div className="grid grid-cols-2 gap-4">
-              <div data-testid="card-total-outstanding">
-                <p className="text-xs text-gray-500">Outstanding</p>
-                <p className="text-base font-semibold text-gray-900 tabular-nums">{formatCurrency(totalOutstanding)}</p>
-              </div>
-              <div data-testid="card-overdue">
-                <p className="text-xs text-gray-500">Overdue</p>
-                <p className="text-base font-semibold text-gray-900 tabular-nums">{formatCurrency(overdueAmount)}</p>
-              </div>
-              <div data-testid="card-collected-month">
-                <p className="text-xs text-gray-500">Collected (Month)</p>
-                <p className="text-base font-semibold text-[#4FAD80] tabular-nums">{formatCurrency(metrics?.collectedThisMonth || 0)}</p>
-              </div>
-              <div data-testid="card-collected-week">
-                <p className="text-xs text-gray-500">Collected (Week)</p>
-                <p className="text-base font-semibold text-[#4FAD80] tabular-nums">{formatCurrency(metrics?.collectedThisWeek || 0)}</p>
-              </div>
+            <div>
+              <span className="text-xs text-gray-500">Overdue</span>
+              {metricsLoading ? (
+                <div className="h-5 w-20 bg-gray-100 animate-pulse rounded mt-0.5"></div>
+              ) : (
+                <p className="text-sm font-semibold text-gray-900 tabular-nums">
+                  {formatCurrency(overdueAmount)} <span className="text-xs font-normal text-gray-400">({overdueCount})</span>
+                </p>
+              )}
             </div>
-          </section>
+            <div>
+              <span className="text-xs text-gray-500">Collected (Month)</span>
+              {metricsLoading ? (
+                <div className="h-5 w-20 bg-gray-100 animate-pulse rounded mt-0.5"></div>
+              ) : (
+                <p className="text-sm font-semibold text-[#4FAD80] tabular-nums">
+                  {formatCurrency(metrics?.collectedThisMonth || 0)}
+                </p>
+              )}
+            </div>
+            <div>
+              <span className="text-xs text-gray-500">Collected (Week)</span>
+              {metricsLoading ? (
+                <div className="h-5 w-20 bg-gray-100 animate-pulse rounded mt-0.5"></div>
+              ) : (
+                <p className="text-sm font-semibold text-[#4FAD80] tabular-nums">
+                  {formatCurrency(metrics?.collectedThisWeek || 0)}
+                </p>
+              )}
+            </div>
+            
+            <div className="h-6 w-px bg-gray-200 hidden sm:block" />
+            
+            <div className="flex items-center gap-1.5">
+              <span className="inline-block w-2 h-2 rounded-full bg-[#4FAD80]" />
+              <span className="text-xs text-gray-500">On-time</span>
+              <span className="text-sm font-semibold text-gray-900 tabular-nums ml-0.5">32%</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="inline-block w-2 h-2 rounded-full bg-[#E8A23B]" />
+              <span className="text-xs text-gray-500">Late</span>
+              <span className="text-sm font-semibold text-gray-900 tabular-nums ml-0.5">45</span>
+              <span className="text-xs text-gray-400">days avg</span>
+            </div>
+          </div>
 
-          {/* Hairline divider - Cardless v2.0 */}
-          <div className="border-t border-gray-100 mb-6 flex-shrink-0" />
-
-          {/* Cashflow Chart - Cardless v2.0 */}
-          <section className="flex-1 flex flex-col min-h-0 mb-6" data-testid="card-cashflow-chart">
+          <section className="flex-1 flex flex-col min-h-0 py-5 border-b border-gray-100" data-testid="card-cashflow-chart">
             <div className="flex items-center justify-between mb-3 flex-shrink-0">
-              <h3 className="text-[13px] font-medium text-gray-900">{getForecastTitle()}</h3>
+              <h3 className="text-[11px] font-medium text-gray-400 uppercase tracking-wider">{getForecastTitle()}</h3>
               <div className="flex items-center gap-2" data-testid="radio-forecast-period">
                 <div className="flex items-center gap-0.5">
                   {([30, 60, 90] as const).map((range) => (
                     <button
                       key={range}
                       onClick={() => setForecastRange(range)}
-                      className={`px-2.5 py-1 text-[11px] transition-colors rounded-lg ${
+                      className={`px-2.5 py-1 text-[11px] transition-colors rounded ${
                         forecastRange === range 
-                          ? "text-gray-900 font-medium bg-gray-50" 
+                          ? "text-gray-900 font-medium bg-gray-100" 
                           : "text-gray-400 hover:text-gray-600"
                       }`}
                       data-testid={`radio-range-${range}`}
@@ -262,9 +240,9 @@ export default function Overview2() {
                     <button
                       key={b}
                       onClick={() => setForecastBucket(b)}
-                      className={`px-2.5 py-1 text-[11px] transition-colors rounded-lg ${
+                      className={`px-2.5 py-1 text-[11px] transition-colors rounded ${
                         forecastBucket === b 
-                          ? "text-gray-900 font-medium bg-gray-50" 
+                          ? "text-gray-900 font-medium bg-gray-100" 
                           : "text-gray-400 hover:text-gray-600"
                       }`}
                       data-testid={`radio-bucket-${b}`}
@@ -275,7 +253,7 @@ export default function Overview2() {
                 </div>
               </div>
             </div>
-            <div className="flex-1 min-h-[200px] max-h-[480px]">
+            <div className="flex-1 min-h-[200px] max-h-[400px]">
               {cashInflowLoading ? (
                 <div className="h-full flex items-center justify-center">
                   <div className="text-gray-400 text-sm">Loading chart...</div>
@@ -302,7 +280,7 @@ export default function Overview2() {
                         const data = payload[0]?.payload;
                         if (!data) return null;
                         return (
-                          <div className="bg-white border border-gray-100 rounded-lg p-3 shadow-sm text-[13px]">
+                          <div className="bg-white border border-gray-200 rounded-lg p-3 shadow-sm text-[13px]">
                             <p className="font-medium text-gray-900 mb-2">{label}</p>
                             <div className="space-y-1">
                               <div className="flex justify-between gap-4">
@@ -360,19 +338,15 @@ export default function Overview2() {
             </div>
           </section>
 
-          {/* Hairline divider - Cardless v2.0 */}
-          <div className="border-t border-gray-100 mb-6 flex-shrink-0" />
-
-          {/* Behaviour Performance - Cardless v2.0 */}
-          <section className="flex-shrink-0 pb-4">
+          <section className="py-5">
             <p className="text-[11px] text-gray-400 uppercase tracking-wider font-medium mb-4">Behaviour Performance</p>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 sm:gap-8">
               <div data-testid="card-perf-avg-days-late">
                 <p className="text-xs text-gray-500 mb-1">Avg Days Late</p>
                 {metricsLoading ? (
-                  <div className="h-6 w-16 bg-gray-50 animate-pulse rounded-lg"></div>
+                  <div className="h-5 w-16 bg-gray-100 animate-pulse rounded"></div>
                 ) : (
-                  <p className="text-lg font-semibold text-gray-900 tabular-nums">
+                  <p className="text-sm font-semibold text-gray-900 tabular-nums">
                     {Math.abs(avgDaysOverdue).toFixed(0)} <span className="text-xs font-normal text-gray-400">days</span>
                   </p>
                 )}
@@ -381,9 +355,9 @@ export default function Overview2() {
               <div data-testid="card-perf-avg-days-pay">
                 <p className="text-xs text-gray-500 mb-1">Avg Days to Pay</p>
                 {metricsLoading ? (
-                  <div className="h-6 w-16 bg-gray-50 animate-pulse rounded-lg"></div>
+                  <div className="h-5 w-16 bg-gray-100 animate-pulse rounded"></div>
                 ) : (
-                  <p className="text-lg font-semibold text-gray-900 tabular-nums">
+                  <p className="text-sm font-semibold text-gray-900 tabular-nums">
                     45 <span className="text-xs font-normal text-gray-400">days</span>
                   </p>
                 )}
@@ -392,9 +366,9 @@ export default function Overview2() {
               <div data-testid="card-perf-ontime-rate">
                 <p className="text-xs text-gray-500 mb-1">On-time Rate</p>
                 {metricsLoading ? (
-                  <div className="h-6 w-16 bg-gray-50 animate-pulse rounded-lg"></div>
+                  <div className="h-5 w-16 bg-gray-100 animate-pulse rounded"></div>
                 ) : (
-                  <p className="text-lg font-semibold text-[#4FAD80] tabular-nums">
+                  <p className="text-sm font-semibold text-[#4FAD80] tabular-nums">
                     32%
                   </p>
                 )}
@@ -402,7 +376,7 @@ export default function Overview2() {
 
               <div data-testid="card-perf-promises-kept">
                 <p className="text-xs text-gray-500 mb-1">Promises Kept</p>
-                <p className="text-lg font-semibold text-[#4FAD80] tabular-nums">78%</p>
+                <p className="text-sm font-semibold text-[#4FAD80] tabular-nums">78%</p>
               </div>
             </div>
           </section>
