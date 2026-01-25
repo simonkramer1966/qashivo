@@ -57,14 +57,30 @@ export default function Customers2() {
 
   const { data: contactsResponse, isLoading } = useQuery<{
     contacts: Contact[];
-    aggregates: { totalOutstanding: number; highRiskCount: number; totalContacts: number };
+    aggregates: { 
+      totalOutstanding: number; 
+      highRiskCount: number; 
+      totalContacts: number;
+      onTimePercent: number;
+      lateReliablePercent: number;
+      inconsistentPercent: number;
+      unknownPercent: number;
+    };
     pagination: { total: number; page: number; limit: number; totalPages: number };
   }>({
     queryKey: ["/api/contacts", { search, page, limit }],
   });
 
   const contactsRaw = contactsResponse?.contacts || [];
-  const aggregates = contactsResponse?.aggregates || { totalOutstanding: 0, highRiskCount: 0, totalContacts: 0 };
+  const aggregates = contactsResponse?.aggregates || { 
+    totalOutstanding: 0, 
+    highRiskCount: 0, 
+    totalContacts: 0,
+    onTimePercent: 0,
+    lateReliablePercent: 0,
+    inconsistentPercent: 0,
+    unknownPercent: 0
+  };
   const pagination = contactsResponse?.pagination || { total: 0, page: 1, limit: 20, totalPages: 1 };
 
   const handleSearchChange = (value: string) => {
@@ -174,26 +190,26 @@ export default function Customers2() {
 
             {/* Compact Metrics Row - v2.0: Inline horizontal layout */}
             <div className="py-4 border-b border-gray-100 flex flex-wrap items-center gap-x-10 gap-y-3">
-              {/* Behaviour Profiles */}
+              {/* Behaviour Profiles - Live data from aggregates */}
               <div className="flex items-center gap-1.5">
                 <span className="inline-block w-2 h-2 rounded-full bg-[#4FAD80]" />
                 <span className="text-sm text-gray-600">On time</span>
-                <span className="text-sm font-semibold text-gray-900 tabular-nums ml-1">38%</span>
+                <span className="text-sm font-semibold text-gray-900 tabular-nums ml-1">{aggregates.onTimePercent ?? 0}%</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <span className="inline-block w-2 h-2 rounded-full bg-[#E8A23B]" />
                 <span className="text-sm text-gray-600">Late reliable</span>
-                <span className="text-sm font-semibold text-gray-900 tabular-nums ml-1">44%</span>
+                <span className="text-sm font-semibold text-gray-900 tabular-nums ml-1">{aggregates.lateReliablePercent ?? 0}%</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <span className="inline-block w-2 h-2 rounded-full bg-[#C75C5C]" />
                 <span className="text-sm text-gray-600">Inconsistent</span>
-                <span className="text-sm font-semibold text-gray-900 tabular-nums ml-1">12%</span>
+                <span className="text-sm font-semibold text-gray-900 tabular-nums ml-1">{aggregates.inconsistentPercent ?? 0}%</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <span className="inline-block w-2 h-2 rounded-full bg-slate-300" />
                 <span className="text-sm text-gray-600">Unknown</span>
-                <span className="text-sm font-semibold text-gray-500 tabular-nums ml-1">6%</span>
+                <span className="text-sm font-semibold text-gray-500 tabular-nums ml-1">{aggregates.unknownPercent ?? 0}%</span>
               </div>
               
               {/* Divider */}

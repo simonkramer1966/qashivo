@@ -3599,10 +3599,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const paginatedContacts = filteredContacts.slice(offset, offset + limit);
 
         // Calculate aggregates across ALL filtered contacts (not just current page)
+        // Calculate behavior profile percentages based on risk bands
+        const totalForProfiles = filteredContacts.length || 1; // Avoid division by zero
+        const onTimeCount = filteredContacts.filter(c => c.riskBand === 'A').length;
+        const lateReliableCount = filteredContacts.filter(c => c.riskBand === 'B').length;
+        const inconsistentCount = filteredContacts.filter(c => c.riskBand === 'C' || c.riskBand === 'D' || c.riskBand === 'E').length;
+        const unknownCount = filteredContacts.filter(c => !c.riskBand).length;
+        
         const aggregates = {
           totalOutstanding: filteredContacts.reduce((sum, c) => sum + c.outstandingAmount, 0),
           highRiskCount: filteredContacts.filter(c => c.riskScore >= 70).length,
-          totalContacts: filteredContacts.length
+          totalContacts: filteredContacts.length,
+          // Behavior profile percentages
+          onTimePercent: filteredContacts.length > 0 ? Math.round((onTimeCount / totalForProfiles) * 100) : 0,
+          lateReliablePercent: filteredContacts.length > 0 ? Math.round((lateReliableCount / totalForProfiles) * 100) : 0,
+          inconsistentPercent: filteredContacts.length > 0 ? Math.round((inconsistentCount / totalForProfiles) * 100) : 0,
+          unknownPercent: filteredContacts.length > 0 ? Math.round((unknownCount / totalForProfiles) * 100) : 0
         };
 
         const result = {
