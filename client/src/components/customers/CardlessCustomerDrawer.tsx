@@ -1921,12 +1921,27 @@ export function CardlessCustomerDrawer({
                       <Input
                         type="text"
                         inputMode="decimal"
-                        value={ptpAmount ? formatNumberWithCommas(ptpAmount) : "0.00"}
-                        onChange={(e) => {
-                          const raw = stripCommas(e.target.value.replace(/[^0-9.,]/g, ''));
-                          setPtpAmount(raw === "0.00" ? "" : raw);
+                        value={ptpAmount}
+                        onFocus={(e) => {
+                          const raw = stripCommas(e.target.value);
+                          if (raw !== e.target.value) {
+                            setPtpAmount(raw);
+                          }
                         }}
-                        className={`h-9 bg-white border rounded-lg pl-7 pr-3 text-sm text-right tabular-nums focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3] ${ptpValidationAttempted && (!ptpAmount || parseFloat(stripCommas(ptpAmount)) <= 0) ? 'border-[#C75C5C]' : 'border-gray-200'}`}
+                        onChange={(e) => {
+                          const value = e.target.value.replace(/[^0-9.]/g, '');
+                          setPtpAmount(value);
+                        }}
+                        onBlur={(e) => {
+                          const raw = stripCommas(e.target.value);
+                          if (raw && !isNaN(parseFloat(raw))) {
+                            const num = parseFloat(raw);
+                            const formatted = formatNumberWithCommas(num.toFixed(2));
+                            setPtpAmount(formatted);
+                          }
+                        }}
+                        placeholder="0.00"
+                        className={`h-9 bg-white border rounded-lg pl-7 pr-3 text-sm text-right tabular-nums focus:ring-2 focus:ring-[#17B6C3]/20 focus:border-[#17B6C3] ${ptpValidationAttempted && (!ptpAmount || parseFloat(stripCommas(ptpAmount) || "0") <= 0) ? 'border-[#C75C5C]' : 'border-gray-200'}`}
                       />
                     </div>
                   </div>
