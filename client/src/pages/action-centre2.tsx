@@ -26,6 +26,8 @@ import {
   formatCurrencyCompact,
   getChannelLabel,
   formatRelativeTime,
+  getWeekBuckets,
+  buildWeeklyForecast,
 } from "@/components/action-centre/utils";
 import { Debtor, ActivityItem, ExecutedAction, AttentionItem } from "@/components/action-centre/types";
 import {
@@ -1539,50 +1541,256 @@ interface ForecastTab2Props {
   isLoading?: boolean;
 }
 
+const CONFIDENCE_DOT: Record<string, string> = {
+  high: 'bg-[#4FAD80]',
+  medium: 'bg-[#E8A23B]',
+  low: 'bg-gray-300',
+};
+
 function ForecastTab2({ debtors, onSelectDebtor, isLoading }: ForecastTab2Props) {
+  const { weekBuckets, forecastMap, weekTotals, debtorsWithForecast } = useMemo(() => {
+    const weekBuckets = getWeekBuckets(8);
+    const forecastMap = buildWeeklyForecast(debtors, weekBuckets);
+    
+    const weekTotals: Record<string, number> = {};
+    for (const bucket of weekBuckets) {
+      weekTotals[bucket.weekCommencing] = 0;
+    }
+    
+    const getDateOnly = (d: Date): string => {
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    };
+    
+    Array.from(forecastMap.values()).forEach(cells => {
+      for (const cell of cells) {
+        const bucket = weekBuckets.find(b => getDateOnly(b.startDate) === cell.weekStartISO);
+        if (bucket) {
+          weekTotals[bucket.weekCommencing] += cell.expectedAmount;
+        }
+      }
+    });
+    
+    const debtorsWithForecast = debtors.filter(d => forecastMap.has(d.id));
+    
+    return { weekBuckets, forecastMap, weekTotals, debtorsWithForecast };
+  }, [debtors]);
+
+  const PAGE_SIZE_OPTIONS = [10, 15, 25, 50];
+  const [itemsPerPage, setItemsPerPage] = useState(15);
+  const [currentPage, setCurrentPage] = useState(1);
+  const totalPages = Math.max(1, Math.ceil(debtorsWithForecast.length / itemsPerPage));
+  
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(Math.max(1, totalPages));
+    }
+  }, [debtorsWithForecast.length, itemsPerPage, currentPage, totalPages]);
+  
+  const paginatedDebtors = useMemo(() => {
+    const clampedPage = Math.min(currentPage, totalPages);
+    const start = (clampedPage - 1) * itemsPerPage;
+    return debtorsWithForecast.slice(start, start + itemsPerPage);
+  }, [debtorsWithForecast, currentPage, itemsPerPage, totalPages]);
+  
+  const handlePageSizeChange = (newSize: number) => {
+    setItemsPerPage(newSize);
+    setCurrentPage(1);
+  };
+
   if (isLoading) {
     return (
       <div className="space-y-1">
+        <div className="h-10 bg-gray-50 animate-pulse rounded" />
         {[...Array(6)].map((_, i) => (
-          <div key={i} className="h-12 bg-gray-50 animate-pulse rounded-lg" />
+          <div key={i} className="h-12 bg-gray-50 animate-pulse rounded" />
         ))}
       </div>
     );
   }
 
-  const totalOutstanding = debtors.reduce((sum, d) => sum + d.totalOutstanding, 0);
-  const totalOverdue = debtors.reduce((sum, d) => sum + d.totalOverdue, 0);
-  const ptpAmount = debtors
-    .filter(d => d.ptpDate && new Date(d.ptpDate) >= new Date())
-    .reduce((sum, d) => sum + d.totalOverdue, 0);
+  if (debtors.length === 0) {
+    return (
+      <div className="py-20 text-center">
+        <p className="text-gray-400 text-[13px]">No customers to display</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-3 gap-4">
-        <div className="p-4 border border-gray-100 rounded-lg">
-          <div className="text-xs text-gray-400 uppercase tracking-wider">Total Outstanding</div>
-          <div className="text-lg font-semibold tabular-nums text-gray-900 mt-1">
-            {formatCurrencyCompact(totalOutstanding)}
-          </div>
+    <TooltipProvider delayDuration={200}>
+      <div className="flex flex-col h-[calc(100vh-220px)]">
+        <div className="overflow-auto flex-1">
+          <table className="w-full" style={{ minWidth: '900px', tableLayout: 'fixed' }}>
+              <colgroup>
+                <col style={{ width: '18%' }} />
+                {weekBuckets.map(bucket => (
+                  <col key={bucket.weekCommencing} style={{ width: `${82 / weekBuckets.length}%` }} />
+                ))}
+              </colgroup>
+              <thead className="sticky top-0 z-20">
+                <tr className="border-b border-gray-100 bg-gray-50 h-16">
+                  <th className="px-3 text-left text-[11px] font-medium text-gray-400 uppercase tracking-wider sticky left-0 bg-gray-50 z-30 align-middle">
+                    Customer
+                  </th>
+                  {weekBuckets.map((bucket, idx) => (
+                    <th 
+                      key={bucket.weekCommencing} 
+                      className={`text-right px-2 bg-gray-50 align-middle ${idx > 0 ? 'border-l border-gray-100' : ''}`}
+                    >
+                      <div className="text-[11px] font-medium text-gray-400 uppercase tracking-wider">{bucket.weekCommencing}</div>
+                      <div className="font-semibold text-gray-900 text-[13px] mt-1 tabular-nums">
+                        {formatCurrencyCompact(weekTotals[bucket.weekCommencing])}
+                      </div>
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {debtorsWithForecast.length === 0 ? (
+                  <tr>
+                    <td colSpan={weekBuckets.length + 1} className="py-16 text-center text-gray-400 text-[13px]">
+                      No forecasted payments. Customers with promises to pay will appear here.
+                    </td>
+                  </tr>
+                ) : (
+                  paginatedDebtors.map((debtor, index) => {
+                    const cells = forecastMap.get(debtor.id) || [];
+                    const isLast = index === paginatedDebtors.length - 1;
+                    
+                    return (
+                      <tr 
+                        key={debtor.id} 
+                        className={`group hover:bg-gray-50 transition-colors ${!isLast ? 'border-b border-gray-50' : ''}`}
+                      >
+                        <td className="py-2.5 px-3 sticky left-0 bg-white group-hover:bg-gray-50 z-10 transition-colors">
+                          <button
+                            onClick={() => onSelectDebtor(debtor.id)}
+                            className="text-left w-full group"
+                          >
+                            <div className="text-[13px] font-medium text-gray-900 truncate max-w-[180px] group-hover:text-gray-700">
+                              {debtor.name}
+                            </div>
+                            <div className="text-[12px] text-gray-400 tabular-nums">
+                              {formatCurrencyCompact(debtor.totalOutstanding)} outstanding
+                            </div>
+                          </button>
+                        </td>
+                        {weekBuckets.map((bucket, idx) => {
+                          const bucketDateStr = `${bucket.startDate.getFullYear()}-${String(bucket.startDate.getMonth() + 1).padStart(2, '0')}-${String(bucket.startDate.getDate()).padStart(2, '0')}`;
+                          const cell = cells.find(c => c.weekStartISO === bucketDateStr);
+                          const borderClass = idx > 0 ? 'border-l border-gray-100' : '';
+                          
+                          if (!cell) {
+                            return (
+                              <td key={bucket.weekCommencing} className={`text-right py-2.5 px-2 ${borderClass}`}>
+                                <span className="text-gray-200">—</span>
+                              </td>
+                            );
+                          }
+                          
+                          return (
+                            <td 
+                              key={bucket.weekCommencing}
+                              className={`text-right py-2.5 px-2 cursor-pointer transition-colors ${borderClass}`}
+                              onClick={() => onSelectDebtor(debtor.id)}
+                            >
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div className="flex items-center justify-end gap-1.5">
+                                    <span className={`w-1.5 h-1.5 rounded-full ${CONFIDENCE_DOT[cell.confidence]}`} />
+                                    <span className="tabular-nums text-gray-900 font-medium text-[13px]">
+                                      {formatCurrencyCompact(cell.expectedAmount)}
+                                    </span>
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent side="top" className="max-w-xs">
+                                  <div className="text-xs space-y-1">
+                                    <div className="font-medium">{formatCurrencyCompact(cell.expectedAmount)} expected</div>
+                                    <div className="text-gray-400">
+                                      Confidence: <span className="capitalize">{cell.confidence}</span>
+                                    </div>
+                                    <div className="text-gray-400">
+                                      Source: <span className="uppercase">{cell.source}</span>
+                                    </div>
+                                    {cell.ptpDate && (
+                                      <div className="text-[#17B6C3]">
+                                        Promised: {new Date(cell.ptpDate).toLocaleDateString('en-GB')}
+                                      </div>
+                                    )}
+                                    {cell.invoiceCount && (
+                                      <div className="text-gray-400">{cell.invoiceCount} invoices</div>
+                                    )}
+                                  </div>
+                                </TooltipContent>
+                              </Tooltip>
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
         </div>
-        <div className="p-4 border border-gray-100 rounded-lg">
-          <div className="text-xs text-gray-400 uppercase tracking-wider">Total Overdue</div>
-          <div className="text-lg font-semibold tabular-nums text-[#C75C5C] mt-1">
-            {formatCurrencyCompact(totalOverdue)}
+        
+        <div className="flex items-center justify-between py-3 flex-shrink-0 border-t border-gray-100">
+          <div className="flex items-center gap-5 text-[11px] text-gray-400">
+            <div className="flex items-center gap-1.5">
+              <span className={`w-1.5 h-1.5 rounded-full ${CONFIDENCE_DOT.high}`} />
+              <span>High (PTP)</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className={`w-1.5 h-1.5 rounded-full ${CONFIDENCE_DOT.medium}`} />
+              <span>Medium</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className={`w-1.5 h-1.5 rounded-full ${CONFIDENCE_DOT.low}`} />
+              <span>Low</span>
+            </div>
           </div>
-        </div>
-        <div className="p-4 border border-gray-100 rounded-lg">
-          <div className="text-xs text-gray-400 uppercase tracking-wider">Expected (PTP)</div>
-          <div className="text-lg font-semibold tabular-nums text-[#4FAD80] mt-1">
-            {formatCurrencyCompact(ptpAmount)}
-          </div>
+          
+          {debtorsWithForecast.length > 0 && (
+            <div className="flex items-center gap-4 text-[12px] text-gray-500">
+              <div className="flex items-center gap-2">
+                <span className="text-gray-400">Rows:</span>
+                <select
+                  value={itemsPerPage}
+                  onChange={(e) => handlePageSizeChange(Number(e.target.value))}
+                  className="bg-white border border-gray-200 rounded px-2 py-1 text-[12px] text-gray-600 cursor-pointer hover:border-gray-300 focus:outline-none focus:ring-1 focus:ring-gray-300"
+                >
+                  {PAGE_SIZE_OPTIONS.map(size => (
+                    <option key={size} value={size}>{size}</option>
+                  ))}
+                </select>
+              </div>
+              
+              {totalPages > 1 && (
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                    className="p-1 rounded hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                  <span className="tabular-nums min-w-[80px] text-center">
+                    {currentPage} of {totalPages}
+                  </span>
+                  <button
+                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                    disabled={currentPage === totalPages}
+                    className="p-1 rounded hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
-      
-      <div className="text-center py-12 text-gray-400 text-[13px]">
-        Forecast visualization coming soon
-      </div>
-    </div>
+    </TooltipProvider>
   );
 }
 
