@@ -60,8 +60,7 @@ const navigationSections = [
   {
     label: "ACTION",
     items: [
-      { name: "Overview", href: "/", icon: Gauge },
-      { name: "Overview2", href: "/overview2", icon: Gauge },
+      { name: "Overview", href: "/overview2", icon: Gauge },
       { name: "Action Centre", href: "/action-centre2", icon: Target },
       { name: "Cash Flow", href: "/cash-flow", icon: TrendingUp },
     ]

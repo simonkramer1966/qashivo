@@ -188,7 +188,7 @@ function Router() {
           <Route path="/accept-invite" component={AcceptInvite} />
           <Route path="/sme-onboarding" component={SmeOnboarding} />
           <Route path="/investor-interest" component={InvestorInterest} />
-          <Route path="/" component={Cashboard} />
+          <Route path="/" component={Overview2} />
           <Route path="/:rest*" component={NotFound} />
         </Switch>
       )}
